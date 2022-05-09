@@ -1,0 +1,16 @@
+*.iml
+*.ipr
+*.iws
+target/
+.idea
+.run
+.DS_Store
+.classpath
+.settings
+.project
+*~
+*.class
+.checkstyle
+.mvn/timing.properties
+.mvn/maven.config
+core/cml-server/etc
