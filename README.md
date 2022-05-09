@@ -18,8 +18,8 @@ mvn clean install -DskipTests
 
 ```dtd
 bigquery.project-id=         # The target bigQuery project
-        bigquery.credentials-key=    # based 64 credentials key
-        bigquery.location=           # BigQuery execution region
+bigquery.credentials-key=    # based 64 credentials key
+bigquery.location=           # BigQuery execution region
 ```
 
 - VM options
