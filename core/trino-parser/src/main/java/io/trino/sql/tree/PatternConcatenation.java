@@ -20,57 +20,41 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-public class Execute
-        extends Statement
+public class PatternConcatenation
+        extends RowPattern
 {
-    private final Identifier name;
-    private final List<Expression> parameters;
+    private final List<RowPattern> patterns;
 
-    public Execute(NodeLocation location, Identifier name, List<Expression> parameters)
+    public PatternConcatenation(NodeLocation location, List<RowPattern> patterns)
     {
-        this(Optional.of(location), name, parameters);
+        this(Optional.of(location), patterns);
     }
 
-    public Execute(Identifier name, List<Expression> parameters)
-    {
-        this(Optional.empty(), name, parameters);
-    }
-
-    private Execute(Optional<NodeLocation> location, Identifier name, List<Expression> parameters)
+    private PatternConcatenation(Optional<NodeLocation> location, List<RowPattern> patterns)
     {
         super(location);
-        this.name = requireNonNull(name, "name is null");
-        this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters is null"));
+        this.patterns = requireNonNull(patterns, "patterns is null");
+        checkArgument(!patterns.isEmpty(), "patterns list is empty");
     }
 
-    public Identifier getName()
+    public List<RowPattern> getPatterns()
     {
-        return name;
-    }
-
-    public List<Expression> getParameters()
-    {
-        return parameters;
+        return patterns;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitExecute(this, context);
+        return visitor.visitPatternConcatenation(this, context);
     }
 
     @Override
-    public List<? extends Node> getChildren()
+    public List<Node> getChildren()
     {
-        return parameters;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(name, parameters);
+        return ImmutableList.copyOf(patterns);
     }
 
     @Override
@@ -82,17 +66,27 @@ public class Execute
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        Execute o = (Execute) obj;
-        return Objects.equals(name, o.name) &&
-                Objects.equals(parameters, o.parameters);
+        PatternConcatenation o = (PatternConcatenation) obj;
+        return Objects.equals(patterns, o.patterns);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(patterns);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("name", name)
-                .add("parameters", parameters)
+                .add("patterns", patterns)
                 .toString();
+    }
+
+    @Override
+    public boolean shallowEquals(Node other)
+    {
+        return sameClass(this, other);
     }
 }

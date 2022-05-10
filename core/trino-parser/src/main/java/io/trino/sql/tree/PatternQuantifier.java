@@ -21,36 +21,26 @@ import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
-public class Table
-        extends QueryBody
+public abstract class PatternQuantifier
+        extends Node
 {
-    private final QualifiedName name;
+    private final boolean greedy;
 
-    public Table(QualifiedName name)
-    {
-        this(Optional.empty(), name);
-    }
-
-    public Table(NodeLocation location, QualifiedName name)
-    {
-        this(Optional.of(location), name);
-    }
-
-    private Table(Optional<NodeLocation> location, QualifiedName name)
+    protected PatternQuantifier(Optional<NodeLocation> location, boolean greedy)
     {
         super(location);
-        this.name = name;
+        this.greedy = greedy;
     }
 
-    public QualifiedName getName()
+    public boolean isGreedy()
     {
-        return name;
+        return greedy;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitTable(this, context);
+        return visitor.visitPatternQuantifier(this, context);
     }
 
     @Override
@@ -60,31 +50,22 @@ public class Table
     }
 
     @Override
-    public String toString()
+    public boolean equals(Object obj)
     {
-        return toStringHelper(this)
-                .addValue(name)
-                .toString();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
+        if (this == obj) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-
-        Table table = (Table) o;
-        return Objects.equals(name, table.name);
+        PatternQuantifier o = (PatternQuantifier) obj;
+        return greedy == o.greedy;
     }
 
     @Override
     public int hashCode()
     {
-        return name.hashCode();
+        return Objects.hash(greedy);
     }
 
     @Override
@@ -94,7 +75,15 @@ public class Table
             return false;
         }
 
-        Table otherTable = (Table) other;
-        return name.equals(otherTable.name);
+        PatternQuantifier otherNode = (PatternQuantifier) other;
+        return greedy == otherNode.greedy;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("greedy", greedy)
+                .toString();
     }
 }

@@ -19,59 +19,47 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
-
-public class TypeParameter
-        extends DataTypeParameter
+public class CurrentSchema
+        extends Expression
 {
-    private final DataType type;
-
-    public TypeParameter(DataType type)
+    public CurrentSchema(NodeLocation location)
     {
-        super(Optional.empty());
-        this.type = requireNonNull(type, "type is null");
+        this(Optional.of(location));
     }
 
-    public DataType getValue()
+    private CurrentSchema(Optional<NodeLocation> location)
     {
-        return type;
+        super(location);
     }
 
     @Override
-    public String toString()
+    public List<Node> getChildren()
     {
-        return type.toString();
+        return ImmutableList.of();
     }
 
     @Override
-    public List<? extends Node> getChildren()
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return ImmutableList.of(type);
-    }
-
-    @Override
-    protected <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitTypeParameter(this, context);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        TypeParameter that = (TypeParameter) o;
-        return type.equals(that.type);
+        return visitor.visitCurrentSchema(this, context);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(type);
+        return Objects.hash();
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if ((obj == null) || (getClass() != obj.getClass())) {
+            return false;
+        }
+        return true;
     }
 
     @Override
