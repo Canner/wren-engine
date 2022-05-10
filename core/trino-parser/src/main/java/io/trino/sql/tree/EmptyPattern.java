@@ -16,62 +16,58 @@ package io.trino.sql.tree;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.MoreObjects.toStringHelper;
 
-public class TypeParameter
-        extends DataTypeParameter
+public class EmptyPattern
+        extends RowPattern
 {
-    private final DataType type;
-
-    public TypeParameter(DataType type)
+    public EmptyPattern(NodeLocation location)
     {
-        super(Optional.empty());
-        this.type = requireNonNull(type, "type is null");
+        this(Optional.of(location));
     }
 
-    public DataType getValue()
+    private EmptyPattern(Optional<NodeLocation> location)
     {
-        return type;
+        super(location);
     }
 
     @Override
-    public String toString()
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return type.toString();
+        return visitor.visitEmptyPattern(this, context);
     }
 
     @Override
-    public List<? extends Node> getChildren()
+    public List<Node> getChildren()
     {
-        return ImmutableList.of(type);
+        return ImmutableList.of();
     }
 
     @Override
-    protected <R, C> R accept(AstVisitor<R, C> visitor, C context)
+    public boolean equals(Object obj)
     {
-        return visitor.visitTypeParameter(this, context);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
+        if (this == obj) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        TypeParameter that = (TypeParameter) o;
-        return type.equals(that.type);
+        return true;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(type);
+        return getClass().hashCode();
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .toString();
     }
 
     @Override

@@ -22,55 +22,43 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public class Execute
-        extends Statement
+public class AnchorPattern
+        extends RowPattern
 {
-    private final Identifier name;
-    private final List<Expression> parameters;
-
-    public Execute(NodeLocation location, Identifier name, List<Expression> parameters)
+    public enum Type
     {
-        this(Optional.of(location), name, parameters);
+        PARTITION_START,
+        PARTITION_END
     }
 
-    public Execute(Identifier name, List<Expression> parameters)
+    private final Type type;
+
+    public AnchorPattern(NodeLocation location, Type type)
     {
-        this(Optional.empty(), name, parameters);
+        this(Optional.of(location), type);
     }
 
-    private Execute(Optional<NodeLocation> location, Identifier name, List<Expression> parameters)
+    private AnchorPattern(Optional<NodeLocation> location, Type type)
     {
         super(location);
-        this.name = requireNonNull(name, "name is null");
-        this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters is null"));
+        this.type = requireNonNull(type, "type is null");
     }
 
-    public Identifier getName()
+    public Type getType()
     {
-        return name;
-    }
-
-    public List<Expression> getParameters()
-    {
-        return parameters;
+        return type;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitExecute(this, context);
+        return visitor.visitAnchorPattern(this, context);
     }
 
     @Override
-    public List<? extends Node> getChildren()
+    public List<Node> getChildren()
     {
-        return parameters;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(name, parameters);
+        return ImmutableList.of();
     }
 
     @Override
@@ -82,17 +70,27 @@ public class Execute
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        Execute o = (Execute) obj;
-        return Objects.equals(name, o.name) &&
-                Objects.equals(parameters, o.parameters);
+        AnchorPattern o = (AnchorPattern) obj;
+        return Objects.equals(type, o.type);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return getClass().hashCode();
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("name", name)
-                .add("parameters", parameters)
+                .add("type", type)
                 .toString();
+    }
+
+    @Override
+    public boolean shallowEquals(Node other)
+    {
+        return sameClass(this, other);
     }
 }

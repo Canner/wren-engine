@@ -32,7 +32,9 @@ import io.trino.sql.tree.CharLiteral;
 import io.trino.sql.tree.CoalesceExpression;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.Cube;
+import io.trino.sql.tree.CurrentCatalog;
 import io.trino.sql.tree.CurrentPath;
+import io.trino.sql.tree.CurrentSchema;
 import io.trino.sql.tree.CurrentTime;
 import io.trino.sql.tree.CurrentUser;
 import io.trino.sql.tree.DateTimeDataType;
@@ -59,6 +61,7 @@ import io.trino.sql.tree.IntervalDayTimeDataType;
 import io.trino.sql.tree.IntervalLiteral;
 import io.trino.sql.tree.IsNotNullPredicate;
 import io.trino.sql.tree.IsNullPredicate;
+import io.trino.sql.tree.LabelDereference;
 import io.trino.sql.tree.LambdaArgumentDeclaration;
 import io.trino.sql.tree.LambdaExpression;
 import io.trino.sql.tree.LikePredicate;
@@ -156,6 +159,18 @@ public final class ExpressionFormatter
                     .append(process(node.getValue(), context))
                     .append(" AT TIME ZONE ")
                     .append(process(node.getTimeZone(), context)).toString();
+        }
+
+        @Override
+        protected String visitCurrentCatalog(CurrentCatalog node, Void context)
+        {
+            return "CURRENT_CATALOG";
+        }
+
+        @Override
+        protected String visitCurrentSchema(CurrentSchema node, Void context)
+        {
+            return "CURRENT_SCHEMA";
         }
 
         @Override
@@ -362,6 +377,11 @@ public final class ExpressionFormatter
         protected String visitFunctionCall(FunctionCall node, Void context)
         {
             StringBuilder builder = new StringBuilder();
+
+            if (node.getProcessingMode().isPresent()) {
+                builder.append(node.getProcessingMode().get().getMode())
+                        .append(" ");
+            }
 
             String arguments = joinExpressions(node.getArguments());
             if (node.getArguments().isEmpty() && "count".equalsIgnoreCase(node.getName().getSuffix())) {
@@ -734,6 +754,16 @@ public final class ExpressionFormatter
             }
 
             return builder.toString();
+        }
+
+        @Override
+        protected String visitLabelDereference(LabelDereference node, Void context)
+        {
+            // format LabelDereference L.x as "LABEL_DEREFERENCE("L", "x")"
+            // LabelDereference, like SymbolReference, is an IR-type expression. It is never a result of the parser.
+            // After being formatted this way for serialization, it will be parsed as functionCall
+            // and swapped back for LabelDereference.
+            return "LABEL_DEREFERENCE(" + formatIdentifier(node.getLabel()) + ", " + process(node.getReference()) + ")";
         }
 
         private String formatBinaryExpression(String operator, Expression left, Expression right)

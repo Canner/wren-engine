@@ -20,29 +20,37 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static java.util.Objects.requireNonNull;
 
-public class Table
-        extends QueryBody
+public class MeasureDefinition
+        extends Node
 {
-    private final QualifiedName name;
+    private final Expression expression;
+    private final Identifier name;
 
-    public Table(QualifiedName name)
+    public MeasureDefinition(Expression expression, Identifier name)
     {
-        this(Optional.empty(), name);
+        this(Optional.empty(), expression, name);
     }
 
-    public Table(NodeLocation location, QualifiedName name)
+    public MeasureDefinition(NodeLocation location, Expression expression, Identifier name)
     {
-        this(Optional.of(location), name);
+        this(Optional.of(location), expression, name);
     }
 
-    private Table(Optional<NodeLocation> location, QualifiedName name)
+    private MeasureDefinition(Optional<NodeLocation> location, Expression expression, Identifier name)
     {
         super(location);
-        this.name = name;
+        this.expression = requireNonNull(expression, "expression is null");
+        this.name = requireNonNull(name, "name is null");
     }
 
-    public QualifiedName getName()
+    public Expression getExpression()
+    {
+        return expression;
+    }
+
+    public Identifier getName()
     {
         return name;
     }
@@ -50,20 +58,21 @@ public class Table
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitTable(this, context);
+        return visitor.visitMeasureDefinition(this, context);
     }
 
     @Override
-    public List<Node> getChildren()
+    public List<? extends Node> getChildren()
     {
-        return ImmutableList.of();
+        return ImmutableList.of(expression);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .addValue(name)
+                .add("expression", expression)
+                .add("name", name)
                 .toString();
     }
 
@@ -77,14 +86,15 @@ public class Table
             return false;
         }
 
-        Table table = (Table) o;
-        return Objects.equals(name, table.name);
+        MeasureDefinition that = (MeasureDefinition) o;
+        return Objects.equals(expression, that.expression) &&
+                Objects.equals(name, that.name);
     }
 
     @Override
     public int hashCode()
     {
-        return name.hashCode();
+        return Objects.hash(expression, name);
     }
 
     @Override
@@ -94,7 +104,6 @@ public class Table
             return false;
         }
 
-        Table otherTable = (Table) other;
-        return name.equals(otherTable.name);
+        return Objects.equals(name, ((MeasureDefinition) other).name);
     }
 }

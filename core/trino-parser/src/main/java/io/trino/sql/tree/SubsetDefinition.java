@@ -13,57 +13,67 @@
  */
 package io.trino.sql.tree;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
-public class Table
-        extends QueryBody
+public class SubsetDefinition
+        extends Node
 {
-    private final QualifiedName name;
+    private final Identifier name;
+    private final List<Identifier> identifiers;
 
-    public Table(QualifiedName name)
+    public SubsetDefinition(Identifier name, List<Identifier> identifiers)
     {
-        this(Optional.empty(), name);
+        this(Optional.empty(), name, identifiers);
     }
 
-    public Table(NodeLocation location, QualifiedName name)
+    public SubsetDefinition(NodeLocation location, Identifier name, List<Identifier> identifiers)
     {
-        this(Optional.of(location), name);
+        this(Optional.of(location), name, identifiers);
     }
 
-    private Table(Optional<NodeLocation> location, QualifiedName name)
+    private SubsetDefinition(Optional<NodeLocation> location, Identifier name, List<Identifier> identifiers)
     {
         super(location);
-        this.name = name;
+        this.name = requireNonNull(name, "name is null");
+        requireNonNull(identifiers, "identifiers is null");
+        checkArgument(!identifiers.isEmpty(), "identifiers is empty");
+        this.identifiers = identifiers;
     }
 
-    public QualifiedName getName()
+    public Identifier getName()
     {
         return name;
+    }
+
+    public List<Identifier> getIdentifiers()
+    {
+        return identifiers;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitTable(this, context);
+        return visitor.visitSubsetDefinition(this, context);
     }
 
     @Override
-    public List<Node> getChildren()
+    public List<? extends Node> getChildren()
     {
-        return ImmutableList.of();
+        return identifiers;
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .addValue(name)
+                .add("name", name)
+                .add("identifiers", identifiers)
                 .toString();
     }
 
@@ -77,14 +87,15 @@ public class Table
             return false;
         }
 
-        Table table = (Table) o;
-        return Objects.equals(name, table.name);
+        SubsetDefinition that = (SubsetDefinition) o;
+        return Objects.equals(name, that.name) &&
+                Objects.equals(identifiers, that.identifiers);
     }
 
     @Override
     public int hashCode()
     {
-        return name.hashCode();
+        return Objects.hash(name, identifiers);
     }
 
     @Override
@@ -94,7 +105,6 @@ public class Table
             return false;
         }
 
-        Table otherTable = (Table) other;
-        return name.equals(otherTable.name);
+        return Objects.equals(name, ((SubsetDefinition) other).name);
     }
 }

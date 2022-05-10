@@ -22,27 +22,20 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public class Execute
-        extends Statement
+public class PatternVariable
+        extends RowPattern
 {
     private final Identifier name;
-    private final List<Expression> parameters;
 
-    public Execute(NodeLocation location, Identifier name, List<Expression> parameters)
+    public PatternVariable(NodeLocation location, Identifier name)
     {
-        this(Optional.of(location), name, parameters);
+        this(Optional.of(location), name);
     }
 
-    public Execute(Identifier name, List<Expression> parameters)
-    {
-        this(Optional.empty(), name, parameters);
-    }
-
-    private Execute(Optional<NodeLocation> location, Identifier name, List<Expression> parameters)
+    private PatternVariable(Optional<NodeLocation> location, Identifier name)
     {
         super(location);
         this.name = requireNonNull(name, "name is null");
-        this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters is null"));
     }
 
     public Identifier getName()
@@ -50,27 +43,16 @@ public class Execute
         return name;
     }
 
-    public List<Expression> getParameters()
-    {
-        return parameters;
-    }
-
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitExecute(this, context);
+        return visitor.visitPatternVariable(this, context);
     }
 
     @Override
-    public List<? extends Node> getChildren()
+    public List<Node> getChildren()
     {
-        return parameters;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(name, parameters);
+        return ImmutableList.of(name);
     }
 
     @Override
@@ -82,9 +64,14 @@ public class Execute
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        Execute o = (Execute) obj;
-        return Objects.equals(name, o.name) &&
-                Objects.equals(parameters, o.parameters);
+        PatternVariable o = (PatternVariable) obj;
+        return Objects.equals(name, o.name);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name);
     }
 
     @Override
@@ -92,7 +79,12 @@ public class Execute
     {
         return toStringHelper(this)
                 .add("name", name)
-                .add("parameters", parameters)
                 .toString();
+    }
+
+    @Override
+    public boolean shallowEquals(Node other)
+    {
+        return sameClass(this, other);
     }
 }
