@@ -12,13 +12,14 @@
  * limitations under the License.
  */
 
+package io.cml.server;
+
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.cml.PostgresWireProtocolModule;
-import io.cml.connector.bigquery.BigQueryConnectorModule;
 import io.cml.pgcatalog.PgCatalogTableManager;
-import io.cml.server.Server;
+import io.cml.server.module.BigQueryConnectorModule;
+import io.cml.server.module.PostgresWireProtocolModule;
 import io.cml.wireprotocol.ssl.EmptyTlsDataProvider;
 
 public class CmlServer

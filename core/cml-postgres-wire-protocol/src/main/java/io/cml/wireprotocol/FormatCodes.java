@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.wireprotocol.postgres;
+package io.cml.wireprotocol;
 
 import io.netty.buffer.ByteBuf;
 

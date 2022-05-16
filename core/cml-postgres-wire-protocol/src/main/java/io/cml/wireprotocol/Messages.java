@@ -17,7 +17,6 @@ package io.cml.wireprotocol;
 import io.airlift.log.Logger;
 import io.cml.spi.Column;
 import io.cml.spi.type.PGType;
-import io.cml.wireprotocol.postgres.FormatCodes;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

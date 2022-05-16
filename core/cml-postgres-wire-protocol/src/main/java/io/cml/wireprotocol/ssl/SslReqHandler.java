@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.wireprotocol.postgres.ssl;
+package io.cml.wireprotocol.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

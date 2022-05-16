@@ -3,7 +3,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,13 +12,12 @@
  * limitations under the License.
  */
 
-package io.cml.wireprotocol.postgres.ssl;
+package io.cml.wireprotocol.ssl;
 
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.cml.PostgresWireProtocolConfig;
 import io.cml.spi.CmlException;
-import io.cml.wireprotocol.ssl.TlsDataProvider;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;

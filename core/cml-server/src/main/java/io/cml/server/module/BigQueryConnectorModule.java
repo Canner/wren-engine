@@ -3,7 +3,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.connector.bigquery;
+package io.cml.server.module;
 
 import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.api.gax.rpc.HeaderProvider;
@@ -22,8 +22,16 @@ import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.cml.connector.bigquery.BigQueryConfig;
+import io.cml.connector.bigquery.BigQueryConnector;
+import io.cml.connector.bigquery.BigQueryCredentialsSupplier;
+import io.cml.pgcatalog.builder.BigQueryPgCatalogBuilder;
+import io.cml.pgcatalog.builder.PgCatalogBuilder;
+import io.cml.pgcatalog.regtype.BigQueryPgMetadata;
+import io.cml.pgcatalog.regtype.PgMetadata;
 import io.cml.spi.connector.Connector;
 
 import java.util.Optional;
@@ -37,6 +45,8 @@ public class BigQueryConnectorModule
     protected void setup(Binder binder)
     {
         binder.bind(Connector.class).to(BigQueryConnector.class);
+        binder.bind(PgCatalogBuilder.class).to(BigQueryPgCatalogBuilder.class).in(Scopes.SINGLETON);
+        binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
     }
 

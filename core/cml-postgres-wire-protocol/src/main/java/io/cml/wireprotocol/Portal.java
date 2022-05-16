@@ -16,7 +16,6 @@ package io.cml.wireprotocol;
 
 import com.google.common.base.Joiner;
 import io.airlift.log.Logger;
-import io.cml.wireprotocol.postgres.FormatCodes;
 
 import javax.annotation.Nullable;
 import javax.annotation.PreDestroy;

@@ -15,9 +15,9 @@
 package io.cml;
 
 import com.google.common.collect.ImmutableList;
+import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.wireprotocol.PostgresNetty;
-import io.cml.wireprotocol.postgres.ssl.SslContextProvider;
-import io.trino.sql.parser.SqlParser;
+import io.cml.wireprotocol.ssl.SslContextProvider;
 import org.elasticsearch.common.network.NetworkService;
 
 import javax.inject.Inject;
@@ -28,19 +28,19 @@ import static java.util.Objects.requireNonNull;
 public class PostgresNettyProvider
         implements Provider<PostgresNetty>
 {
-    private final SqlParser sqlParser;
     private final PostgresWireProtocolConfig postgresWireProtocolConfig;
     private final SslContextProvider sslContextProvider;
+    private final RegObjectFactory regObjectFactory;
 
     @Inject
     public PostgresNettyProvider(
-            SqlParser sqlParser,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
-            SslContextProvider sslContextProvider)
+            SslContextProvider sslContextProvider,
+            RegObjectFactory regObjectFactory)
     {
-        this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
+        this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
     }
 
     @Override
@@ -48,10 +48,10 @@ public class PostgresNettyProvider
     {
         NetworkService networkService = new NetworkService(ImmutableList.of());
         PostgresNetty postgresNetty = new PostgresNetty(
-                sqlParser,
                 networkService,
                 postgresWireProtocolConfig,
-                sslContextProvider);
+                sslContextProvider,
+                regObjectFactory);
         postgresNetty.start();
         return postgresNetty;
     }

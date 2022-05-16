@@ -12,78 +12,83 @@
  * limitations under the License.
  */
 
-package io.cml.wireprotocol;
+package io.cml.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import io.cml.spi.CatalogSchemaTableName;
+import io.cml.pgcatalog.regtype.RegObjectFactory;
+import io.cml.spi.metadata.SchemaTableName;
+import io.cml.wireprotocol.BaseRewriteVisitor;
 import io.trino.sql.parser.SqlBaseLexer;
-import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CurrentUser;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.JoinUsing;
+import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Select;
 import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.Window;
 import io.trino.sql.tree.WindowReference;
 import io.trino.sql.tree.WindowSpecification;
 
-import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.INFORMATION_SCHEMA;
+import static io.cml.sql.PgOidTypeTableInfo.REGCLASS;
+import static io.cml.sql.PgOidTypeTableInfo.REGPROC;
 import static io.trino.sql.QueryUtil.functionCall;
 import static java.util.Locale.ENGLISH;
+import static java.util.Locale.ROOT;
 import static java.util.stream.Collectors.toList;
 
 public class PostgreSqlRewrite
 {
     private static final String PGCATALOG_TABLE_PREFIX = "pg_";
-    private static final String PGCATALOG_SCHEMA = "default";
     private static final String PGCATALOG = "pg_catalog";
     private static final List<String> SYSTEM_SCHEMAS = List.of(INFORMATION_SCHEMA, PGCATALOG);
     private static final List<String> NON_RESERVED = List.of("session_user", "user");
 
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
 
-    public Statement rewrite(Statement statement)
+    public Statement rewrite(RegObjectFactory regObjectFactory, Statement statement)
     {
-        return (Statement) new Visitor().process(statement);
-    }
-
-    public Statement rewrite(
-            Statement statement,
-            @Nullable String catalogName,
-            @Nullable String schemaName)
-    {
-        return (Statement) new Visitor().process(statement);
+        return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory)).process(statement);
     }
 
     private static class Visitor
-            extends AstVisitor<Node, Void>
+            extends BaseRewriteVisitor
     {
         private final List<Identifier> joinUsingCriteria = new ArrayList<>();
         private final Map<Identifier, Expression> selectItemsMap = new HashMap<>();
+
+        private final RegObjectInterpreter regObjectInterpreter;
+
+        public Visitor(RegObjectInterpreter regObjectInterpreter)
+        {
+            this.regObjectInterpreter = regObjectInterpreter;
+        }
 
         @Override
         protected Node visitSelect(Select node, Void context)
@@ -144,10 +149,47 @@ public class PostgreSqlRewrite
         }
 
         @Override
+        protected Node visitQuerySpecification(QuerySpecification node, Void context)
+        {
+            // Relations should be visited first for alias.
+            Optional<Relation> from = node.getFrom().map(this::visitAndCast);
+            if (node.getLocation().isPresent()) {
+                return new QuerySpecification(
+                        node.getLocation().get(),
+                        visitAndCast(node.getSelect()),
+                        from,
+                        node.getWhere().map(this::visitAndCast),
+                        node.getGroupBy().map(this::visitAndCast),
+                        node.getHaving().map(this::visitAndCast),
+                        visitNodes(node.getWindows()),
+                        node.getOrderBy().map(this::visitAndCast),
+                        node.getOffset(),
+                        node.getLimit());
+            }
+            return new QuerySpecification(
+                    visitAndCast(node.getSelect()),
+                    from,
+                    node.getWhere().map(this::visitAndCast),
+                    node.getGroupBy().map(this::visitAndCast),
+                    node.getHaving().map(this::visitAndCast),
+                    visitNodes(node.getWindows()),
+                    node.getOrderBy().map(this::visitAndCast),
+                    node.getOffset(),
+                    node.getLimit());
+        }
+
+        @Override
         protected Node visitSingleColumn(SingleColumn node, Void context)
         {
             Expression expression = node.getExpression();
-            node.getAlias().ifPresent(identifier -> selectItemsMap.put(identifier, expression));
+            // Show regObject's name when it's in a single column.
+            if (expression instanceof GenericLiteral || expression instanceof Cast) {
+                Optional<Object> result = regObjectInterpreter.evaluate(expression, true);
+                expression = result.map(obj -> (Expression) obj).orElse(expression);
+            }
+            if (node.getAlias().isPresent()) {
+                selectItemsMap.put(node.getAlias().get(), expression);
+            }
 
             Optional<Identifier> alias = rewriteAlias(node.getAlias(), expression);
 
@@ -159,6 +201,24 @@ public class PostgreSqlRewrite
                     new SingleColumn(
                             visitAndCast(expression),
                             alias);
+        }
+
+        @Override
+        protected Node visitCast(Cast node, Void context)
+        {
+            String type = node.getType().toString().toUpperCase(ROOT);
+            if (type.equals(REGPROC.name()) || type.equals(REGCLASS.name())) {
+                Optional<Object> result = regObjectInterpreter.evaluate(node, false);
+                return result.map(obj -> (Expression) obj).orElse(node);
+            }
+            return node;
+        }
+
+        @Override
+        protected Node visitExpression(Expression expression, Void context)
+        {
+            Optional<Object> result = regObjectInterpreter.evaluate(expression, false);
+            return result.map(o -> (Node) o).orElse(expression);
         }
 
         private Optional<Identifier> rewriteAlias(Optional<Identifier> alias, Expression expression)
@@ -186,11 +246,6 @@ public class PostgreSqlRewrite
                 return Optional.of(new Identifier(functionCallExpression.getName().getSuffix()));
             }
             return Optional.of(new Identifier("?column?"));
-        }
-
-        private static boolean isNonReservedLexer(String value)
-        {
-            return NON_RESERVED.contains(value);
         }
 
         @Override
@@ -276,6 +331,7 @@ public class PostgreSqlRewrite
                     node.getOrderBy().map(this::visitAndCast),
                     node.isDistinct(),
                     node.getNullTreatment(),
+                    Optional.empty(),
                     visitNodes(node.getArguments()));
         }
 
@@ -288,10 +344,42 @@ public class PostgreSqlRewrite
         @Override
         protected Node visitIdentifier(Identifier node, Void context)
         {
-            if (List.of("session_user", "user").contains(node.getValue().toLowerCase(Locale.ROOT))) {
+            if (List.of("session_user", "user").contains(node.getValue().toLowerCase(ROOT))) {
                 return functionCall("$current_user");
             }
             return super.visitIdentifier(node, context);
+        }
+
+        @Override
+        protected Node visitLikePredicate(LikePredicate node, Void context)
+        {
+            if (node.getEscape().isPresent()) {
+                return super.visitLikePredicate(node, context);
+            }
+
+            StringLiteral backslashEscape = new StringLiteral("\\");
+            if (node.getLocation().isEmpty()) {
+                return super.visitLikePredicate(new LikePredicate(node.getValue(), node.getPattern(), Optional.of(backslashEscape)), context);
+            }
+            return super.visitLikePredicate(new LikePredicate(node.getLocation().get(), node.getValue(), node.getPattern(), Optional.of(backslashEscape)), context);
+        }
+
+        private static boolean isNonReservedLexer(String value)
+        {
+            return NON_RESERVED.contains(value);
+        }
+
+        private static SchemaTableName toPgCatalogSchemaTableName(List<String> parts)
+        {
+            return new SchemaTableName(PGCATALOG, parts.get(parts.size() - 1));
+        }
+
+        private static QualifiedName removeNamespace(QualifiedName name)
+        {
+            if (SYSTEM_SCHEMAS.contains(name.getOriginalParts().get(0).getValue())) {
+                return QualifiedName.of(name.getSuffix());
+            }
+            return name;
         }
 
         protected JoinCriteria visitJoinCriteria(JoinCriteria joinCriteria)
@@ -310,23 +398,7 @@ public class PostgreSqlRewrite
             if (parts.size() == 1) {
                 return parts.get(0).startsWith(PGCATALOG_TABLE_PREFIX);
             }
-            else if (parts.size() == 2) {
-                return parts.get(0).equals(PGCATALOG) && parts.get(1).startsWith(PGCATALOG_TABLE_PREFIX);
-            }
             return false;
-        }
-
-        private static CatalogSchemaTableName toPgCatalogSchemaTableName(List<String> parts)
-        {
-            return new CatalogSchemaTableName(PGCATALOG, PGCATALOG_SCHEMA, parts.get(parts.size() - 1));
-        }
-
-        private static QualifiedName removeNamespace(QualifiedName name)
-        {
-            if (SYSTEM_SCHEMAS.contains(name.getOriginalParts().get(0).getValue())) {
-                return QualifiedName.of(name.getSuffix());
-            }
-            return name;
         }
 
         protected <T extends Node> List<T> visitNodes(List<T> nodes)
@@ -352,32 +424,31 @@ public class PostgreSqlRewrite
             }
             return (T) process(node);
         }
-    }
 
-    protected static QualifiedName getQualifiedName(Expression expression)
-    {
-        if (expression instanceof DereferenceExpression) {
-            return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+        protected static QualifiedName getQualifiedName(Expression expression)
+        {
+            if (expression instanceof DereferenceExpression) {
+                return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+            }
+            if (expression instanceof Identifier) {
+                return QualifiedName.of(ImmutableList.of((Identifier) expression));
+            }
+            return null;
         }
-        if (expression instanceof Identifier) {
-            return QualifiedName.of(ImmutableList.of((Identifier) expression));
-        }
-        return null;
-    }
 
-    protected static QualifiedName qualifiedName(CatalogSchemaTableName table)
-    {
-        return QualifiedName.of(ImmutableList.of(
-                new Identifier(table.getCatalogName()),
-                identifier(table.getSchemaTableName().getSchemaName()),
-                identifier(table.getSchemaTableName().getTableName())));
-    }
-
-    protected static Identifier identifier(String name)
-    {
-        if (KEYWORDS.contains(name.toUpperCase(ENGLISH))) {
-            return new Identifier(name, true);
+        protected static QualifiedName qualifiedName(SchemaTableName table)
+        {
+            return QualifiedName.of(ImmutableList.of(
+                    identifier(table.getSchemaName()),
+                    identifier(table.getTableName())));
         }
-        return new Identifier(name);
+
+        protected static Identifier identifier(String name)
+        {
+            if (KEYWORDS.contains(name.toUpperCase(ENGLISH))) {
+                return new Identifier(name, true);
+            }
+            return new Identifier(name);
+        }
     }
 }

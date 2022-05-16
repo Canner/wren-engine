@@ -33,6 +33,7 @@ import io.cml.type.VarcharType;
 
 import javax.inject.Inject;
 
+import java.util.AbstractCollection;
 import java.util.List;
 import java.util.Optional;
 
@@ -124,5 +125,25 @@ public class BigQueryConnector
     private Optional<Dataset> getDataset(String name)
     {
         return Optional.ofNullable(bigQuery.getDataset(name));
+    }
+
+    @Override
+    public Iterable<Object[]> directQuery(String sql)
+    {
+        requireNonNull(sql, "sql can't be null.");
+        try {
+            QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.newBuilder(sql).build();
+            TableResult results = bigQuery.query(queryJobConfiguration);
+            return Streams.stream(results.iterateAll()).map(AbstractCollection::toArray).collect(toImmutableList());
+        }
+        catch (InterruptedException ex) {
+            LOG.error(ex);
+            throw new CmlException(GENERIC_INTERNAL_ERROR, ex);
+        }
+        catch (BigQueryException ex) {
+            LOG.error(ex);
+            LOG.error("Failed SQL: %s", sql);
+            throw ex;
+        }
     }
 }

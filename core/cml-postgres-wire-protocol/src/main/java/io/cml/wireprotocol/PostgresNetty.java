@@ -19,14 +19,14 @@ import com.carrotsearch.hppc.IntSet;
 import io.airlift.log.Logger;
 import io.cml.PostgresWireProtocolConfig;
 import io.cml.netty.ChannelBootstrapFactory;
-import io.cml.wireprotocol.postgres.ssl.SslContextProvider;
-import io.cml.wireprotocol.postgres.ssl.SslReqHandler;
+import io.cml.pgcatalog.regtype.RegObjectFactory;
+import io.cml.wireprotocol.ssl.SslContextProvider;
+import io.cml.wireprotocol.ssl.SslReqHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.trino.sql.parser.SqlParser;
 import org.elasticsearch.common.network.NetworkAddress;
 import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Setting;
@@ -64,7 +64,6 @@ public class PostgresNetty
     public static final Setting<List<String>> GLOBAL_NETWORK_PUBLISH_HOST_SETTING =
             Setting.listSetting("network.publish_host", GLOBAL_NETWORK_HOST_SETTING, Function.identity(), Setting.Property.NodeScope);
 
-    private final SqlParser sqlParser;
     @Nullable
     private Netty4OpenChannelsHandler openChannels;
     private ServerBootstrap bootstrap;
@@ -81,13 +80,14 @@ public class PostgresNetty
     private final String[] bindHosts;
     private final String[] publishHosts;
 
+    private final RegObjectFactory regObjectFactory;
+
     public PostgresNetty(
-            SqlParser sqlParser,
             NetworkService networkService,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
-            SslContextProvider sslContextProvider)
+            SslContextProvider sslContextProvider,
+            RegObjectFactory regObjectFactory)
     {
-        this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
         this.threadCount = postgresWireProtocolConfig.getNettyThreadCount();
@@ -95,6 +95,7 @@ public class PostgresNetty
         publishHosts = GLOBAL_NETWORK_PUBLISH_HOST_SETTING.get(settings).toArray(new String[0]);
         this.networkService = networkService;
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
+        this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
     }
 
     public void start()
@@ -109,7 +110,7 @@ public class PostgresNetty
             {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
-                WireProtocolSession wireProtocolSession = new WireProtocolSession();
+                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);
