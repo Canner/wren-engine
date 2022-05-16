@@ -18,6 +18,32 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>configuration</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.api</groupId>
+            <artifactId>gax</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-credentials</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-core</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
@@ -32,6 +58,14 @@
         <dependency>
             <groupId>io.cml</groupId>
             <artifactId>cml-postgres-wire-protocol</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.cml</groupId>
+            <artifactId>cml-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.cml</groupId>
+            <artifactId>trino-parser</artifactId>
         </dependency>
     </dependencies>
 </project>
