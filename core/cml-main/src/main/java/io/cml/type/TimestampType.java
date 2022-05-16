@@ -19,15 +19,6 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.ResolverStyle;
-import java.util.Locale;
-
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_TIME;
-import static java.util.Locale.ENGLISH;
-
 public class TimestampType
         extends BaseTimestampType
 {
@@ -35,24 +26,6 @@ public class TimestampType
 
     private static final int OID = 1114;
     private static final String NAME = "timestamp";
-
-    private static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
-            .parseCaseInsensitive()
-            .appendPattern("yyyy-MM-dd HH:mm:ss.SSS")
-            .toFormatter(ENGLISH).withResolverStyle(ResolverStyle.STRICT);
-
-    private static final DateTimeFormatter PARSER_WITH_OPTIONAL_ERA = new DateTimeFormatterBuilder()
-            .parseCaseInsensitive()
-            .append(ISO_LOCAL_DATE)
-            .optionalStart()
-            .appendLiteral(' ')
-            .append(ISO_LOCAL_TIME)
-            .optionalStart()
-            .appendPattern("[VV][x][xx][xxx]")
-            .optionalStart()
-            .appendLiteral(' ')
-            .appendPattern("G")
-            .toFormatter(Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT);
 
     private TimestampType()
     {
