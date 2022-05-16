@@ -201,8 +201,20 @@ public class TestPostgreSqlRewrite
                 "SELECT * FROM pg_catalog.pg_attribute WHERE attrelid = " + oid("t1"));
         assertRewrite("SELECT typinput = 'array_in'::regproc FROM pg_type ",
                 format("SELECT typinput = %s \"?column?\" FROM pg_catalog.pg_type", functionOid("array_in")));
+        assertRewrite(format("SELECT typinput = %s::regproc FROM pg_type ", functionOid("array_in")),
+                format("SELECT typinput = %s \"?column?\" FROM pg_catalog.pg_type", functionOid("array_in")));
+        assertRewrite(format("SELECT attrelid = %s::regclass FROM pg_attribute ", oid("t1")),
+                format("SELECT attrelid = %s \"?column?\" FROM pg_catalog.pg_attribute", oid("t1")));
+
+        assertRewrite(format("SELECT * FROM pg_type WHERE typinput = %s::regproc", functionOid("array_in")),
+                format("SELECT * FROM pg_catalog.pg_type WHERE typinput = %s", functionOid("array_in")));
+        assertRewrite(format("SELECT * FROM pg_attribute WHERE attrelid = %s::regclass", oid("t1")),
+                format("SELECT * FROM pg_catalog.pg_attribute WHERE attrelid = %s", oid("t1")));
+
         assertRewrite("SELECT 'array_in'::regproc", format("SELECT 'array_in' \"?column?\""));
         assertRewrite("SELECT 't1'::regclass", format("SELECT 't1' \"?column?\""));
+        assertRewrite(format("SELECT %s::regproc", functionOid("array_in")), format("SELECT 'array_in' \"?column?\""));
+        assertRewrite(format("SELECT %s::regclass", oid("t1")), format("SELECT 't1' \"?column?\""));
     }
 
     void assertTableNameRewriteAndNoRewrite(@Language("SQL") String sqlFormat)

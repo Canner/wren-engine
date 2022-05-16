@@ -45,11 +45,11 @@ public final class RegObjectFactory
 
     public RegObject of(String type, int oid)
     {
-        return factoryMap.get(type).of(oid);
+        return factoryMap.get(type.toUpperCase(ROOT)).of(oid);
     }
 
     public Optional<RegObject> of(String type, int oid, String name)
     {
-        return factoryMap.get(type).of(oid, name);
+        return factoryMap.get(type.toUpperCase(ROOT)).of(oid, name);
     }
 }

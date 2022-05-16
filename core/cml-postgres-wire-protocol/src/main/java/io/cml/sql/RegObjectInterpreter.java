@@ -17,6 +17,7 @@ package io.cml.sql;
 import io.cml.pgcatalog.regtype.RegObject;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Identifier;
@@ -58,6 +59,20 @@ public class RegObjectInterpreter
         protected Object visitGenericLiteral(GenericLiteral node, Object context)
         {
             RegObject regObject = regObjectFactory.of(node.getType(), node.getValue());
+            if (showObjectAsName) {
+                return new StringLiteral(regObject.getName());
+            }
+            return new LongLiteral(Integer.toString(regObject.getOid()));
+        }
+
+        @Override
+        protected Object visitCast(Cast node, Object context)
+        {
+            // oid is a longLiteral
+            if (!(node.getExpression() instanceof LongLiteral)) {
+                return null;
+            }
+            RegObject regObject = regObjectFactory.of(node.getType().toString(), (int) ((LongLiteral) node.getExpression()).getValue());
             if (showObjectAsName) {
                 return new StringLiteral(regObject.getName());
             }

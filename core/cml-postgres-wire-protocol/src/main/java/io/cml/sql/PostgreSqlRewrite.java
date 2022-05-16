@@ -20,6 +20,7 @@ import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.wireprotocol.BaseRewriteVisitor;
 import io.trino.sql.parser.SqlBaseLexer;
+import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CurrentUser;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -55,6 +56,8 @@ import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.INFORMATION_SCHEMA;
+import static io.cml.sql.PgOidTypeTableInfo.REGCLASS;
+import static io.cml.sql.PgOidTypeTableInfo.REGPROC;
 import static io.trino.sql.QueryUtil.functionCall;
 import static java.util.Locale.ENGLISH;
 import static java.util.Locale.ROOT;
@@ -180,11 +183,10 @@ public class PostgreSqlRewrite
         {
             Expression expression = node.getExpression();
             // Show regObject's name when it's in a single column.
-            if (expression instanceof GenericLiteral) {
+            if (expression instanceof GenericLiteral || expression instanceof Cast) {
                 Optional<Object> result = regObjectInterpreter.evaluate(expression, true);
                 expression = result.map(obj -> (Expression) obj).orElse(expression);
             }
-
             if (node.getAlias().isPresent()) {
                 selectItemsMap.put(node.getAlias().get(), expression);
             }
@@ -199,6 +201,17 @@ public class PostgreSqlRewrite
                     new SingleColumn(
                             visitAndCast(expression),
                             alias);
+        }
+
+        @Override
+        protected Node visitCast(Cast node, Void context)
+        {
+            String type = node.getType().toString().toUpperCase(ROOT);
+            if (type.equals(REGPROC.name()) || type.equals(REGCLASS.name())) {
+                Optional<Object> result = regObjectInterpreter.evaluate(node, false);
+                return result.map(obj -> (Expression) obj).orElse(node);
+            }
+            return node;
         }
 
         @Override
