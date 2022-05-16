@@ -16,13 +16,8 @@ package io.cml.type;
 
 import io.cml.spi.type.PGType;
 import io.netty.buffer.ByteBuf;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 import javax.annotation.Nonnull;
-
-import java.time.format.DateTimeFormatterBuilder;
-import java.util.Locale;
 
 public class TimestampWithTimeZoneType
         extends BaseTimestampType
@@ -31,12 +26,6 @@ public class TimestampWithTimeZoneType
 
     private static final int OID = 1184;
     private static final String NAME = "timestamptz";
-    private static final java.time.format.DateTimeFormatter ISO_OFFSET_DATE_TIME = new DateTimeFormatterBuilder()
-            .appendPattern("yyyy-MM-dd HH:mm:ss.SSSx").toFormatter();
-
-    // For Golang if date is AD (after Christ), era abbreviation is not parsed.
-    private static final DateTimeFormatter ISO_FORMATTER =
-            DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss.SSS+00").withZoneUTC().withLocale(Locale.ENGLISH);
 
     private TimestampWithTimeZoneType()
     {

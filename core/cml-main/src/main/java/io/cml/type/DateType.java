@@ -19,13 +19,6 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.ResolverStyle;
-import java.util.Locale;
-
-import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
-
 public class DateType
         extends PGType
 {
@@ -35,16 +28,6 @@ public class DateType
     private static final String NAME = "date";
     private static final int TYPE_LEN = 4;
     private static final int TYPE_MOD = -1;
-
-    private static final DateTimeFormatter ISO_FORMATTER = new DateTimeFormatterBuilder()
-            .parseCaseInsensitive()
-            .append(ISO_LOCAL_DATE)
-            .toFormatter(Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT);
-
-    private static final DateTimeFormatter ISO_FORMATTER_AD = new DateTimeFormatterBuilder()
-            .parseCaseInsensitive()
-            .appendPattern("yyyy-MM-dd")
-            .toFormatter(Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT);
 
     private DateType()
     {

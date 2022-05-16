@@ -52,7 +52,6 @@ public final class PGTypes
     private PGTypes() {}
 
     private static final Map<Integer, PGType<?>> TYPE_TABLE = new HashMap<>();
-    private static final Map<Integer, PGArray> INNER_OID_TO_PGARRAY;
     private static final Set<PGType<?>> TYPES;
 
     static {
@@ -89,7 +88,6 @@ public final class PGTypes
             TYPE_TABLE.put(array.oid(), array);
             innerToPgTypeBuilder.put(innerType.oid(), array);
         });
-        INNER_OID_TO_PGARRAY = innerToPgTypeBuilder.build();
 
         TYPES = new HashSet<>(TYPE_TABLE.values());
         // the following polymorphic types are added manually,
