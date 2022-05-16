@@ -16,10 +16,11 @@ package io.cml.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
+import io.cml.sql.PostgreSqlRewrite;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
-import io.cml.wireprotocol.postgres.FormatCodes;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Deallocate;
@@ -51,6 +52,7 @@ import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
 
 public class WireProtocolSession
 {
@@ -68,11 +70,13 @@ public class WireProtocolSession
     private CompletableFuture<Optional<GenericTableRecordIterable>> runningQuery = CompletableFuture.completedFuture(null);
     private final PostgreSqlRewrite postgreSqlRewrite;
     private final SqlParser sqlParser;
+    private final RegObjectFactory regObjectFactory;
 
-    public WireProtocolSession()
+    public WireProtocolSession(RegObjectFactory regObjectFactory)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
+        this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -167,7 +171,7 @@ public class WireProtocolSession
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(statementPreRewritten, PARSE_AS_DECIMAL);
-            Statement rewrittenStatement = postgreSqlRewrite.rewrite(parsedStatement);
+            Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,
                     new PreparedStatement(statementName, getFormattedSql(rewrittenStatement, sqlParser), rewrittenParamTypes, statementTrimmed, isSessionCommand(rewrittenStatement)));
