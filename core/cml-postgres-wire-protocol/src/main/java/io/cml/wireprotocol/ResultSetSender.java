@@ -15,7 +15,6 @@
 package io.cml.wireprotocol;
 
 import io.cml.spi.type.PGType;
-import io.cml.wireprotocol.postgres.FormatCodes;
 import io.netty.channel.Channel;
 
 import javax.annotation.Nonnull;
