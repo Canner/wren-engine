@@ -13,7 +13,6 @@
  */
 package io.cml.pgcatalog.table;
 
-import io.cml.pgcatalog.PgCatalogTableManager;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
@@ -31,13 +30,8 @@ public class PgTypeTable
 {
     public static final String NAME = "pg_type";
 
-    public PgTypeTable(PgCatalogTableManager pgCatalogTableManager)
-    {
-        super(pgCatalogTableManager);
-    }
-
     @Override
-    protected TableMetadata createMetadata(PgCatalogTableManager pgCatalogTableManager)
+    protected TableMetadata createMetadata()
     {
         return table(NAME)
                 .column("oid", INTEGER)

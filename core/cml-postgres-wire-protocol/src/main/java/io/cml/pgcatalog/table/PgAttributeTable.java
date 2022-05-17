@@ -13,7 +13,6 @@
  */
 package io.cml.pgcatalog.table;
 
-import io.cml.pgcatalog.PgCatalogTableManager;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
@@ -33,13 +32,8 @@ public class PgAttributeTable
 {
     public static final String NAME = "pg_attribute";
 
-    public PgAttributeTable(PgCatalogTableManager pgCatalogTableManager)
-    {
-        super(pgCatalogTableManager);
-    }
-
     @Override
-    protected TableMetadata createMetadata(PgCatalogTableManager pgCatalogTableManager)
+    protected TableMetadata createMetadata()
     {
         return table(NAME)
                 .column("attrelid", INTEGER, "${hash}(${columnName})")

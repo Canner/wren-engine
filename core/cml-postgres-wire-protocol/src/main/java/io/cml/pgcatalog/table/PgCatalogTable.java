@@ -14,23 +14,18 @@
 
 package io.cml.pgcatalog.table;
 
-import io.cml.pgcatalog.PgCatalogTableManager;
 import io.cml.spi.metadata.TableMetadata;
-
-import static java.util.Objects.requireNonNull;
 
 public abstract class PgCatalogTable
 {
     protected final TableMetadata tableMetadata;
-    protected final PgCatalogTableManager pgCatalogTableManager;
 
-    public PgCatalogTable(PgCatalogTableManager pgCatalogTableManager)
+    public PgCatalogTable()
     {
-        this.pgCatalogTableManager = requireNonNull(pgCatalogTableManager, "pgCatalogTableManager is null");
-        tableMetadata = createMetadata(pgCatalogTableManager);
+        tableMetadata = createMetadata();
     }
 
-    protected abstract TableMetadata createMetadata(PgCatalogTableManager pgCatalogTableManager);
+    protected abstract TableMetadata createMetadata();
 
     public TableMetadata getTableMetadata()
     {

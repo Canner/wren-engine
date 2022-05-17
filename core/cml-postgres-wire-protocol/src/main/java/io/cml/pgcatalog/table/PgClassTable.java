@@ -14,7 +14,6 @@
 
 package io.cml.pgcatalog.table;
 
-import io.cml.pgcatalog.PgCatalogTableManager;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.type.BooleanType;
 
@@ -33,13 +32,8 @@ public class PgClassTable
 {
     public static final String NAME = "pg_class";
 
-    public PgClassTable(PgCatalogTableManager pgCatalogTableManager)
-    {
-        super(pgCatalogTableManager);
-    }
-
     @Override
-    protected TableMetadata createMetadata(PgCatalogTableManager pgCatalogTableManager)
+    protected TableMetadata createMetadata()
     {
         return table(NAME)
                 .column("oid", INTEGER, "${hash}(${tableName})")
