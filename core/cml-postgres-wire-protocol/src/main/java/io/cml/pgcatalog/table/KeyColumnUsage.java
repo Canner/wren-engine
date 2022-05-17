@@ -14,7 +14,6 @@
 
 package io.cml.pgcatalog.table;
 
-import io.cml.pgcatalog.PgCatalogTableManager;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.type.VarcharType.VARCHAR;
@@ -24,13 +23,8 @@ public class KeyColumnUsage
 {
     public static final String NAME = "key_column_usage";
 
-    public KeyColumnUsage(PgCatalogTableManager pgCatalogTableManager)
-    {
-        super(pgCatalogTableManager);
-    }
-
     @Override
-    protected TableMetadata createMetadata(PgCatalogTableManager pgCatalogTableManager)
+    protected TableMetadata createMetadata()
     {
         return PgCatalogTableUtils.table(NAME)
                 .column("constraint_catalog", VARCHAR)

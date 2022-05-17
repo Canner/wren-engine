@@ -24,7 +24,7 @@ public final class PgCatalogTableUtils
     public static final String PG_CATALOG = "pg_catalog";
     public static final String DEFAULT_SCHEMA = "default";
     public static final String INFORMATION_SCHEMA = "information_schema";
-    public static final String DEFAULT_AUTH = "cannerflow";
+    public static final String DEFAULT_AUTH = "cml";
 
     private PgCatalogTableUtils() {}
 
