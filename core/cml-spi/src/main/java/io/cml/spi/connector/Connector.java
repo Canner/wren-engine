@@ -28,6 +28,8 @@ public interface Connector
 
     List<TableMetadata> listTables(String schemaName);
 
+    List<String> listFunctionNames(String schemaName);
+
     boolean directDDL(String sql);
 
     Iterable<Object[]> directQuery(String sql);

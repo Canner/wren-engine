@@ -20,6 +20,7 @@ import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
@@ -98,6 +99,20 @@ public class BigQueryConnector
             fullTable.getDefinition().getSchema().getFields().forEach(field -> builder.column(field.getName(), VarcharType.VARCHAR, null));
             return builder.build();
         }).collect(toImmutableList());
+    }
+
+    @Override
+    public List<String> listFunctionNames(String schemaName)
+    {
+        Optional<Dataset> dataset = getDataset(schemaName);
+        if (dataset.isEmpty()) {
+            throw new CmlException(NOT_FOUND, format("Dataset %s is not found", schemaName));
+        }
+        Page<Routine> routines = bigQuery.listRoutines(dataset.get().getDatasetId(), BigQuery.RoutineListOption.pageSize(100));
+        if (routines == null) {
+            throw new CmlException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
+        }
+        return Streams.stream(routines.iterateAll()).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
     }
 
     @Override

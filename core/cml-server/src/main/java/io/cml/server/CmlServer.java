@@ -17,7 +17,7 @@ package io.cml.server;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.cml.pgcatalog.PgCatalogTableManager;
+import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
 import io.cml.wireprotocol.ssl.EmptyTlsDataProvider;
@@ -33,8 +33,8 @@ public class CmlServer
     @Override
     protected void configure(Injector injector)
     {
-        PgCatalogTableManager pgCatalogTableManager = injector.getInstance(PgCatalogTableManager.class);
-        pgCatalogTableManager.initPgCatalog();
+        PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
+        pgCatalogManager.initPgCatalog();
     }
 
     @Override

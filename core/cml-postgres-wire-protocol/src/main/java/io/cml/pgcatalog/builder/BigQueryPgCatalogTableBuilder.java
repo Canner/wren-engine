@@ -19,7 +19,6 @@ import io.cml.pgcatalog.table.PgCatalogTable;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.type.PGType;
-import io.cml.type.PGArray;
 
 import javax.inject.Inject;
 
@@ -29,38 +28,21 @@ import java.util.stream.IntStream;
 
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.cml.pgcatalog.builder.BigQuerySqls.createOrReplaceAllColumn;
-import static io.cml.pgcatalog.builder.BigQuerySqls.createOrReplaceAllTable;
-import static io.cml.pgcatalog.builder.PgCatalogBuilderUtils.generatePgTypeRecords;
-import static io.cml.type.BigIntType.BIGINT;
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.BpCharType.BPCHAR;
-import static io.cml.type.ByteaType.BYTEA;
+import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
+import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllTable;
+import static io.cml.pgcatalog.builder.BigQueryUtils.getOidToBqType;
+import static io.cml.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
 import static io.cml.type.CharType.CHAR;
-import static io.cml.type.DateType.DATE;
-import static io.cml.type.DoubleType.DOUBLE;
-import static io.cml.type.InetType.INET;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.JsonType.JSON;
-import static io.cml.type.NumericType.NUMERIC;
-import static io.cml.type.OidType.OID_INSTANCE;
-import static io.cml.type.RealType.REAL;
 import static io.cml.type.RegprocType.REGPROC;
-import static io.cml.type.SmallIntType.SMALLINT;
-import static io.cml.type.TimestampType.TIMESTAMP;
-import static io.cml.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
-import static io.cml.type.UuidType.UUID;
-import static io.cml.type.VarcharType.NameType.NAME;
-import static io.cml.type.VarcharType.TextType.TEXT;
 import static io.cml.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
-public final class BigQueryPgCatalogBuilder
-        extends PgCatalogBuilder
+public final class BigQueryPgCatalogTableBuilder
+        extends PgCatalogTableBuilder
 {
     @Inject
-    public BigQueryPgCatalogBuilder(Connector connector)
+    public BigQueryPgCatalogTableBuilder(Connector connector)
     {
         super(connector);
     }
@@ -83,39 +65,7 @@ public final class BigQueryPgCatalogBuilder
     @Override
     protected Map<Integer, String> initOidToTypeMap()
     {
-        ImmutableMap.Builder<Integer, String> builder = ImmutableMap.<Integer, String>builder()
-                .put(BOOLEAN.oid(), "BOOL")
-                .put(SMALLINT.oid(), "SMALLINT")
-                .put(INTEGER.oid(), "INTEGER")
-                .put(BIGINT.oid(), "BIGINT")
-                .put(REAL.oid(), "FLOAT64") // BigQuery only has FLOAT64 for floating point type
-                .put(DOUBLE.oid(), "FLOAT64")
-                .put(NUMERIC.oid(), "NUMERIC")
-                .put(VARCHAR.oid(), "STRING")
-                .put(CHAR.oid(), "STRING")
-                .put(JSON.oid(), "JSON")
-                .put(TIMESTAMP.oid(), "TIMESTAMP")
-                .put(TIMESTAMP_WITH_TIMEZONE.oid(), "TIMESTAMP")
-                .put(TEXT.oid(), "STRING")
-                .put(NAME.oid(), "STRING")
-                .put(OID_INSTANCE.oid(), "INTEGER")
-                .put(DATE.oid(), "DATE")
-                .put(BYTEA.oid(), "BYTES")
-                .put(BPCHAR.oid(), "STRING")
-                .put(INET.oid(), "INET")
-                .put(UUID.oid(), "STRING")
-                .put(REGPROC.oid(), "STRING");
-        // TODO: support record type, hstore
-        // .put(EMPTY_RECORD.oid(), "STRUCT")
-        // .put(HSTORE.oid(), "STRUCT")
-
-        Map<Integer, String> simpleTypeMap = builder.build();
-
-        for (PGArray pgArray : PGArray.allArray()) {
-            String innerType = simpleTypeMap.get(pgArray.getInnerType().oid());
-            builder.put(pgArray.oid(), format("ARRAY<%s>", innerType));
-        }
-        return builder.build();
+        return getOidToBqType();
     }
 
     @Override

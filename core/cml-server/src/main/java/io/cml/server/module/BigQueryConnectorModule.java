@@ -28,8 +28,10 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryConnector;
 import io.cml.connector.bigquery.BigQueryCredentialsSupplier;
-import io.cml.pgcatalog.builder.BigQueryPgCatalogBuilder;
-import io.cml.pgcatalog.builder.PgCatalogBuilder;
+import io.cml.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
+import io.cml.pgcatalog.builder.BigQueryPgFunctionBuilder;
+import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
+import io.cml.pgcatalog.builder.PgFunctionBuilder;
 import io.cml.pgcatalog.regtype.BigQueryPgMetadata;
 import io.cml.pgcatalog.regtype.PgMetadata;
 import io.cml.spi.connector.Connector;
@@ -45,7 +47,8 @@ public class BigQueryConnectorModule
     protected void setup(Binder binder)
     {
         binder.bind(Connector.class).to(BigQueryConnector.class);
-        binder.bind(PgCatalogBuilder.class).to(BigQueryPgCatalogBuilder.class).in(Scopes.SINGLETON);
+        binder.bind(PgCatalogTableBuilder.class).to(BigQueryPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
+        binder.bind(PgFunctionBuilder.class).to(BigQueryPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
     }

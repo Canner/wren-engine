@@ -16,7 +16,9 @@ package io.cml.pgcatalog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.cml.pgcatalog.builder.PgCatalogBuilder;
+import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
+import io.cml.pgcatalog.builder.PgFunctionBuilder;
+import io.cml.pgcatalog.function.PgFunction;
 import io.cml.pgcatalog.table.CharacterSets;
 import io.cml.pgcatalog.table.KeyColumnUsage;
 import io.cml.pgcatalog.table.PgAmTable;
@@ -47,22 +49,30 @@ import java.util.Map;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+import static io.cml.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
+import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
+import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
 import static java.util.Objects.requireNonNull;
 
-public class PgCatalogTableManager
+public class PgCatalogManager
 {
     private final Map<String, PgCatalogTable> tables;
+    private final List<PgFunction> functions;
+
     private final Connector connector;
-    private final PgCatalogBuilder pgCatalogBuilder;
+    private final PgCatalogTableBuilder pgCatalogTableBuilder;
+    private final PgFunctionBuilder pgFunctionBuilder;
 
     private final List<String> highPriorityTableName = ImmutableList.of(PgTypeTable.NAME);
 
     @Inject
-    public PgCatalogTableManager(Connector connector, PgCatalogBuilder pgCatalogBuilder)
+    public PgCatalogManager(Connector connector, PgCatalogTableBuilder pgCatalogTableBuilder, PgFunctionBuilder pgFunctionBuilder)
     {
         this.tables = initTables();
+        this.functions = initFunctions();
         this.connector = requireNonNull(connector, "connector is null");
-        this.pgCatalogBuilder = requireNonNull(pgCatalogBuilder, "pgCatalogBuilder is null");
+        this.pgCatalogTableBuilder = requireNonNull(pgCatalogTableBuilder, "pgCatalogBuilder is null");
+        this.pgFunctionBuilder = requireNonNull(pgFunctionBuilder, "pgFunctionBuilder is null");
     }
 
     private Map<String, PgCatalogTable> initTables()
@@ -91,30 +101,47 @@ public class PgCatalogTableManager
                 .build();
     }
 
-    public Connector getConnector()
+    private List<PgFunction> initFunctions()
     {
-        return this.connector;
+        return ImmutableList.<PgFunction>builder()
+                .add(CURRENT_DATABASE)
+                .add(PG_RELATION_SIZE__INT___BIGINT)
+                .add(PG_RELATION_SIZE__INT_VARCHAR___BIGINT)
+                .build();
     }
 
     public void initPgCatalog()
     {
         createCatalogIfNotExist(PG_CATALOG_NAME);
         if (!isPgCatalogValid()) {
-            createCatalogIfNotExist(CML_TEMP_NAME);
+            initPgTables();
+            initPgFunctions();
+        }
+    }
 
-            // Some table has dependency with the high priority table.
-            // Create them first.
-            for (String tableName : highPriorityTableName) {
-                createPgCatalogTable(tables.get(tableName));
-            }
+    public void initPgTables()
+    {
+        createCatalogIfNotExist(CML_TEMP_NAME);
 
-            List<PgCatalogTable> lowPriorityTable = tables.values().stream()
-                    .filter(pgCatalogTable -> !highPriorityTableName.contains(pgCatalogTable.getName()))
-                    .collect(toImmutableList());
+        // Some table has dependency with the high priority table.
+        // Create them first.
+        for (String tableName : highPriorityTableName) {
+            createPgCatalogTable(tables.get(tableName));
+        }
 
-            for (PgCatalogTable pgCatalogTable : lowPriorityTable) {
-                createPgCatalogTable(pgCatalogTable);
-            }
+        List<PgCatalogTable> lowPriorityTable = tables.values().stream()
+                .filter(pgCatalogTable -> !highPriorityTableName.contains(pgCatalogTable.getName()))
+                .collect(toImmutableList());
+
+        for (PgCatalogTable pgCatalogTable : lowPriorityTable) {
+            createPgCatalogTable(pgCatalogTable);
+        }
+    }
+
+    public void initPgFunctions()
+    {
+        for (PgFunction pgFunction : functions) {
+            pgFunctionBuilder.createPgFunction(pgFunction);
         }
     }
 
@@ -128,11 +155,25 @@ public class PgCatalogTableManager
     private boolean isPgCatalogValid()
     {
         List<TableMetadata> remoteTables = connector.listTables(PG_CATALOG_NAME);
-        return remoteTables.size() == tables.values().size();
+        if (remoteTables.size() != tables.values().size()) {
+            return false;
+        }
+
+        List<String> remoteFunctions = connector.listFunctionNames(PG_CATALOG_NAME);
+        if (functions.size() != remoteFunctions.size()) {
+            return false;
+        }
+
+        return true;
     }
 
     private void createPgCatalogTable(PgCatalogTable pgCatalogTable)
     {
-        pgCatalogBuilder.createPgTable(pgCatalogTable);
+        pgCatalogTableBuilder.createPgTable(pgCatalogTable);
+    }
+
+    public List<PgFunction> getFunctions()
+    {
+        return functions;
     }
 }
