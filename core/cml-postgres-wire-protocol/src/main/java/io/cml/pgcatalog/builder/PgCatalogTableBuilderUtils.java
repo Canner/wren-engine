@@ -26,9 +26,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.PG_CATALOG;
 
-public final class PgCatalogBuilderUtils
+public final class PgCatalogTableBuilderUtils
 {
-    private PgCatalogBuilderUtils() {}
+    private PgCatalogTableBuilderUtils() {}
 
     public static List<Object[]> generatePgTypeRecords(PgCatalogTable pgCatalogTable, Map<Integer, String> oidToTypeMap)
     {

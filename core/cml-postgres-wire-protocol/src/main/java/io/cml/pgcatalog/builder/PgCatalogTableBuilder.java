@@ -46,15 +46,15 @@ import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public abstract class PgCatalogBuilder
+public abstract class PgCatalogTableBuilder
 {
-    private static final Logger LOG = Logger.get(PgCatalogBuilder.class);
+    private static final Logger LOG = Logger.get(PgCatalogTableBuilder.class);
     private final Connector connector;
     private final Map<String, String> replaceMap;
     private final Map<Integer, String> oidToTypeMap;
     private final StrSubstitutor strSubstitutor;
 
-    public PgCatalogBuilder(Connector connector)
+    public PgCatalogTableBuilder(Connector connector)
     {
         this.connector = requireNonNull(connector, "connector is null");
         this.replaceMap = initReplaceMap();

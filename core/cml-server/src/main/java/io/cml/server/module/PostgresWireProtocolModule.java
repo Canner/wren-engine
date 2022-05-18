@@ -19,7 +19,7 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.cml.PostgresNettyProvider;
 import io.cml.PostgresWireProtocolConfig;
-import io.cml.pgcatalog.PgCatalogTableManager;
+import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.wireprotocol.PostgresNetty;
 import io.cml.wireprotocol.ssl.SslContextProvider;
@@ -45,7 +45,7 @@ public class PostgresWireProtocolModule
         binder.bind(SqlParser.class).in(Scopes.SINGLETON);
         binder.bind(TlsDataProvider.class).toInstance(tlsDataProvider);
         binder.bind(SslContextProvider.class).in(Scopes.SINGLETON);
-        binder.bind(PgCatalogTableManager.class).in(Scopes.SINGLETON);
+        binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
         binder.bind(RegObjectFactory.class).in((Scopes.SINGLETON));
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
     }
