@@ -30,7 +30,7 @@ import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.MetadataUtil;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.type.VarcharType;
+import io.cml.spi.type.VarcharType;
 
 import javax.inject.Inject;
 

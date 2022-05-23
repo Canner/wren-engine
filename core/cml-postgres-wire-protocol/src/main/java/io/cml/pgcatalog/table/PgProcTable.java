@@ -17,15 +17,15 @@ package io.cml.pgcatalog.table;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.CharType.CHAR;
-import static io.cml.type.DoubleType.DOUBLE;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.PGArray.CHAR_ARRAY;
-import static io.cml.type.PGArray.INT4_ARRAY;
-import static io.cml.type.PGArray.VARCHAR_ARRAY;
-import static io.cml.type.RegprocType.REGPROC;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.CharType.CHAR;
+import static io.cml.spi.type.DoubleType.DOUBLE;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.PGArray.CHAR_ARRAY;
+import static io.cml.spi.type.PGArray.INT4_ARRAY;
+import static io.cml.spi.type.PGArray.VARCHAR_ARRAY;
+import static io.cml.spi.type.RegprocType.REGPROC;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 /**
  * @see <a href="https://www.postgresql.org/docs/13/catalog-pg-proc.html">PostgreSQL pg_proc</a>

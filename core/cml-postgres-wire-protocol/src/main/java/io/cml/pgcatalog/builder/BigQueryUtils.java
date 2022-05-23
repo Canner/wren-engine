@@ -16,33 +16,33 @@ package io.cml.pgcatalog.builder;
 
 import com.google.common.collect.ImmutableMap;
 import io.cml.spi.connector.Connector;
-import io.cml.type.PGArray;
+import io.cml.spi.type.PGArray;
 
 import java.util.List;
 import java.util.Map;
 
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
-import static io.cml.type.BigIntType.BIGINT;
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.BpCharType.BPCHAR;
-import static io.cml.type.ByteaType.BYTEA;
-import static io.cml.type.CharType.CHAR;
-import static io.cml.type.DateType.DATE;
-import static io.cml.type.DoubleType.DOUBLE;
-import static io.cml.type.InetType.INET;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.JsonType.JSON;
-import static io.cml.type.NumericType.NUMERIC;
-import static io.cml.type.OidType.OID_INSTANCE;
-import static io.cml.type.RealType.REAL;
-import static io.cml.type.RegprocType.REGPROC;
-import static io.cml.type.SmallIntType.SMALLINT;
-import static io.cml.type.TimestampType.TIMESTAMP;
-import static io.cml.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
-import static io.cml.type.UuidType.UUID;
-import static io.cml.type.VarcharType.NameType.NAME;
-import static io.cml.type.VarcharType.TextType.TEXT;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.BigIntType.BIGINT;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.BpCharType.BPCHAR;
+import static io.cml.spi.type.ByteaType.BYTEA;
+import static io.cml.spi.type.CharType.CHAR;
+import static io.cml.spi.type.DateType.DATE;
+import static io.cml.spi.type.DoubleType.DOUBLE;
+import static io.cml.spi.type.InetType.INET;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.JsonType.JSON;
+import static io.cml.spi.type.NumericType.NUMERIC;
+import static io.cml.spi.type.OidType.OID_INSTANCE;
+import static io.cml.spi.type.RealType.REAL;
+import static io.cml.spi.type.RegprocType.REGPROC;
+import static io.cml.spi.type.SmallIntType.SMALLINT;
+import static io.cml.spi.type.TimestampType.TIMESTAMP;
+import static io.cml.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
+import static io.cml.spi.type.UuidType.UUID;
+import static io.cml.spi.type.VarcharType.NameType.NAME;
+import static io.cml.spi.type.VarcharType.TextType.TEXT;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 
 public final class BigQueryUtils

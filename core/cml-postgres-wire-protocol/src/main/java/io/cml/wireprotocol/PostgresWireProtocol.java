@@ -19,7 +19,7 @@ import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.type.PGType;
-import io.cml.type.PGTypes;
+import io.cml.spi.type.PGTypes;
 import io.cml.wireprotocol.ssl.SslReqHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

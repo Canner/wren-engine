@@ -56,11 +56,6 @@
 
         <dependency>
             <groupId>io.cml</groupId>
-            <artifactId>cml-main</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.cml</groupId>
             <artifactId>cml-spi</artifactId>
         </dependency>
 

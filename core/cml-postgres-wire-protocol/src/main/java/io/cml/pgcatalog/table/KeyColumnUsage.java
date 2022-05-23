@@ -16,7 +16,7 @@ package io.cml.pgcatalog.table;
 
 import io.cml.spi.metadata.TableMetadata;
 
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 public class KeyColumnUsage
         extends PgCatalogTable

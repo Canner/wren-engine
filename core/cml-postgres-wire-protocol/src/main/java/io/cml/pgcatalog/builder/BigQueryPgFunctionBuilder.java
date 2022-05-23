@@ -25,7 +25,7 @@ import java.util.Locale;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.cml.pgcatalog.builder.BigQueryUtils.getOidToBqType;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 
 public class BigQueryPgFunctionBuilder

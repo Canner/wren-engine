@@ -17,7 +17,7 @@ package io.cml.pgcatalog.builder;
 import com.google.common.collect.Streams;
 import io.cml.pgcatalog.OidHash;
 import io.cml.pgcatalog.table.PgCatalogTable;
-import io.cml.type.PGTypes;
+import io.cml.spi.type.PGTypes;
 
 import java.util.List;
 import java.util.Map;

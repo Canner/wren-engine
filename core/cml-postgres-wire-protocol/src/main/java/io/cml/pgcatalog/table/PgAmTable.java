@@ -16,9 +16,9 @@ package io.cml.pgcatalog.table;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.cml.type.CharType.CHAR;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.CharType.CHAR;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 /**
  * this table is unused in Cannerflow, so just an empty table

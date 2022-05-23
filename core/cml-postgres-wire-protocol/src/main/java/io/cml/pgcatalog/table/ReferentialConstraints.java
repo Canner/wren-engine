@@ -17,7 +17,7 @@ package io.cml.pgcatalog.table;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 public class ReferentialConstraints
         extends PgCatalogTable

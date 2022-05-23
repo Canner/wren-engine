@@ -16,11 +16,11 @@ package io.cml.pgcatalog.table;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.CharType.CHAR;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.RegprocType.REGPROC;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.CharType.CHAR;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.RegprocType.REGPROC;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 /**
  * @see <a href="https://www.postgresql.org/docs/8.4/catalog-pg-type.html#CATALOG-TYPCATEGORY-TABLE">PostgreSQL pg_type</a>

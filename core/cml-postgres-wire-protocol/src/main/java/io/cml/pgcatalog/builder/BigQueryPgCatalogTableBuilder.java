@@ -32,9 +32,9 @@ import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
 import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllTable;
 import static io.cml.pgcatalog.builder.BigQueryUtils.getOidToBqType;
 import static io.cml.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
-import static io.cml.type.CharType.CHAR;
-import static io.cml.type.RegprocType.REGPROC;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.CharType.CHAR;
+import static io.cml.spi.type.RegprocType.REGPROC;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
