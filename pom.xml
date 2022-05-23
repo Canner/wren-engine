@@ -236,27 +236,12 @@
                 <version>${dep.antlr.version}</version>
             </dependency>
 
-<<<<<<< Updated upstream
-=======
-            <dependency>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro</artifactId>
-                <version>1.9.2</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.apache.calcite</groupId>
                 <artifactId>calcite-core</artifactId>
                 <version>${calcite.version}</version>
             </dependency>
-
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-compress</artifactId>
-                <version>1.20</version>
-            </dependency>
-
->>>>>>> Stashed changes
+            
             <!-- TODO: move this to Airbase -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
