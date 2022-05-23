@@ -16,11 +16,11 @@ package io.cml.pgcatalog.table;
 
 import io.cml.spi.metadata.TableMetadata;
 
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.PGArray.VARCHAR_ARRAY;
-import static io.cml.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.PGArray.VARCHAR_ARRAY;
+import static io.cml.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 /**
  * this table is unused in Cannerflow, so just an empty table

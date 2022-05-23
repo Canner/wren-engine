@@ -3,7 +3,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,9 +19,9 @@ import com.google.common.collect.ImmutableList;
 import static io.cml.pgcatalog.function.PgFunction.Argument.argument;
 import static io.cml.pgcatalog.function.PgFunction.Language.SQL;
 import static io.cml.pgcatalog.function.PgFunction.builder;
-import static io.cml.type.BigIntType.BIGINT;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.VarcharType.VARCHAR;
+import static io.cml.spi.type.BigIntType.BIGINT;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.VarcharType.VARCHAR;
 
 public final class PgFunctions
 {

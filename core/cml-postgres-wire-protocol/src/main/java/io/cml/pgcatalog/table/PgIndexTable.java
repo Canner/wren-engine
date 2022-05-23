@@ -17,10 +17,10 @@ package io.cml.pgcatalog.table;
 import io.cml.spi.metadata.TableMetadata;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.cml.type.BooleanType.BOOLEAN;
-import static io.cml.type.IntegerType.INTEGER;
-import static io.cml.type.PGArray.INT4_ARRAY;
-import static io.cml.type.PGArray.VARCHAR_ARRAY;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.PGArray.INT4_ARRAY;
+import static io.cml.spi.type.PGArray.VARCHAR_ARRAY;
 
 /**
  * this table is unused in Cannerflow, so just an empty table
