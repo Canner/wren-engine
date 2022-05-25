@@ -28,6 +28,7 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryConnector;
 import io.cml.connector.bigquery.BigQueryCredentialsSupplier;
+import io.cml.connector.bigquery.BigQuerySqlConverter;
 import io.cml.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
 import io.cml.pgcatalog.builder.BigQueryPgFunctionBuilder;
 import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
@@ -50,6 +51,7 @@ public class BigQueryConnectorModule
         binder.bind(PgCatalogTableBuilder.class).to(BigQueryPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgFunctionBuilder.class).to(BigQueryPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);
+        binder.bind(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
     }
 

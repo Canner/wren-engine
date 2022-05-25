@@ -190,6 +190,12 @@
 
             <dependency>
                 <groupId>io.cml</groupId>
+                <artifactId>cml-calcite</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
                 <artifactId>cml-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -246,8 +252,16 @@
                         <artifactId>commons-logging</artifactId>
                     </exclusion>
                     <exclusion>
+                        <groupId>org.apache.commons</groupId>
+                        <artifactId>commons-lang3</artifactId>
+                    </exclusion>
+                    <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.yaml</groupId>
+                        <artifactId>snakeyaml</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
