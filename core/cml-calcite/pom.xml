@@ -27,6 +27,11 @@
 
         <dependency>
             <groupId>io.cml</groupId>
+            <artifactId>cml-spi</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.cml</groupId>
             <artifactId>trino-parser</artifactId>
         </dependency>
 
