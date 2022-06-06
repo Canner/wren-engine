@@ -208,6 +208,12 @@
 
             <dependency>
                 <groupId>io.cml</groupId>
+                <artifactId>cml-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
                 <artifactId>cml-spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
