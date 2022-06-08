@@ -70,6 +70,7 @@
         <module>core/cml-postgres-wire-protocol</module>
         <module>core/cml-server</module>
         <module>core/cml-spi</module>
+        <module>core/cml-testing</module>
         <module>core/trino-parser</module>
     </modules>
 

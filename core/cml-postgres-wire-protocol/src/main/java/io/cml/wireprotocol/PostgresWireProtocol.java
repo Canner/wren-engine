@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
 import io.cml.wireprotocol.ssl.SslReqHandler;
@@ -259,7 +260,7 @@ public class PostgresWireProtocol
         try {
             wireProtocolSession.parse("", statement, ImmutableList.of());
             wireProtocolSession.bind("", "", ImmutableList.of(), null);
-            Optional<GenericTableRecordIterable> iterable = wireProtocolSession.execute("").join();
+            Optional<ConnectorRecordIterable> iterable = wireProtocolSession.execute("").join();
             if (iterable.isEmpty()) {
                 sendHardWiredSessionProperty(statement);
                 Messages.sendCommandComplete(channel, statement, 0);
@@ -450,16 +451,16 @@ public class PostgresWireProtocol
             }
 
             if (!portal.isSuspended()) {
-                Optional<GenericTableRecordIterable> genericTableRecordIterable = wireProtocolSession.execute(portalName).join();
-                if (genericTableRecordIterable.isEmpty()) {
+                Optional<ConnectorRecordIterable> connectorRecordIterable = wireProtocolSession.execute(portalName).join();
+                if (connectorRecordIterable.isEmpty()) {
                     sendHardWiredSessionProperty(statement);
                     Messages.sendCommandComplete(channel, statement, 0);
                     return;
                 }
-                portal.setResultSetSender(genericTableRecordIterable.get());
+                portal.setResultSetSender(connectorRecordIterable.get());
             }
 
-            GenericTableRecordIterable hiveRecordIterable = portal.getGenericTableRecordIterable();
+            ConnectorRecordIterable hiveRecordIterable = portal.getConnectorRecordIterable();
             FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,

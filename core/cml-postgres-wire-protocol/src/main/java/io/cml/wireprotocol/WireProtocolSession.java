@@ -19,6 +19,8 @@ import io.airlift.log.Logger;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
+import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.connector.Connector;
 import io.cml.sql.PostgreSqlRewrite;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
 import io.trino.sql.parser.ParsingOptions;
@@ -71,12 +73,14 @@ public class WireProtocolSession
     private final PostgreSqlRewrite postgreSqlRewrite;
     private final SqlParser sqlParser;
     private final RegObjectFactory regObjectFactory;
+    private final Connector connector;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory)
+    public WireProtocolSession(RegObjectFactory regObjectFactory, Connector connector)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
+        this.connector = requireNonNull(connector, "connector is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -145,7 +149,7 @@ public class WireProtocolSession
      */
     public boolean doAuthentication(String personalAccessToken)
     {
-        throw new UnsupportedOperationException();
+        return true;
     }
 
     public Optional<List<Column>> describePortal(String name)
@@ -203,14 +207,15 @@ public class WireProtocolSession
         LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
     }
 
-    public CompletableFuture<Optional<GenericTableRecordIterable>> execute(String portalName)
+    public CompletableFuture<Optional<ConnectorRecordIterable>> execute(String portalName)
     {
-        throw new UnsupportedOperationException();
+        return execute(portals.get(portalName));
     }
 
-    private CompletableFuture<Optional<Iterable<?>>> executeQuery(Portal portal)
+    private CompletableFuture<Optional<ConnectorRecordIterable>> execute(Portal portal)
     {
-        throw new UnsupportedOperationException();
+        String execStmt = portal.getPreparedStatement().getStatement();
+        return CompletableFuture.supplyAsync(() -> Optional.of(connector.directQuery(execStmt)));
     }
 
     private CompletableFuture<Optional<Iterable<?>>> executeSessionCommand(Portal portal)

@@ -12,26 +12,21 @@
  * limitations under the License.
  */
 
-package io.cml.spi.connector;
+package io.cml.testing;
 
-import io.cml.spi.ConnectorRecordIterable;
-import io.cml.spi.metadata.TableMetadata;
+import com.google.common.net.HostAndPort;
 
-import java.util.List;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
-public interface Connector
+public abstract class AbstractWireProtocolTest
+        extends RequireWireProtocolServer
 {
-    void createSchema(String name);
-
-    boolean isSchemaExist(String name);
-
-    List<String> listSchemas();
-
-    List<TableMetadata> listTables(String schemaName);
-
-    List<String> listFunctionNames(String schemaName);
-
-    boolean directDDL(String sql);
-
-    ConnectorRecordIterable directQuery(String sql);
+    protected TestingWireProtocolClient wireProtocolClient()
+            throws IOException
+    {
+        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        return new TestingWireProtocolClient(
+                new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()));
+    }
 }

@@ -14,6 +14,7 @@
 
 package io.cml.wireprotocol;
 
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.type.PGType;
 import io.netty.channel.Channel;
 
@@ -21,14 +22,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 
 class ResultSetSender
         extends BaseResultSender
 {
     private final String query;
     private final Channel channel;
-    private final GenericTableRecordIterable genericTableRecordIterable;
+    private final ConnectorRecordIterable connectorRecordIterable;
     private final List<PGType> schema;
     private final int maxRows;
 
@@ -40,22 +40,22 @@ class ResultSetSender
 
     ResultSetSender(String query,
             Channel channel,
-            GenericTableRecordIterable genericTableRecordIterable,
+            ConnectorRecordIterable connectorRecordIterable,
             int maxRows,
             long previousCount,
             @Nullable FormatCodes.FormatCode[] formatCodes)
     {
         this.query = query;
         this.channel = channel;
-        this.genericTableRecordIterable = genericTableRecordIterable;
-        this.schema = genericTableRecordIterable.getTypes();
+        this.connectorRecordIterable = connectorRecordIterable;
+        this.schema = connectorRecordIterable.getTypes();
         this.maxRows = maxRows;
         this.totalRowCount = previousCount;
         this.formatCodes = formatCodes;
     }
 
     @Override
-    public void sendRow(List row)
+    public void sendRow(Object[] row)
     {
         localRowCount++;
         Messages.sendDataRow(channel, row, schema, formatCodes);
@@ -89,9 +89,9 @@ class ResultSetSender
 
     public long sendResultSet()
     {
-        for (List<Optional<Object>> optionals : genericTableRecordIterable) {
+        for (Object[] optionals : connectorRecordIterable) {
             sendRow(optionals);
-            if (maxRows > 0 && genericTableRecordIterable.iterator().hasNext() && localRowCount % maxRows == 0) {
+            if (maxRows > 0 && connectorRecordIterable.iterator().hasNext() && localRowCount % maxRows == 0) {
                 batchFinished();
                 totalRowCount += localRowCount;
                 return totalRowCount;

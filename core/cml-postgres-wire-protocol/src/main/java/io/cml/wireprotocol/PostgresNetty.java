@@ -16,10 +16,12 @@ package io.cml.wireprotocol;
 
 import com.carrotsearch.hppc.IntHashSet;
 import com.carrotsearch.hppc.IntSet;
+import com.google.common.net.HostAndPort;
 import io.airlift.log.Logger;
 import io.cml.PostgresWireProtocolConfig;
 import io.cml.netty.ChannelBootstrapFactory;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
+import io.cml.spi.connector.Connector;
 import io.cml.wireprotocol.ssl.SslContextProvider;
 import io.cml.wireprotocol.ssl.SslReqHandler;
 import io.netty.bootstrap.ServerBootstrap;
@@ -69,24 +71,23 @@ public class PostgresNetty
     private ServerBootstrap bootstrap;
     private final Settings settings;
     private final SslContextProvider sslContextProvider;
-
     private final NetworkService networkService;
-
     private final List<Channel> serverChannels = new ArrayList<>();
     private final List<TransportAddress> boundAddresses = new ArrayList<>();
-
     private final String port;
     private final int threadCount;
     private final String[] bindHosts;
     private final String[] publishHosts;
-
     private final RegObjectFactory regObjectFactory;
+    private final Connector connector;
+    private BoundTransportAddress boundAddress;
 
     public PostgresNetty(
             NetworkService networkService,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             SslContextProvider sslContextProvider,
-            RegObjectFactory regObjectFactory)
+            RegObjectFactory regObjectFactory,
+            Connector connector)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -96,6 +97,7 @@ public class PostgresNetty
         this.networkService = networkService;
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
+        this.connector = requireNonNull(connector, "connector is null");
     }
 
     public void start()
@@ -110,7 +112,7 @@ public class PostgresNetty
             {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
-                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory);
+                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory, connector);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);
@@ -121,7 +123,7 @@ public class PostgresNetty
 
         boolean success = false;
         try {
-            BoundTransportAddress boundAddress = resolveBindAddress();
+            boundAddress = resolveBindAddress();
             LOGGER.info("Postgre wire protocol server start. Bound Address: %s", boundAddress);
             success = true;
         }
@@ -132,6 +134,12 @@ public class PostgresNetty
                 close();
             }
         }
+    }
+
+    public HostAndPort getHostAndPort()
+    {
+        TransportAddress transportAddress = boundAddress.publishAddress();
+        return HostAndPort.fromParts(transportAddress.getAddress(), transportAddress.getPort());
     }
 
     private BoundTransportAddress resolveBindAddress()
