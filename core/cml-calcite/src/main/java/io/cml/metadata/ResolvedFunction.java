@@ -12,32 +12,37 @@
  * limitations under the License.
  */
 
-package io.cml.calcite;
+package io.cml.metadata;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.impl.AbstractTable;
+import io.cml.spi.type.PGType;
 
-public class CmlTable
-        extends AbstractTable
+import java.util.List;
+
+public class ResolvedFunction
 {
     private final String name;
-    private final RelDataType rowType;
+    private final PGType returnType;
+    private final List<PGType> argumentTypes;
 
-    public CmlTable(String name, RelDataType rowType)
+    public ResolvedFunction(String name, PGType returnType, List<PGType> argumentTypes)
     {
-        this.rowType = rowType;
         this.name = name;
-    }
-
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory)
-    {
-        return rowType;
+        this.returnType = returnType;
+        this.argumentTypes = argumentTypes;
     }
 
     public String getName()
     {
         return name;
+    }
+
+    public PGType getReturnType()
+    {
+        return returnType;
+    }
+
+    public List<PGType> getArgumentTypes()
+    {
+        return argumentTypes;
     }
 }
