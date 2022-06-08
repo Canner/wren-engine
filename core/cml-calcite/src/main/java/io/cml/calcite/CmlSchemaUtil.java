@@ -111,7 +111,7 @@ public final class CmlSchemaUtil
             builder.add(columnMetadata.getName(), toRelDataType(typeFactory, columnMetadata.getType()));
         }
 
-        return new CmlTable(builder.build());
+        return new CmlTable(tableMetadata.getTable().getTableName(), builder.build());
     }
 
     private static CmlSchema toCmlSchema(List<TableMetadata> tables)

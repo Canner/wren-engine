@@ -11,33 +11,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.cml.metadata;
 
-package io.cml.calcite;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import io.cml.calcite.CmlTable;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.impl.AbstractTable;
+import static java.util.Objects.requireNonNull;
 
-public class CmlTable
-        extends AbstractTable
+public final class TableHandle
 {
-    private final String name;
-    private final RelDataType rowType;
+    private final CmlTable table;
 
-    public CmlTable(String name, RelDataType rowType)
+    @JsonCreator
+    public TableHandle(CmlTable table)
     {
-        this.rowType = rowType;
-        this.name = name;
+        this.table = requireNonNull(table, "table is null");
     }
 
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory)
+    public String toString()
     {
-        return rowType;
-    }
-
-    public String getName()
-    {
-        return name;
+        return table.getName();
     }
 }
