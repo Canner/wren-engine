@@ -124,7 +124,7 @@ public class LogicalPlanner
         private void planFrom(Relation from, Node source)
         {
             if (from instanceof Table) {
-                relBuilder.scan(((Table) from).getName().toString());
+                relBuilder.scan(((Table) from).getName().getParts());
                 return;
             }
             throw new IllegalArgumentException();
@@ -221,7 +221,7 @@ public class LogicalPlanner
             return analysis.tryGetScope(source).map(scope ->
                     scope.getRelationId().getSourceNode()
                             .filter(node -> node instanceof Table)
-                            .map(table -> ((Table) table).getName().toString()).orElse(""));
+                            .map(table -> ((Table) table).getName().getSuffix()).orElse(""));
         }
 
         private RelBuilder.AggCall functionCallToAggCall(FunctionCall functionCall, Node source)

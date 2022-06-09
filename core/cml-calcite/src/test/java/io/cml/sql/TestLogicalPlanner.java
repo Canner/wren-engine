@@ -38,6 +38,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.tools.Frameworks;
@@ -67,6 +68,8 @@ public class TestLogicalPlanner
     {
         RelDataTypeFactory typeFactory = new JavaTypeFactoryImpl();
         SchemaPlus schema = Frameworks.createRootSchema(true);
+        SchemaPlus tiny = schema.add("tiny", new AbstractSchema());
+
         ImmutableMap.Builder<String, CmlTable> cmlTableBuilder = ImmutableMap.builder();
         for (TpchTable table : TpchTable.values()) {
             RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
@@ -74,9 +77,10 @@ public class TestLogicalPlanner
                 RelDataType type = typeFactory.createJavaType(column.type);
                 builder.add(column.name, type.getSqlTypeName()).nullable(true);
             }
-            schema.add(table.name().toLowerCase(Locale.ROOT), new CmlTable(table.name().toLowerCase(Locale.ROOT), builder.build()));
+            tiny.add(table.name().toLowerCase(Locale.ROOT), new CmlTable(table.name().toLowerCase(Locale.ROOT), builder.build()));
             cmlTableBuilder.put(table.name().toLowerCase(Locale.ROOT), new CmlTable(table.name().toLowerCase(Locale.ROOT), builder.build()));
         }
+
         this.metadata = new TpchMetadata(cmlTableBuilder.build());
         this.analyzer = new StatementAnalyzer(metadata);
         this.relOptCluster = createCluster(typeFactory);
@@ -96,7 +100,7 @@ public class TestLogicalPlanner
     {
         String sql = "SELECT * FROM tpch.tiny.orders";
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
-        Analysis analysis = analyzer.analyze(new Analysis(statement), relOptCluster, reader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner planner = new LogicalPlanner(analysis, relOptCluster, reader, metadata);
         RelNode relNode = planner.plan(statement);
         System.out.println(
@@ -111,7 +115,7 @@ public class TestLogicalPlanner
         Path path = Paths.get(requireNonNull(getClass().getClassLoader().getResource("tpch/q1.sql")).toURI());
         String sql = Files.readString(path);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
-        Analysis analysis = analyzer.analyze(new Analysis(statement), relOptCluster, reader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner planner = new LogicalPlanner(analysis, relOptCluster, reader, metadata);
         RelNode relNode = planner.plan(statement);
         System.out.println(

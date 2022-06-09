@@ -39,9 +39,9 @@ public final class MetadataUtil
 
         List<String> parts = Lists.reverse(name.getParts());
         String objectName = parts.get(0);
-        // String schemaName = parts.get(1);
-        // String catalogName = parts.get(2);
+        String schemaName = (parts.size() > 1) ? parts.get(1) : "";
+        String catalogName = (parts.size() > 2) ? parts.get(2) : "";
 
-        return new QualifiedObjectName("", "", objectName);
+        return new QualifiedObjectName(catalogName, schemaName, objectName);
     }
 }
