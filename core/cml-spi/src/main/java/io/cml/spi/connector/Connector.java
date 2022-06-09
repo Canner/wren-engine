@@ -14,6 +14,7 @@
 
 package io.cml.spi.connector;
 
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
 
@@ -38,5 +39,5 @@ public interface Connector
 
     void directDDL(String sql);
 
-    Iterable<Object[]> directQuery(String sql);
+    ConnectorRecordIterable directQuery(String sql);
 }

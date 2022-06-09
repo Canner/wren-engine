@@ -25,7 +25,6 @@ import io.netty.channel.ChannelFutureListener;
 import javax.annotation.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
@@ -265,21 +264,21 @@ public class Messages
      * The value of the column, in the format indicated by the associated format code. n is the above length.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    static void sendDataRow(Channel channel, List<Optional<Object>> row, List<PGType> schema, @Nullable FormatCodes.FormatCode[] formatCodes)
+    static void sendDataRow(Channel channel, Object[] row, List<PGType> schema, @Nullable FormatCodes.FormatCode[] formatCodes)
     {
         int length = 4 + 2;
 
         ByteBuf buffer = channel.alloc().buffer();
         buffer.writeByte('D');
         buffer.writeInt(0); // will be set at the end
-        buffer.writeShort(row.size());
+        buffer.writeShort(row.length);
 
-        for (int i = 0; i < row.size(); i++) {
+        for (int i = 0; i < row.length; i++) {
             Object value;
             try {
-                if (row.get(i).isPresent()) {
+                if (row[i] != null) {
                     FormatCodes.FormatCode formatCode = FormatCodes.getFormatCode(formatCodes, i);
-                    value = row.get(i).get();
+                    value = row[i];
                     switch (formatCode) {
                         case TEXT:
                             length += schema.get(i).writeAsText(buffer, value);

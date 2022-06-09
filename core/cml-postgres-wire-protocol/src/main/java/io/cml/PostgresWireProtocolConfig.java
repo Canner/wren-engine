@@ -19,28 +19,13 @@ import javax.validation.constraints.NotNull;
 
 public class PostgresWireProtocolConfig
 {
-    public static final String CANNERFLOW_PG_WIRE_PROTOCOL_ENABLED = "cannerflow.wire-protocol.enabled";
-    public static final String CANNERFLOW_PG_WIRE_PROTOCOL_PORT = "cannerflow.wire-protocol.port";
-    public static final String CANNERFLOW_PG_WIRE_PROTOCOL_SSL_ENABLED = "cannerflow.wire-protocol.ssl.enabled";
-    public static final String CANNERFLOW_WIRE_PROTOCOL_NETTY_THREAD_COUNT = "cannerflow.wire-protocol.netty.thread.count";
+    public static final String PG_WIRE_PROTOCOL_PORT = "pg-wire-protocol.port";
+    public static final String PG_WIRE_PROTOCOL_SSL_ENABLED = "pg-wire-protocol.ssl.enabled";
+    public static final String PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT = "pg-wire-protocol.netty.thread.count";
 
     private String port = "7432";
     private boolean sslEnable;
-    private boolean enabled;
     private int nettyThreadCount;
-
-    @NotNull
-    public boolean isEnabled()
-    {
-        return enabled;
-    }
-
-    @Config(CANNERFLOW_PG_WIRE_PROTOCOL_ENABLED)
-    public PostgresWireProtocolConfig setEnabled(boolean enabled)
-    {
-        this.enabled = enabled;
-        return this;
-    }
 
     @NotNull
     public String getPort()
@@ -48,7 +33,7 @@ public class PostgresWireProtocolConfig
         return port;
     }
 
-    @Config(CANNERFLOW_PG_WIRE_PROTOCOL_PORT)
+    @Config(PG_WIRE_PROTOCOL_PORT)
     public PostgresWireProtocolConfig setPort(String port)
     {
         this.port = port;
@@ -61,7 +46,7 @@ public class PostgresWireProtocolConfig
         return sslEnable;
     }
 
-    @Config(CANNERFLOW_PG_WIRE_PROTOCOL_SSL_ENABLED)
+    @Config(PG_WIRE_PROTOCOL_SSL_ENABLED)
     public PostgresWireProtocolConfig setSslEnable(boolean sslEnable)
     {
         this.sslEnable = sslEnable;
@@ -74,7 +59,7 @@ public class PostgresWireProtocolConfig
         return nettyThreadCount;
     }
 
-    @Config(CANNERFLOW_WIRE_PROTOCOL_NETTY_THREAD_COUNT)
+    @Config(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)
     public PostgresWireProtocolConfig setNettyThreadCount(int nettyThreadCount)
     {
         this.nettyThreadCount = nettyThreadCount;

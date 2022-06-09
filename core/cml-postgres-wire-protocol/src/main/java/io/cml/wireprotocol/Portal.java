@@ -16,11 +16,13 @@ package io.cml.wireprotocol;
 
 import com.google.common.base.Joiner;
 import io.airlift.log.Logger;
+import io.cml.spi.ConnectorRecordIterable;
 
 import javax.annotation.Nullable;
 import javax.annotation.PreDestroy;
 import javax.validation.constraints.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -33,7 +35,7 @@ public class Portal
 
     private final PreparedStatement preparedStatement;
     private final List<Object> params;
-    private GenericTableRecordIterable genericTableRecordIterable;
+    private ConnectorRecordIterable connectorRecordIterable;
     private long rowCount;
 
     @Nullable
@@ -83,14 +85,14 @@ public class Portal
         throw new UnsupportedOperationException();
     }
 
-    public GenericTableRecordIterable getGenericTableRecordIterable()
+    public ConnectorRecordIterable getConnectorRecordIterable()
     {
-        return genericTableRecordIterable;
+        return connectorRecordIterable;
     }
 
-    public void setResultSetSender(GenericTableRecordIterable genericTableRecordIterable)
+    public void setResultSetSender(ConnectorRecordIterable connectorRecordIterable)
     {
-        this.genericTableRecordIterable = genericTableRecordIterable;
+        this.connectorRecordIterable = connectorRecordIterable;
     }
 
     public long getRowCount()
@@ -105,17 +107,22 @@ public class Portal
 
     public boolean isSuspended()
     {
-        return genericTableRecordIterable != null;
+        return connectorRecordIterable != null;
     }
 
     // TODO: make sure this annotation works.
     @PreDestroy
     protected void close()
     {
-        if (genericTableRecordIterable != null) {
-            LOG.info("RecordIterable is closing.");
-            genericTableRecordIterable.close();
-            LOG.info("RecordIterable is closed.");
+        if (connectorRecordIterable != null) {
+            LOG.info("ConnectorRecordIterable is closing.");
+            try {
+                connectorRecordIterable.close();
+            }
+            catch (IOException ex) {
+                LOG.error(ex, "ConnectorRecordIterable close failed");
+            }
+            LOG.info("ConnectorRecordIterable is closed.");
         }
     }
 }
