@@ -12,26 +12,15 @@
  * limitations under the License.
  */
 
-package io.cml.spi.connector;
+package io.cml.spi;
 
-import io.cml.spi.ConnectorRecordIterable;
-import io.cml.spi.metadata.TableMetadata;
+import io.cml.spi.type.PGType;
 
+import java.io.Closeable;
 import java.util.List;
 
-public interface Connector
+public interface ConnectorRecordIterable
+        extends Iterable<Object[]>, Closeable
 {
-    void createSchema(String name);
-
-    boolean isSchemaExist(String name);
-
-    List<String> listSchemas();
-
-    List<TableMetadata> listTables(String schemaName);
-
-    List<String> listFunctionNames(String schemaName);
-
-    boolean directDDL(String sql);
-
-    ConnectorRecordIterable directQuery(String sql);
+    List<PGType> getTypes();
 }
