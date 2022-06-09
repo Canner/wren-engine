@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-package io.cml.tpch;
+package io.cml.connector.bigquery;
 
-import com.google.common.collect.ImmutableMap;
-import io.cml.calcite.CmlTable;
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.Table;
 import io.cml.metadata.ColumnHandle;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
@@ -27,62 +27,71 @@ import io.cml.spi.function.OperatorType;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.type.DateType;
-import io.cml.spi.type.DoubleType;
 import io.cml.spi.type.IntegerType;
 import io.cml.spi.type.PGType;
-import io.cml.spi.type.VarcharType;
 import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.tree.QualifiedName;
 
-import java.sql.Date;
+import javax.inject.Inject;
+
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.cml.calcite.CmlSchemaUtil.Dialect;
+import static io.cml.connector.bigquery.BigQueryType.toPGType;
+import static java.util.Objects.requireNonNull;
 
-public class TpchMetadata
+public class BigQueryMetadata
         implements Metadata
 {
-    private final Map<String, TableHandle> tpchTableMap;
+    private final BigQueryClient bigQueryClient;
 
-    public TpchMetadata(Map<String, CmlTable> tpchTableMap)
+    @Inject
+    public BigQueryMetadata(BigQueryClient bigQueryClient)
     {
-        this.tpchTableMap = tpchTableMap.entrySet().stream().collect(
-                toImmutableMap(
-                        Map.Entry::getKey,
-                        e -> new TableHandle(
-                                new CatalogName("tpch"),
-                                new SchemaTableName("tiny", e.getValue().getName()))));
+        this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
     }
 
     @Override
     public TableSchema getTableSchema(TableHandle tableHandle)
     {
-        TpchTable table = TpchTable.valueOf(tableHandle.getSchemaTableName().getTableName().toUpperCase(Locale.ROOT));
-        return new TableSchema(tableHandle.getCatalogName(),
-                new ConnectorTableSchema(new SchemaTableName(
-                        tableHandle.getSchemaTableName().getSchemaName(),
-                        table.name().toLowerCase(Locale.ROOT)),
-                        table.columns.stream().map(this::toColumnSchema).collect(toImmutableList())));
+        Table table = bigQueryClient.getTable(tableHandle);
+        return new TableSchema(
+                tableHandle.getCatalogName(),
+                new ConnectorTableSchema(
+                        tableHandle.getSchemaTableName(),
+                        table.getDefinition().getSchema().getFields().stream()
+                                .map(field ->
+                                        ColumnSchema.builder()
+                                                .setName(field.getName())
+                                                .setType(toPGType(field.getType().name()))
+                                                .build())
+                                .collect(toImmutableList())));
     }
 
     @Override
     public Optional<TableHandle> getTableHandle(QualifiedObjectName tableName)
     {
-        return Optional.ofNullable(tpchTableMap.get(tableName.getObjectName()));
+        return Optional.of(
+                new TableHandle(
+                        new CatalogName(tableName.getCatalogName()),
+                        new SchemaTableName(tableName.getSchemaName(), tableName.getObjectName())));
     }
 
     @Override
     public Map<String, ColumnHandle> getColumnHandles(TableHandle tableHandle)
     {
-        ImmutableMap.Builder<String, ColumnHandle> builder = ImmutableMap.builder();
-        for (TpchTable.Column column : TpchTable.valueOf(tableHandle.toString().toUpperCase(Locale.ROOT)).columns) {
-            builder.put(column.name, new TpchColumnHandle(column.name, toPgType(column.type)));
-        }
-        return builder.build();
+        return bigQueryClient.getTable(tableHandle)
+                .getDefinition()
+                .getSchema()
+                .getFields()
+                .stream()
+                .collect(toImmutableMap(
+                        Field::getName,
+                        field -> new BigQueryColumnHandle(field.getName(), toPGType(field.getType().name()))));
     }
 
     @Override
@@ -106,28 +115,6 @@ public class TpchMetadata
         throw new IllegalArgumentException();
     }
 
-    private ColumnSchema toColumnSchema(TpchTable.Column column)
-    {
-        return ColumnSchema.builder().setName(column.name).setType(toPgType(column.type)).build();
-    }
-
-    private PGType toPgType(Class<?> type)
-    {
-        if (Integer.class.equals(type)) {
-            return IntegerType.INTEGER;
-        }
-        else if (Double.class.equals(type)) {
-            return DoubleType.DOUBLE;
-        }
-        else if (String.class.equals(type)) {
-            return VarcharType.VARCHAR;
-        }
-        else if (Date.class.equals(type)) {
-            return DateType.DATE;
-        }
-        throw new IllegalArgumentException();
-    }
-
     @Override
     public boolean isAggregationFunction(QualifiedName name)
     {
@@ -138,5 +125,11 @@ public class TpchMetadata
                 return true;
         }
         return false;
+    }
+
+    @Override
+    public Dialect getDialect()
+    {
+        return Dialect.BIGQUERY;
     }
 }

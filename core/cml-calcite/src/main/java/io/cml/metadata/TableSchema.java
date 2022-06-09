@@ -13,6 +13,7 @@
  */
 package io.cml.metadata;
 
+import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.sql.QualifiedObjectName;
 

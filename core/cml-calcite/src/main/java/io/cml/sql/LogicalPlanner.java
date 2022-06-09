@@ -124,10 +124,20 @@ public class LogicalPlanner
         private void planFrom(Relation from, Node source)
         {
             if (from instanceof Table) {
-                relBuilder.scan(((Table) from).getName().toString());
+                relBuilder.scan(((Table) from).getName().getParts());
+                // TODO: need to distinct required field
+                projectRequiredField(from);
                 return;
             }
             throw new IllegalArgumentException();
+        }
+
+        private void projectRequiredField(Node source)
+        {
+            List<RexNode> nodes = analysis.getTypes().entrySet().stream().filter(entry -> entry.getKey().getNode() instanceof Identifier)
+                    .map(entry -> entry.getKey().getNode()).map(expression -> expressionToRexNode(expression, source))
+                    .collect(toImmutableList());
+            relBuilder.project(nodes);
         }
 
         private void planWhere(Expression predicate, Node source)
@@ -147,9 +157,12 @@ public class LogicalPlanner
                     .getAggregates(node).stream().map(functionCall -> functionCallToAggCall(functionCall, node))
                     .collect(toImmutableList());
             relBuilder.aggregate(relBuilder.groupKey(groupKey), functionCalls);
-            List<RexNode> orderBy = analysis.getOrderByAggregates(node.getOrderBy().get()).stream()
-                    .map(expression -> expressionToRexNode(expression, node.getFrom().get())).collect(toImmutableList());
-            relBuilder.sort(orderBy);
+
+            if (node.getOrderBy().isPresent()) {
+                List<RexNode> orderBy = analysis.getOrderByAggregates(node.getOrderBy().get()).stream()
+                        .map(expression -> expressionToRexNode(expression, node.getFrom().get())).collect(toImmutableList());
+                relBuilder.sort(orderBy);
+            }
         }
 
         private List<String> createOutput()
@@ -193,7 +206,7 @@ public class LogicalPlanner
         {
             if (expression instanceof Identifier) {
                 Identifier identifier = (Identifier) expression;
-                return relBuilder.field(1, getRelationNameFromScope(source).orElse(""), identifier.getValue());
+                return relBuilder.field(identifier.getValue());
             }
             else if (expression instanceof Literal) {
                 Literal literal = (Literal) expression;

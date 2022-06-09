@@ -12,24 +12,9 @@
  * limitations under the License.
  */
 
-package io.cml.calcite;
+package io.cml.sql;
 
-import io.cml.spi.metadata.TableMetadata;
-
-import java.util.List;
-import java.util.Map;
-
-public class SchemaPlusInfo
+public interface SqlConverter
 {
-    private final Map<String, List<TableMetadata>> schemaTableMap;
-
-    public SchemaPlusInfo(Map<String, List<TableMetadata>> schemaTableMap)
-    {
-        this.schemaTableMap = schemaTableMap;
-    }
-
-    public Map<String, List<TableMetadata>> getSchemaTableMap()
-    {
-        return schemaTableMap;
-    }
+    String convert(String sql);
 }

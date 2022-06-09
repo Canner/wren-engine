@@ -14,29 +14,19 @@
 
 package io.cml.calcite;
 
-import com.google.common.collect.ImmutableList;
+import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
-import io.trino.sql.tree.Statement;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.config.CalciteConnectionConfigImpl;
-import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.volcano.VolcanoPlanner;
-import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
-import org.apache.calcite.tools.Frameworks;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 
 import java.util.List;
 
@@ -46,6 +36,7 @@ import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.DoubleType.DOUBLE;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
+import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
 
 public final class CmlSchemaUtil
 {
@@ -53,6 +44,7 @@ public final class CmlSchemaUtil
 
     public enum Dialect
     {
+        CALCITE(CalciteSqlDialect.DEFAULT),
         BIGQUERY(BigQuerySqlDialect.DEFAULT);
 
         private final SqlDialect sqlDialect;
@@ -61,45 +53,19 @@ public final class CmlSchemaUtil
         {
             this.sqlDialect = sqlDialect;
         }
+
+        public SqlDialect getSqlDialect()
+        {
+            return sqlDialect;
+        }
     }
 
-    public static String convertQuery(Dialect dialect, SchemaPlusInfo schemaPlusInfo, String sql)
+    public static SchemaPlus schemaPlus(Connector connector)
     {
-        SqlParser sqlParser = new SqlParser();
-        Statement stmt = sqlParser.createStatement(sql, new ParsingOptions());
-        RelOptCluster cluster = newCluster();
-
-        SchemaPlus schemaPlus = get(schemaPlusInfo);
-        CalciteCatalogReader reader = new CalciteCatalogReader(
-                CalciteSchema.from(schemaPlus),
-                ImmutableList.of(),
-                cluster.getTypeFactory(),
-                CalciteConnectionConfigImpl.DEFAULT);
-
-        // TODO: uncomment this when CalciteRelConverter finished
-        // RelNode relNode = CalciteRelConverter.convert(cluster, reader, stmt);
-        // RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect.sqlDialect);
-        // SqlNode sqlNode = relToSqlConverter.visitRoot(relNode).asStatement();
-
-        // SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter();
-        // return sqlPrettyWriter.format(sqlNode);
-        return "";
-    }
-
-    private static RelOptCluster newCluster()
-    {
-        RelDataTypeFactory typeFactory = new JavaTypeFactoryImpl();
-        RelOptPlanner planner = new VolcanoPlanner();
-        planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-        return RelOptCluster.create(planner, new RexBuilder(typeFactory));
-    }
-
-    private static SchemaPlus get(SchemaPlusInfo schemaPlusInfo)
-    {
-        SchemaPlus rootSchema = Frameworks.createRootSchema(true);
-        schemaPlusInfo.getSchemaTableMap()
-                .forEach((schema, tables) -> rootSchema.add(schema, toCmlSchema(tables)));
-
+        SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
+        SchemaPlus secondSchema = rootSchema.add(connector.getCatalogName(), new AbstractSchema());
+        connector.listSchemas()
+                .forEach(schema -> secondSchema.add(schema, toCmlSchema(connector.listTables(schema))));
         return rootSchema;
     }
 
@@ -117,7 +83,6 @@ public final class CmlSchemaUtil
     private static CmlSchema toCmlSchema(List<TableMetadata> tables)
     {
         return new CmlSchema(tables.stream().collect(
-
                 toImmutableMap(
                         table -> table.getTable().getTableName(),
                         CmlSchemaUtil::toCmlTable,

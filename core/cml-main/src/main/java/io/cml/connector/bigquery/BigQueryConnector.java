@@ -14,23 +14,21 @@
 
 package io.cml.connector.bigquery;
 
-import com.google.api.gax.paging.Page;
-import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
-import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableResult;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.spi.connector.Connector;
-import io.cml.spi.metadata.MetadataUtil;
+import io.cml.spi.metadata.CatalogName;
+import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.spi.type.VarcharType;
 
 import javax.inject.Inject;
 
@@ -38,9 +36,10 @@ import java.util.AbstractCollection;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
-import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -49,18 +48,18 @@ public class BigQueryConnector
         implements Connector
 {
     private static final Logger LOG = Logger.get(BigQueryConnector.class);
-    private final BigQuery bigQuery;
+    private final BigQueryClient bigQueryClient;
 
     @Inject
-    public BigQueryConnector(BigQuery bigQuery)
+    public BigQueryConnector(BigQueryClient bigQueryClient)
     {
-        this.bigQuery = requireNonNull(bigQuery, "bigQuery is null");
+        this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
     }
 
     @Override
     public void createSchema(String name)
     {
-        bigQuery.create(DatasetInfo.newBuilder(name).build());
+        bigQueryClient.createSchema(DatasetInfo.newBuilder(name).build());
     }
 
     @Override
@@ -72,16 +71,9 @@ public class BigQueryConnector
     @Override
     public List<String> listSchemas()
     {
-        String querySchemaName = format("SELECT schema_name FROM `region-%s.INFORMATION_SCHEMA.SCHEMATA`", bigQuery.getOptions().getLocation());
-        QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.newBuilder(querySchemaName).build();
-        try {
-            TableResult result = bigQuery.query(queryJobConfiguration);
-            return Streams.stream(result.getValues()).map(fieldValues -> fieldValues.get(0).getStringValue()).collect(toImmutableList());
-        }
-        catch (InterruptedException ex) {
-            LOG.error(ex);
-            throw new CmlException(GENERIC_INTERNAL_ERROR, ex);
-        }
+        return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
+                .map(dataset -> dataset.getDatasetId().getDataset())
+                .collect(toImmutableList());
     }
 
     @Override
@@ -91,14 +83,34 @@ public class BigQueryConnector
         if (dataset.isEmpty()) {
             throw new CmlException(NOT_FOUND, format("Dataset %s is not found", schemaName));
         }
-        Page<Table> result = bigQuery.listTables(dataset.get().getDatasetId());
-        return Streams.stream(result.iterateAll()).map(table -> {
-            MetadataUtil.TableMetadataBuilder builder = tableMetadataBuilder(new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()));
-            Table fullTable = bigQuery.getTable(table.getTableId());
-            // TODO: type mapping
-            fullTable.getDefinition().getSchema().getFields().forEach(field -> builder.column(field.getName(), VarcharType.VARCHAR, null));
-            return builder.build();
-        }).collect(toImmutableList());
+        Iterable<Table> result = bigQueryClient.listTables(dataset.get().getDatasetId());
+        return Streams.stream(result)
+                .map(table -> {
+                    TableMetadataBuilder builder = tableMetadataBuilder(
+                            new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()));
+                    Table fullTable = bigQueryClient.getTable(table.getTableId());
+                    // TODO: type mapping
+                    fullTable.getDefinition().getSchema().getFields()
+                            .forEach(field -> builder.column(field.getName(), BigQueryType.toPGType(field.getType().name()), null));
+                    return builder.build();
+                })
+                .collect(toImmutableList());
+    }
+
+    @Override
+    public List<MaterializedViewDefinition> listMaterializedViews(Optional<String> optSchemaName)
+    {
+        return optSchemaName.map(ImmutableList::of)
+                .orElse(ImmutableList.copyOf(listSchemas()))
+                .stream()
+                .map(schemaName -> Dataset.of(schemaName).getDatasetId())
+                .flatMap(schemaName -> Streams.stream(bigQueryClient.listTables(schemaName, MATERIALIZED_VIEW)))
+                .map(table -> bigQueryClient.getTable(table.getTableId())) // get mv info
+                .map(table -> new MaterializedViewDefinition(
+                        new CatalogName(table.getTableId().getProject()),
+                        new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()),
+                        ((com.google.cloud.bigquery.MaterializedViewDefinition) table.getDefinition()).getQuery()))
+                .collect(toImmutableList());
     }
 
     @Override
@@ -108,38 +120,28 @@ public class BigQueryConnector
         if (dataset.isEmpty()) {
             throw new CmlException(NOT_FOUND, format("Dataset %s is not found", schemaName));
         }
-        Page<Routine> routines = bigQuery.listRoutines(dataset.get().getDatasetId(), BigQuery.RoutineListOption.pageSize(100));
+        Iterable<Routine> routines = bigQueryClient.listRoutines(dataset.get().getDatasetId());
         if (routines == null) {
             throw new CmlException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
         }
-        return Streams.stream(routines.iterateAll()).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
+        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
     }
 
     @Override
-    public boolean directDDL(String sql)
+    public void directDDL(String sql)
     {
-        if (sql == null) {
-            return true;
-        }
         try {
-            QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.newBuilder(sql).build();
-            bigQuery.query(queryJobConfiguration);
-            return true;
+            bigQueryClient.query(sql);
         }
-        catch (InterruptedException ex) {
-            LOG.error(ex);
-            return false;
-        }
-        catch (BigQueryException ex) {
-            LOG.error(ex);
-            LOG.error("Failed SQL: %s", sql);
+        catch (Exception ex) {
+            LOG.error(ex, "Failed SQL: %s", sql);
             throw ex;
         }
     }
 
     private Optional<Dataset> getDataset(String name)
     {
-        return Optional.ofNullable(bigQuery.getDataset(name));
+        return Optional.ofNullable(bigQueryClient.getDataset(name));
     }
 
     @Override
@@ -147,18 +149,19 @@ public class BigQueryConnector
     {
         requireNonNull(sql, "sql can't be null.");
         try {
-            QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.newBuilder(sql).build();
-            TableResult results = bigQuery.query(queryJobConfiguration);
+            TableResult results = bigQueryClient.query(sql);
             return Streams.stream(results.iterateAll()).map(AbstractCollection::toArray).collect(toImmutableList());
-        }
-        catch (InterruptedException ex) {
-            LOG.error(ex);
-            throw new CmlException(GENERIC_INTERNAL_ERROR, ex);
         }
         catch (BigQueryException ex) {
             LOG.error(ex);
             LOG.error("Failed SQL: %s", sql);
             throw ex;
         }
+    }
+
+    @Override
+    public String getCatalogName()
+    {
+        return bigQueryClient.getProjectId();
     }
 }

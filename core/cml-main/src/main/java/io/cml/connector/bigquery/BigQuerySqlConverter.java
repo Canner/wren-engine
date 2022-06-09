@@ -14,38 +14,34 @@
 
 package io.cml.connector.bigquery;
 
-import io.cml.calcite.CmlSchemaUtil;
-import io.cml.calcite.SchemaPlusInfo;
+import io.cml.calcite.QueryProcessor;
+import io.cml.metadata.Metadata;
 import io.cml.spi.connector.Connector;
-import io.cml.spi.metadata.TableMetadata;
+import io.cml.sql.SqlConverter;
 
 import javax.inject.Inject;
 
-import java.util.List;
-import java.util.Map;
-
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Function.identity;
 
 public class BigQuerySqlConverter
+        implements SqlConverter
 {
-    private final SchemaPlusInfo schemaPlusInfo;
+    private final Metadata metadata;
+    private final Connector connector;
 
     @Inject
-    public BigQuerySqlConverter(Connector bigQueryConnector)
+    public BigQuerySqlConverter(
+            Metadata metadata,
+            Connector connector)
     {
-        final Connector connector = requireNonNull(bigQueryConnector, "BigQueryConnector is null");
-
-        List<String> schemas = connector.listSchemas();
-        Map<String, List<TableMetadata>> schemaTableMap = schemas.stream()
-                .collect(toImmutableMap(identity(), schema -> connector.listTables(schema)));
-
-        this.schemaPlusInfo = new SchemaPlusInfo(schemaTableMap);
+        this.connector = requireNonNull(connector, "connector is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
-    public String convertSql(String sql)
+    @Override
+    public String convert(String sql)
     {
-        return CmlSchemaUtil.convertQuery(CmlSchemaUtil.Dialect.BIGQUERY, schemaPlusInfo, sql);
+        QueryProcessor processor = QueryProcessor.of(metadata, connector);
+        return processor.convert(sql);
     }
 }

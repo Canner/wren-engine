@@ -11,27 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.cml.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.cml.spi.metadata.CatalogName;
-import io.cml.spi.metadata.SchemaTableName;
+package io.cml.spi.metadata;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public final class TableHandle
+public class MaterializedViewDefinition
 {
     private final CatalogName catalogName;
     private final SchemaTableName schemaTableName;
 
-    @JsonCreator
-    public TableHandle(
-            @JsonProperty("catalogName") CatalogName catalogName,
-            @JsonProperty("schemaTableName") SchemaTableName schemaTableName)
+    private final String originalSql;
+
+    public MaterializedViewDefinition(CatalogName catalogName, SchemaTableName tableName, String originalSql)
     {
-        this.catalogName = requireNonNull(catalogName, "catalog name is null");
-        this.schemaTableName = requireNonNull(schemaTableName, "schema table name is null");
+        this.catalogName = requireNonNull(catalogName, "catalogName is null");
+        this.schemaTableName = requireNonNull(tableName, "schemaTableName is null");
+        this.originalSql = requireNonNull(originalSql, "originalSql is null");
     }
 
     public CatalogName getCatalogName()
@@ -42,5 +39,19 @@ public final class TableHandle
     public SchemaTableName getSchemaTableName()
     {
         return schemaTableName;
+    }
+
+    public String getOriginalSql()
+    {
+        return originalSql;
+    }
+
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("catalogName", catalogName)
+                .add("schemaTableName", schemaTableName)
+                .add("originalSql", originalSql)
+                .toString();
     }
 }
