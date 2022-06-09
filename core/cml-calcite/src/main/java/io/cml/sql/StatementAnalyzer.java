@@ -22,8 +22,6 @@ import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.Metadata;
 import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
-import io.cml.spi.type.DateType;
-import io.cml.spi.type.PGType;
 import io.cml.sql.analyzer.Analysis;
 import io.cml.sql.analyzer.Analysis.GroupingSetAnalysis;
 import io.cml.sql.analyzer.Analysis.SelectExpression;
@@ -47,7 +45,6 @@ import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.GroupingOperation;
 import io.trino.sql.tree.GroupingSets;
 import io.trino.sql.tree.Identifier;
-import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.OrderBy;
@@ -61,14 +58,7 @@ import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptSchema;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.RelFactories;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlBinaryOperator;
-import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.util.DateString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,10 +91,10 @@ public final class StatementAnalyzer
         this.metadata = metadata;
     }
 
-    public Analysis analyze(Analysis analysis, RelOptCluster cluster, RelOptSchema relOptSchema, Statement statement)
+    public Analysis analyze(Analysis analysis, Statement statement)
     {
         this.analysis = analysis;
-        Visitor visitor = new Visitor(cluster, relOptSchema);
+        Visitor visitor = new Visitor();
         visitor.process(statement, Optional.empty());
         return analysis;
     }
@@ -113,17 +103,6 @@ public final class StatementAnalyzer
             extends AstVisitor<Scope, Optional<Scope>>
     {
         private final Optional<Scope> outerQueryScope = Optional.empty();
-        private final RelBuilder relBuilder;
-
-        Visitor(RelOptCluster relOptCluster, RelOptSchema relOptSchema)
-        {
-            this.relBuilder = RelFactories.LOGICAL_BUILDER.create(relOptCluster, relOptSchema);
-        }
-
-        public RelNode buildRelNode()
-        {
-            return relBuilder.build();
-        }
 
         @Override
         public Scope process(Node node, Optional<Scope> scope)
@@ -163,7 +142,6 @@ public final class StatementAnalyzer
             List<Field> outputFields = fields.build();
             // analyzeFiltersAndMasks(table, name, tableHandle, outputFields, session.getIdentity().getUser());
             Scope tableScope = createAndAssignScope(table, scope, outputFields);
-            relBuilder.scan(table.getName().getParts());
             return tableScope;
         }
 
@@ -344,9 +322,6 @@ public final class StatementAnalyzer
             analysis.setWhere(node, predicate);
 
             ComparisonExpression comparisonExpression = (ComparisonExpression) predicate;
-            relBuilder.filter(relBuilder.call(expressionToRelOperator(comparisonExpression.getOperator()),
-                    expressionToRexNode(comparisonExpression.getLeft(), scope),
-                    expressionToRexNode(comparisonExpression.getRight(), scope)));
             return null;
         }
 
@@ -355,23 +330,6 @@ public final class StatementAnalyzer
             switch (operator) {
                 case LESS_THAN_OR_EQUAL:
                     return LESS_THAN_OR_EQUAL;
-            }
-            throw new IllegalArgumentException();
-        }
-
-        private RexNode expressionToRexNode(Expression expression, Scope sourceScope)
-        {
-            if (expression instanceof Identifier) {
-                Identifier identifier = (Identifier) expression;
-                return relBuilder.field(1, getRelationNameFromScope(sourceScope).orElse(""), identifier.getValue());
-            }
-            else if (expression instanceof Literal) {
-                Literal literal = (Literal) expression;
-                PGType type = analysis.getType(literal);
-                if (type.equals(DateType.DATE)) {
-                    return relBuilder.getRexBuilder().makeDateLiteral(new DateString(literal.toString().split("'")[1]));
-                }
-                return relBuilder.literal(literal.toString());
             }
             throw new IllegalArgumentException();
         }
