@@ -87,7 +87,7 @@ public final class CmlSchemaUtil
                 cluster.getTypeFactory(),
                 CalciteConnectionConfigImpl.DEFAULT);
 
-        analysis = statementAnalyzer.analyze(analysis, cluster, reader, stmt);
+        analysis = statementAnalyzer.analyze(analysis, stmt);
         LogicalPlanner logicalPlanner = new LogicalPlanner(analysis, cluster, reader, metadata);
         RelNode logicalRoot = logicalPlanner.plan(stmt);
         // TODO: add optimizer
