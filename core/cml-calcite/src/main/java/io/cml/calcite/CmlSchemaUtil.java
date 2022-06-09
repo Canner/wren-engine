@@ -15,9 +15,13 @@
 package io.cml.calcite;
 
 import com.google.common.collect.ImmutableList;
+import io.cml.metadata.Metadata;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
+import io.cml.sql.LogicalPlanner;
+import io.cml.sql.StatementAnalyzer;
+import io.cml.sql.analyzer.Analysis;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
@@ -30,12 +34,16 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
+import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.tools.Frameworks;
 
 import java.util.List;
@@ -63,11 +71,14 @@ public final class CmlSchemaUtil
         }
     }
 
-    public static String convertQuery(Dialect dialect, SchemaPlusInfo schemaPlusInfo, String sql)
+    public static String convertQuery(Dialect dialect, SchemaPlusInfo schemaPlusInfo, Metadata metadata, String sql)
     {
         SqlParser sqlParser = new SqlParser();
         Statement stmt = sqlParser.createStatement(sql, new ParsingOptions());
         RelOptCluster cluster = newCluster();
+
+        Analysis analysis = new Analysis(stmt);
+        StatementAnalyzer statementAnalyzer = new StatementAnalyzer(metadata);
 
         SchemaPlus schemaPlus = get(schemaPlusInfo);
         CalciteCatalogReader reader = new CalciteCatalogReader(
@@ -76,14 +87,15 @@ public final class CmlSchemaUtil
                 cluster.getTypeFactory(),
                 CalciteConnectionConfigImpl.DEFAULT);
 
-        // TODO: uncomment this when CalciteRelConverter finished
-        // RelNode relNode = CalciteRelConverter.convert(cluster, reader, stmt);
-        // RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect.sqlDialect);
-        // SqlNode sqlNode = relToSqlConverter.visitRoot(relNode).asStatement();
+        analysis = statementAnalyzer.analyze(analysis, cluster, reader, stmt);
+        LogicalPlanner logicalPlanner = new LogicalPlanner(analysis, cluster, reader, metadata);
+        RelNode logicalRoot = logicalPlanner.plan(stmt);
+        // TODO: add optimizer
+        RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect.sqlDialect);
+        SqlNode sqlNode = relToSqlConverter.visitRoot(logicalRoot).asStatement();
 
-        // SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter();
-        // return sqlPrettyWriter.format(sqlNode);
-        return "";
+        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter();
+        return sqlPrettyWriter.format(sqlNode);
     }
 
     private static RelOptCluster newCluster()

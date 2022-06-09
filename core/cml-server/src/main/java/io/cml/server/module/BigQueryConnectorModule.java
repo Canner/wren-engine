@@ -28,7 +28,9 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryConnector;
 import io.cml.connector.bigquery.BigQueryCredentialsSupplier;
+import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
 import io.cml.pgcatalog.builder.BigQueryPgFunctionBuilder;
 import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
@@ -36,6 +38,7 @@ import io.cml.pgcatalog.builder.PgFunctionBuilder;
 import io.cml.pgcatalog.regtype.BigQueryPgMetadata;
 import io.cml.pgcatalog.regtype.PgMetadata;
 import io.cml.spi.connector.Connector;
+import io.cml.spi.connector.SqlConverter;
 
 import java.util.Optional;
 
@@ -51,7 +54,8 @@ public class BigQueryConnectorModule
         binder.bind(PgCatalogTableBuilder.class).to(BigQueryPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgFunctionBuilder.class).to(BigQueryPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
+        binder.bind(SqlConverter.class).to(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
+        binder.bind(Metadata.class).to(BigQueryMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
     }
 

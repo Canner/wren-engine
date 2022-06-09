@@ -26,6 +26,7 @@ import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.MetadataUtil;
 import io.cml.spi.metadata.SchemaTableName;
@@ -34,7 +35,6 @@ import io.cml.spi.type.VarcharType;
 
 import javax.inject.Inject;
 
-import java.util.AbstractCollection;
 import java.util.List;
 import java.util.Optional;
 
@@ -143,13 +143,13 @@ public class BigQueryConnector
     }
 
     @Override
-    public Iterable<Object[]> directQuery(String sql)
+    public ConnectorRecordIterable directQuery(String sql)
     {
         requireNonNull(sql, "sql can't be null.");
         try {
             QueryJobConfiguration queryJobConfiguration = QueryJobConfiguration.newBuilder(sql).build();
             TableResult results = bigQuery.query(queryJobConfiguration);
-            return Streams.stream(results.iterateAll()).map(AbstractCollection::toArray).collect(toImmutableList());
+            return BigQueryRecordIterable.of(results);
         }
         catch (InterruptedException ex) {
             LOG.error(ex);

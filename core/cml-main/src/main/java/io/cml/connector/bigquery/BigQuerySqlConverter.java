@@ -16,7 +16,9 @@ package io.cml.connector.bigquery;
 
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.calcite.SchemaPlusInfo;
+import io.cml.metadata.Metadata;
 import io.cml.spi.connector.Connector;
+import io.cml.spi.connector.SqlConverter;
 import io.cml.spi.metadata.TableMetadata;
 
 import javax.inject.Inject;
@@ -29,11 +31,13 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
 public class BigQuerySqlConverter
+        implements SqlConverter
 {
     private final SchemaPlusInfo schemaPlusInfo;
+    private final Metadata metadata;
 
     @Inject
-    public BigQuerySqlConverter(Connector bigQueryConnector)
+    public BigQuerySqlConverter(Connector bigQueryConnector, Metadata metadata)
     {
         final Connector connector = requireNonNull(bigQueryConnector, "BigQueryConnector is null");
 
@@ -42,10 +46,12 @@ public class BigQuerySqlConverter
                 .collect(toImmutableMap(identity(), schema -> connector.listTables(schema)));
 
         this.schemaPlusInfo = new SchemaPlusInfo(schemaTableMap);
+        this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
+    @Override
     public String convertSql(String sql)
     {
-        return CmlSchemaUtil.convertQuery(CmlSchemaUtil.Dialect.BIGQUERY, schemaPlusInfo, sql);
+        return CmlSchemaUtil.convertQuery(CmlSchemaUtil.Dialect.BIGQUERY, schemaPlusInfo, metadata, sql);
     }
 }
