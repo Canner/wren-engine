@@ -21,8 +21,8 @@ import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.connector.Connector;
-import io.cml.spi.connector.SqlConverter;
 import io.cml.sql.PostgreSqlRewrite;
+import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -217,7 +217,7 @@ public class WireProtocolSession
     {
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
-            String sql = sqlConverter.convertSql(execStmt);
+            String sql = sqlConverter.convert(execStmt);
             return Optional.of(connector.directQuery(sql));
         });
     }
