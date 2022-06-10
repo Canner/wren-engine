@@ -16,6 +16,8 @@ package io.cml;
 
 import com.google.common.collect.ImmutableList;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
+import io.cml.spi.connector.Connector;
+import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.PostgresNetty;
 import io.cml.wireprotocol.ssl.SslContextProvider;
 import org.elasticsearch.common.network.NetworkService;
@@ -32,15 +34,22 @@ public class PostgresNettyProvider
     private final SslContextProvider sslContextProvider;
     private final RegObjectFactory regObjectFactory;
 
+    private final Connector connector;
+    private final SqlConverter sqlConverter;
+
     @Inject
     public PostgresNettyProvider(
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             SslContextProvider sslContextProvider,
-            RegObjectFactory regObjectFactory)
+            RegObjectFactory regObjectFactory,
+            Connector connector,
+            SqlConverter sqlConverter)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
+        this.connector = requireNonNull(connector, "connector is null");
+        this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
     }
 
     @Override
@@ -51,7 +60,9 @@ public class PostgresNettyProvider
                 networkService,
                 postgresWireProtocolConfig,
                 sslContextProvider,
-                regObjectFactory);
+                regObjectFactory,
+                connector,
+                sqlConverter);
         postgresNetty.start();
         return postgresNetty;
     }

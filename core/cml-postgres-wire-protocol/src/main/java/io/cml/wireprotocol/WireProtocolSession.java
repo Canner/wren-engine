@@ -19,7 +19,10 @@ import io.airlift.log.Logger;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
+import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.connector.Connector;
 import io.cml.sql.PostgreSqlRewrite;
+import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -71,12 +74,17 @@ public class WireProtocolSession
     private final PostgreSqlRewrite postgreSqlRewrite;
     private final SqlParser sqlParser;
     private final RegObjectFactory regObjectFactory;
+    private final Connector connector;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory)
+    private final SqlConverter sqlConverter;
+
+    public WireProtocolSession(RegObjectFactory regObjectFactory, Connector connector, SqlConverter sqlConverter)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
+        this.connector = requireNonNull(connector, "connector is null");
+        this.sqlConverter = sqlConverter;
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -119,7 +127,7 @@ public class WireProtocolSession
         this.properties = properties;
     }
 
-    public Optional<String> getClientSecret()
+    public Optional<String> getPassword()
     {
         return Optional.ofNullable(properties.getProperty("password"));
     }
@@ -140,12 +148,9 @@ public class WireProtocolSession
         return sessionProperties;
     }
 
-    /**
-     * Wire protocol only support to do authentication by the database which is a workspace (not a sub-workspace).
-     */
-    public boolean doAuthentication(String personalAccessToken)
+    public boolean doAuthentication(String password)
     {
-        throw new UnsupportedOperationException();
+        return true;
     }
 
     public Optional<List<Column>> describePortal(String name)
@@ -203,14 +208,18 @@ public class WireProtocolSession
         LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
     }
 
-    public CompletableFuture<Optional<GenericTableRecordIterable>> execute(String portalName)
+    public CompletableFuture<Optional<ConnectorRecordIterable>> execute(String portalName)
     {
-        throw new UnsupportedOperationException();
+        return execute(portals.get(portalName));
     }
 
-    private CompletableFuture<Optional<Iterable<?>>> executeQuery(Portal portal)
+    private CompletableFuture<Optional<ConnectorRecordIterable>> execute(Portal portal)
     {
-        throw new UnsupportedOperationException();
+        String execStmt = portal.getPreparedStatement().getStatement();
+        return CompletableFuture.supplyAsync(() -> {
+            String sql = sqlConverter.convert(execStmt);
+            return Optional.of(connector.directQuery(sql));
+        });
     }
 
     private CompletableFuture<Optional<Iterable<?>>> executeSessionCommand(Portal portal)

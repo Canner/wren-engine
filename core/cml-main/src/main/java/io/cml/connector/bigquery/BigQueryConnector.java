@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.MaterializedViewDefinition;
@@ -32,7 +33,6 @@ import io.cml.spi.metadata.TableMetadata;
 
 import javax.inject.Inject;
 
-import java.util.AbstractCollection;
 import java.util.List;
 import java.util.Optional;
 
@@ -145,12 +145,12 @@ public class BigQueryConnector
     }
 
     @Override
-    public Iterable<Object[]> directQuery(String sql)
+    public ConnectorRecordIterable directQuery(String sql)
     {
         requireNonNull(sql, "sql can't be null.");
         try {
             TableResult results = bigQueryClient.query(sql);
-            return Streams.stream(results.iterateAll()).map(AbstractCollection::toArray).collect(toImmutableList());
+            return BigQueryRecordIterable.of(results);
         }
         catch (BigQueryException ex) {
             LOG.error(ex);

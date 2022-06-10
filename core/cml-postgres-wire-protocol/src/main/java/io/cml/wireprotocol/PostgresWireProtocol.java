@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
 import io.cml.wireprotocol.ssl.SslReqHandler;
@@ -186,13 +187,16 @@ public class PostgresWireProtocol
 
     private void initAuthentication(Channel channel)
     {
-        Optional<String> token = wireProtocolSession.getClientSecret();
-        if (token.isPresent()) {
-            finishAuthentication(channel, token.get());
-        }
-        else {
-            Messages.sendAuthenticationCleartextPassword(channel);
-        }
+        finishAuthentication(channel, "");
+
+        // TODO: support auth
+        // Optional<String> password = wireProtocolSession.getPassword();
+        // if (password.isPresent()) {
+        //     finishAuthentication(channel, password.get());
+        // }
+        // else {
+        //     Messages.sendAuthenticationCleartextPassword(channel);
+        // }
     }
 
     private void handlePassword(ByteBuf buffer, final Channel channel)
@@ -201,14 +205,14 @@ public class PostgresWireProtocol
         finishAuthentication(channel, personalAccessToken);
     }
 
-    private void finishAuthentication(Channel channel, String personalAccessToken)
+    private void finishAuthentication(Channel channel, String password)
     {
         try {
             String clientUser = wireProtocolSession.getClientUser();
-            if (isNull(clientUser) || !"canner".equals(clientUser)) {
+            if (isNull(clientUser)) {
                 Messages.sendAuthenticationError(channel, format("User %s does not exist", clientUser));
             }
-            if (wireProtocolSession.doAuthentication(personalAccessToken)) {
+            if (wireProtocolSession.doAuthentication(password)) {
                 Messages.sendAuthenticationOK(channel)
                         .addListener(f -> sendParamsAndRdyForQuery(channel));
             }
@@ -259,7 +263,7 @@ public class PostgresWireProtocol
         try {
             wireProtocolSession.parse("", statement, ImmutableList.of());
             wireProtocolSession.bind("", "", ImmutableList.of(), null);
-            Optional<GenericTableRecordIterable> iterable = wireProtocolSession.execute("").join();
+            Optional<ConnectorRecordIterable> iterable = wireProtocolSession.execute("").join();
             if (iterable.isEmpty()) {
                 sendHardWiredSessionProperty(statement);
                 Messages.sendCommandComplete(channel, statement, 0);
@@ -272,7 +276,8 @@ public class PostgresWireProtocol
                     0,
                     0,
                     null);
-            Messages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
+            // TODO: support describe
+            // Messages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
             resultSetSender.sendResultSet();
             return wireProtocolSession.sync();
         }
@@ -450,16 +455,16 @@ public class PostgresWireProtocol
             }
 
             if (!portal.isSuspended()) {
-                Optional<GenericTableRecordIterable> genericTableRecordIterable = wireProtocolSession.execute(portalName).join();
-                if (genericTableRecordIterable.isEmpty()) {
+                Optional<ConnectorRecordIterable> connectorRecordIterable = wireProtocolSession.execute(portalName).join();
+                if (connectorRecordIterable.isEmpty()) {
                     sendHardWiredSessionProperty(statement);
                     Messages.sendCommandComplete(channel, statement, 0);
                     return;
                 }
-                portal.setResultSetSender(genericTableRecordIterable.get());
+                portal.setResultSetSender(connectorRecordIterable.get());
             }
 
-            GenericTableRecordIterable hiveRecordIterable = portal.getGenericTableRecordIterable();
+            ConnectorRecordIterable hiveRecordIterable = portal.getConnectorRecordIterable();
             FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,

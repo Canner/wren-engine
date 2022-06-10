@@ -63,7 +63,6 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 
 import static java.util.Objects.requireNonNull;
@@ -141,7 +140,7 @@ public class QueryProcessor
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
         LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
         StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
-        Analysis analysis = analyzer.analyze(new Analysis(statement), cluster, catalogReader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
 
         LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
         RelNode relNode = toRelNode.plan(statement);
@@ -149,14 +148,15 @@ public class QueryProcessor
         LOG.info(RelOptUtil.dumpPlan("[Logical plan]", relNode, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
-        for (MaterializedViewDefinition mvDef : connector.listMaterializedViews(Optional.empty())) {
-            try {
-                planner.addMaterialization(getMvRel(mvDef));
-            }
-            catch (Exception ex) {
-                LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
-            }
-        }
+        // TODO: handle bigquery SQL syntax, `project.dataset.table`
+        // for (MaterializedViewDefinition mvDef : connector.listMaterializedViews(Optional.empty())) {
+        //     try {
+        //         planner.addMaterialization(getMvRel(mvDef));
+        //     }
+        //     catch (Exception ex) {
+        //         LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
+        //     }
+        // }
         // Define the type of the output plan (in this case we want a physical plan in
         // EnumerableContention)
         relNode = planner.changeTraits(relNode,
@@ -210,7 +210,7 @@ public class QueryProcessor
         RelNode tableRel = relConverter.toRel(table, ImmutableList.of());
         Statement statement = sqlParser.createStatement(mvDef.getOriginalSql(), new ParsingOptions());
         StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
-        Analysis analysis = analyzer.analyze(new Analysis(statement), cluster, catalogReader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
         RelNode queryRel = toRelNode.plan(statement);
 

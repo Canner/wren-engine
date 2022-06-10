@@ -17,14 +17,13 @@ package io.cml.wireprotocol;
 import javax.annotation.Nonnull;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class BaseResultSender
 {
     private CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
-    public abstract void sendRow(List row);
+    public abstract void sendRow(Object[] row);
 
     public abstract void batchFinished();
 

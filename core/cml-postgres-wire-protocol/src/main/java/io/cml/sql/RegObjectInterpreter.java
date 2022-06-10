@@ -58,11 +58,14 @@ public class RegObjectInterpreter
         @Override
         protected Object visitGenericLiteral(GenericLiteral node, Object context)
         {
-            RegObject regObject = regObjectFactory.of(node.getType(), node.getValue());
-            if (showObjectAsName) {
-                return new StringLiteral(regObject.getName());
+            if (node.getType().startsWith("reg")) {
+                RegObject regObject = regObjectFactory.of(node.getType(), node.getValue());
+                if (showObjectAsName) {
+                    return new StringLiteral(regObject.getName());
+                }
+                return new LongLiteral(Integer.toString(regObject.getOid()));
             }
-            return new LongLiteral(Integer.toString(regObject.getOid()));
+            return node;
         }
 
         @Override

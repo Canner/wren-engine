@@ -96,7 +96,7 @@ public class TestLogicalPlanner
     {
         String sql = "SELECT * FROM tpch.tiny.orders";
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
-        Analysis analysis = analyzer.analyze(new Analysis(statement), relOptCluster, reader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner planner = new LogicalPlanner(analysis, relOptCluster, reader, metadata);
         RelNode relNode = planner.plan(statement);
         System.out.println(
@@ -111,7 +111,7 @@ public class TestLogicalPlanner
         Path path = Paths.get(requireNonNull(getClass().getClassLoader().getResource("tpch/q1.sql")).toURI());
         String sql = Files.readString(path);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
-        Analysis analysis = analyzer.analyze(new Analysis(statement), relOptCluster, reader, statement);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner planner = new LogicalPlanner(analysis, relOptCluster, reader, metadata);
         RelNode relNode = planner.plan(statement);
         System.out.println(
