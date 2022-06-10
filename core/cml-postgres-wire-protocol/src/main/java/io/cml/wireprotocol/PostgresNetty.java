@@ -22,7 +22,7 @@ import io.cml.PostgresWireProtocolConfig;
 import io.cml.netty.ChannelBootstrapFactory;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.connector.Connector;
-import io.cml.spi.connector.SqlConverter;
+import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.ssl.SslContextProvider;
 import io.cml.wireprotocol.ssl.SslReqHandler;
 import io.netty.bootstrap.ServerBootstrap;
