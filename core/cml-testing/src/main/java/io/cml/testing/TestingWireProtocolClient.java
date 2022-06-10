@@ -967,8 +967,9 @@ public class TestingWireProtocolClient
             byte[] header = new byte[1 + 4];
             in.read(header);
             ByteBuffer headerBuffer = ByteBuffer.wrap(header);
-            int totalLength = headerBuffer.getInt();
             String id = new String(new byte[] {headerBuffer.get()}, UTF_8);
+            int totalLength = headerBuffer.getInt() - 4;
+
             switch (id) {
                 case "D":
                     printDataRow(totalLength, types, formatCodes);
@@ -983,7 +984,7 @@ public class TestingWireProtocolClient
     public void printDataRow(int totalLength, ImmutableList<PGType<?>> types, FormatCodes.FormatCode[] formatCodes)
             throws IOException
     {
-        byte[] row = new byte[totalLength - 4];
+        byte[] row = new byte[totalLength];
         in.read(row);
         ByteBuffer rowBuffer = ByteBuffer.wrap(row);
         int numColumns = rowBuffer.getShort();
@@ -1008,7 +1009,7 @@ public class TestingWireProtocolClient
     public void printCommandComplete(int totalLength)
             throws IOException
     {
-        byte[] commandTagBytes = new byte[totalLength - 4];
+        byte[] commandTagBytes = new byte[totalLength];
         in.read(commandTagBytes);
         String commandTag = new String(commandTagBytes, UTF_8);
         System.out.println(commandTag);
