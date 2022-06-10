@@ -70,6 +70,7 @@
         <module>core/cml-postgres-wire-protocol</module>
         <module>core/cml-server</module>
         <module>core/cml-spi</module>
+        <module>core/cml-testing</module>
         <module>core/trino-parser</module>
     </modules>
 
@@ -232,6 +233,12 @@
 
             <dependency>
                 <groupId>io.cml</groupId>
+                <artifactId>cml-testing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -282,6 +289,12 @@
                         <artifactId>snakeyaml</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-linq4j</artifactId>
+                <version>${dep.calcite.version}</version>
             </dependency>
 
             <!-- TODO: move this to Airbase -->

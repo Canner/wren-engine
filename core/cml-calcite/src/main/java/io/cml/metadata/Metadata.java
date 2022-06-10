@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static io.cml.calcite.CmlSchemaUtil.Dialect;
+
 public interface Metadata
 {
     /**
@@ -45,4 +47,9 @@ public interface Metadata
     PGType fromSqlType(String type);
 
     boolean isAggregationFunction(QualifiedName name);
+
+    default Dialect getDialect()
+    {
+        return Dialect.CALCITE;
+    }
 }

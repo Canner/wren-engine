@@ -14,9 +14,11 @@
 
 package io.cml.spi.connector;
 
+import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface Connector
 {
@@ -28,9 +30,13 @@ public interface Connector
 
     List<TableMetadata> listTables(String schemaName);
 
+    List<MaterializedViewDefinition> listMaterializedViews(Optional<String> schemaName);
+
     List<String> listFunctionNames(String schemaName);
 
-    boolean directDDL(String sql);
+    String getCatalogName();
+
+    void directDDL(String sql);
 
     Iterable<Object[]> directQuery(String sql);
 }

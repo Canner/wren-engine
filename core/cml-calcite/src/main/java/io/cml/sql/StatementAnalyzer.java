@@ -163,7 +163,7 @@ public final class StatementAnalyzer
             List<Field> outputFields = fields.build();
             // analyzeFiltersAndMasks(table, name, tableHandle, outputFields, session.getIdentity().getUser());
             Scope tableScope = createAndAssignScope(table, scope, outputFields);
-            relBuilder.scan(table.getName().toString());
+            relBuilder.scan(table.getName().getParts());
             return tableScope;
         }
 
