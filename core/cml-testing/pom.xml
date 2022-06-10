@@ -37,13 +37,13 @@
         </dependency>
 
         <dependency>
-            <groupId>io.cml</groupId>
-            <artifactId>cml-calcite</artifactId>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
+            <groupId>io.cml</groupId>
+            <artifactId>cml-main</artifactId>
         </dependency>
 
         <dependency>
