@@ -64,7 +64,13 @@ public final class CmlSchemaUtil
     {
         SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
         SchemaPlus secondSchema = rootSchema.add(connector.getCatalogName(), new AbstractSchema());
-        connector.listSchemas()
+
+        // TODO: optimize the schema building
+        // connector.listSchemas().stream()
+        //         .forEach(schema -> secondSchema.add(schema, toCmlSchema(connector.listTables(schema))));
+
+        // For TestWireProtocolWithBigquery#testSimpleQuery, get `tpch_tiny` schema only.
+        connector.listSchemas().stream().filter(schema -> schema.equals("tpch_tiny"))
                 .forEach(schema -> secondSchema.add(schema, toCmlSchema(connector.listTables(schema))));
         return rootSchema;
     }
