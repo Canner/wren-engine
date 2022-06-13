@@ -77,8 +77,7 @@ public class TestWireProtocolWithBigquery
         }
     }
 
-    // TODO: fix LogicalPlanner
-    @Test(enabled = false)
+    @Test
     public void testSimpleQueryTpchQ1()
             throws IOException, URISyntaxException
     {

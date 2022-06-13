@@ -30,6 +30,7 @@ import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
@@ -134,8 +135,8 @@ public class LogicalPlanner
 
         private void projectRequiredField(Node source)
         {
-            List<RexNode> nodes = analysis.getTypes().entrySet().stream().filter(entry -> entry.getKey().getNode() instanceof Identifier)
-                    .map(entry -> entry.getKey().getNode()).map(expression -> expressionToRexNode(expression, source))
+            List<RexNode> nodes = analysis.getTypes().keySet().stream().filter(pgType -> pgType.getNode() instanceof Identifier)
+                    .map(NodeRef::getNode).distinct().map(expression -> expressionToRexNode(expression, source))
                     .collect(toImmutableList());
             relBuilder.project(nodes);
         }

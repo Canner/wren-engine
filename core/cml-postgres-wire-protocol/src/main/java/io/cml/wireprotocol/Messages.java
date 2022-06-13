@@ -71,7 +71,7 @@ public class Messages
      */
     static ChannelFuture sendCommandComplete(Channel channel, String query, long rowCount)
     {
-        query = query.trim().split(" |;", 2)[0].toUpperCase(ENGLISH);
+        query = query.trim().split(" |;|\n\t|\n", 2)[0].toUpperCase(ENGLISH);
         String commandTag = buildCommandTag(query, rowCount);
 
         byte[] commandTagBytes = commandTag.getBytes(UTF_8);

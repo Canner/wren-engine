@@ -977,6 +977,8 @@ public class TestingWireProtocolClient
                 case "C":
                     printCommandComplete(totalLength);
                     return;
+                default:
+                    throw new IllegalStateException("id: " + id);
             }
         }
     }
