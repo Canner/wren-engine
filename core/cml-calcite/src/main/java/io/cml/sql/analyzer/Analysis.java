@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 import io.cml.metadata.ColumnHandle;
+import io.cml.metadata.TableSchema;
 import io.cml.spi.type.PGType;
 import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.tree.Expression;
@@ -35,6 +36,7 @@ import io.trino.sql.tree.Statement;
 
 import javax.annotation.concurrent.Immutable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,6 +80,8 @@ public class Analysis
     private final Map<NodeRef<OrderBy>, List<Expression>> orderByAggregates = new LinkedHashMap<>();
 
     private final Map<NodeRef<QuerySpecification>, List<GroupingOperation>> groupingOperations = new LinkedHashMap<>();
+
+    private final List<TableSchema> visitedTables = new ArrayList<>();
 
     public Analysis(Statement root)
     {
@@ -252,6 +256,16 @@ public class Analysis
     public Scope getScope(Node node)
     {
         return tryGetScope(node).orElseThrow(() -> new IllegalArgumentException(format("Analysis does not contain information for node: %s", node)));
+    }
+
+    public void addVisitedTable(TableSchema tableSchema)
+    {
+        this.visitedTables.add(tableSchema);
+    }
+
+    public List<TableSchema> getVisitedTables()
+    {
+        return this.visitedTables;
     }
 
     @Immutable

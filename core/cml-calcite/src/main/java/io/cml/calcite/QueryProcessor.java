@@ -16,7 +16,10 @@ package io.cml.calcite;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.cml.metadata.ColumnSchema;
+import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
+import io.cml.metadata.TableSchema;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.sql.LogicalPlanner;
@@ -63,8 +66,10 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 
@@ -72,13 +77,13 @@ public class QueryProcessor
 {
     private static final Logger LOG = Logger.get(QueryProcessor.class);
     private final SqlDialect dialect;
-    private final Prepare.CatalogReader catalogReader;
     private final RelDataTypeFactory typeFactory;
     private final SqlParser sqlParser;
     private final RelOptCluster cluster;
     private final RelOptPlanner planner;
     private final Connector connector;
     private final Metadata metadata;
+    private final CalciteConnectionConfig config;
 
     public static QueryProcessor of(
             Metadata metadata,
@@ -100,12 +105,7 @@ public class QueryProcessor
 
         Properties props = new Properties();
         props.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
-        CalciteConnectionConfig config = new CalciteConnectionConfigImpl(props);
-        this.catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(CmlSchemaUtil.schemaPlus(connector)),
-                Collections.singletonList(""),
-                typeFactory,
-                config);
+        this.config = new CalciteConnectionConfigImpl(props);
 
         this.cluster = newCluster(typeFactory);
         this.sqlParser = new SqlParser();
@@ -143,6 +143,11 @@ public class QueryProcessor
         StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
         Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
 
+        Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
+                CalciteSchema.from(CmlSchemaUtil.schemaPlus(analysis.getVisitedTables())),
+                Collections.singletonList(""),
+                typeFactory,
+                config);
         LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
         RelNode relNode = toRelNode.plan(statement);
 
@@ -150,16 +155,15 @@ public class QueryProcessor
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         // TODO: handle bigquery SQL syntax, `project.dataset.table`
-        // for (MaterializedViewDefinition mvDef : connector.listMaterializedViews(Optional.empty())) {
-        //     try {
-        //         planner.addMaterialization(getMvRel(mvDef));
-        //     }
-        //     catch (Exception ex) {
-        //         LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
-        //     }
-        // }
-        // Define the type of the output plan (in this case we want a physical plan in
-        // EnumerableContention)
+        for (MaterializedViewDefinition mvDef : connector.listMaterializedViews(Optional.empty())) {
+            try {
+                planner.addMaterialization(getMvRel(mvDef));
+            }
+            catch (Exception ex) {
+                LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
+            }
+        }
+        // Define the type of the output plan (in this case we want a physical plan in EnumerableContention)
         relNode = planner.changeTraits(relNode,
                 cluster.traitSet().replace(EnumerableConvention.INSTANCE));
         planner.setRoot(relNode);
@@ -187,6 +191,19 @@ public class QueryProcessor
 
     private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef)
     {
+        Statement statement = sqlParser.createStatement(mvDef.getOriginalSql(), new ParsingOptions());
+        StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
+        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
+        Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
+                CalciteSchema.from(
+                        CmlSchemaUtil.schemaPlus(
+                                ImmutableList.<TableSchema>builder()
+                                        .addAll(analysis.getVisitedTables())
+                                        .add(toTableSchema(mvDef))
+                                        .build())),
+                Collections.singletonList(""),
+                typeFactory,
+                config);
         SqlValidator validator = SqlValidatorUtil.newValidator(
                 SqlStdOperatorTable.instance(),
                 catalogReader,
@@ -209,9 +226,6 @@ public class QueryProcessor
         RelOptTable table = catalogReader.getTable(mvName);
         // TODO: find a way to not use relConverter convert RelOptTable to RelNode unless we are confident that doing this is the right way
         RelNode tableRel = relConverter.toRel(table, ImmutableList.of());
-        Statement statement = sqlParser.createStatement(mvDef.getOriginalSql(), new ParsingOptions());
-        StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
-        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
         LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
         RelNode queryRel = toRelNode.plan(statement);
 
@@ -230,5 +244,21 @@ public class QueryProcessor
         return mvDef.getCatalogName().getCatalogName() + "." +
                 mvDef.getSchemaTableName().getSchemaName() + "." +
                 mvDef.getSchemaTableName().getTableName();
+    }
+
+    private static TableSchema toTableSchema(MaterializedViewDefinition mvDef)
+    {
+        return new TableSchema(
+                mvDef.getCatalogName(),
+                new ConnectorTableSchema(
+                        mvDef.getSchemaTableName(),
+                        mvDef.getColumns().stream()
+                                .map(columnMetadata ->
+                                        ColumnSchema.builder()
+                                                .setName(columnMetadata.getName())
+                                                .setType(columnMetadata.getType())
+                                                .setHidden(false)
+                                                .build())
+                                .collect(toImmutableList())));
     }
 }

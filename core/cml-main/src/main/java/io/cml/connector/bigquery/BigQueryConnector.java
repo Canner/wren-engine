@@ -27,6 +27,7 @@ import io.cml.spi.CmlException;
 import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.CatalogName;
+import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
@@ -109,7 +110,14 @@ public class BigQueryConnector
                 .map(table -> new MaterializedViewDefinition(
                         new CatalogName(table.getTableId().getProject()),
                         new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()),
-                        ((com.google.cloud.bigquery.MaterializedViewDefinition) table.getDefinition()).getQuery()))
+                        ((com.google.cloud.bigquery.MaterializedViewDefinition) table.getDefinition()).getQuery(),
+                        table.getDefinition().getSchema().getFields().stream()
+                                .map(field ->
+                                        ColumnMetadata.builder()
+                                                .setName(field.getName())
+                                                .setType(BigQueryType.toPGType(field.getType().name()))
+                                                .build())
+                                .collect(toImmutableList())))
                 .collect(toImmutableList());
     }
 

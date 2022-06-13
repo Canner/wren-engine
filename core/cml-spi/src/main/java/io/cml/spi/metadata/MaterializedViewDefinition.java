@@ -14,6 +14,8 @@
 
 package io.cml.spi.metadata;
 
+import java.util.List;
+
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
@@ -24,11 +26,14 @@ public class MaterializedViewDefinition
 
     private final String originalSql;
 
-    public MaterializedViewDefinition(CatalogName catalogName, SchemaTableName tableName, String originalSql)
+    private final List<ColumnMetadata> columns;
+
+    public MaterializedViewDefinition(CatalogName catalogName, SchemaTableName tableName, String originalSql, List<ColumnMetadata> columns)
     {
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
         this.schemaTableName = requireNonNull(tableName, "schemaTableName is null");
         this.originalSql = requireNonNull(originalSql, "originalSql is null");
+        this.columns = requireNonNull(columns, "columns is null");
     }
 
     public CatalogName getCatalogName()
@@ -44,6 +49,11 @@ public class MaterializedViewDefinition
     public String getOriginalSql()
     {
         return originalSql;
+    }
+
+    public List<ColumnMetadata> getColumns()
+    {
+        return columns;
     }
 
     public String toString()

@@ -134,6 +134,7 @@ public final class StatementAnalyzer
             Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
 
             TableSchema tableSchema = metadata.getTableSchema(tableHandle.get());
+            analysis.addVisitedTable(tableSchema);
             Map<String, ColumnHandle> columnHandles = metadata.getColumnHandles(tableHandle.get());
 
             ImmutableList.Builder<Field> fields = ImmutableList.builder();
