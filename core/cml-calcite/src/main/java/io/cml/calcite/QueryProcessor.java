@@ -125,6 +125,7 @@ public class QueryProcessor
         planner.addRule(EnumerableRules.ENUMERABLE_SORT_RULE);
         planner.addRule(EnumerableRules.ENUMERABLE_LIMIT_RULE);
         planner.addRule(EnumerableRules.ENUMERABLE_AGGREGATE_RULE);
+        planner.addRule(EnumerableRules.ENUMERABLE_SORTED_AGGREGATE_RULE);
         planner.addRule(EnumerableRules.ENUMERABLE_VALUES_RULE);
         planner.addRule(EnumerableRules.ENUMERABLE_UNION_RULE);
         planner.addRule(EnumerableRules.ENUMERABLE_MINUS_RULE);
