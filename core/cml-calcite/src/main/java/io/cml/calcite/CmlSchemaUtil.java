@@ -14,7 +14,8 @@
 
 package io.cml.calcite;
 
-import io.cml.spi.connector.Connector;
+import io.cml.metadata.ColumnSchema;
+import io.cml.metadata.TableSchema;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
@@ -29,6 +30,7 @@ import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.cml.spi.type.BigIntType.BIGINT;
@@ -36,6 +38,8 @@ import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.DoubleType.DOUBLE;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
 
 public final class CmlSchemaUtil
@@ -60,19 +64,30 @@ public final class CmlSchemaUtil
         }
     }
 
-    public static SchemaPlus schemaPlus(Connector connector)
+    public static SchemaPlus schemaPlus(List<TableSchema> tableSchemas)
     {
         SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
-        SchemaPlus secondSchema = rootSchema.add(connector.getCatalogName(), new AbstractSchema());
-
-        // TODO: optimize the schema building
-        // connector.listSchemas().stream()
-        //         .forEach(schema -> secondSchema.add(schema, toCmlSchema(connector.listTables(schema))));
-
-        // For TestWireProtocolWithBigquery#testSimpleQuery, get `tpch_tiny` schema only.
-        connector.listSchemas().stream().filter(schema -> schema.equals("tpch_tiny"))
-                .forEach(schema -> secondSchema.add(schema, toCmlSchema(connector.listTables(schema))));
+        tableSchemas.stream()
+                .collect(groupingBy(tableSchema -> tableSchema.getCatalogName().getCatalogName(),
+                        groupingBy(tableSchema -> tableSchema.getTableSchema().getTable().getSchemaName(),
+                                mapping(tableSchema -> Map.entry(tableSchema.getTableSchema().getTable().getTableName(), toCmlTable(tableSchema)),
+                                        toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))
+                .forEach((catalogName, schemaTableMap) -> {
+                    SchemaPlus secondSchema = rootSchema.add(catalogName, new AbstractSchema());
+                    schemaTableMap.forEach((schemaName, cmlTableMap) -> secondSchema.add(schemaName, new CmlSchema(cmlTableMap)));
+                });
         return rootSchema;
+    }
+
+    private static CmlTable toCmlTable(TableSchema tableSchema)
+    {
+        JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl();
+        RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
+        for (ColumnSchema columnSchema : tableSchema.getColumns()) {
+            builder.add(columnSchema.getName(), toRelDataType(typeFactory, columnSchema.getType()));
+        }
+
+        return new CmlTable(tableSchema.getTable().getTableName(), builder.build());
     }
 
     private static CmlTable toCmlTable(TableMetadata tableMetadata)
@@ -84,16 +99,6 @@ public final class CmlSchemaUtil
         }
 
         return new CmlTable(tableMetadata.getTable().getTableName(), builder.build());
-    }
-
-    private static CmlSchema toCmlSchema(List<TableMetadata> tables)
-    {
-        return new CmlSchema(tables.stream().collect(
-                toImmutableMap(
-                        table -> table.getTable().getTableName(),
-                        CmlSchemaUtil::toCmlTable,
-                        // TODO: handle case sensitive table name
-                        (a, b) -> a)));
     }
 
     // TODO: handle nested types

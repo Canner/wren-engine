@@ -14,6 +14,7 @@
 
 package io.cml.calcite;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
@@ -26,9 +27,9 @@ class CmlSchema
 {
     private final Map<String, Table> tableMap;
 
-    public CmlSchema(Map<String, Table> tableMap)
+    public CmlSchema(Map<String, ? extends Table> tableMap)
     {
-        this.tableMap = requireNonNull(tableMap, "tableMap is null");
+        this.tableMap = ImmutableMap.copyOf(requireNonNull(tableMap, "tableMap is null"));
     }
 
     @Override
