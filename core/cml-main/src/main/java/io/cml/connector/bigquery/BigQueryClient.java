@@ -19,6 +19,7 @@ import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
+import com.google.cloud.bigquery.MaterializedViewDefinition;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
@@ -26,22 +27,31 @@ import com.google.cloud.bigquery.TableDefinition;
 import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.cml.metadata.TableHandle;
 
+import java.time.Duration;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class BigQueryClient
 {
     private final BigQuery bigQuery;
+    private final Cache<TableId, Table> mvCache;
 
     public BigQueryClient(BigQuery bigQuery)
     {
         this.bigQuery = bigQuery;
+        this.mvCache =
+                CacheBuilder.newBuilder()
+                        .expireAfterWrite(Duration.ofHours(1).toMillis(), MILLISECONDS)
+                        .build();
     }
 
     public Iterable<Dataset> listDatasets(String projectId)
@@ -88,7 +98,22 @@ public class BigQueryClient
 
     public Table getTable(TableId tableId)
     {
-        return bigQuery.getTable(tableId);
+        Table mv = mvCache.getIfPresent(tableId);
+        if (mv != null) {
+            return mv;
+        }
+
+        Table table = bigQuery.getTable(tableId);
+        // put mv def to mv cache
+        if (table != null && table.getDefinition() instanceof MaterializedViewDefinition) {
+            mvCache.put(table.getTableId(), table);
+        }
+        return table;
+    }
+
+    public Table getCacheMV(TableId tableId)
+    {
+        return mvCache.getIfPresent(tableId);
     }
 
     public TableResult query(String sql)
