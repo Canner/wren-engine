@@ -14,7 +14,9 @@
 
 package io.cml.connector.bigquery;
 
+import com.google.cloud.bigquery.StandardSQLTypeName;
 import io.cml.spi.type.BooleanType;
+import io.cml.spi.type.DateType;
 import io.cml.spi.type.DoubleType;
 import io.cml.spi.type.IntegerType;
 import io.cml.spi.type.PGType;
@@ -24,17 +26,19 @@ public final class BigQueryType
 {
     private BigQueryType() {}
 
-    public static PGType<?> toPGType(String bigQueryType)
+    public static PGType<?> toPGType(StandardSQLTypeName bigQueryType)
     {
         switch (bigQueryType) {
-            case "BOOLEAN":
+            case BOOL:
                 return BooleanType.BOOLEAN;
-            case "INTEGER":
+            case INT64:
                 return IntegerType.INTEGER;
-            case "STRING":
+            case STRING:
                 return VarcharType.VARCHAR;
-            case "FLOAT":
+            case FLOAT64:
                 return DoubleType.DOUBLE;
+            case DATE:
+                return DateType.DATE;
             default:
                 return VarcharType.VARCHAR;
         }
