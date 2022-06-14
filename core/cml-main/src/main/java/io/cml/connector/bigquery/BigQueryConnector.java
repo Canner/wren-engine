@@ -17,6 +17,7 @@ package io.cml.connector.bigquery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
+import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableResult;
@@ -24,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
+import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.CatalogName;
@@ -172,5 +174,14 @@ public class BigQueryConnector
     public String getCatalogName()
     {
         return bigQueryClient.getProjectId();
+    }
+
+    @Override
+    public List<Column> describeQuery(String sql)
+    {
+        JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql);
+        return Streams.stream(queryStatistics.getSchema().getFields().iterator())
+                .map(field -> new Column(field.getName(), toPGType(field.getType().getStandardType())))
+                .collect(toImmutableList());
     }
 }
