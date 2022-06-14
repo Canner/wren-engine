@@ -155,7 +155,9 @@ public class WireProtocolSession
 
     public Optional<List<Column>> describePortal(String name)
     {
-        throw new UnsupportedOperationException();
+        Portal portal = getPortal(name);
+        String sql = sqlConverter.convert(portal.getPreparedStatement().getOriginalStatement());
+        return Optional.of(connector.describeQuery(sql));
     }
 
     public List<Integer> describeStatement(String name)

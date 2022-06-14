@@ -29,12 +29,14 @@ import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
+import static io.cml.spi.type.DateType.DATE;
 import static io.cml.spi.type.DoubleType.DOUBLE;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
@@ -119,6 +121,9 @@ public final class CmlSchemaUtil
         if (pgType.equals(DOUBLE)) {
             return typeFactory.createJavaType(Double.class);
         }
-        throw new UnsupportedOperationException(pgType.type() + " not supported yet");
+        if (pgType.equals(DATE)) {
+            return typeFactory.createJavaType(Date.class);
+        }
+        throw new UnsupportedOperationException(pgType.typName() + " not supported yet");
     }
 }

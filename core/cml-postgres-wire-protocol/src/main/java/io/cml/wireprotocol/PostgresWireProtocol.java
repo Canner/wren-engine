@@ -276,8 +276,7 @@ public class PostgresWireProtocol
                     0,
                     0,
                     null);
-            // TODO: support describe
-            // Messages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
+            Messages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
             resultSetSender.sendResultSet();
             return wireProtocolSession.sync();
         }
