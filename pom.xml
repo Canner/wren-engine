@@ -65,7 +65,6 @@
     </properties>
 
     <modules>
-        <module>core/cml-calcite</module>
         <module>core/cml-main</module>
         <module>core/cml-postgres-wire-protocol</module>
         <module>core/cml-server</module>
@@ -199,12 +198,6 @@
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
                 <version>1.15</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-calcite</artifactId>
-                <version>${project.version}</version>
             </dependency>
 
             <dependency>
