@@ -19,6 +19,9 @@ import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
+import com.google.cloud.bigquery.Job;
+import com.google.cloud.bigquery.JobInfo;
+import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.MaterializedViewDefinition;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.Routine;
@@ -31,17 +34,26 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
+import io.airlift.log.Logger;
 import io.cml.metadata.TableHandle;
+import io.cml.spi.CmlException;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.cml.spi.metadata.StandardErrorCode.AMBIGUOUS_NAME;
+import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class BigQueryClient
 {
+    private static final Logger LOG = Logger.get(BigQueryClient.class);
+    private static final Set<String> INVALID_QUERY = ImmutableSet.of("invalidQuery", "invalid");
+
     private final BigQuery bigQuery;
     private final Cache<TableId, Table> mvCache;
 
@@ -124,6 +136,32 @@ public class BigQueryClient
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BigQueryException(BaseHttpServiceException.UNKNOWN_CODE, format("Failed to run the query [%s]", sql), e);
+        }
+    }
+
+    protected JobStatistics.QueryStatistics queryDryRun(Optional<String> datasetIdOptional, String query)
+    {
+        try {
+            QueryJobConfiguration.Builder queryConfigBuilder =
+                    QueryJobConfiguration
+                            .newBuilder(query)
+                            .setDryRun(true)
+                            .setUseQueryCache(false);
+
+            datasetIdOptional.ifPresent(queryConfigBuilder::setDefaultDataset);
+
+            Job job = bigQuery.create(JobInfo.of(queryConfigBuilder.build()));
+            return job.getStatistics();
+        }
+        catch (BigQueryException e) {
+            LOG.error(e);
+            if (INVALID_QUERY.contains(e.getReason())) {
+                if (e.getMessage().contains("ambiguous at")) {
+                    throw new CmlException(AMBIGUOUS_NAME, "There are ambiguous column names", e);
+                }
+                throw new CmlException(GENERIC_USER_ERROR, format("Invalid statement: %s", query), e);
+            }
+            throw new CmlException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 }

@@ -67,7 +67,7 @@ public class BigQueryMetadata
                                 .map(field ->
                                         ColumnSchema.builder()
                                                 .setName(field.getName())
-                                                .setType(toPGType(field.getType().name()))
+                                                .setType(toPGType(field.getType().getStandardType()))
                                                 .build())
                                 .collect(toImmutableList())));
     }
@@ -91,7 +91,7 @@ public class BigQueryMetadata
                 .stream()
                 .collect(toImmutableMap(
                         Field::getName,
-                        field -> new BigQueryColumnHandle(field.getName(), toPGType(field.getType().name()))));
+                        field -> new BigQueryColumnHandle(field.getName(), toPGType(field.getType().getStandardType()))));
     }
 
     @Override
