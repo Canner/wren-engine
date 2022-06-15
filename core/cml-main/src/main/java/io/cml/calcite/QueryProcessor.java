@@ -20,7 +20,6 @@ import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
 import io.cml.metadata.TableSchema;
-import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.sql.LogicalPlanner;
 import io.cml.sql.StatementAnalyzer;
@@ -81,25 +80,17 @@ public class QueryProcessor
     private final SqlParser sqlParser;
     private final RelOptCluster cluster;
     private final RelOptPlanner planner;
-    private final Connector connector;
     private final Metadata metadata;
     private final CalciteConnectionConfig config;
 
-    public static QueryProcessor of(
-            Metadata metadata,
-            Connector connector)
+    public static QueryProcessor of(Metadata metadata)
     {
-        return new QueryProcessor(
-                metadata,
-                connector);
+        return new QueryProcessor(metadata);
     }
 
-    private QueryProcessor(
-            Metadata metadata,
-            Connector connector)
+    private QueryProcessor(Metadata metadata)
     {
         this.dialect = requireNonNull(metadata.getDialect().getSqlDialect(), "dialect is null");
-        this.connector = requireNonNull(connector, "connector is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.typeFactory = new JavaTypeFactoryImpl();
 
@@ -155,7 +146,7 @@ public class QueryProcessor
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         // TODO: handle bigquery SQL syntax, `project.dataset.table`
-        for (MaterializedViewDefinition mvDef : connector.listMaterializedViews(Optional.empty())) {
+        for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews(Optional.empty())) {
             try {
                 planner.addMaterialization(getMvRel(mvDef));
             }

@@ -13,7 +13,12 @@
  */
 package io.cml.metadata;
 
+import io.cml.calcite.CmlSchemaUtil;
+import io.cml.spi.Column;
+import io.cml.spi.ConnectorRecordIterable;
 import io.cml.spi.function.OperatorType;
+import io.cml.spi.metadata.MaterializedViewDefinition;
+import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
 import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.tree.QualifiedName;
@@ -22,34 +27,39 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.cml.calcite.CmlSchemaUtil.Dialect;
-
 public interface Metadata
 {
-    /**
-     * Return table schema definition for the specified table handle.
-     * Table schema definition is a set of information
-     * required by semantic analyzer to analyze the query.
-     *
-     * @throws RuntimeException if table handle is no longer valid
-     * @see {@link #getTableMetadata(Session, TableHandle)}
-     */
+    void createSchema(String name);
+
+    boolean isSchemaExist(String name);
+
+    List<String> listSchemas();
+
+    List<TableMetadata> listTables(String schemaName);
+
+    List<MaterializedViewDefinition> listMaterializedViews(Optional<String> schemaName);
+
+    List<String> listFunctionNames(String schemaName);
+
     TableSchema getTableSchema(TableHandle tableHandle);
 
     Optional<TableHandle> getTableHandle(QualifiedObjectName tableName);
 
     Map<String, ColumnHandle> getColumnHandles(TableHandle tableHandle);
 
-    ResolvedFunction resolveFunction(QualifiedName name, List<PGType> parameterTypes);
+    ResolvedFunction resolveFunction(QualifiedName name, List<PGType<?>> parameterTypes);
 
-    ResolvedFunction resolveOperator(OperatorType operatorType, List<PGType> parameterTypes);
+    ResolvedFunction resolveOperator(OperatorType operatorType, List<PGType<?>> parameterTypes);
 
-    PGType fromSqlType(String type);
+    PGType<?> fromSqlType(String type);
 
     boolean isAggregationFunction(QualifiedName name);
 
-    default Dialect getDialect()
-    {
-        return Dialect.CALCITE;
-    }
+    CmlSchemaUtil.Dialect getDialect();
+
+    void directDDL(String sql);
+
+    ConnectorRecordIterable directQuery(String sql);
+
+    List<Column> describeQuery(String sql);
 }

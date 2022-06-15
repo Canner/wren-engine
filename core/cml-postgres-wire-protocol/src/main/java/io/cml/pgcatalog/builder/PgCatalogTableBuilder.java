@@ -15,6 +15,7 @@
 package io.cml.pgcatalog.builder;
 
 import io.airlift.log.Logger;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.table.CharacterSets;
 import io.cml.pgcatalog.table.KeyColumnUsage;
 import io.cml.pgcatalog.table.PgAmTable;
@@ -37,7 +38,6 @@ import io.cml.pgcatalog.table.PgTypeTable;
 import io.cml.pgcatalog.table.ReferentialConstraints;
 import io.cml.pgcatalog.table.TableConstraints;
 import io.cml.spi.CmlException;
-import io.cml.spi.connector.Connector;
 import org.apache.commons.lang3.text.StrSubstitutor;
 
 import java.util.Map;
@@ -49,14 +49,14 @@ import static java.util.Objects.requireNonNull;
 public abstract class PgCatalogTableBuilder
 {
     private static final Logger LOG = Logger.get(PgCatalogTableBuilder.class);
-    private final Connector connector;
+    private final Metadata metadata;
     private final Map<String, String> replaceMap;
     private final Map<Integer, String> oidToTypeMap;
     private final StrSubstitutor strSubstitutor;
 
-    public PgCatalogTableBuilder(Connector connector)
+    public PgCatalogTableBuilder(Metadata metadata)
     {
-        this.connector = requireNonNull(connector, "connector is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
         this.replaceMap = initReplaceMap();
         this.oidToTypeMap = initOidToTypeMap();
         this.strSubstitutor = new StrSubstitutor(getReplaceMap());
@@ -130,7 +130,7 @@ public abstract class PgCatalogTableBuilder
                 throw new CmlException(GENERIC_INTERNAL_ERROR, format("Unsupported table %s", pgCatalogTable.getName()));
         }
 
-        connector.directDDL(strSubstitutor.replace(sql));
+        metadata.directDDL(strSubstitutor.replace(sql));
         LOG.info("pg_catalog.%s has created or updated", pgCatalogTable.getName());
     }
 
@@ -138,9 +138,9 @@ public abstract class PgCatalogTableBuilder
 
     protected abstract Map<Integer, String> initOidToTypeMap();
 
-    public Connector getConnector()
+    public Metadata getMetadata()
     {
-        return connector;
+        return metadata;
     }
 
     public Map<String, String> getReplaceMap()

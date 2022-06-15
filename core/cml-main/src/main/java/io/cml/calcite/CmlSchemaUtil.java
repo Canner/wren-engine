@@ -16,8 +16,6 @@ package io.cml.calcite;
 
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.TableSchema;
-import io.cml.spi.metadata.ColumnMetadata;
-import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -27,7 +25,6 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
-import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 
 import java.util.Date;
 import java.util.List;
@@ -50,7 +47,6 @@ public final class CmlSchemaUtil
 
     public enum Dialect
     {
-        CALCITE(CalciteSqlDialect.DEFAULT),
         BIGQUERY(BigQuerySqlDialect.DEFAULT);
 
         private final SqlDialect sqlDialect;
@@ -90,17 +86,6 @@ public final class CmlSchemaUtil
         }
 
         return new CmlTable(tableSchema.getTable().getTableName(), builder.build());
-    }
-
-    private static CmlTable toCmlTable(TableMetadata tableMetadata)
-    {
-        JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl();
-        RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
-        for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
-            builder.add(columnMetadata.getName(), toRelDataType(typeFactory, columnMetadata.getType()));
-        }
-
-        return new CmlTable(tableMetadata.getTable().getTableName(), builder.build());
     }
 
     // TODO: handle nested types

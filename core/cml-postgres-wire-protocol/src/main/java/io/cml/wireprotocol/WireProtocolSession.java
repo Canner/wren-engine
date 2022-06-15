@@ -16,11 +16,11 @@ package io.cml.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
-import io.cml.spi.connector.Connector;
 import io.cml.sql.PostgreSqlRewrite;
 import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
@@ -74,16 +74,16 @@ public class WireProtocolSession
     private final PostgreSqlRewrite postgreSqlRewrite;
     private final SqlParser sqlParser;
     private final RegObjectFactory regObjectFactory;
-    private final Connector connector;
+    private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory, Connector connector, SqlConverter sqlConverter)
+    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
-        this.connector = requireNonNull(connector, "connector is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
     }
 
@@ -157,7 +157,7 @@ public class WireProtocolSession
     {
         Portal portal = getPortal(name);
         String sql = sqlConverter.convert(portal.getPreparedStatement().getOriginalStatement());
-        return Optional.of(connector.describeQuery(sql));
+        return Optional.of(metadata.describeQuery(sql));
     }
 
     public List<Integer> describeStatement(String name)
@@ -220,7 +220,7 @@ public class WireProtocolSession
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
             String sql = sqlConverter.convert(execStmt);
-            return Optional.of(connector.directQuery(sql));
+            return Optional.of(metadata.directQuery(sql));
         });
     }
 

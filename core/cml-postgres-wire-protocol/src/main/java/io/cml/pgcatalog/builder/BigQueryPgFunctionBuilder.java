@@ -14,9 +14,9 @@
 
 package io.cml.pgcatalog.builder;
 
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.function.PgFunction;
 import io.cml.spi.CmlException;
-import io.cml.spi.connector.Connector;
 
 import javax.inject.Inject;
 
@@ -32,7 +32,7 @@ public class BigQueryPgFunctionBuilder
         extends PgFunctionBuilder
 {
     @Inject
-    public BigQueryPgFunctionBuilder(Connector connector)
+    public BigQueryPgFunctionBuilder(Metadata connector)
     {
         super(connector);
     }

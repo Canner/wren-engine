@@ -15,15 +15,15 @@
 package io.cml.pgcatalog.builder;
 
 import io.airlift.log.Logger;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.function.PgFunction;
-import io.cml.spi.connector.Connector;
 
 public abstract class PgFunctionBuilder
 {
     private static final Logger LOG = Logger.get(PgFunctionBuilder.class);
-    private final Connector connector;
+    private final Metadata connector;
 
-    public PgFunctionBuilder(Connector connector)
+    public PgFunctionBuilder(Metadata connector)
     {
         this.connector = connector;
     }

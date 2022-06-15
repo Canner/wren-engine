@@ -58,7 +58,7 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalyzer
 {
-    private final Map<NodeRef<Expression>, PGType> expressionTypes = new LinkedHashMap<>();
+    private final Map<NodeRef<Expression>, PGType<?>> expressionTypes = new LinkedHashMap<>();
     private final Multimap<QualifiedObjectName, String> tableColumnReferences = HashMultimap.create();
     private final List<Field> sourceFields = new ArrayList<>();
     private final Multimap<NodeRef<Node>, Field> referencedFields = HashMultimap.create();
@@ -67,17 +67,17 @@ public class ExpressionAnalyzer
 
     private final Map<NodeRef<FunctionCall>, ResolvedFunction> resolvedFunctions = new LinkedHashMap<>();
 
-    private final Function<Expression, PGType> getPreanalyzedType;
+    private final Function<Expression, PGType<?>> getPreanalyzedType;
 
     private final Metadata metadata;
 
-    public ExpressionAnalyzer(Function<Expression, PGType> getPreanalyzedType, Metadata metadata)
+    public ExpressionAnalyzer(Function<Expression, PGType<?>> getPreanalyzedType, Metadata metadata)
     {
         this.getPreanalyzedType = requireNonNull(getPreanalyzedType, "getPreanalyzedType is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
-    public PGType setExpressionType(Expression expression, PGType type)
+    public PGType<?> setExpressionType(Expression expression, PGType<?> type)
     {
         requireNonNull(expression, "expression cannot be null");
         requireNonNull(type, "type cannot be null");
@@ -87,28 +87,28 @@ public class ExpressionAnalyzer
         return type;
     }
 
-    private PGType getExpressionType(Expression expression)
+    private PGType<?> getExpressionType(Expression expression)
     {
         requireNonNull(expression, "expression cannot be null");
 
-        PGType type = expressionTypes.get(NodeRef.of(expression));
+        PGType<?> type = expressionTypes.get(NodeRef.of(expression));
         checkState(type != null, "Expression not yet analyzed: %s", expression);
         return type;
     }
 
-    public Map<NodeRef<Expression>, PGType> getExpressionTypes()
+    public Map<NodeRef<Expression>, PGType<?>> getExpressionTypes()
     {
         return unmodifiableMap(expressionTypes);
     }
 
-    public PGType analyze(Expression expression, Scope scope)
+    public PGType<?> analyze(Expression expression, Scope scope)
     {
         Visitor visitor = new Visitor(scope);
         return visitor.process(expression, new StackableAstVisitor.StackableAstVisitorContext<>(new Context(scope)));
     }
 
     private class Visitor
-            extends StackableAstVisitor<PGType, Context>
+            extends StackableAstVisitor<PGType<?>, Context>
     {
         // Used to resolve FieldReferences (e.g. during local execution planning)
         private final Scope baseScope;
@@ -119,11 +119,11 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        public PGType process(Node node, @Nullable StackableAstVisitorContext<Context> context)
+        public PGType<?> process(Node node, @Nullable StackableAstVisitorContext<Context> context)
         {
             if (node instanceof Expression) {
                 // don't double process a node
-                PGType type = expressionTypes.get(NodeRef.of(((Expression) node)));
+                PGType<?> type = expressionTypes.get(NodeRef.of(((Expression) node)));
                 if (type != null) {
                     return type;
                 }
@@ -132,13 +132,13 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        protected PGType visitIdentifier(Identifier node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitIdentifier(Identifier node, StackableAstVisitorContext<Context> context)
         {
             ResolvedField resolvedField = context.getContext().getScope().resolveField(node, QualifiedName.of(node.getValue()));
             return handleResolvedField(node, resolvedField, context);
         }
 
-        private PGType handleResolvedField(Expression node, ResolvedField resolvedField, StackableAstVisitorContext<Context> context)
+        private PGType<?> handleResolvedField(Expression node, ResolvedField resolvedField, StackableAstVisitorContext<Context> context)
         {
             FieldId fieldId = FieldId.from(resolvedField);
             Field field = resolvedField.getField();
@@ -172,9 +172,9 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        protected PGType visitFunctionCall(FunctionCall node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitFunctionCall(FunctionCall node, StackableAstVisitorContext<Context> context)
         {
-            List<PGType> argumentTypes = getCallArgumentTypes(node.getArguments(), context);
+            List<PGType<?>> argumentTypes = getCallArgumentTypes(node.getArguments(), context);
 
             ResolvedFunction function;
             try {
@@ -195,13 +195,13 @@ public class ExpressionAnalyzer
 
             resolvedFunctions.put(NodeRef.of(node), function);
 
-            PGType type = function.getReturnType();
+            PGType<?> type = function.getReturnType();
             return setExpressionType(node, type);
         }
 
-        public List<PGType> getCallArgumentTypes(List<Expression> arguments, StackableAstVisitorContext<Context> context)
+        public List<PGType<?>> getCallArgumentTypes(List<Expression> arguments, StackableAstVisitorContext<Context> context)
         {
-            ImmutableList.Builder<PGType> argumentTypesBuilder = ImmutableList.builder();
+            ImmutableList.Builder<PGType<?>> argumentTypesBuilder = ImmutableList.builder();
             for (Expression argument : arguments) {
                 argumentTypesBuilder.add(process(argument, context));
             }
@@ -209,14 +209,14 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        protected PGType visitArithmeticBinary(ArithmeticBinaryExpression node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitArithmeticBinary(ArithmeticBinaryExpression node, StackableAstVisitorContext<Context> context)
         {
             return getOperator(context, node, OperatorType.valueOf(node.getOperator().name()), node.getLeft(), node.getRight());
         }
 
-        private PGType getOperator(StackableAstVisitorContext<Context> context, Expression node, OperatorType operatorType, Expression... arguments)
+        private PGType<?> getOperator(StackableAstVisitorContext<Context> context, Expression node, OperatorType operatorType, Expression... arguments)
         {
-            ImmutableList.Builder<PGType> argumentTypes = ImmutableList.builder();
+            ImmutableList.Builder<PGType<?>> argumentTypes = ImmutableList.builder();
             for (Expression expression : arguments) {
                 argumentTypes.add(process(expression, context));
             }
@@ -224,12 +224,12 @@ public class ExpressionAnalyzer
             ResolvedFunction operation;
             operation = metadata.resolveOperator(operatorType, argumentTypes.build());
 
-            PGType type = operation.getReturnType();
+            PGType<?> type = operation.getReturnType();
             return setExpressionType(node, type);
         }
 
         @Override
-        protected PGType visitLongLiteral(LongLiteral node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitLongLiteral(LongLiteral node, StackableAstVisitorContext<Context> context)
         {
             if (node.getValue() >= Integer.MIN_VALUE && node.getValue() <= Integer.MAX_VALUE) {
                 return setExpressionType(node, INTEGER);
@@ -239,7 +239,7 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        protected PGType visitComparisonExpression(ComparisonExpression node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitComparisonExpression(ComparisonExpression node, StackableAstVisitorContext<Context> context)
         {
             OperatorType operatorType;
             switch (node.getOperator()) {
@@ -265,15 +265,15 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        protected PGType visitStringLiteral(StringLiteral node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitStringLiteral(StringLiteral node, StackableAstVisitorContext<Context> context)
         {
             return setExpressionType(node, VARCHAR);
         }
 
         @Override
-        protected PGType visitGenericLiteral(GenericLiteral node, StackableAstVisitorContext<Context> context)
+        protected PGType<?> visitGenericLiteral(GenericLiteral node, StackableAstVisitorContext<Context> context)
         {
-            PGType type;
+            PGType<?> type;
             try {
                 type = metadata.fromSqlType(node.getType());
             }

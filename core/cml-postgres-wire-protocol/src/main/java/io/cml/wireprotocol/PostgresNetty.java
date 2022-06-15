@@ -19,9 +19,9 @@ import com.carrotsearch.hppc.IntSet;
 import com.google.common.net.HostAndPort;
 import io.airlift.log.Logger;
 import io.cml.PostgresWireProtocolConfig;
+import io.cml.metadata.Metadata;
 import io.cml.netty.ChannelBootstrapFactory;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
-import io.cml.spi.connector.Connector;
 import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.ssl.SslContextProvider;
 import io.cml.wireprotocol.ssl.SslReqHandler;
@@ -80,7 +80,7 @@ public class PostgresNetty
     private final String[] bindHosts;
     private final String[] publishHosts;
     private final RegObjectFactory regObjectFactory;
-    private final Connector connector;
+    private final Metadata connector;
 
     private final SqlConverter sqlConverter;
     private BoundTransportAddress boundAddress;
@@ -90,7 +90,7 @@ public class PostgresNetty
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
-            Connector connector,
+            Metadata connector,
             SqlConverter sqlConverter)
     {
         this.settings = toWireProtocolSettings();

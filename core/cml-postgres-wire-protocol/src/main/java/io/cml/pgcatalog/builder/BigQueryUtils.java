@@ -15,7 +15,7 @@
 package io.cml.pgcatalog.builder;
 
 import com.google.common.collect.ImmutableMap;
-import io.cml.spi.connector.Connector;
+import io.cml.metadata.Metadata;
 import io.cml.spi.type.PGArray;
 
 import java.util.List;
@@ -87,7 +87,7 @@ public final class BigQueryUtils
 
     private BigQueryUtils() {}
 
-    public static String createOrReplaceAllTable(Connector connector)
+    public static String createOrReplaceAllTable(Metadata connector)
     {
         List<String> schemas = connector.listSchemas();
         StringBuilder builder = new StringBuilder();
@@ -100,7 +100,7 @@ public final class BigQueryUtils
         return builder.toString();
     }
 
-    public static String createOrReplaceAllColumn(Connector connector)
+    public static String createOrReplaceAllColumn(Metadata connector)
     {
         // TODO: we should check if pg_type has created or not.
         List<String> schemas = connector.listSchemas();

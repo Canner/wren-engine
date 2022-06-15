@@ -21,10 +21,10 @@ import java.util.List;
 public class ResolvedFunction
 {
     private final String name;
-    private final PGType returnType;
-    private final List<PGType> argumentTypes;
+    private final PGType<?> returnType;
+    private final List<PGType<?>> argumentTypes;
 
-    public ResolvedFunction(String name, PGType returnType, List<PGType> argumentTypes)
+    public ResolvedFunction(String name, PGType<?> returnType, List<PGType<?>> argumentTypes)
     {
         this.name = name;
         this.returnType = returnType;
@@ -36,12 +36,12 @@ public class ResolvedFunction
         return name;
     }
 
-    public PGType getReturnType()
+    public PGType<?> getReturnType()
     {
         return returnType;
     }
 
-    public List<PGType> getArgumentTypes()
+    public List<PGType<?>> getArgumentTypes()
     {
         return argumentTypes;
     }
