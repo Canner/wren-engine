@@ -22,42 +22,57 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public final class PatternSearchMode
-        extends Node
+public final class ExplainAnalyze
+        extends Statement
 {
-    private final Mode mode;
+    private final Statement statement;
+    private final boolean verbose;
 
-    public PatternSearchMode(Mode mode)
+    public ExplainAnalyze(Statement statement, boolean verbose)
     {
-        this(Optional.empty(), mode);
+        this(Optional.empty(), statement, verbose);
     }
 
-    public PatternSearchMode(NodeLocation location, Mode mode)
+    public ExplainAnalyze(NodeLocation location, boolean verbose, Statement statement)
     {
-        this(Optional.of(location), mode);
+        this(Optional.of(location), statement, verbose);
     }
 
-    public PatternSearchMode(Optional<NodeLocation> location, Mode mode)
+    public ExplainAnalyze(Optional<NodeLocation> location, Statement statement, boolean verbose)
     {
         super(location);
-        this.mode = requireNonNull(mode, "mode is null");
+        this.statement = requireNonNull(statement, "statement is null");
+        this.verbose = verbose;
     }
 
-    public Mode getMode()
+    public Statement getStatement()
     {
-        return mode;
+        return statement;
+    }
+
+    public boolean isVerbose()
+    {
+        return verbose;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitPatternSearchMode(this, context);
+        return visitor.visitExplainAnalyze(this, context);
     }
 
     @Override
     public List<Node> getChildren()
     {
-        return ImmutableList.of();
+        return ImmutableList.<Node>builder()
+                .add(statement)
+                .build();
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(statement, verbose);
     }
 
     @Override
@@ -69,35 +84,16 @@ public final class PatternSearchMode
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        return mode == ((PatternSearchMode) obj).mode;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(mode);
+        ExplainAnalyze o = (ExplainAnalyze) obj;
+        return Objects.equals(statement, o.statement);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("mode", mode)
+                .add("statement", statement)
+                .add("verbose", verbose)
                 .toString();
-    }
-
-    @Override
-    public boolean shallowEquals(Node other)
-    {
-        if (!sameClass(this, other)) {
-            return false;
-        }
-
-        return mode == ((PatternSearchMode) other).mode;
-    }
-
-    public enum Mode
-    {
-        INITIAL, SEEK
     }
 }
