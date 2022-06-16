@@ -15,8 +15,8 @@
 package io.cml;
 
 import com.google.common.collect.ImmutableList;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
-import io.cml.spi.connector.Connector;
 import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.PostgresNetty;
 import io.cml.wireprotocol.ssl.SslContextProvider;
@@ -34,7 +34,7 @@ public class PostgresNettyProvider
     private final SslContextProvider sslContextProvider;
     private final RegObjectFactory regObjectFactory;
 
-    private final Connector connector;
+    private final Metadata connector;
     private final SqlConverter sqlConverter;
 
     @Inject
@@ -42,7 +42,7 @@ public class PostgresNettyProvider
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
-            Connector connector,
+            Metadata connector,
             SqlConverter sqlConverter)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");

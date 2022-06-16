@@ -15,8 +15,8 @@
 package io.cml.pgcatalog.builder;
 
 import com.google.common.collect.ImmutableMap;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.table.PgCatalogTable;
-import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.type.PGType;
 
@@ -42,9 +42,9 @@ public final class BigQueryPgCatalogTableBuilder
         extends PgCatalogTableBuilder
 {
     @Inject
-    public BigQueryPgCatalogTableBuilder(Connector connector)
+    public BigQueryPgCatalogTableBuilder(Metadata metadata)
     {
-        super(connector);
+        super(metadata);
     }
 
     @Override
@@ -71,7 +71,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgClass(PgCatalogTable pgCatalogTable)
     {
-        getConnector().directDDL(createOrReplaceAllTable(getConnector()));
+        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
@@ -110,7 +110,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgAttributeTable(PgCatalogTable pgCatalogTable)
     {
-        getConnector().directDDL(createOrReplaceAllColumn(getConnector()));
+        getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
@@ -137,7 +137,7 @@ public final class BigQueryPgCatalogTableBuilder
     protected String createPgDatabaseTable(PgCatalogTable pgCatalogTable)
     {
         // TODO get project id from config
-        getConnector().directDDL(createOrReplaceAllTable(getConnector()));
+        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
@@ -169,7 +169,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgNamespaceTable(PgCatalogTable pgCatalogTable)
     {
-        getConnector().directDDL(createOrReplaceAllTable(getConnector()));
+        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
@@ -215,7 +215,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createCharacterSets(PgCatalogTable pgCatalogTable)
     {
-        getConnector().directDDL(createOrReplaceAllTable(getConnector()));
+        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {

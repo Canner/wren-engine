@@ -57,7 +57,7 @@ public class Analysis
     private Statement root;
     private final Map<NodeRef<Node>, Expression> where = new LinkedHashMap<>();
 
-    private final Map<NodeRef<Expression>, PGType> types = new LinkedHashMap<>();
+    private final Map<NodeRef<Expression>, PGType<?>> types = new LinkedHashMap<>();
 
     private final Map<NodeRef<QuerySpecification>, GroupingSetAnalysis> groupingSets = new LinkedHashMap<>();
 
@@ -123,19 +123,19 @@ public class Analysis
         return selectExpressions.get(NodeRef.of(node));
     }
 
-    public void addTypes(Map<NodeRef<Expression>, PGType> types)
+    public void addTypes(Map<NodeRef<Expression>, PGType<?>> types)
     {
         this.types.putAll(types);
     }
 
-    public Map<NodeRef<Expression>, PGType> getTypes()
+    public Map<NodeRef<Expression>, PGType<?>> getTypes()
     {
         return unmodifiableMap(types);
     }
 
-    public PGType getType(Expression expression)
+    public PGType<?> getType(Expression expression)
     {
-        PGType type = types.get(NodeRef.of(expression));
+        PGType<?> type = types.get(NodeRef.of(expression));
         checkArgument(type != null, "Expression not analyzed: %s", expression);
         return type;
     }

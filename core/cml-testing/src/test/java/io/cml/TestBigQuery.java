@@ -16,7 +16,6 @@ package io.cml;
 
 import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;
-import io.cml.connector.bigquery.BigQueryConnector;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
 import io.cml.server.module.BigQueryConnectorModule;
@@ -42,8 +41,7 @@ public class TestBigQuery
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient);
-        BigQueryConnector bigQueryConnector = new BigQueryConnector(bigQueryClient);
-        BigQuerySqlConverter bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, bigQueryConnector);
+        BigQuerySqlConverter bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
 
         String output = bigQuerySqlConverter.convert("SELECT o_custkey, COUNT(*) as cnt FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\" GROUP BY o_custkey");
         assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +

@@ -32,8 +32,8 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalysis
 {
-    private final Map<NodeRef<Expression>, PGType> expressionTypes;
-    private final Map<NodeRef<Expression>, PGType> expressionCoercions;
+    private final Map<NodeRef<Expression>, PGType<?>> expressionTypes;
+    private final Map<NodeRef<Expression>, PGType<?>> expressionCoercions;
     private final Set<NodeRef<Expression>> typeOnlyCoercions;
     private final Map<NodeRef<Expression>, ResolvedField> columnReferences;
     private final Set<NodeRef<InPredicate>> subqueryInPredicates;
@@ -43,8 +43,8 @@ public class ExpressionAnalysis
     private final Set<NodeRef<FunctionCall>> windowFunctions;
 
     public ExpressionAnalysis(
-            Map<NodeRef<Expression>, PGType> expressionTypes,
-            Map<NodeRef<Expression>, PGType> expressionCoercions,
+            Map<NodeRef<Expression>, PGType<?>> expressionTypes,
+            Map<NodeRef<Expression>, PGType<?>> expressionCoercions,
             Set<NodeRef<InPredicate>> subqueryInPredicates,
             Set<NodeRef<SubqueryExpression>> subqueries,
             Set<NodeRef<ExistsPredicate>> existsSubqueries,
@@ -64,17 +64,17 @@ public class ExpressionAnalysis
         this.windowFunctions = ImmutableSet.copyOf(requireNonNull(windowFunctions, "windowFunctions is null"));
     }
 
-    public PGType getType(Expression expression)
+    public PGType<?> getType(Expression expression)
     {
         return expressionTypes.get(NodeRef.of(expression));
     }
 
-    public Map<NodeRef<Expression>, PGType> getExpressionTypes()
+    public Map<NodeRef<Expression>, PGType<?>> getExpressionTypes()
     {
         return expressionTypes;
     }
 
-    public PGType getCoercion(Expression expression)
+    public PGType<?> getCoercion(Expression expression)
     {
         return expressionCoercions.get(NodeRef.of(expression));
     }

@@ -16,6 +16,7 @@ package io.cml.pgcatalog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
 import io.cml.pgcatalog.builder.PgFunctionBuilder;
 import io.cml.pgcatalog.function.PgFunction;
@@ -40,7 +41,6 @@ import io.cml.pgcatalog.table.PgTablespaceTable;
 import io.cml.pgcatalog.table.PgTypeTable;
 import io.cml.pgcatalog.table.ReferentialConstraints;
 import io.cml.pgcatalog.table.TableConstraints;
-import io.cml.spi.connector.Connector;
 import io.cml.spi.metadata.TableMetadata;
 
 import java.util.List;
@@ -59,14 +59,14 @@ public class PgCatalogManager
     private final Map<String, PgCatalogTable> tables;
     private final List<PgFunction> functions;
 
-    private final Connector connector;
+    private final Metadata connector;
     private final PgCatalogTableBuilder pgCatalogTableBuilder;
     private final PgFunctionBuilder pgFunctionBuilder;
 
     private final List<String> highPriorityTableName = ImmutableList.of(PgTypeTable.NAME);
 
     @Inject
-    public PgCatalogManager(Connector connector, PgCatalogTableBuilder pgCatalogTableBuilder, PgFunctionBuilder pgFunctionBuilder)
+    public PgCatalogManager(Metadata connector, PgCatalogTableBuilder pgCatalogTableBuilder, PgFunctionBuilder pgFunctionBuilder)
     {
         this.tables = initTables();
         this.functions = initFunctions();

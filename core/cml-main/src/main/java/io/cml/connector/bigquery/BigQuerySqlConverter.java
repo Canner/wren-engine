@@ -16,7 +16,6 @@ package io.cml.connector.bigquery;
 
 import io.cml.calcite.QueryProcessor;
 import io.cml.metadata.Metadata;
-import io.cml.spi.connector.Connector;
 import io.cml.sql.SqlConverter;
 
 import javax.inject.Inject;
@@ -27,21 +26,17 @@ public class BigQuerySqlConverter
         implements SqlConverter
 {
     private final Metadata metadata;
-    private final Connector connector;
 
     @Inject
-    public BigQuerySqlConverter(
-            Metadata metadata,
-            Connector connector)
+    public BigQuerySqlConverter(Metadata metadata)
     {
-        this.connector = requireNonNull(connector, "connector is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
     @Override
     public String convert(String sql)
     {
-        QueryProcessor processor = QueryProcessor.of(metadata, connector);
+        QueryProcessor processor = QueryProcessor.of(metadata);
         return processor.convert(sql);
     }
 }

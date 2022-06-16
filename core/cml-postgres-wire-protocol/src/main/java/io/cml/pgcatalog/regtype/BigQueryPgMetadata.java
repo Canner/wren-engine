@@ -15,7 +15,7 @@
 package io.cml.pgcatalog.regtype;
 
 import com.google.common.collect.Streams;
-import io.cml.spi.connector.Connector;
+import io.cml.metadata.Metadata;
 
 import javax.inject.Inject;
 
@@ -30,12 +30,12 @@ import static java.util.Objects.requireNonNull;
 public class BigQueryPgMetadata
         extends PgMetadata
 {
-    Connector connector;
+    Metadata metadata;
 
     @Inject
-    public BigQueryPgMetadata(Connector connector)
+    public BigQueryPgMetadata(Metadata metadata)
     {
-        this.connector = requireNonNull(connector, "connector is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
     @Override
@@ -52,7 +52,7 @@ public class BigQueryPgMetadata
 
     private List<RegObject> listRegObject(String nameField, String tableName)
     {
-        return Streams.stream(connector.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", nameField, tableName)))
+        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", nameField, tableName)))
                 .map(row -> new RegObject((int) row[0], (String) row[1]))
                 .collect(toImmutableList());
     }
