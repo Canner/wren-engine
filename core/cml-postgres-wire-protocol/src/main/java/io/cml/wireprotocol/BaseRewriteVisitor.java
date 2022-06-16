@@ -340,15 +340,11 @@ public class BaseRewriteVisitor
         if (node.getLocation().isPresent()) {
             return new Explain(
                     node.getLocation().get(),
-                    node.isAnalyze(),
-                    node.isVerbose(),
                     visitAndCast(node.getStatement()),
                     node.getOptions());
         }
         return new Explain(
                 visitAndCast(node.getStatement()),
-                node.isAnalyze(),
-                node.isVerbose(),
                 node.getOptions());
     }
 
@@ -897,12 +893,24 @@ public class BaseRewriteVisitor
                     node.getLocation().get(),
                     node.getType(),
                     visitAndCast(node.getStart()),
-                    node.getEnd().map(this::visitAndCast));
+                    node.getEnd().map(this::visitAndCast),
+                    node.getMeasures(),
+                    node.getAfterMatchSkipTo(),
+                    node.getPatternSearchMode(),
+                    node.getPattern(),
+                    node.getSubsets(),
+                    node.getVariableDefinitions());
         }
         return new WindowFrame(
                 node.getType(),
                 visitAndCast(node.getStart()),
-                node.getEnd().map(this::visitAndCast));
+                node.getEnd().map(this::visitAndCast),
+                node.getMeasures(),
+                node.getAfterMatchSkipTo(),
+                node.getPatternSearchMode(),
+                node.getPattern(),
+                node.getSubsets(),
+                node.getVariableDefinitions());
     }
 
     @Override

@@ -25,26 +25,43 @@ public class Table
         extends QueryBody
 {
     private final QualifiedName name;
+    private final Optional<QualifiedName> cannerflowName;
 
     public Table(QualifiedName name)
     {
-        this(Optional.empty(), name);
+        this(Optional.empty(), name, Optional.empty());
+    }
+
+    public Table(QualifiedName name, QualifiedName cannerflowName)
+    {
+        this(Optional.empty(), name, Optional.of(cannerflowName));
     }
 
     public Table(NodeLocation location, QualifiedName name)
     {
-        this(Optional.of(location), name);
+        this(Optional.of(location), name, Optional.empty());
     }
 
-    private Table(Optional<NodeLocation> location, QualifiedName name)
+    public Table(NodeLocation location, QualifiedName name, QualifiedName cannerflowName)
+    {
+        this(Optional.of(location), name, Optional.of(cannerflowName));
+    }
+
+    private Table(Optional<NodeLocation> location, QualifiedName name, Optional<QualifiedName> cannerflowName)
     {
         super(location);
         this.name = name;
+        this.cannerflowName = cannerflowName;
     }
 
     public QualifiedName getName()
     {
         return name;
+    }
+
+    public Optional<QualifiedName> getCannerflowName()
+    {
+        return cannerflowName;
     }
 
     @Override

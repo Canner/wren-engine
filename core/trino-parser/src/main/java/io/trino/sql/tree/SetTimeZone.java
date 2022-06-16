@@ -22,37 +22,33 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public class DropRole
+public class SetTimeZone
         extends Statement
 {
-    private final Identifier name;
-    private final Optional<Identifier> catalog;
+    private final Optional<Expression> timeZone;
 
-    public DropRole(Identifier name, Optional<Identifier> catalog)
+    public SetTimeZone(NodeLocation location, Optional<Expression> timeZone)
     {
-        this(Optional.empty(), name, catalog);
+        super(Optional.of(location));
+        requireNonNull(timeZone, "timeZone is null");
+        this.timeZone = timeZone;
     }
 
-    public DropRole(NodeLocation location, Identifier name, Optional<Identifier> catalog)
+    public Optional<Expression> getTimeZone()
     {
-        this(Optional.of(location), name, catalog);
+        return timeZone;
     }
 
-    private DropRole(Optional<NodeLocation> location, Identifier name, Optional<Identifier> catalog)
+    @Override
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        super(location);
-        this.name = requireNonNull(name, "name is null");
-        this.catalog = requireNonNull(catalog, "catalog is null");
+        return visitor.visitSetTimeZone(this, context);
     }
 
-    public Identifier getName()
+    @Override
+    public List<? extends Node> getChildren()
     {
-        return name;
-    }
-
-    public Optional<Identifier> getCatalog()
-    {
-        return catalog;
+        return timeZone.isPresent() ? ImmutableList.of(timeZone.get()) : ImmutableList.of();
     }
 
     @Override
@@ -64,35 +60,21 @@ public class DropRole
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        DropRole dropRole = (DropRole) o;
-        return Objects.equals(name, dropRole.name) &&
-                Objects.equals(catalog, dropRole.catalog);
+        SetTimeZone that = (SetTimeZone) o;
+        return Objects.equals(timeZone, that.timeZone);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, catalog);
+        return Objects.hash(timeZone);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("name", name)
-                .add("catalog", catalog)
+                .add("timeZone", timeZone.isPresent() ? timeZone : "LOCAL")
                 .toString();
-    }
-
-    @Override
-    public List<? extends Node> getChildren()
-    {
-        return ImmutableList.of();
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitDropRole(this, context);
     }
 }

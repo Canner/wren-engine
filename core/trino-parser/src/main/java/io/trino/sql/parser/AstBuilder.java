@@ -74,6 +74,7 @@ import io.trino.sql.tree.ExcludedPattern;
 import io.trino.sql.tree.Execute;
 import io.trino.sql.tree.ExistsPredicate;
 import io.trino.sql.tree.Explain;
+import io.trino.sql.tree.ExplainAnalyze;
 import io.trino.sql.tree.ExplainFormat;
 import io.trino.sql.tree.ExplainOption;
 import io.trino.sql.tree.ExplainType;
@@ -178,6 +179,7 @@ import io.trino.sql.tree.SetRole;
 import io.trino.sql.tree.SetSchemaAuthorization;
 import io.trino.sql.tree.SetSession;
 import io.trino.sql.tree.SetTableAuthorization;
+import io.trino.sql.tree.SetTimeZone;
 import io.trino.sql.tree.SetViewAuthorization;
 import io.trino.sql.tree.ShowCatalogs;
 import io.trino.sql.tree.ShowColumns;
@@ -221,6 +223,7 @@ import io.trino.sql.tree.WhenClause;
 import io.trino.sql.tree.Window;
 import io.trino.sql.tree.WindowDefinition;
 import io.trino.sql.tree.WindowFrame;
+import io.trino.sql.tree.WindowOperation;
 import io.trino.sql.tree.WindowReference;
 import io.trino.sql.tree.WindowSpecification;
 import io.trino.sql.tree.With;
@@ -1077,7 +1080,13 @@ class AstBuilder
     @Override
     public Node visitExplain(SqlBaseParser.ExplainContext context)
     {
-        return new Explain(getLocation(context), context.ANALYZE() != null, context.VERBOSE() != null, (Statement) visit(context.statement()), visit(context.explainOption(), ExplainOption.class));
+        return new Explain(getLocation(context), (Statement) visit(context.statement()), visit(context.explainOption(), ExplainOption.class));
+    }
+
+    @Override
+    public Node visitExplainAnalyze(SqlBaseParser.ExplainAnalyzeContext context)
+    {
+        return new ExplainAnalyze(getLocation(context), context.VERBOSE() != null, (Statement) visit(context.statement()));
     }
 
     @Override
@@ -1228,7 +1237,8 @@ class AstBuilder
         return new CreateRole(
                 getLocation(context),
                 (Identifier) visit(context.name),
-                getGrantorSpecificationIfPresent(context.grantor()));
+                getGrantorSpecificationIfPresent(context.grantor()),
+                visitIfPresent(context.catalog, Identifier.class));
     }
 
     @Override
@@ -1236,7 +1246,8 @@ class AstBuilder
     {
         return new DropRole(
                 getLocation(context),
-                (Identifier) visit(context.name));
+                (Identifier) visit(context.name),
+                visitIfPresent(context.catalog, Identifier.class));
     }
 
     @Override
@@ -1247,7 +1258,8 @@ class AstBuilder
                 ImmutableSet.copyOf(getIdentifiers(context.roles().identifier())),
                 ImmutableSet.copyOf(getPrincipalSpecifications(context.principal())),
                 context.OPTION() != null,
-                getGrantorSpecificationIfPresent(context.grantor()));
+                getGrantorSpecificationIfPresent(context.grantor()),
+                visitIfPresent(context.catalog, Identifier.class));
     }
 
     @Override
@@ -1258,7 +1270,8 @@ class AstBuilder
                 ImmutableSet.copyOf(getIdentifiers(context.roles().identifier())),
                 ImmutableSet.copyOf(getPrincipalSpecifications(context.principal())),
                 context.OPTION() != null,
-                getGrantorSpecificationIfPresent(context.grantor()));
+                getGrantorSpecificationIfPresent(context.grantor()),
+                visitIfPresent(context.catalog, Identifier.class));
     }
 
     @Override
@@ -1271,7 +1284,11 @@ class AstBuilder
         else if (context.NONE() != null) {
             type = SetRole.Type.NONE;
         }
-        return new SetRole(getLocation(context), type, getIdentifierIfPresent(context.role));
+        return new SetRole(
+                getLocation(context),
+                type,
+                getIdentifierIfPresent(context.role),
+                visitIfPresent(context.catalog, Identifier.class));
     }
 
     @Override
@@ -1376,6 +1393,16 @@ class AstBuilder
     public Node visitSetPath(SqlBaseParser.SetPathContext context)
     {
         return new SetPath(getLocation(context), (PathSpecification) visit(context.pathSpecification()));
+    }
+
+    @Override
+    public Node visitSetTimeZone(SqlBaseParser.SetTimeZoneContext context)
+    {
+        Optional<Expression> timeZone = Optional.empty();
+        if (context.expression() != null) {
+            timeZone = Optional.of((Expression) visit(context.expression()));
+        }
+        return new SetTimeZone(getLocation(context), timeZone);
     }
 
     // ***************** boolean expressions ******************
@@ -1654,6 +1681,8 @@ class AstBuilder
     @Override
     public Node visitComparison(SqlBaseParser.ComparisonContext context)
     {
+        checkPgSchema(context.IDENTIFIER()); // pg syntax
+
         return new ComparisonExpression(
                 getLocation(context.comparisonOperator()),
                 getComparisonOperator(((TerminalNode) context.comparisonOperator().getChild(0)).getSymbol()),
@@ -1667,6 +1696,10 @@ class AstBuilder
     @Override
     public Node visitPosixComparison(SqlBaseParser.PosixComparisonContext context)
     {
+        if (!isNull(context.quotedRegexMatch())) {
+            checkPgSchema(context.quotedRegexMatch().IDENTIFIER());
+        }
+
         Expression value = (Expression) visit(context.value);
         Expression pattern = (Expression) visit(context.pattern);
 
@@ -1822,6 +1855,8 @@ class AstBuilder
     @Override
     public Node visitArithmeticBinary(SqlBaseParser.ArithmeticBinaryContext context)
     {
+        checkPgSchema(context.IDENTIFIER()); // pg syntax
+
         return new ArithmeticBinaryExpression(
                 getLocation(context.operator),
                 getArithmeticBinaryOperator(context.operator),
@@ -1883,6 +1918,8 @@ class AstBuilder
     @Override
     public Node visitCast(SqlBaseParser.CastContext context)
     {
+        checkPgSchema(context.IDENTIFIER()); // pg syntax
+
         boolean isTryCast = context.TRY_CAST() != null;
         boolean isPostgreStyle = context.PG_CAST() != null;
         if (isPostgreStyle) {
@@ -1939,6 +1976,64 @@ class AstBuilder
             throw parseError("Invalid EXTRACT field: " + fieldString, context);
         }
         return new Extract(getLocation(context), (Expression) visit(context.valueExpression()), field);
+    }
+
+    /**
+     * Returns the corresponding {@link FunctionCall} for the `LISTAGG` primary expression.
+     * <p>
+     * Although the syntax tree should represent the structure of the original parsed query
+     * as closely as possible and any semantic interpretation should be part of the
+     * analysis/planning phase, in case of `LISTAGG` aggregation function it is more pragmatic
+     * now to create a synthetic {@link FunctionCall} expression during the parsing of the syntax tree.
+     *
+     * @param context `LISTAGG` expression context
+     */
+    @Override
+    public Node visitListagg(SqlBaseParser.ListaggContext context)
+    {
+        Optional<Window> window = Optional.empty();
+        OrderBy orderBy = new OrderBy(visit(context.sortItem(), SortItem.class));
+        boolean distinct = isDistinct(context.setQuantifier());
+
+        Expression expression = (Expression) visit(context.expression());
+        StringLiteral separator = context.string() == null ? new StringLiteral(getLocation(context), "") : (StringLiteral) (visit(context.string()));
+        BooleanLiteral overflowError = new BooleanLiteral(getLocation(context), "true");
+        StringLiteral overflowFiller = new StringLiteral(getLocation(context), "...");
+        BooleanLiteral showOverflowEntryCount = new BooleanLiteral(getLocation(context), "false");
+
+        SqlBaseParser.ListAggOverflowBehaviorContext overflowBehavior = context.listAggOverflowBehavior();
+        if (overflowBehavior != null) {
+            if (overflowBehavior.ERROR() != null) {
+                overflowError = new BooleanLiteral(getLocation(context), "true");
+            }
+            else if (overflowBehavior.TRUNCATE() != null) {
+                overflowError = new BooleanLiteral(getLocation(context), "false");
+                if (overflowBehavior.string() != null) {
+                    overflowFiller = (StringLiteral) (visit(overflowBehavior.string()));
+                }
+                SqlBaseParser.ListaggCountIndicationContext listaggCountIndicationContext = overflowBehavior.listaggCountIndication();
+                if (listaggCountIndicationContext.WITH() != null) {
+                    showOverflowEntryCount = new BooleanLiteral(getLocation(context), "true");
+                }
+                else if (listaggCountIndicationContext.WITHOUT() != null) {
+                    showOverflowEntryCount = new BooleanLiteral(getLocation(context), "false");
+                }
+            }
+        }
+
+        List<Expression> arguments = ImmutableList.of(expression, separator, overflowError, overflowFiller, showOverflowEntryCount);
+
+        //TODO model this as a ListAgg node in the AST
+        return new FunctionCall(
+                Optional.of(getLocation(context)),
+                QualifiedName.of("LISTAGG"),
+                window,
+                Optional.empty(),
+                Optional.of(orderBy),
+                distinct,
+                Optional.empty(),
+                Optional.empty(),
+                arguments);
     }
 
     @Override
@@ -2156,6 +2251,12 @@ class AstBuilder
     }
 
     @Override
+    public Node visitMeasure(SqlBaseParser.MeasureContext context)
+    {
+        return new WindowOperation(getLocation(context), (Identifier) visit(context.identifier()), (Window) visit(context.over()));
+    }
+
+    @Override
     public Node visitLambda(SqlBaseParser.LambdaContext context)
     {
         List<LambdaArgumentDeclaration> arguments = visit(context.identifier(), Identifier.class).stream()
@@ -2234,11 +2335,25 @@ class AstBuilder
     @Override
     public Node visitWindowFrame(SqlBaseParser.WindowFrameContext context)
     {
+        Optional<PatternSearchMode> searchMode = Optional.empty();
+        if (context.INITIAL() != null) {
+            searchMode = Optional.of(new PatternSearchMode(getLocation(context.INITIAL()), INITIAL));
+        }
+        else if (context.SEEK() != null) {
+            searchMode = Optional.of(new PatternSearchMode(getLocation(context.SEEK()), SEEK));
+        }
+
         return new WindowFrame(
                 getLocation(context),
-                getFrameType(context.frameType),
-                (FrameBound) visit(context.start),
-                visitIfPresent(context.end, FrameBound.class));
+                getFrameType(context.frameExtent().frameType),
+                (FrameBound) visit(context.frameExtent().start),
+                visitIfPresent(context.frameExtent().end, FrameBound.class),
+                visit(context.measureDefinition(), MeasureDefinition.class),
+                visitIfPresent(context.skipTo(), SkipTo.class),
+                searchMode,
+                visitIfPresent(context.rowPattern(), RowPattern.class),
+                visit(context.subsetDefinition(), SubsetDefinition.class),
+                visit(context.variableDefinition(), VariableDefinition.class));
     }
 
     @Override
@@ -2430,6 +2545,8 @@ class AstBuilder
     @Override
     public Node visitTypeConstructor(SqlBaseParser.TypeConstructorContext context)
     {
+        checkPgSchema(context.IDENTIFIER()); // pg syntax
+
         String value = ((StringLiteral) visit(context.string())).getValue();
 
         if (context.DOUBLE() != null) {
@@ -3132,5 +3249,17 @@ class AstBuilder
     private static ParsingException parseError(String message, ParserRuleContext context)
     {
         return new ParsingException(message, null, context.getStart().getLine(), context.getStart().getCharPositionInLine() + 1);
+    }
+
+    /**
+     * PostgreSQL syntax
+     */
+    private static void checkPgSchema(TerminalNode identifier)
+    {
+        if (isNull(identifier) || identifier.getText().equals("pg_catalog")) {
+            return;
+        }
+
+        throw new IllegalArgumentException("Unsupported pg schema");
     }
 }
