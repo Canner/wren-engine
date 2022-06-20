@@ -1004,8 +1004,9 @@ DOUBLE_VALUE
     | '.' DIGIT+ EXPONENT
     ;
 
+// TODO: BigQuery project id contains '-' character. We add '-' in identifier in SqlBase.g4. We need to create BigQuery Sql Parser to deal this issue
 IDENTIFIER
-    : (LETTER | '_') (LETTER | DIGIT | '_')*
+    : (LETTER | '_') (LETTER | DIGIT | '_' | '-')*
     ;
 
 DIGIT_IDENTIFIER
