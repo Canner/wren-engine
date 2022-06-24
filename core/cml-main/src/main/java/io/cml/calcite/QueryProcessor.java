@@ -28,9 +28,6 @@ import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableRel;
-import org.apache.calcite.adapter.enumerable.EnumerableRules;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -42,13 +39,13 @@ import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.plan.hep.HepPlanner;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.prepare.Prepare;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
-import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.calcite.rel.rules.materialize.MaterializedViewRules;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlDialect;
@@ -71,6 +68,7 @@ import java.util.Properties;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
+import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
 
 public class QueryProcessor
 {
@@ -100,30 +98,10 @@ public class QueryProcessor
 
         this.cluster = newCluster(typeFactory);
         this.sqlParser = new SqlParser();
-
-        this.planner = cluster.getPlanner();
-        planner.addRule(CoreRules.AGGREGATE_STAR_TABLE);
-        planner.addRule(MaterializedViewRules.PROJECT_JOIN);
-        planner.addRule(MaterializedViewRules.PROJECT_FILTER);
-        planner.addRule(MaterializedViewRules.PROJECT_AGGREGATE);
-        planner.addRule(MaterializedViewRules.JOIN);
-        planner.addRule(MaterializedViewRules.FILTER_SCAN);
-        planner.addRule(MaterializedViewRules.AGGREGATE);
-        planner.addRule(CoreRules.PROJECT_TO_CALC);
-        planner.addRule(CoreRules.FILTER_TO_CALC);
-        planner.addRule(EnumerableRules.ENUMERABLE_CALC_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_SORT_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_LIMIT_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_AGGREGATE_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_SORTED_AGGREGATE_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_VALUES_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_UNION_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_MINUS_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_INTERSECT_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_MATCH_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_WINDOW_RULE);
-        planner.addRule(EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE);
+        this.planner = new HepPlanner(
+                new HepProgramBuilder()
+                        .addRuleCollection(MATERIALIZATION_RULES)
+                        .build());
     }
 
     public String convert(String sql)
@@ -154,19 +132,17 @@ public class QueryProcessor
                 LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
             }
         }
-        // Define the type of the output plan (in this case we want a physical plan in EnumerableContention)
-        relNode = planner.changeTraits(relNode,
-                cluster.traitSet().replace(EnumerableConvention.INSTANCE));
-        planner.setRoot(relNode);
-        // Start the optimization process to obtain the most efficient physical plan based on the
-        // provided rule set.
-        EnumerableRel phyPlan = (EnumerableRel) planner.findBestExp();
 
-        LOG.info(RelOptUtil.dumpPlan("[Optimized Logical plan]", phyPlan, SqlExplainFormat.TEXT,
+        planner.setRoot(relNode);
+        // Start the optimization process to obtain the most efficient plan based on the
+        // provided rule set.
+        RelNode bestExp = planner.findBestExp();
+
+        LOG.info(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect);
-        SqlNode sqlNode = relToSqlConverter.visitRoot(phyPlan).asStatement();
+        SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
                 SqlWriterConfig.of().withDialect(dialect));

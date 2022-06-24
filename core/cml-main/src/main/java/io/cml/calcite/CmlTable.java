@@ -14,16 +14,12 @@
 
 package io.cml.calcite;
 
-import org.apache.calcite.DataContext;
-import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.impl.AbstractTable;
 
-public class CmlTable
+class CmlTable
         extends AbstractTable
-        implements ScannableTable
 {
     private final String name;
     private final RelDataType rowType;
@@ -38,13 +34,6 @@ public class CmlTable
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
         return rowType;
-    }
-
-    @Override
-    public Enumerable<Object[]> scan(DataContext root)
-    {
-        // we don't need to scan table data
-        return null;
     }
 
     public String getName()
