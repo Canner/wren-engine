@@ -79,7 +79,8 @@ public class TestWireProtocolWithBigquery
         }
     }
 
-    @Test
+    // TODO: enable this test
+    @Test(enabled = false)
     public void testSimpleQueryTpchQ1()
             throws IOException, URISyntaxException
     {
