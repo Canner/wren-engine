@@ -16,15 +16,11 @@ package io.cml.metadata;
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
-import io.cml.spi.function.OperatorType;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.spi.type.PGType;
 import io.cml.sql.QualifiedObjectName;
-import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public interface Metadata
@@ -44,16 +40,6 @@ public interface Metadata
     TableSchema getTableSchema(TableHandle tableHandle);
 
     Optional<TableHandle> getTableHandle(QualifiedObjectName tableName);
-
-    Map<String, ColumnHandle> getColumnHandles(TableHandle tableHandle);
-
-    ResolvedFunction resolveFunction(QualifiedName name, List<PGType<?>> parameterTypes);
-
-    ResolvedFunction resolveOperator(OperatorType operatorType, List<PGType<?>> parameterTypes);
-
-    PGType<?> fromSqlType(String type);
-
-    boolean isAggregationFunction(QualifiedName name);
 
     CmlSchemaUtil.Dialect getDialect();
 

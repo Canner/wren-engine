@@ -13,11 +13,7 @@
  */
 package io.cml.sql;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
-import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.metadata.SchemaTableName;
 
 import javax.annotation.concurrent.Immutable;
@@ -28,22 +24,10 @@ import java.util.function.Function;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
-import static java.util.Objects.requireNonNull;
 
 @Immutable
 public class QualifiedObjectName
 {
-    @JsonCreator
-    public static QualifiedObjectName valueOf(String name)
-    {
-        requireNonNull(name, "name is null");
-
-        ImmutableList<String> ids = ImmutableList.copyOf(Splitter.on('.').split(name));
-        checkArgument(ids.size() == 3, "Invalid name %s", name);
-
-        return new QualifiedObjectName(ids.get(0), ids.get(1), ids.get(2));
-    }
-
     private final String catalogName;
     private final String schemaName;
     private final String objectName;
@@ -69,16 +53,6 @@ public class QualifiedObjectName
     public String getObjectName()
     {
         return objectName;
-    }
-
-    public SchemaTableName asSchemaTableName()
-    {
-        return new SchemaTableName(schemaName, objectName);
-    }
-
-    public CatalogSchemaTableName asCatalogSchemaTableName()
-    {
-        return new CatalogSchemaTableName(catalogName, schemaName, objectName);
     }
 
     @Override

@@ -17,7 +17,6 @@ package io.cml.metadata;
 import com.google.common.collect.Lists;
 import io.cml.spi.CmlException;
 import io.cml.sql.QualifiedObjectName;
-import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -26,7 +25,6 @@ import java.util.Optional;
 import static io.cml.spi.metadata.StandardErrorCode.MISSING_CATALOG_NAME;
 import static io.cml.spi.metadata.StandardErrorCode.MISSING_SCHEMA_NAME;
 import static io.cml.spi.metadata.StandardErrorCode.SYNTAX_ERROR;
-import static io.cml.sql.analyzer.SemanticExceptions.semanticException;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +32,7 @@ public final class MetadataUtil
 {
     private MetadataUtil() {}
 
-    public static QualifiedObjectName createQualifiedObjectName(Node node, QualifiedName name)
+    public static QualifiedObjectName createQualifiedObjectName(QualifiedName name)
     {
         requireNonNull(name, "name is null");
         if (name.getParts().size() > 3) {
@@ -45,9 +43,9 @@ public final class MetadataUtil
         String objectName = parts.get(0);
         // TODO: handle bigquery with optional project id, optional schema name
         String schemaName = Optional.ofNullable(parts.get(1)).orElseThrow(() ->
-                semanticException(MISSING_SCHEMA_NAME, node, "Schema must be specified when session schema is not set"));
+                new CmlException(MISSING_SCHEMA_NAME, "Schema must be specified when session schema is not set"));
         String catalogName = Optional.ofNullable(parts.get(2)).orElseThrow(() ->
-                semanticException(MISSING_CATALOG_NAME, node, "Catalog must be specified when session catalog is not set"));
+                new CmlException(MISSING_CATALOG_NAME, "Catalog must be specified when session catalog is not set"));
 
         return new QualifiedObjectName(catalogName, schemaName, objectName);
     }

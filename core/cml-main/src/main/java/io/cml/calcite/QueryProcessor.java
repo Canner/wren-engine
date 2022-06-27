@@ -19,14 +19,14 @@ import io.airlift.log.Logger;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
+import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.spi.metadata.MaterializedViewDefinition;
-import io.cml.sql.LogicalPlanner;
-import io.cml.sql.StatementAnalyzer;
-import io.cml.sql.analyzer.Analysis;
+import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
@@ -64,8 +64,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
@@ -109,18 +111,37 @@ public class QueryProcessor
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
         LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
-        StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
-        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
+        Analysis analysis = new Analysis();
+        SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);
+
+        List<TableSchema> visitedTable = analysis.getVisitedTables()
+                .stream().map(this::toTableSchema)
+                .collect(Collectors.toList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(CmlSchemaUtil.schemaPlus(analysis.getVisitedTables())),
+                CalciteSchema.from(CmlSchemaUtil.schemaPlus(visitedTable)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);
-        LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
-        RelNode relNode = toRelNode.plan(statement);
+        SqlValidator validator = SqlValidatorUtil.newValidator(SqlStdOperatorTable.instance(),
+                catalogReader, typeFactory,
+                SqlValidator.Config.DEFAULT);
 
-        LOG.info(RelOptUtil.dumpPlan("[Logical plan]", relNode, SqlExplainFormat.TEXT,
+        // Validate the initial AST
+        SqlNode validNode = validator.validate(calciteStatement);
+
+        SqlToRelConverter relConverter = new SqlToRelConverter(
+                NOOP_EXPANDER,
+                validator,
+                catalogReader,
+                cluster,
+                StandardConvertletTable.INSTANCE,
+                SqlToRelConverter.config());
+
+        // Convert the valid AST into a logical plan
+        RelNode logPlan = relConverter.convertQuery(validNode, false, true).rel;
+
+        LOG.info(RelOptUtil.dumpPlan("[Logical plan]", logPlan, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         // TODO: handle bigquery SQL syntax, `project.dataset.table`
@@ -133,7 +154,7 @@ public class QueryProcessor
             }
         }
 
-        planner.setRoot(relNode);
+        planner.setRoot(logPlan);
         // Start the optimization process to obtain the most efficient plan based on the
         // provided rule set.
         RelNode bestExp = planner.findBestExp();
@@ -149,6 +170,13 @@ public class QueryProcessor
         return sqlPrettyWriter.format(sqlNode);
     }
 
+    private TableSchema toTableSchema(QualifiedName tableName)
+    {
+        QualifiedObjectName name = createQualifiedObjectName(tableName);
+        Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
+        return metadata.getTableSchema(tableHandle.get());
+    }
+
     private static RelOptCluster newCluster(RelDataTypeFactory factory)
     {
         RelOptPlanner planner = new VolcanoPlanner();
@@ -159,13 +187,18 @@ public class QueryProcessor
     private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef)
     {
         Statement statement = sqlParser.createStatement(mvDef.getOriginalSql(), new ParsingOptions());
-        StatementAnalyzer analyzer = new StatementAnalyzer(metadata);
-        Analysis analysis = analyzer.analyze(new Analysis(statement), statement);
+        Analysis analysis = new Analysis();
+        SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);
+
+        List<TableSchema> visitedTable = analysis.getVisitedTables()
+                .stream().map(this::toTableSchema)
+                .collect(Collectors.toList());
+
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
                 CalciteSchema.from(
                         CmlSchemaUtil.schemaPlus(
                                 ImmutableList.<TableSchema>builder()
-                                        .addAll(analysis.getVisitedTables())
+                                        .addAll(visitedTable)
                                         .add(toTableSchema(mvDef))
                                         .build())),
                 Collections.singletonList(""),
@@ -177,9 +210,11 @@ public class QueryProcessor
                 typeFactory,
                 SqlValidator.Config.DEFAULT);
 
+        SqlNode validNode = validator.validate(calciteStatement);
+
         // TODO: find another way to get table rel instead of using calcite SqlToRelConverter
         SqlToRelConverter relConverter = new SqlToRelConverter(
-                (type, query, schema, path) -> null,
+                NOOP_EXPANDER,
                 validator,
                 catalogReader,
                 cluster,
@@ -193,8 +228,7 @@ public class QueryProcessor
         RelOptTable table = catalogReader.getTable(mvName);
         // TODO: find a way to not use relConverter convert RelOptTable to RelNode unless we are confident that doing this is the right way
         RelNode tableRel = relConverter.toRel(table, ImmutableList.of());
-        LogicalPlanner toRelNode = new LogicalPlanner(analysis, cluster, catalogReader, metadata);
-        RelNode queryRel = toRelNode.plan(statement);
+        RelNode queryRel = relConverter.convertQuery(validNode, false, true).rel;
 
         LOG.info(RelOptUtil.dumpPlan("[MV " + mvName(mvDef) + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
@@ -228,4 +262,6 @@ public class QueryProcessor
                                                 .build())
                                 .collect(toImmutableList())));
     }
+
+    private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
 }
