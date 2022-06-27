@@ -41,7 +41,7 @@ public class TestCalciteSqlNodeConverter
         SqlParser sqlParser = new SqlParser();
         String sql = "select orderkey, custkey from tpch.tiny.orders join tpch.tiny.lineitem on tpch.tiny.orders.orderkey = tpch.tiny.lineitem.orderkey";
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
-        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement);
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);
         SqlNode calciteNode = parser.parseQuery();
@@ -93,7 +93,7 @@ public class TestCalciteSqlNodeConverter
         String sql = Files.readString(path);
 
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL));
-        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement);
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);
         SqlNode calciteNode = parser.parseQuery();

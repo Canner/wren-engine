@@ -92,12 +92,12 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.util.DateString;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.type.StandardTypes.BOOLEAN;
 import static io.cml.spi.type.StandardTypes.DATE;
@@ -137,15 +137,22 @@ public class CalciteSqlNodeConverter
 {
     private CalciteSqlNodeConverter() {}
 
-    public static SqlNode convert(Node statement)
+    public static SqlNode convert(Node statement, Analysis analysis)
     {
-        Visitor visitor = new Visitor();
+        Visitor visitor = new Visitor(analysis);
         return visitor.process(statement);
     }
 
     private static class Visitor
             extends AstVisitor<SqlNode, ConvertContext>
     {
+        private final Analysis analysis;
+
+        public Visitor(Analysis analysis)
+        {
+            this.analysis = analysis;
+        }
+
         @Override
         public SqlNode visitQuery(Query node, ConvertContext ignored)
         {
@@ -222,7 +229,7 @@ public class CalciteSqlNodeConverter
         {
             List<SqlNode> selectItems = node.getSelectItems().stream()
                     .map(this::visitNode)
-                    .collect(toImmutableList());
+                    .collect(toList());
 
             return SqlNodeList.of(POS, selectItems);
         }
@@ -230,11 +237,12 @@ public class CalciteSqlNodeConverter
         @Override
         public SqlNode visitTable(Table node, ConvertContext context)
         {
+            analysis.addVisitedTable(node.getName());
             SqlIdentifier sqlIdentifier = new SqlIdentifier(node.getName().getParts().stream().map(String::toUpperCase).collect(toList()), ZERO);
             return new SqlTableRef(
                     sqlIdentifier.getParserPosition(),
                     sqlIdentifier,
-                    SqlNodeList.of(ZERO, ImmutableList.of()));
+                    SqlNodeList.of(ZERO, new ArrayList<>()));
         }
 
         @Override

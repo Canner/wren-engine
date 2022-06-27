@@ -17,7 +17,6 @@ package io.cml.connector.bigquery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
-import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
@@ -26,37 +25,28 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.calcite.CmlSchemaUtil;
-import io.cml.metadata.ColumnHandle;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.ResolvedFunction;
 import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
-import io.cml.spi.function.OperatorType;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.spi.type.DateType;
-import io.cml.spi.type.IntegerType;
-import io.cml.spi.type.PGType;
 import io.cml.sql.QualifiedObjectName;
-import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
@@ -178,52 +168,6 @@ public class BigQueryMetadata
                 new TableHandle(
                         new CatalogName(tableName.getCatalogName()),
                         new SchemaTableName(tableName.getSchemaName(), tableName.getObjectName())));
-    }
-
-    @Override
-    public Map<String, ColumnHandle> getColumnHandles(TableHandle tableHandle)
-    {
-        return bigQueryClient.getTable(tableHandle)
-                .getDefinition()
-                .getSchema()
-                .getFields()
-                .stream()
-                .collect(toImmutableMap(
-                        Field::getName,
-                        field -> new BigQueryColumnHandle(field.getName(), toPGType(field.getType().getStandardType()))));
-    }
-
-    @Override
-    public ResolvedFunction resolveFunction(QualifiedName name, List<PGType<?>> parameterTypes)
-    {
-        return new ResolvedFunction(name.toString(), IntegerType.INTEGER, parameterTypes);
-    }
-
-    @Override
-    public ResolvedFunction resolveOperator(OperatorType operatorType, List<PGType<?>> parameterTypes)
-    {
-        return new ResolvedFunction(operatorType.name(), IntegerType.INTEGER, parameterTypes);
-    }
-
-    @Override
-    public PGType<?> fromSqlType(String type)
-    {
-        if ("date".equals(type)) {
-            return DateType.DATE;
-        }
-        throw new IllegalArgumentException();
-    }
-
-    @Override
-    public boolean isAggregationFunction(QualifiedName name)
-    {
-        switch (name.toString()) {
-            case "sum":
-            case "avg":
-            case "count":
-                return true;
-        }
-        return false;
     }
 
     @Override

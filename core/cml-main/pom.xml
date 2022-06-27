@@ -112,6 +112,12 @@
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-linq4j</artifactId>
         </dependency>
+        
+        <dependency>
+            <groupId>org.apache.calcite.avatica</groupId>
+            <artifactId>avatica-core</artifactId>
+            <version>1.20.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
