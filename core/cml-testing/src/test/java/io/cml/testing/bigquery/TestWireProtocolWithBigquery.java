@@ -21,16 +21,11 @@ import io.cml.spi.type.PGTypes;
 import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.TestingWireProtocolClient;
 import io.cml.testing.TestingWireProtocolServer;
-import io.cml.wireprotocol.FormatCodes;
 import io.cml.wireprotocol.PostgresWireProtocol;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,9 +33,10 @@ import java.util.stream.Collectors;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
+import static io.cml.testing.TestingWireProtocolClient.DescribeType.PORTAL;
+import static io.cml.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.cml.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.lang.System.getenv;
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestWireProtocolWithBigquery
@@ -61,7 +57,7 @@ public class TestWireProtocolWithBigquery
                 .build();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testSimpleQuery()
             throws IOException
     {
@@ -72,39 +68,16 @@ public class TestWireProtocolWithBigquery
             assertDefaultPgConfigResponse(protocolClient);
             protocolClient.assertReadyForQuery('I');
 
-            protocolClient.sendSimpleQuery("SELECT o_custkey, COUNT(*) as cnt FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\" GROUP BY o_custkey");
+            protocolClient.sendSimpleQuery("select * from (values ('rows1', 10), ('rows2', 10), ('rows3', 10)) as t(col1, col2) where col2 = 10");
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            assertThat(types).isEqualTo(ImmutableList.of(INTEGER, INTEGER));
+            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
-            protocolClient.printResult(ImmutableList.of(), new FormatCodes.FormatCode[0]);
-            protocolClient.assertReadyForQuery('I');
-        }
-    }
-
-    // TODO: enable this test
-    @Test(enabled = false)
-    public void testSimpleQueryTpchQ1()
-            throws IOException, URISyntaxException
-    {
-        Path path = Paths.get(requireNonNull(getClass().getClassLoader().getResource("tpch/q1.sql")).toURI());
-        String sql = Files.readString(path);
-
-        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
-            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
-
-            protocolClient.assertAuthOk();
-            assertDefaultPgConfigResponse(protocolClient);
-            protocolClient.assertReadyForQuery('I');
-
-            protocolClient.sendSimpleQuery(sql);
-
-            // List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
-            // List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            // assertThat(types).isEqualTo(ImmutableList.of(INTEGER, INTEGER, INTEGER));
-
-            protocolClient.printResult(ImmutableList.of(), new FormatCodes.FormatCode[0]);
+            protocolClient.assertDataRow("rows1,10");
+            protocolClient.assertDataRow("rows2,10");
+            protocolClient.assertDataRow("rows3,10");
+            protocolClient.assertCommandComplete("SELECT 3");
             protocolClient.assertReadyForQuery('I');
         }
     }
@@ -119,11 +92,11 @@ public class TestWireProtocolWithBigquery
             assertDefaultPgConfigResponse(protocolClient);
             protocolClient.assertReadyForQuery('I');
 
-            List<PGType> paramTypes = ImmutableList.of(VARCHAR);
-            protocolClient.sendParse("teststmt", "select o_orderstatus, o_orderkey from \"cannerflow-286003\".\"tpch_tiny\".\"orders\" where o_orderstatus = ? limit 2",
+            List<PGType> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("teststmt", "select * from (values ('rows1', 10), ('rows2', 10)) as t(col1, col2) where col2 = ?",
                     paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "teststmt");
-            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter("F", VARCHAR)));
+            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter(10, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec1");
             protocolClient.sendExecute("exec1", 0);
             protocolClient.sendSync();
@@ -143,8 +116,106 @@ public class TestWireProtocolWithBigquery
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
             AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
-            protocolClient.assertDataRow("F,36485");
-            protocolClient.assertDataRow("F,37315");
+            protocolClient.assertDataRow("rows1,10");
+            protocolClient.assertDataRow("rows2,10");
+            protocolClient.assertCommandComplete("SELECT 2");
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    @Test
+    public void testNullExtendedQuery()
+            throws IOException
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+            protocolClient.sendNullParse("");
+            protocolClient.assertErrorMessage("query can't be null");
+        }
+    }
+
+    @Test
+    public void testNotExistOid()
+            throws IOException
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+            protocolClient.sendParse("teststmt", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?",
+                    ImmutableList.of(999));
+            protocolClient.assertErrorMessage("No oid mapping from '999' to pg_type");
+
+            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter("10", INTEGER)));
+            protocolClient.assertErrorMessage("prepared statement teststmt not found");
+        }
+    }
+
+    @Test
+    public void testDescribeEmptyStatement()
+            throws IOException
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+            protocolClient.sendParse("teststmt", "", ImmutableList.of());
+            protocolClient.sendDescribe(STATEMENT, "teststmt");
+            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of());
+            protocolClient.sendDescribe(PORTAL, "exec1");
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+            List<PGType<?>> fields = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(fields.size()).isZero();
+            protocolClient.assertNoData();
+
+            protocolClient.assertBindComplete();
+            protocolClient.assertNoData();
+
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    // TODO: support suspendable result set
+    @Test(enabled = false)
+    public void testExtendedQueryWithMaxRow()
+            throws IOException
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+            List<PGType<?>> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("teststmt", "select * from (values ('rows1', 10), ('rows2', 10)) as t(col1, col2) where col2 = ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter(10, INTEGER)));
+            protocolClient.sendDescribe(PORTAL, "exec1");
+            protocolClient.sendExecute("exec1", 1);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertDataRow("rows1,10");
+            protocolClient.assertPortalPortalSuspended();
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendExecute("exec1", 1);
+            protocolClient.sendSync();
+
+            protocolClient.assertDataRow("rows2,10");
             protocolClient.assertCommandComplete("SELECT 2");
             protocolClient.assertReadyForQuery('I');
         }
