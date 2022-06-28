@@ -156,6 +156,12 @@ public class WireProtocolSession
     public Optional<List<Column>> describePortal(String name)
     {
         Portal portal = getPortal(name);
+
+        String oriStmt = portal.getPreparedStatement().getOriginalStatement();
+        if (oriStmt.isEmpty() || isIgnoredCommand(oriStmt)) {
+            return Optional.empty();
+        }
+
         String sql = sqlConverter.convert(portal.getPreparedStatement().getOriginalStatement());
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
