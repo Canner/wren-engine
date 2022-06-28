@@ -436,20 +436,15 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitAliasedRelation(AliasedRelation node, ConvertContext context)
         {
-            if (Optional.ofNullable(node.getColumnNames()).isEmpty()) {
-                return new SqlBasicCall(
-                        AS,
-                        ImmutableList.of(
-                                visitNode(node.getRelation()),
-                                visitNode(node.getAlias())),
-                        toCalcitePos(node.getLocation()));
-            }
+            ImmutableList.Builder<SqlNode> operandListBuilder = ImmutableList.builder();
+            operandListBuilder
+                    .add(visitNode(node.getRelation()))
+                    .add(visitNode(node.getAlias()));
+            node.getColumnNames().stream().map(this::visitNode).forEach(operandListBuilder::add);
+
             return new SqlBasicCall(
                     AS,
-                    ImmutableList.of(
-                            visitNode(node.getRelation()),
-                            visitNode(node.getAlias()),
-                            SqlNodeList.of(POS, visitNodes(node.getColumnNames()))),
+                    operandListBuilder.build(),
                     toCalcitePos(node.getLocation()));
         }
 
