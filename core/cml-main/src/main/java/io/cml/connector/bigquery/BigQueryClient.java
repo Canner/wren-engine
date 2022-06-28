@@ -24,6 +24,7 @@ import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.MaterializedViewDefinition;
 import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.QueryParameterValue;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableDefinition;
@@ -37,8 +38,10 @@ import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.metadata.TableHandle;
 import io.cml.spi.CmlException;
+import io.cml.spi.Parameter;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -128,10 +131,18 @@ public class BigQueryClient
         return mvCache.getIfPresent(tableId);
     }
 
-    public TableResult query(String sql)
+    public TableResult query(String sql, List<Parameter> parameters)
     {
         try {
-            return bigQuery.query(QueryJobConfiguration.of(sql));
+            QueryJobConfiguration.Builder queryConfigBuilder =
+                    QueryJobConfiguration
+                            .newBuilder(sql);
+
+            for (Parameter parameter : parameters) {
+                queryConfigBuilder.addPositionalParameter(QueryParameterValue.of(parameter.getValue(), BigQueryType.toBqType(parameter.getType())));
+            }
+
+            return bigQuery.query(queryConfigBuilder.build());
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -139,7 +150,7 @@ public class BigQueryClient
         }
     }
 
-    protected JobStatistics.QueryStatistics queryDryRun(Optional<String> datasetIdOptional, String query)
+    protected JobStatistics.QueryStatistics queryDryRun(Optional<String> datasetIdOptional, String query, List<Parameter> parameters)
     {
         try {
             QueryJobConfiguration.Builder queryConfigBuilder =
@@ -149,6 +160,10 @@ public class BigQueryClient
                             .setUseQueryCache(false);
 
             datasetIdOptional.ifPresent(queryConfigBuilder::setDefaultDataset);
+
+            for (Parameter parameter : parameters) {
+                queryConfigBuilder.addPositionalParameter(QueryParameterValue.of(parameter.getValue(), BigQueryType.toBqType(parameter.getType())));
+            }
 
             Job job = bigQuery.create(JobInfo.of(queryConfigBuilder.build()));
             return job.getStatistics();

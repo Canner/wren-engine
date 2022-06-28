@@ -14,6 +14,7 @@
 
 package io.cml.pgcatalog.regtype;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.cml.metadata.Metadata;
 
@@ -52,7 +53,7 @@ public class BigQueryPgMetadata
 
     private List<RegObject> listRegObject(String nameField, String tableName)
     {
-        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", nameField, tableName)))
+        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", nameField, tableName), ImmutableList.of()))
                 .map(row -> new RegObject((int) row[0], (String) row[1]))
                 .collect(toImmutableList());
     }

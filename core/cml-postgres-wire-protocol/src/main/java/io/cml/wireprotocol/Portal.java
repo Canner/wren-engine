@@ -15,8 +15,12 @@
 package io.cml.wireprotocol;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.Parameter;
+import io.cml.spi.type.PGType;
+import io.cml.spi.type.PGTypes;
 
 import javax.annotation.Nullable;
 import javax.annotation.PreDestroy;
@@ -24,6 +28,7 @@ import javax.validation.constraints.NotNull;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -108,6 +113,16 @@ public class Portal
     public boolean isSuspended()
     {
         return connectorRecordIterable != null;
+    }
+
+    public List<Parameter> getParameters()
+    {
+        List<PGType<?>> pgTypes = preparedStatement.getParamTypeOids().stream().map(PGTypes::oidToPgType).collect(Collectors.toList());
+        ImmutableList.Builder<Parameter> builder = ImmutableList.builder();
+        for (int i = 0; i < pgTypes.size(); i++) {
+            builder.add(new Parameter(pgTypes.get(i), params.get(i) == null ? "" : params.get(i)));
+        }
+        return builder.build();
     }
 
     // TODO: make sure this annotation works.
