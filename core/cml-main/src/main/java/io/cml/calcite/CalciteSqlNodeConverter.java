@@ -152,7 +152,7 @@ public class CalciteSqlNodeConverter
             extends AstVisitor<SqlNode, ConvertContext>
     {
         private final Analysis analysis;
-        private int paramCount = 0;
+        private int paramCount;
 
         public Visitor(Analysis analysis)
         {
