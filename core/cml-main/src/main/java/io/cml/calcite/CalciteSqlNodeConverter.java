@@ -440,7 +440,10 @@ public class CalciteSqlNodeConverter
             operandListBuilder
                     .add(visitNode(node.getRelation()))
                     .add(visitNode(node.getAlias()));
-            node.getColumnNames().stream().map(this::visitNode).forEach(operandListBuilder::add);
+
+            if (node.getColumnNames() != null) {
+                node.getColumnNames().stream().map(this::visitNode).forEach(operandListBuilder::add);
+            }
 
             return new SqlBasicCall(
                     AS,
