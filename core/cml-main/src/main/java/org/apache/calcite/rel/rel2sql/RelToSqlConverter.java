@@ -90,7 +90,8 @@ import org.apache.calcite.util.Permutation;
 import org.apache.calcite.util.ReflectUtil;
 import org.apache.calcite.util.ReflectiveVisitor;
 import org.apache.calcite.util.Util;
-import org.checkerframework.checker.nullness.qual.Nullable;
+
+import javax.annotation.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -107,6 +108,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.rex.RexLiteral.stringValue;
 
@@ -370,8 +372,8 @@ public class RelToSqlConverter
         //   Join((Join(a, b), Join(c, Join(d, e)))
         // we get the same topJoin for a, b, c, d and e. Join. Stack is never empty,
         // and frame.r on the first iteration is always "join".
-        assert !stack.isEmpty();
-        assert stack.element().r == join;
+        checkArgument(!stack.isEmpty());
+        checkArgument(stack.element().r == join);
         Join j = null;
         for (Frame frame : stack) {
             j = (Join) frame.r;
@@ -643,9 +645,9 @@ public class RelToSqlConverter
     {
         final List<Integer> sortedGroupList =
                 Ordering.natural().sortedCopy(groupList);
-        assert aggregate.getGroupSet().asList().equals(sortedGroupList)
-                : "groupList " + groupList + " must be equal to groupSet "
-                + aggregate.getGroupSet() + ", just possibly a different order";
+        checkArgument(aggregate.getGroupSet().asList().equals(sortedGroupList),
+                "groupList " + groupList + " must be equal to groupSet "
+                        + aggregate.getGroupSet() + ", just possibly a different order");
 
         final List<SqlNode> groupKeys = new ArrayList<>();
         for (int key : groupList) {
