@@ -57,7 +57,7 @@ public class TestWireProtocolWithBigquery
                 .build();
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSimpleQuery()
             throws IOException
     {
