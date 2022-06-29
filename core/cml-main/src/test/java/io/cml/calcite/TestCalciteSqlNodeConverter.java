@@ -44,7 +44,7 @@ public class TestCalciteSqlNodeConverter
     }
 
     @Test(dataProvider = "normalQuery")
-    public void testNormalQuery(String name, String sql)
+    public void testNormalQuery(@SuppressWarnings("unused") String name, String sql)
             throws SqlParseException
     {
         SqlParser sqlParser = new SqlParser();
