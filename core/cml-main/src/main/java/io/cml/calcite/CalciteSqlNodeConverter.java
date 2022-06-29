@@ -51,9 +51,11 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NotExpression;
 import io.trino.sql.tree.NullLiteral;
+import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PatternRecognitionRelation;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.Row;
 import io.trino.sql.tree.SampledRelation;
 import io.trino.sql.tree.SearchedCaseExpression;
 import io.trino.sql.tree.Select;
@@ -66,12 +68,14 @@ import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
+import io.trino.sql.tree.Values;
 import io.trino.sql.tree.WhenClause;
 import io.trino.sql.tree.WithQuery;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -131,6 +135,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_IN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_LIKE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROW;
 import static org.apache.calcite.sql.parser.SqlParserPos.ZERO;
 
 public class CalciteSqlNodeConverter
@@ -147,6 +152,7 @@ public class CalciteSqlNodeConverter
             extends AstVisitor<SqlNode, ConvertContext>
     {
         private final Analysis analysis;
+        private int paramCount;
 
         public Visitor(Analysis analysis)
         {
@@ -216,6 +222,12 @@ public class CalciteSqlNodeConverter
                     node.getOrderBy().isEmpty() ? offset : null,
                     node.getOrderBy().isEmpty() ? limit : null,
                     null);
+        }
+
+        @Override
+        protected SqlNode visitValues(Values node, ConvertContext context)
+        {
+            return new SqlBasicCall(SqlStdOperatorTable.VALUES, visitNodes(node.getRows()), toCalcitePos(node.getLocation()));
         }
 
         @Override
@@ -424,20 +436,18 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitAliasedRelation(AliasedRelation node, ConvertContext context)
         {
-            if (Optional.ofNullable(node.getColumnNames()).isEmpty()) {
-                return new SqlBasicCall(
-                        AS,
-                        ImmutableList.of(
-                                visitNode(node.getRelation()),
-                                visitNode(node.getAlias())),
-                        toCalcitePos(node.getLocation()));
+            ImmutableList.Builder<SqlNode> operandListBuilder = ImmutableList.builder();
+            operandListBuilder
+                    .add(visitNode(node.getRelation()))
+                    .add(visitNode(node.getAlias()));
+
+            if (node.getColumnNames() != null) {
+                node.getColumnNames().stream().map(this::visitNode).forEach(operandListBuilder::add);
             }
+
             return new SqlBasicCall(
                     AS,
-                    ImmutableList.of(
-                            visitNode(node.getRelation()),
-                            visitNode(node.getAlias()),
-                            SqlNodeList.of(POS, visitNodes(node.getColumnNames()))),
+                    operandListBuilder.build(),
                     toCalcitePos(node.getLocation()));
         }
 
@@ -607,6 +617,18 @@ public class CalciteSqlNodeConverter
                 return process(node.getValue(), ConvertContext.builder().setFromNotExpression(true).build());
             }
             return new SqlBasicCall(NOT, ImmutableList.of(visitNode(node.getValue())), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitRow(Row node, ConvertContext context)
+        {
+            return new SqlBasicCall(ROW, visitNodes(node.getItems()), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitParameter(Parameter node, ConvertContext context)
+        {
+            return new SqlDynamicParam(paramCount++, toCalcitePos(node.getLocation()));
         }
 
         @Override

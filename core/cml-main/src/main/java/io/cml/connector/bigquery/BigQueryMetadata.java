@@ -33,6 +33,7 @@ import io.cml.metadata.TableSchema;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.Parameter;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
@@ -180,7 +181,7 @@ public class BigQueryMetadata
     public void directDDL(String sql)
     {
         try {
-            bigQueryClient.query(sql);
+            bigQueryClient.query(sql, ImmutableList.of());
         }
         catch (Exception ex) {
             LOG.error(ex, "Failed SQL: %s", sql);
@@ -194,11 +195,11 @@ public class BigQueryMetadata
     }
 
     @Override
-    public ConnectorRecordIterable directQuery(String sql)
+    public ConnectorRecordIterable directQuery(String sql, List<Parameter> parameters)
     {
         requireNonNull(sql, "sql can't be null.");
         try {
-            TableResult results = bigQueryClient.query(sql);
+            TableResult results = bigQueryClient.query(sql, parameters);
             return BigQueryRecordIterable.of(results);
         }
         catch (BigQueryException ex) {
@@ -209,9 +210,9 @@ public class BigQueryMetadata
     }
 
     @Override
-    public List<Column> describeQuery(String sql)
+    public List<Column> describeQuery(String sql, List<Parameter> parameters)
     {
-        JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql);
+        JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql, parameters);
         return Streams.stream(queryStatistics.getSchema().getFields().iterator())
                 .map(field -> new Column(field.getName(), toPGType(field.getType().getStandardType())))
                 .collect(toImmutableList());

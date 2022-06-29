@@ -156,13 +156,19 @@ public class WireProtocolSession
     public Optional<List<Column>> describePortal(String name)
     {
         Portal portal = getPortal(name);
+
+        String oriStmt = portal.getPreparedStatement().getOriginalStatement();
+        if (oriStmt.isEmpty() || isIgnoredCommand(oriStmt)) {
+            return Optional.empty();
+        }
+
         String sql = sqlConverter.convert(portal.getPreparedStatement().getOriginalStatement());
-        return Optional.of(metadata.describeQuery(sql));
+        return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
 
     public List<Integer> describeStatement(String name)
     {
-        throw new UnsupportedOperationException();
+        return preparedStatements.get(name).getParamTypeOids();
     }
 
     public void parse(String statementName, String statement, List<Integer> paramTypes)
@@ -220,7 +226,7 @@ public class WireProtocolSession
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
             String sql = sqlConverter.convert(execStmt);
-            return Optional.of(metadata.directQuery(sql));
+            return Optional.of(metadata.directQuery(sql, portal.getParameters()));
         });
     }
 

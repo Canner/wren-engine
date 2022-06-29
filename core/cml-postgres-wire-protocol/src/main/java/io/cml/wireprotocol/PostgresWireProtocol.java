@@ -508,6 +508,7 @@ public class PostgresWireProtocol
             byte type = buffer.readByte();
             String portalOrStatement = readCString(buffer);
 
+            // TODO: check parameter's size equal to parameter type's size
             switch (type) {
                 case 'P':
                     Optional<List<Column>> columns = wireProtocolSession.describePortal(portalOrStatement);

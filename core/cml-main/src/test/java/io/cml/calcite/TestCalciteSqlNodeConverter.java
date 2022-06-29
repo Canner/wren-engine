@@ -34,12 +34,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCalciteSqlNodeConverter
 {
-    @Test
-    public void testRelationWithPrefix()
+    @DataProvider
+    public Object[][] normalQuery()
+    {
+        return new Object[][] {
+                {"testRelationWithPrefix", "select orderkey, custkey from tpch.tiny.orders join tpch.tiny.lineitem on tpch.tiny.orders.orderkey = tpch.tiny.lineitem.orderkey"},
+                {"testRowNode", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?"},
+        };
+    }
+
+    @Test(dataProvider = "normalQuery")
+    public void testNormalQuery(@SuppressWarnings("unused") String name, String sql)
             throws SqlParseException
     {
         SqlParser sqlParser = new SqlParser();
-        String sql = "select orderkey, custkey from tpch.tiny.orders join tpch.tiny.lineitem on tpch.tiny.orders.orderkey = tpch.tiny.lineitem.orderkey";
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
         SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
 
