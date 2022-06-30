@@ -114,7 +114,8 @@ import static org.apache.calcite.rex.RexLiteral.stringValue;
 
 /**
  * Copied from Calcite RelToSqlConverter.java
- * Remove this class when visit(Values e) fixed in official calcite release
+ * Remove this class after calcite 1.31.0 release
+ * related issue: <a href="https://issues.apache.org/jira/browse/CALCITE-5179">CALCITE-5179</a>
  */
 public class RelToSqlConverter
         extends SqlImplementor
