@@ -68,6 +68,7 @@ import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
+import io.trino.sql.tree.Union;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.WhenClause;
 import io.trino.sql.tree.WithQuery;
@@ -136,6 +137,8 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_LIKE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROW;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNION;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNION_ALL;
 import static org.apache.calcite.sql.parser.SqlParserPos.ZERO;
 
 public class CalciteSqlNodeConverter
@@ -519,6 +522,15 @@ public class CalciteSqlNodeConverter
         }
 
         @Override
+        protected SqlNode visitUnion(Union node, ConvertContext context)
+        {
+            if (node.isDistinct()) {
+                return new SqlBasicCall(UNION, visitNodes(node.getRelations(), context), toCalcitePos(node.getLocation()));
+            }
+            return new SqlBasicCall(UNION_ALL, visitNodes(node.getRelations(), context), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
         protected SqlNode visitGroupingElement(GroupingElement node, ConvertContext context)
         {
             if (node instanceof SimpleGroupBy && node.getExpressions().size() == 1) {
@@ -640,8 +652,14 @@ public class CalciteSqlNodeConverter
         @SuppressWarnings("unchecked")
         protected <T extends SqlNode> List<SqlNode> visitNodes(List<? extends Node> nodes)
         {
+            return visitNodes(nodes, null);
+        }
+
+        @SuppressWarnings("unchecked")
+        protected <T extends SqlNode> List<SqlNode> visitNodes(List<? extends Node> nodes, ConvertContext context)
+        {
             return nodes.stream()
-                    .map(node -> (T) process(node))
+                    .map(node -> (T) process(node, context))
                     .collect(toList());
         }
 
