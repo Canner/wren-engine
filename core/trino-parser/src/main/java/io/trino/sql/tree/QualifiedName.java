@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.isEmpty;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
 public class QualifiedName
@@ -56,7 +55,7 @@ public class QualifiedName
     private QualifiedName(List<Identifier> originalParts)
     {
         this.originalParts = originalParts;
-        this.parts = originalParts.stream().map(identifier -> identifier.getValue().toLowerCase(ENGLISH)).collect(toImmutableList());
+        this.parts = originalParts.stream().map(Identifier::getValue).collect(toImmutableList());
     }
 
     public List<String> getParts()

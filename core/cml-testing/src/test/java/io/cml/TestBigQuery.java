@@ -14,20 +14,29 @@
 
 package io.cml;
 
+import com.google.cloud.bigquery.MaterializedViewDefinition;
+import com.google.cloud.bigquery.TableDefinition;
+import com.google.cloud.bigquery.TableId;
+import com.google.cloud.bigquery.TableInfo;
 import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
 import io.cml.server.module.BigQueryConnectorModule;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import static io.cml.testing.Utils.randomTableSuffix;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQuery
 {
-    @Test
-    public void testBigQueryGetTables()
+    private BigQueryClient bigQueryClient;
+    private BigQuerySqlConverter bigQuerySqlConverter;
+
+    @BeforeClass
+    public void createBigQueryClient()
     {
         BigQueryConfig config = new BigQueryConfig();
         config.setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
@@ -35,16 +44,70 @@ public class TestBigQuery
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .setLocation("US");
 
-        BigQueryClient bigQueryClient = BigQueryConnectorModule.provideBigQuery(
+        bigQueryClient = BigQueryConnectorModule.provideBigQuery(
                 config,
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient);
-        BigQuerySqlConverter bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
+        bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
+    }
 
-        String output = bigQuerySqlConverter.convert("SELECT o_custkey, COUNT(*) as cnt FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\" GROUP BY o_custkey");
-        assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
-                "FROM `cannerflow-286003`.cml_temp.mv_orders_group_by_test");
+    @Test
+    public void testBigQueryMVReplace()
+    {
+        String tableName = "mv_orders_group_by" + randomTableSuffix();
+        TableId tableId = TableId.of("cml_temp", tableName);
+        TableDefinition tableDefinition = MaterializedViewDefinition.of(
+                "SELECT o_custkey, COUNT(*) as cnt\n" +
+                        "FROM cannerflow-286003.tpch_tiny.orders\n" +
+                        "GROUP BY o_custkey");
+        TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+
+        try {
+            bigQueryClient.createTable(tableInfo);
+
+            String output = bigQuerySqlConverter.convert(
+                    "SELECT o_custkey, COUNT(*) as cnt\n" +
+                            "FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\"\n" +
+                            "GROUP BY o_custkey");
+            assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
+                    "FROM `cannerflow-286003`.cml_temp." + tableName);
+        }
+        finally {
+            bigQueryClient.dropTable(tableId);
+        }
+    }
+
+    // test case-sensitive sql in mv
+    @Test
+    public void testBigQueryCaseSensitiveMVReplace()
+    {
+        String tableName = "mv_case_sensitive" + randomTableSuffix();
+        TableId tableId = TableId.of("cml_temp", tableName);
+        TableDefinition tableDefinition = MaterializedViewDefinition.of("SELECT b FROM cannerflow-286003.cml_temp.CANNER WHERE b = '1'");
+        TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+
+        try {
+            bigQueryClient.createTable(tableInfo);
+            String output = bigQuerySqlConverter.convert(
+                    "SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\" WHERE b = '1'");
+            assertThat(output).isEqualTo("SELECT *\n" +
+                    "FROM `cannerflow-286003`.cml_temp." + tableName);
+        }
+        finally {
+            bigQueryClient.dropTable(tableId);
+        }
+    }
+
+    @Test
+    public void testCaseSensitive()
+    {
+        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"cannerflow-286003\".\"cml_temp\".\"canner\""))
+                .isEqualTo("SELECT a\n" +
+                        "FROM `cannerflow-286003`.cml_temp.canner");
+        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\""))
+                .isEqualTo("SELECT b\n" +
+                        "FROM `cannerflow-286003`.cml_temp.CANNER");
     }
 }

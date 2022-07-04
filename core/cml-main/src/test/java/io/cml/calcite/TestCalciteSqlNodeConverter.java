@@ -18,6 +18,8 @@ import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlWriterConfig;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.testng.annotations.DataProvider;
@@ -112,5 +114,29 @@ public class TestCalciteSqlNodeConverter
         sqlPrettyWriter.reset();
         String calciteSql = sqlPrettyWriter.format(calciteNode);
         assertThat(trinoSql).isEqualToIgnoringCase(calciteSql);
+    }
+
+    @DataProvider
+    public Object[][] forCaseSensitive()
+    {
+        return new Object[][] {
+                {"SELECT clerk FROM tpch.tiny.orders", "SELECT \"clerk\" FROM \"tpch\".\"tiny\".\"orders\""},
+                {"SELECT CLERK FROM tpch.tiny.orders", "SELECT \"CLERK\" FROM \"tpch\".\"tiny\".\"orders\""},
+                {"SELECT \"CLERK\" FROM \"tpch\".\"tiny\".\"ORDERS\"", "SELECT \"CLERK\" FROM \"tpch\".\"tiny\".\"ORDERS\""},
+                {"SELECT clerk FROM \"tpch\".\"tiny\".\"ORDERS\"", "SELECT \"clerk\" FROM \"tpch\".\"tiny\".\"ORDERS\""}
+        };
+    }
+
+    @Test(dataProvider = "forCaseSensitive")
+    public void testCaseSensitive(String before, String after)
+    {
+        SqlParser sqlParser = new SqlParser();
+        Statement statement = sqlParser.createStatement(before, new ParsingOptions());
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
+        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
+                SqlWriterConfig.of().withClauseStartsLine(false).withDialect(CalciteSqlDialect.DEFAULT));
+        String processed = sqlPrettyWriter.format(processedNode);
+
+        assertThat(processed).isEqualTo(after);
     }
 }

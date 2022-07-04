@@ -15,6 +15,7 @@
 package io.cml.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
@@ -26,8 +27,10 @@ import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
+import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -48,11 +51,16 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriterConfig;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.validate.SqlValidator;
@@ -60,13 +68,18 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.cml.common.Utils.wrapException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
@@ -144,7 +157,6 @@ public class QueryProcessor
         LOG.info(RelOptUtil.dumpPlan("[Logical plan]", logPlan, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
-        // TODO: handle bigquery SQL syntax, `project.dataset.table`
         for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews(Optional.empty())) {
             try {
                 planner.addMaterialization(getMvRel(mvDef));
@@ -184,13 +196,22 @@ public class QueryProcessor
         return RelOptCluster.create(planner, new RexBuilder(factory));
     }
 
+    // We use calcite sql parser in MV since bigquery use backtick as identifier quote character
+    // and BigQuery will keep unquoted identifier unchanged while pg will do lowercase.
+    // And these two issues could be solved by using calcite sql parser.
     private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef)
     {
-        Statement statement = sqlParser.createStatement(mvDef.getOriginalSql(), new ParsingOptions());
-        Analysis analysis = new Analysis();
-        SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);
+        org.apache.calcite.sql.parser.SqlParser calciteParser =
+                org.apache.calcite.sql.parser.SqlParser.create(
+                        mvDef.getOriginalSql(),
+                        BigQuerySqlDialect.DEFAULT.configureParser(
+                                // Calcite BigQuery dialect won't quote all identifiers unless it contains reserved character, unlike Trino,
+                                // Postgresql, BigQuery will keep unquoted identifiers UNCHANGED.
+                                // e.g. SELECT * FROM Abc, BigQuery will go get table Abc, Trino and Postgresql will go get table abc
+                                org.apache.calcite.sql.parser.SqlParser.config().withUnquotedCasing(Casing.UNCHANGED)));
 
-        List<TableSchema> visitedTable = analysis.getVisitedTables()
+        SqlNode calciteStatement = wrapException(calciteParser::parseQuery);
+        List<TableSchema> visitedTable = extractTables(calciteStatement, false)
                 .stream().map(this::toTableSchema)
                 .collect(Collectors.toList());
 
@@ -212,7 +233,6 @@ public class QueryProcessor
 
         SqlNode validNode = validator.validate(calciteStatement);
 
-        // TODO: find another way to get table rel instead of using calcite SqlToRelConverter
         SqlToRelConverter relConverter = new SqlToRelConverter(
                 NOOP_EXPANDER,
                 validator,
@@ -226,7 +246,6 @@ public class QueryProcessor
                 mvDef.getSchemaTableName().getSchemaName(),
                 mvDef.getSchemaTableName().getTableName());
         RelOptTable table = catalogReader.getTable(mvName);
-        // TODO: find a way to not use relConverter convert RelOptTable to RelNode unless we are confident that doing this is the right way
         RelNode tableRel = relConverter.toRel(table, ImmutableList.of());
         RelNode queryRel = relConverter.convertQuery(validNode, false, true).rel;
 
@@ -264,4 +283,64 @@ public class QueryProcessor
     }
 
     private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
+
+    /**
+     * When we use Calcite sql parser, tables in SqlNode is SqlIdentifier while SqlIdentifier could be
+     * column name or something else. Here we traverse whole SqlNode to find tables in FROM and JOIN.
+     *
+     * @param sqlNode sqlNode that we want to traverse
+     * @param fromOrJoin boolean to check input SqlNode is from or join
+     * @return visited tables which is a set of QualifiedName
+     */
+    static Set<QualifiedName> extractTables(SqlNode sqlNode, boolean fromOrJoin)
+    {
+        if (sqlNode == null) {
+            return ImmutableSet.of();
+        }
+        switch (sqlNode.getKind()) {
+            case SELECT:
+                var sqlSelect = (SqlSelect) sqlNode;
+                var tablesInFrom = extractTables(sqlSelect.getFrom(), true);
+                var tablesInSelectList =
+                        sqlSelect.getSelectList().getList().stream()
+                                .filter(node -> node instanceof SqlCall)
+                                .map(node -> extractTables(node, false))
+                                .flatMap(Collection::stream)
+                                .collect(toImmutableSet());
+                var tablesInWhere = extractTables(sqlSelect.getWhere(), false);
+                var tablesInHaving = extractTables(sqlSelect.getHaving(), false);
+                return ImmutableSet.<QualifiedName>builder()
+                        .addAll(tablesInFrom)
+                        .addAll(tablesInSelectList)
+                        .addAll(tablesInWhere)
+                        .addAll(tablesInHaving)
+                        .build();
+            case JOIN:
+                var left = extractTables(((SqlJoin) sqlNode).getLeft(), true);
+                var right = extractTables(((SqlJoin) sqlNode).getRight(), true);
+                return ImmutableSet.<QualifiedName>builder()
+                        .addAll(left)
+                        .addAll(right)
+                        .build();
+            case AS:
+                checkArgument(((SqlCall) sqlNode).operandCount() >= 2);
+                return extractTables(((SqlCall) sqlNode).operand(0), fromOrJoin);
+            case IDENTIFIER:
+                if (fromOrJoin) {
+                    return ImmutableSet.of(
+                            QualifiedName.of(((SqlIdentifier) sqlNode).names
+                                    .stream().map(Identifier::new).collect(toImmutableList())));
+                }
+                return ImmutableSet.of();
+            default: {
+                if (sqlNode instanceof SqlCall) {
+                    return ((SqlCall) sqlNode).getOperandList().stream()
+                            .map(sqlCall -> extractTables(sqlCall, false))
+                            .flatMap(Collection::stream)
+                            .collect(toImmutableSet());
+                }
+                return ImmutableSet.of();
+            }
+        }
+    }
 }
