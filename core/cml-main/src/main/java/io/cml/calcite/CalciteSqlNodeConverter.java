@@ -99,7 +99,6 @@ import org.apache.calcite.util.DateString;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
@@ -250,7 +249,7 @@ public class CalciteSqlNodeConverter
         public SqlNode visitTable(Table node, ConvertContext context)
         {
             analysis.addVisitedTable(node.getName());
-            SqlIdentifier sqlIdentifier = new SqlIdentifier(node.getName().getParts().stream().map(String::toUpperCase).collect(toList()), ZERO);
+            SqlIdentifier sqlIdentifier = new SqlIdentifier(new ArrayList<>(node.getName().getParts()), ZERO);
             return new SqlTableRef(
                     sqlIdentifier.getParserPosition(),
                     sqlIdentifier,
@@ -278,7 +277,7 @@ public class CalciteSqlNodeConverter
         @Override
         public SqlNode visitIdentifier(Identifier identifier, ConvertContext context)
         {
-            return new SqlIdentifier(identifier.getValue().toUpperCase(Locale.ROOT), POS);
+            return new SqlIdentifier(identifier.getValue(), POS);
         }
 
         @Override
@@ -424,7 +423,7 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitDereferenceExpression(DereferenceExpression node, ConvertContext context)
         {
             // split catalog.schema.table
-            return new SqlIdentifier(Arrays.asList(node.toString().toUpperCase(Locale.ROOT).split("\\.")), POS);
+            return new SqlIdentifier(Arrays.asList(node.toString().split("\\.")), POS);
         }
 
         @Override

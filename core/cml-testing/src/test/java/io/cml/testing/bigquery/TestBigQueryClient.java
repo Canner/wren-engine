@@ -34,7 +34,7 @@ public class TestBigQueryClient
         Table table = client.getTable(
                 new TableHandle(
                         new CatalogName("cannerflow-286003"),
-                        new SchemaTableName("cml_temp", "mv_orders_group_by_test")));
+                        new SchemaTableName("canner_cube", "gby_rflag_lstatus_sdate")));
         assertThat(table).isNotNull();
         assertThat(client.getCacheMV(table.getTableId())).isEqualTo(table);
     }

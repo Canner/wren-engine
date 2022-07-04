@@ -21,10 +21,6 @@ import javax.annotation.concurrent.Immutable;
 import java.util.Objects;
 import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
-import static java.util.Locale.ENGLISH;
-
 @Immutable
 public class QualifiedObjectName
 {
@@ -34,7 +30,6 @@ public class QualifiedObjectName
 
     public QualifiedObjectName(String catalogName, String schemaName, String objectName)
     {
-        checkObjectName(catalogName, schemaName, objectName);
         this.catalogName = catalogName;
         this.schemaName = schemaName;
         this.objectName = objectName;
@@ -86,21 +81,5 @@ public class QualifiedObjectName
     public static Function<SchemaTableName, QualifiedObjectName> convertFromSchemaTableName(String catalogName)
     {
         return input -> new QualifiedObjectName(catalogName, input.getSchemaName(), input.getTableName());
-    }
-
-    public static void checkObjectName(String catalogName, String schemaName, String objectName)
-    {
-        checkLowerCase(catalogName, "catalogName");
-        checkLowerCase(schemaName, "schemaName");
-        checkLowerCase(objectName, "objectName");
-    }
-
-    public static String checkLowerCase(String value, String name)
-    {
-        if (value == null) {
-            throw new NullPointerException(format("%s is null", name));
-        }
-        checkArgument(value.equals(value.toLowerCase(ENGLISH)), "%s is not lowercase: %s", name, value);
-        return value;
     }
 }

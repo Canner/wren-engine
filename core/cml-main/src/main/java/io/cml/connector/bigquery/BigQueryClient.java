@@ -29,6 +29,7 @@ import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableDefinition;
 import com.google.cloud.bigquery.TableId;
+import com.google.cloud.bigquery.TableInfo;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
 import com.google.common.cache.Cache;
@@ -178,5 +179,15 @@ public class BigQueryClient
             }
             throw new CmlException(GENERIC_INTERNAL_ERROR, e);
         }
+    }
+
+    public void createTable(TableInfo tableInfo)
+    {
+        bigQuery.create(tableInfo);
+    }
+
+    public void dropTable(TableId tableId)
+    {
+        bigQuery.delete(tableId);
     }
 }
