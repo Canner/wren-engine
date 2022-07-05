@@ -412,7 +412,8 @@ public final class PostgresSessionProperties
             "jit_tuple_deforming",
             /* other */
             IS_SUPER_USER,
-            SESSION_AUTHORIZATION);
+            SESSION_AUTHORIZATION,
+            EXTRA_FLOAT_DIGITS);
 
     /**
      * hard-wired parameters

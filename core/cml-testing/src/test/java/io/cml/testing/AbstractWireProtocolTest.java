@@ -18,15 +18,41 @@ import com.google.common.net.HostAndPort;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Properties;
+
+import static java.lang.String.format;
 
 public abstract class AbstractWireProtocolTest
         extends RequireWireProtocolServer
 {
+    public static final String MOCK_PASSWORD = "ignored";
+
     protected TestingWireProtocolClient wireProtocolClient()
             throws IOException
     {
         HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
         return new TestingWireProtocolClient(
                 new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()));
+    }
+
+    protected Connection createConnection()
+            throws SQLException
+    {
+        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
+        Properties props = getDefaultProperties();
+        return DriverManager.getConnection(url, props);
+    }
+
+    protected Properties getDefaultProperties()
+    {
+        Properties props = new Properties();
+        props.setProperty("password", MOCK_PASSWORD);
+        props.setProperty("user", "canner");
+        props.setProperty("ssl", "false");
+        return props;
     }
 }
