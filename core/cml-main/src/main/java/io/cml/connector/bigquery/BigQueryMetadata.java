@@ -32,7 +32,7 @@ import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.ColumnMetadata;
@@ -195,12 +195,12 @@ public class BigQueryMetadata
     }
 
     @Override
-    public ConnectorRecordIterable directQuery(String sql, List<Parameter> parameters)
+    public ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters)
     {
         requireNonNull(sql, "sql can't be null.");
         try {
             TableResult results = bigQueryClient.query(sql, parameters);
-            return BigQueryRecordIterable.of(results);
+            return BigQueryRecordIterator.of(results);
         }
         catch (BigQueryException ex) {
             LOG.error(ex);

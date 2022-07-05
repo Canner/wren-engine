@@ -18,7 +18,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
@@ -42,7 +42,7 @@ public class Portal
 
     private final PreparedStatement preparedStatement;
     private final List<Object> params;
-    private ConnectorRecordIterable connectorRecordIterable;
+    private ConnectorRecordIterator connectorRecordIterator;
     private long rowCount;
 
     @Nullable
@@ -92,14 +92,14 @@ public class Portal
         throw new UnsupportedOperationException();
     }
 
-    public ConnectorRecordIterable getConnectorRecordIterable()
+    public ConnectorRecordIterator getConnectorRecordIterable()
     {
-        return connectorRecordIterable;
+        return connectorRecordIterator;
     }
 
-    public void setResultSetSender(ConnectorRecordIterable connectorRecordIterable)
+    public void setResultSetSender(ConnectorRecordIterator connectorRecordIterator)
     {
-        this.connectorRecordIterable = connectorRecordIterable;
+        this.connectorRecordIterator = connectorRecordIterator;
     }
 
     public long getRowCount()
@@ -114,7 +114,7 @@ public class Portal
 
     public boolean isSuspended()
     {
-        return connectorRecordIterable != null;
+        return connectorRecordIterator != null;
     }
 
     public List<Parameter> getParameters()
@@ -142,10 +142,10 @@ public class Portal
     @PreDestroy
     protected void close()
     {
-        if (connectorRecordIterable != null) {
+        if (connectorRecordIterator != null) {
             LOG.info("ConnectorRecordIterable is closing.");
             try {
-                connectorRecordIterable.close();
+                connectorRecordIterator.close();
             }
             catch (IOException ex) {
                 LOG.error(ex, "ConnectorRecordIterable close failed");

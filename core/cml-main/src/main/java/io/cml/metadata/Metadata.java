@@ -15,7 +15,7 @@ package io.cml.metadata;
 
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.spi.Column;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
@@ -46,7 +46,7 @@ public interface Metadata
 
     void directDDL(String sql);
 
-    ConnectorRecordIterable directQuery(String sql, List<Parameter> parameters);
+    ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
     List<Column> describeQuery(String sql, List<Parameter> parameters);
 }

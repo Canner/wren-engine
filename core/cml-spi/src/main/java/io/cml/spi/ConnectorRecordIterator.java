@@ -17,10 +17,11 @@ package io.cml.spi;
 import io.cml.spi.type.PGType;
 
 import java.io.Closeable;
+import java.util.Iterator;
 import java.util.List;
 
-public interface ConnectorRecordIterable
-        extends Iterable<Object[]>, Closeable
+public interface ConnectorRecordIterator
+        extends Iterator<Object[]>, Closeable
 {
     List<PGType> getTypes();
 }
