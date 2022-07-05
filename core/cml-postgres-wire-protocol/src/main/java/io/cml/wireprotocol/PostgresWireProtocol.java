@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
 import io.cml.wireprotocol.ssl.SslReqHandler;
@@ -263,8 +263,8 @@ public class PostgresWireProtocol
         try {
             wireProtocolSession.parse("", statement, ImmutableList.of());
             wireProtocolSession.bind("", "", ImmutableList.of(), null);
-            Optional<ConnectorRecordIterable> iterable = wireProtocolSession.execute("").join();
-            if (iterable.isEmpty()) {
+            Optional<ConnectorRecordIterator> iterator = wireProtocolSession.execute("").join();
+            if (iterator.isEmpty()) {
                 sendHardWiredSessionProperty(statement);
                 Messages.sendCommandComplete(channel, statement, 0);
                 return CompletableFuture.completedFuture(null);
@@ -272,7 +272,7 @@ public class PostgresWireProtocol
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,
                     channel,
-                    iterable.get(),
+                    iterator.get(),
                     0,
                     0,
                     null);
@@ -454,7 +454,7 @@ public class PostgresWireProtocol
             }
 
             if (!portal.isSuspended()) {
-                Optional<ConnectorRecordIterable> connectorRecordIterable = wireProtocolSession.execute(portalName).join();
+                Optional<ConnectorRecordIterator> connectorRecordIterable = wireProtocolSession.execute(portalName).join();
                 if (connectorRecordIterable.isEmpty()) {
                     sendHardWiredSessionProperty(statement);
                     Messages.sendCommandComplete(channel, statement, 0);
@@ -463,7 +463,7 @@ public class PostgresWireProtocol
                 portal.setResultSetSender(connectorRecordIterable.get());
             }
 
-            ConnectorRecordIterable hiveRecordIterable = portal.getConnectorRecordIterable();
+            ConnectorRecordIterator hiveRecordIterable = portal.getConnectorRecordIterable();
             FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,

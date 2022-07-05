@@ -20,7 +20,7 @@ import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.sql.PostgreSqlRewrite;
 import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
@@ -216,12 +216,12 @@ public class WireProtocolSession
         LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
     }
 
-    public CompletableFuture<Optional<ConnectorRecordIterable>> execute(String portalName)
+    public CompletableFuture<Optional<ConnectorRecordIterator>> execute(String portalName)
     {
         return execute(portals.get(portalName));
     }
 
-    private CompletableFuture<Optional<ConnectorRecordIterable>> execute(Portal portal)
+    private CompletableFuture<Optional<ConnectorRecordIterator>> execute(Portal portal)
     {
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {

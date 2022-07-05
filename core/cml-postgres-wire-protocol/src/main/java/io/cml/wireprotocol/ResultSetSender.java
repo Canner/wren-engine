@@ -14,13 +14,14 @@
 
 package io.cml.wireprotocol;
 
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.type.PGType;
 import io.netty.channel.Channel;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.Iterator;
 import java.util.List;
 
 class ResultSetSender
@@ -28,7 +29,7 @@ class ResultSetSender
 {
     private final String query;
     private final Channel channel;
-    private final ConnectorRecordIterable connectorRecordIterable;
+    private final Iterator<Object[]> connectorRecordIterator;
     private final List<PGType> schema;
     private final int maxRows;
 
@@ -40,15 +41,15 @@ class ResultSetSender
 
     ResultSetSender(String query,
             Channel channel,
-            ConnectorRecordIterable connectorRecordIterable,
+            ConnectorRecordIterator connectorRecordIterator,
             int maxRows,
             long previousCount,
             @Nullable FormatCodes.FormatCode[] formatCodes)
     {
         this.query = query;
         this.channel = channel;
-        this.connectorRecordIterable = connectorRecordIterable;
-        this.schema = connectorRecordIterable.getTypes();
+        this.connectorRecordIterator = connectorRecordIterator;
+        this.schema = connectorRecordIterator.getTypes();
         this.maxRows = maxRows;
         this.totalRowCount = previousCount;
         this.formatCodes = formatCodes;
@@ -89,9 +90,9 @@ class ResultSetSender
 
     public long sendResultSet()
     {
-        for (Object[] optionals : connectorRecordIterable) {
-            sendRow(optionals);
-            if (maxRows > 0 && connectorRecordIterable.iterator().hasNext() && localRowCount % maxRows == 0) {
+        while (connectorRecordIterator.hasNext()) {
+            sendRow(connectorRecordIterator.next());
+            if (maxRows > 0 && connectorRecordIterator.hasNext() && localRowCount % maxRows == 0) {
                 batchFinished();
                 totalRowCount += localRowCount;
                 return totalRowCount;

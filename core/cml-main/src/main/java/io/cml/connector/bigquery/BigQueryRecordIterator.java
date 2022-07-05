@@ -14,10 +14,11 @@
 
 package io.cml.connector.bigquery;
 
+import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
-import io.cml.spi.ConnectorRecordIterable;
+import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.VarcharType;
 
@@ -27,20 +28,21 @@ import java.util.List;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-public class BigQueryRecordIterable
-        implements ConnectorRecordIterable
+public class BigQueryRecordIterator
+        implements ConnectorRecordIterator
 {
     private final List<PGType> types;
-    private final TableResult tableResult;
+    private final Iterator<FieldValueList> resultIterator;
 
-    public static BigQueryRecordIterable of(TableResult tableResult)
+    public static BigQueryRecordIterator of(TableResult tableResult)
     {
-        return new BigQueryRecordIterable(tableResult);
+        return new BigQueryRecordIterator(tableResult);
     }
 
-    private BigQueryRecordIterable(TableResult tableResult)
+    private BigQueryRecordIterator(TableResult tableResult)
     {
-        this.tableResult = requireNonNull(tableResult, "tableResult is null");
+        requireNonNull(tableResult, "tableResult is null");
+        this.resultIterator = tableResult.iterateAll().iterator();
 
         // TODO: type mapping
         this.types = Streams.stream(tableResult.getSchema().getFields().iterator())
@@ -54,28 +56,19 @@ public class BigQueryRecordIterable
     }
 
     @Override
-    public Iterator<Object[]> iterator()
+    public boolean hasNext()
     {
-        Iterator<FieldValueList> iterator = tableResult.iterateAll().iterator();
+        return resultIterator.hasNext();
+    }
 
-        return new Iterator<>()
-        {
-            @Override
-            public boolean hasNext()
-            {
-                return iterator.hasNext();
-            }
-
-            @Override
-            public Object[] next()
-            {
-                FieldValueList fieldValues = iterator.next();
-                return fieldValues.stream()
-                        // TODO: type mapping
-                        .map(fieldValue -> fieldValue.getStringValue())
-                        .toArray();
-            }
-        };
+    @Override
+    public Object[] next()
+    {
+        FieldValueList fieldValues = resultIterator.next();
+        return fieldValues.stream()
+                // TODO: type mapping
+                .map(FieldValue::getStringValue)
+                .toArray();
     }
 
     public List<PGType> getTypes()

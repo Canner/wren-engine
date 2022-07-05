@@ -182,8 +182,7 @@ public class TestWireProtocolWithBigquery
         }
     }
 
-    // TODO: support suspendable result set
-    @Test(enabled = false)
+    @Test
     public void testExtendedQueryWithMaxRow()
             throws IOException
     {
