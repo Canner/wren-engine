@@ -42,6 +42,8 @@ public class TestCalciteSqlNodeConverter
         return new Object[][] {
                 {"testRelationWithPrefix", "select orderkey, custkey from tpch.tiny.orders join tpch.tiny.lineitem on tpch.tiny.orders.orderkey = tpch.tiny.lineitem.orderkey"},
                 {"testRowNode", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?"},
+                {"testUnion", "select * from (select 1, 'foo' union select 2, 'bar' union select 3, 'test') as t(col1, col2)"},
+                {"testUnionAll", "select * from (select 1, 'foo' union all select 2, 'bar' union all select 3, 'test') as t(col1, col2)"}
         };
     }
 
