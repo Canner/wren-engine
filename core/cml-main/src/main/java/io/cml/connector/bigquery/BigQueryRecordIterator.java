@@ -14,16 +14,19 @@
 
 package io.cml.connector.bigquery;
 
+import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
+import com.google.cloud.bigquery.LegacySQLTypeName;
+import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.type.PGType;
-import io.cml.spi.type.VarcharType;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -32,6 +35,8 @@ public class BigQueryRecordIterator
         implements ConnectorRecordIterator
 {
     private final List<PGType> types;
+    private final List<StandardSQLTypeName> bqTypes;
+
     private final Iterator<FieldValueList> resultIterator;
 
     public static BigQueryRecordIterator of(TableResult tableResult)
@@ -44,10 +49,11 @@ public class BigQueryRecordIterator
         requireNonNull(tableResult, "tableResult is null");
         this.resultIterator = tableResult.iterateAll().iterator();
 
-        // TODO: type mapping
         this.types = Streams.stream(tableResult.getSchema().getFields().iterator())
-                .map(field -> VarcharType.VARCHAR)
+                .map(field -> BigQueryType.toPGType(field.getType().getStandardType()))
                 .collect(toImmutableList());
+
+        this.bqTypes = tableResult.getSchema().getFields().stream().map(Field::getType).map(LegacySQLTypeName::getStandardType).collect(toImmutableList());
     }
 
     @Override
@@ -65,10 +71,28 @@ public class BigQueryRecordIterator
     public Object[] next()
     {
         FieldValueList fieldValues = resultIterator.next();
+        AtomicInteger index = new AtomicInteger(0);
         return fieldValues.stream()
-                // TODO: type mapping
-                .map(FieldValue::getStringValue)
+                .map(fieldValue -> getFieldValue(index.getAndIncrement(), fieldValue))
                 .toArray();
+    }
+
+    private Object getFieldValue(int index, FieldValue fieldValue)
+    {
+        switch (bqTypes.get(index)) {
+            case BOOL:
+                return fieldValue.getBooleanValue();
+            case INT64:
+                return fieldValue.getLongValue();
+            case FLOAT64:
+                return fieldValue.getDoubleValue();
+            case STRING:
+                return fieldValue.getStringValue();
+            case BYTES:
+                return fieldValue.getBytesValue();
+            default:
+                throw new IllegalArgumentException("Unsupported type: " + bqTypes.get(index));
+        }
     }
 
     public List<PGType> getTypes()
