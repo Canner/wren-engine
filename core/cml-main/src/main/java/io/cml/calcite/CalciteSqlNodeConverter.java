@@ -608,7 +608,6 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitGenericDataType(GenericDataType node, ConvertContext context)
         {
-
             return new SqlDataTypeSpec(
                     new SqlBasicTypeNameSpec(toCalciteType(node.getName().toString()), ZERO),
                     toCalcitePos(node.getLocation()));
