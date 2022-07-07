@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,7 +44,10 @@ public class TestCalciteSqlNodeConverter
                 {"testRelationWithPrefix", "select orderkey, custkey from tpch.tiny.orders join tpch.tiny.lineitem on tpch.tiny.orders.orderkey = tpch.tiny.lineitem.orderkey"},
                 {"testRowNode", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?"},
                 {"testUnion", "select * from (select 1, 'foo' union select 2, 'bar' union select 3, 'test') as t(col1, col2)"},
-                {"testUnionAll", "select * from (select 1, 'foo' union all select 2, 'bar' union all select 3, 'test') as t(col1, col2)"}
+                {"testUnionAll", "select * from (select 1, 'foo' union all select 2, 'bar' union all select 3, 'test') as t(col1, col2)"},
+                {"testCastAs", "SELECT CAST(true AS boolean) col_0, CAST(false AS boolean) col_1, CAST(123456789012 AS bigint) col_2, CAST(32456 AS smallint) col_4, " +
+                        "CAST(125 AS tinyint) col_5, CAST(123.45 AS double) col_6, CAST(123.45 AS real) col_7"},
+                {"testBinaryLiteral", "SELECT X'68656C6C6F' col_0"}
         };
     }
 
@@ -52,7 +56,7 @@ public class TestCalciteSqlNodeConverter
             throws SqlParseException
     {
         SqlParser sqlParser = new SqlParser();
-        Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
+        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);
@@ -104,7 +108,7 @@ public class TestCalciteSqlNodeConverter
         Path path = Paths.get(requireNonNull(getClass().getClassLoader().getResource(sqlFile)).toURI());
         String sql = Files.readString(path);
 
-        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL));
+        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);

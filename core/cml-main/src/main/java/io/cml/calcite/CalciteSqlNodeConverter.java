@@ -23,6 +23,7 @@ import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.BetweenPredicate;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.BooleanLiteral;
+import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CharLiteral;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DecimalLiteral;
@@ -31,6 +32,7 @@ import io.trino.sql.tree.DoubleLiteral;
 import io.trino.sql.tree.ExistsPredicate;
 import io.trino.sql.tree.Extract;
 import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Identifier;
@@ -76,6 +78,8 @@ import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlBasicTypeNameSpec;
+import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -102,6 +106,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static io.cml.calcite.CalciteTypes.toCalciteType;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.type.StandardTypes.BOOLEAN;
 import static io.cml.spi.type.StandardTypes.DATE;
@@ -114,6 +119,7 @@ import static org.apache.calcite.sql.SqlIdentifier.star;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AND;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BETWEEN;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DESC;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
@@ -389,19 +395,19 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitBinaryLiteral(BinaryLiteral node, ConvertContext context)
         {
-            return super.visitBinaryLiteral(node, context);
+            return SqlLiteral.createBinaryString(node.getValue().getBytes(), toCalcitePos(node.getLocation()));
         }
 
         @Override
         protected SqlNode visitBooleanLiteral(BooleanLiteral node, ConvertContext context)
         {
-            return super.visitBooleanLiteral(node, context);
+            return SqlLiteral.createBoolean(node.getValue(), toCalcitePos(node.getLocation()));
         }
 
         @Override
         protected SqlNode visitNullLiteral(NullLiteral node, ConvertContext context)
         {
-            return super.visitNullLiteral(node, context);
+            return SqlLiteral.createNull(toCalcitePos(node.getLocation()));
         }
 
         @Override
@@ -591,6 +597,21 @@ public class CalciteSqlNodeConverter
                     SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(node.getWhenClauses().stream().map(WhenClause::getOperand).collect(toList()))),
                     SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(node.getWhenClauses().stream().map(WhenClause::getResult).collect(toList()))),
                     node.getDefaultValue().map(this::visitNode).orElse(null));
+        }
+
+        @Override
+        protected SqlNode visitCast(Cast node, ConvertContext context)
+        {
+            return new SqlBasicCall(CAST, ImmutableList.of(visitNode(node.getExpression()), visitNode(node.getType())), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitGenericDataType(GenericDataType node, ConvertContext context)
+        {
+
+            return new SqlDataTypeSpec(
+                    new SqlBasicTypeNameSpec(toCalciteType(node.getName().toString()), ZERO),
+                    toCalcitePos(node.getLocation()));
         }
 
         private SqlIntervalQualifier toSqlIntervalQualifier(Extract.Field field, SqlParserPos pos)
