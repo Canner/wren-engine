@@ -1,0 +1,281 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.cml.testing.bigquery;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import io.cml.testing.AbstractWireProtocolTest;
+import io.cml.testing.DataType;
+import io.cml.testing.TestingWireProtocolServer;
+import org.postgresql.util.PGobject;
+import org.testng.annotations.Test;
+
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+import static io.cml.spi.type.SmallIntType.SMALLINT;
+import static io.cml.spi.type.TinyIntType.TINYINT;
+import static io.cml.testing.DataType.bigintDataType;
+import static io.cml.testing.DataType.booleanDataType;
+import static io.cml.testing.DataType.byteaDataType;
+import static io.cml.testing.DataType.dataType;
+import static io.cml.testing.DataType.doubleDataType;
+import static io.cml.testing.DataType.integerDataType;
+import static io.cml.testing.DataType.realDataType;
+import static java.lang.String.format;
+import static java.lang.System.getenv;
+import static java.nio.charset.StandardCharsets.UTF_16LE;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.nCopies;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
+import static org.apache.commons.codec.binary.Hex.encodeHexString;
+import static org.assertj.core.api.Assertions.assertThat;
+
+public class TestWireProtocolType
+        extends AbstractWireProtocolTest
+{
+    // BigQuery has only INT64 type. We should cast other int to int32 after got them.
+    private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint");
+    private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real");
+
+    @Override
+    protected TestingWireProtocolServer createWireProtocolServer()
+    {
+        return TestingWireProtocolServer.builder()
+                .setRequiredConfigs(
+                        ImmutableMap.<String, String>builder()
+                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
+                                .put("bigquery.location", "US")
+                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
+                                .build())
+                .build();
+    }
+
+    @Test
+    public void testBasicTypes()
+    {
+        createTypeTest()
+                .addInput(booleanDataType(), true)
+                .addInput(booleanDataType(), false)
+                .addInput(bigintDataType(), 123_456_789_012L)
+                .addInput(integerDataType(), 1_234_567_890)
+                .addInput(jdbcSmallintDataType(), 32_456)
+                .addInput(jdbcTinyintDataType(), 125)
+                .addInput(doubleDataType(), 123.45d)
+                .addInput(realDataType(), 123.45f)
+                .executeSuite();
+    }
+
+    // TODO: https://github.com/Canner/canner-metric-layer/issues/41
+    @Test(enabled = false)
+    public void testBytea()
+    {
+        byteaTestCases(byteaDataType())
+                .executeSuite();
+    }
+
+    private WireProtocolTypeTest byteaTestCases(DataType<byte[]> byteaDataType)
+    {
+        return createTypeTest()
+                .addInput(byteaDataType, "hello".getBytes(UTF_8))
+                .addInput(byteaDataType, "Piękna łąka w 東京都".getBytes(UTF_8))
+                .addInput(byteaDataType, "Bag full of 💰".getBytes(UTF_16LE))
+                .addInput(byteaDataType, null)
+                .addInput(byteaDataType, new byte[] {})
+                .addInput(byteaDataType, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 13, -7, 54, 122, -89, 0, 0, 0});
+    }
+
+    private WireProtocolTypeTest createTypeTest()
+    {
+        return new WireProtocolTypeTest();
+    }
+
+    /**
+     * JDBC get pg smallint by Integer
+     */
+    private static DataType<Integer> jdbcSmallintDataType()
+    {
+        return dataType("smallint", SMALLINT, Object::toString);
+    }
+
+    /**
+     * JDBC get pg tinyint by Integer.
+     */
+    private static DataType<Integer> jdbcTinyintDataType()
+    {
+        return dataType("tinyint", TINYINT, Object::toString);
+    }
+
+    public class WireProtocolTypeTest
+    {
+        private final List<Input<?>> inputs = new ArrayList<>();
+
+        private WireProtocolTypeTest() {}
+
+        public <T> WireProtocolTypeTest addInput(DataType<T> type, T value)
+        {
+            inputs.add(new WireProtocolTypeTest.Input<>(type, value));
+            return this;
+        }
+
+        public <T> WireProtocolTypeTest addInput(DataType<T> inputType, T inputValue, Function<T, ?> toJdbcQueryResult)
+        {
+            inputs.add(new WireProtocolTypeTest.Input<>(inputType, inputValue, toJdbcQueryResult));
+            return this;
+        }
+
+        public void executeSuite()
+        {
+            try {
+                execute(1);
+                // just want to test multirows, it is ok that the data are the same
+                execute(10);
+            }
+            catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private void execute(int rowCopies)
+                throws SQLException
+        {
+            List<Object> expectedResults = inputs.stream().map(WireProtocolTypeTest.Input::toJdbcQueryResult).collect(toList());
+            List<String> expectedTypeName = inputs.stream().map(Input::getInsertType).collect(toList());
+
+            try (Connection conn = createConnection()) {
+                Statement stmt = conn.createStatement();
+                String sql = prepareQueryForDataType(rowCopies);
+                stmt.execute(sql);
+                ResultSet result = stmt.getResultSet();
+                long count = 0;
+                while (result.next()) {
+                    for (int i = 0; i < expectedResults.size(); i++) {
+                        Object actual = result.getObject(i + 1);
+                        if (actual instanceof Array) {
+                            assertArrayEquals((Array) actual, (List<?>) expectedResults.get(i));
+                        }
+                        else if (expectedResults.get(i) instanceof PGobject) {
+                            PGobject expected = (PGobject) expectedResults.get(i);
+                            if ("inet".equals(expected.getType())) {
+                                assertThat(actual).isEqualTo(expected.getValue());
+                            }
+                        }
+                        else if (TYPE_FORCED_TO_LONG.contains(expectedTypeName.get(i))) {
+                            assertThat(Long.valueOf((long) actual).intValue()).isEqualTo(expectedResults.get(i));
+                        }
+                        else if (TYPE_FORCED_TO_DOUBLE.contains(expectedTypeName.get(i))) {
+                            assertThat(Double.valueOf((double) actual).floatValue()).isEqualTo(expectedResults.get(i));
+                        }
+                        else {
+                            assertThat(actual).isEqualTo(expectedResults.get(i));
+                        }
+                    }
+                    count++;
+                }
+                assertThat(count).isEqualTo(rowCopies);
+            }
+        }
+
+        /**
+         * Jdbc will get array result by Java array. Transform it to List to match the type of the expected answer.
+         */
+        private Object arrayToList(Object value)
+        {
+            if (value instanceof Object[]) {
+                // We don't use toImmutableList here because it requires non-null elements but there are null values in test cases.
+                return Arrays.stream((Object[]) value).map(this::arrayToList).collect(toList());
+            }
+            if (value instanceof byte[]) {
+                return "\\x" + encodeHexString((byte[]) value);
+            }
+            if (value instanceof PGobject) {
+                String type = ((PGobject) value).getType();
+                if (type.equals("record")) {
+                    String pValue = ((PGobject) value).getValue();
+                    return ImmutableList.copyOf(pValue.substring(1, pValue.length() - 1).split(","));
+                }
+            }
+            return value;
+        }
+
+        private void assertArrayEquals(Array jdbcArray, List<?> expected)
+                throws SQLException
+        {
+            Object[] actualArray = (Object[]) jdbcArray.getArray();
+            Object actual = arrayToList(actualArray);
+            assertThat(actual).isEqualTo(expected);
+        }
+
+        private String prepareQueryForDataType(int rowCopies)
+        {
+            Stream<String> columnValuesWithNames = range(0, inputs.size())
+                    .mapToObj(i -> format("%s col_%d", literalInExplicitCast(inputs.get(i)), i));
+            String selectBody = Joiner.on(",\n").join(columnValuesWithNames.iterator());
+            return Joiner.on("\nUNION ALL\n").join(nCopies(rowCopies, format("SELECT %s", selectBody)));
+        }
+
+        private String literalInExplicitCast(WireProtocolTypeTest.Input<?> input)
+        {
+            return format("CAST(%s AS %s)", input.toLiteral(), input.getInsertType());
+        }
+
+        public class Input<T>
+        {
+            private final DataType<T> dataType;
+            private final T value;
+            private final Function<T, ?> toJdbcQueryResult;
+
+            public Input(DataType<T> dataType, T value)
+            {
+                this(dataType, value, null);
+            }
+
+            public Input(DataType<T> dataType, T value, Function<T, ?> toJdbcQueryResult)
+            {
+                this.dataType = dataType;
+                this.value = value;
+                this.toJdbcQueryResult = toJdbcQueryResult;
+            }
+
+            public String getInsertType()
+            {
+                return dataType.getInsertType();
+            }
+
+            public Object toJdbcQueryResult()
+            {
+                if (toJdbcQueryResult != null) {
+                    return toJdbcQueryResult.apply(value);
+                }
+                return value;
+            }
+
+            public String toLiteral()
+            {
+                return dataType.toLiteral(value);
+            }
+        }
+    }
+}
