@@ -23,6 +23,7 @@ import io.cml.testing.TestingWireProtocolServer;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -40,9 +41,11 @@ import static io.cml.testing.DataType.bigintDataType;
 import static io.cml.testing.DataType.booleanDataType;
 import static io.cml.testing.DataType.byteaDataType;
 import static io.cml.testing.DataType.dataType;
+import static io.cml.testing.DataType.decimalDataType;
 import static io.cml.testing.DataType.doubleDataType;
 import static io.cml.testing.DataType.integerDataType;
 import static io.cml.testing.DataType.realDataType;
+import static io.cml.testing.DataType.varcharDataType;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
@@ -105,6 +108,78 @@ public class TestWireProtocolType
                 .addInput(byteaDataType, null)
                 .addInput(byteaDataType, new byte[] {})
                 .addInput(byteaDataType, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 13, -7, 54, 122, -89, 0, 0, 0});
+    }
+
+    @Test
+    public void testCreatedParameterizedVarchar()
+    {
+        varcharDataTypeTest()
+                .executeSuite();
+    }
+
+    private WireProtocolTypeTest varcharDataTypeTest()
+    {
+        return createTypeTest()
+                .addInput(varcharDataType(10), "text_a")
+                .addInput(varcharDataType(255), "text_b")
+                .addInput(varcharDataType(65535), "text_d")
+                .addInput(varcharDataType(10485760), "text_f")
+                .addInput(varcharDataType(), "unbounded");
+    }
+
+    // TODO: https://github.com/Canner/canner-metric-layer/issues/42
+    @Test(enabled = false)
+    public void testCreatedParameterizedVarcharUnicode()
+    {
+        unicodeVarcharDateTypeTest()
+                .executeSuite();
+    }
+
+    private WireProtocolTypeTest unicodeVarcharDateTypeTest()
+    {
+        return unicodeDataTypeTest(DataType::varcharDataType)
+                .addInput(varcharDataType(), "\u041d\u0443, \u043f\u043e\u0433\u043e\u0434\u0438!");
+    }
+
+    private WireProtocolTypeTest unicodeDataTypeTest(Function<Integer, DataType<String>> dataTypeFactory)
+    {
+        String sampleUnicodeText = "\u653b\u6bbb\u6a5f\u52d5\u968a";
+        String sampleFourByteUnicodeCharacter = "\uD83D\uDE02";
+
+        return createTypeTest()
+                .addInput(dataTypeFactory.apply(sampleUnicodeText.length()), sampleUnicodeText)
+                .addInput(dataTypeFactory.apply(32), sampleUnicodeText)
+                .addInput(dataTypeFactory.apply(20000), sampleUnicodeText)
+                .addInput(dataTypeFactory.apply(1), sampleFourByteUnicodeCharacter);
+    }
+
+    // TODO: https://github.com/Canner/canner-metric-layer/issues/43
+    @Test(enabled = false)
+    public void testCreatedDecimal()
+    {
+        decimalTests()
+                .executeSuite();
+    }
+
+    private WireProtocolTypeTest decimalTests()
+    {
+        return createTypeTest()
+                .addInput(decimalDataType(3, 0), new BigDecimal("0"))
+                .addInput(decimalDataType(3, 0), new BigDecimal("193"))
+                .addInput(decimalDataType(3, 0), new BigDecimal("19"))
+                .addInput(decimalDataType(3, 0), new BigDecimal("-193"))
+                .addInput(decimalDataType(3, 1), new BigDecimal("10.0"))
+                .addInput(decimalDataType(3, 1), new BigDecimal("10.1"))
+                .addInput(decimalDataType(3, 1), new BigDecimal("-10.1"))
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.00"))
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.30"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.00"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.30"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("123456789.30"))
+                .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"))
+                .addInput(decimalDataType(30, 5), new BigDecimal("3141592653589793238462643.38327"))
+                .addInput(decimalDataType(30, 5), new BigDecimal("-3141592653589793238462643.38327"))
+                .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"));
     }
 
     private WireProtocolTypeTest createTypeTest()
