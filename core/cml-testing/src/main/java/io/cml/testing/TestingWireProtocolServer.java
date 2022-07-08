@@ -58,7 +58,7 @@ public class TestingWireProtocolServer
 
         injector = app
                 .doNotInitializeLogging()
-                .setRequiredConfigurationProperties(requiredConfigs)
+                .setRequiredConfigurationProperties(requiredConfigProps)
                 .quiet()
                 .initialize();
 
