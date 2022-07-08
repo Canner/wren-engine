@@ -81,6 +81,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.cml.common.Utils.wrapException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
@@ -122,7 +123,7 @@ public class QueryProcessor
     public String convert(String sql)
     {
         LOG.info("[Input query]: %s", sql);
-        Statement statement = sqlParser.createStatement(sql, new ParsingOptions());
+        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
         Analysis analysis = new Analysis();
         SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);

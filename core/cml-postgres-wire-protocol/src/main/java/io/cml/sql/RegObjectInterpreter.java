@@ -71,6 +71,9 @@ public class RegObjectInterpreter
         @Override
         protected Object visitCast(Cast node, Object context)
         {
+            if (!node.getType().toString().startsWith("reg")) {
+                return null;
+            }
             // oid is a longLiteral
             if (!(node.getExpression() instanceof LongLiteral)) {
                 return null;

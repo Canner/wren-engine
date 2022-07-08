@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
 import static io.cml.testing.TestingWireProtocolClient.DescribeType.PORTAL;
@@ -80,7 +81,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -116,13 +117,13 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -213,7 +214,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -250,7 +251,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -498,7 +499,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertCommandComplete("BEGIN");
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(INTEGER, INTEGER, INTEGER));
+            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(BIGINT, BIGINT, BIGINT));
             protocolClient.assertDataRow("1,2,3");
             protocolClient.assertDataRow("2,4,6");
             protocolClient.assertCommandComplete("SELECT 2");
