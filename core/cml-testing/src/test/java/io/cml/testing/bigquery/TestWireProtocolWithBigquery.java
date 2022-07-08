@@ -12,6 +12,20 @@
  * limitations under the License.
  */
 
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.cml.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
@@ -40,6 +54,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
 import static io.cml.testing.TestingWireProtocolClient.DescribeType.PORTAL;
@@ -80,7 +95,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -116,13 +131,13 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -213,7 +228,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -250,7 +265,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -498,7 +513,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertCommandComplete("BEGIN");
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(INTEGER, INTEGER, INTEGER));
+            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(BIGINT, BIGINT, BIGINT));
             protocolClient.assertDataRow("1,2,3");
             protocolClient.assertDataRow("2,4,6");
             protocolClient.assertCommandComplete("SELECT 2");
