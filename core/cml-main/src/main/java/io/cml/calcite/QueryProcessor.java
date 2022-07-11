@@ -35,7 +35,6 @@ import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptMaterialization;
@@ -82,6 +81,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.cml.common.Utils.wrapException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
@@ -106,7 +106,7 @@ public class QueryProcessor
     {
         this.dialect = requireNonNull(metadata.getDialect().getSqlDialect(), "dialect is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
-        this.typeFactory = new JavaTypeFactoryImpl();
+        this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8);
 
         Properties props = new Properties();
         props.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
