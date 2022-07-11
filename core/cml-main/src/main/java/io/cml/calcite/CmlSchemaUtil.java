@@ -24,7 +24,6 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 
 import java.util.Date;
 import java.util.List;
@@ -40,6 +39,7 @@ import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
+import static org.apache.calcite.sql.dialect.BigQuerySqlDialect.DEFAULT_CONTEXT;
 
 public final class CmlSchemaUtil
 {
@@ -47,7 +47,7 @@ public final class CmlSchemaUtil
 
     public enum Dialect
     {
-        BIGQUERY(BigQuerySqlDialect.DEFAULT);
+        BIGQUERY(new BigQueryUnicodeSqlDialect(DEFAULT_CONTEXT));
 
         private final SqlDialect sqlDialect;
 

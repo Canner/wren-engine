@@ -127,8 +127,7 @@ public class TestWireProtocolType
                 .addInput(varcharDataType(), "unbounded");
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/42
-    @Test(enabled = false)
+    @Test
     public void testCreatedParameterizedVarcharUnicode()
     {
         unicodeVarcharDateTypeTest()
