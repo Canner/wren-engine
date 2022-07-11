@@ -36,6 +36,7 @@ import static io.cml.spi.type.DateType.DATE;
 import static io.cml.spi.type.DoubleType.DOUBLE;
 import static io.cml.spi.type.IntegerType.INTEGER;
 import static io.cml.spi.type.VarcharType.VARCHAR;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
@@ -79,7 +80,7 @@ public final class CmlSchemaUtil
 
     private static CmlTable toCmlTable(TableSchema tableSchema)
     {
-        JavaTypeFactoryImpl typeFactory = new JavaTypeFactoryImpl();
+        JavaTypeFactoryImpl typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8);
         RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
         for (ColumnSchema columnSchema : tableSchema.getColumns()) {
             builder.add(columnSchema.getName(), toRelDataType(typeFactory, columnSchema.getType()));
