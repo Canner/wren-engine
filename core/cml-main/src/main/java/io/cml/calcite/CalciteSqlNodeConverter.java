@@ -26,6 +26,7 @@ import io.trino.sql.tree.BooleanLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CharLiteral;
 import io.trino.sql.tree.ComparisonExpression;
+import io.trino.sql.tree.DataTypeParameter;
 import io.trino.sql.tree.DecimalLiteral;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.DoubleLiteral;
@@ -53,6 +54,7 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NotExpression;
 import io.trino.sql.tree.NullLiteral;
+import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PatternRecognitionRelation;
 import io.trino.sql.tree.Query;
@@ -99,6 +101,7 @@ import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
 
 import java.util.ArrayList;
@@ -106,6 +109,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.calcite.CalciteTypes.toCalciteType;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.type.StandardTypes.BOOLEAN;
@@ -608,9 +613,25 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitGenericDataType(GenericDataType node, ConvertContext context)
         {
+            SqlTypeName typeName = toCalciteType(node.getName().toString());
+            if (typeName.equals(SqlTypeName.DECIMAL)) {
+                List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
+                checkArgument(params.size() == 2, format("decimal type should have 2 parameters but %s", params.size()));
+                return new SqlDataTypeSpec(
+                        new SqlBasicTypeNameSpec(typeName, params.get(0), params.get(1), ZERO),
+                        toCalcitePos(node.getLocation()));
+            }
             return new SqlDataTypeSpec(
-                    new SqlBasicTypeNameSpec(toCalciteType(node.getName().toString()), ZERO),
+                    new SqlBasicTypeNameSpec(typeName, ZERO),
                     toCalcitePos(node.getLocation()));
+        }
+
+        private static int handleNumericParameter(DataTypeParameter dataTypeParameter)
+        {
+            if (dataTypeParameter instanceof NumericParameter) {
+                return Integer.parseInt(((NumericParameter) dataTypeParameter).getValue());
+            }
+            throw new IllegalArgumentException(format("%s isn't a DataTypeParameter", dataTypeParameter));
         }
 
         private SqlIntervalQualifier toSqlIntervalQualifier(Extract.Field field, SqlParserPos pos)
