@@ -180,7 +180,9 @@ public class QueryProcessor
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
                 SqlWriterConfig.of().withDialect(dialect));
-        return sqlPrettyWriter.format(sqlNode);
+        String result = sqlPrettyWriter.format(sqlNode);
+        LOG.info("[Converted BQ SQL]: %s", result);
+        return result;
     }
 
     private TableSchema toTableSchema(QualifiedName tableName)

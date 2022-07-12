@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.cml.calcite.BigQueryCmlCustomSqlDialect.DEFAULT_CONTEXT;
 import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.DateType.DATE;
@@ -40,7 +41,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
-import static org.apache.calcite.sql.dialect.BigQuerySqlDialect.DEFAULT_CONTEXT;
 
 public final class CmlSchemaUtil
 {
@@ -48,7 +48,7 @@ public final class CmlSchemaUtil
 
     public enum Dialect
     {
-        BIGQUERY(new BigQueryUnicodeSqlDialect(DEFAULT_CONTEXT));
+        BIGQUERY(new BigQueryCmlCustomSqlDialect(DEFAULT_CONTEXT));
 
         private final SqlDialect sqlDialect;
 
