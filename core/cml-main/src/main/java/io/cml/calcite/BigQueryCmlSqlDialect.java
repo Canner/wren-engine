@@ -23,7 +23,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class BigQueryCmlCustomSqlDialect
+public class BigQueryCmlSqlDialect
         extends BigQuerySqlDialect
 {
     /**
@@ -31,7 +31,7 @@ public class BigQueryCmlCustomSqlDialect
      *
      * @param context
      */
-    public BigQueryCmlCustomSqlDialect(Context context)
+    public BigQueryCmlSqlDialect(Context context)
     {
         super(context);
     }
@@ -62,7 +62,7 @@ public class BigQueryCmlCustomSqlDialect
                 case DOUBLE:
                     return createSqlDataTypeSpecByName("FLOAT64", typeName);
                 case DECIMAL:
-                    if (type.getPrecision() <= 29) {
+                    if (type.getPrecision() <= 38) {
                         return createSqlDataTypeSpecByName("NUMERIC", typeName);
                     }
                     return createSqlDataTypeSpecByName("BIGNUMERIC", typeName);

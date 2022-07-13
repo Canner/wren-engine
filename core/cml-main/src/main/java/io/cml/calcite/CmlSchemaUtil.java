@@ -15,6 +15,7 @@
 package io.cml.calcite;
 
 import io.cml.metadata.ColumnSchema;
+import io.cml.metadata.Metadata;
 import io.cml.metadata.TableSchema;
 import io.cml.spi.type.PGType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -30,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static io.cml.calcite.BigQueryCmlCustomSqlDialect.DEFAULT_CONTEXT;
+import static io.cml.calcite.BigQueryCmlSqlDialect.DEFAULT_CONTEXT;
 import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.DateType.DATE;
@@ -48,7 +49,7 @@ public final class CmlSchemaUtil
 
     public enum Dialect
     {
-        BIGQUERY(new BigQueryCmlCustomSqlDialect(DEFAULT_CONTEXT));
+        BIGQUERY(new BigQueryCmlSqlDialect(DEFAULT_CONTEXT));
 
         private final SqlDialect sqlDialect;
 
@@ -63,13 +64,13 @@ public final class CmlSchemaUtil
         }
     }
 
-    public static SchemaPlus schemaPlus(List<TableSchema> tableSchemas)
+    public static SchemaPlus schemaPlus(List<TableSchema> tableSchemas, Metadata metadata)
     {
         SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
         tableSchemas.stream()
                 .collect(groupingBy(tableSchema -> tableSchema.getCatalogName().getCatalogName(),
                         groupingBy(tableSchema -> tableSchema.getTableSchema().getTable().getSchemaName(),
-                                mapping(tableSchema -> Map.entry(tableSchema.getTableSchema().getTable().getTableName(), toCmlTable(tableSchema)),
+                                mapping(tableSchema -> Map.entry(tableSchema.getTableSchema().getTable().getTableName(), toCmlTable(tableSchema, metadata)),
                                         toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))
                 .forEach((catalogName, schemaTableMap) -> {
                     SchemaPlus secondSchema = rootSchema.add(catalogName, new AbstractSchema());
@@ -78,9 +79,9 @@ public final class CmlSchemaUtil
         return rootSchema;
     }
 
-    private static CmlTable toCmlTable(TableSchema tableSchema)
+    private static CmlTable toCmlTable(TableSchema tableSchema, Metadata metadata)
     {
-        JavaTypeFactoryImpl typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8);
+        JavaTypeFactoryImpl typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, metadata.getRelDataTypeSystem());
         RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
         for (ColumnSchema columnSchema : tableSchema.getColumns()) {
             builder.add(columnSchema.getName(), toRelDataType(typeFactory, columnSchema.getType()));

@@ -631,7 +631,7 @@ public class CalciteSqlNodeConverter
             if (dataTypeParameter instanceof NumericParameter) {
                 return Integer.parseInt(((NumericParameter) dataTypeParameter).getValue());
             }
-            throw new IllegalArgumentException(format("%s isn't a DataTypeParameter", dataTypeParameter));
+            throw new IllegalArgumentException(format("%s isn't NumericParameter", dataTypeParameter));
         }
 
         private SqlIntervalQualifier toSqlIntervalQualifier(Extract.Field field, SqlParserPos pos)
