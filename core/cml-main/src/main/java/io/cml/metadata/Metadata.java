@@ -20,6 +20,7 @@ import io.cml.spi.Parameter;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.QualifiedObjectName;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +44,8 @@ public interface Metadata
     Optional<TableHandle> getTableHandle(QualifiedObjectName tableName);
 
     CmlSchemaUtil.Dialect getDialect();
+
+    RelDataTypeSystem getRelDataTypeSystem();
 
     void directDDL(String sql);
 

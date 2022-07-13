@@ -15,6 +15,7 @@
 package io.cml.calcite;
 
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
 
 import java.nio.charset.Charset;
 
@@ -25,9 +26,9 @@ public class CustomCharsetJavaTypeFactoryImpl
 {
     private final Charset charset;
 
-    public CustomCharsetJavaTypeFactoryImpl(Charset charset)
+    public CustomCharsetJavaTypeFactoryImpl(Charset charset, RelDataTypeSystem relDataTypeSystem)
     {
-        super();
+        super(relDataTypeSystem);
         this.charset = requireNonNull(charset, "charset is null");
     }
 

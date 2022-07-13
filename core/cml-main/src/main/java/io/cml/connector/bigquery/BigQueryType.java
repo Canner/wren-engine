@@ -56,7 +56,6 @@ public final class BigQueryType
                 .put(DATE, DateType.DATE)
                 .put(BYTES, BYTEA)
                 .build();
-        ImmutableMap.Builder<PGType<?>, StandardSQLTypeName> reverseBuilder = ImmutableMap.builder();
 
         pgTypeToBqTypeMap = ImmutableMap.<PGType<?>, StandardSQLTypeName>builder()
                 .put(BOOLEAN, BOOL)

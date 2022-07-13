@@ -106,7 +106,7 @@ public class QueryProcessor
     {
         this.dialect = requireNonNull(metadata.getDialect().getSqlDialect(), "dialect is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
-        this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8);
+        this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, metadata.getRelDataTypeSystem());
 
         Properties props = new Properties();
         props.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
@@ -133,7 +133,7 @@ public class QueryProcessor
                 .collect(Collectors.toList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(CmlSchemaUtil.schemaPlus(visitedTable)),
+                CalciteSchema.from(CmlSchemaUtil.schemaPlus(visitedTable, metadata)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);
@@ -180,7 +180,9 @@ public class QueryProcessor
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
                 SqlWriterConfig.of().withDialect(dialect));
-        return sqlPrettyWriter.format(sqlNode);
+        String result = sqlPrettyWriter.format(sqlNode);
+        LOG.info("[Converted calcite dialect SQL]: %s", result);
+        return result;
     }
 
     private TableSchema toTableSchema(QualifiedName tableName)
@@ -222,7 +224,7 @@ public class QueryProcessor
                                 ImmutableList.<TableSchema>builder()
                                         .addAll(visitedTable)
                                         .add(toTableSchema(mvDef))
-                                        .build())),
+                                        .build(), metadata)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);
