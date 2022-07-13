@@ -16,7 +16,6 @@ package io.cml.calcite;
 
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 
 import java.nio.charset.Charset;
 
@@ -25,29 +24,11 @@ import static java.util.Objects.requireNonNull;
 public class CustomCharsetJavaTypeFactoryImpl
         extends JavaTypeFactoryImpl
 {
-    public static final RelDataTypeSystem BIGQUERY_TYPE_SYSTEM =
-            new RelDataTypeSystemImpl()
-            {
-                @Override
-                public int getMaxNumericPrecision()
-                {
-                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
-                    return 76;
-                }
-
-                @Override
-                public int getMaxNumericScale()
-                {
-                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
-                    return 38;
-                }
-            };
-
     private final Charset charset;
 
-    public CustomCharsetJavaTypeFactoryImpl(Charset charset)
+    public CustomCharsetJavaTypeFactoryImpl(Charset charset, RelDataTypeSystem relDataTypeSystem)
     {
-        super(BIGQUERY_TYPE_SYSTEM);
+        super(relDataTypeSystem);
         this.charset = requireNonNull(charset, "charset is null");
     }
 

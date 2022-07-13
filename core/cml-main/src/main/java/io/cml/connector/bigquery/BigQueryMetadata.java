@@ -40,6 +40,8 @@ import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.QualifiedObjectName;
+import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 
 import javax.inject.Inject;
 
@@ -58,6 +60,23 @@ import static java.util.Objects.requireNonNull;
 public class BigQueryMetadata
         implements Metadata
 {
+    private static final RelDataTypeSystem BIGQUERY_TYPE_SYSTEM =
+            new RelDataTypeSystemImpl()
+            {
+                @Override
+                public int getMaxNumericPrecision()
+                {
+                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
+                    return 76;
+                }
+
+                @Override
+                public int getMaxNumericScale()
+                {
+                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
+                    return 38;
+                }
+            };
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
 
@@ -175,6 +194,12 @@ public class BigQueryMetadata
     public CmlSchemaUtil.Dialect getDialect()
     {
         return CmlSchemaUtil.Dialect.BIGQUERY;
+    }
+
+    @Override
+    public RelDataTypeSystem getRelDataTypeSystem()
+    {
+        return BIGQUERY_TYPE_SYSTEM;
     }
 
     @Override
