@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import io.cml.spi.CmlException;
 import io.cml.spi.type.DateType;
 import io.cml.spi.type.PGType;
+import io.cml.spi.type.TimestampType;
 
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +30,7 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
+import static com.google.cloud.bigquery.StandardSQLTypeName.TIMESTAMP;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
@@ -55,6 +57,7 @@ public final class BigQueryType
                 .put(FLOAT64, DOUBLE)
                 .put(DATE, DateType.DATE)
                 .put(BYTES, BYTEA)
+                .put(TIMESTAMP, TimestampType.TIMESTAMP)
                 .build();
 
         pgTypeToBqTypeMap = ImmutableMap.<PGType<?>, StandardSQLTypeName>builder()
