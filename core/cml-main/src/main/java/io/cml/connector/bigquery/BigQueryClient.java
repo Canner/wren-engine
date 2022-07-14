@@ -34,6 +34,7 @@ import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
@@ -70,9 +71,13 @@ public class BigQueryClient
                         .build();
     }
 
-    public Iterable<Dataset> listDatasets(String projectId)
+    public Iterable<String> listDatasets(String region)
     {
-        return bigQuery.listDatasets(projectId).iterateAll();
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/47
+        //  directly query will be charged the fee for 10MB. Find another way to list dataset in one region for free.
+        return Streams.stream(query(format("SELECT schema_name FROM region-%s.INFORMATION_SCHEMA.SCHEMATA", region), ImmutableList.of()).getValues())
+                .map(fieldValues -> fieldValues.get("schema_name").getStringValue())
+                .collect(toImmutableList());
     }
 
     public Iterable<Table> listTables(DatasetId datasetId, TableDefinition.Type... types)
