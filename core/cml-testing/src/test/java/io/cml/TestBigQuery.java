@@ -23,6 +23,7 @@ import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
 import io.cml.server.module.BigQueryConnectorModule;
+import io.cml.spi.SessionContext;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -49,7 +50,7 @@ public class TestBigQuery
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient);
+        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
     }
 
@@ -70,7 +71,7 @@ public class TestBigQuery
             String output = bigQuerySqlConverter.convert(
                     "SELECT o_custkey, COUNT(*) as cnt\n" +
                             "FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\"\n" +
-                            "GROUP BY o_custkey");
+                            "GROUP BY o_custkey", SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
                     "FROM `cannerflow-286003`.cml_temp." + tableName);
         }
@@ -91,7 +92,7 @@ public class TestBigQuery
         try {
             bigQueryClient.createTable(tableInfo);
             String output = bigQuerySqlConverter.convert(
-                    "SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\" WHERE b = '1'");
+                    "SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\" WHERE b = '1'", SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT *\n" +
                     "FROM `cannerflow-286003`.cml_temp." + tableName);
         }
@@ -103,10 +104,10 @@ public class TestBigQuery
     @Test
     public void testCaseSensitive()
     {
-        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"cannerflow-286003\".\"cml_temp\".\"canner\""))
+        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"cannerflow-286003\".\"cml_temp\".\"canner\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT a\n" +
                         "FROM `cannerflow-286003`.cml_temp.canner");
-        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\""))
+        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT b\n" +
                         "FROM `cannerflow-286003`.cml_temp.CANNER");
     }
