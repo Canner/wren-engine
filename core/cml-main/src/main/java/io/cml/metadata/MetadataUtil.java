@@ -14,7 +14,6 @@
 
 package io.cml.metadata;
 
-import com.google.common.collect.Lists;
 import io.cml.spi.CmlException;
 import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.tree.QualifiedName;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static io.cml.spi.metadata.StandardErrorCode.MISSING_CATALOG_NAME;
-import static io.cml.spi.metadata.StandardErrorCode.MISSING_SCHEMA_NAME;
 import static io.cml.spi.metadata.StandardErrorCode.SYNTAX_ERROR;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -32,21 +30,29 @@ public final class MetadataUtil
 {
     private MetadataUtil() {}
 
-    public static QualifiedObjectName createQualifiedObjectName(QualifiedName name)
+    public static QualifiedObjectName createQualifiedObjectName(QualifiedName name, String defaultCatalog, String defaultSchema)
     {
         requireNonNull(name, "name is null");
-        if (name.getParts().size() > 3) {
-            throw new CmlException(SYNTAX_ERROR, format("Too many dots in table name: %s", name));
+        List<String> parts = name.getParts();
+        if (name.getParts().size() == 3) {
+            return new QualifiedObjectName(parts.get(0), parts.get(1), parts.get(2));
+        }
+        else if (parts.size() == 2) {
+            return new QualifiedObjectName(
+                    Optional.ofNullable(defaultCatalog).orElseThrow(() ->
+                            new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
+                    parts.get(0),
+                    parts.get(1));
+        }
+        else if (parts.size() == 1) {
+            return new QualifiedObjectName(
+                    Optional.ofNullable(defaultCatalog).orElseThrow(() ->
+                            new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
+                    Optional.ofNullable(defaultSchema).orElseThrow(() ->
+                            new CmlException(MISSING_CATALOG_NAME, "Default schema must be specified")),
+                    parts.get(0));
         }
 
-        List<String> parts = Lists.reverse(name.getParts());
-        String objectName = parts.get(0);
-        // TODO: handle bigquery with optional project id, optional schema name
-        String schemaName = Optional.ofNullable(parts.get(1)).orElseThrow(() ->
-                new CmlException(MISSING_SCHEMA_NAME, "Schema must be specified when session schema is not set"));
-        String catalogName = Optional.ofNullable(parts.get(2)).orElseThrow(() ->
-                new CmlException(MISSING_CATALOG_NAME, "Catalog must be specified when session catalog is not set"));
-
-        return new QualifiedObjectName(catalogName, schemaName, objectName);
+        throw new CmlException(SYNTAX_ERROR, format("Too many dots in table name: %s", name));
     }
 }

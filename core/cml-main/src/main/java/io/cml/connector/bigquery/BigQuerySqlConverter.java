@@ -16,6 +16,7 @@ package io.cml.connector.bigquery;
 
 import io.cml.calcite.QueryProcessor;
 import io.cml.metadata.Metadata;
+import io.cml.spi.SessionContext;
 import io.cml.sql.SqlConverter;
 
 import javax.inject.Inject;
@@ -34,9 +35,9 @@ public class BigQuerySqlConverter
     }
 
     @Override
-    public String convert(String sql)
+    public String convert(String sql, SessionContext sessionContext)
     {
         QueryProcessor processor = QueryProcessor.of(metadata);
-        return processor.convert(sql);
+        return processor.convert(sql, sessionContext);
     }
 }
