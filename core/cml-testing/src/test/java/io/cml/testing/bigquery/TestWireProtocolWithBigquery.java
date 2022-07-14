@@ -823,6 +823,29 @@ public class TestWireProtocolWithBigquery
         }
     }
 
+    @DataProvider
+    public Object[][] jdbcQuery()
+    {
+        return new Object[][] {
+                {"SELECT t.typlen FROM pg_catalog.pg_type t, pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid AND t.typname='name' AND n.nspname='pg_catalog'"},
+        };
+    }
+
+    /**
+     * In this test, we only check the query used by jdbc can be parsed and executed.
+     * We don't care whether the result is correct.
+     */
+    @Test(dataProvider = "jdbcQuery")
+    public void testJdbcQuery(String sql)
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+        }
+    }
+
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)
             throws IOException
     {
