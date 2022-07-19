@@ -15,7 +15,6 @@
 package io.cml.pgcatalog.builder;
 
 import com.google.common.collect.Streams;
-import io.cml.pgcatalog.OidHash;
 import io.cml.pgcatalog.table.PgCatalogTable;
 import io.cml.spi.type.PGTypes;
 
@@ -25,6 +24,7 @@ import java.util.Map;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.PG_CATALOG;
+import static java.lang.String.format;
 
 public final class PgCatalogTableBuilderUtils
 {
@@ -37,8 +37,8 @@ public final class PgCatalogTableBuilderUtils
                     Object[] record = new Object[pgCatalogTable.getTableMetadata().getColumns().size()];
                     record[0] = type.oid(); // oid
                     record[1] = type.typName(); // typname
-                    record[2] = OidHash.oid(PG_CATALOG); // typnamespace
-                    record[3] = OidHash.oid(DEFAULT_AUTH); // typowner
+                    record[2] = withHash(PG_CATALOG); // typnamespace
+                    record[3] = withHash(DEFAULT_AUTH); // typowner
                     record[4] = type.typeLen(); // typlen
                     record[5] = true; // typbyval
                     record[6] = type.type(); // typtype
@@ -63,5 +63,10 @@ public final class PgCatalogTableBuilderUtils
                     record[25] = oidToTypeMap.get(type.oid()); //remotetype
                     return record;
                 }).collect(toImmutableList());
+    }
+
+    private static String withHash(String key)
+    {
+        return format("${hash}('%s')", key);
     }
 }

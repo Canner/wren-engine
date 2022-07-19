@@ -53,6 +53,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
+import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -79,11 +80,13 @@ public class BigQueryMetadata
             };
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
+    private final BigQueryConfig bigQueryConfig;
 
     @Inject
-    public BigQueryMetadata(BigQueryClient bigQueryClient)
+    public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig)
     {
         this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
+        this.bigQueryConfig = requireNonNull(bigQueryConfig, "bigQueryConfig is null");
     }
 
     @Override
@@ -101,7 +104,13 @@ public class BigQueryMetadata
     @Override
     public List<String> listSchemas()
     {
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/47
+        //  Getting full dataset information is a heavy cost. It's better to find another way to list dataset by region.
         return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
+                .map(bigQueryClient::getDataSet)
+                .filter(dataset -> bigQueryConfig.getLocation()
+                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"))
+                        .equals(dataset.getLocation()))
                 .map(dataset -> dataset.getDatasetId().getDataset())
                 .collect(toImmutableList());
     }

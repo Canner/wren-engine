@@ -50,7 +50,7 @@ public class TestBigQuery
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient);
+        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
     }
 
