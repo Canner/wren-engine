@@ -34,7 +34,6 @@ import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
@@ -71,14 +70,9 @@ public class BigQueryClient
                         .build();
     }
 
-    public Iterable<String> listDatasetNames(String region)
+    public Iterable<Dataset> listDatasets(String projectId)
     {
-        // TODO: https://github.com/Canner/canner-metric-layer/issues/47
-        // bigquery sql charges are rounded up to the nearest MB, with a minimum 10 MB data processed per table
-        // referenced by the query, and with a minimum 10 MB data processed per query.
-        return Streams.stream(query(format("SELECT schema_name FROM region-%s.INFORMATION_SCHEMA.SCHEMATA", region), ImmutableList.of()).getValues())
-                .map(fieldValues -> fieldValues.get("schema_name").getStringValue())
-                .collect(toImmutableList());
+        return bigQuery.listDatasets(projectId).iterateAll();
     }
 
     public Iterable<Table> listTables(DatasetId datasetId, TableDefinition.Type... types)
