@@ -14,7 +14,9 @@
 
 package io.cml.sql;
 
+import io.cml.spi.SessionContext;
+
 public interface SqlConverter
 {
-    String convert(String sql);
+    String convert(String sql, SessionContext sessionContext);
 }

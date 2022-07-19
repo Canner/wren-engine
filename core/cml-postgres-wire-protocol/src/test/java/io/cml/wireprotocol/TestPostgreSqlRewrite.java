@@ -35,8 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestPostgreSqlRewrite
 {
+    private static final String DEFAULT_CATALOG = "default";
     private static final String PGTYPE = "pg_type";
-    private static final String PGCATALOG_PGTYPE = "pg_catalog.pg_type";
+    private static final String PGCATALOG_PGTYPE = DEFAULT_CATALOG + ".pg_catalog.pg_type";
     private PostgreSqlRewrite postgreSqlRewrite;
     private SqlParser sqlParser;
     private RegObjectFactory regObjectFactory;
@@ -196,20 +197,20 @@ public class TestPostgreSqlRewrite
     public void testOidOperator()
     {
         assertRewrite("SELECT * FROM pg_type WHERE typinput = 'array_in'::regproc",
-                "SELECT * FROM pg_catalog.pg_type WHERE typinput = " + functionOid("array_in"));
+                format("SELECT * FROM %s.pg_catalog.pg_type WHERE typinput = %s", DEFAULT_CATALOG, functionOid("array_in")));
         assertRewrite("SELECT * FROM pg_attribute WHERE attrelid = 't1'::regclass",
-                "SELECT * FROM pg_catalog.pg_attribute WHERE attrelid = " + oid("t1"));
+                format("SELECT * FROM %s.pg_catalog.pg_attribute WHERE attrelid = %s", DEFAULT_CATALOG, oid("t1")));
         assertRewrite("SELECT typinput = 'array_in'::regproc FROM pg_type ",
-                format("SELECT typinput = %s \"?column?\" FROM pg_catalog.pg_type", functionOid("array_in")));
+                format("SELECT typinput = %s \"?column?\" FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
         assertRewrite(format("SELECT typinput = %s::regproc FROM pg_type ", functionOid("array_in")),
-                format("SELECT typinput = %s \"?column?\" FROM pg_catalog.pg_type", functionOid("array_in")));
+                format("SELECT typinput = %s \"?column?\" FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
         assertRewrite(format("SELECT attrelid = %s::regclass FROM pg_attribute ", oid("t1")),
-                format("SELECT attrelid = %s \"?column?\" FROM pg_catalog.pg_attribute", oid("t1")));
+                format("SELECT attrelid = %s \"?column?\" FROM %s.pg_catalog.pg_attribute", oid("t1"), DEFAULT_CATALOG));
 
         assertRewrite(format("SELECT * FROM pg_type WHERE typinput = %s::regproc", functionOid("array_in")),
-                format("SELECT * FROM pg_catalog.pg_type WHERE typinput = %s", functionOid("array_in")));
+                format("SELECT * FROM %s.pg_catalog.pg_type WHERE typinput = %s", DEFAULT_CATALOG, functionOid("array_in")));
         assertRewrite(format("SELECT * FROM pg_attribute WHERE attrelid = %s::regclass", oid("t1")),
-                format("SELECT * FROM pg_catalog.pg_attribute WHERE attrelid = %s", oid("t1")));
+                format("SELECT * FROM %s.pg_catalog.pg_attribute WHERE attrelid = %s", DEFAULT_CATALOG, oid("t1")));
 
         assertRewrite("SELECT 'array_in'::regproc", format("SELECT 'array_in' \"?column?\""));
         assertRewrite("SELECT 't1'::regclass", format("SELECT 't1' \"?column?\""));
@@ -228,7 +229,7 @@ public class TestPostgreSqlRewrite
             @Language("SQL") String expectSql)
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
-        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, statement);
+        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
         Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
         assertThat(getFormattedSql(result, sqlParser)).isEqualTo(getFormattedSql(expect, sqlParser));
         assertThat(result).isEqualTo(expect);
@@ -238,7 +239,7 @@ public class TestPostgreSqlRewrite
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
 
-        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, statement);
+        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
 
         assertThat(result).describedAs("%n[actual]%n%s[expect]%n%s", getFormattedSql(result, sqlParser), getFormattedSql(statement, sqlParser)).isEqualTo(statement);
     }

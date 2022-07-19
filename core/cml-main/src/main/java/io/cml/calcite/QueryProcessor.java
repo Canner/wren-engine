@@ -22,6 +22,7 @@ import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
 import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
+import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.SqlFormatter;
@@ -120,7 +121,7 @@ public class QueryProcessor
                         .build());
     }
 
-    public String convert(String sql)
+    public String convert(String sql, SessionContext sessionContext)
     {
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
@@ -129,7 +130,7 @@ public class QueryProcessor
         SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);
 
         List<TableSchema> visitedTable = analysis.getVisitedTables()
-                .stream().map(this::toTableSchema)
+                .stream().map(name -> toTableSchema(name, sessionContext))
                 .collect(Collectors.toList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
@@ -160,7 +161,7 @@ public class QueryProcessor
 
         for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews(Optional.empty())) {
             try {
-                planner.addMaterialization(getMvRel(mvDef));
+                planner.addMaterialization(getMvRel(mvDef, sessionContext));
             }
             catch (Exception ex) {
                 LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
@@ -185,9 +186,9 @@ public class QueryProcessor
         return result;
     }
 
-    private TableSchema toTableSchema(QualifiedName tableName)
+    private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
     {
-        QualifiedObjectName name = createQualifiedObjectName(tableName);
+        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getCatalog(), sessionContext.getSchema());
         Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
         return metadata.getTableSchema(tableHandle.get());
     }
@@ -202,7 +203,7 @@ public class QueryProcessor
     // We use calcite sql parser in MV since bigquery use backtick as identifier quote character
     // and BigQuery will keep unquoted identifier unchanged while pg will do lowercase.
     // And these two issues could be solved by using calcite sql parser.
-    private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef)
+    private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef, SessionContext sessionContext)
     {
         org.apache.calcite.sql.parser.SqlParser calciteParser =
                 org.apache.calcite.sql.parser.SqlParser.create(
@@ -215,7 +216,7 @@ public class QueryProcessor
 
         SqlNode calciteStatement = wrapException(calciteParser::parseQuery);
         List<TableSchema> visitedTable = extractTables(calciteStatement, false)
-                .stream().map(this::toTableSchema)
+                .stream().map(name -> toTableSchema(name, sessionContext))
                 .collect(Collectors.toList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(

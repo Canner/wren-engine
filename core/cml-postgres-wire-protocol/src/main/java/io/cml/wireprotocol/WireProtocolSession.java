@@ -21,6 +21,7 @@ import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
+import io.cml.spi.SessionContext;
 import io.cml.sql.PostgreSqlRewrite;
 import io.cml.sql.SqlConverter;
 import io.cml.wireprotocol.patterns.PostgreSqlRewriteUtil;
@@ -162,7 +163,8 @@ public class WireProtocolSession
             return Optional.empty();
         }
 
-        String sql = sqlConverter.convert(portal.getPreparedStatement().getOriginalStatement());
+        String sql = sqlConverter.convert(portal.getPreparedStatement().getStatement(),
+                SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
 
@@ -184,7 +186,7 @@ public class WireProtocolSession
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(statementPreRewritten, PARSE_AS_DECIMAL);
-            Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, parsedStatement);
+            Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,
                     new PreparedStatement(statementName, getFormattedSql(rewrittenStatement, sqlParser), rewrittenParamTypes, statementTrimmed, isSessionCommand(rewrittenStatement)));
@@ -225,7 +227,8 @@ public class WireProtocolSession
     {
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
-            String sql = sqlConverter.convert(execStmt);
+            String sql = sqlConverter.convert(execStmt,
+                    SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
             return Optional.of(metadata.directQuery(sql, portal.getParameters()));
         });
     }

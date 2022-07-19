@@ -242,4 +242,10 @@ public class BigQueryMetadata
                 .map(field -> new Column(field.getName(), toPGType(field.getType().getStandardType())))
                 .collect(toImmutableList());
     }
+
+    @Override
+    public String getDefaultCatalog()
+    {
+        return bigQueryClient.getProjectId();
+    }
 }

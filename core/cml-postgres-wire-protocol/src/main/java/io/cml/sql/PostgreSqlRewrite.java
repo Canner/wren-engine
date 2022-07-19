@@ -17,6 +17,7 @@ package io.cml.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.wireprotocol.BaseRewriteVisitor;
 import io.trino.sql.parser.SqlBaseLexer;
@@ -72,9 +73,9 @@ public class PostgreSqlRewrite
 
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
 
-    public Statement rewrite(RegObjectFactory regObjectFactory, Statement statement)
+    public Statement rewrite(RegObjectFactory regObjectFactory, String defaultCatalog, Statement statement)
     {
-        return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory)).process(statement);
+        return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory), defaultCatalog).process(statement);
     }
 
     private static class Visitor
@@ -85,9 +86,12 @@ public class PostgreSqlRewrite
 
         private final RegObjectInterpreter regObjectInterpreter;
 
-        public Visitor(RegObjectInterpreter regObjectInterpreter)
+        private final String defaultCatalog;
+
+        public Visitor(RegObjectInterpreter regObjectInterpreter, String defaultCatalog)
         {
             this.regObjectInterpreter = regObjectInterpreter;
+            this.defaultCatalog = defaultCatalog;
         }
 
         @Override
@@ -277,9 +281,9 @@ public class PostgreSqlRewrite
                 if (node.getLocation().isPresent()) {
                     return new Table(
                             node.getLocation().get(),
-                            qualifiedName(toPgCatalogSchemaTableName(node.getName().getParts())));
+                            qualifiedName(toDefaultCatalogPgCatalogSchemaTableName(node.getName().getParts())));
                 }
-                return new Table(qualifiedName(toPgCatalogSchemaTableName(node.getName().getParts())));
+                return new Table(qualifiedName(toDefaultCatalogPgCatalogSchemaTableName(node.getName().getParts())));
             }
             if (node.getLocation().isPresent()) {
                 return new Table(
@@ -298,7 +302,7 @@ public class PostgreSqlRewrite
                 base = visitAndCast(node.getBase());
             }
             else if (isBelongPgCatalog(name.getParts())) {
-                base = DereferenceExpression.from(qualifiedName(toPgCatalogSchemaTableName(name.getParts())));
+                base = DereferenceExpression.from(qualifiedName(toDefaultCatalogPgCatalogSchemaTableName(name.getParts())));
             }
             else {
                 base = DereferenceExpression.from(name);
@@ -369,9 +373,9 @@ public class PostgreSqlRewrite
             return NON_RESERVED.contains(value);
         }
 
-        private static SchemaTableName toPgCatalogSchemaTableName(List<String> parts)
+        private CatalogSchemaTableName toDefaultCatalogPgCatalogSchemaTableName(List<String> parts)
         {
-            return new SchemaTableName(PGCATALOG, parts.get(parts.size() - 1));
+            return new CatalogSchemaTableName(defaultCatalog, new SchemaTableName(PGCATALOG, parts.get(parts.size() - 1)));
         }
 
         private static QualifiedName removeNamespace(QualifiedName name)
@@ -397,6 +401,9 @@ public class PostgreSqlRewrite
             // sql submitted by pg jdbc will only like `pg_type` and `pg_catalog.pg_type`.
             if (parts.size() == 1) {
                 return parts.get(0).startsWith(PGCATALOG_TABLE_PREFIX);
+            }
+            else if (parts.size() == 2) {
+                return parts.get(0).equals(PGCATALOG);
             }
             return false;
         }
@@ -436,11 +443,12 @@ public class PostgreSqlRewrite
             return null;
         }
 
-        protected static QualifiedName qualifiedName(SchemaTableName table)
+        protected static QualifiedName qualifiedName(CatalogSchemaTableName table)
         {
             return QualifiedName.of(ImmutableList.of(
-                    identifier(table.getSchemaName()),
-                    identifier(table.getTableName())));
+                    identifier(table.getCatalogName()),
+                    identifier(table.getSchemaTableName().getSchemaName()),
+                    identifier(table.getSchemaTableName().getTableName())));
         }
 
         protected static Identifier identifier(String name)

@@ -47,6 +47,8 @@ public interface Metadata
 
     RelDataTypeSystem getRelDataTypeSystem();
 
+    String getDefaultCatalog();
+
     void directDDL(String sql);
 
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
