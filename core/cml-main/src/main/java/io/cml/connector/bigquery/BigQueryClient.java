@@ -75,6 +75,11 @@ public class BigQueryClient
         return bigQuery.listDatasets(projectId).iterateAll();
     }
 
+    public Dataset getDataSet(Dataset dataset)
+    {
+        return bigQuery.getDataset(dataset.getDatasetId());
+    }
+
     public Iterable<Table> listTables(DatasetId datasetId, TableDefinition.Type... types)
     {
         Set<TableDefinition.Type> allowedTypes = ImmutableSet.copyOf(types);
