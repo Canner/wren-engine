@@ -104,6 +104,8 @@ public class BigQueryMetadata
     @Override
     public List<String> listSchemas()
     {
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/47
+        //  Getting full dataset information is a heavy cost. It's better to find another way to list dataset by region.
         return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
                 .map(bigQueryClient::getDataSet)
                 .filter(dataset -> bigQueryConfig.getLocation()
