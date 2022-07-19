@@ -64,7 +64,7 @@ public class TestingWireProtocolClient
             throws IOException
     {
         this.socketClient = new Socket();
-        socketClient.setSoTimeout(30000);
+        socketClient.setSoTimeout(60000);
         socketClient.connect(isa);
 
         this.in = socketClient.getInputStream();
