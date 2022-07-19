@@ -104,7 +104,7 @@ public class BigQueryMetadata
     @Override
     public List<String> listSchemas()
     {
-        return Streams.stream(bigQueryClient.listDatasets(bigQueryConfig.getLocation()
+        return Streams.stream(bigQueryClient.listDatasetNames(bigQueryConfig.getLocation()
                         .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "bigquery client location should be set"))))
                 .collect(toImmutableList());
     }

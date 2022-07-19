@@ -71,10 +71,11 @@ public class BigQueryClient
                         .build();
     }
 
-    public Iterable<String> listDatasets(String region)
+    public Iterable<String> listDatasetNames(String region)
     {
         // TODO: https://github.com/Canner/canner-metric-layer/issues/47
-        //  directly query will be charged the fee for 10MB. Find another way to list dataset in one region for free.
+        // bigquery sql charges are rounded up to the nearest MB, with a minimum 10 MB data processed per table
+        // referenced by the query, and with a minimum 10 MB data processed per query.
         return Streams.stream(query(format("SELECT schema_name FROM region-%s.INFORMATION_SCHEMA.SCHEMATA", region), ImmutableList.of()).getValues())
                 .map(fieldValues -> fieldValues.get("schema_name").getStringValue())
                 .collect(toImmutableList());
