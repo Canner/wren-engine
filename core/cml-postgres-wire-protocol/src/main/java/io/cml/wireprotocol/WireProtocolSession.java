@@ -164,7 +164,7 @@ public class WireProtocolSession
         }
 
         String sql = sqlConverter.convert(portal.getPreparedStatement().getStatement(),
-                SessionContext.builder().setDefaultCatalog(metadata.getDefaultCatalog()).build());
+                SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
 
@@ -228,7 +228,7 @@ public class WireProtocolSession
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
             String sql = sqlConverter.convert(execStmt,
-                    SessionContext.builder().setDefaultCatalog(metadata.getDefaultCatalog()).build());
+                    SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
             return Optional.of(metadata.directQuery(sql, portal.getParameters()));
         });
     }

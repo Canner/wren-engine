@@ -188,7 +188,7 @@ public class QueryProcessor
 
     private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
     {
-        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getDefaultCatalog(), sessionContext.getDefaultSchema());
+        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getCatalog(), sessionContext.getSchema());
         Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
         return metadata.getTableSchema(tableHandle.get());
     }
