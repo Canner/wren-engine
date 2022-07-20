@@ -32,7 +32,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class BigQueryCmlSqlDialect
         extends BigQuerySqlDialect
 {
-    private final Logger LOG = Logger.get(BigQueryCmlSqlDialect.class);
+    private static final Logger LOG = Logger.get(BigQueryCmlSqlDialect.class);
 
     /**
      * Creates a BigQuerySqlDialect.
