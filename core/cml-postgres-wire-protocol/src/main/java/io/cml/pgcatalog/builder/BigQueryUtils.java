@@ -89,6 +89,7 @@ public final class BigQueryUtils
 
     public static String createOrReplaceAllTable(Metadata connector)
     {
+        // TODO: handle schemas is empty. https://github.com/Canner/canner-metric-layer/issues/52
         List<String> schemas = connector.listSchemas();
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", CML_TEMP_NAME));
@@ -102,6 +103,7 @@ public final class BigQueryUtils
 
     public static String createOrReplaceAllColumn(Metadata connector)
     {
+        // TODO: handle schemas is empty. https://github.com/Canner/canner-metric-layer/issues/52
         // TODO: we should check if pg_type has created or not.
         List<String> schemas = connector.listSchemas();
         StringBuilder builder = new StringBuilder();
