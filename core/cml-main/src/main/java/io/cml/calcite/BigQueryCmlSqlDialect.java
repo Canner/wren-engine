@@ -128,21 +128,11 @@ public class BigQueryCmlSqlDialect
             StringBuilder buf,
             String val)
     {
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/55
         if (val.startsWith("$")) {
-            val = "_" + val;
+            return super.quoteIdentifier(buf, "_" + val);
         }
-        if (identifierQuoteString == null // quoting is not supported
-                || identifierEndQuoteString == null
-                || identifierEscapedQuote == null
-                || !identifierNeedsQuote(val)) {
-            buf.append(val);
-        }
-        else {
-            buf.append(identifierQuoteString);
-            buf.append(val.replace(identifierEndQuoteString, identifierEscapedQuote));
-            buf.append(identifierEndQuoteString);
-        }
-        return buf;
+        return super.quoteIdentifier(buf, val);
     }
 
     private static SqlDataTypeSpec createSqlDataTypeSpecByName(String typeAlias,
