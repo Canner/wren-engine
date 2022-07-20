@@ -110,7 +110,7 @@ public class BigQueryMetadata
                 .map(bigQueryClient::getDataSet)
                 .filter(dataset -> bigQueryConfig.getLocation()
                         .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"))
-                        .equals(dataset.getLocation()))
+                        .equalsIgnoreCase(dataset.getLocation()))
                 .map(dataset -> dataset.getDatasetId().getDataset())
                 .collect(toImmutableList());
     }
