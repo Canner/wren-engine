@@ -828,6 +828,17 @@ public class TestWireProtocolWithBigquery
     {
         return new Object[][] {
                 {"SELECT t.typlen FROM pg_catalog.pg_type t, pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid AND t.typname='name' AND n.nspname='pg_catalog'"},
+                {"SELECT\n" +
+                        "  t.typname\n" +
+                        ", t.oid\n" +
+                        "FROM\n" +
+                        "  (\"cannerflow-286003\".pg_catalog.pg_type t\n" +
+                        "INNER JOIN \"cannerflow-286003\".pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
+                        "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (SELECT (c.relkind = 'c') \"?column?\"\n" +
+                        "FROM\n" +
+                        "  \"cannerflow-286003\".pg_catalog.pg_class c\n" +
+                        "WHERE (c.oid = t.typrelid)\n" +
+                        ")))"},
         };
     }
 
