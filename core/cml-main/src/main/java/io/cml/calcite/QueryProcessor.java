@@ -159,6 +159,12 @@ public class QueryProcessor
         LOG.info(RelOptUtil.dumpPlan("[Logical plan]", logPlan, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
+        // BigQuery doesn't support LATERAL Join statement. Do decorrelate to remove correlation statement.
+        RelNode decorrelated = relConverter.decorrelate(validNode, logPlan);
+
+        LOG.info(RelOptUtil.dumpPlan("[Decorrelated Logical plan]", decorrelated, SqlExplainFormat.TEXT,
+                SqlExplainLevel.NON_COST_ATTRIBUTES));
+
         for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews(Optional.empty())) {
             try {
                 planner.addMaterialization(getMvRel(mvDef, sessionContext));
@@ -168,7 +174,7 @@ public class QueryProcessor
             }
         }
 
-        planner.setRoot(logPlan);
+        planner.setRoot(decorrelated);
         // Start the optimization process to obtain the most efficient plan based on the
         // provided rule set.
         RelNode bestExp = planner.findBestExp();

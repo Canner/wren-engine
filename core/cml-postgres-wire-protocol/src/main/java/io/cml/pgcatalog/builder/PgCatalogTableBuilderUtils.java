@@ -45,7 +45,7 @@ public final class PgCatalogTableBuilderUtils
                     record[7] = type.typeCategory(); // typcategory
                     record[8] = true; // typisddefined
                     record[9] = type.typDelim(); // typdelim
-                    record[10] = null; // typrelid
+                    record[10] = 0; // typrelid
                     record[11] = type.typElem(); // typelem
                     record[12] = type.typArray(); // typarray
                     record[13] = type.typInput(); // typinput

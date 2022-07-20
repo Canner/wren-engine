@@ -14,11 +14,17 @@
 
 package io.cml.calcite;
 
+import io.airlift.log.Logger;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
+import org.apache.calcite.sql.fun.SqlCase;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -26,6 +32,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class BigQueryCmlSqlDialect
         extends BigQuerySqlDialect
 {
+    private static final Logger LOG = Logger.get(BigQueryCmlSqlDialect.class);
+
     /**
      * Creates a BigQuerySqlDialect.
      *
@@ -85,6 +93,46 @@ public class BigQueryCmlSqlDialect
             }
         }
         return super.getCastSpec(type);
+    }
+
+    @Override
+    public SqlNode rewriteSingleValueExpr(SqlNode aggCall)
+    {
+        final SqlNode operand = ((SqlBasicCall) aggCall).operand(0);
+        final SqlNode anyValue = SqlStdOperatorTable.ANY_VALUE.createCall(null, SqlParserPos.ZERO, ((SqlBasicCall) aggCall).getOperandList());
+        final SqlLiteral nullLiteral = SqlLiteral.createNull(SqlParserPos.ZERO);
+        // For BigQuery, generate
+        //   CASE COUNT(*)
+        //   WHEN 0 THEN NULL
+        //   WHEN 1 THEN ANY_VALUE(<result>)
+        //   ELSE NULL
+        //   END
+        final SqlNode caseExpr =
+                new SqlCase(SqlParserPos.ZERO,
+                        SqlStdOperatorTable.COUNT.createCall(SqlParserPos.ZERO, operand),
+                        SqlNodeList.of(
+                                SqlLiteral.createExactNumeric("0", SqlParserPos.ZERO),
+                                SqlLiteral.createExactNumeric("1", SqlParserPos.ZERO)),
+                        SqlNodeList.of(
+                                nullLiteral,
+                                anyValue),
+                        nullLiteral);
+
+        LOG.debug("SINGLE_VALUE rewritten into [{}]", caseExpr);
+
+        return caseExpr;
+    }
+
+    @Override
+    public StringBuilder quoteIdentifier(
+            StringBuilder buf,
+            String val)
+    {
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/55
+        if (val.startsWith("$")) {
+            return super.quoteIdentifier(buf, "_" + val);
+        }
+        return super.quoteIdentifier(buf, val);
     }
 
     private static SqlDataTypeSpec createSqlDataTypeSpecByName(String typeAlias,
