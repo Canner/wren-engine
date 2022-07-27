@@ -49,7 +49,12 @@ import java.util.Map;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+import static io.cml.pgcatalog.function.PgFunctions.ARRAY_IN;
+import static io.cml.pgcatalog.function.PgFunctions.ARRAY_OUT;
+import static io.cml.pgcatalog.function.PgFunctions.ARRAY_RECV;
+import static io.cml.pgcatalog.function.PgFunctions.ARRAY_UPPER;
 import static io.cml.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
+import static io.cml.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
 import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
 import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
 import static java.util.Objects.requireNonNull;
@@ -105,8 +110,13 @@ public class PgCatalogManager
     {
         return ImmutableList.<PgFunction>builder()
                 .add(CURRENT_DATABASE)
+                .add(CURRENT_SCHEMAS)
                 .add(PG_RELATION_SIZE__INT___BIGINT)
                 .add(PG_RELATION_SIZE__INT_VARCHAR___BIGINT)
+                .add(ARRAY_IN)
+                .add(ARRAY_OUT)
+                .add(ARRAY_RECV)
+                .add(ARRAY_UPPER)
                 .build();
     }
 
