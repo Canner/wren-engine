@@ -243,7 +243,6 @@ import java.util.Optional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.sql.QueryUtil.functionCall;
-import static io.trino.sql.QueryUtil.identifier;
 import static io.trino.sql.QueryUtil.selectAll;
 import static io.trino.sql.QueryUtil.selectList;
 import static io.trino.sql.QueryUtil.simpleQuery;
@@ -1642,10 +1641,7 @@ class AstBuilder
         //  It's just a workaround to support postgresql `Set Returning Functions`.
         for (PgSetReturnFunction pgSetReturnFunction : PgSetReturnFunction.values()) {
             if (name.toString().equals(pgSetReturnFunction.getPgFuncName())) {
-                return new AliasedRelation(getLocation(context),
-                        new Unnest(ImmutableList.of(functionCall(pgSetReturnFunction.getPrestoFuncName(), visit(context.functionExpression().expression(), Expression.class))), false),
-                        identifier(pgSetReturnFunction.getTempTableName()),
-                        ImmutableList.of(identifier(pgSetReturnFunction.pgFuncName)));
+                return new Unnest(ImmutableList.of(functionCall(pgSetReturnFunction.getPrestoFuncName(), visit(context.functionExpression().expression(), Expression.class))), false);
             }
         }
         Query query = simpleQuery(selectList(
@@ -2813,7 +2809,9 @@ class AstBuilder
 
     private enum PgSetReturnFunction
     {
-        GENERATE_SERIES("generate_series", "sequence");
+        // TODO: support other remote database
+        // the array generating function in bigquery call 'generate_array`.
+        GENERATE_SERIES("generate_series", "generate_array");
 
         private static final String TABLE_NAME_PREFIX = "wire_protocol_table$";
         private final String pgFuncName;
