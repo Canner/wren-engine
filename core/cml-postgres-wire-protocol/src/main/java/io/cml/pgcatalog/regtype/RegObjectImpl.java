@@ -14,9 +14,25 @@
 
 package io.cml.pgcatalog.regtype;
 
-public interface RegObject
+public class RegObjectImpl
+        implements RegObject
 {
-    long getOid();
+    private final long oid;
+    private final String name;
 
-    String getName();
+    public RegObjectImpl(long oid, String name)
+    {
+        this.oid = oid;
+        this.name = name;
+    }
+
+    public long getOid()
+    {
+        return oid;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
 }
