@@ -47,7 +47,32 @@ public class TestCalciteSqlNodeConverter
                 {"testUnionAll", "select * from (select 1, 'foo' union all select 2, 'bar' union all select 3, 'test') as t(col1, col2)"},
                 {"testCastAs", "SELECT CAST(true AS boolean) col_0, CAST(false AS boolean) col_1, CAST(123456789012 AS bigint) col_2, CAST(32456 AS smallint) col_4, " +
                         "CAST(125 AS tinyint) col_5, CAST(123.45 AS double) col_6, CAST(123.45 AS real) col_7"},
-                {"testBinaryLiteral", "SELECT X'68656C6C6F' col_0"}
+                {"testBinaryLiteral", "SELECT X'68656C6C6F' col_0"},
+                {"testQuotedDereferenceExpression", "select \"canner-1234\".\"schema-1234\".\"table-1234\".\"col1\" from \"canner-1234\".\"schema-1234\".\"table-1234\""},
+                {"testSubscript", "select generate_array(1, 10)[1]"},
+                {"testUnnset", "select * from unnest (generate_array(1, 10))"},
+                {"testJdbcTypeInfoQuery", "SELECT\n" +
+                        "  (typinput = 5004152699888335811) is_array\n" +
+                        ", typtype\n" +
+                        ", typname\n" +
+                        ", \"cannerflow-286003\".pg_catalog.pg_type.oid\n" +
+                        "FROM\n" +
+                        "  \"cannerflow-286003\".pg_catalog.pg_type\n" +
+                        "LEFT JOIN (\n" +
+                        "   SELECT\n" +
+                        "     ns.oid nspoid\n" +
+                        "   , nspname\n" +
+                        "   , r.r\n" +
+                        "   FROM\n" +
+                        "     \"cannerflow-286003\".pg_catalog.pg_namespace ns\n" +
+                        "   INNER JOIN (\n" +
+                        "      SELECT\n" +
+                        "        s.r\n" +
+                        "      , current_schemas(false)[s.r] nspname\n" +
+                        "      FROM\n" +
+                        "        UNNEST(generate_array(1, array_upper(current_schemas(false), 1)))  s (r)\n" +
+                        "   )  r USING (nspname)\n" +
+                        ")  sp ON (sp.nspoid = typnamespace)"}
         };
     }
 
