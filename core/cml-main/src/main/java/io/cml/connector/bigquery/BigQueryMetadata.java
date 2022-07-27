@@ -47,6 +47,8 @@ import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -61,6 +63,8 @@ import static java.util.Objects.requireNonNull;
 public class BigQueryMetadata
         implements Metadata
 {
+    // TODO: share the same instance of RegProc#PG_FUNCTION_PATTERN after https://github.com/Canner/canner-metric-layer/issues/57
+    public static final Pattern PG_FUNCTION_PATTERN = Pattern.compile("(?<functionName>[a-zA-Z]+(_[a-zA-Z0-9]+)*)(__(?<argsType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?(___(?<returnType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?");
     private static final RelDataTypeSystem BIGQUERY_TYPE_SYSTEM =
             new RelDataTypeSystemImpl()
             {
@@ -170,7 +174,13 @@ public class BigQueryMetadata
         if (routines == null) {
             throw new CmlException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
         }
-        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
+        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).map(routine -> {
+            Matcher matcher = PG_FUNCTION_PATTERN.matcher(routine);
+            if (matcher.find()) {
+                return matcher.group("functionName");
+            }
+            throw new IllegalArgumentException();
+        }).collect(toImmutableList());
     }
 
     @Override
