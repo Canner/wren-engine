@@ -42,19 +42,18 @@ public class BigQueryPgMetadata
     @Override
     protected List<RegObject> listRegProc()
     {
-        return listRegObject(REGPROC.getNameField(), REGPROC.getTableName());
+        // TODO: change to use bigquery api to save cost
+        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", REGPROC.getNameField(), REGPROC.getTableName()), ImmutableList.of()))
+                .map(row -> new RegProc((long) row[0], (String) row[1]))
+                .collect(toImmutableList());
     }
 
     @Override
     protected List<RegObject> listRegClass()
     {
-        return listRegObject(REGCLASS.getNameField(), REGCLASS.getTableName());
-    }
-
-    private List<RegObject> listRegObject(String nameField, String tableName)
-    {
-        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", nameField, tableName), ImmutableList.of()))
-                .map(row -> new RegObject((int) row[0], (String) row[1]))
+        // TODO: change to use bigquery api to save cost
+        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", REGCLASS.getNameField(), REGCLASS.getTableName()), ImmutableList.of()))
+                .map(row -> new RegObjectImpl((long) row[0], (String) row[1]))
                 .collect(toImmutableList());
     }
 }
