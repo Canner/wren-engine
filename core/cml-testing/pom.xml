@@ -64,11 +64,6 @@
 
         <dependency>
             <groupId>io.cml</groupId>
-            <artifactId>cml-postgres-wire-protocol</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.cml</groupId>
             <artifactId>cml-server</artifactId>
         </dependency>
 
