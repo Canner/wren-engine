@@ -135,9 +135,7 @@ public class TestPostgreSqlRewrite
     @Test
     public void testJoinUsing()
     {
-        assertRewrite("select t1.c1, t1.c2, t2.c3 from (values(1,2), (2,3)) as t1(c1,c2) join (select * from (values(1,3), (2,4))) as t2(c1,c3) using (c1)",
-                "select c1, t1.c2, t2.c3 from (values(1,2), (2,3)) as t1(c1,c2) join (select * from (values(1,3), (2,4))) as t2(c1,c3) using (c1)");
-        assertNoRewrite("select c1, t1.c2, t2.c3 from (values(1,2), (2,3)) as t1(c1,c2) join (select * from (values(1,3), (2,4))) as t2(c1,c3) using (c1)");
+        assertNoRewrite("select t1.c1, t1.c2, t2.c3 from (values(1,2), (2,3)) as t1(c1,c2) join (select * from (values(1,3), (2,4))) as t2(c1,c3) using (c1)");
     }
 
     @Test(enabled = false)

@@ -31,14 +31,12 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
-import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Select;
-import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
@@ -48,14 +46,12 @@ import io.trino.sql.tree.Window;
 import io.trino.sql.tree.WindowReference;
 import io.trino.sql.tree.WindowSpecification;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.INFORMATION_SCHEMA;
 import static io.cml.sql.PgOidTypeTableInfo.REGCLASS;
 import static io.cml.sql.PgOidTypeTableInfo.REGPROC;
@@ -81,7 +77,6 @@ public class PostgreSqlRewrite
     private static class Visitor
             extends BaseRewriteVisitor
     {
-        private final List<Identifier> joinUsingCriteria = new ArrayList<>();
         private final Map<Identifier, Expression> selectItemsMap = new HashMap<>();
 
         private final RegObjectInterpreter regObjectInterpreter;
@@ -97,23 +92,15 @@ public class PostgreSqlRewrite
         @Override
         protected Node visitSelect(Select node, Void context)
         {
-            List<SelectItem> selectItems = node.getSelectItems().stream()
-                    .map(selectItem -> {
-                        if (selectItem instanceof SingleColumn) {
-                            return removeBaseIfBelongJoinUsingCriterias((SingleColumn) selectItem);
-                        }
-                        return selectItem;
-                    }).collect(toImmutableList());
-
             if (node.getLocation().isPresent()) {
                 return new Select(
                         node.getLocation().get(),
                         node.isDistinct(),
-                        visitNodes(selectItems));
+                        visitNodes(node.getSelectItems()));
             }
             return new Select(
                     node.isDistinct(),
-                    visitNodes(selectItems));
+                    visitNodes(node.getSelectItems()));
         }
 
         @Override
@@ -136,20 +123,6 @@ public class PostgreSqlRewrite
         private boolean isColumnAlias(Expression expression)
         {
             return expression instanceof Identifier && selectItemsMap.containsKey(expression);
-        }
-
-        private SingleColumn removeBaseIfBelongJoinUsingCriterias(SingleColumn singleColumn)
-        {
-            if (singleColumn.getExpression() instanceof DereferenceExpression) {
-                Identifier joinUsingColumn = ((DereferenceExpression) singleColumn.getExpression()).getField();
-                if (joinUsingCriteria.contains(joinUsingColumn)) {
-                    if (singleColumn.getLocation().isPresent()) {
-                        return new SingleColumn(singleColumn.getLocation().get(), joinUsingColumn, singleColumn.getAlias());
-                    }
-                    return new SingleColumn(joinUsingColumn, singleColumn.getAlias());
-                }
-            }
-            return singleColumn;
         }
 
         @Override
@@ -255,10 +228,6 @@ public class PostgreSqlRewrite
         @Override
         protected Node visitJoin(Join node, Void context)
         {
-            node.getCriteria().filter(criteria -> criteria instanceof JoinUsing)
-                    .map(criteria -> ((JoinUsing) criteria).getColumns())
-                    .ifPresent(joinUsingCriteria::addAll);
-
             if (node.getLocation().isPresent()) {
                 return new Join(
                         node.getLocation().get(),
