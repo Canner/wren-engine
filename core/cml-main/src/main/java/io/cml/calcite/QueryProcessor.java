@@ -161,7 +161,7 @@ public class QueryProcessor
         SqlOperatorTable chainedSqlOperatorTable = SqlOperatorTables.chain(SqlStdOperatorTable.instance(), listSqlOperatorTable);
         SqlValidator validator = SqlValidatorUtil.newValidator(chainedSqlOperatorTable,
                 catalogReader, typeFactory,
-                SqlValidator.Config.DEFAULT);
+                SqlValidator.Config.DEFAULT.withConformance(dialect.getConformance()));
 
         // Validate the initial AST
         SqlNode validNode = validator.validate(calciteStatement);
