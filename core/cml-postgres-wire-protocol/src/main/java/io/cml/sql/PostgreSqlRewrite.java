@@ -31,7 +31,6 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
-import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
@@ -47,7 +46,6 @@ import io.trino.sql.tree.Window;
 import io.trino.sql.tree.WindowReference;
 import io.trino.sql.tree.WindowSpecification;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +77,6 @@ public class PostgreSqlRewrite
     private static class Visitor
             extends BaseRewriteVisitor
     {
-        private final List<Identifier> joinUsingCriteria = new ArrayList<>();
         private final Map<Identifier, Expression> selectItemsMap = new HashMap<>();
 
         private final RegObjectInterpreter regObjectInterpreter;
@@ -231,10 +228,6 @@ public class PostgreSqlRewrite
         @Override
         protected Node visitJoin(Join node, Void context)
         {
-            node.getCriteria().filter(criteria -> criteria instanceof JoinUsing)
-                    .map(criteria -> ((JoinUsing) criteria).getColumns())
-                    .ifPresent(joinUsingCriteria::addAll);
-
             if (node.getLocation().isPresent()) {
                 return new Join(
                         node.getLocation().get(),
