@@ -14,9 +14,9 @@
 
 package io.cml.pgcatalog;
 
-import java.nio.charset.StandardCharsets;
+import org.apache.lucene.util.StringHelper;
 
-import static org.apache.lucene.util.StringHelper.murmurhash3_x86_32;
+import java.nio.charset.StandardCharsets;
 
 public final class OidHash
 {
@@ -30,7 +30,7 @@ public final class OidHash
     public static int oid(String key)
     {
         byte[] b = key.getBytes(StandardCharsets.UTF_8);
-        return murmurhash3_x86_32(b, 0, b.length, 0);
+        return StringHelper.murmurhash3_x86_32(b, 0, b.length, 0);
     }
 
     public static int functionOid(String name)
