@@ -179,7 +179,7 @@ public class BigQueryMetadata
             if (matcher.find()) {
                 return matcher.group("functionName");
             }
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(format("The name pattern of %s doesn't match PG_FUNCTION_PATTERN", routine));
         }).collect(toImmutableList());
     }
 

@@ -1637,11 +1637,9 @@ class AstBuilder
     {
         QualifiedName name = getQualifiedName(context.functionExpression().qualifiedName());
 
-        // TODO: wait Trino support real table function.
-        //  It's just a workaround to support postgresql `Set Returning Functions`.
         for (PgSetReturnFunction pgSetReturnFunction : PgSetReturnFunction.values()) {
             if (name.toString().equals(pgSetReturnFunction.getPgFuncName())) {
-                return new Unnest(ImmutableList.of(functionCall(pgSetReturnFunction.getPrestoFuncName(), visit(context.functionExpression().expression(), Expression.class))), false);
+                return new Unnest(ImmutableList.of(functionCall(pgSetReturnFunction.getRemoteFuncName(), visit(context.functionExpression().expression(), Expression.class))), false);
             }
         }
         Query query = simpleQuery(selectList(
@@ -2810,10 +2808,10 @@ class AstBuilder
     private enum PgSetReturnFunction
     {
         // TODO: support other remote database
+        // https://github.com/Canner/canner-metric-layer/issues/62
         // the array generating function in bigquery call 'generate_array`.
         GENERATE_SERIES("generate_series", "generate_array");
 
-        private static final String TABLE_NAME_PREFIX = "wire_protocol_table$";
         private final String pgFuncName;
         private final String prestoFuncName;
 
@@ -2828,14 +2826,9 @@ class AstBuilder
             return pgFuncName;
         }
 
-        public String getPrestoFuncName()
+        public String getRemoteFuncName()
         {
             return prestoFuncName;
-        }
-
-        public String getTempTableName()
-        {
-            return TABLE_NAME_PREFIX + pgFuncName;
         }
     }
 

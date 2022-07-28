@@ -38,6 +38,7 @@ public final class PgFunctions
             .build();
 
     // TODO: consider region
+    // https://github.com/Canner/canner-metric-layer/issues/64
     public static final PgFunction CURRENT_SCHEMAS = builder()
             .setName("current_schemas")
             .setLanguage(SQL)

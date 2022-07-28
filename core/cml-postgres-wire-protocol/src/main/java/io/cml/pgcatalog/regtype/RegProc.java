@@ -14,26 +14,19 @@
 
 package io.cml.pgcatalog.regtype;
 
-import com.google.common.collect.ImmutableList;
 import io.cml.spi.CmlException;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import static io.cml.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 
 public class RegProc
         implements RegObject
 {
-    public static final Pattern PG_FUNCTION_PATTERN = Pattern.compile("(?<functionName>[a-zA-Z]+(_[a-zA-Z0-9]+)*)(__(?<argsType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?(___(?<returnType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?");
-
     private final long oid;
     private final String name;
-    private final String returnType;
-    private final List<String> argumentTypes;
 
     public RegProc(long oid, String signature)
     {
@@ -41,11 +34,9 @@ public class RegProc
         Matcher matcher = PG_FUNCTION_PATTERN.matcher(signature);
         if (matcher.find()) {
             this.name = matcher.group("functionName");
-            this.argumentTypes = Optional.ofNullable(matcher.group("argsType")).map(args -> ImmutableList.copyOf(args.split("_"))).orElse(ImmutableList.of());
-            this.returnType = matcher.group("returnType");
         }
         else {
-            throw new CmlException(NOT_FOUND, format("%s is not found", signature));
+            throw new CmlException(NOT_FOUND, format("%s doensn't match PG_FUNCTION_PATTERN", signature));
         }
     }
 
@@ -59,15 +50,5 @@ public class RegProc
     public String getName()
     {
         return name;
-    }
-
-    public String getReturnType()
-    {
-        return returnType;
-    }
-
-    public List<String> getArgumentTypes()
-    {
-        return argumentTypes;
     }
 }

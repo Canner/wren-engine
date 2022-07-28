@@ -43,6 +43,7 @@ public class BigQueryPgMetadata
     protected List<RegObject> listRegProc()
     {
         // TODO: change to use bigquery api to save cost
+        // https://github.com/Canner/canner-metric-layer/issues/63
         return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", REGPROC.getNameField(), REGPROC.getTableName()), ImmutableList.of()))
                 .map(row -> new RegProc((long) row[0], (String) row[1]))
                 .collect(toImmutableList());
@@ -52,6 +53,7 @@ public class BigQueryPgMetadata
     protected List<RegObject> listRegClass()
     {
         // TODO: change to use bigquery api to save cost
+        // https://github.com/Canner/canner-metric-layer/issues/63
         return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM pg_catalog.%s", REGCLASS.getNameField(), REGCLASS.getTableName()), ImmutableList.of()))
                 .map(row -> new RegObjectImpl((long) row[0], (String) row[1]))
                 .collect(toImmutableList());
