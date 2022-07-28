@@ -68,11 +68,13 @@ import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.SubqueryExpression;
+import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
 import io.trino.sql.tree.Union;
+import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.WhenClause;
 import io.trino.sql.tree.WithQuery;
@@ -134,6 +136,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.GREATER_THAN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.GREATER_THAN_OR_EQUAL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.IS_DISTINCT_FROM;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ITEM;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.LESS_THAN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.LESS_THAN_OR_EQUAL;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.LIKE;
@@ -149,6 +152,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROW;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNION;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNION_ALL;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNNEST;
 import static org.apache.calcite.sql.parser.SqlParserPos.ZERO;
 
 public class CalciteSqlNodeConverter
@@ -437,7 +441,16 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitDereferenceExpression(DereferenceExpression node, ConvertContext context)
         {
             // split catalog.schema.table
-            return new SqlIdentifier(Arrays.asList(node.toString().split("\\.")), POS);
+            List<String> expressions = Arrays.stream(node.toString().split("\\.")).map(Visitor::deQuoted).collect(toImmutableList());
+            return new SqlIdentifier(expressions, POS);
+        }
+
+        private static String deQuoted(String value)
+        {
+            if (value.startsWith("\"") && value.endsWith("\"")) {
+                return value.substring(1, value.length() - 1);
+            }
+            return value;
         }
 
         @Override
@@ -669,6 +682,18 @@ public class CalciteSqlNodeConverter
                 return process(node.getValue(), ConvertContext.builder().setFromNotExpression(true).build());
             }
             return new SqlBasicCall(NOT, ImmutableList.of(visitNode(node.getValue())), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitSubscriptExpression(SubscriptExpression node, ConvertContext context)
+        {
+            return new SqlBasicCall(ITEM, ImmutableList.of(visitNode(node.getBase()), visitNode(node.getIndex())), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitUnnest(Unnest node, ConvertContext context)
+        {
+            return new SqlBasicCall(UNNEST, visitNodes(node.getExpressions()), toCalcitePos(node.getLocation()));
         }
 
         @Override
