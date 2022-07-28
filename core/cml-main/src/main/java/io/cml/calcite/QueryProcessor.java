@@ -55,14 +55,22 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
+import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.util.ListSqlOperatorTable;
+import org.apache.calcite.sql.util.SqlOperatorTables;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
@@ -86,6 +94,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
+import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
 public class QueryProcessor
 {
@@ -138,7 +147,19 @@ public class QueryProcessor
                 Collections.singletonList(""),
                 typeFactory,
                 config);
-        SqlValidator validator = SqlValidatorUtil.newValidator(SqlStdOperatorTable.instance(),
+
+        // TODO: create ListSqlOperatorTable from PgFunctions
+        //  https://github.com/Canner/canner-metric-layer/issues/58
+        ListSqlOperatorTable listSqlOperatorTable = new ListSqlOperatorTable();
+        listSqlOperatorTable.add(new SqlFunction("current_schemas", SqlKind.OTHER_FUNCTION, ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.VARCHAR), -1)), null, ONE_OR_MORE,
+                SqlFunctionCategory.USER_DEFINED_FUNCTION));
+        listSqlOperatorTable.add(new SqlFunction("array_upper", SqlKind.OTHER_FUNCTION, ReturnTypes.INTEGER, null, ONE_OR_MORE,
+                SqlFunctionCategory.USER_DEFINED_FUNCTION));
+        listSqlOperatorTable.add(new SqlFunction("generate_array", SqlKind.OTHER_FUNCTION, ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)), null, ONE_OR_MORE,
+                SqlFunctionCategory.USER_DEFINED_FUNCTION));
+
+        SqlOperatorTable chainedSqlOperatorTable = SqlOperatorTables.chain(SqlStdOperatorTable.instance(), listSqlOperatorTable);
+        SqlValidator validator = SqlValidatorUtil.newValidator(chainedSqlOperatorTable,
                 catalogReader, typeFactory,
                 SqlValidator.Config.DEFAULT);
 

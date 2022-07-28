@@ -59,6 +59,8 @@ public final class BigQueryPgCatalogTableBuilder
                 .put("typeLen", "typlen")
                 .put("columNum", "ordinal_position")
                 .put("catalogName", "table_catalog")
+                .put("functionName", "routine_name")
+                .put("functionSchema", "routine_schema")
                 .build();
     }
 
@@ -183,8 +185,15 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgProcTable(PgCatalogTable pgCatalogTable)
     {
-        // TODO list bigQuery's function and cml-implemented pg functions
-        return buildEmptyTableView(pgCatalogTable);
+        // TODO: list bigquery function
+        StringBuilder builder = new StringBuilder();
+        builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
+            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+        }
+        builder.setLength(builder.length() - 1);
+        builder.append("FROM `pg_catalog.INFORMATION_SCHEMA.ROUTINES`;");
+        return builder.toString();
     }
 
     @Override

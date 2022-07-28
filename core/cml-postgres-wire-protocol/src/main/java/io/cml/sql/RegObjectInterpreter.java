@@ -63,7 +63,7 @@ public class RegObjectInterpreter
                 if (showObjectAsName) {
                     return new StringLiteral(regObject.getName());
                 }
-                return new LongLiteral(Integer.toString(regObject.getOid()));
+                return new LongLiteral(Long.toString(regObject.getOid()));
             }
             return node;
         }
@@ -82,7 +82,7 @@ public class RegObjectInterpreter
             if (showObjectAsName) {
                 return new StringLiteral(regObject.getName());
             }
-            return new LongLiteral(Integer.toString(regObject.getOid()));
+            return new LongLiteral(Long.toString(regObject.getOid()));
         }
 
         @Override

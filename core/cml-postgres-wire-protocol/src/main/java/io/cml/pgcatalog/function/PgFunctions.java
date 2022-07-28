@@ -20,7 +20,9 @@ import static io.cml.pgcatalog.function.PgFunction.Argument.argument;
 import static io.cml.pgcatalog.function.PgFunction.Language.SQL;
 import static io.cml.pgcatalog.function.PgFunction.builder;
 import static io.cml.spi.type.BigIntType.BIGINT;
+import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.IntegerType.INTEGER;
+import static io.cml.spi.type.PGArray.VARCHAR_ARRAY;
 import static io.cml.spi.type.VarcharType.VARCHAR;
 
 public final class PgFunctions
@@ -33,6 +35,16 @@ public final class PgFunctions
             .setName("current_database")
             .setLanguage(SQL)
             .setDefinition("SELECT DISTINCT catalog_name FROM INFORMATION_SCHEMA.SCHEMATA")
+            .build();
+
+    // TODO: consider region
+    // https://github.com/Canner/canner-metric-layer/issues/64
+    public static final PgFunction CURRENT_SCHEMAS = builder()
+            .setName("current_schemas")
+            .setLanguage(SQL)
+            .setDefinition("SELECT DISTINCT schema_name FROM INFORMATION_SCHEMA.SCHEMATA")
+            .setArguments(ImmutableList.of(argument("include_implicit", BOOLEAN)))
+            .setReturnType(VARCHAR_ARRAY)
             .build();
 
     public static final PgFunction PG_RELATION_SIZE__INT___BIGINT = builder()
@@ -49,5 +61,39 @@ public final class PgFunctions
             .setDefinition(EMPTY_STATEMENT)
             .setArguments(ImmutableList.of(argument("relOid", INTEGER), argument("text", VARCHAR)))
             .setReturnType(BIGINT)
+            .build();
+
+    public static final PgFunction ARRAY_IN = builder()
+            .setName("array_in")
+            .setLanguage(SQL)
+            .setDefinition(EMPTY_STATEMENT)
+            .setArguments(ImmutableList.of(argument("ignored", VARCHAR)))
+            .setReturnType(VARCHAR_ARRAY)
+            .build();
+
+    public static final PgFunction ARRAY_OUT = builder()
+            .setName("array_out")
+            .setLanguage(SQL)
+            .setDefinition(EMPTY_STATEMENT)
+            .setArguments(ImmutableList.of(argument("ignored", VARCHAR_ARRAY)))
+            .setReturnType(VARCHAR)
+            .build();
+
+    public static final PgFunction ARRAY_RECV = builder()
+            .setName("array_recv")
+            .setLanguage(SQL)
+            .setDefinition(EMPTY_STATEMENT)
+            .setArguments(ImmutableList.of(argument("ignored", VARCHAR)))
+            .setReturnType(VARCHAR_ARRAY)
+            .build();
+
+    // BigQuery didn't support nested array now.
+    // Only handle 1-dim array here.
+    public static final PgFunction ARRAY_UPPER = builder()
+            .setName("array_upper")
+            .setLanguage(SQL)
+            .setDefinition("SELECT CASE WHEN dim = 1 THEN array_length(input) ELSE NULL END")
+            .setArguments(ImmutableList.of(argument("input", VARCHAR_ARRAY), argument("dim", BIGINT)))
+            .setReturnType(INTEGER)
             .build();
 }

@@ -19,6 +19,7 @@ import io.cml.spi.type.PGType;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
@@ -26,6 +27,8 @@ import static java.util.Objects.requireNonNull;
 
 public class PgFunction
 {
+    public static final Pattern PG_FUNCTION_PATTERN = Pattern.compile("(?<functionName>[a-zA-Z]+(_[a-zA-Z0-9]+)*)(__(?<argsType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?(___(?<returnType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?");
+
     public enum Language
     {
         SQL,

@@ -16,6 +16,8 @@ package io.cml.pgcatalog.table;
 
 import io.cml.spi.metadata.TableMetadata;
 
+import static io.cml.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
+import static io.cml.pgcatalog.table.PgCatalogTableUtils.INTERNAL_LANGUAGE;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.CharType.CHAR;
@@ -39,35 +41,35 @@ public class PgProcTable
     protected TableMetadata createMetadata()
     {
         return table(NAME)
-                .column("oid", INTEGER)
-                .column("proname", VARCHAR)
-                .column("pronamespace", INTEGER)
-                .column("proowner", INTEGER)
-                .column("prolang", INTEGER)
-                .column("procost", DOUBLE)
-                .column("prorows", DOUBLE)
-                .column("provariadic", INTEGER)
-                .column("prosupport", REGPROC)
-                .column("prokind", CHAR)
-                .column("prosecdef", BOOLEAN)
-                .column("proleakproof", BOOLEAN)
-                .column("proisstrict", BOOLEAN)
-                .column("proretset", BOOLEAN)
-                .column("provolatile", CHAR)
-                .column("proparallel", CHAR)
-                .column("pronargs", INTEGER)
-                .column("pronargdefaults", INTEGER)
-                .column("prorettype", INTEGER)
-                .column("proargtypes", INT4_ARRAY)
-                .column("proallargtypes", INT4_ARRAY)
-                .column("proargmodes", CHAR_ARRAY)
-                .column("proargnames", VARCHAR_ARRAY)
-                .column("proargdefaults", VARCHAR_ARRAY)
-                .column("protrftypes", INT4_ARRAY)
-                .column("prosrc", VARCHAR_ARRAY)
-                .column("probin", VARCHAR_ARRAY)
-                .column("proconfig", VARCHAR_ARRAY)
-                .column("proacl", VARCHAR_ARRAY)
+                .column("oid", INTEGER, "${hash}(concat('PROC', ${functionName}))")
+                .column("proname", VARCHAR, "${functionName}")
+                .column("pronamespace", INTEGER, "${hash}(${functionSchema})")
+                .column("proowner", INTEGER, "${hash}('" + DEFAULT_AUTH + "')")
+                .column("prolang", INTEGER, "${hash}('" + INTERNAL_LANGUAGE + "')")
+                .column("procost", DOUBLE, "1")
+                .column("prorows", DOUBLE, "0")
+                .column("provariadic", INTEGER, "0")
+                .column("prosupport", REGPROC, "null")
+                .column("prokind", CHAR, "'f'")
+                .column("prosecdef", BOOLEAN, "false")
+                .column("proleakproof", BOOLEAN, "false")
+                .column("proisstrict", BOOLEAN, "false")
+                .column("proretset", BOOLEAN, "false")
+                .column("provolatile", CHAR, "'i'")
+                .column("proparallel", CHAR, "'u'")
+                .column("pronargs", INTEGER, "0")
+                .column("pronargdefaults", INTEGER, "0")
+                .column("prorettype", INTEGER, "null")
+                .column("proargtypes", INT4_ARRAY, "null")
+                .column("proallargtypes", INT4_ARRAY, "null")
+                .column("proargmodes", CHAR_ARRAY, "null")
+                .column("proargnames", VARCHAR_ARRAY, "null")
+                .column("proargdefaults", VARCHAR_ARRAY, "null")
+                .column("protrftypes", INT4_ARRAY, "null")
+                .column("prosrc", VARCHAR_ARRAY, "null")
+                .column("probin", VARCHAR_ARRAY, "null")
+                .column("proconfig", VARCHAR_ARRAY, "null")
+                .column("proacl", VARCHAR_ARRAY, "null")
                 .build();
     }
 }

@@ -27,12 +27,12 @@ public class TestingPgMetadata
     @Override
     protected List<RegObject> listRegProc()
     {
-        return ImmutableList.of(new RegObject(functionOid("array_in"), "array_in"), new RegObject(functionOid("equals"), "equals"));
+        return ImmutableList.of(new RegProc(functionOid("array_in"), "array_in__varchar____varchar"), new RegProc(functionOid("equals"), "equals__varchar_varchar___boolean"));
     }
 
     @Override
     protected List<RegObject> listRegClass()
     {
-        return ImmutableList.of(new RegObject(oid("t1"), "t1"), new RegObject(oid("t2"), "t2"));
+        return ImmutableList.of(new RegObjectImpl(oid("t1"), "t1"), new RegObjectImpl(oid("t2"), "t2"));
     }
 }

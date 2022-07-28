@@ -26,6 +26,8 @@ public final class PgCatalogTableUtils
     public static final String INFORMATION_SCHEMA = "information_schema";
     public static final String DEFAULT_AUTH = "cml";
 
+    public static final String INTERNAL_LANGUAGE = "internal";
+
     private PgCatalogTableUtils() {}
 
     public static MetadataUtil.TableMetadataBuilder table(String tableName)
