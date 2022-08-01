@@ -80,6 +80,18 @@ public class TestBigQuery
         }
     }
 
+    @Test
+    public void testBigQueryGroupByOrdinal()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT o_custkey, COUNT(*) AS cnt\n" +
+                        "FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\"\n" +
+                        "GROUP BY 1", SessionContext.builder().build()))
+                .isEqualTo("SELECT o_custkey, COUNT(*) AS cnt\n" +
+                        "FROM `cannerflow-286003`.tpch_tiny.orders\n" +
+                        "GROUP BY o_custkey");
+    }
+
     // test case-sensitive sql in mv
     @Test
     public void testBigQueryCaseSensitiveMVReplace()
