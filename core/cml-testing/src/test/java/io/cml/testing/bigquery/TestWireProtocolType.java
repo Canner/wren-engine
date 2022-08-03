@@ -17,6 +17,7 @@ package io.cml.testing.bigquery;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.cml.spi.type.PGTypes;
 import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.DataType;
 import io.cml.testing.TestingWireProtocolServer;
@@ -50,6 +51,7 @@ import static java.lang.String.format;
 import static java.lang.System.getenv;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Arrays.asList;
 import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
@@ -60,8 +62,8 @@ public class TestWireProtocolType
         extends AbstractWireProtocolTest
 {
     // BigQuery has only INT64 type. We should cast other int to int32 after got them.
-    private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint");
-    private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real");
+    private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint", "array(integer)", "array(smallint)", "array(tinyint)");
+    private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real", "array(real)");
 
     @Override
     protected TestingWireProtocolServer createWireProtocolServer()
@@ -185,6 +187,35 @@ public class TestWireProtocolType
         // .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"));
     }
 
+    @Test
+    public void testArray()
+    {
+        // basic types
+        createTypeTest()
+                .addInput(arrayDataType(booleanDataType()), asList(true, false))
+                .addInput(arrayDataType(bigintDataType()), asList(123_456_789_012L))
+                .addInput(arrayDataType(integerDataType()), asList(1, 2, 1_234_567_890))
+                // TODO: handle calcite array syntax
+                //  https://github.com/Canner/canner-metric-layer/issues/69
+                // .addInput(arrayDataType(smallintDataType()), asList((short) 32_456))
+                // .addInput(arrayDataType(doubleDataType()), asList(123.45d))
+                // .addInput(arrayDataType(realDataType()), asList(123.45f))
+                .executeSuite();
+    }
+
+    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType)
+    {
+        return arrayDataType(elementType, format("array(%s)", elementType.getInsertType()));
+    }
+
+    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, String insertType)
+    {
+        return dataType(
+                insertType,
+                PGTypes.getArrayType(elementType.getPgResultType().oid()),
+                valuesList -> "array" + valuesList.stream().map(elementType::toLiteral).collect(toList()));
+    }
+
     private WireProtocolTypeTest createTypeTest()
     {
         return new WireProtocolTypeTest();
@@ -252,7 +283,7 @@ public class TestWireProtocolType
                     for (int i = 0; i < expectedResults.size(); i++) {
                         Object actual = result.getObject(i + 1);
                         if (actual instanceof Array) {
-                            assertArrayEquals((Array) actual, (List<?>) expectedResults.get(i));
+                            assertArrayEquals((Array) actual, (List<?>) expectedResults.get(i), expectedTypeName.get(i));
                         }
                         else if (expectedResults.get(i) instanceof PGobject) {
                             PGobject expected = (PGobject) expectedResults.get(i);
@@ -291,11 +322,11 @@ public class TestWireProtocolType
         /**
          * Jdbc will get array result by Java array. Transform it to List to match the type of the expected answer.
          */
-        private Object arrayToList(Object value)
+        private Object arrayToList(Object value, String expectedType)
         {
             if (value instanceof Object[]) {
                 // We don't use toImmutableList here because it requires non-null elements but there are null values in test cases.
-                return Arrays.stream((Object[]) value).map(this::arrayToList).collect(toList());
+                return Arrays.stream((Object[]) value).map(inner -> arrayToList(inner, expectedType)).collect(toList());
             }
             if (value instanceof byte[]) {
                 return "\\x" + encodeHexString((byte[]) value);
@@ -307,14 +338,20 @@ public class TestWireProtocolType
                     return ImmutableList.copyOf(pValue.substring(1, pValue.length() - 1).split(","));
                 }
             }
+            if (TYPE_FORCED_TO_LONG.contains(expectedType) && value instanceof Long) {
+                return Long.valueOf((long) value).intValue();
+            }
+            if (TYPE_FORCED_TO_DOUBLE.contains(expectedType) && value instanceof Double) {
+                return Double.valueOf((double) value).floatValue();
+            }
             return value;
         }
 
-        private void assertArrayEquals(Array jdbcArray, List<?> expected)
+        private void assertArrayEquals(Array jdbcArray, List<?> expected, String expectedType)
                 throws SQLException
         {
             Object[] actualArray = (Object[]) jdbcArray.getArray();
-            Object actual = arrayToList(actualArray);
+            Object actual = arrayToList(actualArray, expectedType);
             assertThat(actual).isEqualTo(expected);
         }
 
