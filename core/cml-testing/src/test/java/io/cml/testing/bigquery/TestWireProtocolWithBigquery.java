@@ -839,6 +839,7 @@ public class TestWireProtocolWithBigquery
                         "  \"cannerflow-286003\".pg_catalog.pg_class c\n" +
                         "WHERE (c.oid = t.typrelid)\n" +
                         ")))"},
+                {"SELECT 1, 2, 3"}
         };
     }
 
