@@ -153,7 +153,6 @@ public class TestPostgreSqlRewrite
         assertRewrite("select (information_schema._pg_expandarray(ARRAY ['a','b'])).n", "select _pg_expandarray(ARRAY ['a','b']).n n");
         assertRewrite("select (information_schema._pg_expandarray(ARRAY ['a','b']))", "select _pg_expandarray(ARRAY ['a','b']) _pg_expandarray");
         assertRewrite("select version()", "select pg_version() version");
-        assertRewrite("select current_user", "select \"$current_user\"() \"?column?\"");
         assertRewrite("select session_user", "select \"$current_user\"() session_user");
         assertRewrite("select user", "select \"$current_user\"() user");
         assertRewrite("select to_date()", "select pg_to_date() to_date");
@@ -177,9 +176,9 @@ public class TestPostgreSqlRewrite
     @Test
     public void testIntervalLiteralWithInternalField()
     {
-        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '-30 day')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL - '30' day)) AS date) \"?column?\"");
-        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '30 month')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL + '30' month)) AS date) \"?column?\"");
-        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '+30 month')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL + '30' month)) AS date) \"?column?\"");
+        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '-30 day')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL - '30' day)) AS date)");
+        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '30 month')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL + '30' month)) AS date)");
+        assertRewrite("select CAST((CAST(now() AS timestamp) + (INTERVAL '+30 month')) AS date)", "select CAST((CAST(now() AS timestamp) + (INTERVAL + '30' month)) AS date)");
     }
 
     @Test
@@ -199,21 +198,21 @@ public class TestPostgreSqlRewrite
         assertRewrite("SELECT * FROM pg_attribute WHERE attrelid = 't1'::regclass",
                 format("SELECT * FROM %s.pg_catalog.pg_attribute WHERE attrelid = %s", DEFAULT_CATALOG, oid("t1")));
         assertRewrite("SELECT typinput = 'array_in'::regproc FROM pg_type ",
-                format("SELECT typinput = %s \"?column?\" FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
+                format("SELECT typinput = %s FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
         assertRewrite(format("SELECT typinput = %s::regproc FROM pg_type ", functionOid("array_in")),
-                format("SELECT typinput = %s \"?column?\" FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
+                format("SELECT typinput = %s FROM %s.pg_catalog.pg_type", functionOid("array_in"), DEFAULT_CATALOG));
         assertRewrite(format("SELECT attrelid = %s::regclass FROM pg_attribute ", oid("t1")),
-                format("SELECT attrelid = %s \"?column?\" FROM %s.pg_catalog.pg_attribute", oid("t1"), DEFAULT_CATALOG));
+                format("SELECT attrelid = %s FROM %s.pg_catalog.pg_attribute", oid("t1"), DEFAULT_CATALOG));
 
         assertRewrite(format("SELECT * FROM pg_type WHERE typinput = %s::regproc", functionOid("array_in")),
                 format("SELECT * FROM %s.pg_catalog.pg_type WHERE typinput = %s", DEFAULT_CATALOG, functionOid("array_in")));
         assertRewrite(format("SELECT * FROM pg_attribute WHERE attrelid = %s::regclass", oid("t1")),
                 format("SELECT * FROM %s.pg_catalog.pg_attribute WHERE attrelid = %s", DEFAULT_CATALOG, oid("t1")));
 
-        assertRewrite("SELECT 'array_in'::regproc", format("SELECT 'array_in' \"?column?\""));
-        assertRewrite("SELECT 't1'::regclass", format("SELECT 't1' \"?column?\""));
-        assertRewrite(format("SELECT %s::regproc", functionOid("array_in")), format("SELECT 'array_in' \"?column?\""));
-        assertRewrite(format("SELECT %s::regclass", oid("t1")), format("SELECT 't1' \"?column?\""));
+        assertRewrite("SELECT 'array_in'::regproc", "SELECT 'array_in'");
+        assertRewrite("SELECT 't1'::regclass", "SELECT 't1'");
+        assertRewrite(format("SELECT %s::regproc", functionOid("array_in")), "SELECT 'array_in'");
+        assertRewrite(format("SELECT %s::regclass", oid("t1")), "SELECT 't1'");
     }
 
     void assertTableNameRewriteAndNoRewrite(@Language("SQL") String sqlFormat)

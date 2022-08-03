@@ -203,26 +203,11 @@ public class PostgreSqlRewrite
             if (alias.isPresent()) {
                 return alias;
             }
-
-            if (expression instanceof DereferenceExpression) {
-                DereferenceExpression base = (DereferenceExpression) expression;
-                if (base.getBase() instanceof FunctionCall) {
-                    return Optional.of(new Identifier(base.getField().getValue()));
-                }
-                return Optional.empty();
-            }
-            else if (expression instanceof Identifier) {
-                String value = ((Identifier) expression).getValue();
-                if (isNonReservedLexer(value)) {
-                    return Optional.of(new Identifier(value));
-                }
-                return Optional.empty();
-            }
             else if (expression instanceof FunctionCall) {
                 FunctionCall functionCallExpression = (FunctionCall) expression;
                 return Optional.of(new Identifier(functionCallExpression.getName().getSuffix()));
             }
-            return Optional.of(new Identifier("?column?"));
+            return Optional.empty();
         }
 
         @Override
