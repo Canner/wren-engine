@@ -84,6 +84,7 @@ import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
+import org.apache.calcite.sql.SqlCollectionTypeNameSpec;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -98,6 +99,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlTypeNameSpec;
 import org.apache.calcite.sql.SqlUnresolvedFunction;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
@@ -636,9 +638,19 @@ public class CalciteSqlNodeConverter
                         new SqlBasicTypeNameSpec(typeName, params.get(0), params.get(1), ZERO),
                         toCalcitePos(node.getLocation()));
             }
+            else if (typeName.equals(SqlTypeName.ARRAY)) {
+                return new SqlDataTypeSpec(
+                        new SqlCollectionTypeNameSpec(toCalciteTypeNameSpec(node.getArguments().get(0).toString()), typeName, ZERO),
+                        toCalcitePos(node.getLocation()));
+            }
             return new SqlDataTypeSpec(
                     new SqlBasicTypeNameSpec(typeName, ZERO),
                     toCalcitePos(node.getLocation()));
+        }
+
+        private SqlTypeNameSpec toCalciteTypeNameSpec(String typeName)
+        {
+            return new SqlBasicTypeNameSpec(toCalciteType(typeName), ZERO);
         }
 
         private static int handleNumericParameter(DataTypeParameter dataTypeParameter)

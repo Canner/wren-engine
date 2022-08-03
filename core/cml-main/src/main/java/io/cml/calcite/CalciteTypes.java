@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static io.cml.spi.metadata.StandardErrorCode.NOT_SUPPORTED;
+import static io.cml.spi.type.StandardTypes.ARRAY;
 import static io.cml.spi.type.StandardTypes.BIGINT;
 import static io.cml.spi.type.StandardTypes.BOOLEAN;
 import static io.cml.spi.type.StandardTypes.BYTEA;
@@ -40,6 +41,7 @@ import static io.cml.spi.type.StandardTypes.TIMESTAMP_WITH_TIME_ZONE;
 import static io.cml.spi.type.StandardTypes.TIME_WITH_TIME_ZONE;
 import static io.cml.spi.type.StandardTypes.TINYINT;
 import static io.cml.spi.type.StandardTypes.VARCHAR;
+import static java.util.Locale.ROOT;
 
 public final class CalciteTypes
 {
@@ -69,12 +71,13 @@ public final class CalciteTypes
                 .put(BYTEA, SqlTypeName.VARBINARY)
                 .put(VARCHAR, SqlTypeName.VARCHAR)
                 .put(CHAR, SqlTypeName.CHAR)
+                .put(ARRAY, SqlTypeName.ARRAY)
                 .build();
     }
 
     public static SqlTypeName toCalciteType(String typeName)
     {
-        return Optional.ofNullable(standardTypeToCalciteTypeMap.get(typeName))
+        return Optional.ofNullable(standardTypeToCalciteTypeMap.get(typeName.toLowerCase(ROOT)))
                 .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + typeName));
     }
 }
