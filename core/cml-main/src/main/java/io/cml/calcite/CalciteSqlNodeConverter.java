@@ -19,6 +19,7 @@ import io.cml.spi.CmlException;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
+import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.BetweenPredicate;
 import io.trino.sql.tree.BinaryLiteral;
@@ -124,6 +125,7 @@ import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 import static org.apache.calcite.sql.SqlIdentifier.STAR;
 import static org.apache.calcite.sql.SqlIdentifier.star;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AND;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BETWEEN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
@@ -706,6 +708,12 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitParameter(Parameter node, ConvertContext context)
         {
             return new SqlDynamicParam(paramCount++, toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitArrayConstructor(ArrayConstructor node, ConvertContext context)
+        {
+            return new SqlBasicCall(ARRAY_VALUE_CONSTRUCTOR, visitNodes(node.getValues()), toCalcitePos(node.getLocation()));
         }
 
         @Override
