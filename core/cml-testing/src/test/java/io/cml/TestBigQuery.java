@@ -22,14 +22,22 @@ import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
+import io.cml.metrics.Metric;
+import io.cml.metrics.MetricSql;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.spi.SessionContext;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.testing.Utils.randomTableSuffix;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestBigQuery
 {
@@ -122,5 +130,27 @@ public class TestBigQuery
         assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT b\n" +
                         "FROM `cannerflow-286003`.cml_temp.CANNER");
+    }
+
+    @Test
+    public void testCreateMetricTable()
+    {
+        Metric metric = Metric.builder()
+                .setName("test-metric")
+                .setSource("cannerflow-286003.tpch_tiny.orders")
+                .setType(Metric.Type.AVG)
+                .setSql("o_totalprice")
+                .setDimensions(Set.of("o_orderstatus"))
+                .setTimestamp("o_orderdate")
+                .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .build();
+
+        List<MetricSql> metricSqls = MetricSql.of(metric);
+        assertThat(metricSqls.size()).isEqualTo(1);
+        MetricSql metricSql = metricSqls.get(0);
+
+        assertThatCode(() -> bigQueryClient.queryDryRun(Optional.of("cml_temp"), metricSql.sql("cml_temp"), List.of()))
+                .doesNotThrowAnyException();
     }
 }

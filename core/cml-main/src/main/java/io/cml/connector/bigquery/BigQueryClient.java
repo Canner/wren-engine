@@ -156,7 +156,7 @@ public class BigQueryClient
         }
     }
 
-    protected JobStatistics.QueryStatistics queryDryRun(Optional<String> datasetIdOptional, String query, List<Parameter> parameters)
+    public JobStatistics.QueryStatistics queryDryRun(Optional<String> datasetIdOptional, String query, List<Parameter> parameters)
     {
         try {
             QueryJobConfiguration.Builder queryConfigBuilder =
