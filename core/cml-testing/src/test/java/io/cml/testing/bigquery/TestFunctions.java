@@ -47,26 +47,37 @@ public class TestFunctions
     @DataProvider
     public Object[][] functions()
     {
-        // TODO: add test for other functions
-        //  https://github.com/Canner/canner-metric-layer/issues/72
         return new Object[][] {
-                {"select array_recv('abc')", null},
+                {"select array_recv('abc')", null, false},
+                {"select array_in('{1,2,3')", null, false},
+                // TODO: handle function return type or argument type is array
+                //  https://github.com/Canner/canner-metric-layer/issues/76
+                // {"select array_out(array[1,2])", null, false},
                 // TODO: handle function name overloading mapping
                 //  https://github.com/Canner/canner-metric-layer/issues/73
                 // {"select pg_relation_size(1)", null},
-                {"select pg_relation_size(1, 'abc')", null},
+                {"select pg_relation_size(1, 'abc')", null, false},
+                {"select current_schemas(false)", "test_function", true},
+                // TODO: fix current_databas()
+                //  https://github.com/Canner/canner-metric-layer/issues/75
+                // {"select current_database()", "", false}
         };
     }
 
     @Test(dataProvider = "functions")
-    public void testJdbcQuery(String sql, String expected)
+    public void testJdbcQuery(String sql, String expected, boolean isArrayResult)
             throws SQLException
     {
         try (Connection connection = createConnection()) {
             PreparedStatement stmt = connection.prepareStatement(sql);
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
-            assertThat(resultSet.getString(1)).isEqualTo(expected);
+            if (isArrayResult) {
+                assertThat(((String[]) resultSet.getArray(1).getArray())[0]).isEqualTo(expected);
+            }
+            else {
+                assertThat(resultSet.getString(1)).isEqualTo(expected);
+            }
         }
     }
 }
