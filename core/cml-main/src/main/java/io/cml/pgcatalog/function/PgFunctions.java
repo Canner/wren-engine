@@ -42,7 +42,7 @@ public final class PgFunctions
     public static final PgFunction CURRENT_SCHEMAS = builder()
             .setName("current_schemas")
             .setLanguage(SQL)
-            .setDefinition("SELECT DISTINCT schema_name FROM INFORMATION_SCHEMA.SCHEMATA")
+            .setDefinition("SELECT ARRAY(SELECT DISTINCT schema_name FROM INFORMATION_SCHEMA.SCHEMATA)")
             .setArguments(ImmutableList.of(argument("include_implicit", BOOLEAN)))
             .setReturnType(VARCHAR_ARRAY)
             .build();
