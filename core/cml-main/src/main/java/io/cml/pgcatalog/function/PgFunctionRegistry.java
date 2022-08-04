@@ -59,7 +59,9 @@ public final class PgFunctionRegistry
 
         ImmutableMap.Builder<String, PgFunction> remoteNameBuilder = ImmutableMap.builder();
         pgFunctions.forEach(pgFunction -> {
-            // use HashMap to handle multiple same key entriesnn
+            // TODO: handle function name overloading
+            //  https://github.com/Canner/canner-metric-layer/issues/73
+            // use HashMap to handle multiple same key entries
             simpleNameToFunction.put(pgFunction.getName(), pgFunction);
             remoteNameBuilder.put(pgFunction.getRemoteName(), pgFunction);
         });
