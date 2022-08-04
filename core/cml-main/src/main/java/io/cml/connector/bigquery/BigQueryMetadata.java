@@ -54,9 +54,11 @@ import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ListSqlOperatorTable;
@@ -66,6 +68,7 @@ import javax.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -143,11 +146,11 @@ public class BigQueryMetadata
 
     private SqlFunction toCalciteSqlFunction(PgFunction pgFunction)
     {
-        return new SqlFunction("pg_catalog." + pgFunction.getRemoteName(),
-                SqlKind.OTHER_FUNCTION,
+        return new SqlFunction(new SqlIdentifier("pg_catalog." + pgFunction.getRemoteName(), SqlParserPos.ZERO),
                 pgFunction.getReturnType().isPresent() ? ReturnTypes.explicit(toCalciteType(pgFunction.getReturnType().get())) : null,
                 null,
                 pgFunction.getArguments().isPresent() ? ONE_OR_MORE : null,
+                pgFunction.getArguments().isPresent() ? pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList()) : null,
                 SqlFunctionCategory.USER_DEFINED_FUNCTION);
     }
 
