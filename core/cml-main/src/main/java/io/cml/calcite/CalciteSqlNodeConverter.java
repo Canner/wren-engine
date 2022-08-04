@@ -19,6 +19,7 @@ import io.cml.spi.CmlException;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
+import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.BetweenPredicate;
 import io.trino.sql.tree.BinaryLiteral;
@@ -83,6 +84,7 @@ import org.apache.calcite.sql.JoinConditionType;
 import org.apache.calcite.sql.JoinType;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlBasicTypeNameSpec;
+import org.apache.calcite.sql.SqlCollectionTypeNameSpec;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlDynamicParam;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -97,6 +99,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlTableRef;
+import org.apache.calcite.sql.SqlTypeNameSpec;
 import org.apache.calcite.sql.SqlUnresolvedFunction;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
@@ -124,6 +127,7 @@ import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 import static org.apache.calcite.sql.SqlIdentifier.STAR;
 import static org.apache.calcite.sql.SqlIdentifier.star;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AND;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.AS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BETWEEN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
@@ -634,9 +638,19 @@ public class CalciteSqlNodeConverter
                         new SqlBasicTypeNameSpec(typeName, params.get(0), params.get(1), ZERO),
                         toCalcitePos(node.getLocation()));
             }
+            else if (typeName.equals(SqlTypeName.ARRAY)) {
+                return new SqlDataTypeSpec(
+                        new SqlCollectionTypeNameSpec(toCalciteTypeNameSpec(node.getArguments().get(0).toString()), typeName, ZERO),
+                        toCalcitePos(node.getLocation()));
+            }
             return new SqlDataTypeSpec(
                     new SqlBasicTypeNameSpec(typeName, ZERO),
                     toCalcitePos(node.getLocation()));
+        }
+
+        private SqlTypeNameSpec toCalciteTypeNameSpec(String typeName)
+        {
+            return new SqlBasicTypeNameSpec(toCalciteType(typeName), ZERO);
         }
 
         private static int handleNumericParameter(DataTypeParameter dataTypeParameter)
@@ -706,6 +720,12 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitParameter(Parameter node, ConvertContext context)
         {
             return new SqlDynamicParam(paramCount++, toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitArrayConstructor(ArrayConstructor node, ConvertContext context)
+        {
+            return new SqlBasicCall(ARRAY_VALUE_CONSTRUCTOR, visitNodes(node.getValues()), toCalcitePos(node.getLocation()));
         }
 
         @Override

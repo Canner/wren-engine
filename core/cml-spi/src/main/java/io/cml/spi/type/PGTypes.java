@@ -40,6 +40,7 @@ public final class PGTypes
     private PGTypes() {}
 
     private static final Map<Integer, PGType<?>> TYPE_TABLE = new HashMap<>();
+    private static final Map<Integer, PGArray> INNER_TYPE_TO_ARRAY_TABLE;
     private static final Set<PGType<?>> TYPES;
 
     static {
@@ -77,6 +78,8 @@ public final class PGTypes
             innerToPgTypeBuilder.put(innerType.oid(), array);
         });
 
+        INNER_TYPE_TO_ARRAY_TABLE = innerToPgTypeBuilder.build();
+
         TYPES = new HashSet<>(TYPE_TABLE.values());
         // the following polymorphic types are added manually,
         // because there are no corresponding data types in Cannerflow
@@ -96,5 +99,15 @@ public final class PGTypes
                     format("No oid mapping from '%s' to pg_type", oid));
         }
         return pgType;
+    }
+
+    public static PGType<?> getArrayType(int innerOid)
+    {
+        PGType<?> arrayType = INNER_TYPE_TO_ARRAY_TABLE.get(innerOid);
+        if (arrayType == null) {
+            throw new IllegalArgumentException(
+                    format("No array type mapping from '%s' to pg_type", innerOid));
+        }
+        return arrayType;
     }
 }

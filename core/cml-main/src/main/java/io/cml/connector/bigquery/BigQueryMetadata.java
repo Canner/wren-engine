@@ -17,6 +17,7 @@ package io.cml.connector.bigquery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
+import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
@@ -39,6 +40,8 @@ import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
+import io.cml.spi.type.PGType;
+import io.cml.spi.type.PGTypes;
 import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
@@ -258,7 +261,13 @@ public class BigQueryMetadata
     {
         JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql, parameters);
         return Streams.stream(queryStatistics.getSchema().getFields().iterator())
-                .map(field -> new Column(field.getName(), toPGType(field.getType().getStandardType())))
+                .map(field -> {
+                    PGType<?> type = toPGType(field.getType().getStandardType());
+                    if (field.getMode().equals(Field.Mode.REPEATED)) {
+                        type = PGTypes.getArrayType(type.oid());
+                    }
+                    return new Column(field.getName(), type);
+                })
                 .collect(toImmutableList());
     }
 

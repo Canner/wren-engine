@@ -72,7 +72,8 @@ public class TestCalciteSqlNodeConverter
                         "      FROM\n" +
                         "        UNNEST(generate_array(1, array_upper(current_schemas(false), 1)))  s (r)\n" +
                         "   )  r USING (nspname)\n" +
-                        ")  sp ON (sp.nspoid = typnamespace)"}
+                        ")  sp ON (sp.nspoid = typnamespace)"},
+                {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
         };
     }
 

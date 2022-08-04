@@ -17,12 +17,12 @@ package io.cml.connector.bigquery;
 import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
-import com.google.cloud.bigquery.LegacySQLTypeName;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.type.PGType;
+import io.cml.spi.type.PGTypes;
 
 import java.util.Iterator;
 import java.util.List;
@@ -35,7 +35,7 @@ public class BigQueryRecordIterator
         implements ConnectorRecordIterator
 {
     private final List<PGType> types;
-    private final List<StandardSQLTypeName> bqTypes;
+    private final List<Field> bqFields;
 
     private final Iterator<FieldValueList> resultIterator;
 
@@ -50,10 +50,16 @@ public class BigQueryRecordIterator
         this.resultIterator = tableResult.iterateAll().iterator();
 
         this.types = Streams.stream(tableResult.getSchema().getFields().iterator())
-                .map(field -> BigQueryType.toPGType(field.getType().getStandardType()))
+                .map(field -> {
+                    PGType<?> fieldType = BigQueryType.toPGType(field.getType().getStandardType());
+                    if (field.getMode().equals(Field.Mode.REPEATED)) {
+                        return PGTypes.getArrayType(fieldType.oid());
+                    }
+                    return fieldType;
+                })
                 .collect(toImmutableList());
 
-        this.bqTypes = tableResult.getSchema().getFields().stream().map(Field::getType).map(LegacySQLTypeName::getStandardType).collect(toImmutableList());
+        this.bqFields = tableResult.getSchema().getFields();
     }
 
     @Override
@@ -79,7 +85,18 @@ public class BigQueryRecordIterator
 
     private Object getFieldValue(int index, FieldValue fieldValue)
     {
-        switch (bqTypes.get(index)) {
+        StandardSQLTypeName typeName = bqFields.get(index).getType().getStandardType();
+        if (bqFields.get(index).getMode().equals(Field.Mode.REPEATED)) {
+            return fieldValue.getRepeatedValue().stream()
+                    .map(innerField -> getFieldValue(typeName, innerField))
+                    .collect(toImmutableList());
+        }
+        return getFieldValue(typeName, fieldValue);
+    }
+
+    private Object getFieldValue(StandardSQLTypeName typeName, FieldValue fieldValue)
+    {
+        switch (typeName) {
             case BOOL:
                 return fieldValue.getBooleanValue();
             case INT64:
@@ -91,7 +108,7 @@ public class BigQueryRecordIterator
             case BYTES:
                 return fieldValue.getBytesValue();
             default:
-                throw new IllegalArgumentException("Unsupported type: " + bqTypes.get(index));
+                throw new IllegalArgumentException("Unsupported type: " + typeName);
         }
     }
 
