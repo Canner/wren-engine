@@ -56,6 +56,7 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.ListSqlOperatorTable;
@@ -263,7 +264,10 @@ public class BigQueryMetadata
     @Override
     public String resolveFunction(String functionName)
     {
-        if (supportedBqFunction.stream().anyMatch(sqlFunction -> sqlFunction.getName().equals(functionName))) {
+        // lookup calcite operator table and bigquery supported table
+        if (SqlStdOperatorTable.instance().getOperatorList().stream()
+                .anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName)) ||
+                supportedBqFunction.stream().anyMatch(sqlFunction -> sqlFunction.getName().equals(functionName))) {
             return functionName;
         }
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
