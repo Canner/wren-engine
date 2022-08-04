@@ -55,11 +55,8 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlJoin;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
@@ -67,9 +64,6 @@ import org.apache.calcite.sql.SqlWriterConfig;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.ListSqlOperatorTable;
 import org.apache.calcite.sql.util.SqlOperatorTables;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
@@ -90,11 +84,9 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.cml.common.Utils.wrapException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
 import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
-import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
 public class QueryProcessor
 {
@@ -112,11 +104,12 @@ public class QueryProcessor
         return new QueryProcessor(metadata);
     }
 
+    // TODO: abstract query processor https://github.com/Canner/canner-metric-layer/issues/68
     private QueryProcessor(Metadata metadata)
     {
         this.dialect = requireNonNull(metadata.getDialect().getSqlDialect(), "dialect is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
-        this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, metadata.getRelDataTypeSystem());
+        this.typeFactory = metadata.getTypeFactory();
 
         Properties props = new Properties();
         props.setProperty(CalciteConnectionProperty.CASE_SENSITIVE.camelName(), "false");
@@ -136,7 +129,7 @@ public class QueryProcessor
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
         Analysis analysis = new Analysis();
-        SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis);
+        SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis, metadata);
 
         List<TableSchema> visitedTable = analysis.getVisitedTables()
                 .stream().map(name -> toTableSchema(name, sessionContext))
@@ -148,17 +141,7 @@ public class QueryProcessor
                 typeFactory,
                 config);
 
-        // TODO: create ListSqlOperatorTable from PgFunctions
-        //  https://github.com/Canner/canner-metric-layer/issues/58
-        ListSqlOperatorTable listSqlOperatorTable = new ListSqlOperatorTable();
-        listSqlOperatorTable.add(new SqlFunction("current_schemas", SqlKind.OTHER_FUNCTION, ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.VARCHAR), -1)), null, ONE_OR_MORE,
-                SqlFunctionCategory.USER_DEFINED_FUNCTION));
-        listSqlOperatorTable.add(new SqlFunction("array_upper", SqlKind.OTHER_FUNCTION, ReturnTypes.INTEGER, null, ONE_OR_MORE,
-                SqlFunctionCategory.USER_DEFINED_FUNCTION));
-        listSqlOperatorTable.add(new SqlFunction("generate_array", SqlKind.OTHER_FUNCTION, ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)), null, ONE_OR_MORE,
-                SqlFunctionCategory.USER_DEFINED_FUNCTION));
-
-        SqlOperatorTable chainedSqlOperatorTable = SqlOperatorTables.chain(SqlStdOperatorTable.instance(), listSqlOperatorTable);
+        SqlOperatorTable chainedSqlOperatorTable = SqlOperatorTables.chain(SqlStdOperatorTable.instance(), metadata.getCalciteOperatorTable());
         SqlValidator validator = SqlValidatorUtil.newValidator(chainedSqlOperatorTable,
                 catalogReader, typeFactory,
                 SqlValidator.Config.DEFAULT.withConformance(dialect.getConformance()));
@@ -207,7 +190,9 @@ public class QueryProcessor
         SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
-                SqlWriterConfig.of().withDialect(dialect));
+                // BigQuery's UDF name is case sensitivity. Because we define all pg function in lowercase,
+                // force all keywords is lowercase here.
+                SqlWriterConfig.of().withDialect(dialect).withKeywordsLowerCase(true));
         String result = sqlPrettyWriter.format(sqlNode);
         LOG.info("[Converted calcite dialect SQL]: %s", result);
         return result;

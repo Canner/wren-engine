@@ -15,6 +15,7 @@
 package io.cml.calcite;
 
 import com.google.common.collect.ImmutableList;
+import io.cml.metadata.Metadata;
 import io.cml.spi.CmlException;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
@@ -163,9 +164,9 @@ public class CalciteSqlNodeConverter
 {
     private CalciteSqlNodeConverter() {}
 
-    public static SqlNode convert(Node statement, Analysis analysis)
+    public static SqlNode convert(Node statement, Analysis analysis, Metadata metadata)
     {
-        Visitor visitor = new Visitor(analysis);
+        Visitor visitor = new Visitor(analysis, metadata);
         return visitor.process(statement);
     }
 
@@ -175,9 +176,12 @@ public class CalciteSqlNodeConverter
         private final Analysis analysis;
         private int paramCount;
 
-        public Visitor(Analysis analysis)
+        private Metadata metadata;
+
+        public Visitor(Analysis analysis, Metadata metadata)
         {
             this.analysis = analysis;
+            this.metadata = metadata;
         }
 
         @Override
@@ -433,7 +437,8 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitFunctionCall(FunctionCall node, ConvertContext context)
         {
             return new SqlBasicCall(
-                    new SqlUnresolvedFunction(new SqlIdentifier(node.getName().toString(), toCalcitePos(node.getLocation())), null, null, null, null, SqlFunctionCategory.USER_DEFINED_FUNCTION),
+                    new SqlUnresolvedFunction(new SqlIdentifier(metadata.resolveFunction(node.getName().toString()),
+                            toCalcitePos(node.getLocation())), null, null, null, null, SqlFunctionCategory.USER_DEFINED_FUNCTION),
                     !(node.getArguments().isEmpty() && "count".equalsIgnoreCase(node.getName().toString())) ?
                             visitNodes(node.getArguments()) :
                             ImmutableList.of(star(toCalcitePos(node.getLocation()))),

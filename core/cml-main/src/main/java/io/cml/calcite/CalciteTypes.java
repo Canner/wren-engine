@@ -16,6 +16,18 @@ package io.cml.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import io.cml.spi.CmlException;
+import io.cml.spi.type.BigIntType;
+import io.cml.spi.type.BooleanType;
+import io.cml.spi.type.CharType;
+import io.cml.spi.type.DateType;
+import io.cml.spi.type.DoubleType;
+import io.cml.spi.type.IntegerType;
+import io.cml.spi.type.NumericType;
+import io.cml.spi.type.PGType;
+import io.cml.spi.type.RealType;
+import io.cml.spi.type.SmallIntType;
+import io.cml.spi.type.TinyIntType;
+import io.cml.spi.type.VarcharType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 import java.util.Map;
@@ -48,6 +60,7 @@ public final class CalciteTypes
     private CalciteTypes() {}
 
     private static final Map<String, SqlTypeName> standardTypeToCalciteTypeMap;
+    private static final Map<PGType<?>, SqlTypeName> pgTypeToCalciteTypeMap;
 
     static {
         standardTypeToCalciteTypeMap = ImmutableMap.<String, SqlTypeName>builder()
@@ -73,11 +86,31 @@ public final class CalciteTypes
                 .put(CHAR, SqlTypeName.CHAR)
                 .put(ARRAY, SqlTypeName.ARRAY)
                 .build();
+
+        pgTypeToCalciteTypeMap = ImmutableMap.<PGType<?>, SqlTypeName>builder()
+                .put(BigIntType.BIGINT, SqlTypeName.BIGINT)
+                .put(IntegerType.INTEGER, SqlTypeName.INTEGER)
+                .put(SmallIntType.SMALLINT, SqlTypeName.SMALLINT)
+                .put(TinyIntType.TINYINT, SqlTypeName.TINYINT)
+                .put(BooleanType.BOOLEAN, SqlTypeName.BOOLEAN)
+                .put(DateType.DATE, SqlTypeName.DATE)
+                .put(NumericType.NUMERIC, SqlTypeName.DECIMAL)
+                .put(RealType.REAL, SqlTypeName.REAL)
+                .put(DoubleType.DOUBLE, SqlTypeName.DOUBLE)
+                .put(VarcharType.VARCHAR, SqlTypeName.VARCHAR)
+                .put(CharType.CHAR, SqlTypeName.CHAR)
+                .build();
     }
 
     public static SqlTypeName toCalciteType(String typeName)
     {
         return Optional.ofNullable(standardTypeToCalciteTypeMap.get(typeName.toLowerCase(ROOT)))
                 .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + typeName));
+    }
+
+    public static SqlTypeName toCalciteType(PGType<?> type)
+    {
+        return Optional.ofNullable(pgTypeToCalciteTypeMap.get(type))
+                .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + type.typName()));
     }
 }

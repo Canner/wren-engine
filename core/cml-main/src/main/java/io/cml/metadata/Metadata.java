@@ -20,7 +20,9 @@ import io.cml.spi.Parameter;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.QualifiedObjectName;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.sql.SqlOperatorTable;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +40,12 @@ public interface Metadata
     List<MaterializedViewDefinition> listMaterializedViews(Optional<String> schemaName);
 
     List<String> listFunctionNames(String schemaName);
+
+    String resolveFunction(String functionName);
+
+    SqlOperatorTable getCalciteOperatorTable();
+
+    RelDataTypeFactory getTypeFactory();
 
     TableSchema getTableSchema(TableHandle tableHandle);
 
