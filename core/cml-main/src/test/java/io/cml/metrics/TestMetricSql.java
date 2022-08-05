@@ -22,6 +22,7 @@ import java.util.Set;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.metrics.Metric.Filter.Operator.LESS_THAN;
 import static io.cml.metrics.Metric.Filter.Operator.LESS_THAN_OR_EQUAL_TO;
+import static io.cml.metrics.Metric.TimeGrain.DAY;
 import static io.cml.metrics.Metric.TimeGrain.MONTH;
 import static io.cml.metrics.MetricSql.findCombinations;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,6 +85,7 @@ public class TestMetricSql
     public void testSql()
     {
         MetricSql metricSql = MetricSql.builder()
+                .setBaseMetricName("test")
                 .setSource("test_table")
                 .setDimensions(List.of("dim1", "dim2"))
                 .setType(Metric.Type.COUNT)
@@ -113,7 +115,7 @@ public class TestMetricSql
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus", "o_shippriority"))
                 .setTimestamp("o_orderdate")
-                .setTimeGrains(Set.of(Metric.TimeGrain.DAY, MONTH))
+                .setTimeGrains(Set.of(DAY, MONTH))
                 .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
                 .build();
 

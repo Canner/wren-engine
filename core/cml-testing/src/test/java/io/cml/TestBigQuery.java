@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.cml.Utils.randomTableSuffix;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
-import static io.cml.testing.Utils.randomTableSuffix;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -136,7 +136,7 @@ public class TestBigQuery
     public void testCreateMetricTable()
     {
         Metric metric = Metric.builder()
-                .setName("test-metric")
+                .setName("metric")
                 .setSource("cannerflow-286003.tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")

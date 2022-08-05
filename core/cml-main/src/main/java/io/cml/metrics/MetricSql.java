@@ -17,6 +17,7 @@ package io.cml.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import io.cml.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,13 +28,13 @@ import java.util.stream.IntStream;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.io.BaseEncoding.base16;
 import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 public final class MetricSql
 {
+    private final String baseMetricName;
+    private final String name;
     private final String source;
     private final Metric.Type type;
     private final String sql;
@@ -43,8 +44,10 @@ public final class MetricSql
     private final Metric.TimeGrain timeGrain;
     private final List<Metric.Filter> filters;
 
-    private MetricSql(String source, Metric.Type type, String sql, List<String> dimensions, String timestamp, Metric.TimeGrain timeGrain, List<Metric.Filter> filters)
+    private MetricSql(String baseMetricName, String source, Metric.Type type, String sql, List<String> dimensions, String timestamp, Metric.TimeGrain timeGrain, List<Metric.Filter> filters)
     {
+        this.baseMetricName = baseMetricName;
+        this.name = baseMetricName + "_" + Utils.randomTableSuffix();
         this.source = source;
         this.type = type;
         this.sql = sql;
@@ -56,25 +59,16 @@ public final class MetricSql
 
     public static List<MetricSql> of(Metric metric)
     {
-        MetricSql metricSql = new MetricSql(metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of());
+        MetricSql metricSql = new MetricSql(metric.getName(), metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of());
         List<MetricSql> metricSqls = expandDimensions(List.of(metricSql), List.copyOf(metric.getDimensions()));
         metricSqls = expandTimeGrains(metricSqls, List.copyOf(metric.getTimeGrains()));
         metricSqls = expandFilters(metricSqls, List.copyOf(metric.getFilters()));
         return metricSqls;
     }
 
-    /**
-     * Get name for this MetricSql, note that the name here is also a table name when we use {@link #sql(String)}
-     * to create sql.
-     * Doing this could make table name very long, note that in BigQuery max table name size is 1024,
-     * use base16 encoding here since it use [A-F0-9] which doesn't contain '/' and '=' char, both of these
-     * chars are restricted in table name in almost every database.
-     *
-     * @return metric name
-     */
     public String name()
     {
-        return "m_" + base16().encode(toString().getBytes(UTF_8));
+        return name;
     }
 
     /**
@@ -105,7 +99,7 @@ public final class MetricSql
                 .reduce((a, b) -> format("%s AND %s", a, b))
                 .orElse("");
         return format("CREATE TABLE %s.%s AS SELECT %s, %s FROM %s WHERE %s GROUP BY %s",
-                schema, name(), selectItems, typeAgg, source, whereExpression, groupByExpression);
+                schema, name, selectItems, typeAgg, source, whereExpression, groupByExpression);
     }
 
     @Override
@@ -150,6 +144,7 @@ public final class MetricSql
     private static Builder fromMetricSql(MetricSql metricSql)
     {
         return new Builder()
+                .setBaseMetricName(metricSql.baseMetricName)
                 .setSource(metricSql.source)
                 .setType(metricSql.type)
                 .setSql(metricSql.sql)
@@ -168,6 +163,7 @@ public final class MetricSql
     @VisibleForTesting
     static class Builder
     {
+        private String baseMetricName;
         private String source;
         private Metric.Type type;
         private String sql;
@@ -175,6 +171,12 @@ public final class MetricSql
         private String timestamp;
         private Metric.TimeGrain timeGrains;
         private List<Metric.Filter> filters = List.of();
+
+        public Builder setBaseMetricName(String baseMetricName)
+        {
+            this.baseMetricName = baseMetricName;
+            return this;
+        }
 
         public Builder setSource(String source)
         {
@@ -220,7 +222,7 @@ public final class MetricSql
 
         public MetricSql build()
         {
-            return new MetricSql(source, type, sql, dimensions, timestamp, timeGrains, filters);
+            return new MetricSql(baseMetricName, source, type, sql, dimensions, timestamp, timeGrains, filters);
         }
     }
 

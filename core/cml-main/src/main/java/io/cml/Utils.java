@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.testing;
+package io.cml;
 
 import java.security.SecureRandom;
 
