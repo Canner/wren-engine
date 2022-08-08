@@ -463,12 +463,12 @@ public class PostgresWireProtocol
                 portal.setResultSetSender(connectorRecordIterable.get());
             }
 
-            ConnectorRecordIterator hiveRecordIterable = portal.getConnectorRecordIterable();
+            ConnectorRecordIterator connectorRecordIterable = portal.getConnectorRecordIterable();
             FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,
                     channel,
-                    hiveRecordIterable,
+                    connectorRecordIterable,
                     maxRows,
                     portal.getRowCount(),
                     resultFormatCodes);

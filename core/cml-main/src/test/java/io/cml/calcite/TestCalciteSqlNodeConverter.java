@@ -14,6 +14,7 @@
 
 package io.cml.calcite;
 
+import io.cml.TestingMetadata;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
@@ -83,7 +84,7 @@ public class TestCalciteSqlNodeConverter
     {
         SqlParser sqlParser = new SqlParser();
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis(), new TestingMetadata());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);
         SqlNode calciteNode = parser.parseQuery();
@@ -135,7 +136,7 @@ public class TestCalciteSqlNodeConverter
         String sql = Files.readString(path);
 
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis(), new TestingMetadata());
 
         org.apache.calcite.sql.parser.SqlParser parser = org.apache.calcite.sql.parser.SqlParser.create(sql);
         SqlNode calciteNode = parser.parseQuery();
@@ -164,7 +165,7 @@ public class TestCalciteSqlNodeConverter
     {
         SqlParser sqlParser = new SqlParser();
         Statement statement = sqlParser.createStatement(before, new ParsingOptions());
-        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis());
+        SqlNode processedNode = CalciteSqlNodeConverter.convert(statement, new Analysis(), new TestingMetadata());
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
                 SqlWriterConfig.of().withClauseStartsLine(false).withDialect(CalciteSqlDialect.DEFAULT));
         String processed = sqlPrettyWriter.format(processedNode);

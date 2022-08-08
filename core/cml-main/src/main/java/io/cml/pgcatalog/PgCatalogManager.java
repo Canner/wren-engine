@@ -20,6 +20,7 @@ import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
 import io.cml.pgcatalog.builder.PgFunctionBuilder;
 import io.cml.pgcatalog.function.PgFunction;
+import io.cml.pgcatalog.function.PgFunctionRegistry;
 import io.cml.pgcatalog.table.CharacterSets;
 import io.cml.pgcatalog.table.KeyColumnUsage;
 import io.cml.pgcatalog.table.PgAmTable;
@@ -49,22 +50,15 @@ import java.util.Map;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.cml.pgcatalog.function.PgFunctions.ARRAY_IN;
-import static io.cml.pgcatalog.function.PgFunctions.ARRAY_OUT;
-import static io.cml.pgcatalog.function.PgFunctions.ARRAY_RECV;
-import static io.cml.pgcatalog.function.PgFunctions.ARRAY_UPPER;
-import static io.cml.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
-import static io.cml.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
-import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
-import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
 import static java.util.Objects.requireNonNull;
 
 public class PgCatalogManager
 {
     private final Map<String, PgCatalogTable> tables;
-    private final List<PgFunction> functions;
 
     private final Metadata connector;
+
+    private final PgFunctionRegistry pgFunctionRegistry;
     private final PgCatalogTableBuilder pgCatalogTableBuilder;
     private final PgFunctionBuilder pgFunctionBuilder;
 
@@ -74,10 +68,10 @@ public class PgCatalogManager
     public PgCatalogManager(Metadata connector, PgCatalogTableBuilder pgCatalogTableBuilder, PgFunctionBuilder pgFunctionBuilder)
     {
         this.tables = initTables();
-        this.functions = initFunctions();
         this.connector = requireNonNull(connector, "connector is null");
         this.pgCatalogTableBuilder = requireNonNull(pgCatalogTableBuilder, "pgCatalogBuilder is null");
         this.pgFunctionBuilder = requireNonNull(pgFunctionBuilder, "pgFunctionBuilder is null");
+        this.pgFunctionRegistry = new PgFunctionRegistry();
     }
 
     private Map<String, PgCatalogTable> initTables()
@@ -103,20 +97,6 @@ public class PgCatalogManager
                 .put(ReferentialConstraints.NAME, new ReferentialConstraints())
                 .put(KeyColumnUsage.NAME, new KeyColumnUsage())
                 .put(TableConstraints.NAME, new TableConstraints())
-                .build();
-    }
-
-    private List<PgFunction> initFunctions()
-    {
-        return ImmutableList.<PgFunction>builder()
-                .add(CURRENT_DATABASE)
-                .add(CURRENT_SCHEMAS)
-                .add(PG_RELATION_SIZE__INT___BIGINT)
-                .add(PG_RELATION_SIZE__INT_VARCHAR___BIGINT)
-                .add(ARRAY_IN)
-                .add(ARRAY_OUT)
-                .add(ARRAY_RECV)
-                .add(ARRAY_UPPER)
                 .build();
     }
 
@@ -150,7 +130,7 @@ public class PgCatalogManager
 
     public void initPgFunctions()
     {
-        for (PgFunction pgFunction : functions) {
+        for (PgFunction pgFunction : pgFunctionRegistry.getPgFunctions()) {
             pgFunctionBuilder.createPgFunction(pgFunction);
         }
     }
@@ -170,20 +150,11 @@ public class PgCatalogManager
         }
 
         List<String> remoteFunctions = connector.listFunctionNames(PG_CATALOG_NAME);
-        if (functions.size() != remoteFunctions.size()) {
-            return false;
-        }
-
-        return true;
+        return pgFunctionRegistry.getPgFunctions().size() == remoteFunctions.size();
     }
 
     private void createPgCatalogTable(PgCatalogTable pgCatalogTable)
     {
         pgCatalogTableBuilder.createPgTable(pgCatalogTable);
-    }
-
-    public List<PgFunction> getFunctions()
-    {
-        return functions;
     }
 }

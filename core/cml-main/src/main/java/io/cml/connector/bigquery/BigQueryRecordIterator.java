@@ -85,6 +85,10 @@ public class BigQueryRecordIterator
 
     private Object getFieldValue(int index, FieldValue fieldValue)
     {
+        if (fieldValue.isNull()) {
+            return null;
+        }
+
         StandardSQLTypeName typeName = bqFields.get(index).getType().getStandardType();
         if (bqFields.get(index).getMode().equals(Field.Mode.REPEATED)) {
             return fieldValue.getRepeatedValue().stream()
