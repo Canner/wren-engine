@@ -150,11 +150,7 @@ public class PgCatalogManager
         }
 
         List<String> remoteFunctions = connector.listFunctionNames(PG_CATALOG_NAME);
-        if (pgFunctionRegistry.getPgFunctions().size() != remoteFunctions.size()) {
-            return false;
-        }
-
-        return true;
+        return pgFunctionRegistry.getPgFunctions().size() == remoteFunctions.size();
     }
 
     private void createPgCatalogTable(PgCatalogTable pgCatalogTable)

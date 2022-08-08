@@ -73,6 +73,7 @@ import java.util.stream.Collectors;
 import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
+import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.cml.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder;
 import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
@@ -127,6 +128,7 @@ public class BigQueryMetadata
 
     private List<SqlFunction> initBqFunctions()
     {
+        // bq native function is not case sensitive, so it is ok to this kind of SqlFunction ctor here.
         return ImmutableList.of(
                 new SqlFunction("generate_array",
                         SqlKind.OTHER_FUNCTION,
@@ -146,12 +148,17 @@ public class BigQueryMetadata
 
     private SqlFunction toCalciteSqlFunction(PgFunction pgFunction)
     {
-        return new SqlFunction(new SqlIdentifier("pg_catalog." + pgFunction.getRemoteName(), SqlParserPos.ZERO),
-                pgFunction.getReturnType().isPresent() ? ReturnTypes.explicit(toCalciteType(pgFunction.getReturnType().get())) : null,
+        return new SqlFunction(new SqlIdentifier(withPgCatalogPrefix(pgFunction.getRemoteName()), SqlParserPos.ZERO),
+                pgFunction.getReturnType().map(type -> ReturnTypes.explicit(toCalciteType(pgFunction.getReturnType().get()))).orElse(null),
                 null,
-                pgFunction.getArguments().isPresent() ? ONE_OR_MORE : null,
-                pgFunction.getArguments().isPresent() ? pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList()) : null,
+                pgFunction.getArguments().map(ignored -> ONE_OR_MORE).orElse(null),
+                pgFunction.getArguments().map(arguments -> pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList())).orElse(null),
                 SqlFunctionCategory.USER_DEFINED_FUNCTION);
+    }
+
+    private String withPgCatalogPrefix(String identifier)
+    {
+        return PG_CATALOG_NAME + "." + identifier;
     }
 
     private RelDataType toCalciteType(PGType<?> pgType)
@@ -274,7 +281,7 @@ public class BigQueryMetadata
             return functionName;
         }
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return "pg_catalog." + pgFunctionRegistry.getPgFunction(functionName).getRemoteName();
+        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(functionName).getRemoteName());
     }
 
     @Override

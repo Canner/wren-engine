@@ -190,8 +190,6 @@ public class QueryProcessor
         SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
-                // BigQuery's UDF name is case sensitivity. Because we define all pg function in lowercase,
-                // force all keywords is lowercase here.
                 SqlWriterConfig.of().withDialect(dialect));
         String result = sqlPrettyWriter.format(sqlNode);
         LOG.info("[Converted calcite dialect SQL]: %s", result);

@@ -15,7 +15,6 @@
 package io.cml.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.cml.spi.CmlException;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -42,8 +41,6 @@ public final class PgFunctionRegistry
     private final List<PgFunction> pgFunctions;
     private final Map<String, PgFunction> simpleNameToFunction = new HashMap<>();
 
-    private final Map<String, PgFunction> remoteNameToFunction;
-
     public PgFunctionRegistry()
     {
         pgFunctions = ImmutableList.<PgFunction>builder()
@@ -57,15 +54,10 @@ public final class PgFunctionRegistry
                 .add(ARRAY_UPPER)
                 .build();
 
-        ImmutableMap.Builder<String, PgFunction> remoteNameBuilder = ImmutableMap.builder();
-        pgFunctions.forEach(pgFunction -> {
-            // TODO: handle function name overloading
-            //  https://github.com/Canner/canner-metric-layer/issues/73
-            // use HashMap to handle multiple same key entries
-            simpleNameToFunction.put(pgFunction.getName(), pgFunction);
-            remoteNameBuilder.put(pgFunction.getRemoteName(), pgFunction);
-        });
-        remoteNameToFunction = remoteNameBuilder.build();
+        // TODO: handle function name overloading
+        //  https://github.com/Canner/canner-metric-layer/issues/73
+        // use HashMap to handle multiple same key entries
+        pgFunctions.forEach(pgFunction -> simpleNameToFunction.put(pgFunction.getName(), pgFunction));
     }
 
     public List<PgFunction> getPgFunctions()
@@ -75,11 +67,7 @@ public final class PgFunctionRegistry
 
     public PgFunction getPgFunction(String name)
     {
-        PgFunction candidate = simpleNameToFunction.get(name);
-        if (candidate == null) {
-            candidate = remoteNameToFunction.get(name);
-        }
-        return Optional.ofNullable(candidate)
+        return Optional.ofNullable(simpleNameToFunction.get(name))
                 .orElseThrow(() -> new CmlException(NOT_FOUND, format("%s is undefined", name)));
     }
 }
