@@ -58,7 +58,7 @@ public class TestFunctions
                 // {"select pg_relation_size(1)", null},
                 {"select pg_relation_size(1, 'abc')", null, false},
                 {"select current_schemas(false)", "test_function", true},
-                // TODO: fix current_databas()
+                // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
         };
