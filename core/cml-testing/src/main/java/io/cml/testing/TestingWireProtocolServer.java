@@ -14,6 +14,7 @@
 
 package io.cml.testing;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import com.google.common.net.HostAndPort;
@@ -65,7 +66,8 @@ public class TestingWireProtocolServer
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }
 
-    protected HostAndPort getHostAndPort()
+    @VisibleForTesting
+    public HostAndPort getHostAndPort()
     {
         return injector.getInstance(PostgresNetty.class).getHostAndPort();
     }
