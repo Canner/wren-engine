@@ -16,12 +16,13 @@ package io.cml.calcite;
 
 import io.trino.sql.tree.QualifiedName;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Analysis
 {
-    private final List<QualifiedName> visitedTables = new ArrayList<>();
+    private final Set<QualifiedName> visitedTables = new HashSet<>();
 
     public void addVisitedTable(QualifiedName tableName)
     {
@@ -30,6 +31,6 @@ public class Analysis
 
     public List<QualifiedName> getVisitedTables()
     {
-        return visitedTables;
+        return List.copyOf(visitedTables);
     }
 }
