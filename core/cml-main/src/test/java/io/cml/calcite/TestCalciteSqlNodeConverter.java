@@ -75,6 +75,7 @@ public class TestCalciteSqlNodeConverter
                         "   )  r USING (nspname)\n" +
                         ")  sp ON (sp.nspoid = typnamespace)"},
                 {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
+                {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"cannerflow-286003\".pg_catalog.pg_attribute a"},
         };
     }
 
