@@ -14,6 +14,7 @@
 
 package io.cml.pgcatalog.function;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import io.cml.spi.CmlException;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static io.cml.pgcatalog.function.PgFunctionRegistry.FunctionKey.functionKey;
 import static io.cml.pgcatalog.function.PgFunctions.ARRAY_IN;
 import static io.cml.pgcatalog.function.PgFunctions.ARRAY_OUT;
 import static io.cml.pgcatalog.function.PgFunctions.ARRAY_RECV;
@@ -41,7 +43,7 @@ import static java.lang.String.format;
 public final class PgFunctionRegistry
 {
     private final List<PgFunction> pgFunctions;
-    private final Map<String, PgFunction> simpleNameToFunction = new HashMap<>();
+    private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();
 
     public PgFunctionRegistry()
     {
@@ -61,7 +63,7 @@ public final class PgFunctionRegistry
         // TODO: handle function name overloading
         //  https://github.com/Canner/canner-metric-layer/issues/73
         // use HashMap to handle multiple same key entries
-        pgFunctions.forEach(pgFunction -> simpleNameToFunction.put(pgFunction.getName(), pgFunction));
+        pgFunctions.forEach(pgFunction -> simpleNameToFunction.put(functionKey(pgFunction.getName(), pgFunction.getArguments().map(List::size).orElse(0)), pgFunction));
     }
 
     public List<PgFunction> getPgFunctions()
@@ -69,9 +71,58 @@ public final class PgFunctionRegistry
         return pgFunctions;
     }
 
-    public PgFunction getPgFunction(String name)
+    public PgFunction getPgFunction(String name, int numArgument)
     {
-        return Optional.ofNullable(simpleNameToFunction.get(name))
+        return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, numArgument)))
                 .orElseThrow(() -> new CmlException(NOT_FOUND, format("%s is undefined", name)));
+    }
+
+    /**
+     * TODO: analyze the type of argument expression
+     *  https://github.com/Canner/canner-metric-layer/issues/92
+     * <p>
+     * We only support function overloading with different number of argument now. Because
+     * the work of analyze the type of argument is too huge to implement, FunctionKey only
+     * recognizes each function by its name and number of argument.
+     */
+    static class FunctionKey
+    {
+        public static FunctionKey functionKey(String name, int numArgument)
+        {
+            return new FunctionKey(name, numArgument);
+        }
+
+        private final String name;
+        private final int numArgument;
+
+        private FunctionKey(String name, int numArgument)
+        {
+            this.name = name;
+            this.numArgument = numArgument;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hashCode(name, numArgument);
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            FunctionKey that = (FunctionKey) o;
+            return numArgument == that.numArgument && Objects.equal(name, that.name);
+        }
     }
 }
