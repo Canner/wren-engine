@@ -53,17 +53,13 @@ public class TestFunctions
                 // TODO: handle function return type or argument type is array
                 //  https://github.com/Canner/canner-metric-layer/issues/76
                 // {"select array_out(array[1,2])", null, false},
-                // TODO: handle function name overloading mapping
-                //  https://github.com/Canner/canner-metric-layer/issues/73
-                // {"select pg_relation_size(1)", null},
+                {"select pg_relation_size(1)", null, false},
                 {"select pg_relation_size(1, 'abc')", null, false},
                 {"select current_schemas(false)", "test_function", true},
                 // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
-                // TODO: handle function name overloading mapping
-                //  https://github.com/Canner/canner-metric-layer/issues/73
-                // {"select pg_get_expr('test', 1)", null, false},
+                {"select pg_get_expr('test', 1)", "", false},
                 {"select pg_get_expr('test', 1, true)", "", false}
         };
     }
