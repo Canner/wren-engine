@@ -14,7 +14,6 @@
 
 package io.cml.pgcatalog.function;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import io.cml.spi.CmlException;
 
@@ -23,6 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static io.cml.pgcatalog.function.PgFunctionRegistry.FunctionKey.functionKey;
@@ -109,7 +109,7 @@ public final class PgFunctionRegistry
         @Override
         public int hashCode()
         {
-            return Objects.hashCode(name, numArgument);
+            return Objects.hash(name, numArgument);
         }
 
         @Override
@@ -122,7 +122,7 @@ public final class PgFunctionRegistry
                 return false;
             }
             FunctionKey that = (FunctionKey) o;
-            return numArgument == that.numArgument && Objects.equal(name, that.name);
+            return numArgument == that.numArgument && Objects.equals(name, that.name);
         }
     }
 }
