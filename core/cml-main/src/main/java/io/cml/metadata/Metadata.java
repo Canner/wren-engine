@@ -41,7 +41,7 @@ public interface Metadata
 
     List<String> listFunctionNames(String schemaName);
 
-    String resolveFunction(String functionName);
+    String resolveFunction(String functionName, int numArgument);
 
     SqlOperatorTable getCalciteOperatorTable();
 
