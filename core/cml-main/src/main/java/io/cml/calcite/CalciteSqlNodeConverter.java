@@ -80,6 +80,7 @@ import io.trino.sql.tree.Union;
 import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.WhenClause;
+import io.trino.sql.tree.WindowSpecification;
 import io.trino.sql.tree.WithQuery;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.sql.JoinConditionType;
@@ -103,6 +104,7 @@ import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlTypeNameSpec;
 import org.apache.calcite.sql.SqlUnresolvedFunction;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.fun.SqlCase;
@@ -155,6 +157,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_IN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_LIKE;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NULLIF;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OVER;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROW;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.UNION;
@@ -438,14 +441,32 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitFunctionCall(FunctionCall node, ConvertContext context)
         {
-            return new SqlBasicCall(
-                    new SqlUnresolvedFunction(new SqlIdentifier(metadata.resolveFunction(node.getName().toString(), node.getArguments().size()),
-                            toCalcitePos(node.getLocation())), null, null, null, null, SqlFunctionCategory.USER_DEFINED_FUNCTION),
+            SqlUnresolvedFunction function = new SqlUnresolvedFunction(new SqlIdentifier(metadata.resolveFunction(node.getName().toString(), node.getArguments().size()),
+                    toCalcitePos(node.getLocation())), null, null, null, null, SqlFunctionCategory.USER_DEFINED_FUNCTION);
+            if (node.getWindow().isPresent()) {
+                SqlBasicCall sqlBasicCall = new SqlBasicCall(function, visitNodes(node.getArguments()), toCalcitePos(node.getLocation()));
+                return new SqlBasicCall(OVER,
+                        List.of(sqlBasicCall, visitNode((Node) node.getWindow().get())), toCalcitePos(node.getLocation()));
+            }
+
+            return new SqlBasicCall(function,
                     !(node.getArguments().isEmpty() && "count".equalsIgnoreCase(node.getName().toString())) ?
                             visitNodes(node.getArguments()) :
                             ImmutableList.of(star(toCalcitePos(node.getLocation()))),
                     toCalcitePos(node.getLocation()),
                     node.isDistinct() ? SqlLiteral.createSymbol(SqlSelectKeyword.DISTINCT, toCalcitePos(node.getLocation())) : null);
+        }
+
+        @Override
+        protected SqlNode visitWindowSpecification(WindowSpecification node, ConvertContext context)
+        {
+            // TODO: https://github.com/Canner/canner-metric-layer/issues/94
+            //  support window function formally
+            return SqlWindow.create(null,
+                    null,
+                    SqlNodeList.of(ZERO, visitNodes(node.getPartitionBy())),
+                    node.getOrderBy().map(orderBy -> SqlNodeList.of(ZERO, visitNodes(orderBy.getSortItems()))).orElse(null),
+                    SqlLiteral.createBoolean(false, ZERO), null, null, null, toCalcitePos(node.getLocation()));
         }
 
         @Override

@@ -76,6 +76,8 @@ public class TestCalciteSqlNodeConverter
                         ")  sp ON (sp.nspoid = typnamespace)"},
                 {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
                 {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"cannerflow-286003\".pg_catalog.pg_attribute a"},
+                {"testRowNumber", "SELECT row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum ASC) attnum\n" +
+                        "FROM \"cannerflow-286003\".pg_catalog.pg_attribute a"}
         };
     }
 
