@@ -71,7 +71,7 @@ public class TestingMetadata
     }
 
     @Override
-    public String resolveFunction(String functionName)
+    public String resolveFunction(String functionName, int numArgument)
     {
         return functionName;
     }

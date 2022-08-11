@@ -272,7 +272,7 @@ public class BigQueryMetadata
     }
 
     @Override
-    public String resolveFunction(String functionName)
+    public String resolveFunction(String functionName, int numArgument)
     {
         // lookup calcite operator table and bigquery supported table
         if (SqlStdOperatorTable.instance().getOperatorList().stream()
@@ -281,7 +281,7 @@ public class BigQueryMetadata
             return functionName;
         }
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(functionName).getRemoteName());
+        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(functionName, numArgument).getRemoteName());
     }
 
     @Override

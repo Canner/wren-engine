@@ -439,7 +439,7 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitFunctionCall(FunctionCall node, ConvertContext context)
         {
             return new SqlBasicCall(
-                    new SqlUnresolvedFunction(new SqlIdentifier(metadata.resolveFunction(node.getName().toString()),
+                    new SqlUnresolvedFunction(new SqlIdentifier(metadata.resolveFunction(node.getName().toString(), node.getArguments().size()),
                             toCalcitePos(node.getLocation())), null, null, null, null, SqlFunctionCategory.USER_DEFINED_FUNCTION),
                     !(node.getArguments().isEmpty() && "count".equalsIgnoreCase(node.getName().toString())) ?
                             visitNodes(node.getArguments()) :
