@@ -61,6 +61,10 @@ public class TestFunctions
                 // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
+                // TODO: handle function name overloading mapping
+                //  https://github.com/Canner/canner-metric-layer/issues/73
+                // {"select pg_get_expr('test', 1)", null, false},
+                {"select pg_get_expr('test', 1, true)", "", false}
         };
     }
 

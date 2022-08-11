@@ -16,6 +16,8 @@ package io.cml.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 
+import java.util.List;
+
 import static io.cml.pgcatalog.function.PgFunction.Argument.argument;
 import static io.cml.pgcatalog.function.PgFunction.Language.SQL;
 import static io.cml.pgcatalog.function.PgFunction.builder;
@@ -95,5 +97,21 @@ public final class PgFunctions
             .setDefinition("SELECT CASE WHEN dim = 1 THEN array_length(input) ELSE NULL END")
             .setArguments(ImmutableList.of(argument("input", VARCHAR_ARRAY), argument("dim", BIGINT)))
             .setReturnType(INTEGER)
+            .build();
+
+    public static final PgFunction PG_GET_EXPR = builder()
+            .setName("pg_get_expr")
+            .setLanguage(SQL)
+            .setDefinition("SELECT ''")
+            .setArguments(List.of(argument("pg_node", VARCHAR), argument("relation", INTEGER)))
+            .setReturnType(VARCHAR)
+            .build();
+
+    public static final PgFunction PG_GET_EXPR_PRETTY = builder()
+            .setName("pg_get_expr")
+            .setLanguage(SQL)
+            .setDefinition("SELECT ''")
+            .setArguments(List.of(argument("pg_node", VARCHAR), argument("relation", INTEGER), argument("pretty", BOOLEAN)))
+            .setReturnType(VARCHAR)
             .build();
 }
