@@ -14,6 +14,8 @@
 
 package io.cml;
 
+import io.airlift.log.Logger;
+
 import java.security.SecureRandom;
 
 import static java.lang.Character.MAX_RADIX;
@@ -22,6 +24,7 @@ import static java.lang.Math.min;
 
 public class Utils
 {
+    private static final Logger LOG = Logger.get(Utils.class);
     private static final SecureRandom random = new SecureRandom();
     private static final int RANDOM_SUFFIX_LENGTH = 10;
 
@@ -31,5 +34,15 @@ public class Utils
     {
         String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
         return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
+    }
+
+    public static void swallowException(Runnable runnable)
+    {
+        try {
+            runnable.run();
+        }
+        catch (Exception ex) {
+            LOG.error(ex);
+        }
     }
 }

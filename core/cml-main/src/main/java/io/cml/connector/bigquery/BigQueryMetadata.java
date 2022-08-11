@@ -16,11 +16,13 @@ package io.cml.connector.bigquery;
 
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
+import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
+import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
@@ -28,6 +30,7 @@ import io.airlift.log.Logger;
 import io.cml.calcite.CalciteTypes;
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.calcite.CustomCharsetJavaTypeFactoryImpl;
+import io.cml.calcite.QueryProcessor;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
@@ -39,6 +42,7 @@ import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
+import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
@@ -70,7 +74,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
-import static com.google.cloud.bigquery.TableDefinition.Type.MATERIALIZED_VIEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
@@ -127,12 +130,21 @@ public class BigQueryMetadata
         this.calciteOperatorTable = initCalciteOperators();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
+
+        String mvSchema = getMaterializedViewSchema();
+        if (!listSchemas().contains(mvSchema)) {
+            createSchema(mvSchema);
+        }
     }
 
     private List<SqlFunction> initBqFunctions()
     {
-        // bq native function is not case sensitive, so it is ok to this kind of SqlFunction ctor here.
+        // bq native function is not case-sensitive, so it is ok to this kind of SqlFunction ctor here.
         return ImmutableList.of(
+                new SqlFunction("trunc",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.DECIMAL)),
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
                 new SqlFunction("generate_array",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)),
@@ -230,18 +242,43 @@ public class BigQueryMetadata
     }
 
     @Override
-    public List<MaterializedViewDefinition> listMaterializedViews(Optional<String> optSchemaName)
+    public void createMaterializedView(SchemaTableName schemaTableName, String pgSql)
     {
-        return optSchemaName.map(ImmutableList::of)
-                .orElse(ImmutableList.copyOf(listSchemas()))
-                .stream()
-                .map(schemaName -> Dataset.of(schemaName).getDatasetId())
-                .flatMap(schemaName -> Streams.stream(bigQueryClient.listTables(schemaName, MATERIALIZED_VIEW)))
-                .map(table -> bigQueryClient.getTable(table.getTableId())) // get mv info
+        try {
+            String bqSql = QueryProcessor.of(this).convert(pgSql, SessionContext.builder().enableMVReplacement(false).build());
+            bigQueryClient.query(format("CREATE TABLE %s AS %s", schemaTableName.toString(), bqSql), List.of());
+            bigQueryClient.updateTable(
+                    bigQueryClient.getTable(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))
+                            .toBuilder().setDescription(pgSql).build());
+        }
+        catch (Exception ex) {
+            try {
+                bigQueryClient.dropTable(schemaTableName);
+            }
+            catch (Exception ex2) {
+                LOG.error(ex2, "drop mv failed in createMaterializedView");
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public List<MaterializedViewDefinition> listMaterializedViews()
+    {
+        return Streams.stream(bigQueryClient.listTables(DatasetId.of(getMaterializedViewSchema())))
+                .map(table -> bigQueryClient.getTable(table.getTableId())) // get detailed table info
+                // Filter mv that was created, but not update desc yet. There are two steps in
+                // BigQueryMetadata#createMaterializedView. 1. Do CTAS query 2. Update mv sql in table desc.
+                // There is a gap between step1 & step2. If listMaterializedViews is triggered while mv are
+                // created right after step1 and start before step2. We will get mvs that don't contain sql in desc.
+                // Add null check `table != null` here since there might exist a case that when we listTables
+                // mv still exist, while when we iterate through table list to get detailed info, mv was deleted,
+                // and bigQueryClient getTable will return null (i.e. table not found)
+                .filter(table -> table != null && table.getDescription() != null)
                 .map(table -> new MaterializedViewDefinition(
                         new CatalogName(table.getTableId().getProject()),
                         new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()),
-                        ((com.google.cloud.bigquery.MaterializedViewDefinition) table.getDefinition()).getQuery(),
+                        table.getDescription(), // we store sql in table desc
                         table.getDefinition().getSchema().getFields().stream()
                                 .map(field ->
                                         ColumnMetadata.builder()
@@ -278,7 +315,7 @@ public class BigQueryMetadata
         // lookup calcite operator table and bigquery supported table
         if (SqlStdOperatorTable.instance().getOperatorList().stream()
                 .anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName)) ||
-                supportedBqFunction.stream().anyMatch(sqlFunction -> sqlFunction.getName().equals(functionName))) {
+                supportedBqFunction.stream().anyMatch(sqlFunction -> sqlFunction.getName().equalsIgnoreCase(functionName))) {
             return functionName;
         }
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.

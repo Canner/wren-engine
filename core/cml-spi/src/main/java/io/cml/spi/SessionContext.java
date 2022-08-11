@@ -23,11 +23,13 @@ public final class SessionContext
 
     private final String catalog;
     private final String schema;
+    private final boolean enableMVReplacement;
 
-    private SessionContext(String catalog, String schema)
+    private SessionContext(String catalog, String schema, boolean enableMVReplacement)
     {
         this.catalog = catalog;
         this.schema = schema;
+        this.enableMVReplacement = enableMVReplacement;
     }
 
     public String getCatalog()
@@ -40,10 +42,16 @@ public final class SessionContext
         return schema;
     }
 
+    public boolean enableMVReplacement()
+    {
+        return enableMVReplacement;
+    }
+
     public static class Builder
     {
         private String catalog;
         private String schema;
+        private boolean enableMVReplacement = true;
 
         public Builder setCatalog(String catalog)
         {
@@ -57,9 +65,15 @@ public final class SessionContext
             return this;
         }
 
+        public Builder enableMVReplacement(boolean enableMVReplacement)
+        {
+            this.enableMVReplacement = enableMVReplacement;
+            return this;
+        }
+
         public SessionContext build()
         {
-            return new SessionContext(catalog, schema);
+            return new SessionContext(catalog, schema, enableMVReplacement);
         }
     }
 }
