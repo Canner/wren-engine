@@ -55,6 +55,7 @@ import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NotExpression;
+import io.trino.sql.tree.NullIfExpression;
 import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.Parameter;
@@ -152,6 +153,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_IN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NOT_LIKE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.NULLIF;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.OR;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.PLUS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.ROW;
@@ -731,6 +733,16 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitArrayConstructor(ArrayConstructor node, ConvertContext context)
         {
             return new SqlBasicCall(ARRAY_VALUE_CONSTRUCTOR, visitNodes(node.getValues()), toCalcitePos(node.getLocation()));
+        }
+
+        @Override
+        protected SqlNode visitNullIfExpression(NullIfExpression node, ConvertContext context)
+        {
+            return new SqlBasicCall(
+                    new SqlUnresolvedFunction(new SqlIdentifier(NULLIF.getName(), ZERO),
+                            null, null, null, null,
+                            SqlFunctionCategory.USER_DEFINED_FUNCTION),
+                    List.of(visitNode(node.getFirst()), visitNode(node.getSecond())), toCalcitePos(node.getLocation()));
         }
 
         @Override
