@@ -106,7 +106,6 @@ public class BigQueryMetadata
             };
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
-    private final BigQueryConfig bigQueryConfig;
 
     private final PgFunctionRegistry pgFunctionRegistry = new PgFunctionRegistry();
 
@@ -116,14 +115,18 @@ public class BigQueryMetadata
 
     private final SqlOperatorTable calciteOperatorTable;
 
+    private final String location;
+
     @Inject
     public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig)
     {
         this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
-        this.bigQueryConfig = requireNonNull(bigQueryConfig, "bigQueryConfig is null");
+        requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, getRelDataTypeSystem());
         this.supportedBqFunction = initBqFunctions();
         this.calciteOperatorTable = initCalciteOperators();
+        this.location = bigQueryConfig.getLocation()
+                .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
     }
 
     private List<SqlFunction> initBqFunctions()
@@ -184,7 +187,7 @@ public class BigQueryMetadata
     @Override
     public void createSchema(String name)
     {
-        bigQueryClient.createSchema(DatasetInfo.newBuilder(name).setLocation(getLocation()).build());
+        bigQueryClient.createSchema(DatasetInfo.newBuilder(name).setLocation(location).build());
     }
 
     @Override
@@ -200,15 +203,9 @@ public class BigQueryMetadata
         //  Getting full dataset information is a heavy cost. It's better to find another way to list dataset by region.
         return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
                 .map(bigQueryClient::getDataSet)
-                .filter(dataset -> getLocation().equalsIgnoreCase(dataset.getLocation()))
+                .filter(dataset -> location.equalsIgnoreCase(dataset.getLocation()))
                 .map(dataset -> dataset.getDatasetId().getDataset())
                 .collect(toImmutableList());
-    }
-
-    private String getLocation()
-    {
-        return bigQueryConfig.getLocation()
-                .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
     }
 
     @Override
