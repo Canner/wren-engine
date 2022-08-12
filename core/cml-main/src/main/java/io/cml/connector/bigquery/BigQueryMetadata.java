@@ -184,7 +184,7 @@ public class BigQueryMetadata
     @Override
     public void createSchema(String name)
     {
-        bigQueryClient.createSchema(DatasetInfo.newBuilder(name).build());
+        bigQueryClient.createSchema(DatasetInfo.newBuilder(name).setLocation(getLocation()).build());
     }
 
     @Override
@@ -200,11 +200,15 @@ public class BigQueryMetadata
         //  Getting full dataset information is a heavy cost. It's better to find another way to list dataset by region.
         return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
                 .map(bigQueryClient::getDataSet)
-                .filter(dataset -> bigQueryConfig.getLocation()
-                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"))
-                        .equalsIgnoreCase(dataset.getLocation()))
+                .filter(dataset -> getLocation().equalsIgnoreCase(dataset.getLocation()))
                 .map(dataset -> dataset.getDatasetId().getDataset())
                 .collect(toImmutableList());
+    }
+
+    private String getLocation()
+    {
+        return bigQueryConfig.getLocation()
+                .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
     }
 
     @Override
