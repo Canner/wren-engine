@@ -27,7 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQueryClient
 {
-    @Test
+    // TODO: Remove/Refactor bigquery mv cache https://github.com/Canner/canner-metric-layer/issues/99
+    @Test(enabled = false)
     public void testCacheMV()
     {
         BigQueryClient client = bigQueryClient();
