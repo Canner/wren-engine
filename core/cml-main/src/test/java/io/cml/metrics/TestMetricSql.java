@@ -110,7 +110,7 @@ public class TestMetricSql
     {
         Metric metric = Metric.builder()
                 .setName("test")
-                .setSource("cannerflow-286003.tpch_tiny.orders")
+                .setSource("canner-cml.tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus", "o_shippriority"))

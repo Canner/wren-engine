@@ -10,7 +10,7 @@ select
 	avg(l_discount) as avg_disc,
 	count(*) as count_order
 from
-	"cannerflow-286003"."tpch_tiny"."lineitem"
+	"canner-cml"."tpch_tiny"."lineitem"
 where
 	l_shipdate <= date '1998-12-01'
 group by

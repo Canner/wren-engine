@@ -33,7 +33,7 @@ public class TestBigQueryClient
         BigQueryClient client = bigQueryClient();
         Table table = client.getTable(
                 new TableHandle(
-                        new CatalogName("cannerflow-286003"),
+                        new CatalogName("canner-cml"),
                         new SchemaTableName("canner_cube", "gby_rflag_lstatus_sdate")));
         assertThat(table).isNotNull();
         assertThat(client.getCacheMV(table.getTableId())).isEqualTo(table);
@@ -45,7 +45,7 @@ public class TestBigQueryClient
         config.setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .setParentProjectId(getenv("TEST_BIG_QUERY_PARENT_PROJECT_ID"))
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .setLocation("US");
+                .setLocation("asia-east1");
 
         return BigQueryConnectorModule.provideBigQuery(
                 config,

@@ -56,16 +56,16 @@ public class TestCalciteSqlNodeConverter
                         "  (typinput = 5004152699888335811) is_array\n" +
                         ", typtype\n" +
                         ", typname\n" +
-                        ", \"cannerflow-286003\".pg_catalog.pg_type.oid\n" +
+                        ", \"canner-cml\".pg_catalog.pg_type.oid\n" +
                         "FROM\n" +
-                        "  \"cannerflow-286003\".pg_catalog.pg_type\n" +
+                        "  \"canner-cml\".pg_catalog.pg_type\n" +
                         "LEFT JOIN (\n" +
                         "   SELECT\n" +
                         "     ns.oid nspoid\n" +
                         "   , nspname\n" +
                         "   , r.r\n" +
                         "   FROM\n" +
-                        "     \"cannerflow-286003\".pg_catalog.pg_namespace ns\n" +
+                        "     \"canner-cml\".pg_catalog.pg_namespace ns\n" +
                         "   INNER JOIN (\n" +
                         "      SELECT\n" +
                         "        s.r\n" +
@@ -75,9 +75,9 @@ public class TestCalciteSqlNodeConverter
                         "   )  r USING (nspname)\n" +
                         ")  sp ON (sp.nspoid = typnamespace)"},
                 {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
-                {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"cannerflow-286003\".pg_catalog.pg_attribute a"},
+                {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"canner-cml\".pg_catalog.pg_attribute a"},
                 {"testRowNumber", "SELECT row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum ASC) attnum\n" +
-                        "FROM \"cannerflow-286003\".pg_catalog.pg_attribute a"}
+                        "FROM \"canner-cml\".pg_catalog.pg_attribute a"}
         };
     }
 

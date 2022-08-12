@@ -51,7 +51,7 @@ public class TestBigQuery
         config.setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .setParentProjectId(getenv("TEST_BIG_QUERY_PARENT_PROJECT_ID"))
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .setLocation("US");
+                .setLocation("asia-east1");
 
         bigQueryClient = BigQueryConnectorModule.provideBigQuery(
                 config,
@@ -69,7 +69,7 @@ public class TestBigQuery
         TableId tableId = TableId.of("cml_temp", tableName);
         TableDefinition tableDefinition = MaterializedViewDefinition.of(
                 "SELECT o_custkey, COUNT(*) as cnt\n" +
-                        "FROM cannerflow-286003.tpch_tiny.orders\n" +
+                        "FROM canner-cml.tpch_tiny.orders\n" +
                         "GROUP BY o_custkey");
         TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
 
@@ -78,10 +78,10 @@ public class TestBigQuery
 
             String output = bigQuerySqlConverter.convert(
                     "SELECT o_custkey, COUNT(*) as cnt\n" +
-                            "FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\"\n" +
+                            "FROM \"canner-cml\".\"tpch_tiny\".\"orders\"\n" +
                             "GROUP BY o_custkey", SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
-                    "FROM `cannerflow-286003`.cml_temp." + tableName);
+                    "FROM `canner-cml`.cml_temp." + tableName);
         }
         finally {
             bigQueryClient.dropTable(tableId);
@@ -93,10 +93,10 @@ public class TestBigQuery
     {
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT o_custkey, COUNT(*) AS cnt\n" +
-                        "FROM \"cannerflow-286003\".\"tpch_tiny\".\"orders\"\n" +
+                        "FROM \"canner-cml\".\"tpch_tiny\".\"orders\"\n" +
                         "GROUP BY 1", SessionContext.builder().build()))
                 .isEqualTo("SELECT o_custkey, COUNT(*) AS cnt\n" +
-                        "FROM `cannerflow-286003`.tpch_tiny.orders\n" +
+                        "FROM `canner-cml`.tpch_tiny.orders\n" +
                         "GROUP BY o_custkey");
     }
 
@@ -106,15 +106,15 @@ public class TestBigQuery
     {
         String tableName = "mv_case_sensitive" + randomTableSuffix();
         TableId tableId = TableId.of("cml_temp", tableName);
-        TableDefinition tableDefinition = MaterializedViewDefinition.of("SELECT b FROM cannerflow-286003.cml_temp.CANNER WHERE b = '1'");
+        TableDefinition tableDefinition = MaterializedViewDefinition.of("SELECT b FROM canner-cml.cml_temp.CANNER WHERE b = '1'");
         TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
 
         try {
             bigQueryClient.createTable(tableInfo);
             String output = bigQuerySqlConverter.convert(
-                    "SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\" WHERE b = '1'", SessionContext.builder().build());
+                    "SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\" WHERE b = '1'", SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT *\n" +
-                    "FROM `cannerflow-286003`.cml_temp." + tableName);
+                    "FROM `canner-cml`.cml_temp." + tableName);
         }
         finally {
             bigQueryClient.dropTable(tableId);
@@ -124,12 +124,12 @@ public class TestBigQuery
     @Test
     public void testCaseSensitive()
     {
-        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"cannerflow-286003\".\"cml_temp\".\"canner\"", SessionContext.builder().build()))
+        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"canner-cml\".\"cml_temp\".\"canner\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT a\n" +
-                        "FROM `cannerflow-286003`.cml_temp.canner");
-        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"cannerflow-286003\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
+                        "FROM `canner-cml`.cml_temp.canner");
+        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT b\n" +
-                        "FROM `cannerflow-286003`.cml_temp.CANNER");
+                        "FROM `canner-cml`.cml_temp.CANNER");
     }
 
     @Test
@@ -137,7 +137,7 @@ public class TestBigQuery
     {
         Metric metric = Metric.builder()
                 .setName("metric")
-                .setSource("cannerflow-286003.tpch_tiny.orders")
+                .setSource("canner-cml.tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus"))
