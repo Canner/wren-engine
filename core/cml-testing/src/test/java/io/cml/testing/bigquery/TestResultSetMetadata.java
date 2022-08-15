@@ -54,7 +54,7 @@ public class TestResultSetMetadata
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "US")
+                                .put("bigquery.location", "asia-east1")
                                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                                 .build())
                 .build();

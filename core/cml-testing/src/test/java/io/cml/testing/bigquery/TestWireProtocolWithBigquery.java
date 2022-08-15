@@ -60,7 +60,7 @@ public class TestWireProtocolWithBigquery
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "US")
+                                .put("bigquery.location", "asia-east1")
                                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                                 .build())
                 .build();
@@ -832,11 +832,11 @@ public class TestWireProtocolWithBigquery
                         "  t.typname\n" +
                         ", t.oid\n" +
                         "FROM\n" +
-                        "  (\"cannerflow-286003\".pg_catalog.pg_type t\n" +
-                        "INNER JOIN \"cannerflow-286003\".pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
+                        "  (\"canner-cml\".pg_catalog.pg_type t\n" +
+                        "INNER JOIN \"canner-cml\".pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
                         "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (SELECT (c.relkind = 'c') \"?column?\"\n" +
                         "FROM\n" +
-                        "  \"cannerflow-286003\".pg_catalog.pg_class c\n" +
+                        "  \"canner-cml\".pg_catalog.pg_class c\n" +
                         "WHERE (c.oid = t.typrelid)\n" +
                         ")))"},
                 {"SELECT 1, 2, 3"}

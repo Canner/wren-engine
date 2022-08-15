@@ -38,7 +38,7 @@ public class TestFunctions
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "US")
+                                .put("bigquery.location", "asia-east1")
                                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                                 .build())
                 .build();
@@ -55,7 +55,7 @@ public class TestFunctions
                 // {"select array_out(array[1,2])", null, false},
                 {"select pg_relation_size(1)", null, false},
                 {"select pg_relation_size(1, 'abc')", null, false},
-                {"select current_schemas(false)", "test_function", true},
+                {"select current_schemas(false)", "pg_catalog", true},
                 // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
