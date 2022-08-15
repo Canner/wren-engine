@@ -36,7 +36,7 @@ public class PgAttributeTable
     protected TableMetadata createMetadata()
     {
         return table(NAME)
-                .column("attrelid", INTEGER, "${hash}(${columnName})")
+                .column("attrelid", INTEGER, "${hash}(${tableName})")
                 .column("attname", VARCHAR, "${columnName}")
                 .column("atttypid", INTEGER, "${typeOid}")
                 .column("attstattarget", INTEGER, "0")
