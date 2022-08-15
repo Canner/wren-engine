@@ -28,9 +28,11 @@ import java.util.stream.IntStream;
 
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+import static io.cml.pgcatalog.builder.BigQueryUtils.buildPgCatalogTableView;
 import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
 import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllTable;
-import static io.cml.pgcatalog.builder.BigQueryUtils.getOidToBqType;
+import static io.cml.pgcatalog.builder.BigQueryUtils.createPgTypeMapping;
+import static io.cml.pgcatalog.builder.BigQueryUtils.getPgTypeToBqType;
 import static io.cml.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
 import static io.cml.spi.type.CharType.CHAR;
 import static io.cml.spi.type.RegprocType.REGPROC;
@@ -65,9 +67,9 @@ public final class BigQueryPgCatalogTableBuilder
     }
 
     @Override
-    protected Map<Integer, String> initOidToTypeMap()
+    protected Map<PGType<?>, String> initPgTypeToTypeMap()
     {
-        return getOidToBqType();
+        return getPgTypeToBqType();
     }
 
     @Override
@@ -87,7 +89,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgType(PgCatalogTable pgCatalogTable)
     {
-        List<Object[]> typeRecords = generatePgTypeRecords(pgCatalogTable, getOidToTypeMap());
+        List<Object[]> typeRecords = generatePgTypeRecords(pgCatalogTable);
         List<ColumnMetadata> columnMetadata = pgCatalogTable.getTableMetadata().getColumns();
 
         StringBuilder recordBuilder = new StringBuilder();
@@ -112,6 +114,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgAttributeTable(PgCatalogTable pgCatalogTable)
     {
+        getMetadata().directDDL(createPgTypeMapping());
         getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
@@ -270,17 +273,11 @@ public final class BigQueryPgCatalogTableBuilder
         for (ColumnMetadata columnMetadata : columnMetadatas) {
             metadataBuilder.append(columnMetadata.getName())
                     .append(" ")
-                    .append(getOidToTypeMap().get(columnMetadata.getType().oid()))
+                    .append(getPgTypeToTypeMap().get(columnMetadata.getType()))
                     .append(",");
         }
         metadataBuilder.setLength(metadataBuilder.length() - 1);
         return metadataBuilder.toString();
-    }
-
-    private String buildPgCatalogTableView(String catalogName, String viewName, String columnDefinition, String records, boolean isEmpty)
-    {
-        String viewDefinition = format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT * FROM UNNEST([STRUCT<%s> %s])", catalogName, viewName, columnDefinition, records);
-        return isEmpty ? viewDefinition + " LIMIT 0;" : viewDefinition + ";";
     }
 
     private String buildEmptyValue(int size)
