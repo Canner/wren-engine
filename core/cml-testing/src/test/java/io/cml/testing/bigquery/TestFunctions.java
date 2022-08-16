@@ -61,7 +61,10 @@ public class TestFunctions
                 // {"select current_database()", "", false}
                 {"select pg_get_expr('test', 1)", "", false},
                 {"select pg_get_expr('test', 1, true)", "", false},
-                {"select trunc(1.1)", "1.0", false}
+                {"select trunc(1.1)", "1.0", false},
+                {"select format_type(null, 1)", null, false},
+                {"select format_type(1000, 1)", "_bool", false},
+                {"select format_type(0, 1)", "???", false},
         };
     }
 

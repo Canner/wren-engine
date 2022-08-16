@@ -32,6 +32,7 @@ import static io.cml.pgcatalog.function.PgFunctions.ARRAY_RECV;
 import static io.cml.pgcatalog.function.PgFunctions.ARRAY_UPPER;
 import static io.cml.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
 import static io.cml.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
+import static io.cml.pgcatalog.function.PgFunctions.FORMAT_TYPE;
 import static io.cml.pgcatalog.function.PgFunctions.PG_GET_EXPR;
 import static io.cml.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY;
 import static io.cml.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
@@ -58,6 +59,7 @@ public final class PgFunctionRegistry
                 .add(ARRAY_UPPER)
                 .add(PG_GET_EXPR)
                 .add(PG_GET_EXPR_PRETTY)
+                .add(FORMAT_TYPE)
                 .build();
 
         // TODO: handle function name overloading

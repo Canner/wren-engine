@@ -114,4 +114,13 @@ public final class PgFunctions
             .setArguments(List.of(argument("pg_node", VARCHAR), argument("relation", INTEGER), argument("pretty", BOOLEAN)))
             .setReturnType(VARCHAR)
             .build();
+
+    public static final PgFunction FORMAT_TYPE = builder()
+            .setName("format_type")
+            .setLanguage(SQL)
+            .setDefinition("SELECT CASE WHEN type IS NULL THEN null ELSE CASE WHEN ARRAY_LENGTH(typresult) = 0 THEN '???' ELSE typresult[ordinal(1)] END END " +
+                    "FROM (SELECT array(SELECT typname FROM pg_catalog.pg_type WHERE oid = type) as typresult)")
+            .setArguments(List.of(argument("type", INTEGER), argument("typmod", INTEGER)))
+            .setReturnType(VARCHAR)
+            .build();
 }
