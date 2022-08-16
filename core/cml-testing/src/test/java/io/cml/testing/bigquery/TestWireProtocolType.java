@@ -45,7 +45,9 @@ import static io.cml.testing.DataType.dataType;
 import static io.cml.testing.DataType.decimalDataType;
 import static io.cml.testing.DataType.doubleDataType;
 import static io.cml.testing.DataType.integerDataType;
+import static io.cml.testing.DataType.nameDataType;
 import static io.cml.testing.DataType.realDataType;
+import static io.cml.testing.DataType.textDataType;
 import static io.cml.testing.DataType.varcharDataType;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
@@ -126,7 +128,9 @@ public class TestWireProtocolType
                 .addInput(varcharDataType(255), "text_b")
                 .addInput(varcharDataType(65535), "text_d")
                 .addInput(varcharDataType(10485760), "text_f")
-                .addInput(varcharDataType(), "unbounded");
+                .addInput(varcharDataType(), "unbounded")
+                .addInput(textDataType(), "cml_text")
+                .addInput(nameDataType(), "cml_name");
     }
 
     @Test
