@@ -40,6 +40,7 @@ import io.airlift.log.Logger;
 import io.cml.metadata.TableHandle;
 import io.cml.spi.CmlException;
 import io.cml.spi.Parameter;
+import io.cml.spi.metadata.SchemaTableName;
 
 import java.time.Duration;
 import java.util.List;
@@ -50,6 +51,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.spi.metadata.StandardErrorCode.AMBIGUOUS_NAME;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -132,6 +134,11 @@ public class BigQueryClient
         return table;
     }
 
+    public void updateTable(TableInfo tableInfo)
+    {
+        bigQuery.update(tableInfo);
+    }
+
     public Table getCacheMV(TableId tableId)
     {
         return mvCache.getIfPresent(tableId);
@@ -186,13 +193,10 @@ public class BigQueryClient
         }
     }
 
-    public void createTable(TableInfo tableInfo)
+    public void dropTable(SchemaTableName schemaTableName)
     {
-        bigQuery.create(tableInfo);
-    }
-
-    public void dropTable(TableId tableId)
-    {
-        bigQuery.delete(tableId);
+        if (!bigQuery.delete(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))) {
+            throw new CmlException(NOT_FOUND, schemaTableName + " was not found");
+        }
     }
 }

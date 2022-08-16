@@ -22,6 +22,7 @@ import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.MaterializedViewDefinition;
+import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -59,7 +60,13 @@ public class TestingMetadata
     }
 
     @Override
-    public List<MaterializedViewDefinition> listMaterializedViews(Optional<String> schemaName)
+    public void createMaterializedView(SchemaTableName schemaTableName, String sql)
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+    }
+
+    @Override
+    public List<MaterializedViewDefinition> listMaterializedViews()
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

@@ -60,7 +60,8 @@ public class TestFunctions
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
                 {"select pg_get_expr('test', 1)", "", false},
-                {"select pg_get_expr('test', 1, true)", "", false}
+                {"select pg_get_expr('test', 1, true)", "", false},
+                {"select trunc(1.1)", "1.0", false}
         };
     }
 

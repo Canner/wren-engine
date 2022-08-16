@@ -95,8 +95,8 @@ public class TestMetricSql
                 .setFilters(List.of(new Metric.Filter("c1", GREATER_THAN, "2"), new Metric.Filter("c1", LESS_THAN, "10")))
                 .build();
 
-        assertThat(metricSql.sql("schema")).isEqualTo(
-                "CREATE TABLE schema." + metricSql.name() + " AS SELECT dim1,dim2," +
+        assertThat(metricSql.sql()).isEqualTo(
+                "SELECT dim1,dim2," +
                         "CAST(TRUNC(EXTRACT(YEAR FROM ts1)) AS INTEGER) AS _col1, " +
                         "CAST(TRUNC(EXTRACT(MONTH FROM ts1)) AS INTEGER) AS _col2, " +
                         "COUNT(*) AS _col3 " +

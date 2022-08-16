@@ -14,10 +14,6 @@
 
 package io.cml;
 
-import com.google.cloud.bigquery.MaterializedViewDefinition;
-import com.google.cloud.bigquery.TableDefinition;
-import com.google.cloud.bigquery.TableId;
-import com.google.cloud.bigquery.TableInfo;
 import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryMetadata;
@@ -26,22 +22,23 @@ import io.cml.metrics.Metric;
 import io.cml.metrics.MetricSql;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.spi.SessionContext;
+import io.cml.spi.metadata.SchemaTableName;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static io.cml.Utils.randomTableSuffix;
+import static io.cml.Utils.swallowException;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestBigQuery
 {
     private BigQueryClient bigQueryClient;
+    private BigQueryMetadata bigQueryMetadata;
     private BigQuerySqlConverter bigQuerySqlConverter;
 
     @BeforeClass
@@ -58,33 +55,28 @@ public class TestBigQuery
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
+        bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
     }
 
     @Test
     public void testBigQueryMVReplace()
     {
-        String tableName = "mv_orders_group_by" + randomTableSuffix();
-        TableId tableId = TableId.of("cml_temp", tableName);
-        TableDefinition tableDefinition = MaterializedViewDefinition.of(
-                "SELECT o_custkey, COUNT(*) as cnt\n" +
-                        "FROM canner-cml.tpch_tiny.orders\n" +
-                        "GROUP BY o_custkey");
-        TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+        SchemaTableName schemaTableName = new SchemaTableName(
+                bigQueryMetadata.getMaterializedViewSchema(), "mv_orders_group_by" + randomTableSuffix());
 
+        String sql = "SELECT o_custkey, COUNT(*) as cnt\n" +
+                "FROM \"canner-cml\".tpch_tiny.orders\n" +
+                "GROUP BY o_custkey";
         try {
-            bigQueryClient.createTable(tableInfo);
+            bigQueryMetadata.createMaterializedView(schemaTableName, sql);
 
-            String output = bigQuerySqlConverter.convert(
-                    "SELECT o_custkey, COUNT(*) as cnt\n" +
-                            "FROM \"canner-cml\".\"tpch_tiny\".\"orders\"\n" +
-                            "GROUP BY o_custkey", SessionContext.builder().build());
+            String output = bigQuerySqlConverter.convert(sql, SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
-                    "FROM `canner-cml`.cml_temp." + tableName);
+                    "FROM `canner-cml`." + schemaTableName);
         }
         finally {
-            bigQueryClient.dropTable(tableId);
+            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
         }
     }
 
@@ -104,20 +96,18 @@ public class TestBigQuery
     @Test
     public void testBigQueryCaseSensitiveMVReplace()
     {
-        String tableName = "mv_case_sensitive" + randomTableSuffix();
-        TableId tableId = TableId.of("cml_temp", tableName);
-        TableDefinition tableDefinition = MaterializedViewDefinition.of("SELECT b FROM canner-cml.cml_temp.CANNER WHERE b = '1'");
-        TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+        SchemaTableName schemaTableName = new SchemaTableName(
+                bigQueryMetadata.getMaterializedViewSchema(), "mv_case_sensitive" + randomTableSuffix());
 
+        String sql = "SELECT b FROM \"canner-cml\".cml_temp.CANNER WHERE b = '1'";
         try {
-            bigQueryClient.createTable(tableInfo);
-            String output = bigQuerySqlConverter.convert(
-                    "SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\" WHERE b = '1'", SessionContext.builder().build());
+            bigQueryMetadata.createMaterializedView(schemaTableName, sql);
+            String output = bigQuerySqlConverter.convert(sql, SessionContext.builder().build());
             assertThat(output).isEqualTo("SELECT *\n" +
-                    "FROM `canner-cml`.cml_temp." + tableName);
+                    "FROM `canner-cml`." + schemaTableName);
         }
         finally {
-            bigQueryClient.dropTable(tableId);
+            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
         }
     }
 
@@ -133,11 +123,12 @@ public class TestBigQuery
     }
 
     @Test
-    public void testCreateMetricTable()
+    public void testMetricSql()
     {
         Metric metric = Metric.builder()
                 .setName("metric")
-                .setSource("canner-cml.tpch_tiny.orders")
+                // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
+                .setSource("\"canner-cml\".tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus"))
@@ -150,7 +141,24 @@ public class TestBigQuery
         assertThat(metricSqls.size()).isEqualTo(1);
         MetricSql metricSql = metricSqls.get(0);
 
-        assertThatCode(() -> bigQueryClient.queryDryRun(Optional.of("cml_temp"), metricSql.sql("cml_temp"), List.of()))
-                .doesNotThrowAnyException();
+        SchemaTableName schemaTableName = new SchemaTableName(bigQueryMetadata.getMaterializedViewSchema(), metricSql.name());
+
+        try {
+            bigQueryMetadata.createMaterializedView(schemaTableName, metricSql.sql());
+            assertThat(bigQuerySqlConverter.convert(
+                    "SELECT\n" +
+                            "o_orderstatus,\n" +
+                            "CAST(TRUNC(EXTRACT(YEAR FROM o_orderdate)) AS INTEGER) AS _col1,\n" +
+                            "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
+                            "AVG(o_totalprice) AS _col3\n" +
+                            "FROM \"canner-cml\".tpch_tiny.orders\n" +
+                            "WHERE o_orderkey > 1\n" +
+                            "GROUP BY 1, 2, 3", SessionContext.builder().build()))
+                    .isEqualTo("SELECT o_orderstatus, CAST(`_col1` AS INT64) AS `_col1`, CAST(`_col2` AS INT64) AS `_col2`, `_col3`\n" +
+                            "FROM `canner-cml`." + schemaTableName);
+        }
+        finally {
+            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
+        }
     }
 }

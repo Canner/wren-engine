@@ -17,7 +17,9 @@ import io.cml.calcite.CmlSchemaUtil;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
+import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.MaterializedViewDefinition;
+import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -37,7 +39,33 @@ public interface Metadata
 
     List<TableMetadata> listTables(String schemaName);
 
-    List<MaterializedViewDefinition> listMaterializedViews(Optional<String> schemaName);
+    /**
+     * Create mv by using pg syntax sql, each connector should
+     * convert pg syntax sql to connector-compatible sql by using
+     * {@link io.cml.calcite.QueryProcessor#convert(String, SessionContext)}
+     * before create mv.
+     * <p>
+     * All mvs in canner-metric-layer should be placed under {@link Metadata#getMaterializedViewSchema}
+     * and use TABLE to create mv instead of using MATERIALIZED VIEW since in bq/snowflake
+     * there are many limitation in mv.
+     * <p>
+     * More info, see:
+     * <li><a href=https://cloud.google.com/bigquery/docs/materialized-views-intro#limitations>bigquery mv limitations</a></li>
+     * <li><a href=https://docs.snowflake.com/en/user-guide/views-materialized.html#limitations-on-creating-materialized-views>snowflake mv limitations</a></li>
+     *
+     * @param schemaTableName the table name we want to create
+     * @param sql mv sql that follow pg syntax
+     */
+    void createMaterializedView(SchemaTableName schemaTableName, String sql);
+
+    /**
+     * List all MVs, note that mv here is not the same as bigquery/snowflake mv,
+     * mv here is so-called "metric" which is backed by table, and all these mvs will
+     * be placed under {@link #getMaterializedViewSchema()}.
+     *
+     * @return list of MaterializedViewDefinition
+     */
+    List<MaterializedViewDefinition> listMaterializedViews();
 
     List<String> listFunctionNames(String schemaName);
 
@@ -62,4 +90,9 @@ public interface Metadata
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
     List<Column> describeQuery(String sql, List<Parameter> parameters);
+
+    default String getMaterializedViewSchema()
+    {
+        return "cml_mvs";
+    }
 }

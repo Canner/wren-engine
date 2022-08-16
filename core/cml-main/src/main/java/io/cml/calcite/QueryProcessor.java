@@ -14,8 +14,7 @@
 
 package io.cml.calcite;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.base.Joiner;
 import io.airlift.log.Logger;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
@@ -28,10 +27,8 @@ import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
-import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
-import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -51,17 +48,12 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.sql.SqlIdentifier;
-import org.apache.calcite.sql.SqlJoin;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlWriterConfig;
-import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.pretty.SqlPrettyWriter;
 import org.apache.calcite.sql.util.SqlOperatorTables;
@@ -75,13 +67,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.cml.common.Utils.wrapException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
@@ -125,6 +114,95 @@ public class QueryProcessor
 
     public String convert(String sql, SessionContext sessionContext)
     {
+        if (sessionContext.enableMVReplacement()) {
+            for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews()) {
+                try {
+                    planner.addMaterialization(getMvRel(mvDef, sessionContext));
+                }
+                catch (Exception ex) {
+                    LOG.error(ex, "planner add mv failed, name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
+                }
+            }
+        }
+
+        planner.setRoot(convertSqlToRelNode(sql, sessionContext).getRelNode());
+        // Start the optimization process to obtain the most efficient plan based on the
+        // provided rule set.
+        RelNode bestExp = planner.findBestExp();
+
+        LOG.info(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
+                SqlExplainLevel.NON_COST_ATTRIBUTES));
+
+        RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect);
+        SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
+
+        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
+                SqlWriterConfig.of().withDialect(dialect));
+        String result = sqlPrettyWriter.format(sqlNode);
+        LOG.info("[Converted calcite dialect SQL]: %s", result);
+        return result;
+    }
+
+    private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
+    {
+        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getCatalog(), sessionContext.getSchema());
+        Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
+        return metadata.getTableSchema(tableHandle.get());
+    }
+
+    private static RelOptCluster newCluster(RelDataTypeFactory factory)
+    {
+        RelOptPlanner planner = new VolcanoPlanner();
+        planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+        return RelOptCluster.create(planner, new RexBuilder(factory));
+    }
+
+    private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef, SessionContext sessionContext)
+    {
+        QueryContext queryContext = convertSqlToRelNode(mvDef.getOriginalSql(), sessionContext, List.of(toTableSchema(mvDef)));
+        List<String> mvName = List.of(
+                mvDef.getCatalogName().getCatalogName(),
+                mvDef.getSchemaTableName().getSchemaName(),
+                mvDef.getSchemaTableName().getTableName());
+        String mvNameStr = Joiner.on(",").join(mvName);
+        RelOptTable relOptTable = requireNonNull(queryContext.getCatalogReader().getTable(mvName), mvNameStr + " not found in catalogReader");
+        RelNode queryRel = queryContext.getRelNode();
+
+        LOG.info(RelOptUtil.dumpPlan("[MV " + mvNameStr + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
+                SqlExplainLevel.NON_COST_ATTRIBUTES));
+
+        return new RelOptMaterialization(
+                castNonNull(queryContext.getSqlToRelConverter().toRel(relOptTable, List.of())),
+                castNonNull(queryRel),
+                null,
+                mvName);
+    }
+
+    private static TableSchema toTableSchema(MaterializedViewDefinition mvDef)
+    {
+        return new TableSchema(
+                mvDef.getCatalogName(),
+                new ConnectorTableSchema(
+                        mvDef.getSchemaTableName(),
+                        mvDef.getColumns().stream()
+                                .map(columnMetadata ->
+                                        ColumnSchema.builder()
+                                                .setName(columnMetadata.getName())
+                                                .setType(columnMetadata.getType())
+                                                .setHidden(false)
+                                                .build())
+                                .collect(toImmutableList())));
+    }
+
+    private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
+
+    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext)
+    {
+        return convertSqlToRelNode(sql, sessionContext, List.of());
+    }
+
+    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext, List<TableSchema> extraTables)
+    {
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
@@ -133,10 +211,10 @@ public class QueryProcessor
 
         List<TableSchema> visitedTable = analysis.getVisitedTables()
                 .stream().map(name -> toTableSchema(name, sessionContext))
-                .collect(Collectors.toList());
+                .collect(toImmutableList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(CmlSchemaUtil.schemaPlus(visitedTable, metadata)),
+                CalciteSchema.from(CmlSchemaUtil.schemaPlus(Stream.of(visitedTable, extraTables).flatMap(Collection::stream).collect(Collectors.toList()), metadata)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);
@@ -169,192 +247,35 @@ public class QueryProcessor
         LOG.info(RelOptUtil.dumpPlan("[Decorrelated Logical plan]", decorrelated, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
-        for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews(Optional.empty())) {
-            try {
-                planner.addMaterialization(getMvRel(mvDef, sessionContext));
-            }
-            catch (Exception ex) {
-                LOG.error(ex, "planner add mv failed name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
-            }
+        return new QueryContext(catalogReader, relConverter, decorrelated);
+    }
+
+    private static class QueryContext
+    {
+        private final Prepare.CatalogReader catalogReader;
+        private final SqlToRelConverter sqlToRelConverter;
+        private final RelNode relNode;
+
+        private QueryContext(Prepare.CatalogReader catalogReader, SqlToRelConverter sqlToRelConverter, RelNode relNode)
+        {
+            this.catalogReader = requireNonNull(catalogReader, "catalogReader is null");
+            this.sqlToRelConverter = requireNonNull(sqlToRelConverter, "sqlToRelConverter is null");
+            this.relNode = requireNonNull(relNode, "relNode is null");
         }
 
-        planner.setRoot(decorrelated);
-        // Start the optimization process to obtain the most efficient plan based on the
-        // provided rule set.
-        RelNode bestExp = planner.findBestExp();
-
-        LOG.info(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
-                SqlExplainLevel.NON_COST_ATTRIBUTES));
-
-        RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect);
-        SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
-
-        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
-                SqlWriterConfig.of().withDialect(dialect));
-        String result = sqlPrettyWriter.format(sqlNode);
-        LOG.info("[Converted calcite dialect SQL]: %s", result);
-        return result;
-    }
-
-    private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
-    {
-        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getCatalog(), sessionContext.getSchema());
-        Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
-        return metadata.getTableSchema(tableHandle.get());
-    }
-
-    private static RelOptCluster newCluster(RelDataTypeFactory factory)
-    {
-        RelOptPlanner planner = new VolcanoPlanner();
-        planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-        return RelOptCluster.create(planner, new RexBuilder(factory));
-    }
-
-    // We use calcite sql parser in MV since bigquery use backtick as identifier quote character
-    // and BigQuery will keep unquoted identifier unchanged while pg will do lowercase.
-    // And these two issues could be solved by using calcite sql parser.
-    private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef, SessionContext sessionContext)
-    {
-        org.apache.calcite.sql.parser.SqlParser calciteParser =
-                org.apache.calcite.sql.parser.SqlParser.create(
-                        mvDef.getOriginalSql(),
-                        BigQuerySqlDialect.DEFAULT.configureParser(
-                                // Calcite BigQuery dialect won't quote all identifiers unless it contains reserved character, unlike Trino,
-                                // Postgresql, BigQuery will keep unquoted identifiers UNCHANGED.
-                                // e.g. SELECT * FROM Abc, BigQuery will go get table Abc, Trino and Postgresql will go get table abc
-                                org.apache.calcite.sql.parser.SqlParser.config().withUnquotedCasing(Casing.UNCHANGED)));
-
-        SqlNode calciteStatement = wrapException(calciteParser::parseQuery);
-        List<TableSchema> visitedTable = extractTables(calciteStatement, false)
-                .stream().map(name -> toTableSchema(name, sessionContext))
-                .collect(Collectors.toList());
-
-        Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(
-                        CmlSchemaUtil.schemaPlus(
-                                ImmutableList.<TableSchema>builder()
-                                        .addAll(visitedTable)
-                                        .add(toTableSchema(mvDef))
-                                        .build(), metadata)),
-                Collections.singletonList(""),
-                typeFactory,
-                config);
-        SqlValidator validator = SqlValidatorUtil.newValidator(
-                SqlStdOperatorTable.instance(),
-                catalogReader,
-                typeFactory,
-                SqlValidator.Config.DEFAULT);
-
-        SqlNode validNode = validator.validate(calciteStatement);
-
-        SqlToRelConverter relConverter = new SqlToRelConverter(
-                NOOP_EXPANDER,
-                validator,
-                catalogReader,
-                cluster,
-                StandardConvertletTable.INSTANCE,
-                SqlToRelConverter.config());
-
-        List<String> mvName = ImmutableList.of(
-                mvDef.getCatalogName().getCatalogName(),
-                mvDef.getSchemaTableName().getSchemaName(),
-                mvDef.getSchemaTableName().getTableName());
-        RelOptTable table = catalogReader.getTable(mvName);
-        RelNode tableRel = relConverter.toRel(table, ImmutableList.of());
-        RelNode queryRel = relConverter.convertQuery(validNode, false, true).rel;
-
-        LOG.info(RelOptUtil.dumpPlan("[MV " + mvName(mvDef) + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
-                SqlExplainLevel.NON_COST_ATTRIBUTES));
-
-        return new RelOptMaterialization(
-                castNonNull(tableRel),
-                castNonNull(queryRel),
-                null,
-                mvName);
-    }
-
-    private static String mvName(MaterializedViewDefinition mvDef)
-    {
-        return mvDef.getCatalogName().getCatalogName() + "." +
-                mvDef.getSchemaTableName().getSchemaName() + "." +
-                mvDef.getSchemaTableName().getTableName();
-    }
-
-    private static TableSchema toTableSchema(MaterializedViewDefinition mvDef)
-    {
-        return new TableSchema(
-                mvDef.getCatalogName(),
-                new ConnectorTableSchema(
-                        mvDef.getSchemaTableName(),
-                        mvDef.getColumns().stream()
-                                .map(columnMetadata ->
-                                        ColumnSchema.builder()
-                                                .setName(columnMetadata.getName())
-                                                .setType(columnMetadata.getType())
-                                                .setHidden(false)
-                                                .build())
-                                .collect(toImmutableList())));
-    }
-
-    private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
-
-    /**
-     * When we use Calcite sql parser, tables in SqlNode is SqlIdentifier while SqlIdentifier could be
-     * column name or something else. Here we traverse whole SqlNode to find tables in FROM and JOIN.
-     *
-     * @param sqlNode sqlNode that we want to traverse
-     * @param fromOrJoin boolean to check input SqlNode is from or join
-     * @return visited tables which is a set of QualifiedName
-     */
-    static Set<QualifiedName> extractTables(SqlNode sqlNode, boolean fromOrJoin)
-    {
-        if (sqlNode == null) {
-            return ImmutableSet.of();
+        public Prepare.CatalogReader getCatalogReader()
+        {
+            return catalogReader;
         }
-        switch (sqlNode.getKind()) {
-            case SELECT:
-                var sqlSelect = (SqlSelect) sqlNode;
-                var tablesInFrom = extractTables(sqlSelect.getFrom(), true);
-                var tablesInSelectList =
-                        sqlSelect.getSelectList().getList().stream()
-                                .filter(node -> node instanceof SqlCall)
-                                .map(node -> extractTables(node, false))
-                                .flatMap(Collection::stream)
-                                .collect(toImmutableSet());
-                var tablesInWhere = extractTables(sqlSelect.getWhere(), false);
-                var tablesInHaving = extractTables(sqlSelect.getHaving(), false);
-                return ImmutableSet.<QualifiedName>builder()
-                        .addAll(tablesInFrom)
-                        .addAll(tablesInSelectList)
-                        .addAll(tablesInWhere)
-                        .addAll(tablesInHaving)
-                        .build();
-            case JOIN:
-                var left = extractTables(((SqlJoin) sqlNode).getLeft(), true);
-                var right = extractTables(((SqlJoin) sqlNode).getRight(), true);
-                return ImmutableSet.<QualifiedName>builder()
-                        .addAll(left)
-                        .addAll(right)
-                        .build();
-            case AS:
-                checkArgument(((SqlCall) sqlNode).operandCount() >= 2);
-                return extractTables(((SqlCall) sqlNode).operand(0), fromOrJoin);
-            case IDENTIFIER:
-                if (fromOrJoin) {
-                    return ImmutableSet.of(
-                            QualifiedName.of(((SqlIdentifier) sqlNode).names
-                                    .stream().map(Identifier::new).collect(toImmutableList())));
-                }
-                return ImmutableSet.of();
-            default: {
-                if (sqlNode instanceof SqlCall) {
-                    return ((SqlCall) sqlNode).getOperandList().stream()
-                            .map(sqlCall -> extractTables(sqlCall, false))
-                            .flatMap(Collection::stream)
-                            .collect(toImmutableSet());
-                }
-                return ImmutableSet.of();
-            }
+
+        public SqlToRelConverter getSqlToRelConverter()
+        {
+            return sqlToRelConverter;
+        }
+
+        public RelNode getRelNode()
+        {
+            return relNode;
         }
     }
 }
