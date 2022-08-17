@@ -50,7 +50,7 @@ public class TestingMetadata
     @Override
     public List<String> listSchemas()
     {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+        return List.of("testing_schema1", "testing_schema2");
     }
 
     @Override
