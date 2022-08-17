@@ -65,6 +65,10 @@ public class TestFunctions
                 {"select format_type(null, 1)", null, false},
                 {"select format_type(1000, 1)", "_bool", false},
                 {"select format_type(0, 1)", "???", false},
+                {"select substr('testString', 0, 4)", "test", false},
+                {"select concat('T.P.', ' ', 'Bar')", "T.P. Bar", false},
+                {"select pg_get_function_result(7751334321673795072)", "int8", false}, // pg_relation_size__int4_varchar___int8
+                {"select pg_get_function_result(2155180082033071319)", "varchar", false}, // current_database___varchar
         };
     }
 
