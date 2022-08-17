@@ -63,6 +63,8 @@ public final class BigQueryPgCatalogTableBuilder
                 .put("catalogName", "table_catalog")
                 .put("functionName", "routine_name")
                 .put("functionSchema", "routine_schema")
+                .put("split", "split")
+                .put("firstOrdinal", "[ordinal(1)]")
                 .build();
     }
 
