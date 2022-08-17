@@ -23,7 +23,7 @@ import javax.inject.Inject;
 import java.util.Locale;
 
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.cml.pgcatalog.builder.BigQueryUtils.getPgTypeToBqType;
+import static io.cml.pgcatalog.builder.BigQueryUtils.toBqType;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
@@ -56,7 +56,7 @@ public class BigQueryPgFunctionBuilder
             for (PgFunction.Argument argument : pgFunction.getArguments().get()) {
                 parameterBuilder
                         .append(argument.getName()).append(" ")
-                        .append(getPgTypeToBqType().get(argument.getType())).append(",");
+                        .append(toBqType(argument.getType())).append(",");
             }
             parameterBuilder.setLength(parameterBuilder.length() - 1);
         }
@@ -71,7 +71,7 @@ public class BigQueryPgFunctionBuilder
             for (PgFunction.Argument argument : pgFunction.getArguments().get()) {
                 parameterBuilder
                         .append(argument.getName()).append(" ")
-                        .append(getPgTypeToBqType().get(argument.getType())).append(",");
+                        .append(toBqType(argument.getType())).append(",");
             }
             parameterBuilder.setLength(parameterBuilder.length() - 1);
         }
@@ -80,7 +80,7 @@ public class BigQueryPgFunctionBuilder
                 PG_CATALOG_NAME,
                 pgFunction.getRemoteName(),
                 parameterBuilder,
-                getPgTypeToBqType().get(pgFunction.getReturnType().orElse(VARCHAR)),
+                toBqType(pgFunction.getReturnType().orElse(VARCHAR)),
                 pgFunction.getLanguage().name().toLowerCase(Locale.ROOT),
                 pgFunction.getDefinition());
     }

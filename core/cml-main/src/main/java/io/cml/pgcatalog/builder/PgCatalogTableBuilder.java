@@ -38,7 +38,6 @@ import io.cml.pgcatalog.table.PgTypeTable;
 import io.cml.pgcatalog.table.ReferentialConstraints;
 import io.cml.pgcatalog.table.TableConstraints;
 import io.cml.spi.CmlException;
-import io.cml.spi.type.PGType;
 import org.apache.commons.lang3.text.StrSubstitutor;
 
 import java.util.Map;
@@ -52,14 +51,12 @@ public abstract class PgCatalogTableBuilder
     private static final Logger LOG = Logger.get(PgCatalogTableBuilder.class);
     private final Metadata metadata;
     private final Map<String, String> replaceMap;
-    private final Map<PGType<?>, String> pgTypeToTypeMap;
     private final StrSubstitutor strSubstitutor;
 
     public PgCatalogTableBuilder(Metadata metadata)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.replaceMap = initReplaceMap();
-        this.pgTypeToTypeMap = initPgTypeToTypeMap();
         this.strSubstitutor = new StrSubstitutor(getReplaceMap());
     }
 
@@ -137,8 +134,6 @@ public abstract class PgCatalogTableBuilder
 
     protected abstract Map<String, String> initReplaceMap();
 
-    protected abstract Map<PGType<?>, String> initPgTypeToTypeMap();
-
     public Metadata getMetadata()
     {
         return metadata;
@@ -147,11 +142,6 @@ public abstract class PgCatalogTableBuilder
     public Map<String, String> getReplaceMap()
     {
         return replaceMap;
-    }
-
-    public Map<PGType<?>, String> getPgTypeToTypeMap()
-    {
-        return pgTypeToTypeMap;
     }
 
     protected abstract String createPgClass(PgCatalogTable pgCatalogTable);

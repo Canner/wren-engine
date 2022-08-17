@@ -31,8 +31,8 @@ import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.cml.pgcatalog.builder.BigQueryUtils.buildPgCatalogTableView;
 import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
 import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplaceAllTable;
-import static io.cml.pgcatalog.builder.BigQueryUtils.createPgTypeMapping;
-import static io.cml.pgcatalog.builder.BigQueryUtils.getPgTypeToBqType;
+import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplacePgTypeMapping;
+import static io.cml.pgcatalog.builder.BigQueryUtils.toBqType;
 import static io.cml.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
 import static io.cml.spi.type.CharType.CHAR;
 import static io.cml.spi.type.RegprocType.REGPROC;
@@ -64,12 +64,6 @@ public final class BigQueryPgCatalogTableBuilder
                 .put("functionName", "routine_name")
                 .put("functionSchema", "routine_schema")
                 .build();
-    }
-
-    @Override
-    protected Map<PGType<?>, String> initPgTypeToTypeMap()
-    {
-        return getPgTypeToBqType();
     }
 
     @Override
@@ -114,7 +108,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgAttributeTable(PgCatalogTable pgCatalogTable)
     {
-        getMetadata().directDDL(createPgTypeMapping());
+        getMetadata().directDDL(createOrReplacePgTypeMapping());
         getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
@@ -273,7 +267,7 @@ public final class BigQueryPgCatalogTableBuilder
         for (ColumnMetadata columnMetadata : columnMetadatas) {
             metadataBuilder.append(columnMetadata.getName())
                     .append(" ")
-                    .append(getPgTypeToTypeMap().get(columnMetadata.getType()))
+                    .append(toBqType(columnMetadata.getType()))
                     .append(",");
         }
         metadataBuilder.setLength(metadataBuilder.length() - 1);

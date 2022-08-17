@@ -17,6 +17,7 @@ package io.cml.pgcatalog.builder;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.cml.metadata.Metadata;
+import io.cml.spi.CmlException;
 import io.cml.spi.type.PGArray;
 import io.cml.spi.type.PGType;
 
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 
 import static io.cml.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
+import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.type.BigIntType.BIGINT;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.BpCharType.BPCHAR;
@@ -87,7 +90,7 @@ public final class BigQueryUtils
         // .put(EMPTY_RECORD, "STRUCT")
         // .put(HSTORE, "STRUCT")
 
-        ImmutableMap.Builder<String, PGType<?>> bqTypeToOidBuilder = ImmutableMap.<String, PGType<?>>builder()
+        ImmutableMap.Builder<String, PGType<?>> bqTypeToPgTypeBuilder = ImmutableMap.<String, PGType<?>>builder()
                 .put(StandardSQLTypeName.BOOL.name(), BOOLEAN)
                 .put(array(StandardSQLTypeName.BOOL.name()), BOOL_ARRAY)
                 .put(StandardSQLTypeName.BYTES.name(), BYTEA)
@@ -109,10 +112,10 @@ public final class BigQueryUtils
 
         for (PGArray pgArray : PGArray.allArray()) {
             String innerType = simpleTypeMap.get(pgArray.getInnerType());
-            String bqType = format("ARRAY<%s>", innerType);
-            builder.put(pgArray, bqType);
+            String bqArrayType = format("ARRAY<%s>", innerType);
+            builder.put(pgArray, bqArrayType);
         }
-        bqTypeToPgType = bqTypeToOidBuilder.build();
+        bqTypeToPgType = bqTypeToPgTypeBuilder.build();
         pgTypeToBqType = builder.build();
     }
 
@@ -125,16 +128,12 @@ public final class BigQueryUtils
 
     public static String createOrReplaceAllTable(Metadata connector)
     {
-        // TODO: handle schemas is empty. https://github.com/Canner/canner-metric-layer/issues/52
         List<String> schemas = connector.listSchemas();
-        StringBuilder builder = new StringBuilder();
-        builder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", CML_TEMP_NAME));
-        for (String schema : schemas) {
-            builder.append(format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES UNION ALL ", schema));
-        }
-        builder.setLength(builder.length() - "UNION ALL ".length());
-        builder.append(";");
-        return builder.toString();
+        return format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", CML_TEMP_NAME) +
+                schemas.stream()
+                        .map(schema -> format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES", schema))
+                        .reduce((a, b) -> a + " UNION ALL " + b)
+                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
 
     /**
@@ -142,47 +141,40 @@ public final class BigQueryUtils
      */
     public static String createOrReplaceAllColumn(Metadata connector)
     {
-        // TODO: handle schemas is empty. https://github.com/Canner/canner-metric-layer/issues/52
         // TODO: we should check if pg_type has created or not.
         List<String> schemas = connector.listSchemas();
-        StringBuilder builder = new StringBuilder();
-        builder.append(format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", CML_TEMP_NAME));
-        for (String schema : schemas) {
-            builder.append(format("SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
-                    "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
-                    "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                    "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid " +
-                    "UNION ALL ", schema, CML_TEMP_NAME + ".pg_type_mapping"));
-        }
-        builder.setLength(builder.length() - "UNION ALL ".length());
-        builder.append(";");
-        return builder.toString();
+        return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", CML_TEMP_NAME) +
+                schemas.stream()
+                        .map(schema -> format("SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
+                                "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
+                                "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
+                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, CML_TEMP_NAME + ".pg_type_mapping"))
+                        .reduce((a, b) -> a + " UNION ALL " + b)
+                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
 
-    public static String createPgTypeMapping()
+    public static String createOrReplacePgTypeMapping()
     {
         String columnDefinition = "bq_type string, oid int64";
-        StringBuilder records = new StringBuilder();
-        for (Map.Entry<String, PGType<?>> entry : getBqTypeToPgType().entrySet()) {
-            records.append(format("('%s', %s),", entry.getKey(), entry.getValue().oid()));
-        }
-        records.setLength(records.length() - 1);
-        return buildPgCatalogTableView(CML_TEMP_NAME, "pg_type_mapping", columnDefinition, records.toString(), false);
+        String records = getBqTypeToPgType().entrySet().stream()
+                .map(entry -> format("('%s', %s)", entry.getKey(), entry.getValue().oid()))
+                .reduce((a, b) -> a + "," + b)
+                .orElseThrow(() -> new CmlException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed"));
+        return buildPgCatalogTableView(CML_TEMP_NAME, "pg_type_mapping", columnDefinition, records, false);
     }
 
     public static String buildPgCatalogTableView(String datasetName, String viewName, String columnDefinition, String records, boolean isEmpty)
     {
-        String viewDefinition = format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT * FROM UNNEST([STRUCT<%s> %s])", datasetName, viewName, columnDefinition, records);
-        return isEmpty ? viewDefinition + " LIMIT 0;" : viewDefinition + ";";
-    }
-
-    public static Map<PGType<?>, String> getPgTypeToBqType()
-    {
-        return pgTypeToBqType;
+        return format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT * FROM UNNEST([STRUCT<%s> %s])%s", datasetName, viewName, columnDefinition, records, isEmpty ? " LIMIT 0;" : ";");
     }
 
     public static Map<String, PGType<?>> getBqTypeToPgType()
     {
         return bqTypeToPgType;
+    }
+
+    public static String toBqType(PGType<?> pgType)
+    {
+        return pgTypeToBqType.get(pgType);
     }
 }
