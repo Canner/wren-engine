@@ -19,7 +19,6 @@ import io.cml.pgcatalog.table.PgCatalogTable;
 import io.cml.spi.type.PGTypes;
 
 import java.util.List;
-import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
@@ -30,7 +29,7 @@ public final class PgCatalogTableBuilderUtils
 {
     private PgCatalogTableBuilderUtils() {}
 
-    public static List<Object[]> generatePgTypeRecords(PgCatalogTable pgCatalogTable, Map<Integer, String> oidToTypeMap)
+    public static List<Object[]> generatePgTypeRecords(PgCatalogTable pgCatalogTable)
     {
         return Streams.stream(PGTypes.pgTypes())
                 .map(type -> {
@@ -60,7 +59,6 @@ public final class PgCatalogTableBuilderUtils
                     record[22] = null; // typsend
                     record[23] = null; // typstorage
                     record[24] = null; // typdefaultbin
-                    record[25] = oidToTypeMap.get(type.oid()); //remotetype
                     return record;
                 }).collect(toImmutableList());
     }

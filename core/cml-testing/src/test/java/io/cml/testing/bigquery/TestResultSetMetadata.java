@@ -452,8 +452,7 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/84
-    @Test(enabled = false)
+    @Test
     public void testGetColumns()
             throws Exception
     {

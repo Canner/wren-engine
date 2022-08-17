@@ -51,14 +51,12 @@ public abstract class PgCatalogTableBuilder
     private static final Logger LOG = Logger.get(PgCatalogTableBuilder.class);
     private final Metadata metadata;
     private final Map<String, String> replaceMap;
-    private final Map<Integer, String> oidToTypeMap;
     private final StrSubstitutor strSubstitutor;
 
     public PgCatalogTableBuilder(Metadata metadata)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.replaceMap = initReplaceMap();
-        this.oidToTypeMap = initOidToTypeMap();
         this.strSubstitutor = new StrSubstitutor(getReplaceMap());
     }
 
@@ -136,8 +134,6 @@ public abstract class PgCatalogTableBuilder
 
     protected abstract Map<String, String> initReplaceMap();
 
-    protected abstract Map<Integer, String> initOidToTypeMap();
-
     public Metadata getMetadata()
     {
         return metadata;
@@ -146,11 +142,6 @@ public abstract class PgCatalogTableBuilder
     public Map<String, String> getReplaceMap()
     {
         return replaceMap;
-    }
-
-    public Map<Integer, String> getOidToTypeMap()
-    {
-        return oidToTypeMap;
     }
 
     protected abstract String createPgClass(PgCatalogTable pgCatalogTable);
