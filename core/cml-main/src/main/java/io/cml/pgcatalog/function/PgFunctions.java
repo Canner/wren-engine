@@ -37,6 +37,7 @@ public final class PgFunctions
             .setName("current_database")
             .setLanguage(SQL)
             .setDefinition("SELECT DISTINCT catalog_name FROM INFORMATION_SCHEMA.SCHEMATA")
+            .setReturnType(VARCHAR)
             .build();
 
     // TODO: consider region
@@ -121,6 +122,14 @@ public final class PgFunctions
             .setDefinition("SELECT CASE WHEN type IS NULL THEN null ELSE CASE WHEN ARRAY_LENGTH(typresult) = 0 THEN '???' ELSE typresult[ordinal(1)] END END " +
                     "FROM (SELECT array(SELECT typname FROM pg_catalog.pg_type WHERE oid = type) as typresult)")
             .setArguments(List.of(argument("type", INTEGER), argument("typmod", INTEGER)))
+            .setReturnType(VARCHAR)
+            .build();
+
+    public static final PgFunction PG_GET_FUNCTION_RESULT = builder()
+            .setName("pg_get_function_result")
+            .setLanguage(SQL)
+            .setDefinition("select regexp_extract(remotename, r\".*___([_a-zA-Z1-9]+)*\", 1) from pg_catalog.pg_proc WHERE oid = func")
+            .setArguments(List.of(argument("func", INTEGER)))
             .setReturnType(VARCHAR)
             .build();
 }
