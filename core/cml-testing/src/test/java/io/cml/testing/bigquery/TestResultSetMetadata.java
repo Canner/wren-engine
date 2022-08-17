@@ -605,8 +605,7 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/87
-    @Test(enabled = false)
+    @Test
     public void testGetProcedures()
             throws Exception
     {
@@ -617,8 +616,7 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/86
-    @Test(enabled = false)
+    @Test
     public void testGetProcedureColumns()
             throws Exception
     {
