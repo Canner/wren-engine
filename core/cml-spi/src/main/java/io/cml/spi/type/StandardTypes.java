@@ -38,6 +38,8 @@ public final class StandardTypes
     public static final String VARCHAR = "varchar";
     public static final String CHAR = "char";
     public static final String ROW = "row";
+    public static final String TEXT = "text";
+    public static final String NAME = "name";
     public static final String ARRAY = "array";
     public static final String MAP = "map";
     public static final String JSON = "json";

@@ -45,8 +45,10 @@ import static io.cml.spi.type.StandardTypes.DOUBLE;
 import static io.cml.spi.type.StandardTypes.INTEGER;
 import static io.cml.spi.type.StandardTypes.INTERVAL_DAY_TO_SECOND;
 import static io.cml.spi.type.StandardTypes.INTERVAL_YEAR_TO_MONTH;
+import static io.cml.spi.type.StandardTypes.NAME;
 import static io.cml.spi.type.StandardTypes.REAL;
 import static io.cml.spi.type.StandardTypes.SMALLINT;
+import static io.cml.spi.type.StandardTypes.TEXT;
 import static io.cml.spi.type.StandardTypes.TIME;
 import static io.cml.spi.type.StandardTypes.TIMESTAMP;
 import static io.cml.spi.type.StandardTypes.TIMESTAMP_WITH_TIME_ZONE;
@@ -85,6 +87,8 @@ public final class CalciteTypes
                 .put(VARCHAR, SqlTypeName.VARCHAR)
                 .put(CHAR, SqlTypeName.CHAR)
                 .put(ARRAY, SqlTypeName.ARRAY)
+                .put(TEXT, SqlTypeName.VARCHAR)
+                .put(NAME, SqlTypeName.VARCHAR)
                 .build();
 
         pgTypeToCalciteTypeMap = ImmutableMap.<PGType<?>, SqlTypeName>builder()

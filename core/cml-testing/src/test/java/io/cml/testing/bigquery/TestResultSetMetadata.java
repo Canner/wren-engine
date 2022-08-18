@@ -589,25 +589,23 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/85
-    @Test(enabled = false)
+    @Test
     public void testGetFunctions()
             throws Exception
     {
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getFunctions(null, null, "current_schemas");
             assertTrue(rs.next());
-            assertEquals(rs.getString("function_cat"), "test");
+            assertEquals(rs.getString("function_cat"), "canner-cml");
             assertEquals(rs.getString("function_schem"), "pg_catalog");
             assertEquals(rs.getString("function_name"), "current_schemas");
             assertNull(rs.getString("remarks"));
             assertEquals(rs.getInt("function_type"), 1);
-            assertEquals(rs.getString("specific_name"), "current_schemas_-1427879221");
+            assertEquals(rs.getString("specific_name"), "current_schemas_8097498532701726860");
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/87
-    @Test(enabled = false)
+    @Test
     public void testGetProcedures()
             throws Exception
     {
@@ -618,8 +616,7 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/86
-    @Test(enabled = false)
+    @Test
     public void testGetProcedureColumns()
             throws Exception
     {

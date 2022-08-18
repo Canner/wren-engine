@@ -123,6 +123,16 @@ public class DataType<T>
         return stringDataType(prefix + suffix, VarcharType.VARCHAR);
     }
 
+    public static DataType<String> nameDataType()
+    {
+        return stringDataType("name", VarcharType.VARCHAR);
+    }
+
+    public static DataType<String> textDataType()
+    {
+        return stringDataType("text", VarcharType.VARCHAR);
+    }
+
     public static DataType<String> stringDataType(String insertType, PGType<?> trinoResultType)
     {
         return dataType(insertType, trinoResultType, DataType::formatStringLiteral);

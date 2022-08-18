@@ -42,7 +42,7 @@ public class PgProcTable
     {
         return table(NAME)
                 .column("oid", INTEGER, "${hash}(concat('PROC', ${functionName}))")
-                .column("proname", VARCHAR, "${functionName}")
+                .column("proname", VARCHAR, "${split}(${functionName}, '__')${firstOrdinal}")
                 .column("pronamespace", INTEGER, "${hash}(${functionSchema})")
                 .column("proowner", INTEGER, "${hash}('" + DEFAULT_AUTH + "')")
                 .column("prolang", INTEGER, "${hash}('" + INTERNAL_LANGUAGE + "')")
@@ -70,6 +70,7 @@ public class PgProcTable
                 .column("probin", VARCHAR_ARRAY, "null")
                 .column("proconfig", VARCHAR_ARRAY, "null")
                 .column("proacl", VARCHAR_ARRAY, "null")
+                .column("remotename", VARCHAR, "${functionName}")
                 .build();
     }
 }

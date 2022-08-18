@@ -85,6 +85,7 @@ import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static org.apache.calcite.sql.type.OperandTypes.NILADIC;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
 public class BigQueryMetadata
@@ -148,6 +149,14 @@ public class BigQueryMetadata
                 new SqlFunction("generate_array",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)),
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
+                new SqlFunction("substr",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
+                new SqlFunction("concat",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
                         null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION));
     }
 
@@ -166,8 +175,8 @@ public class BigQueryMetadata
         return new SqlFunction(new SqlIdentifier(withPgCatalogPrefix(pgFunction.getRemoteName()), SqlParserPos.ZERO),
                 pgFunction.getReturnType().map(type -> ReturnTypes.explicit(toCalciteType(pgFunction.getReturnType().get()))).orElse(null),
                 null,
-                pgFunction.getArguments().map(ignored -> ONE_OR_MORE).orElse(null),
-                pgFunction.getArguments().map(arguments -> pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList())).orElse(null),
+                pgFunction.getArguments().map(ignored -> ONE_OR_MORE).orElse(NILADIC),
+                pgFunction.getArguments().map(arguments -> pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList())).orElse(List.of()),
                 SqlFunctionCategory.USER_DEFINED_FUNCTION);
     }
 
