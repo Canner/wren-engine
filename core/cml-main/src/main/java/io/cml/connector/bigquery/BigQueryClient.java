@@ -22,7 +22,6 @@ import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.Job;
 import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.JobStatistics;
-import com.google.cloud.bigquery.MaterializedViewDefinition;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.QueryParameterValue;
 import com.google.cloud.bigquery.Routine;
@@ -32,8 +31,6 @@ import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableInfo;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.http.BaseHttpServiceException;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
@@ -42,7 +39,6 @@ import io.cml.spi.CmlException;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.SchemaTableName;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -53,7 +49,6 @@ import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class BigQueryClient
 {
@@ -61,15 +56,10 @@ public class BigQueryClient
     private static final Set<String> INVALID_QUERY = ImmutableSet.of("invalidQuery", "invalid");
 
     private final BigQuery bigQuery;
-    private final Cache<TableId, Table> mvCache;
 
     public BigQueryClient(BigQuery bigQuery)
     {
         this.bigQuery = bigQuery;
-        this.mvCache =
-                CacheBuilder.newBuilder()
-                        .expireAfterWrite(Duration.ofHours(1).toMillis(), MILLISECONDS)
-                        .build();
     }
 
     public Iterable<Dataset> listDatasets(String projectId)
@@ -121,27 +111,12 @@ public class BigQueryClient
 
     public Table getTable(TableId tableId)
     {
-        Table mv = mvCache.getIfPresent(tableId);
-        if (mv != null) {
-            return mv;
-        }
-
-        Table table = bigQuery.getTable(tableId);
-        // put mv def to mv cache
-        if (table != null && table.getDefinition() instanceof MaterializedViewDefinition) {
-            mvCache.put(table.getTableId(), table);
-        }
-        return table;
+        return bigQuery.getTable(tableId);
     }
 
     public void updateTable(TableInfo tableInfo)
     {
         bigQuery.update(tableInfo);
-    }
-
-    public Table getCacheMV(TableId tableId)
-    {
-        return mvCache.getIfPresent(tableId);
     }
 
     public TableResult query(String sql, List<Parameter> parameters)
