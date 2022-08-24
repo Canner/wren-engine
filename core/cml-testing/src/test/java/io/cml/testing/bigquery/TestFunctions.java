@@ -69,6 +69,7 @@ public class TestFunctions
                 {"select concat('T.P.', ' ', 'Bar')", "T.P. Bar", false},
                 {"select pg_get_function_result(7751334321673795072)", "int8", false}, // pg_relation_size__int4_varchar___int8
                 {"select pg_get_function_result(2155180082033071319)", "varchar", false}, // current_database___varchar
+                {"select regexp_like('pg_temp_table', '^pg_temp_')", "t", false}
         };
     }
 
