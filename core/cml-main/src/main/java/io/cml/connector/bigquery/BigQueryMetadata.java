@@ -86,6 +86,7 @@ import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.sql.type.OperandTypes.NILADIC;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
@@ -331,17 +332,18 @@ public class BigQueryMetadata
     @Override
     public String resolveFunction(String functionName, int numArgument)
     {
+        String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
         // lookup calcite operator table and bigquery supported table
         if (SqlStdOperatorTable.instance().getOperatorList().stream().anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName))) {
             return functionName;
         }
 
-        if (pgNameToBqFunction.containsKey(functionName)) {
-            return pgNameToBqFunction.get(functionName).getName();
+        if (pgNameToBqFunction.containsKey(funcNameLowerCase)) {
+            return pgNameToBqFunction.get(funcNameLowerCase).getName();
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(functionName, numArgument).getRemoteName());
+        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
     }
 
     @Override
