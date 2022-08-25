@@ -77,7 +77,10 @@ public class TestCalciteSqlNodeConverter
                 {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
                 {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"canner-cml\".pg_catalog.pg_attribute a"},
                 {"testRowNumber", "SELECT row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum ASC) attnum\n" +
-                        "FROM \"canner-cml\".pg_catalog.pg_attribute a"}
+                        "FROM \"canner-cml\".pg_catalog.pg_attribute a"},
+                {"testSimpleCase", "SELECT CASE (n.nspname = 'information_schema') WHEN true THEN 'YES' ELSE 'NO' END FROM \"canner-cml\".pg_catalog.pg_namespace n"},
+                {"testSimpleCaseMultiWhen",
+                        "SELECT CASE c.relkind WHEN 'r' THEN 'SYSTEM TOAST TABLE' WHEN 'i' THEN 'SYSTEM TOAST INDEX' ELSE null END FROM \"canner-cml\".pg_catalog.pg_class c"},
         };
     }
 
