@@ -333,7 +333,7 @@ public class BigQueryMetadata
     public String resolveFunction(String functionName, int numArgument)
     {
         String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
-        // lookup calcite operator table and bigquery supported table
+        // lookup calcite operator table
         if (SqlStdOperatorTable.instance().getOperatorList().stream().anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName))) {
             return functionName;
         }
