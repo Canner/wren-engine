@@ -25,6 +25,7 @@ import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.cml.calcite.CalciteTypes;
@@ -65,11 +66,12 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.ListSqlOperatorTable;
+import org.apache.calcite.sql.util.SqlOperatorTables;
 
 import javax.inject.Inject;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -84,6 +86,7 @@ import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.sql.type.OperandTypes.NILADIC;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
@@ -115,7 +118,7 @@ public class BigQueryMetadata
 
     private final RelDataTypeFactory typeFactory;
 
-    private final List<SqlFunction> supportedBqFunction;
+    private final Map<String, SqlFunction> pgNameToBqFunction;
 
     private final SqlOperatorTable calciteOperatorTable;
 
@@ -127,7 +130,7 @@ public class BigQueryMetadata
         this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, getRelDataTypeSystem());
-        this.supportedBqFunction = initBqFunctions();
+        this.pgNameToBqFunction = initPgNameToBqFunctions();
         this.calciteOperatorTable = initCalciteOperators();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
@@ -138,36 +141,44 @@ public class BigQueryMetadata
         }
     }
 
-    private List<SqlFunction> initBqFunctions()
+    /**
+     * @return mapping table for pg function which can be replaced by bq function.
+     */
+    private Map<String, SqlFunction> initPgNameToBqFunctions()
     {
         // bq native function is not case-sensitive, so it is ok to this kind of SqlFunction ctor here.
-        return ImmutableList.of(
-                new SqlFunction("trunc",
+        return ImmutableMap.<String, SqlFunction>builder()
+                .put("trunc", new SqlFunction("trunc",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.DECIMAL)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
-                new SqlFunction("generate_array",
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("generate_array", new SqlFunction("generate_array",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
-                new SqlFunction("substr",
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("substr", new SqlFunction("substr",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION),
-                new SqlFunction("concat",
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("concat", new SqlFunction("concat",
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION));
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("regexp_like", new SqlFunction("regexp_contains",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.BOOLEAN)),
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .build();
     }
 
-    private ListSqlOperatorTable initCalciteOperators()
+    private SqlOperatorTable initCalciteOperators()
     {
-        ListSqlOperatorTable listSqlOperatorTable = new ListSqlOperatorTable();
+        ImmutableList.Builder<SqlFunction> builder = ImmutableList.builder();
         for (PgFunction pgFunction : pgFunctionRegistry.getPgFunctions()) {
-            listSqlOperatorTable.add(toCalciteSqlFunction(pgFunction));
+            builder.add(toCalciteSqlFunction(pgFunction));
         }
-        supportedBqFunction.forEach(listSqlOperatorTable::add);
-        return listSqlOperatorTable;
+        pgNameToBqFunction.values().forEach(builder::add);
+        return SqlOperatorTables.of(builder.build());
     }
 
     private SqlFunction toCalciteSqlFunction(PgFunction pgFunction)
@@ -321,14 +332,18 @@ public class BigQueryMetadata
     @Override
     public String resolveFunction(String functionName, int numArgument)
     {
-        // lookup calcite operator table and bigquery supported table
-        if (SqlStdOperatorTable.instance().getOperatorList().stream()
-                .anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName)) ||
-                supportedBqFunction.stream().anyMatch(sqlFunction -> sqlFunction.getName().equalsIgnoreCase(functionName))) {
+        String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
+        // lookup calcite operator table
+        if (SqlStdOperatorTable.instance().getOperatorList().stream().anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName))) {
             return functionName;
         }
+
+        if (pgNameToBqFunction.containsKey(funcNameLowerCase)) {
+            return pgNameToBqFunction.get(funcNameLowerCase).getName();
+        }
+
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(functionName, numArgument).getRemoteName());
+        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
     }
 
     @Override
