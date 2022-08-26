@@ -839,7 +839,9 @@ public class TestWireProtocolWithBigquery
                         "  \"canner-cml\".pg_catalog.pg_class c\n" +
                         "WHERE (c.oid = t.typrelid)\n" +
                         ")))"},
-                {"SELECT 1, 2, 3"}
+                {"SELECT 1, 2, 3"},
+                {"SELECT array[1,2,3][1]"},
+                {"select current_schemas(false)[1]"}
         };
     }
 
