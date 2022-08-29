@@ -45,7 +45,7 @@ import static org.testng.Assert.assertTrue;
 public class TestResultSetMetadata
         extends AbstractWireProtocolTest
 {
-    private static final String TEST_CATALOG = "cml";
+    private static final String TEST_CATALOG = "canner-cml";
 
     @Override
     protected TestingWireProtocolServer createWireProtocolServer()
@@ -253,24 +253,32 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(2), Types.BIGINT);
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/83
-    @Test(enabled = false)
+    @Test
     public void testGetTables()
             throws Exception
     {
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(null, null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            List<List<Object>> data = readRows(rs);
+            // Total number of tables in canner-cml project
+            assertThat(data).hasSize(41);
         }
 
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            List<List<Object>> data = readRows(rs);
+            // Total number of tables in canner-cml project
+            assertThat(data).hasSize(41);
         }
 
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables("", null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            List<List<Object>> data = readRows(rs);
+            // Total number of tables in canner-cml project
+            assertThat(data).hasSize(41);
         }
 
         try (Connection connection = this.createConnection()) {
@@ -376,7 +384,7 @@ public class TestResultSetMetadata
 
     private static List<Object> getTablesRow(String catalog, String schema, String table, String type)
     {
-        return List.of(catalog, schema, table, type, null, "", "", "", "", "");
+        return asList(catalog, schema, table, type, null, "", "", "", "", "");
     }
 
     // this assertion has a little different with postgresql, the column if unquoted is lower case in postgresql, but we didn't follow this rule.
@@ -387,7 +395,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnCount(), 10);
 
         assertEquals(metadata.getColumnLabel(1), "TABLE_CAT");
-        assertEquals(metadata.getColumnType(1), Types.VARCHAR);
+        assertEquals(metadata.getColumnType(1), Types.BIGINT);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_SCHEM");
         assertEquals(metadata.getColumnType(2), Types.VARCHAR);
