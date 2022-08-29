@@ -168,68 +168,67 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/82
-    @Test(enabled = false)
+    @Test
     public void testGetSchemas()
             throws Exception
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas();
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("", null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "test");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "cml_temp");
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "test");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "cml_temp");
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "te%");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "tpch%");
+            assertGetSchemasResult(rs, List.of(List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "te_");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
     }
 
@@ -251,7 +250,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(1), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_CATALOG");
-        assertEquals(metadata.getColumnType(2), Types.VARCHAR);
+        assertEquals(metadata.getColumnType(2), Types.BIGINT);
     }
 
     // TODO: https://github.com/Canner/canner-metric-layer/issues/83
