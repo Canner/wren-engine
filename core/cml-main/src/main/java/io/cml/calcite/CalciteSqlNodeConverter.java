@@ -33,6 +33,7 @@ import io.trino.sql.tree.DecimalLiteral;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.DoubleLiteral;
 import io.trino.sql.tree.ExistsPredicate;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Extract;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GenericDataType;
@@ -66,6 +67,7 @@ import io.trino.sql.tree.Row;
 import io.trino.sql.tree.SampledRelation;
 import io.trino.sql.tree.SearchedCaseExpression;
 import io.trino.sql.tree.Select;
+import io.trino.sql.tree.SimpleCaseExpression;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
@@ -645,6 +647,23 @@ public class CalciteSqlNodeConverter
                     toCalcitePos(node.getLocation()),
                     null,
                     SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(node.getWhenClauses().stream().map(WhenClause::getOperand).collect(toList()))),
+                    SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(node.getWhenClauses().stream().map(WhenClause::getResult).collect(toList()))),
+                    node.getDefaultValue().map(this::visitNode).orElse(null));
+        }
+
+        @Override
+        protected SqlNode visitSimpleCaseExpression(SimpleCaseExpression node, ConvertContext context)
+        {
+            // Calcite will transfer simple case to searched case.
+            // e.g. CASE col WHEN 1 THEN 'good' ELSE 'bad' END -> CASE WHEN col = 1 THEN 'good' ELSE 'bad' END
+            // We should follow this logical to build the calcite case node.
+            List<Expression> operands = node.getWhenClauses().stream()
+                    .map(whenClause -> new ComparisonExpression(ComparisonExpression.Operator.EQUAL, node.getOperand(), whenClause.getOperand()))
+                    .collect(toList());
+            return new SqlCase(
+                    toCalcitePos(node.getLocation()),
+                    null,
+                    SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(operands)),
                     SqlNodeList.of(toCalcitePos(node.getLocation()), visitNodes(node.getWhenClauses().stream().map(WhenClause::getResult).collect(toList()))),
                     node.getDefaultValue().map(this::visitNode).orElse(null));
         }
