@@ -35,7 +35,6 @@ import static io.cml.pgcatalog.builder.BigQueryUtils.createOrReplacePgTypeMappin
 import static io.cml.pgcatalog.builder.BigQueryUtils.toBqType;
 import static io.cml.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
 import static io.cml.spi.type.CharType.CHAR;
-import static io.cml.spi.type.RegprocType.REGPROC;
 import static io.cml.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -257,7 +256,7 @@ public final class BigQueryPgCatalogTableBuilder
         if (value == null) {
             return "null";
         }
-        if (type.oid() == VARCHAR.oid() || type.oid() == CHAR.oid() || type.oid() == REGPROC.oid()) {
+        if (type.oid() == VARCHAR.oid() || type.oid() == CHAR.oid()) {
             return "'" + value + "'";
         }
         return value.toString();
