@@ -47,9 +47,9 @@ public final class PgCatalogTableBuilderUtils
                     record[10] = 0; // typrelid
                     record[11] = type.typElem(); // typelem
                     record[12] = type.typArray(); // typarray
-                    record[13] = type.typInput(); // typinput
-                    record[14] = type.typOutput(); // typoutput
-                    record[15] = type.typReceive(); // typreceive
+                    record[13] = withProcHash(type.typInput()); // typinput
+                    record[14] = withProcHash(type.typOutput()); // typoutput
+                    record[15] = withProcHash(type.typReceive()); // typreceive
                     record[16] = false; // typnotnull
                     record[17] = 0; // typbasetype
                     record[18] = -1; // typtypmod
@@ -61,6 +61,11 @@ public final class PgCatalogTableBuilderUtils
                     record[24] = null; // typdefaultbin
                     return record;
                 }).collect(toImmutableList());
+    }
+
+    private static String withProcHash(String key)
+    {
+        return withHash("PROC" + key);
     }
 
     private static String withHash(String key)
