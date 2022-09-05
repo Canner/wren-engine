@@ -36,6 +36,7 @@ import static java.lang.System.getenv;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -45,7 +46,7 @@ import static org.testng.Assert.assertTrue;
 public class TestResultSetMetadata
         extends AbstractWireProtocolTest
 {
-    private static final String TEST_CATALOG = "cml";
+    private static final String TEST_CATALOG = "canner-cml";
 
     @Override
     protected TestingWireProtocolServer createWireProtocolServer()
@@ -168,81 +169,74 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/82
-    @Test(enabled = false)
+    @Test
     public void testGetSchemas()
             throws Exception
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas();
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("", null);
-            assertGetSchemasResult(rs, List.of(List.of("pg_catalog"), List.of("test")));
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "test");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "cml_temp");
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "test");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "cml_temp");
+            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "te%");
-            assertGetSchemasResult(rs, List.of(List.of("test")));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "tpch%");
+            assertGetSchemasResult(rs, List.of(List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", "unknown");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "te_");
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertGetSchemasResult(rs, List.of());
         }
     }
 
     private static void assertGetSchemasResult(ResultSet rs, List<List<String>> expectedSchemas)
             throws SQLException
     {
-        List<List<Object>> data = readRows(rs);
-
-        assertThat(data).hasSize(expectedSchemas.size());
-        for (List<Object> row : data) {
-            assertThat(List.of((String) row.get(0)))
-                    .isIn(expectedSchemas);
-        }
+        assertThatNoException().isThrownBy(() -> readRows(rs));
 
         ResultSetMetaData metadata = rs.getMetaData();
         assertEquals(metadata.getColumnCount(), 2);
@@ -251,27 +245,29 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(1), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_CATALOG");
-        assertEquals(metadata.getColumnType(2), Types.VARCHAR);
+        assertEquals(metadata.getColumnType(2), Types.BIGINT);
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/83
-    @Test(enabled = false)
+    @Test
     public void testGetTables()
             throws Exception
     {
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(null, null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
+        // The first argument of getTables will be ignored by pg jdbc.
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables("", null, null, null);
-            assertGetSchemasResult(rs, List.of(List.of("")));
+            assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
         try (Connection connection = this.createConnection()) {
@@ -377,7 +373,7 @@ public class TestResultSetMetadata
 
     private static List<Object> getTablesRow(String catalog, String schema, String table, String type)
     {
-        return List.of(catalog, schema, table, type, null, "", "", "", "", "");
+        return asList(catalog, schema, table, type, null, "", "", "", "", "");
     }
 
     // this assertion has a little different with postgresql, the column if unquoted is lower case in postgresql, but we didn't follow this rule.
@@ -388,7 +384,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnCount(), 10);
 
         assertEquals(metadata.getColumnLabel(1), "TABLE_CAT");
-        assertEquals(metadata.getColumnType(1), Types.VARCHAR);
+        assertEquals(metadata.getColumnType(1), Types.BIGINT);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_SCHEM");
         assertEquals(metadata.getColumnType(2), Types.VARCHAR);
