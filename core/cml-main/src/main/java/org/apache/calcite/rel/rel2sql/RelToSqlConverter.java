@@ -109,6 +109,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.rex.RexLiteral.stringValue;
 
@@ -1237,7 +1238,14 @@ public class RelToSqlConverter
     public Result visit(Uncollect e)
     {
         final Result x = visitInput(e, 0);
-        final SqlNode unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, x.asStatement());
+        SqlNode unnestNode;
+        // BigQuery only support unnest an array statement
+        if (x.asStatement() instanceof SqlSelect) {
+            unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, ((SqlSelect) x.asStatement()).getSelectList().get(0));
+        }
+        else {
+            unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, x.asStatement());
+        }
         final List<SqlNode> operands = createAsFullOperands(e.getRowType(), unnestNode,
                 requireNonNull(x.neededAlias, () -> "x.neededAlias is null, node is " + x.node));
         final SqlNode asNode = SqlStdOperatorTable.AS.createCall(POS, operands);
@@ -1277,13 +1285,23 @@ public class RelToSqlConverter
     {
         final List<SqlNode> result = new ArrayList<>();
         result.add(leftOperand);
-        result.add(new SqlIdentifier(alias, POS));
-        Ord.forEach(rowType.getFieldNames(), (fieldName, i) -> {
-            if (SqlUtil.isGeneratedAlias(fieldName)) {
-                fieldName = "col_" + i;
-            }
-            result.add(new SqlIdentifier(fieldName, POS));
-        });
+        if (dialect.supportsAliasedValues()) {
+            result.add(new SqlIdentifier(alias, POS));
+            Ord.forEach(rowType.getFieldNames(), (fieldName, i) -> {
+                if (SqlUtil.isGeneratedAlias(fieldName)) {
+                    fieldName = "col_" + i;
+                }
+                result.add(new SqlIdentifier(fieldName, POS));
+            });
+        }
+        else {
+            // The field size should 1 because the nested array is unsupported in BigQuery.
+            checkArgument(rowType.getFieldNames().size() == 1, format("The field number of row should be 1 but %s", rowType.getFieldNames().size()));
+            // checkArgument(!SqlUtil.isGeneratedAlias(rowType.getFieldNames().get(0)), "UNNEST relation should be aliased");
+            // The alias of an unnest array is the field name in BigQuery.
+            // Set the field name of row only.
+            result.add(new SqlIdentifier(rowType.getFieldNames().get(0), POS));
+        }
         return result;
     }
 

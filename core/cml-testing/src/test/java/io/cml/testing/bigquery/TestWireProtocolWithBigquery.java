@@ -842,7 +842,14 @@ public class TestWireProtocolWithBigquery
                 {"SELECT 1, 2, 3"},
                 {"SELECT array[1,2,3][1]"},
                 {"select current_schemas(false)[1]"},
-                {"select typinput = 1, typoutput = 1, typreceive = 1 from \"canner-cml\".pg_catalog.pg_type"}
+                {"select typinput = 1, typoutput = 1, typreceive = 1 from \"canner-cml\".pg_catalog.pg_type"},
+                {"select * from unnest(generate_array(1, 10)) t(col_1)"},
+                {"select * from unnest(array[1,2,3]) t(col_1)"},
+                {"SELECT\n" +
+                        "s.r\n" +
+                        ", current_schemas(false)[s.r] nspname\n" +
+                        "FROM\n" +
+                        "UNNEST(generate_array(1, array_upper(current_schemas(false), 1))) s (r)"},
         };
     }
 
