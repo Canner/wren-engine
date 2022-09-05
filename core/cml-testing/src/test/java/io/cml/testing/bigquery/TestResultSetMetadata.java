@@ -76,23 +76,22 @@ public class TestResultSetMetadata
         }
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/61
-    @Test(enabled = false)
+    @Test
     public void testGetTypeInfo()
             throws Exception
     {
         Map<Object, List<Object>> map = ImmutableMap.<Object, List<Object>>builder()
-                .put("bool", List.of("bool", -7, 0, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
-                .put("int2", List.of("int2", 5, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
-                .put("int4", List.of("int4", 4, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
-                .put("int8", List.of("int8", -5, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
-                .put("float4", List.of("float4", 7, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
-                .put("float8", List.of("float8", 8, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
-                .put("numeric", List.of("numeric", 2, 1000, null, null, null, 1, false, 3, false, false, false, null, 0, 1000, null, null, 10))
-                .put("varchar", List.of("varchar", 12, 10485760, "'", "'", null, 1, true, 3, true, false, false, null, 0, 0, null, null, 10))
-                .put("char", List.of("char", 1, 0, "'", "'", null, 1, true, 3, true, false, false, null, 0, 0, null, null, 10))
-                .put("timestamp", List.of("timestamp", 93, 6, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
-                .put("timestamptz", List.of("timestamptz", 93, 6, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
+                .put("bool", asList("bool", -7, 0, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
+                .put("int2", asList("int2", 5, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
+                .put("int4", asList("int4", 4, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
+                .put("int8", asList("int8", -5, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
+                .put("float4", asList("float4", 7, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
+                .put("float8", asList("float8", 8, 0, null, null, null, 1, false, 3, false, false, false, null, 0, 0, null, null, 10))
+                .put("numeric", asList("numeric", 2, 1000, null, null, null, 1, false, 3, false, false, false, null, 0, 1000, null, null, 10))
+                .put("varchar", asList("varchar", 12, 10485760, "'", "'", null, 1, true, 3, true, false, false, null, 0, 0, null, null, 10))
+                .put("char", asList("char", 1, 0, "'", "'", null, 1, true, 3, true, false, false, null, 0, 0, null, null, 10))
+                .put("timestamp", asList("timestamp", 93, 6, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
+                .put("timestamptz", asList("timestamptz", 93, 6, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
                 .build();
 
         try (Connection connection = createConnection()) {
