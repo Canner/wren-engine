@@ -85,7 +85,7 @@ public final class BigQueryUtils
                 .put(BPCHAR, "STRING")
                 .put(INET, "INET")
                 .put(UUID, "STRING")
-                .put(REGPROC, "STRING");
+                .put(REGPROC, "INT64");
         // TODO: support record type, hstore
         // .put(EMPTY_RECORD, "STRUCT")
         // .put(HSTORE, "STRUCT")

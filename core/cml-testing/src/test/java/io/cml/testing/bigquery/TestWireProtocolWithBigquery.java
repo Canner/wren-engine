@@ -841,7 +841,8 @@ public class TestWireProtocolWithBigquery
                         ")))"},
                 {"SELECT 1, 2, 3"},
                 {"SELECT array[1,2,3][1]"},
-                {"select current_schemas(false)[1]"}
+                {"select current_schemas(false)[1]"},
+                {"select typinput = 1, typoutput = 1, typreceive = 1 from \"canner-cml\".pg_catalog.pg_type"}
         };
     }
 
