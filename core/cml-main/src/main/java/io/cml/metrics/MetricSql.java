@@ -14,6 +14,8 @@
 
 package io.cml.metrics;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -45,7 +47,19 @@ public final class MetricSql
     private final Metric.TimeGrain timeGrain;
     private final List<Metric.Filter> filters;
 
-    private MetricSql(String baseMetricName, String source, Metric.Type type, String sql, List<String> dimensions, String timestamp, Metric.TimeGrain timeGrain, List<Metric.Filter> filters)
+    private final Status status;
+
+    @JsonCreator
+    public MetricSql(
+            @JsonProperty("baseMetricName") String baseMetricName,
+            @JsonProperty("source") String source,
+            @JsonProperty("type") Metric.Type type,
+            @JsonProperty("sql") String sql,
+            @JsonProperty("dimensions") List<String> dimensions,
+            @JsonProperty("timestamp") String timestamp,
+            @JsonProperty("timeGrain") Metric.TimeGrain timeGrain,
+            @JsonProperty("filters") List<Metric.Filter> filters,
+            @JsonProperty("status") Status status)
     {
         this.baseMetricName = baseMetricName;
         this.name = baseMetricName + "_" + Utils.randomTableSuffix();
@@ -56,20 +70,76 @@ public final class MetricSql
         this.timestamp = timestamp;
         this.timeGrain = timeGrain;
         this.filters = filters;
+        this.status = status;
     }
 
     public static List<MetricSql> of(Metric metric)
     {
-        MetricSql metricSql = new MetricSql(metric.getName(), metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of());
+        MetricSql metricSql = new MetricSql(metric.getName(), metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of(), Status.FAILED);
         List<MetricSql> metricSqls = expandDimensions(List.of(metricSql), List.copyOf(metric.getDimensions()));
         metricSqls = expandTimeGrains(metricSqls, List.copyOf(metric.getTimeGrains()));
         metricSqls = expandFilters(metricSqls, List.copyOf(metric.getFilters()));
         return metricSqls;
     }
 
-    public String name()
+    @JsonProperty
+    public String getName()
     {
         return name;
+    }
+
+    @JsonProperty
+    public String getBaseMetricName()
+    {
+        return baseMetricName;
+    }
+
+    @JsonProperty
+    public String getSource()
+    {
+        return source;
+    }
+
+    @JsonProperty
+    public Metric.Type getType()
+    {
+        return type;
+    }
+
+    @JsonProperty
+    public String getSql()
+    {
+        return sql;
+    }
+
+    @JsonProperty
+    public List<String> getDimensions()
+    {
+        return dimensions;
+    }
+
+    @JsonProperty
+    public String getTimestamp()
+    {
+        return timestamp;
+    }
+
+    @JsonProperty
+    public Metric.TimeGrain getTimeGrain()
+    {
+        return timeGrain;
+    }
+
+    @JsonProperty
+    public List<Metric.Filter> getFilters()
+    {
+        return filters;
+    }
+
+    @JsonProperty
+    public Status getStatus()
+    {
+        return status;
     }
 
     /**
@@ -121,13 +191,14 @@ public final class MetricSql
                 && Objects.equals(dimensions, metricSql.dimensions)
                 && Objects.equals(timestamp, metricSql.timestamp)
                 && timeGrain == metricSql.timeGrain
-                && Objects.equals(filters, metricSql.filters);
+                && Objects.equals(filters, metricSql.filters)
+                && Objects.equals(status, metricSql.status);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(source, type, sql, dimensions, timestamp, timeGrain, filters);
+        return Objects.hash(source, type, sql, dimensions, timestamp, timeGrain, filters, status);
     }
 
     @Override
@@ -141,6 +212,7 @@ public final class MetricSql
                 .add("timestamp", timestamp)
                 .add("timeGrain", timeGrain)
                 .add("filters", filters)
+                .add("status", filters)
                 .toString();
     }
 
@@ -154,7 +226,8 @@ public final class MetricSql
                 .setDimensions(metricSql.dimensions)
                 .setTimestamp(metricSql.timestamp)
                 .setTimeGrains(metricSql.timeGrain)
-                .setFilters(metricSql.filters);
+                .setFilters(metricSql.filters)
+                .setStatus(metricSql.status);
     }
 
     @VisibleForTesting
@@ -174,6 +247,8 @@ public final class MetricSql
         private String timestamp;
         private Metric.TimeGrain timeGrains;
         private List<Metric.Filter> filters = List.of();
+
+        private Status status = Status.FAILED;
 
         public Builder setBaseMetricName(String baseMetricName)
         {
@@ -223,9 +298,15 @@ public final class MetricSql
             return this;
         }
 
+        public Builder setStatus(Status status)
+        {
+            this.status = status;
+            return this;
+        }
+
         public MetricSql build()
         {
-            return new MetricSql(baseMetricName, source, type, sql, dimensions, timestamp, timeGrains, filters);
+            return new MetricSql(baseMetricName, source, type, sql, dimensions, timestamp, timeGrains, filters, status);
         }
     }
 
@@ -304,5 +385,11 @@ public final class MetricSql
             findCombinations(result, original, candidate, i + 1, num);
             candidate.remove(candidate.size() - 1);
         }
+    }
+
+    public enum Status
+    {
+        SUCCESS,
+        FAILED
     }
 }
