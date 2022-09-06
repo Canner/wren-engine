@@ -274,14 +274,12 @@ public final class Metric
         }
 
         @JsonProperty
-
         public Operator getOperator()
         {
             return operator;
         }
 
         @JsonProperty
-
         public String getValue()
         {
             return value;

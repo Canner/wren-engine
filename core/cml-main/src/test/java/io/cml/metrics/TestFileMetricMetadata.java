@@ -125,7 +125,6 @@ public class TestFileMetricMetadata
             metricMetadata.dropMetric(name);
         }
         catch (Exception ignore) {
-
         }
     }
 }
