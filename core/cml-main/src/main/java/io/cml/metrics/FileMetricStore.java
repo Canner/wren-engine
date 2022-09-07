@@ -20,7 +20,6 @@ import io.cml.spi.CmlException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -31,6 +30,7 @@ import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class FileMetricStore
         implements MetricStore
@@ -55,15 +55,14 @@ public class FileMetricStore
             return stream.filter(path -> path.getFileName().toFile().isDirectory())
                     .map(path -> path.toFile().getName())
                     .map(name -> {
-                        String path = format("%s/%s.json", rootPath, name);
                         try {
-                            return objectMapper.readValue(Paths.get(path).toFile(), Metric.class);
+                            return objectMapper.readValue(rootPath.resolve(withJsonFileExtension(name)).toFile(), Metric.class);
                         }
                         catch (IOException e) {
                             throw new RuntimeException(e);
                         }
                     })
-                    .collect(Collectors.toList());
+                    .collect(toUnmodifiableList());
         }
         catch (Exception e) {
             throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
@@ -158,7 +157,7 @@ public class FileMetricStore
                             throw new RuntimeException(e);
                         }
                     })
-                    .collect(Collectors.toList());
+                    .collect(toUnmodifiableList());
         }
         catch (Exception e) {
             throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);

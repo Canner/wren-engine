@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.cml.Utils.swallowException;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.metrics.Metric.TimeGrain.DAY;
 import static io.cml.metrics.Metric.TimeGrain.MONTH;
@@ -32,12 +33,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 @Test(singleThreaded = true)
 public class TestFileMetricStore
 {
-    private final MetricStore metricStore;
-
-    public TestFileMetricStore()
-    {
-        this.metricStore = new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_METADATA_HOME"))));
-    }
+    private static final MetricStore metricStore =  new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_STORE_HOME"))));
 
     @Test
     public void testCreateMetric()
@@ -67,7 +63,7 @@ public class TestFileMetricStore
 
             MetricSql firstSqlExpected = metricSqls.get(0);
             Optional<MetricSql> firstSqlActualOptional = metricStore.getMetricSql(firstSqlExpected.getBaseMetricName(), firstSqlExpected.getName());
-            assertThat(firstSqlActualOptional.isPresent()).isTrue();
+            assertThat(firstSqlActualOptional).isPresent();
             assertThat(firstSqlActualOptional.get()).isEqualTo(firstSqlExpected);
         }
         finally {
@@ -82,9 +78,10 @@ public class TestFileMetricStore
         assertThatThrownBy(fakeMetadata::listMetrics)
                 .hasMessageFindingMatch(".*rootPath is not found.*");
         assertThat(metricStore.listMetrics().isEmpty()).isTrue();
-        assertThat(metricStore.getMetric("notfound").isEmpty()).isTrue();
+        assertThat(metricStore.getMetric("notfound")).isEmpty();
         assertThatThrownBy(() -> metricStore.listMetricSqls("notfound"))
                 .hasMessageFindingMatch("metric .* not found");
+        assertThat(metricStore.getMetricSql("notfound", "notfound")).isEmpty();
     }
 
     @Test
@@ -105,26 +102,18 @@ public class TestFileMetricStore
 
         try {
             metricStore.createMetric(expected);
-            assertThat(metricStore.getMetric(expected.getName()).isPresent()).isTrue();
+            assertThat(metricStore.getMetric(expected.getName())).isPresent();
             metricSqls.forEach(metricStore::createMetricSql);
             assertThat(metricStore.listMetricSqls(expected.getName()).size()).isEqualTo(metricSqls.size());
 
             metricStore.dropMetric(expected.getName());
-            assertThat(metricStore.getMetric(expected.getName()).isPresent()).isFalse();
+            assertThat(metricStore.getMetric(expected.getName())).isNotPresent();
+            assertThat(metricStore.getMetricSql(expected.getName(), metricSqls.get(0).getName())).isNotPresent();
             assertThatThrownBy(() -> metricStore.dropMetric(expected.getName()))
                     .hasMessageFindingMatch("metric .* not found");
         }
         finally {
-            dropMetricQuietly(expected.getName());
-        }
-    }
-
-    private void dropMetricQuietly(String name)
-    {
-        try {
-            metricStore.dropMetric(name);
-        }
-        catch (Exception ignore) {
+            swallowException(() -> metricStore.dropMetric(expected.getName()));
         }
     }
 }

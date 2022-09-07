@@ -391,6 +391,6 @@ public final class MetricSql
     {
         SUCCESS,
         FAILED,
-        PREPARING
+        PREPARING,
     }
 }
