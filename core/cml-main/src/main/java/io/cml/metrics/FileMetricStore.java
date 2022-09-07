@@ -32,13 +32,13 @@ import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class FileMetricMetadata
-        implements MetricMetadata
+public class FileMetricStore
+        implements MetricStore
 {
     private final Path rootPath;
     private final ObjectMapper objectMapper;
 
-    public FileMetricMetadata(Path rootPath)
+    public FileMetricStore(Path rootPath)
     {
         this.rootPath = requireNonNull(rootPath);
         this.objectMapper = new ObjectMapper();
@@ -66,7 +66,7 @@ public class FileMetricMetadata
                     .collect(Collectors.toList());
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("rootPath can't be accessed. Exception: %s", e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
         }
     }
 
@@ -82,7 +82,7 @@ public class FileMetricMetadata
             return Optional.of(objectMapper.readValue(path.toFile(), Metric.class));
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be accessed. Exception: %s", metricName, e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be accessed", metricName), e);
         }
     }
 
@@ -100,7 +100,7 @@ public class FileMetricMetadata
             objectMapper.writeValue(path.toFile(), metric);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be created. Exception: %s", metric.getName(), e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be created", metric.getName()), e);
         }
     }
 
@@ -119,7 +119,7 @@ public class FileMetricMetadata
             Files.delete(path);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be dropped. Exception: %s", metricName, e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be dropped", metricName), e);
         }
     }
 
@@ -135,7 +135,7 @@ public class FileMetricMetadata
             objectMapper.writeValue(path.toFile(), metricSql);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metricSql %s can't be created. Exception: %s", metricSql.getName(), e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metricSql %s can't be created", metricSql.getName()), e);
         }
     }
 
@@ -161,7 +161,7 @@ public class FileMetricMetadata
                     .collect(Collectors.toList());
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("rootPath can't be accessed. Exception: %s", e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
         }
     }
 
@@ -177,7 +177,7 @@ public class FileMetricMetadata
             return Optional.of(objectMapper.readValue(filePath.toFile(), MetricSql.class));
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric sql %s can't be accessed. Exception: %s", metricSqlName, e));
+            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric sql %s can't be accessed", metricSqlName), e);
         }
     }
 

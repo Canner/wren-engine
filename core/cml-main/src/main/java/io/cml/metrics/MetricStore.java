@@ -17,7 +17,7 @@ package io.cml.metrics;
 import java.util.List;
 import java.util.Optional;
 
-public interface MetricMetadata
+public interface MetricStore
 {
     /**
      * @return all created metrics in the root

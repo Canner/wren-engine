@@ -30,13 +30,13 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @Test(singleThreaded = true)
-public class TestFileMetricMetadata
+public class TestFileMetricStore
 {
-    private final MetricMetadata metricMetadata;
+    private final MetricStore metricStore;
 
-    public TestFileMetricMetadata()
+    public TestFileMetricStore()
     {
-        this.metricMetadata = new FileMetricMetadata(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_METADATA_HOME"))));
+        this.metricStore = new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_METADATA_HOME"))));
     }
 
     @Test
@@ -56,34 +56,34 @@ public class TestFileMetricMetadata
         List<MetricSql> metricSqls = MetricSql.of(expected);
 
         try {
-            metricMetadata.createMetric(expected);
-            Optional<Metric> actual = metricMetadata.getMetric(expected.getName());
+            metricStore.createMetric(expected);
+            Optional<Metric> actual = metricStore.getMetric(expected.getName());
             assertThat(actual.isPresent()).isTrue();
             assertThat(actual.get()).isEqualTo(expected);
-            assertThat(metricMetadata.listMetricSqls(expected.getName()).isEmpty()).isTrue();
+            assertThat(metricStore.listMetricSqls(expected.getName()).isEmpty()).isTrue();
 
-            metricSqls.forEach(metricMetadata::createMetricSql);
-            assertThat(metricMetadata.listMetricSqls(expected.getName()).size()).isEqualTo(metricSqls.size());
+            metricSqls.forEach(metricStore::createMetricSql);
+            assertThat(metricStore.listMetricSqls(expected.getName()).size()).isEqualTo(metricSqls.size());
 
             MetricSql firstSqlExpected = metricSqls.get(0);
-            Optional<MetricSql> firstSqlActualOptional = metricMetadata.getMetricSql(firstSqlExpected.getBaseMetricName(), firstSqlExpected.getName());
+            Optional<MetricSql> firstSqlActualOptional = metricStore.getMetricSql(firstSqlExpected.getBaseMetricName(), firstSqlExpected.getName());
             assertThat(firstSqlActualOptional.isPresent()).isTrue();
             assertThat(firstSqlActualOptional.get()).isEqualTo(firstSqlExpected);
         }
         finally {
-            metricMetadata.dropMetric(expected.getName());
+            metricStore.dropMetric(expected.getName());
         }
     }
 
     @Test
     public void testNotExistMetric()
     {
-        MetricMetadata fakeMetadata = new FileMetricMetadata(Path.of("/tmp/notfound"));
+        MetricStore fakeMetadata = new FileMetricStore(Path.of("/tmp/notfound"));
         assertThatThrownBy(fakeMetadata::listMetrics)
                 .hasMessageFindingMatch(".*rootPath is not found.*");
-        assertThat(metricMetadata.listMetrics().isEmpty()).isTrue();
-        assertThat(metricMetadata.getMetric("notfound").isEmpty()).isTrue();
-        assertThatThrownBy(() -> metricMetadata.listMetricSqls("notfound"))
+        assertThat(metricStore.listMetrics().isEmpty()).isTrue();
+        assertThat(metricStore.getMetric("notfound").isEmpty()).isTrue();
+        assertThatThrownBy(() -> metricStore.listMetricSqls("notfound"))
                 .hasMessageFindingMatch("metric .* not found");
     }
 
@@ -104,14 +104,14 @@ public class TestFileMetricMetadata
         List<MetricSql> metricSqls = MetricSql.of(expected);
 
         try {
-            metricMetadata.createMetric(expected);
-            assertThat(metricMetadata.getMetric(expected.getName()).isPresent()).isTrue();
-            metricSqls.forEach(metricMetadata::createMetricSql);
-            assertThat(metricMetadata.listMetricSqls(expected.getName()).size()).isEqualTo(metricSqls.size());
+            metricStore.createMetric(expected);
+            assertThat(metricStore.getMetric(expected.getName()).isPresent()).isTrue();
+            metricSqls.forEach(metricStore::createMetricSql);
+            assertThat(metricStore.listMetricSqls(expected.getName()).size()).isEqualTo(metricSqls.size());
 
-            metricMetadata.dropMetric(expected.getName());
-            assertThat(metricMetadata.getMetric(expected.getName()).isPresent()).isFalse();
-            assertThatThrownBy(() -> metricMetadata.dropMetric(expected.getName()))
+            metricStore.dropMetric(expected.getName());
+            assertThat(metricStore.getMetric(expected.getName()).isPresent()).isFalse();
+            assertThatThrownBy(() -> metricStore.dropMetric(expected.getName()))
                     .hasMessageFindingMatch("metric .* not found");
         }
         finally {
@@ -122,7 +122,7 @@ public class TestFileMetricMetadata
     private void dropMetricQuietly(String name)
     {
         try {
-            metricMetadata.dropMetric(name);
+            metricStore.dropMetric(name);
         }
         catch (Exception ignore) {
         }
