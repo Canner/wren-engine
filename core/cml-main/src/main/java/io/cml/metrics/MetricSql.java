@@ -75,7 +75,7 @@ public final class MetricSql
 
     public static List<MetricSql> of(Metric metric)
     {
-        MetricSql metricSql = new MetricSql(metric.getName(), metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of(), Status.FAILED);
+        MetricSql metricSql = new MetricSql(metric.getName(), metric.getSource(), metric.getType(), metric.getSql(), List.of(), metric.getTimestamp(), null, List.of(), Status.PREPARING);
         List<MetricSql> metricSqls = expandDimensions(List.of(metricSql), List.copyOf(metric.getDimensions()));
         metricSqls = expandTimeGrains(metricSqls, List.copyOf(metric.getTimeGrains()));
         metricSqls = expandFilters(metricSqls, List.copyOf(metric.getFilters()));
@@ -248,7 +248,7 @@ public final class MetricSql
         private Metric.TimeGrain timeGrains;
         private List<Metric.Filter> filters = List.of();
 
-        private Status status = Status.FAILED;
+        private Status status = Status.PREPARING;
 
         public Builder setBaseMetricName(String baseMetricName)
         {
@@ -390,6 +390,7 @@ public final class MetricSql
     public enum Status
     {
         SUCCESS,
-        FAILED
+        FAILED,
+        PREPARING
     }
 }
