@@ -141,7 +141,7 @@ public class TestBigQuery
         assertThat(metricSqls.size()).isEqualTo(1);
         MetricSql metricSql = metricSqls.get(0);
 
-        SchemaTableName schemaTableName = new SchemaTableName(bigQueryMetadata.getMaterializedViewSchema(), metricSql.name());
+        SchemaTableName schemaTableName = new SchemaTableName(bigQueryMetadata.getMaterializedViewSchema(), metricSql.getName());
 
         try {
             bigQueryMetadata.createMaterializedView(schemaTableName, metricSql.sql());

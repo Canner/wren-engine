@@ -14,6 +14,9 @@
 
 package io.cml.metrics;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -33,7 +36,16 @@ public final class Metric
     // Filters are combined using AND clauses
     private final Set<Filter> filters;
 
-    private Metric(String name, String source, Type type, String sql, Set<String> dimensions, String timestamp, Set<TimeGrain> timeGrains, Set<Filter> filters)
+    @JsonCreator
+    public Metric(
+            @JsonProperty("name") String name,
+            @JsonProperty("source") String source,
+            @JsonProperty("type") Type type,
+            @JsonProperty("sql") String sql,
+            @JsonProperty("dimensions") Set<String> dimensions,
+            @JsonProperty("timestamp") String timestamp,
+            @JsonProperty("timeGrains") Set<TimeGrain> timeGrains,
+            @JsonProperty("filters") Set<Filter> filters)
     {
         this.name = requireNonNull(name);
         this.source = requireNonNull(source);
@@ -45,44 +57,94 @@ public final class Metric
         this.filters = requireNonNull(filters);
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getSource()
     {
         return source;
     }
 
+    @JsonProperty
     public Type getType()
     {
         return type;
     }
 
+    @JsonProperty
     public String getSql()
     {
         return sql;
     }
 
+    @JsonProperty
     public Set<String> getDimensions()
     {
         return dimensions;
     }
 
+    @JsonProperty
     public String getTimestamp()
     {
         return timestamp;
     }
 
+    @JsonProperty
     public Set<TimeGrain> getTimeGrains()
     {
         return timeGrains;
     }
 
+    @JsonProperty
     public Set<Filter> getFilters()
     {
         return filters;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Metric metric = (Metric) o;
+
+        return Objects.equals(name, metric.name)
+                && Objects.equals(source, metric.source)
+                && type == metric.type
+                && Objects.equals(sql, metric.sql)
+                && Objects.equals(dimensions, metric.dimensions)
+                && Objects.equals(timestamp, metric.timestamp)
+                && Objects.equals(timeGrains, metric.timeGrains)
+                && Objects.equals(filters, metric.filters);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, source, type, sql, dimensions, timestamp, timeGrains, filters);
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("source", source)
+                .add("type", type)
+                .add("sql", sql)
+                .add("dimensions", dimensions)
+                .add("timestamp", timestamp)
+                .add("timeGrains", timeGrains)
+                .add("filters", filters)
+                .toString();
     }
 
     public static Builder builder()
@@ -194,23 +256,30 @@ public final class Metric
         private final Operator operator;
         private final String value;
 
-        public Filter(String field, Operator operator, String value)
+        @JsonCreator
+        public Filter(
+                @JsonProperty("field") String field,
+                @JsonProperty("operator") Operator operator,
+                @JsonProperty("value") String value)
         {
             this.field = field;
             this.operator = operator;
             this.value = value;
         }
 
+        @JsonProperty
         public String getField()
         {
             return field;
         }
 
+        @JsonProperty
         public Operator getOperator()
         {
             return operator;
         }
 
+        @JsonProperty
         public String getValue()
         {
             return value;

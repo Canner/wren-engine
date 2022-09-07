@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-    - '**'
+      - '**'
 
 jobs:
   build:
@@ -32,5 +32,7 @@ jobs:
           TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}
           TEST_BIG_QUERY_PARENT_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PARENT_PROJECT_ID }}
           TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON: ${{ secrets.TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON }}
+          TEST_CML_FILE_METRIC_STORE_HOME: /tmp/cml-metric-test
         run: |
+          mkdir /tmp/cml-metric-test
           ./mvnw test -B --fail-at-end
