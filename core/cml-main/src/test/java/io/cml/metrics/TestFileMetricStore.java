@@ -33,7 +33,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 @Test(singleThreaded = true)
 public class TestFileMetricStore
 {
-    private static final MetricStore metricStore =  new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_STORE_HOME"))));
+    private static final MetricStore metricStore = new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_STORE_HOME"))));
 
     @Test
     public void testCreateMetric()
