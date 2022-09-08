@@ -36,15 +36,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class AbstractTestMetricHook
 {
-    public abstract MetricHook getMetricHook();
+    protected abstract MetricHook getMetricHook();
 
-    public abstract MetricStore getMetricStore();
+    protected abstract MetricStore getMetricStore();
 
-    public abstract Metadata getMetadata();
+    protected abstract Metadata getMetadata();
 
-    public abstract SqlConverter getSqlConverter();
+    protected abstract SqlConverter getSqlConverter();
 
-    public abstract void dropTables(List<SchemaTableName> createdTables);
+    protected abstract void dropTables(List<SchemaTableName> createdTables);
 
     @Test
     public void testCreateMetric()
@@ -112,7 +112,7 @@ public abstract class AbstractTestMetricHook
             assertThat(metricSql.getStatus()).isEqualTo(SUCCESS);
             schemaTableName = new SchemaTableName(getMetadata().getMaterializedViewSchema(), metricSql.getName());
 
-            getMetricHook().handleDrop(metric);
+            getMetricHook().handleDrop(metric.getName());
             assertThat(getMetricStore().getMetric(metric.getName())).isEmpty();
 
             // Aggregate and GroupBy won't be removed but sql will be formatted by calcite
@@ -136,18 +136,7 @@ public abstract class AbstractTestMetricHook
             swallowException(() -> getMetricStore().dropMetric(metric.getName()));
         }
 
-        Metric notfound = Metric.builder()
-                .setName("notfound")
-                // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
-                .setSource("\"canner-cml\".tpch_tiny.orders")
-                .setType(Metric.Type.AVG)
-                .setSql("o_totalprice")
-                .setDimensions(Set.of("o_orderstatus"))
-                .setTimestamp("o_orderdate")
-                .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
-                .build();
-        assertThatThrownBy(() -> getMetricHook().handleDrop(notfound))
+        assertThatThrownBy(() -> getMetricHook().handleDrop("notfound"))
                 .hasMessageFindingMatch("metric .* is not found");
     }
 

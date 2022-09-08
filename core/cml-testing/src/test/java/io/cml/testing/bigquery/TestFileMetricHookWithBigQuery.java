@@ -26,6 +26,7 @@ import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.sql.SqlConverter;
 import io.cml.testing.AbstractTestMetricHook;
+import org.testng.annotations.Test;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.List;
 import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
 
+@Test(singleThreaded = true)
 public class TestFileMetricHookWithBigQuery
         extends AbstractTestMetricHook
 {
@@ -62,31 +64,31 @@ public class TestFileMetricHookWithBigQuery
     }
 
     @Override
-    public MetricStore getMetricStore()
+    protected MetricStore getMetricStore()
     {
         return metricStore;
     }
 
     @Override
-    public Metadata getMetadata()
+    protected Metadata getMetadata()
     {
         return metadata;
     }
 
     @Override
-    public SqlConverter getSqlConverter()
+    protected SqlConverter getSqlConverter()
     {
         return sqlConverter;
     }
 
     @Override
-    public MetricHook getMetricHook()
+    protected MetricHook getMetricHook()
     {
         return metricHook;
     }
 
     @Override
-    public void dropTables(List<SchemaTableName> createdTables)
+    protected void dropTables(List<SchemaTableName> createdTables)
     {
         createdTables.forEach(bigQueryClient::dropTable);
     }

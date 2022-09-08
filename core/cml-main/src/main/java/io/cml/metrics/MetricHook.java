@@ -81,26 +81,26 @@ public class MetricHook
 
         // TODO: concurrency accessing issue for query, update and delete
         //  https://github.com/Canner/canner-metric-layer/issues/113
-        dropMetric(metric);
+        dropMetric(metric.getName());
         createMetric(metric);
     }
 
-    private void dropMetric(Metric metric)
+    private void dropMetric(String metricName)
     {
-        List<MetricSql> metricSqls = metricStore.listMetricSqls(metric.getName());
+        List<MetricSql> metricSqls = metricStore.listMetricSqls(metricName);
         metricSqls.stream()
                 .map(metricSql -> new SchemaTableName(metadata.getMaterializedViewSchema(), metricSql.getName()))
                 .forEach(metadata::deleteMaterializedView);
 
-        metricStore.dropMetric(metric.getName());
+        metricStore.dropMetric(metricName);
     }
 
-    public void handleDrop(Metric metric)
+    public void handleDrop(String metricName)
     {
-        if (metricStore.getMetric(metric.getName()).isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("metric %s is not found", metric.getName()));
+        if (metricStore.getMetric(metricName).isEmpty()) {
+            throw new CmlException(NOT_FOUND, format("metric %s is not found", metricName));
         }
 
-        dropMetric(metric);
+        dropMetric(metricName);
     }
 }
