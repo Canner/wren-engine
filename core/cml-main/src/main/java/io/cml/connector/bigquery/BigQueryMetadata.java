@@ -310,6 +310,12 @@ public class BigQueryMetadata
     }
 
     @Override
+    public void deleteMaterializedView(SchemaTableName schemaTableName)
+    {
+        bigQueryClient.dropTable(schemaTableName);
+    }
+
+    @Override
     public List<String> listFunctionNames(String schemaName)
     {
         Optional<Dataset> dataset = getDataset(schemaName);

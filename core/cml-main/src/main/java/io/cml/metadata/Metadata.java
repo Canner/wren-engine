@@ -67,6 +67,8 @@ public interface Metadata
      */
     List<MaterializedViewDefinition> listMaterializedViews();
 
+    void deleteMaterializedView(SchemaTableName schemaTableName);
+
     List<String> listFunctionNames(String schemaName);
 
     String resolveFunction(String functionName, int numArgument);
