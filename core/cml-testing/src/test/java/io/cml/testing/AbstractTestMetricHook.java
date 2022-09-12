@@ -15,20 +15,26 @@
 package io.cml.testing;
 
 import io.cml.metadata.Metadata;
+import io.cml.metadata.TableHandle;
+import io.cml.metadata.TableSchema;
 import io.cml.metrics.Metric;
 import io.cml.metrics.MetricHook;
 import io.cml.metrics.MetricSql;
 import io.cml.metrics.MetricStore;
 import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.SchemaTableName;
+import io.cml.sql.QualifiedObjectName;
 import io.cml.sql.SqlConverter;
+import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.cml.Utils.swallowException;
+import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.metrics.MetricSql.Status.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -114,6 +120,7 @@ public abstract class AbstractTestMetricHook
 
             getMetricHook().handleDrop(metric.getName());
             assertThat(getMetricStore().getMetric(metric.getName())).isEmpty();
+            waitTableRemoved(QualifiedName.of(getMetadata().getDefaultCatalog(), getMetadata().getMaterializedViewSchema(), metricSql.getName()));
 
             // Aggregate and GroupBy won't be removed but sql will be formatted by calcite
             assertThat(getSqlConverter().convert("SELECT\n" +
@@ -138,6 +145,27 @@ public abstract class AbstractTestMetricHook
 
         assertThatThrownBy(() -> getMetricHook().handleDrop("notfound"))
                 .hasMessageFindingMatch("metric .* is not found");
+    }
+
+    private void waitTableRemoved(QualifiedName tableName)
+    {
+        Optional<TableSchema> tableSchema;
+        do {
+            tableSchema = getTableSchema(tableName);
+        }
+        while (tableSchema.isPresent());
+    }
+
+    private Optional<TableSchema> getTableSchema(QualifiedName tableName)
+    {
+        try {
+            QualifiedObjectName name = createQualifiedObjectName(tableName, "", "");
+            Optional<TableHandle> tableHandle = getMetadata().getTableHandle(name);
+            return Optional.of(getMetadata().getTableSchema(tableHandle.get()));
+        }
+        catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
     @Test
