@@ -147,7 +147,7 @@ public abstract class AbstractTestMetricHook
                 .hasMessageFindingMatch("metric .* is not found");
     }
 
-    private void waitTableRemoved(QualifiedName tableName)
+    protected void waitTableRemoved(QualifiedName tableName)
     {
         Optional<TableSchema> tableSchema;
         do {
@@ -156,7 +156,7 @@ public abstract class AbstractTestMetricHook
         while (tableSchema.isPresent());
     }
 
-    private Optional<TableSchema> getTableSchema(QualifiedName tableName)
+    protected Optional<TableSchema> getTableSchema(QualifiedName tableName)
     {
         try {
             QualifiedObjectName name = createQualifiedObjectName(tableName, "", "");
