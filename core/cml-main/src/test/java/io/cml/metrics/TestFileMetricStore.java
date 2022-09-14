@@ -53,6 +53,8 @@ public class TestFileMetricStore
 
         try {
             metricStore.createMetric(expected);
+            List<Metric> metrics = metricStore.listMetrics();
+            assertThat(metrics.size()).isEqualTo(1);
             Optional<Metric> actual = metricStore.getMetric(expected.getName());
             assertThat(actual.isPresent()).isTrue();
             assertThat(actual.get()).isEqualTo(expected);
