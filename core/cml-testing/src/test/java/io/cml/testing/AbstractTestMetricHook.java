@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.cml.Utils.randomIntString;
+import static io.cml.Utils.randomTableSuffix;
 import static io.cml.Utils.swallowException;
 import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
@@ -55,8 +57,9 @@ public abstract class AbstractTestMetricHook
     @Test
     public void testCreateMetric()
     {
+        String filter = randomIntString();
         Metric metric = Metric.builder()
-                .setName("metric")
+                .setName("metric" + randomTableSuffix())
                 // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
                 .setSource("\"canner-cml\".tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
@@ -64,7 +67,7 @@ public abstract class AbstractTestMetricHook
                 .setDimensions(Set.of("o_orderstatus"))
                 .setTimestamp("o_orderdate")
                 .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, filter)))
                 .build();
         SchemaTableName schemaTableName = null;
         try {
@@ -82,7 +85,7 @@ public abstract class AbstractTestMetricHook
                             "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
                             "AVG(o_totalprice) AS _col3\n" +
                             "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                            "WHERE o_orderkey > 1\n" +
+                            "WHERE o_orderkey > " + filter + "\n" +
                             "GROUP BY 1, 2, 3", SessionContext.builder().build()))
                     .isEqualTo("SELECT o_orderstatus, CAST(`_col1` AS INT64) AS `_col1`, CAST(`_col2` AS INT64) AS `_col2`, `_col3`\n" +
                             "FROM `canner-cml`." + schemaTableName);
@@ -97,8 +100,9 @@ public abstract class AbstractTestMetricHook
     @Test
     public void testDropMetric()
     {
+        String filter = randomIntString();
         Metric metric = Metric.builder()
-                .setName("metric")
+                .setName("metric" + randomTableSuffix())
                 // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
                 .setSource("\"canner-cml\".tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
@@ -106,7 +110,7 @@ public abstract class AbstractTestMetricHook
                 .setDimensions(Set.of("o_orderstatus"))
                 .setTimestamp("o_orderdate")
                 .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, filter)))
                 .build();
 
         SchemaTableName schemaTableName = null;
@@ -129,12 +133,12 @@ public abstract class AbstractTestMetricHook
                     "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
                     "AVG(o_totalprice) AS _col3\n" +
                     "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                    "WHERE o_orderkey > 1\n" +
+                    "WHERE o_orderkey > " + filter + "\n" +
                     "GROUP BY 1, 2, 3", SessionContext.builder().build()))
                     .isEqualTo("SELECT o_orderstatus, CAST(TRUNC(EXTRACT(YEAR FROM o_orderdate)) AS INT64) AS `_col1`, " +
                             "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INT64) AS `_col2`, AVG(o_totalprice) AS `_col3`\n" +
                             "FROM `canner-cml`.tpch_tiny.orders\n" +
-                            "WHERE o_orderkey > 1\n" +
+                            "WHERE o_orderkey > " + filter + "\n" +
                             "GROUP BY o_orderstatus, CAST(TRUNC(EXTRACT(YEAR FROM o_orderdate)) AS INT64), CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INT64)");
         }
         finally {
@@ -171,8 +175,9 @@ public abstract class AbstractTestMetricHook
     @Test
     public void testRefreshMetric()
     {
+        String filter = randomIntString();
         Metric metric = Metric.builder()
-                .setName("metric")
+                .setName("metric" + randomTableSuffix())
                 // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
                 .setSource("\"canner-cml\".tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
@@ -180,7 +185,7 @@ public abstract class AbstractTestMetricHook
                 .setDimensions(Set.of("o_orderstatus"))
                 .setTimestamp("o_orderdate")
                 .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, filter)))
                 .build();
 
         SchemaTableName schemaTableName = null;
@@ -200,24 +205,16 @@ public abstract class AbstractTestMetricHook
                                 "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
                                 "AVG(o_totalprice) AS _col3\n" +
                                 "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                                "WHERE o_orderkey > 1\n" +
+                                "WHERE o_orderkey > " + filter + "\n" +
                                 "GROUP BY 1, 2, 3", SessionContext.builder().build()))
                         .isEqualTo("SELECT o_orderstatus, CAST(`_col1` AS INT64) AS `_col1`, CAST(`_col2` AS INT64) AS `_col2`, `_col3`\n" +
                                 "FROM `canner-cml`." + schemaTableName);
             }
             {
-                Metric updated = Metric.builder()
-                        .setName("metric")
-                        // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
-                        .setSource("\"canner-cml\".tpch_tiny.orders")
-                        .setType(Metric.Type.AVG)
-                        .setSql("o_totalprice")
-                        .setDimensions(Set.of("o_orderstatus"))
-                        .setTimestamp("o_orderdate")
-                        .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                        .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "2")))
+                String updatedFilter = randomIntString();
+                Metric updated = Metric.from(metric)
+                        .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, updatedFilter)))
                         .build();
-
                 getMetricHook().handleUpdate(updated);
                 List<MetricSql> metricSqls = getMetricStore().listMetricSqls(metric.getName());
                 assertThat(metricSqls.size()).isEqualTo(1);
@@ -232,7 +229,7 @@ public abstract class AbstractTestMetricHook
                                 "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
                                 "AVG(o_totalprice) AS _col3\n" +
                                 "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                                "WHERE o_orderkey > 2\n" +
+                                "WHERE o_orderkey > " + updatedFilter + "\n" +
                                 "GROUP BY 1, 2, 3", SessionContext.builder().build()))
                         .isEqualTo("SELECT o_orderstatus, CAST(`_col1` AS INT64) AS `_col1`, CAST(`_col2` AS INT64) AS `_col2`, `_col3`\n" +
                                 "FROM `canner-cml`." + schemaTableName);

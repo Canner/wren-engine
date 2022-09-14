@@ -152,6 +152,19 @@ public final class Metric
         return new Builder();
     }
 
+    public static Builder from(Metric metric)
+    {
+        return builder()
+                .setName(metric.getName())
+                .setSource(metric.getSource())
+                .setType(metric.getType())
+                .setDimensions(metric.getDimensions())
+                .setFilters(metric.getFilters())
+                .setTimestamp(metric.getTimestamp())
+                .setTimeGrains(metric.getTimeGrains())
+                .setSql(metric.getSql());
+    }
+
     public static class Builder
     {
         private String name;
