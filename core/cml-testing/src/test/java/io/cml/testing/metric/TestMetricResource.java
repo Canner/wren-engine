@@ -55,11 +55,11 @@ public class TestMetricResource
             createMetric(metric);
 
             // test getMetric
-            assertThat(getAllMetrics().stream().filter(metricDto -> !Objects.equals(metricDto.getName(), metric.getName())).findAny()).isPresent();
+            assertThat(getAllMetrics().stream().filter(metricDto -> Objects.equals(metricDto.getName(), metric.getName())).findAny()).isPresent();
             assertThat(getOneMetric(metric.getName()).getMetricSqls().size()).isEqualTo(1);
 
             // test update
-            Metric update = Metric.from(metric).setTimeGrains(Set.of(Metric.TimeGrain.MONTH, Metric.TimeGrain.DAY)).build();
+            Metric update = Metric.builder(metric).setTimeGrains(Set.of(Metric.TimeGrain.MONTH, Metric.TimeGrain.DAY)).build();
             updateMetric(update);
             assertThat(getOneMetric(metric.getName()).getMetricSqls().size()).isEqualTo(2);
 
