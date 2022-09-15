@@ -26,14 +26,14 @@ import java.util.Properties;
 import static java.lang.String.format;
 
 public abstract class AbstractWireProtocolTest
-        extends RequireWireProtocolServer
+        extends RequireCmlServer
 {
     public static final String MOCK_PASSWORD = "ignored";
 
     protected TestingWireProtocolClient wireProtocolClient()
             throws IOException
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         return new TestingWireProtocolClient(
                 new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()));
     }
@@ -41,7 +41,7 @@ public abstract class AbstractWireProtocolTest
     protected Connection createConnection()
             throws SQLException
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
         Properties props = getDefaultProperties();
         return DriverManager.getConnection(url, props);

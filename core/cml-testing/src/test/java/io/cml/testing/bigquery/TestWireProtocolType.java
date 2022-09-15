@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import io.cml.spi.type.PGTypes;
 import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.DataType;
-import io.cml.testing.TestingWireProtocolServer;
+import io.cml.testing.TestingCmlServer;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.Test;
 
@@ -68,9 +68,9 @@ public class TestWireProtocolType
     private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real", "array(real)");
 
     @Override
-    protected TestingWireProtocolServer createWireProtocolServer()
+    protected TestingCmlServer createCmlServer()
     {
-        return TestingWireProtocolServer.builder()
+        return TestingCmlServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))

@@ -19,8 +19,8 @@ import com.google.common.collect.ImmutableMap;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
 import io.cml.testing.AbstractWireProtocolTest;
+import io.cml.testing.TestingCmlServer;
 import io.cml.testing.TestingWireProtocolClient;
-import io.cml.testing.TestingWireProtocolServer;
 import io.cml.wireprotocol.PostgresWireProtocol;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
@@ -54,9 +54,9 @@ public class TestWireProtocolWithBigquery
         extends AbstractWireProtocolTest
 {
     @Override
-    protected TestingWireProtocolServer createWireProtocolServer()
+    protected TestingCmlServer createCmlServer()
     {
-        return TestingWireProtocolServer.builder()
+        return TestingCmlServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))

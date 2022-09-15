@@ -16,7 +16,7 @@ package io.cml.testing.bigquery;
 
 import com.google.common.collect.ImmutableMap;
 import io.cml.testing.AbstractWireProtocolTest;
-import io.cml.testing.TestingWireProtocolServer;
+import io.cml.testing.TestingCmlServer;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -32,9 +32,9 @@ public class TestFunctions
         extends AbstractWireProtocolTest
 {
     @Override
-    protected TestingWireProtocolServer createWireProtocolServer()
+    protected TestingCmlServer createCmlServer()
     {
-        return TestingWireProtocolServer.builder()
+        return TestingCmlServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))

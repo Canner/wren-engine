@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import io.cml.testing.AbstractWireProtocolTest;
-import io.cml.testing.TestingWireProtocolServer;
+import io.cml.testing.TestingCmlServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -49,9 +49,9 @@ public class TestResultSetMetadata
     private static final String TEST_CATALOG = "canner-cml";
 
     @Override
-    protected TestingWireProtocolServer createWireProtocolServer()
+    protected TestingCmlServer createCmlServer()
     {
-        return TestingWireProtocolServer.builder()
+        return TestingCmlServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
@@ -133,7 +133,7 @@ public class TestResultSetMetadata
     public void testGetUrl()
             throws Exception
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
         try (Connection connection = this.createConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
