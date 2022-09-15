@@ -15,11 +15,9 @@
 package io.cml.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
 import io.cml.testing.AbstractWireProtocolTest;
-import io.cml.testing.TestingCmlServer;
 import io.cml.testing.TestingWireProtocolClient;
 import io.cml.wireprotocol.PostgresWireProtocol;
 import org.assertj.core.api.AssertionsForClassTypes;
@@ -46,26 +44,12 @@ import static io.cml.spi.type.VarcharType.VARCHAR;
 import static io.cml.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.cml.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.cml.testing.TestingWireProtocolClient.Parameter.textParameter;
-import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithBigquery
         extends AbstractWireProtocolTest
 {
-    @Override
-    protected TestingCmlServer createCmlServer()
-    {
-        return TestingCmlServer.builder()
-                .setRequiredConfigs(
-                        ImmutableMap.<String, String>builder()
-                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "asia-east1")
-                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .build())
-                .build();
-    }
-
     @Test
     public void testSimpleQuery()
             throws IOException
