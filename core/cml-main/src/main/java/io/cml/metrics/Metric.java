@@ -152,7 +152,7 @@ public final class Metric
         return new Builder();
     }
 
-    public static Builder from(Metric metric)
+    public static Builder builder(Metric metric)
     {
         return builder()
                 .setName(metric.getName())

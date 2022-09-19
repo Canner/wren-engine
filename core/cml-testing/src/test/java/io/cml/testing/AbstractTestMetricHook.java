@@ -212,7 +212,7 @@ public abstract class AbstractTestMetricHook
             }
             {
                 String updatedFilter = randomIntString();
-                Metric updated = Metric.from(metric)
+                Metric updated = Metric.builder(metric)
                         .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, updatedFilter)))
                         .build();
                 getMetricHook().handleUpdate(updated);

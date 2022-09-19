@@ -67,7 +67,7 @@ public final class MetricSql
             @JsonProperty("timeGrain") Metric.TimeGrain timeGrain,
             @JsonProperty("filters") List<Metric.Filter> filters,
             @JsonProperty("status") Status status,
-            @JsonProperty("errorMessage") String errorMessage)
+            @JsonProperty("errorMessage") @Nullable String errorMessage)
     {
         this.baseMetricName = baseMetricName;
         this.name = name;
@@ -158,6 +158,7 @@ public final class MetricSql
         return status;
     }
 
+    @Nullable
     @JsonProperty
     public String getErrorMessage()
     {

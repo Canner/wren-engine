@@ -28,6 +28,8 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
+// TODO: concurrency accessing issue for query, update and delete
+//  https://github.com/Canner/canner-metric-layer/issues/113
 public class MetricHook
 {
     private final MetricStore metricStore;
@@ -79,8 +81,6 @@ public class MetricHook
             throw new CmlException(NOT_FOUND, format("metric %s is not found", metric.getName()));
         }
 
-        // TODO: concurrency accessing issue for query, update and delete
-        //  https://github.com/Canner/canner-metric-layer/issues/113
         dropMetric(metric.getName());
         createMetric(metric);
     }

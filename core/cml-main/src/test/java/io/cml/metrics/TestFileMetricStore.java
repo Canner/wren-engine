@@ -19,7 +19,6 @@ import org.testng.annotations.Test;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 
 import static io.cml.Utils.randomIntString;
@@ -37,7 +36,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 public class TestFileMetricStore
 {
     private static final MetricStore metricStore = new FileMetricStore(Path.of(requireNonNull(getenv("TEST_CML_FILE_METRIC_STORE_HOME"))));
-    private static final Random rand = new Random();
 
     @Test
     public void testCreateMetric()

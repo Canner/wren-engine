@@ -26,7 +26,6 @@ import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.sql.SqlConverter;
 import io.cml.testing.AbstractTestMetricHook;
-import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
 
 import java.nio.file.Path;
@@ -91,9 +90,6 @@ public class TestFileMetricHookWithBigQuery
     @Override
     protected void dropTables(List<SchemaTableName> createdTables)
     {
-        createdTables.forEach(schemaTableName -> {
-            bigQueryClient.dropTable(schemaTableName);
-            waitTableRemoved(QualifiedName.of(metadata.getDefaultCatalog(), schemaTableName.getSchemaName(), schemaTableName.getTableName()));
-        });
+        createdTables.forEach(bigQueryClient::dropTable);
     }
 }
