@@ -78,6 +78,7 @@ import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTableRef;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlInternalOperators;
 import org.apache.calcite.sql.fun.SqlSingleValueAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -1240,7 +1241,7 @@ public class RelToSqlConverter
         final Result x = visitInput(e, 0);
         SqlNode unnestNode;
         // BigQuery only support unnest an array statement
-        if (x.asStatement() instanceof SqlSelect) {
+        if (dialect instanceof BigQuerySqlDialect && x.asStatement() instanceof SqlSelect) {
             unnestNode = SqlStdOperatorTable.UNNEST.createCall(POS, ((SqlSelect) x.asStatement()).getSelectList().get(0));
         }
         else {
@@ -1285,7 +1286,14 @@ public class RelToSqlConverter
     {
         final List<SqlNode> result = new ArrayList<>();
         result.add(leftOperand);
-        if (dialect.supportsAliasedValues()) {
+        if (dialect instanceof BigQuerySqlDialect) {
+            // The field size should 1 because the nested array is unsupported in BigQuery.
+            checkArgument(rowType.getFieldNames().size() == 1, format("The field number of row should be 1 but %s", rowType.getFieldNames().size()));
+            // The alias of an unnest array is the field name in BigQuery.
+            // Set the field name of row only.
+            result.add(new SqlIdentifier(rowType.getFieldNames().get(0), POS));
+        }
+        else {
             result.add(new SqlIdentifier(alias, POS));
             Ord.forEach(rowType.getFieldNames(), (fieldName, i) -> {
                 if (SqlUtil.isGeneratedAlias(fieldName)) {
@@ -1293,14 +1301,6 @@ public class RelToSqlConverter
                 }
                 result.add(new SqlIdentifier(fieldName, POS));
             });
-        }
-        else {
-            // The field size should 1 because the nested array is unsupported in BigQuery.
-            checkArgument(rowType.getFieldNames().size() == 1, format("The field number of row should be 1 but %s", rowType.getFieldNames().size()));
-            // checkArgument(!SqlUtil.isGeneratedAlias(rowType.getFieldNames().get(0)), "UNNEST relation should be aliased");
-            // The alias of an unnest array is the field name in BigQuery.
-            // Set the field name of row only.
-            result.add(new SqlIdentifier(rowType.getFieldNames().get(0), POS));
         }
         return result;
     }
