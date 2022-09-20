@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.cml.Utils.randomIntString;
+import static io.cml.Utils.randomTableSuffix;
 import static io.cml.Utils.swallowException;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.metrics.Metric.TimeGrain.DAY;
@@ -39,20 +41,22 @@ public class TestFileMetricStore
     public void testCreateMetric()
     {
         Metric expected = Metric.builder()
-                .setName("test")
+                .setName("testcreate" + randomTableSuffix())
                 .setSource("canner-cml.tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus", "o_shippriority"))
                 .setTimestamp("o_orderdate")
                 .setTimeGrains(Set.of(DAY, MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, randomIntString())))
                 .build();
 
         List<MetricSql> metricSqls = MetricSql.of(expected);
 
         try {
             metricStore.createMetric(expected);
+            List<Metric> metrics = metricStore.listMetrics();
+            assertThat(metrics.size()).isEqualTo(1);
             Optional<Metric> actual = metricStore.getMetric(expected.getName());
             assertThat(actual.isPresent()).isTrue();
             assertThat(actual.get()).isEqualTo(expected);
@@ -88,14 +92,14 @@ public class TestFileMetricStore
     public void testDropMetric()
     {
         Metric expected = Metric.builder()
-                .setName("test")
+                .setName("testdrop" + randomTableSuffix())
                 .setSource("canner-cml.tpch_tiny.orders")
                 .setType(Metric.Type.AVG)
                 .setSql("o_totalprice")
                 .setDimensions(Set.of("o_orderstatus", "o_shippriority"))
                 .setTimestamp("o_orderdate")
                 .setTimeGrains(Set.of(DAY, MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
+                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, randomIntString())))
                 .build();
 
         List<MetricSql> metricSqls = MetricSql.of(expected);

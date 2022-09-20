@@ -18,20 +18,14 @@ import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
-import io.cml.metrics.Metric;
-import io.cml.metrics.MetricSql;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.SchemaTableName;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.util.List;
-import java.util.Set;
-
 import static io.cml.Utils.randomTableSuffix;
 import static io.cml.Utils.swallowException;
-import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -120,45 +114,5 @@ public class TestBigQuery
         assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT b\n" +
                         "FROM `canner-cml`.cml_temp.CANNER");
-    }
-
-    @Test
-    public void testMetricSql()
-    {
-        Metric metric = Metric.builder()
-                .setName("metric")
-                // '-' is not allowed in database(catalog) name in pg syntax, hence we quoted catalog name here.
-                .setSource("\"canner-cml\".tpch_tiny.orders")
-                .setType(Metric.Type.AVG)
-                .setSql("o_totalprice")
-                .setDimensions(Set.of("o_orderstatus"))
-                .setTimestamp("o_orderdate")
-                .setTimeGrains(Set.of(Metric.TimeGrain.MONTH))
-                .setFilters(Set.of(new Metric.Filter("o_orderkey", GREATER_THAN, "1")))
-                .build();
-
-        List<MetricSql> metricSqls = MetricSql.of(metric);
-        assertThat(metricSqls.size()).isEqualTo(1);
-        MetricSql metricSql = metricSqls.get(0);
-
-        SchemaTableName schemaTableName = new SchemaTableName(bigQueryMetadata.getMaterializedViewSchema(), metricSql.getName());
-
-        try {
-            bigQueryMetadata.createMaterializedView(schemaTableName, metricSql.sql());
-            assertThat(bigQuerySqlConverter.convert(
-                    "SELECT\n" +
-                            "o_orderstatus,\n" +
-                            "CAST(TRUNC(EXTRACT(YEAR FROM o_orderdate)) AS INTEGER) AS _col1,\n" +
-                            "CAST(TRUNC(EXTRACT(MONTH FROM o_orderdate)) AS INTEGER) AS _col2,\n" +
-                            "AVG(o_totalprice) AS _col3\n" +
-                            "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                            "WHERE o_orderkey > 1\n" +
-                            "GROUP BY 1, 2, 3", SessionContext.builder().build()))
-                    .isEqualTo("SELECT o_orderstatus, CAST(`_col1` AS INT64) AS `_col1`, CAST(`_col2` AS INT64) AS `_col2`, `_col3`\n" +
-                            "FROM `canner-cml`." + schemaTableName);
-        }
-        finally {
-            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
-        }
     }
 }

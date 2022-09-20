@@ -67,6 +67,16 @@ public interface Metadata
      */
     List<MaterializedViewDefinition> listMaterializedViews();
 
+    /**
+     * Delete the specific materializedView.
+     * <p>
+     * Because we use TABLE to present the concept of materializedView in BigQuery,
+     * this method drop the specific TABLE in {@link Metadata#getMaterializedViewSchema} actually.
+     *
+     * @param schemaTableName the specific table name
+     */
+    void deleteMaterializedView(SchemaTableName schemaTableName);
+
     List<String> listFunctionNames(String schemaName);
 
     String resolveFunction(String functionName, int numArgument);

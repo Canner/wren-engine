@@ -36,6 +36,11 @@ public class Utils
         return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
     }
 
+    public static String randomIntString()
+    {
+        return Integer.toString(random.nextInt());
+    }
+
     public static void swallowException(Runnable runnable)
     {
         try {

@@ -52,11 +52,10 @@ public class FileMetricStore
         }
 
         try (Stream<Path> stream = Files.list(rootPath)) {
-            return stream.filter(path -> path.getFileName().toFile().isDirectory())
-                    .map(path -> path.toFile().getName())
+            return stream.map(path -> path.toFile().getName())
                     .map(name -> {
                         try {
-                            return objectMapper.readValue(rootPath.resolve(withJsonFileExtension(name)).toFile(), Metric.class);
+                            return objectMapper.readValue(rootPath.resolve(name).resolve(withJsonFileExtension(name)).toFile(), Metric.class);
                         }
                         catch (IOException e) {
                             throw new RuntimeException(e);

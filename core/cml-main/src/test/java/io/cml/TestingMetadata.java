@@ -72,6 +72,12 @@ public class TestingMetadata
     }
 
     @Override
+    public void deleteMaterializedView(SchemaTableName schemaTableName)
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+    }
+
+    @Override
     public List<String> listFunctionNames(String schemaName)
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");

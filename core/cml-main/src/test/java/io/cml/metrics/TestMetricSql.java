@@ -53,20 +53,20 @@ public class TestMetricSql
     @Test
     public void testExpandDimensions()
     {
-        assertThat(MetricSql.expandDimensions(List.of(MetricSql.builder().build()), List.of("dim1", "dim2")))
+        assertThat(MetricSql.expandDimensions(List.of(testBuilder().build()), List.of("dim1", "dim2")))
                 .hasSameElementsAs(List.of(
-                        MetricSql.builder().setDimensions(List.of("dim1")).build(),
-                        MetricSql.builder().setDimensions(List.of("dim2")).build(),
-                        MetricSql.builder().setDimensions(List.of("dim1", "dim2")).build()));
+                        testBuilder().setDimensions(List.of("dim1")).build(),
+                        testBuilder().setDimensions(List.of("dim2")).build(),
+                        testBuilder().setDimensions(List.of("dim1", "dim2")).build()));
     }
 
     @Test
     public void testExpandTimeGrains()
     {
-        assertThat(MetricSql.expandTimeGrains(List.of(MetricSql.builder().build()), List.of(MONTH, Metric.TimeGrain.QUARTER)))
+        assertThat(MetricSql.expandTimeGrains(List.of(testBuilder().build()), List.of(MONTH, Metric.TimeGrain.QUARTER)))
                 .hasSameElementsAs(List.of(
-                        MetricSql.builder().setTimeGrains(MONTH).build(),
-                        MetricSql.builder().setTimeGrains(Metric.TimeGrain.QUARTER).build()));
+                        testBuilder().setTimeGrains(MONTH).build(),
+                        testBuilder().setTimeGrains(Metric.TimeGrain.QUARTER).build()));
     }
 
     @Test
@@ -74,11 +74,11 @@ public class TestMetricSql
     {
         Metric.Filter c1GT2 = new Metric.Filter("c1", GREATER_THAN, "2");
         Metric.Filter c2LTE100 = new Metric.Filter("c2", LESS_THAN_OR_EQUAL_TO, "100");
-        assertThat(MetricSql.expandFilters(List.of(MetricSql.builder().build()), List.of(c1GT2, c2LTE100)))
+        assertThat(MetricSql.expandFilters(List.of(testBuilder().build()), List.of(c1GT2, c2LTE100)))
                 .hasSameElementsAs(List.of(
-                        MetricSql.builder().setFilters(List.of(c1GT2)).build(),
-                        MetricSql.builder().setFilters(List.of(c2LTE100)).build(),
-                        MetricSql.builder().setFilters(List.of(c1GT2, c2LTE100)).build()));
+                        testBuilder().setFilters(List.of(c1GT2)).build(),
+                        testBuilder().setFilters(List.of(c2LTE100)).build(),
+                        testBuilder().setFilters(List.of(c1GT2, c2LTE100)).build()));
     }
 
     @Test
@@ -121,5 +121,15 @@ public class TestMetricSql
 
         // 3 (dims) * 2 (time grains) * 1 (filter)
         assertThat(MetricSql.of(metric).size()).isEqualTo(6);
+    }
+
+    private static MetricSql.Builder testBuilder()
+    {
+        return MetricSql.builder()
+                .setBaseMetricName("test")
+                .setSource("source")
+                .setType(Metric.Type.COUNT)
+                .setSql("*")
+                .setTimestamp("timestamp");
     }
 }
