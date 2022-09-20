@@ -268,7 +268,7 @@ public final class MetricSql
                 .setSql(metricSql.getSql())
                 .setDimensions(metricSql.getDimensions())
                 .setTimestamp(metricSql.getTimestamp())
-                .setTimeGrains(metricSql.getTimeGrain())
+                .setTimeGrain(metricSql.getTimeGrain())
                 .setFilters(metricSql.getFilters())
                 .setStatus(metricSql.getStatus())
                 .setErrorMessage(metricSql.getErrorMessage());
@@ -287,7 +287,7 @@ public final class MetricSql
                 .setSql(builder.getSql())
                 .setDimensions(builder.getDimensions())
                 .setTimestamp(builder.getTimestamp())
-                .setTimeGrains(builder.getTimeGrains())
+                .setTimeGrain(builder.getTimeGrain())
                 .setFilters(builder.getFilters())
                 .setStatus(builder.getStatus())
                 .setErrorMessage(builder.getErrorMessage());
@@ -308,7 +308,7 @@ public final class MetricSql
         private String sql;
         private List<String> dimensions = List.of();
         private String timestamp;
-        private Metric.TimeGrain timeGrains;
+        private Metric.TimeGrain timeGrain;
         private List<Metric.Filter> filters = List.of();
         private Status status = Status.PREPARING;
         private String errorMessage;
@@ -390,15 +390,15 @@ public final class MetricSql
             return timestamp;
         }
 
-        public Builder setTimeGrains(Metric.TimeGrain timeGrains)
+        public Builder setTimeGrain(Metric.TimeGrain timeGrain)
         {
-            this.timeGrains = timeGrains;
+            this.timeGrain = timeGrain;
             return this;
         }
 
-        public Metric.TimeGrain getTimeGrains()
+        public Metric.TimeGrain getTimeGrain()
         {
-            return timeGrains;
+            return timeGrain;
         }
 
         public Builder setFilters(List<Metric.Filter> filters)
@@ -444,7 +444,7 @@ public final class MetricSql
                     sql,
                     dimensions,
                     timestamp,
-                    timeGrains,
+                    timeGrain,
                     filters,
                     status,
                     errorMessage);
@@ -475,7 +475,7 @@ public final class MetricSql
         for (Builder metric : metrics) {
             for (Metric.TimeGrain timeGrain : timeGrains) {
                 Builder newMetric = builder(metric);
-                newMetric.setTimeGrains(timeGrain);
+                newMetric.setTimeGrain(timeGrain);
                 builder.add(newMetric);
             }
         }

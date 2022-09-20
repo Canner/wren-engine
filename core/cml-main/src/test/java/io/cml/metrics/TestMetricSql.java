@@ -66,7 +66,7 @@ public class TestMetricSql
     {
         List<MetricSql.Builder> metricSqls = MetricSql.expandTimeGrains(List.of(testBuilder()), List.of(MONTH, QUARTER));
         assertThat(metricSqls.size()).isEqualTo(2);
-        assertThat(metricSqls.stream().map(MetricSql.Builder::getTimeGrains).collect(toList())).isEqualTo(List.of(MONTH, QUARTER));
+        assertThat(metricSqls.stream().map(MetricSql.Builder::getTimeGrain).collect(toList())).isEqualTo(List.of(MONTH, QUARTER));
     }
 
     @Test
@@ -93,7 +93,7 @@ public class TestMetricSql
                 .setType(Metric.Type.COUNT)
                 .setSql("*")
                 .setTimestamp("ts1")
-                .setTimeGrains(MONTH)
+                .setTimeGrain(MONTH)
                 .setFilters(List.of(new Metric.Filter("c1", GREATER_THAN, "2"), new Metric.Filter("c1", LESS_THAN, "10")))
                 .build();
 
