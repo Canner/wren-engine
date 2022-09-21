@@ -68,10 +68,15 @@ public class MetricHook
         SchemaTableName schemaTableName = new SchemaTableName(metadata.getMaterializedViewSchema(), metricSql.getName());
         try {
             metadata.createMaterializedView(schemaTableName, metricSql.sql());
-            return metricSql.withStatus(MetricSql.Status.SUCCESS, null);
+            return MetricSql.builder(metricSql)
+                    .setStatus(MetricSql.Status.SUCCESS)
+                    .build();
         }
         catch (Exception e) {
-            return metricSql.withStatus(MetricSql.Status.FAILED, e.getMessage());
+            return MetricSql.builder(metricSql)
+                    .setStatus(MetricSql.Status.FAILED)
+                    .setErrorMessage(e.getMessage())
+                    .build();
         }
     }
 

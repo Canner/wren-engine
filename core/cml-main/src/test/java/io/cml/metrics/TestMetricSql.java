@@ -24,7 +24,9 @@ import static io.cml.metrics.Metric.Filter.Operator.LESS_THAN;
 import static io.cml.metrics.Metric.Filter.Operator.LESS_THAN_OR_EQUAL_TO;
 import static io.cml.metrics.Metric.TimeGrain.DAY;
 import static io.cml.metrics.Metric.TimeGrain.MONTH;
+import static io.cml.metrics.Metric.TimeGrain.QUARTER;
 import static io.cml.metrics.MetricSql.findCombinations;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestMetricSql
@@ -53,20 +55,18 @@ public class TestMetricSql
     @Test
     public void testExpandDimensions()
     {
-        assertThat(MetricSql.expandDimensions(List.of(testBuilder().build()), List.of("dim1", "dim2")))
-                .hasSameElementsAs(List.of(
-                        testBuilder().setDimensions(List.of("dim1")).build(),
-                        testBuilder().setDimensions(List.of("dim2")).build(),
-                        testBuilder().setDimensions(List.of("dim1", "dim2")).build()));
+        List<MetricSql.Builder> metricSqls = MetricSql.expandDimensions(List.of(testBuilder()), List.of("dim1", "dim2"));
+        assertThat(metricSqls.size()).isEqualTo(3);
+        assertThat(metricSqls.stream().map(MetricSql.Builder::getDimensions).collect(toList()))
+                .isEqualTo(List.of(List.of("dim1"), List.of("dim2"), List.of("dim1", "dim2")));
     }
 
     @Test
     public void testExpandTimeGrains()
     {
-        assertThat(MetricSql.expandTimeGrains(List.of(testBuilder().build()), List.of(MONTH, Metric.TimeGrain.QUARTER)))
-                .hasSameElementsAs(List.of(
-                        testBuilder().setTimeGrains(MONTH).build(),
-                        testBuilder().setTimeGrains(Metric.TimeGrain.QUARTER).build()));
+        List<MetricSql.Builder> metricSqls = MetricSql.expandTimeGrains(List.of(testBuilder()), List.of(MONTH, QUARTER));
+        assertThat(metricSqls.size()).isEqualTo(2);
+        assertThat(metricSqls.stream().map(MetricSql.Builder::getTimeGrain).collect(toList())).isEqualTo(List.of(MONTH, QUARTER));
     }
 
     @Test
@@ -74,11 +74,13 @@ public class TestMetricSql
     {
         Metric.Filter c1GT2 = new Metric.Filter("c1", GREATER_THAN, "2");
         Metric.Filter c2LTE100 = new Metric.Filter("c2", LESS_THAN_OR_EQUAL_TO, "100");
-        assertThat(MetricSql.expandFilters(List.of(testBuilder().build()), List.of(c1GT2, c2LTE100)))
-                .hasSameElementsAs(List.of(
-                        testBuilder().setFilters(List.of(c1GT2)).build(),
-                        testBuilder().setFilters(List.of(c2LTE100)).build(),
-                        testBuilder().setFilters(List.of(c1GT2, c2LTE100)).build()));
+        List<MetricSql.Builder> metricSqls = MetricSql.expandFilters(List.of(testBuilder()), List.of(c1GT2, c2LTE100));
+        assertThat(metricSqls.size()).isEqualTo(3);
+        assertThat(metricSqls.stream().map(MetricSql.Builder::getFilters).collect(toList()))
+                .isEqualTo(List.of(
+                        List.of(c1GT2),
+                        List.of(c2LTE100),
+                        List.of(c1GT2, c2LTE100)));
     }
 
     @Test
@@ -91,7 +93,7 @@ public class TestMetricSql
                 .setType(Metric.Type.COUNT)
                 .setSql("*")
                 .setTimestamp("ts1")
-                .setTimeGrains(MONTH)
+                .setTimeGrain(MONTH)
                 .setFilters(List.of(new Metric.Filter("c1", GREATER_THAN, "2"), new Metric.Filter("c1", LESS_THAN, "10")))
                 .build();
 
