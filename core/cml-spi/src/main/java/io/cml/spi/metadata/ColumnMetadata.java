@@ -24,7 +24,7 @@ public class ColumnMetadata
     private final String name;
     private final PGType<?> type;
 
-    public ColumnMetadata(String name, PGType<?> type)
+    private ColumnMetadata(String name, PGType<?> type)
     {
         this.name = name;
         this.type = type;
