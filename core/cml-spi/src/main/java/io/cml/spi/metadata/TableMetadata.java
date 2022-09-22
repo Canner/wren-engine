@@ -13,6 +13,9 @@
  */
 package io.cml.spi.metadata;
 
+import com.google.common.collect.ImmutableList;
+import io.cml.spi.type.PGType;
+
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -46,5 +49,34 @@ public class TableMetadata
         sb.append(", columns=").append(columns);
         sb.append('}');
         return sb.toString();
+    }
+
+    public static class Builder
+    {
+        public static Builder builder(SchemaTableName tableName)
+        {
+            return new Builder(tableName);
+        }
+
+        private final SchemaTableName tableName;
+        private final ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
+
+        private Builder(SchemaTableName tableName)
+        {
+            this.tableName = tableName;
+        }
+
+        public Builder column(String columnName, PGType<?> type)
+        {
+            columns.add(ColumnMetadata.builder()
+                    .setName(columnName)
+                    .setType(type).build());
+            return this;
+        }
+
+        public TableMetadata build()
+        {
+            return new TableMetadata(tableName, columns.build());
+        }
     }
 }
