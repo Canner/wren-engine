@@ -14,7 +14,10 @@
 
 package io.cml.pgcatalog.table;
 
+import com.google.common.collect.ImmutableMap;
 import io.cml.spi.metadata.TableMetadata;
+
+import java.util.Map;
 
 import static io.cml.spi.type.BooleanType.BOOLEAN;
 import static io.cml.spi.type.IntegerType.INTEGER;
@@ -33,20 +36,41 @@ public class PgDatabaseTable
     protected TableMetadata createMetadata()
     {
         return PgCatalogTableUtils.table(NAME)
-                .column("oid", INTEGER, "0")
-                .column("datname", VARCHAR, "${catalogName}")
-                .column("datdba", INTEGER, "0")
-                .column("encoding", INTEGER, "6")
-                .column("datcollate", VARCHAR, "'en_US.UTF-8'")
-                .column("datctype", VARCHAR, "'en_US.UTF-8'")
-                .column("datistemplate", BOOLEAN, "false")
-                .column("datallowconn", BOOLEAN, "true")
-                .column("datconnlimit", INTEGER, "-1")
-                .column("datlastsysoid", INTEGER, "0")
-                .column("datfrozenxid", INTEGER, "0")
-                .column("datminmxid", INTEGER, "0")
-                .column("dattablespace", INTEGER, "0")
-                .column("datacl", VARCHAR_ARRAY, "null")
+                .column("oid", INTEGER)
+                .column("datname", VARCHAR)
+                .column("datdba", INTEGER)
+                .column("encoding", INTEGER)
+                .column("datcollate", VARCHAR)
+                .column("datctype", VARCHAR)
+                .column("datistemplate", BOOLEAN)
+                .column("datallowconn", BOOLEAN)
+                .column("datconnlimit", INTEGER)
+                .column("datlastsysoid", INTEGER)
+                .column("datfrozenxid", INTEGER)
+                .column("datminmxid", INTEGER)
+                .column("dattablespace", INTEGER)
+                .column("datacl", VARCHAR_ARRAY)
+                .build();
+    }
+
+    @Override
+    protected Map<String, String> createTableContent()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("oid", "0")
+                .put("datname", "${catalogName}")
+                .put("datdba", "0")
+                .put("encoding", "6")
+                .put("datcollate", "'en_US.UTF-8'")
+                .put("datctype", "'en_US.UTF-8'")
+                .put("datistemplate", "false")
+                .put("datallowconn", "true")
+                .put("datconnlimit", "-1")
+                .put("datlastsysoid", "0")
+                .put("datfrozenxid", "0")
+                .put("datminmxid", "0")
+                .put("dattablespace", "0")
+                .put("datacl", "null")
                 .build();
     }
 }

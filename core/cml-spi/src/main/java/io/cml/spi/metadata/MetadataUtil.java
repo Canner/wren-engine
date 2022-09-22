@@ -53,15 +53,6 @@ public class MetadataUtil
             return this;
         }
 
-        public TableMetadataBuilder column(String columnName, PGType<?> type, String value)
-        {
-            columns.add(ColumnMetadata.builder()
-                    .setName(columnName)
-                    .setType(type)
-                    .setValue(value).build());
-            return this;
-        }
-
         public TableMetadataBuilder hiddenColumn(String columnName, PGType<?> type)
         {
             columns.add(ColumnMetadata.builder()

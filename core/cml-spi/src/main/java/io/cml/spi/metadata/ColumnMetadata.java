@@ -28,18 +28,16 @@ public class ColumnMetadata
     private final PGType<?> type;
     private final boolean nullable;
     private final String comment;
-    private final String value;
     private final String extraInfo;
     private final boolean hidden;
     private final Map<String, Object> properties;
 
-    public ColumnMetadata(String name, PGType<?> type, boolean nullable, String comment, String value, String extraInfo, boolean hidden, Map<String, Object> properties)
+    public ColumnMetadata(String name, PGType<?> type, boolean nullable, String comment, String extraInfo, boolean hidden, Map<String, Object> properties)
     {
         this.name = name;
         this.type = type;
         this.nullable = nullable;
         this.comment = comment;
-        this.value = value;
         this.extraInfo = extraInfo;
         this.hidden = hidden;
         this.properties = properties;
@@ -63,11 +61,6 @@ public class ColumnMetadata
     public Optional<String> getComment()
     {
         return Optional.ofNullable(comment);
-    }
-
-    public String getValue()
-    {
-        return value;
     }
 
     public Optional<String> getExtraInfo()
@@ -148,8 +141,6 @@ public class ColumnMetadata
         private PGType<?> type;
         private boolean nullable = true;
         private Optional<String> comment = Optional.empty();
-
-        private String value;
         private Optional<String> extraInfo = Optional.empty();
         private boolean hidden;
         private Map<String, Object> properties = emptyMap();
@@ -162,7 +153,6 @@ public class ColumnMetadata
             this.type = columnMetadata.getType();
             this.nullable = columnMetadata.isNullable();
             this.comment = columnMetadata.getComment();
-            this.value = columnMetadata.getValue();
             this.extraInfo = columnMetadata.getExtraInfo();
             this.hidden = columnMetadata.isHidden();
             this.properties = columnMetadata.getProperties();
@@ -192,12 +182,6 @@ public class ColumnMetadata
             return this;
         }
 
-        public Builder setValue(String value)
-        {
-            this.value = value;
-            return this;
-        }
-
         public Builder setExtraInfo(Optional<String> extraInfo)
         {
             this.extraInfo = requireNonNull(extraInfo, "extraInfo is null");
@@ -223,7 +207,6 @@ public class ColumnMetadata
                     type,
                     nullable,
                     comment.orElse(null),
-                    value,
                     extraInfo.orElse(null),
                     hidden,
                     properties);

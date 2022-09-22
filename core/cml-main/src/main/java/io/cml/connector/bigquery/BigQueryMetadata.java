@@ -255,7 +255,7 @@ public class BigQueryMetadata
                     Table fullTable = bigQueryClient.getTable(table.getTableId());
                     // TODO: type mapping
                     fullTable.getDefinition().getSchema().getFields()
-                            .forEach(field -> builder.column(field.getName(), toPGType(field.getType().getStandardType()), null));
+                            .forEach(field -> builder.column(field.getName(), toPGType(field.getType().getStandardType())));
                     return builder.build();
                 })
                 .collect(toImmutableList());

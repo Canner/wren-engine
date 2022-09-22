@@ -13,7 +13,10 @@
  */
 package io.cml.pgcatalog.table;
 
+import com.google.common.collect.ImmutableMap;
 import io.cml.spi.metadata.TableMetadata;
+
+import java.util.Map;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
 import static io.cml.spi.type.BooleanType.BOOLEAN;
@@ -36,31 +39,63 @@ public class PgAttributeTable
     protected TableMetadata createMetadata()
     {
         return table(NAME)
-                .column("attrelid", INTEGER, "${hash}(${tableName})")
-                .column("attname", VARCHAR, "${columnName}")
-                .column("atttypid", INTEGER, "${typeOid}")
-                .column("attstattarget", INTEGER, "0")
-                .column("attlen", INTEGER, "${typeLen}")
-                .column("attnum", INTEGER, "${columNum}")
-                .column("attndims", INTEGER, "0")
-                .column("attcacheoff", INTEGER, "-1")
-                .column("atttypmod", INTEGER, "-1")
-                .column("attbyval", BOOLEAN, "false")
-                .column("attstorage", CHAR, "'p'")
-                .column("attalign", CHAR, "'c'")
-                .column("attnotnull", BOOLEAN, "false")
-                .column("atthasdef", BOOLEAN, "false")
-                .column("atthasmissing", BOOLEAN, "false")
-                .column("attidentity", CHAR, "'a'")
-                .column("attgenerated", CHAR, "'s'")
-                .column("attisdropped", BOOLEAN, "false")
-                .column("attislocal", BOOLEAN, "false")
-                .column("attinhcount", INTEGER, "0")
-                .column("attcollation", INTEGER, "0")
-                .column("attacl", VARCHAR_ARRAY, "null")
-                .column("attoptions", VARCHAR_ARRAY, "null")
-                .column("attfdwoptions", VARCHAR_ARRAY, "null")
-                .column("attmissingval", VARCHAR_ARRAY, "null")
+                .column("attrelid", INTEGER)
+                .column("attname", VARCHAR)
+                .column("atttypid", INTEGER)
+                .column("attstattarget", INTEGER)
+                .column("attlen", INTEGER)
+                .column("attnum", INTEGER)
+                .column("attndims", INTEGER)
+                .column("attcacheoff", INTEGER)
+                .column("atttypmod", INTEGER)
+                .column("attbyval", BOOLEAN)
+                .column("attstorage", CHAR)
+                .column("attalign", CHAR)
+                .column("attnotnull", BOOLEAN)
+                .column("atthasdef", BOOLEAN)
+                .column("atthasmissing", BOOLEAN)
+                .column("attidentity", CHAR)
+                .column("attgenerated", CHAR)
+                .column("attisdropped", BOOLEAN)
+                .column("attislocal", BOOLEAN)
+                .column("attinhcount", INTEGER)
+                .column("attcollation", INTEGER)
+                .column("attacl", VARCHAR_ARRAY)
+                .column("attoptions", VARCHAR_ARRAY)
+                .column("attfdwoptions", VARCHAR_ARRAY)
+                .column("attmissingval", VARCHAR_ARRAY)
+                .build();
+    }
+
+    @Override
+    protected Map<String, String> createTableContent()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("attrelid", "${hash}(${tableName})")
+                .put("attname", "${columnName}")
+                .put("atttypid", "${typeOid}")
+                .put("attstattarget", "0")
+                .put("attlen", "${typeLen}")
+                .put("attnum", "${columNum}")
+                .put("attndims", "0")
+                .put("attcacheoff", "-1")
+                .put("atttypmod", "-1")
+                .put("attbyval", "false")
+                .put("attstorage", "'p'")
+                .put("attalign", "'c'")
+                .put("attnotnull", "false")
+                .put("atthasdef", "false")
+                .put("atthasmissing", "false")
+                .put("attidentity", "'a'")
+                .put("attgenerated", "'s'")
+                .put("attisdropped", "false")
+                .put("attislocal", "false")
+                .put("attinhcount", "0")
+                .put("attcollation", "0")
+                .put("attacl", "null")
+                .put("attoptions", "null")
+                .put("attfdwoptions", "null")
+                .put("attmissingval", "null")
                 .build();
     }
 }
