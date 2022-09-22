@@ -14,6 +14,7 @@
 package io.cml.metadata;
 
 import io.cml.calcite.CmlSchemaUtil;
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
@@ -21,13 +22,11 @@ import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlOperatorTable;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface Metadata
 {
@@ -85,9 +84,7 @@ public interface Metadata
 
     RelDataTypeFactory getTypeFactory();
 
-    TableSchema getTableSchema(TableHandle tableHandle);
-
-    Optional<TableHandle> getTableHandle(QualifiedObjectName tableName);
+    TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName);
 
     CmlSchemaUtil.Dialect getDialect();
 

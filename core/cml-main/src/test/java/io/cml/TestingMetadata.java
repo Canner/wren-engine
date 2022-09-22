@@ -16,21 +16,19 @@ package io.cml;
 
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.MaterializedViewDefinition;
 import io.cml.spi.metadata.SchemaTableName;
 import io.cml.spi.metadata.TableMetadata;
-import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlOperatorTable;
 
 import java.util.List;
-import java.util.Optional;
 
 public class TestingMetadata
         implements Metadata
@@ -90,13 +88,7 @@ public class TestingMetadata
     }
 
     @Override
-    public TableSchema getTableSchema(TableHandle tableHandle)
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public Optional<TableHandle> getTableHandle(QualifiedObjectName tableName)
+    public TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName)
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

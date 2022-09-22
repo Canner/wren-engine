@@ -15,7 +15,6 @@
 package io.cml.testing;
 
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.metrics.Metric;
 import io.cml.metrics.MetricHook;
@@ -23,7 +22,6 @@ import io.cml.metrics.MetricSql;
 import io.cml.metrics.MetricStore;
 import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.SchemaTableName;
-import io.cml.sql.QualifiedObjectName;
 import io.cml.sql.SqlConverter;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
@@ -36,7 +34,7 @@ import java.util.Set;
 import static io.cml.Utils.randomIntString;
 import static io.cml.Utils.randomTableSuffix;
 import static io.cml.Utils.swallowException;
-import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
+import static io.cml.metadata.MetadataUtil.createCatalogSchemaTableName;
 import static io.cml.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static io.cml.metrics.MetricSql.Status.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -163,9 +161,7 @@ public abstract class AbstractTestMetricHook
     protected Optional<TableSchema> getTableSchema(QualifiedName tableName)
     {
         try {
-            QualifiedObjectName name = createQualifiedObjectName(tableName, "", "");
-            Optional<TableHandle> tableHandle = getMetadata().getTableHandle(name);
-            return Optional.of(getMetadata().getTableSchema(tableHandle.get()));
+            return Optional.of(getMetadata().getTableSchema(createCatalogSchemaTableName(tableName, "", "")));
         }
         catch (Exception e) {
             return Optional.empty();
