@@ -15,7 +15,6 @@ package io.cml.metadata;
 
 import io.cml.spi.metadata.CatalogName;
 import io.cml.spi.metadata.SchemaTableName;
-import io.cml.sql.QualifiedObjectName;
 
 import java.util.List;
 
@@ -34,11 +33,6 @@ public final class TableSchema
 
         this.catalogName = catalogName;
         this.tableSchema = tableSchema;
-    }
-
-    public QualifiedObjectName getQualifiedName()
-    {
-        return new QualifiedObjectName(catalogName.getCatalogName(), tableSchema.getTable().getSchemaName(), tableSchema.getTable().getTableName());
     }
 
     public CatalogName getCatalogName()

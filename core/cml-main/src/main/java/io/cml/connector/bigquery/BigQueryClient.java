@@ -34,7 +34,7 @@ import com.google.cloud.http.BaseHttpServiceException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
-import io.cml.metadata.TableHandle;
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.CmlException;
 import io.cml.spi.Parameter;
 import io.cml.spi.metadata.SchemaTableName;
@@ -91,12 +91,12 @@ public class BigQueryClient
         bigQuery.create(datasetInfo);
     }
 
-    public Table getTable(TableHandle tableHandle)
+    public Table getTable(CatalogSchemaTableName catalogSchemaTableName)
     {
         return getTable(TableId.of(
-                tableHandle.getCatalogName().getCatalogName(),
-                tableHandle.getSchemaTableName().getSchemaName(),
-                tableHandle.getSchemaTableName().getTableName()));
+                catalogSchemaTableName.getCatalogName(),
+                catalogSchemaTableName.getSchemaTableName().getSchemaName(),
+                catalogSchemaTableName.getSchemaTableName().getTableName()));
     }
 
     public String getProjectId()

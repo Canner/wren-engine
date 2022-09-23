@@ -19,11 +19,9 @@ import io.airlift.log.Logger;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.MaterializedViewDefinition;
-import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -65,13 +63,12 @@ import org.apache.calcite.sql2rel.StandardConvertletTable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.cml.metadata.MetadataUtil.createQualifiedObjectName;
+import static io.cml.metadata.MetadataUtil.createCatalogSchemaTableName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
 import static org.apache.calcite.linq4j.Nullness.castNonNull;
@@ -145,9 +142,7 @@ public class QueryProcessor
 
     private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
     {
-        QualifiedObjectName name = createQualifiedObjectName(tableName, sessionContext.getCatalog(), sessionContext.getSchema());
-        Optional<TableHandle> tableHandle = metadata.getTableHandle(name);
-        return metadata.getTableSchema(tableHandle.get());
+        return metadata.getTableSchema(createCatalogSchemaTableName(tableName, sessionContext.getCatalog(), sessionContext.getSchema()));
     }
 
     private static RelOptCluster newCluster(RelDataTypeFactory factory)

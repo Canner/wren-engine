@@ -35,10 +35,10 @@ import io.cml.calcite.QueryProcessor;
 import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableHandle;
 import io.cml.metadata.TableSchema;
 import io.cml.pgcatalog.function.PgFunction;
 import io.cml.pgcatalog.function.PgFunctionRegistry;
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
@@ -52,7 +52,6 @@ import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGArray;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.PGTypes;
-import io.cml.sql.QualifiedObjectName;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -352,13 +351,13 @@ public class BigQueryMetadata
     }
 
     @Override
-    public TableSchema getTableSchema(TableHandle tableHandle)
+    public TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName)
     {
-        Table table = bigQueryClient.getTable(tableHandle);
+        Table table = bigQueryClient.getTable(catalogSchemaTableName);
         return new TableSchema(
-                tableHandle.getCatalogName(),
+                new CatalogName(catalogSchemaTableName.getCatalogName()),
                 new ConnectorTableSchema(
-                        tableHandle.getSchemaTableName(),
+                        catalogSchemaTableName.getSchemaTableName(),
                         table.getDefinition().getSchema().getFields().stream()
                                 .map(field ->
                                         ColumnSchema.builder()
@@ -366,15 +365,6 @@ public class BigQueryMetadata
                                                 .setType(toPGType(field.getType().getStandardType()))
                                                 .build())
                                 .collect(toImmutableList())));
-    }
-
-    @Override
-    public Optional<TableHandle> getTableHandle(QualifiedObjectName tableName)
-    {
-        return Optional.of(
-                new TableHandle(
-                        new CatalogName(tableName.getCatalogName()),
-                        new SchemaTableName(tableName.getSchemaName(), tableName.getObjectName())));
     }
 
     @Override

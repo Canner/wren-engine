@@ -14,8 +14,8 @@
 
 package io.cml.metadata;
 
+import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.CmlException;
-import io.cml.sql.QualifiedObjectName;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -30,22 +30,22 @@ public final class MetadataUtil
 {
     private MetadataUtil() {}
 
-    public static QualifiedObjectName createQualifiedObjectName(QualifiedName name, String defaultCatalog, String defaultSchema)
+    public static CatalogSchemaTableName createCatalogSchemaTableName(QualifiedName name, String defaultCatalog, String defaultSchema)
     {
         requireNonNull(name, "name is null");
         List<String> parts = name.getParts();
         if (name.getParts().size() == 3) {
-            return new QualifiedObjectName(parts.get(0), parts.get(1), parts.get(2));
+            return new CatalogSchemaTableName(parts.get(0), parts.get(1), parts.get(2));
         }
         else if (parts.size() == 2) {
-            return new QualifiedObjectName(
+            return new CatalogSchemaTableName(
                     Optional.ofNullable(defaultCatalog).orElseThrow(() ->
                             new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
                     parts.get(0),
                     parts.get(1));
         }
         else if (parts.size() == 1) {
-            return new QualifiedObjectName(
+            return new CatalogSchemaTableName(
                     Optional.ofNullable(defaultCatalog).orElseThrow(() ->
                             new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
                     Optional.ofNullable(defaultSchema).orElseThrow(() ->
