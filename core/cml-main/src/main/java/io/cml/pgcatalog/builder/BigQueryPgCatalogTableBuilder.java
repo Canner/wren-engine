@@ -73,8 +73,10 @@ public final class BigQueryPgCatalogTableBuilder
         getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
@@ -113,8 +115,10 @@ public final class BigQueryPgCatalogTableBuilder
         getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append(format("FROM `%s.all_columns`;", CML_TEMP_NAME));
@@ -140,8 +144,10 @@ public final class BigQueryPgCatalogTableBuilder
         getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
@@ -172,8 +178,10 @@ public final class BigQueryPgCatalogTableBuilder
         getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
@@ -186,8 +194,10 @@ public final class BigQueryPgCatalogTableBuilder
         // TODO: list bigquery function
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append("FROM `pg_catalog.INFORMATION_SCHEMA.ROUTINES`;");
@@ -225,8 +235,10 @@ public final class BigQueryPgCatalogTableBuilder
         getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
+        Map<String, String> tableContent = pgCatalogTable.getTableContent();
         for (ColumnMetadata columnMetadata : pgCatalogTable.getTableMetadata().getColumns()) {
-            builder.append(format("%s AS `%s`,", columnMetadata.getValue(), columnMetadata.getName()));
+            String columnName = columnMetadata.getName();
+            builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
         builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));

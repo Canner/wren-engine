@@ -14,7 +14,10 @@
 
 package io.cml.pgcatalog.table;
 
+import com.google.common.collect.ImmutableMap;
 import io.cml.spi.metadata.TableMetadata;
+
+import java.util.Map;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
 import static io.cml.spi.type.VarcharType.VARCHAR;
@@ -28,14 +31,29 @@ public class CharacterSets
     protected TableMetadata createMetadata()
     {
         return table(NAME)
-                .column("character_set_catalog", VARCHAR, "null")
-                .column("character_set_schema", VARCHAR, "null")
-                .column("character_set_name", VARCHAR, "'UTF8'")
-                .column("character_repertoire", VARCHAR, "'UCS'")
-                .column("form_of_use", VARCHAR, "'UTF8'")
-                .column("default_collate_catalog", VARCHAR, "${catalogName}")
-                .column("default_collate_schema", VARCHAR, "'default'")
-                .column("default_collate_name", VARCHAR, "'use_basic'")
+                .column("character_set_catalog", VARCHAR)
+                .column("character_set_schema", VARCHAR)
+                .column("character_set_name", VARCHAR)
+                .column("character_repertoire", VARCHAR)
+                .column("form_of_use", VARCHAR)
+                .column("default_collate_catalog", VARCHAR)
+                .column("default_collate_schema", VARCHAR)
+                .column("default_collate_name", VARCHAR)
+                .build();
+    }
+
+    @Override
+    protected Map<String, String> createTableContent()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("character_set_catalog", "null")
+                .put("character_set_schema", "null")
+                .put("character_set_name", "'UTF8'")
+                .put("character_repertoire", "'UCS'")
+                .put("form_of_use", "'UTF8'")
+                .put("default_collate_catalog", "${catalogName}")
+                .put("default_collate_schema", "'default'")
+                .put("default_collate_name", "'use_basic'")
                 .build();
     }
 }

@@ -80,10 +80,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.cml.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
-import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder;
-import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
+import static io.cml.spi.metadata.TableMetadata.Builder.builder;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
@@ -250,12 +249,12 @@ public class BigQueryMetadata
         Iterable<Table> result = bigQueryClient.listTables(dataset.get().getDatasetId());
         return Streams.stream(result)
                 .map(table -> {
-                    TableMetadataBuilder builder = tableMetadataBuilder(
+                    TableMetadata.Builder builder = builder(
                             new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()));
                     Table fullTable = bigQueryClient.getTable(table.getTableId());
                     // TODO: type mapping
                     fullTable.getDefinition().getSchema().getFields()
-                            .forEach(field -> builder.column(field.getName(), toPGType(field.getType().getStandardType()), null));
+                            .forEach(field -> builder.column(field.getName(), toPGType(field.getType().getStandardType())));
                     return builder.build();
                 })
                 .collect(toImmutableList());

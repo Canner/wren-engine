@@ -14,7 +14,10 @@
 
 package io.cml.pgcatalog.table;
 
+import com.google.common.collect.ImmutableMap;
 import io.cml.spi.metadata.TableMetadata;
+
+import java.util.Map;
 
 import static io.cml.pgcatalog.table.PgCatalogTableUtils.table;
 import static io.cml.spi.type.IntegerType.INTEGER;
@@ -33,10 +36,21 @@ public class PgNamespaceTable
     protected TableMetadata createMetadata()
     {
         return table(NAME)
-                .column("oid", INTEGER, "${hash}(${schemaName})")
-                .column("nspname", VARCHAR, "${schemaName}")
-                .column("nspowner", INTEGER, "0")
-                .column("nspacl", VARCHAR_ARRAY, "null")
+                .column("oid", INTEGER)
+                .column("nspname", VARCHAR)
+                .column("nspowner", INTEGER)
+                .column("nspacl", VARCHAR_ARRAY)
+                .build();
+    }
+
+    @Override
+    protected Map<String, String> createTableContent()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("oid", "${hash}(${schemaName})")
+                .put("nspname", "${schemaName}")
+                .put("nspowner", "0")
+                .put("nspacl", "null")
                 .build();
     }
 }

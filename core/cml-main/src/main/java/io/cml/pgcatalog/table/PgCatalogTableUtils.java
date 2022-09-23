@@ -14,10 +14,10 @@
 
 package io.cml.pgcatalog.table;
 
-import io.cml.spi.metadata.MetadataUtil;
 import io.cml.spi.metadata.SchemaTableName;
+import io.cml.spi.metadata.TableMetadata;
 
-import static io.cml.spi.metadata.MetadataUtil.TableMetadataBuilder.tableMetadataBuilder;
+import static io.cml.spi.metadata.TableMetadata.Builder.builder;
 
 public final class PgCatalogTableUtils
 {
@@ -30,13 +30,13 @@ public final class PgCatalogTableUtils
 
     private PgCatalogTableUtils() {}
 
-    public static MetadataUtil.TableMetadataBuilder table(String tableName)
+    public static TableMetadata.Builder table(String tableName)
     {
         return table(DEFAULT_SCHEMA, tableName);
     }
 
-    public static MetadataUtil.TableMetadataBuilder table(String schema, String tableName)
+    public static TableMetadata.Builder table(String schema, String tableName)
     {
-        return tableMetadataBuilder(new SchemaTableName(schema, tableName));
+        return builder(new SchemaTableName(schema, tableName));
     }
 }

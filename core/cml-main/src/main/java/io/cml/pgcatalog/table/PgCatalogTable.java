@@ -16,20 +16,36 @@ package io.cml.pgcatalog.table;
 
 import io.cml.spi.metadata.TableMetadata;
 
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
+
 public abstract class PgCatalogTable
 {
-    protected final TableMetadata tableMetadata;
+    private final TableMetadata tableMetadata;
+    private final Map<String, String> tableContent;
 
     public PgCatalogTable()
     {
-        tableMetadata = createMetadata();
+        tableMetadata = requireNonNull(createMetadata(), "tableMetadata is null");
+        tableContent = requireNonNull(createTableContent(), "tableContent is null");
     }
 
     protected abstract TableMetadata createMetadata();
 
+    protected Map<String, String> createTableContent()
+    {
+        return Map.of();
+    }
+
     public TableMetadata getTableMetadata()
     {
         return tableMetadata;
+    }
+
+    public Map<String, String> getTableContent()
+    {
+        return tableContent;
     }
 
     public String getName()

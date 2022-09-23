@@ -13,42 +13,22 @@
  */
 package io.cml.spi.metadata;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import com.google.common.collect.ImmutableList;
+import io.cml.spi.type.PGType;
 
-import static java.util.Collections.emptyMap;
+import java.util.List;
+
 import static java.util.Objects.requireNonNull;
 
 public class TableMetadata
 {
     private final SchemaTableName table;
-    private final Optional<String> comment;
     private final List<ColumnMetadata> columns;
-    private final Map<String, Object> properties;
 
     public TableMetadata(SchemaTableName table, List<ColumnMetadata> columns)
     {
-        this(table, columns, emptyMap());
-    }
-
-    public TableMetadata(SchemaTableName table, List<ColumnMetadata> columns, Map<String, Object> properties)
-    {
-        this(table, columns, properties, Optional.empty());
-    }
-
-    public TableMetadata(SchemaTableName table, List<ColumnMetadata> columns, Map<String, Object> properties, Optional<String> comment)
-    {
-        requireNonNull(table, "table is null");
-        requireNonNull(columns, "columns is null");
-        requireNonNull(comment, "comment is null");
-
-        this.table = table;
-        this.columns = List.copyOf(columns);
-        this.properties = Collections.unmodifiableMap(new LinkedHashMap<>(properties));
-        this.comment = comment;
+        this.table = requireNonNull(table, "table is null");
+        this.columns = List.copyOf(requireNonNull(columns, "columns is null"));
     }
 
     public SchemaTableName getTable()
@@ -61,25 +41,42 @@ public class TableMetadata
         return columns;
     }
 
-    public Map<String, Object> getProperties()
-    {
-        return properties;
-    }
-
-    public Optional<String> getComment()
-    {
-        return comment;
-    }
-
     @Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder("ConnectorTableMetadata{");
         sb.append("table=").append(table);
         sb.append(", columns=").append(columns);
-        sb.append(", properties=").append(properties);
-        comment.ifPresent(value -> sb.append(", comment='").append(value).append("'"));
         sb.append('}');
         return sb.toString();
+    }
+
+    public static class Builder
+    {
+        public static Builder builder(SchemaTableName tableName)
+        {
+            return new Builder(tableName);
+        }
+
+        private final SchemaTableName tableName;
+        private final ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
+
+        private Builder(SchemaTableName tableName)
+        {
+            this.tableName = tableName;
+        }
+
+        public Builder column(String columnName, PGType<?> type)
+        {
+            columns.add(ColumnMetadata.builder()
+                    .setName(columnName)
+                    .setType(type).build());
+            return this;
+        }
+
+        public TableMetadata build()
+        {
+            return new TableMetadata(tableName, columns.build());
+        }
     }
 }

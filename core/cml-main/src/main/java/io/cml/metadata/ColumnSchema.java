@@ -107,7 +107,6 @@ public final class ColumnSchema
         {
             this.name = columnMetadata.getName();
             this.type = columnMetadata.getType();
-            this.hidden = columnMetadata.isHidden();
         }
 
         public Builder setName(String name)
