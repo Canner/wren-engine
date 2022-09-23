@@ -42,12 +42,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static io.cml.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
-import static io.cml.Utils.HTTP_SERVER_PORT;
-import static io.cml.Utils.NODE_ENVIRONMENT;
 
 public class TestingCmlServer
         implements Closeable
 {
+    private static final String HTTP_SERVER_PORT = "http-server.http.port";
+    private static final String NODE_ENVIRONMENT = "node.environment";
     private final Injector injector;
     private final Closer closer = Closer.create();
 

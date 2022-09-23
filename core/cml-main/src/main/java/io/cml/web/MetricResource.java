@@ -38,6 +38,7 @@ import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static io.cml.web.CompletableFutureAsyncResponseHandler.bindAsyncResponse;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Path("/v1/metric")
@@ -62,7 +63,7 @@ public class MetricResource
     {
         CompletableFuture
                 .supplyAsync(metricStore::listMetrics)
-                .thenApply(metrics -> metrics.stream().map(metric -> MetricDto.from(metric, metricStore.listMetricSqls(metric.getName()))))
+                .thenApply(metrics -> metrics.stream().map(metric -> MetricDto.from(metric, metricStore.listMetricSqls(metric.getName()))).collect(toList()))
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 

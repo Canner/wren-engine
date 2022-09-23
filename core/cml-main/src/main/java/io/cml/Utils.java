@@ -24,8 +24,6 @@ import static java.lang.Math.min;
 
 public class Utils
 {
-    public static final String HTTP_SERVER_PORT = "http-server.http.port";
-    public static final String NODE_ENVIRONMENT = "node.environment";
     private static final Logger LOG = Logger.get(Utils.class);
     private static final SecureRandom random = new SecureRandom();
     private static final int RANDOM_SUFFIX_LENGTH = 10;
