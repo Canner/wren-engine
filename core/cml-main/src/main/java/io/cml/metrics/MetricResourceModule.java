@@ -17,7 +17,7 @@ package io.cml.metrics;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.cml.web.CompletableFutureAsyncResponseHandler;
+import io.cml.web.CmlExceptionMapper;
 import io.cml.web.MetricResource;
 
 import java.nio.file.Path;
@@ -36,6 +36,6 @@ public class MetricResourceModule
         binder.bind(MetricHook.class).in(Scopes.SINGLETON);
 
         jaxrsBinder(binder).bind(MetricResource.class);
-        jaxrsBinder(binder).bindInstance(new CompletableFutureAsyncResponseHandler());
+        jaxrsBinder(binder).bindInstance(new CmlExceptionMapper());
     }
 }

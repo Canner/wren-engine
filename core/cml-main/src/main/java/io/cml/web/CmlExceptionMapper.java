@@ -4,13 +4,10 @@ import io.airlift.log.Logger;
 import io.cml.spi.CmlException;
 import io.cml.web.dto.ErrorMessageDto;
 
-import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
 import java.util.concurrent.CompletionException;
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
@@ -19,39 +16,10 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
-public final class CompletableFutureAsyncResponseHandler
+public final class CmlExceptionMapper
         implements ExceptionMapper<Throwable>
 {
-    private static final Logger LOG = Logger.get(CompletableFutureAsyncResponseHandler.class);
-
-    public static <T> void bindAsyncResponse(AsyncResponse asyncResponse, Supplier<T> supplier)
-    {
-        T result = null;
-        Throwable throwable = null;
-        try {
-            result = supplier.get();
-        }
-        catch (Throwable ex) {
-            throwable = ex;
-        }
-        bindAsyncResponse(asyncResponse).accept(result, throwable);
-    }
-
-    public static BiConsumer<? super Object, ? super Throwable> bindAsyncResponse(AsyncResponse asyncResponse)
-    {
-        return (response, throwable) -> {
-            if (throwable != null) {
-                LOG.error(throwable);
-                asyncResponse.resume(throwable);
-            }
-            else if (response instanceof Response) {
-                asyncResponse.resume(response);
-            }
-            else {
-                asyncResponse.resume(Response.ok(response).build());
-            }
-        };
-    }
+    private static final Logger LOG = Logger.get(CmlExceptionMapper.class);
 
     @Override
     public Response toResponse(Throwable throwable)

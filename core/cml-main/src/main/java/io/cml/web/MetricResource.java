@@ -14,6 +14,9 @@
 
 package io.cml.web;
 
+import com.google.common.util.concurrent.FluentFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.cml.metrics.Metric;
 import io.cml.metrics.MetricHook;
 import io.cml.metrics.MetricStore;
@@ -32,10 +35,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
+import java.util.concurrent.Callable;
 
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static io.airlift.jaxrs.AsyncResponseHandler.bindAsyncResponse;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
-import static io.cml.web.CompletableFutureAsyncResponseHandler.bindAsyncResponse;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -61,10 +66,10 @@ public class MetricResource
     @Produces(APPLICATION_JSON)
     public void getMetrics(@Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .supplyAsync(metricStore::listMetrics)
-                .thenApply(metrics -> metrics.stream().map(metric -> MetricDto.from(metric, metricStore.listMetricSqls(metric.getName()))).collect(toList()))
-                .whenComplete(bindAsyncResponse(asyncResponse));
+        ListenableFuture<List<MetricDto>> future = FluentFuture.from(createDirectListenableFuture(metricStore::listMetrics))
+                .transform(metrics -> metrics.stream()
+                        .map(metric -> MetricDto.from(metric, metricStore.listMetricSqls(metric.getName()))).collect(toList()), directExecutor());
+        bindAsyncResponse(asyncResponse, future, directExecutor());
     }
 
     @GET
@@ -75,12 +80,11 @@ public class MetricResource
             @PathParam("metricName") String metricName,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .supplyAsync(() -> metricStore.getMetric(metricName))
-                .thenApply(metricOptional -> MetricDto.from(
+        ListenableFuture<MetricDto> future = FluentFuture.from(createDirectListenableFuture(() -> metricStore.getMetric(metricName)))
+                .transform(metricOptional -> MetricDto.from(
                         metricOptional.orElseThrow(() -> new CmlException(NOT_FOUND, format("metric %s is not found", metricName))),
-                        metricStore.listMetricSqls(metricName)))
-                .whenComplete(bindAsyncResponse(asyncResponse));
+                        metricStore.listMetricSqls(metricName)), directExecutor());
+        bindAsyncResponse(asyncResponse, future, directExecutor());
     }
 
     @DELETE
@@ -91,9 +95,10 @@ public class MetricResource
             @PathParam("metricName") String metricName,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .runAsync(() -> metricHook.handleDrop(metricName))
-                .whenComplete(bindAsyncResponse(asyncResponse));
+        bindAsyncResponse(
+                asyncResponse,
+                runDirect(() -> metricHook.handleDrop(metricName)),
+                directExecutor());
     }
 
     @PUT
@@ -105,9 +110,10 @@ public class MetricResource
             Metric metric,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .runAsync(() -> metricHook.handleUpdate(metric))
-                .whenComplete(bindAsyncResponse(asyncResponse));
+        bindAsyncResponse(
+                asyncResponse,
+                runDirect(() -> metricHook.handleUpdate(metric)),
+                directExecutor());
     }
 
     @POST
@@ -117,8 +123,19 @@ public class MetricResource
             Metric metric,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .runAsync(() -> metricHook.handleCreate(metric))
-                .whenComplete(bindAsyncResponse(asyncResponse));
+        bindAsyncResponse(
+                asyncResponse,
+                runDirect(() -> metricHook.handleCreate(metric)),
+                directExecutor());
+    }
+
+    private <O> ListenableFuture<O> createDirectListenableFuture(Callable<O> callable)
+    {
+        return Futures.submit(callable, directExecutor());
+    }
+
+    private ListenableFuture<Void> runDirect(Runnable runnable)
+    {
+        return FluentFuture.from(Futures.submit(runnable, directExecutor()));
     }
 }
