@@ -16,7 +16,6 @@ package io.cml;
 
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableSchema;
 import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.Column;
 import io.cml.spi.ConnectorRecordIterator;
@@ -88,7 +87,7 @@ public class TestingMetadata
     }
 
     @Override
-    public TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName)
+    public TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName)
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

@@ -15,13 +15,13 @@
 package io.cml.testing;
 
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableSchema;
 import io.cml.metrics.Metric;
 import io.cml.metrics.MetricHook;
 import io.cml.metrics.MetricSql;
 import io.cml.metrics.MetricStore;
 import io.cml.spi.SessionContext;
 import io.cml.spi.metadata.SchemaTableName;
+import io.cml.spi.metadata.TableMetadata;
 import io.cml.sql.SqlConverter;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
@@ -151,17 +151,17 @@ public abstract class AbstractTestMetricHook
 
     protected void waitTableRemoved(QualifiedName tableName)
     {
-        Optional<TableSchema> tableSchema;
+        Optional<TableMetadata> tableMetadata;
         do {
-            tableSchema = getTableSchema(tableName);
+            tableMetadata = getTableMetadata(tableName);
         }
-        while (tableSchema.isPresent());
+        while (tableMetadata.isPresent());
     }
 
-    protected Optional<TableSchema> getTableSchema(QualifiedName tableName)
+    protected Optional<TableMetadata> getTableMetadata(QualifiedName tableName)
     {
         try {
-            return Optional.of(getMetadata().getTableSchema(createCatalogSchemaTableName(tableName, "", "")));
+            return Optional.of(getMetadata().getTableMetadata(createCatalogSchemaTableName(tableName, "", "")));
         }
         catch (Exception e) {
             return Optional.empty();

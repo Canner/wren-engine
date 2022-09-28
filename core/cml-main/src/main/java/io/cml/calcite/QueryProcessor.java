@@ -16,12 +16,11 @@ package io.cml.calcite;
 
 import com.google.common.base.Joiner;
 import io.airlift.log.Logger;
-import io.cml.metadata.ColumnSchema;
-import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableSchema;
 import io.cml.spi.SessionContext;
+import io.cml.spi.metadata.ColumnMetadata;
 import io.cml.spi.metadata.MaterializedViewDefinition;
+import io.cml.spi.metadata.TableMetadata;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -140,9 +139,9 @@ public class QueryProcessor
         return result;
     }
 
-    private TableSchema toTableSchema(QualifiedName tableName, SessionContext sessionContext)
+    private TableMetadata toTableMetadata(QualifiedName tableName, SessionContext sessionContext)
     {
-        return metadata.getTableSchema(createCatalogSchemaTableName(tableName, sessionContext.getCatalog(), sessionContext.getSchema()));
+        return metadata.getTableMetadata(createCatalogSchemaTableName(tableName, sessionContext.getCatalog(), sessionContext.getSchema()));
     }
 
     private static RelOptCluster newCluster(RelDataTypeFactory factory)
@@ -154,7 +153,7 @@ public class QueryProcessor
 
     private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef, SessionContext sessionContext)
     {
-        QueryContext queryContext = convertSqlToRelNode(mvDef.getOriginalSql(), sessionContext, List.of(toTableSchema(mvDef)));
+        QueryContext queryContext = convertSqlToRelNode(mvDef.getOriginalSql(), sessionContext, List.of(toTableMetadata(mvDef)));
         List<String> mvName = List.of(
                 mvDef.getCatalogName().getCatalogName(),
                 mvDef.getSchemaTableName().getSchemaName(),
@@ -173,20 +172,17 @@ public class QueryProcessor
                 mvName);
     }
 
-    private static TableSchema toTableSchema(MaterializedViewDefinition mvDef)
+    private static TableMetadata toTableMetadata(MaterializedViewDefinition mvDef)
     {
-        return new TableSchema(
-                mvDef.getCatalogName(),
-                new ConnectorTableSchema(
-                        mvDef.getSchemaTableName(),
-                        mvDef.getColumns().stream()
-                                .map(columnMetadata ->
-                                        ColumnSchema.builder()
-                                                .setName(columnMetadata.getName())
-                                                .setType(columnMetadata.getType())
-                                                .setHidden(false)
-                                                .build())
-                                .collect(toImmutableList())));
+        return new TableMetadata(
+                mvDef.getSchemaTableName(),
+                mvDef.getColumns().stream()
+                        .map(columnMetadata ->
+                                ColumnMetadata.builder()
+                                        .setName(columnMetadata.getName())
+                                        .setType(columnMetadata.getType())
+                                        .build())
+                        .collect(toImmutableList()));
     }
 
     private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
@@ -196,7 +192,7 @@ public class QueryProcessor
         return convertSqlToRelNode(sql, sessionContext, List.of());
     }
 
-    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext, List<TableSchema> extraTables)
+    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext, List<TableMetadata> extraTables)
     {
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
@@ -204,8 +200,8 @@ public class QueryProcessor
         Analysis analysis = new Analysis();
         SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis, metadata);
 
-        List<TableSchema> visitedTable = analysis.getVisitedTables()
-                .stream().map(name -> toTableSchema(name, sessionContext))
+        List<TableMetadata> visitedTable = analysis.getVisitedTables()
+                .stream().map(name -> toTableMetadata(name, sessionContext))
                 .collect(toImmutableList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
