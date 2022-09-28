@@ -7,7 +7,7 @@ import io.cml.web.dto.ErrorMessageDto;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
@@ -28,7 +28,7 @@ public final class CmlExceptionMapper
         if (throwable instanceof CmlException) {
             return failure((CmlException) throwable);
         }
-        else if (throwable instanceof CompletionException && throwable.getCause() instanceof CmlException) {
+        else if (throwable instanceof ExecutionException && throwable.getCause() instanceof CmlException) {
             return failure((CmlException) throwable.getCause());
         }
         else {
