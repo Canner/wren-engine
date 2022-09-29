@@ -32,10 +32,7 @@ import io.cml.calcite.CalciteTypes;
 import io.cml.calcite.CmlSchemaUtil;
 import io.cml.calcite.CustomCharsetJavaTypeFactoryImpl;
 import io.cml.calcite.QueryProcessor;
-import io.cml.metadata.ColumnSchema;
-import io.cml.metadata.ConnectorTableSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableSchema;
 import io.cml.pgcatalog.function.PgFunction;
 import io.cml.pgcatalog.function.PgFunctionRegistry;
 import io.cml.spi.CatalogSchemaTableName;
@@ -351,20 +348,18 @@ public class BigQueryMetadata
     }
 
     @Override
-    public TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName)
+    public TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName)
     {
         Table table = bigQueryClient.getTable(catalogSchemaTableName);
-        return new TableSchema(
-                new CatalogName(catalogSchemaTableName.getCatalogName()),
-                new ConnectorTableSchema(
-                        catalogSchemaTableName.getSchemaTableName(),
-                        table.getDefinition().getSchema().getFields().stream()
-                                .map(field ->
-                                        ColumnSchema.builder()
-                                                .setName(field.getName())
-                                                .setType(toPGType(field.getType().getStandardType()))
-                                                .build())
-                                .collect(toImmutableList())));
+        return new TableMetadata(
+                catalogSchemaTableName.getSchemaTableName(),
+                table.getDefinition().getSchema().getFields().stream()
+                        .map(field ->
+                                ColumnMetadata.builder()
+                                        .setName(field.getName())
+                                        .setType(toPGType(field.getType().getStandardType()))
+                                        .build())
+                        .collect(toImmutableList()));
     }
 
     @Override

@@ -84,7 +84,7 @@ public interface Metadata
 
     RelDataTypeFactory getTypeFactory();
 
-    TableSchema getTableSchema(CatalogSchemaTableName catalogSchemaTableName);
+    TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName);
 
     CmlSchemaUtil.Dialect getDialect();
 

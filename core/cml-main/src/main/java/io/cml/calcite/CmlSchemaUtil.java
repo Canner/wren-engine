@@ -14,9 +14,9 @@
 
 package io.cml.calcite;
 
-import io.cml.metadata.ColumnSchema;
 import io.cml.metadata.Metadata;
-import io.cml.metadata.TableSchema;
+import io.cml.spi.metadata.ColumnMetadata;
+import io.cml.spi.metadata.TableMetadata;
 import io.cml.spi.type.PGType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -64,13 +64,13 @@ public final class CmlSchemaUtil
         }
     }
 
-    public static SchemaPlus schemaPlus(List<TableSchema> tableSchemas, Metadata metadata)
+    public static SchemaPlus schemaPlus(List<TableMetadata> tableMetadatas, Metadata metadata)
     {
         SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
-        tableSchemas.stream()
-                .collect(groupingBy(tableSchema -> tableSchema.getCatalogName().getCatalogName(),
-                        groupingBy(tableSchema -> tableSchema.getTableSchema().getTable().getSchemaName(),
-                                mapping(tableSchema -> Map.entry(tableSchema.getTableSchema().getTable().getTableName(), toCmlTable(tableSchema, metadata)),
+        tableMetadatas.stream()
+                .collect(groupingBy(tableMetadata -> metadata.getDefaultCatalog(),
+                        groupingBy(tableMetadata -> tableMetadata.getTable().getSchemaName(),
+                                mapping(tableMetadata -> Map.entry(tableMetadata.getTable().getTableName(), toCmlTable(tableMetadata, metadata)),
                                         toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))
                 .forEach((catalogName, schemaTableMap) -> {
                     SchemaPlus secondSchema = rootSchema.add(catalogName, new AbstractSchema());
@@ -79,15 +79,15 @@ public final class CmlSchemaUtil
         return rootSchema;
     }
 
-    private static CmlTable toCmlTable(TableSchema tableSchema, Metadata metadata)
+    private static CmlTable toCmlTable(TableMetadata tableMetadata, Metadata metadata)
     {
         JavaTypeFactoryImpl typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, metadata.getRelDataTypeSystem());
         RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
-        for (ColumnSchema columnSchema : tableSchema.getColumns()) {
-            builder.add(columnSchema.getName(), toRelDataType(typeFactory, columnSchema.getType()));
+        for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
+            builder.add(columnMetadata.getName(), toRelDataType(typeFactory, columnMetadata.getType()));
         }
 
-        return new CmlTable(tableSchema.getTable().getTableName(), builder.build());
+        return new CmlTable(tableMetadata.getTable().getTableName(), builder.build());
     }
 
     // TODO: handle nested types
