@@ -17,6 +17,12 @@ package io.cml.server;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import io.airlift.event.client.EventModule;
+import io.airlift.http.server.HttpServerModule;
+import io.airlift.jaxrs.JaxrsModule;
+import io.airlift.json.JsonModule;
+import io.airlift.node.NodeModule;
+import io.cml.metrics.MetricResourceModule;
 import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
@@ -41,7 +47,13 @@ public class CmlServer
     protected Iterable<? extends Module> getAdditionalModules()
     {
         return ImmutableList.of(
+                new NodeModule(),
+                new HttpServerModule(),
+                new JsonModule(),
+                new JaxrsModule(),
+                new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule());
+                new BigQueryConnectorModule(),
+                new MetricResourceModule());
     }
 }

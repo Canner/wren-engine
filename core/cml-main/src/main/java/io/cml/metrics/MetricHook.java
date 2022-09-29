@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import java.util.List;
 
+import static io.cml.Utils.swallowException;
 import static io.cml.spi.metadata.StandardErrorCode.ALREADY_EXISTS;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
@@ -47,7 +48,7 @@ public class MetricHook
     public void handleCreate(Metric metric)
     {
         if (metricStore.getMetric(metric.getName()).isPresent()) {
-            throw new CmlException(ALREADY_EXISTS, "metric %s already exist");
+            throw new CmlException(ALREADY_EXISTS, format("metric %s already exist", metric.getName()));
         }
 
         createMetric(metric);
@@ -95,7 +96,7 @@ public class MetricHook
         List<MetricSql> metricSqls = metricStore.listMetricSqls(metricName);
         metricSqls.stream()
                 .map(metricSql -> new SchemaTableName(metadata.getMaterializedViewSchema(), metricSql.getName()))
-                .forEach(metadata::deleteMaterializedView);
+                .forEach(schemaTableName -> swallowException(() -> metadata.deleteMaterializedView(schemaTableName)));
 
         metricStore.dropMetric(metricName);
     }

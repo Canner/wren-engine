@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import io.cml.testing.AbstractWireProtocolTest;
-import io.cml.testing.TestingWireProtocolServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -32,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static java.lang.System.getenv;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,19 +45,6 @@ public class TestResultSetMetadata
         extends AbstractWireProtocolTest
 {
     private static final String TEST_CATALOG = "canner-cml";
-
-    @Override
-    protected TestingWireProtocolServer createWireProtocolServer()
-    {
-        return TestingWireProtocolServer.builder()
-                .setRequiredConfigs(
-                        ImmutableMap.<String, String>builder()
-                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "asia-east1")
-                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .build())
-                .build();
-    }
 
     @Test
     public void testGetClientInfoProperties()
@@ -133,7 +118,7 @@ public class TestResultSetMetadata
     public void testGetUrl()
             throws Exception
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
         try (Connection connection = this.createConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();

@@ -19,22 +19,22 @@ import org.testng.annotations.AfterClass;
 
 import java.io.IOException;
 
-public abstract class RequireWireProtocolServer
+public abstract class RequireCmlServer
 {
-    private final TestingWireProtocolServer wireProtocolServer;
-    private final Closer closer = Closer.create();
+    private final TestingCmlServer cmlServer;
+    protected final Closer closer = Closer.create();
 
-    public RequireWireProtocolServer()
+    public RequireCmlServer()
     {
-        this.wireProtocolServer = createWireProtocolServer();
-        closer.register(wireProtocolServer);
+        this.cmlServer = createCmlServer();
+        closer.register(cmlServer);
     }
 
-    protected abstract TestingWireProtocolServer createWireProtocolServer();
+    protected abstract TestingCmlServer createCmlServer();
 
-    protected TestingWireProtocolServer wireProtocolServer()
+    protected TestingCmlServer server()
     {
-        return wireProtocolServer;
+        return cmlServer;
     }
 
     @AfterClass(alwaysRun = true)

@@ -22,6 +22,13 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
+import io.airlift.event.client.EventModule;
+import io.airlift.http.server.testing.TestingHttpServer;
+import io.airlift.http.server.testing.TestingHttpServerModule;
+import io.airlift.jaxrs.JaxrsModule;
+import io.airlift.json.JsonModule;
+import io.airlift.node.NodeModule;
+import io.cml.metrics.MetricResourceModule;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
 import io.cml.wireprotocol.PostgresNetty;
@@ -30,14 +37,17 @@ import io.cml.wireprotocol.ssl.EmptyTlsDataProvider;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
 import static io.cml.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
-public class TestingWireProtocolServer
+public class TestingCmlServer
         implements Closeable
 {
+    private static final String HTTP_SERVER_PORT = "http-server.http.port";
+    private static final String NODE_ENVIRONMENT = "node.environment";
     private final Injector injector;
     private final Closer closer = Closer.create();
 
@@ -46,16 +56,25 @@ public class TestingWireProtocolServer
         return new Builder();
     }
 
-    private TestingWireProtocolServer(Map<String, String> requiredConfigs)
+    private TestingCmlServer(Map<String, String> requiredConfigs)
             throws IOException
     {
         Map<String, String> requiredConfigProps = new HashMap<>();
         requiredConfigProps.put(PG_WIRE_PROTOCOL_PORT, String.valueOf(randomPort()));
+        requiredConfigProps.put(HTTP_SERVER_PORT, String.valueOf(randomPort()));
+        requiredConfigProps.put(NODE_ENVIRONMENT, "test");
+
         requiredConfigProps.putAll(requiredConfigs);
 
         Bootstrap app = new Bootstrap(ImmutableList.<Module>of(
+                new TestingHttpServerModule(),
+                new NodeModule(),
+                new JsonModule(),
+                new JaxrsModule(),
+                new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule()));
+                new BigQueryConnectorModule(),
+                new MetricResourceModule()));
 
         injector = app
                 .doNotInitializeLogging()
@@ -67,9 +86,14 @@ public class TestingWireProtocolServer
     }
 
     @VisibleForTesting
-    public HostAndPort getHostAndPort()
+    public HostAndPort getPgHostAndPort()
     {
         return injector.getInstance(PostgresNetty.class).getHostAndPort();
+    }
+
+    public URI getHttpServerBasedUrl()
+    {
+        return injector.getInstance(TestingHttpServer.class).getBaseUrl();
     }
 
     @Override
@@ -104,10 +128,10 @@ public class TestingWireProtocolServer
             return this;
         }
 
-        public TestingWireProtocolServer build()
+        public TestingCmlServer build()
         {
             try {
-                return new TestingWireProtocolServer(configs);
+                return new TestingCmlServer(configs);
             }
             catch (IOException ex) {
                 throw new RuntimeException(ex);

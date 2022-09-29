@@ -14,6 +14,7 @@
 
 package io.cml.testing;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 
 import java.io.IOException;
@@ -23,17 +24,33 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+import static io.cml.metrics.MetricConfig.METRIC_ROOT_PATH;
 import static java.lang.String.format;
+import static java.lang.System.getenv;
 
 public abstract class AbstractWireProtocolTest
-        extends RequireWireProtocolServer
+        extends RequireCmlServer
 {
     public static final String MOCK_PASSWORD = "ignored";
+
+    @Override
+    protected TestingCmlServer createCmlServer()
+    {
+        return TestingCmlServer.builder()
+                .setRequiredConfigs(
+                        ImmutableMap.<String, String>builder()
+                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
+                                .put("bigquery.location", "asia-east1")
+                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
+                                .put(METRIC_ROOT_PATH, "ignored")
+                                .build())
+                .build();
+    }
 
     protected TestingWireProtocolClient wireProtocolClient()
             throws IOException
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         return new TestingWireProtocolClient(
                 new InetSocketAddress(hostAndPort.getHost(), hostAndPort.getPort()));
     }
@@ -41,7 +58,7 @@ public abstract class AbstractWireProtocolTest
     protected Connection createConnection()
             throws SQLException
     {
-        HostAndPort hostAndPort = wireProtocolServer().getHostAndPort();
+        HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
         Properties props = getDefaultProperties();
         return DriverManager.getConnection(url, props);
