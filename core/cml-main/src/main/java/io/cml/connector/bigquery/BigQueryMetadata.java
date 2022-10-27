@@ -34,7 +34,6 @@ import io.cml.calcite.CustomCharsetJavaTypeFactoryImpl;
 import io.cml.calcite.QueryProcessor;
 import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.function.PgFunction;
-import io.cml.pgcatalog.function.PgFunctionRegistry;
 import io.cml.spi.CatalogSchemaTableName;
 import io.cml.spi.CmlException;
 import io.cml.spi.Column;
@@ -76,6 +75,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.cml.connector.bigquery.BigQueryType.toPGType;
 import static io.cml.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.cml.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
+import static io.cml.pgcatalog.function.PgFunctionRegistry.PG_FUNCTION_REGISTRY;
 import static io.cml.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.cml.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static io.cml.spi.metadata.TableMetadata.Builder.builder;
@@ -108,8 +108,6 @@ public class BigQueryMetadata
             };
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
-
-    private final PgFunctionRegistry pgFunctionRegistry = new PgFunctionRegistry();
 
     private final RelDataTypeFactory typeFactory;
 
@@ -169,7 +167,7 @@ public class BigQueryMetadata
     private SqlOperatorTable initCalciteOperators()
     {
         ImmutableList.Builder<SqlFunction> builder = ImmutableList.builder();
-        for (PgFunction pgFunction : pgFunctionRegistry.getPgFunctions()) {
+        for (PgFunction pgFunction : PG_FUNCTION_REGISTRY.getPgFunctions()) {
             builder.add(toCalciteSqlFunction(pgFunction));
         }
         pgNameToBqFunction.values().forEach(builder::add);
@@ -344,7 +342,7 @@ public class BigQueryMetadata
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
+        return withPgCatalogPrefix(PG_FUNCTION_REGISTRY.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
     }
 
     @Override

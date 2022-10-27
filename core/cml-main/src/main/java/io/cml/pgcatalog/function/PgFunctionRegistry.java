@@ -44,6 +44,7 @@ import static java.lang.String.format;
 @ThreadSafe
 public final class PgFunctionRegistry
 {
+    public static final PgFunctionRegistry PG_FUNCTION_REGISTRY = new PgFunctionRegistry();
     private final List<PgFunction> pgFunctions;
     private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();
 
