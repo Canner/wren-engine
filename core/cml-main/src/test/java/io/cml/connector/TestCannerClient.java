@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Test(enabled = false)
 public class TestCannerClient
 {
     private final CannerClient cannerClient;

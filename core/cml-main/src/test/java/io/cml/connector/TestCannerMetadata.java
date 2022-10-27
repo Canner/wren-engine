@@ -21,6 +21,7 @@ import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Test(enabled = false)
 public class TestCannerMetadata
 {
     private final CannerMetadta metadata;
