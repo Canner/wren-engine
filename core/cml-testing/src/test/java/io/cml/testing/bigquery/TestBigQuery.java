@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml;
+package io.cml.testing.bigquery;
 
 import io.cml.connector.bigquery.BigQueryClient;
 import io.cml.connector.bigquery.BigQueryConfig;

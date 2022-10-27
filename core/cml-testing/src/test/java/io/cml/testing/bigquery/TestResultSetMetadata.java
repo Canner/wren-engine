@@ -17,7 +17,9 @@ package io.cml.testing.bigquery;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
-import io.cml.testing.AbstractWireProtocolTest;
+import io.cml.testing.JdbcTesting;
+import io.cml.testing.RequireCmlServer;
+import io.cml.testing.TestingCmlServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -42,15 +44,22 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestResultSetMetadata
-        extends AbstractWireProtocolTest
+        extends RequireCmlServer
+        implements JdbcTesting, BigQueryTesting
 {
     private static final String TEST_CATALOG = "canner-cml";
+
+    @Override
+    protected TestingCmlServer createCmlServer()
+    {
+        return createCmlServerWithBigQuery();
+    }
 
     @Test
     public void testGetClientInfoProperties()
             throws SQLException
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             assertResultSet(connection.getMetaData().getClientInfoProperties())
                     .hasColumnCount(4)
                     .hasColumn(1, "NAME", Types.VARCHAR)
@@ -79,7 +88,7 @@ public class TestResultSetMetadata
                 .put("timestamptz", asList("timestamptz", 93, 6, "'", "'", null, 1, false, 3, true, false, false, null, 0, 0, null, null, 10))
                 .build();
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet resultSet = connection.getMetaData().getTypeInfo();
             while (resultSet.next()) {
                 String type = resultSet.getString("TYPE_NAME");
@@ -120,7 +129,7 @@ public class TestResultSetMetadata
     {
         HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             DatabaseMetaData metaData = connection.getMetaData();
             assertEquals(metaData.getURL(), url);
         }
@@ -130,7 +139,7 @@ public class TestResultSetMetadata
     public void testGetDatabaseProductVersion()
             throws Exception
     {
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             DatabaseMetaData metaData = connection.getMetaData();
             assertEquals(metaData.getDatabaseProductName(), "PostgreSQL");
             assertEquals(metaData.getDatabaseProductVersion(), "13.0");
@@ -143,7 +152,7 @@ public class TestResultSetMetadata
     public void testGetCatalogs()
             throws Exception
     {
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getCatalogs();
             assertThat(readRows(rs)).isEqualTo(List.of(List.of("test")));
             ResultSetMetaData metadata = rs.getMetaData();
@@ -157,61 +166,61 @@ public class TestResultSetMetadata
     public void testGetSchemas()
             throws Exception
     {
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas();
             assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(null, null);
             assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, null);
             assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", null);
             assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas("", null);
             assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "cml_temp");
             assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "cml_temp");
             assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "tpch%");
             assertGetSchemasResult(rs, List.of(List.of("tpch_sf1"), List.of("tpch_tiny")));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "unknown");
             assertGetSchemasResult(rs, List.of());
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "unknown");
             assertGetSchemasResult(rs, List.of());
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", "unknown");
             assertGetSchemasResult(rs, List.of());
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "te_");
             assertGetSchemasResult(rs, List.of());
         }
@@ -237,113 +246,113 @@ public class TestResultSetMetadata
             throws Exception
     {
         // The first argument of getTables will be ignored by pg jdbc.
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(null, null, null, null);
             assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
         // The first argument of getTables will be ignored by pg jdbc.
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, null, null, null);
             assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
         // The first argument of getTables will be ignored by pg jdbc.
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables("", null, null, null);
             assertThatNoException().isThrownBy(() -> readRows(rs));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", null, null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "", null, null);
             assertTableMetadata(rs);
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(null, "pg_catalog", null, null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(null, null, "pg_class", null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(null, null, null, array("SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_cata%", "pg_class", null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_cata%", "pg_class", null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_cla%s", null);
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables("unknown", "pg_catalog", "pg_class", array("SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "unknown", "pg_class", array("SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "unknown", array("SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("unknown"));
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("unknown", "SYSTEM TABLE"));
             assertTableMetadata(rs);
             assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
         }
 
-        try (Connection connection = this.createConnection()) {
+        try (Connection connection = this.createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array());
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
@@ -402,7 +411,7 @@ public class TestResultSetMetadata
     public void testGetTableTypes()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getTableTypes();
             assertThat(readRows(rs)).isEqualTo(List.of(
                     List.of("FOREIGN TABLE"),
@@ -436,43 +445,43 @@ public class TestResultSetMetadata
     public void testGetColumns()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(null, null, "pg_class", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, null, "pg_class", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(null, "pg_catalog", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catal%", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_cla%", "relnamespace");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
         }
 
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_class", "%lnamespac%");
             assertColumnMetadata(rs);
             assertThat(readRows(rs)).hasSize(1);
@@ -562,7 +571,7 @@ public class TestResultSetMetadata
     public void testGetPseudoColumns()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             assertThatThrownBy(() -> connection.getMetaData().getPseudoColumns(null, null, null, null))
                     .isInstanceOf(SQLException.class)
                     .hasMessage("Method org.postgresql.jdbc.PgDatabaseMetaData.getPseudoColumns(String, String, String, String) is not yet implemented.");
@@ -573,7 +582,7 @@ public class TestResultSetMetadata
     public void testGetFunctions()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getFunctions(null, null, "current_schemas");
             assertTrue(rs.next());
             assertEquals(rs.getString("function_cat"), "canner-cml");
@@ -590,7 +599,7 @@ public class TestResultSetMetadata
             throws Exception
     {
         // Pgsql driver method getProcedures can not get function like "current_schemas"
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getProcedures(null, null, "current_schemas");
             assertFalse(rs.next());
         }
@@ -600,7 +609,7 @@ public class TestResultSetMetadata
     public void testGetProcedureColumns()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getProcedureColumns(null, null, null, null);
             assertFalse(rs.next());
         }
@@ -610,7 +619,7 @@ public class TestResultSetMetadata
     public void testGetSuperTables()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             assertThatThrownBy(() -> connection.getMetaData().getSuperTables(null, null, null))
                     .isInstanceOf(SQLException.class)
                     .hasMessage("Method org.postgresql.jdbc.PgDatabaseMetaData.getSuperTables(String,String,String,String) is not yet implemented.");
@@ -621,7 +630,7 @@ public class TestResultSetMetadata
     public void testGetUdts()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             ResultSet rs = connection.getMetaData().getUDTs(null, null, null, null);
             assertFalse(rs.next());
         }
@@ -631,7 +640,7 @@ public class TestResultSetMetadata
     public void testGetAttributes()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             assertThatThrownBy(() -> connection.getMetaData().getAttributes(null, null, null, null))
                     .isInstanceOf(SQLException.class)
                     .hasMessage("Method org.postgresql.jdbc.PgDatabaseMetaData.getAttributes(String,String,String,String) is not yet implemented.");
@@ -642,7 +651,7 @@ public class TestResultSetMetadata
     public void testGetSuperTypes()
             throws Exception
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             assertThatThrownBy(() -> connection.getMetaData().getSuperTypes(null, null, null))
                     .isInstanceOf(SQLException.class)
                     .hasMessage("Method org.postgresql.jdbc.PgDatabaseMetaData.getSuperTypes(String,String,String) is not yet implemented.");

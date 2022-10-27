@@ -29,7 +29,6 @@ import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
 import io.cml.metrics.MetricResourceModule;
-import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
 import io.cml.wireprotocol.PostgresNetty;
 import io.cml.wireprotocol.ssl.EmptyTlsDataProvider;
@@ -39,6 +38,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static io.cml.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
@@ -56,7 +56,7 @@ public class TestingCmlServer
         return new Builder();
     }
 
-    private TestingCmlServer(Map<String, String> requiredConfigs)
+    private TestingCmlServer(Map<String, String> requiredConfigs, List<Module> additionalModules)
             throws IOException
     {
         Map<String, String> requiredConfigProps = new HashMap<>();
@@ -66,15 +66,17 @@ public class TestingCmlServer
 
         requiredConfigProps.putAll(requiredConfigs);
 
-        Bootstrap app = new Bootstrap(ImmutableList.<Module>of(
-                new TestingHttpServerModule(),
-                new NodeModule(),
-                new JsonModule(),
-                new JaxrsModule(),
-                new EventModule(),
-                new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule(),
-                new MetricResourceModule()));
+        ImmutableList.Builder<Module> moduleBuilder = ImmutableList.<Module>builder()
+                .add(new TestingHttpServerModule(),
+                        new NodeModule(),
+                        new JsonModule(),
+                        new JaxrsModule(),
+                        new EventModule(),
+                        new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
+                        new MetricResourceModule())
+                .addAll(additionalModules);
+
+        Bootstrap app = new Bootstrap(moduleBuilder.build());
 
         injector = app
                 .doNotInitializeLogging()
@@ -115,6 +117,7 @@ public class TestingCmlServer
     public static class Builder
     {
         private Map<String, String> configs = new HashMap<>();
+        private ImmutableList.Builder<Module> additionalModules = ImmutableList.builder();
 
         public Builder setRequireConfig(String key, String value)
         {
@@ -128,10 +131,16 @@ public class TestingCmlServer
             return this;
         }
 
+        public Builder addAdditionalModule(Module... modules)
+        {
+            this.additionalModules.add(modules);
+            return this;
+        }
+
         public TestingCmlServer build()
         {
             try {
-                return new TestingCmlServer(configs);
+                return new TestingCmlServer(configs, additionalModules.build());
             }
             catch (IOException ex) {
                 throw new RuntimeException(ex);

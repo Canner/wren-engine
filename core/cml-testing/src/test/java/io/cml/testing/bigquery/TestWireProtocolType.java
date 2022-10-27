@@ -17,8 +17,10 @@ package io.cml.testing.bigquery;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.cml.spi.type.PGTypes;
-import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.DataType;
+import io.cml.testing.JdbcTesting;
+import io.cml.testing.RequireCmlServer;
+import io.cml.testing.TestingCmlServer;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.Test;
 
@@ -58,11 +60,18 @@ import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestWireProtocolType
-        extends AbstractWireProtocolTest
+        extends RequireCmlServer
+        implements BigQueryTesting, JdbcTesting
 {
     // BigQuery has only INT64 type. We should cast other int to int32 after got them.
     private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint", "array(integer)", "array(smallint)", "array(tinyint)");
     private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real", "array(real)");
+
+    @Override
+    protected TestingCmlServer createCmlServer()
+    {
+        return createCmlServerWithBigQuery();
+    }
 
     @Test
     public void testBasicTypes()
@@ -261,7 +270,7 @@ public class TestWireProtocolType
             List<Object> expectedResults = inputs.stream().map(WireProtocolTypeTest.Input::toJdbcQueryResult).collect(toList());
             List<String> expectedTypeName = inputs.stream().map(Input::getInsertType).collect(toList());
 
-            try (Connection conn = createConnection()) {
+            try (Connection conn = createConnection(server())) {
                 Statement stmt = conn.createStatement();
                 String sql = prepareQueryForDataType(rowCopies);
                 stmt.execute(sql);

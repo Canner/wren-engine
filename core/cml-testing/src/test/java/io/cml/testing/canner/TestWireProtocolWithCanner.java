@@ -12,26 +12,31 @@
  * limitations under the License.
  */
 
-package io.cml.testing.bigquery;
+package io.cml.testing.canner;
 
-import io.cml.spi.type.BigIntType;
+import io.cml.spi.type.IntegerType;
 import io.cml.spi.type.PGType;
 import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.TestingCmlServer;
+import org.testng.annotations.Test;
 
-public class TestWireProtocolWithBigquery
+/**
+ * This test is only for local testing.
+ */
+@Test(enabled = false)
+public class TestWireProtocolWithCanner
         extends AbstractWireProtocolTest
-        implements BigQueryTesting
+        implements CannerTesting
 {
     @Override
     protected TestingCmlServer createCmlServer()
     {
-        return createCmlServerWithBigQuery();
+        return createCmlServerWithCanner();
     }
 
     @Override
     protected PGType<?> correspondingIntegerType()
     {
-        return BigIntType.BIGINT;
+        return IntegerType.INTEGER;
     }
 }

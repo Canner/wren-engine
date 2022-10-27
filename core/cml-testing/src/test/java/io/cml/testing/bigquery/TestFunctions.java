@@ -14,7 +14,9 @@
 
 package io.cml.testing.bigquery;
 
-import io.cml.testing.AbstractWireProtocolTest;
+import io.cml.testing.JdbcTesting;
+import io.cml.testing.RequireCmlServer;
+import io.cml.testing.TestingCmlServer;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -26,8 +28,15 @@ import java.sql.SQLException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFunctions
-        extends AbstractWireProtocolTest
+        extends RequireCmlServer
+        implements JdbcTesting, BigQueryTesting
 {
+    @Override
+    protected TestingCmlServer createCmlServer()
+    {
+        return createCmlServerWithBigQuery();
+    }
+
     @DataProvider
     public Object[][] functions()
     {
@@ -61,7 +70,7 @@ public class TestFunctions
     public void testJdbcQuery(String sql, String expected, boolean isArrayResult)
             throws SQLException
     {
-        try (Connection connection = createConnection()) {
+        try (Connection connection = createConnection(server())) {
             PreparedStatement stmt = connection.prepareStatement(sql);
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
