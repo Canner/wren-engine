@@ -11,9 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.cml.pgcatalog;
 
-public interface PgCatalogManager
+public class PgCatalogCreated
+        implements PgCatalogManager
 {
-    void initPgCatalog();
+    @Override
+    public void initPgCatalog()
+    {
+    }
 }

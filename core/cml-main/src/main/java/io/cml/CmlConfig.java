@@ -11,9 +11,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.cml.pgcatalog;
 
-public interface PgCatalogManager
+package io.cml;
+
+import io.airlift.configuration.Config;
+
+import javax.validation.constraints.NotNull;
+
+import java.util.Locale;
+
+public class CmlConfig
 {
-    void initPgCatalog();
+    public enum Connector
+    {
+        BIGQUERY,
+        CANNER,
+    }
+
+    private Connector connector;
+
+    @NotNull
+    public Connector getConnector()
+    {
+        return connector;
+    }
+
+    @Config("connector")
+    public CmlConfig setConnector(String connector)
+    {
+        this.connector = Connector.valueOf(connector.toUpperCase(Locale.ENGLISH));
+        return this;
+    }
 }

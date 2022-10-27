@@ -30,6 +30,8 @@ import io.cml.connector.bigquery.BigQueryCredentialsSupplier;
 import io.cml.connector.bigquery.BigQueryMetadata;
 import io.cml.connector.bigquery.BigQuerySqlConverter;
 import io.cml.metadata.Metadata;
+import io.cml.pgcatalog.PgCatalogCreateRequired;
+import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
 import io.cml.pgcatalog.builder.BigQueryPgFunctionBuilder;
 import io.cml.pgcatalog.builder.PgCatalogTableBuilder;
@@ -49,6 +51,7 @@ public class BigQueryConnectorModule
     protected void setup(Binder binder)
     {
         binder.bind(Metadata.class).to(BigQueryMetadata.class).in(Scopes.SINGLETON);
+        binder.bind(PgCatalogManager.class).to(PgCatalogCreateRequired.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogTableBuilder.class).to(BigQueryPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgFunctionBuilder.class).to(BigQueryPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);

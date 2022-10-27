@@ -22,11 +22,15 @@ import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.cml.CmlConfig;
 import io.cml.metrics.MetricResourceModule;
 import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.server.module.BigQueryConnectorModule;
+import io.cml.server.module.CannerConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
 import io.cml.wireprotocol.ssl.EmptyTlsDataProvider;
+
+import static io.airlift.configuration.ConditionalModule.installModuleIf;
 
 public class CmlServer
         extends Server
@@ -53,7 +57,8 @@ public class CmlServer
                 new JaxrsModule(),
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule(),
+                installModuleIf(CmlConfig.class, config -> config.getConnector() == CmlConfig.Connector.BIGQUERY, new BigQueryConnectorModule()),
+                installModuleIf(CmlConfig.class, config -> config.getConnector() == CmlConfig.Connector.CANNER, new CannerConnectorModule()),
                 new MetricResourceModule());
     }
 }

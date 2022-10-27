@@ -38,7 +38,7 @@ public class Utils
 
     public static String randomIntString()
     {
-        return Integer.toString(random.nextInt());
+        return Integer.toString(abs(random.nextInt()));
     }
 
     public static void swallowException(Runnable runnable)

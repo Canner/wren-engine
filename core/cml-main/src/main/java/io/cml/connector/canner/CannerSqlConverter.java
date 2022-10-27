@@ -11,9 +11,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.cml.pgcatalog;
 
-public interface PgCatalogManager
+package io.cml.connector.canner;
+
+import io.cml.spi.SessionContext;
+import io.cml.sql.SqlConverter;
+
+import javax.inject.Inject;
+
+public class CannerSqlConverter
+        implements SqlConverter
 {
-    void initPgCatalog();
+    @Inject
+    public CannerSqlConverter()
+    {
+    }
+
+    @Override
+    public String convert(String sql, SessionContext sessionContext)
+    {
+        return sql;
+    }
 }
