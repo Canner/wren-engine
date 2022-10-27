@@ -69,6 +69,14 @@ public final class PGTypes
         // Just need a fake instance to do type mapping. We never use the field.
         TYPE_TABLE.put(HSTORE.oid(), HSTORE);
         TYPE_TABLE.put(UuidType.UUID.oid(), UuidType.UUID);
+        TYPE_TABLE.put(AnyType.ANY.oid(), AnyType.ANY);
+        TYPE_TABLE.put(RegprocType.REGPROC.oid(), RegprocType.REGPROC);
+        TYPE_TABLE.put(RegclassType.REGCLASS.oid(), RegclassType.REGCLASS);
+        TYPE_TABLE.put(RegtypeType.REGTYPE.oid(), RegtypeType.REGTYPE);
+        TYPE_TABLE.put(RegnamespaceType.REGNAMESPACE.oid(), RegnamespaceType.REGNAMESPACE);
+        TYPE_TABLE.put(RegoperatorType.REGOPERATOR.oid(), RegoperatorType.REGOPERATOR);
+        TYPE_TABLE.put(RegoperType.REGOPER.oid(), RegoperType.REGOPER);
+        TYPE_TABLE.put(RegprocedureType.REGPROCEDURE.oid(), RegprocedureType.REGPROCEDURE);
 
         ImmutableMap.Builder<Integer, PGArray> innerToPgTypeBuilder = ImmutableMap.builder();
         // initial collection types

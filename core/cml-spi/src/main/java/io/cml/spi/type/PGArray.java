@@ -52,18 +52,22 @@ public class PGArray
     public static final PGArray UUID_ARRAY = new PGArray(2951, UuidType.UUID);
     public static final PGArray BYTEA_ARRAY = new PGArray(1001, ByteaType.BYTEA);
     public static final PGArray INET_ARRAY = new PGArray(1041, InetType.INET);
-    public static final PGArray EMPTY_RECORD_ARRAY = new PGArray(2287, RecordType.EMPTY_RECORD);
+    public static final PGArray EMPTY_RECORD_ARRAY = new PGArray(22871, RecordType.EMPTY_RECORD);
     public static final PGArray HSTORE_ARRAY = new PGArray(57645, HstoreType.HSTORE);
     public static final PGArray REGPROC_ARRAY = new PGArray(1008, RegprocType.REGPROC);
+    public static final PGArray REGCLASS_ARRAY = new PGArray(2210, RegclassType.REGCLASS);
+    public static final PGArray REGTYPE_ARRAY = new PGArray(2211, RegtypeType.REGTYPE);
+    public static final PGArray REGNAMESPACE_ARRAY = new PGArray(4090, RegnamespaceType.REGNAMESPACE);
+    public static final PGArray REGOPERATOR_ARRAY = new PGArray(2209, RegoperatorType.REGOPERATOR);
+    public static final PGArray REGOPER_ARRAY = new PGArray(2208, RegoperType.REGOPER);
+    public static final PGArray REGPROCEDURE_ARRAY = new PGArray(2207, RegprocedureType.REGPROCEDURE);
+
+    public static final PGArray ANY_ARRAY = new PGArray(2277, AnyType.ANY);
 
     // TODO:
     // public static final PGArray INTERVAL_ARRAY = new PGArray(1187, IntervalType.INSTANCE);
     // public static final PGArray TIMETZ_ARRAY = new PGArray(1270, TimeTZType.INSTANCE);
     // public static final PGArray POINT_ARRAY = new PGArray(1017, PointType.INSTANCE);
-    // public static final PGArray ANY_ARRAY = new PGArray(
-    //         2277,
-    //         AnyType.INSTANCE.typName() + "array",
-    //         AnyType.INSTANCE)
     // {
     //     @Override
     //     public String typeCategory()

@@ -16,17 +16,26 @@ package io.cml.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import io.cml.spi.CmlException;
+import io.cml.spi.type.AnyType;
 import io.cml.spi.type.BigIntType;
 import io.cml.spi.type.BooleanType;
+import io.cml.spi.type.ByteaType;
 import io.cml.spi.type.CharType;
 import io.cml.spi.type.DateType;
 import io.cml.spi.type.DoubleType;
+import io.cml.spi.type.HstoreType;
 import io.cml.spi.type.IntegerType;
+import io.cml.spi.type.JsonType;
 import io.cml.spi.type.NumericType;
 import io.cml.spi.type.PGType;
 import io.cml.spi.type.RealType;
+import io.cml.spi.type.RecordType;
+import io.cml.spi.type.RegObjectType;
 import io.cml.spi.type.SmallIntType;
+import io.cml.spi.type.TimestampType;
+import io.cml.spi.type.TimestampWithTimeZoneType;
 import io.cml.spi.type.TinyIntType;
+import io.cml.spi.type.UuidType;
 import io.cml.spi.type.VarcharType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
@@ -56,6 +65,7 @@ import static io.cml.spi.type.StandardTypes.TIME_WITH_TIME_ZONE;
 import static io.cml.spi.type.StandardTypes.TINYINT;
 import static io.cml.spi.type.StandardTypes.VARCHAR;
 import static java.util.Locale.ROOT;
+import static org.apache.commons.codec.language.bm.Languages.ANY;
 
 public final class CalciteTypes
 {
@@ -89,6 +99,7 @@ public final class CalciteTypes
                 .put(ARRAY, SqlTypeName.ARRAY)
                 .put(TEXT, SqlTypeName.VARCHAR)
                 .put(NAME, SqlTypeName.VARCHAR)
+                .put(ANY, SqlTypeName.ANY)
                 .build();
 
         pgTypeToCalciteTypeMap = ImmutableMap.<PGType<?>, SqlTypeName>builder()
@@ -103,6 +114,16 @@ public final class CalciteTypes
                 .put(DoubleType.DOUBLE, SqlTypeName.DOUBLE)
                 .put(VarcharType.VARCHAR, SqlTypeName.VARCHAR)
                 .put(CharType.CHAR, SqlTypeName.CHAR)
+                .put(AnyType.ANY, SqlTypeName.ANY)
+                .put(HstoreType.HSTORE, SqlTypeName.MAP)
+                .put(TimestampType.TIMESTAMP, SqlTypeName.TIMESTAMP)
+                .put(ByteaType.BYTEA, SqlTypeName.VARBINARY)
+                .put(UuidType.UUID, SqlTypeName.VARCHAR)
+                .put(JsonType.JSON, SqlTypeName.VARCHAR)
+                // TODO: check timestamp tz equals to timestamp with local tz in Calcite
+                .put(TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE, SqlTypeName.TIMESTAMP_WITH_LOCAL_TIME_ZONE)
+                // don't care about the type of fields.
+                .put(RecordType.EMPTY_RECORD, SqlTypeName.ANY)
                 .build();
     }
 
@@ -114,6 +135,10 @@ public final class CalciteTypes
 
     public static SqlTypeName toCalciteType(PGType<?> type)
     {
+        if (type instanceof RegObjectType) {
+            return SqlTypeName.INTEGER;
+        }
+
         return Optional.ofNullable(pgTypeToCalciteTypeMap.get(type))
                 .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + type.typName()));
     }

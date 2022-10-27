@@ -20,6 +20,8 @@ import javax.annotation.Nonnull;
 
 import java.nio.charset.StandardCharsets;
 
+import static io.cml.spi.type.PGArray.ANY_ARRAY;
+
 public class AnyType
         extends PGType<Integer>
 {
@@ -37,7 +39,7 @@ public class AnyType
     @Override
     public int typArray()
     {
-        return 0;
+        return ANY_ARRAY.oid();
     }
 
     @Override

@@ -14,21 +14,23 @@
 
 package io.cml.spi.type;
 
-public class RegprocType
+import static io.cml.spi.type.PGArray.REGPROCEDURE_ARRAY;
+
+public class RegprocedureType
         extends RegObjectType
 {
-    public static final RegprocType REGPROC = new RegprocType();
+    public static final RegprocedureType REGPROCEDURE = new RegprocedureType();
 
-    private static final int OID = 24;
+    private static final int OID = 2022;
 
-    RegprocType()
+    RegprocedureType()
     {
-        super(OID, "regproc");
+        super(OID, "regprocedure");
     }
 
     @Override
     public int typArray()
     {
-        return PGArray.REGPROC_ARRAY.oid();
+        return REGPROCEDURE_ARRAY.oid();
     }
 }

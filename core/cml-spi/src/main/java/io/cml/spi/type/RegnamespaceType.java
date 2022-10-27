@@ -14,21 +14,21 @@
 
 package io.cml.spi.type;
 
-public class RegprocType
+public class RegnamespaceType
         extends RegObjectType
 {
-    public static final RegprocType REGPROC = new RegprocType();
+    public static final RegnamespaceType REGNAMESPACE = new RegnamespaceType();
 
-    private static final int OID = 24;
+    private static final int OID = 4089;
 
-    RegprocType()
+    RegnamespaceType()
     {
-        super(OID, "regproc");
+        super(OID, "regnamespace");
     }
 
     @Override
     public int typArray()
     {
-        return PGArray.REGPROC_ARRAY.oid();
+        return PGArray.REGNAMESPACE_ARRAY.oid();
     }
 }

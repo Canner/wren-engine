@@ -47,6 +47,13 @@ public final class StandardTypes
     public static final String GEOMETRY = "Geometry";
     public static final String BING_TILE = "BingTile";
     public static final String UUID = "uuid";
+    public static final String REGPROC = "regproc";
+    public static final String REGCLASS = "regclass";
+    public static final String REGTYPE = "regtype";
+    public static final String REGNAMESPACE = "regnamespace";
+    public static final String REGOPERATOR = "regoperator";
+    public static final String REGOPER = "regoper";
+    public static final String REGPROCEDURE = "regprocedure";
 
     private StandardTypes() {}
 }
