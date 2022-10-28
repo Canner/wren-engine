@@ -14,7 +14,6 @@
 
 package io.cml.testing;
 
-import com.google.common.collect.ImmutableMap;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
 import io.airlift.http.client.Request;
@@ -25,6 +24,7 @@ import io.airlift.json.JsonCodec;
 import io.airlift.log.Logger;
 import io.airlift.units.Duration;
 import io.cml.metrics.Metric;
+import io.cml.testing.bigquery.BigQueryTesting;
 import io.cml.web.dto.ErrorMessageDto;
 import io.cml.web.dto.MetricDto;
 
@@ -42,7 +42,6 @@ import static io.airlift.http.client.Request.Builder.preparePut;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.listJsonCodec;
-import static io.cml.metrics.MetricConfig.METRIC_ROOT_PATH;
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
@@ -51,6 +50,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public class AbstractMetricTestingFramework
         extends RequireCmlServer
+        implements BigQueryTesting
 {
     private static final long QUERY_TIMEOUT_SECONDS = parseLong(getenv().getOrDefault("TEST_QUERY_TIMEOUT", "20"));
     private static final JsonCodec<Metric> METRIC_JSON_CODEC = jsonCodec(Metric.class);
@@ -70,15 +70,7 @@ public class AbstractMetricTestingFramework
     @Override
     protected TestingCmlServer createCmlServer()
     {
-        return TestingCmlServer.builder()
-                .setRequiredConfigs(
-                        ImmutableMap.<String, String>builder()
-                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "asia-east1")
-                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .put(METRIC_ROOT_PATH, getenv("TEST_CML_FILE_METRIC_STORE_HOME"))
-                                .build())
-                .build();
+        return createCmlServerWithBigQuery();
     }
 
     public void createMetric(Metric metric)

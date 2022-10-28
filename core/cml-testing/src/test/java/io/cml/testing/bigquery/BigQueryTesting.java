@@ -31,7 +31,7 @@ public interface BigQueryTesting
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                                 .put("bigquery.location", "asia-east1")
                                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .put(METRIC_ROOT_PATH, "ignored")
+                                .put(METRIC_ROOT_PATH, getenv("TEST_CML_FILE_METRIC_STORE_HOME"))
                                 .build())
                 .addAdditionalModule(new BigQueryConnectorModule())
                 .build();
