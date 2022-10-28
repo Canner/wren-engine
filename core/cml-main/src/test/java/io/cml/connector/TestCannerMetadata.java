@@ -21,7 +21,6 @@ import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test(enabled = false)
 public class TestCannerMetadata
 {
     private final CannerMetadta metadata;
@@ -35,7 +34,7 @@ public class TestCannerMetadata
         this.metadata = new CannerMetadta(new CannerClient(cannerConfig));
     }
 
-    @Test
+    @Test(enabled = false)
     public void testResolveFunction()
     {
         assertThat(metadata.resolveFunction("round", 2)).isEqualTo("round");

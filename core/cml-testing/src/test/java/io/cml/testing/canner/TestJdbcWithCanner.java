@@ -17,12 +17,10 @@ package io.cml.testing.canner;
 import io.cml.testing.AbstractJdbcTest;
 import io.cml.testing.JdbcTesting;
 import io.cml.testing.TestingCmlServer;
-import org.testng.annotations.Test;
 
 /**
  * This test is only for local testing.
  */
-@Test(enabled = false)
 public class TestJdbcWithCanner
         extends AbstractJdbcTest
         implements JdbcTesting, CannerTesting

@@ -18,12 +18,10 @@ import io.cml.spi.type.IntegerType;
 import io.cml.spi.type.PGType;
 import io.cml.testing.AbstractWireProtocolTest;
 import io.cml.testing.TestingCmlServer;
-import org.testng.annotations.Test;
 
 /**
  * This test is only for local testing.
  */
-@Test(enabled = false)
 public class TestWireProtocolWithCanner
         extends AbstractWireProtocolTest
         implements CannerTesting

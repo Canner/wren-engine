@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Test(enabled = false)
 public class TestCannerClient
 {
     private final CannerClient cannerClient;
@@ -41,21 +40,21 @@ public class TestCannerClient
         cannerClient = new CannerClient(cannerConfig);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testListWorkspace()
     {
         List<WorkspaceDto> workspaceDtos = cannerClient.listWorkspaces();
         assertThat(workspaceDtos.size()).isEqualTo(2);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testIsWorkspaceExist()
     {
         assertThat(cannerClient.getOneWorkspace("fake")).isEmpty();
         assertThat(cannerClient.getOneWorkspace("tworkspace")).isPresent();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testListTables()
     {
         Optional<WorkspaceDto> workspaceDto = cannerClient.getWorkspaceBySqlName("tworkspace");
@@ -63,7 +62,7 @@ public class TestCannerClient
         assertThat(tables.size()).isEqualTo(3);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testQuery()
     {
         int count = 0;
@@ -76,7 +75,7 @@ public class TestCannerClient
         assertThat(count).isEqualTo(100);
     }
 
-    @Test
+    @Test(enabled = false)
     public void testDescribe()
     {
         int count = 0;
