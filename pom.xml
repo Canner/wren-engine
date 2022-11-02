@@ -69,6 +69,7 @@
         <module>core/cml-server</module>
         <module>core/cml-spi</module>
         <module>core/cml-testing</module>
+        <module>core/graphml</module>
         <module>core/trino-parser</module>
     </modules>
 

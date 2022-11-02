@@ -1,0 +1,43 @@
+{
+  "models": [
+    {
+      "name": "User",
+      "refSql": "SELECT * FROM User",
+      "columns": [
+        {
+          "name": "id",
+          "type": "STRING"
+        },
+        {
+          "name": "email",
+          "type": "STRING"
+        }
+      ]
+    },
+    {
+      "name": "Book",
+      "refSql": "SELECT * FROM Book",
+      "columns": [
+        {
+          "name": "authorId",
+          "type": "STRING"
+        },
+        {
+          "name": "publish_date",
+          "type": "TIMESTAMP"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "BookUser",
+      "joinType": "MANY_TO_MANY",
+      "condition": "user.id = book.authorId",
+      "models": [
+        "Book",
+        "User"
+      ]
+    }
+  ]
+}
