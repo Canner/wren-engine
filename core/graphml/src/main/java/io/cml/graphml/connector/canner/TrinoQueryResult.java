@@ -30,7 +30,6 @@ package io.cml.graphml.connector.canner;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
 import javax.annotation.Nullable;
 
@@ -38,10 +37,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.collect.Iterables.unmodifiableIterable;
 import static io.cml.graphml.Utils.checkArgument;
+import static io.cml.graphml.Utils.firstNonNull;
 import static io.cml.graphml.connector.canner.FixJsonDataUtils.fixData;
 import static java.util.Objects.requireNonNull;
 
@@ -82,7 +79,7 @@ public class TrinoQueryResult
                 fixData(columns, data),
                 stats,
                 error,
-                firstNonNull(warnings, ImmutableList.of()),
+                firstNonNull(warnings, List.of()),
                 updateType,
                 updateCount);
     }
@@ -104,12 +101,12 @@ public class TrinoQueryResult
         this.infoUri = requireNonNull(infoUri, "infoUri is null");
         this.partialCancelUri = partialCancelUri;
         this.nextUri = nextUri;
-        this.columns = (columns != null) ? ImmutableList.copyOf(columns) : null;
-        this.data = (data != null) ? unmodifiableIterable(data) : null;
+        this.columns = (columns != null) ? List.copyOf(columns) : null;
+        this.data = data;
         checkArgument(data == null || columns != null, "data present without columns");
         this.stats = requireNonNull(stats, "stats is null");
         this.error = error;
-        this.warnings = ImmutableList.copyOf(requireNonNull(warnings, "warnings is null"));
+        this.warnings = List.copyOf(requireNonNull(warnings, "warnings is null"));
         this.updateType = updateType;
         this.updateCount = updateCount;
     }
@@ -190,17 +187,18 @@ public class TrinoQueryResult
     @Override
     public String toString()
     {
-        return toStringHelper(this)
-                .add("id", id)
-                .add("infoUri", infoUri)
-                .add("partialCancelUri", partialCancelUri)
-                .add("nextUri", nextUri)
-                .add("columns", columns)
-                .add("hasData", data != null)
-                .add("stats", stats)
-                .add("error", error)
-                .add("updateType", updateType)
-                .add("updateCount", updateCount)
-                .toString();
+        return "TrinoQueryResult{" +
+                "id='" + id + '\'' +
+                ", infoUri=" + infoUri +
+                ", partialCancelUri=" + partialCancelUri +
+                ", nextUri=" + nextUri +
+                ", columns=" + columns +
+                ", data=" + data +
+                ", stats=" + stats +
+                ", error=" + error +
+                ", warnings=" + warnings +
+                ", updateType='" + updateType + '\'' +
+                ", updateCount=" + updateCount +
+                '}';
     }
 }

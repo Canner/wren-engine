@@ -15,6 +15,8 @@
 package io.cml.graphml;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class Utils
 {
@@ -32,5 +34,10 @@ public class Utils
     public static String randomIntString()
     {
         return Integer.toString(random.nextInt());
+    }
+
+    public static <T> T firstNonNull(T... objects)
+    {
+        return Arrays.stream(objects).filter(Objects::nonNull).findFirst().orElse(null);
     }
 }

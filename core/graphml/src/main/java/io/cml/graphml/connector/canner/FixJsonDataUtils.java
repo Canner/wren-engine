@@ -14,8 +14,6 @@
 
 package io.cml.graphml.connector.canner;
 
-import com.google.common.collect.ImmutableList;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +56,7 @@ public final class FixJsonDataUtils
         List<Map<String, Object>> signatures = columns.stream()
                 .map(column -> (Map<String, Object>) column.get("typeSignature"))
                 .collect(toList());
-        ImmutableList.Builder<List<Object>> rows = ImmutableList.builder();
+        List<List<Object>> rows = new ArrayList<>();
         for (List<Object> row : data) {
             checkArgument(row.size() == columns.size(), "row/column size mismatch");
             List<Object> newRow = new ArrayList<>();
@@ -67,7 +65,7 @@ public final class FixJsonDataUtils
             }
             rows.add(unmodifiableList(newRow)); // allow nulls in list
         }
-        return rows.build();
+        return List.copyOf(rows);
     }
 
     /**

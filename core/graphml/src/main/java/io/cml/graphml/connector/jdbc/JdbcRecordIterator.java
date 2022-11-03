@@ -14,12 +14,12 @@
 
 package io.cml.graphml.connector.jdbc;
 
-import com.google.common.collect.ImmutableList;
-
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class JdbcRecordIterator
         implements Iterator<Object[]>
@@ -69,10 +69,10 @@ public class JdbcRecordIterator
     private Object[] getCurrentRecord()
             throws SQLException
     {
-        ImmutableList.Builder<Object> builder = ImmutableList.builder();
+        List<Object> builder = new ArrayList<>(columnCount);
         for (int i = 1; i <= columnCount; i++) {
             builder.add(resultSet.getObject(i));
         }
-        return builder.build().toArray();
+        return builder.toArray();
     }
 }

@@ -34,8 +34,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
-import static com.google.common.base.MoreObjects.toStringHelper;
-
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorMessageDto
 {
@@ -94,9 +92,9 @@ public class ErrorMessageDto
     @Override
     public String toString()
     {
-        return toStringHelper(this)
-                .add("code", code)
-                .add("message", message)
-                .toString();
+        return "ErrorMessageDto{" +
+                "code='" + code + '\'' +
+                ", message='" + message + '\'' +
+                '}';
     }
 }
