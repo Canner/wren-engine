@@ -12,25 +12,15 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.validation;
 
-import java.security.SecureRandom;
+import io.cml.graphml.GraphML;
+import io.cml.graphml.connector.Client;
 
-public class Utils
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+public abstract class ValidationRule
 {
-    private Utils() {}
-
-    private static final SecureRandom random = new SecureRandom();
-
-    public static void checkArgument(boolean expression, String errorMessage)
-    {
-        if (!expression) {
-            throw new IllegalArgumentException(errorMessage);
-        }
-    }
-
-    public static String randomIntString()
-    {
-        return Integer.toString(random.nextInt());
-    }
+    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML);
 }

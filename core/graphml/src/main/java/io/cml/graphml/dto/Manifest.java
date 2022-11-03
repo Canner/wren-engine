@@ -24,6 +24,11 @@ public class Manifest
     private final List<Model> models;
     private final List<Relationship> relationships;
 
+    public static Manifest manifest(List<Model> models, List<Relationship> relationships)
+    {
+        return new Manifest(models, relationships);
+    }
+
     @JsonCreator
     public Manifest(
             @JsonProperty("models") List<Model> models,

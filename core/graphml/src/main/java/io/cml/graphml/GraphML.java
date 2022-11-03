@@ -36,6 +36,11 @@ public class GraphML
         return new GraphML(objectMapper.readValue(manifest, Manifest.class));
     }
 
+    public static GraphML fromManifest(Manifest manifest)
+    {
+        return new GraphML(manifest);
+    }
+
     private GraphML(Manifest manifest)
     {
         this.manifest = requireNonNull(manifest, "graphML is null");
