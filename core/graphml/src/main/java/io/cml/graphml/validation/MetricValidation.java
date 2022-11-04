@@ -17,6 +17,7 @@ package io.cml.graphml.validation;
 import io.cml.graphml.GraphML;
 import io.cml.graphml.connector.Client;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -55,14 +56,15 @@ public final class MetricValidation
 
         public List<ValidationResult> validate()
         {
+            final int timeoutInMinutes = 5;
             // TODO: parallel execute the validation rule
             return tasks.stream().flatMap(task -> task.validate(dbClient, graphML).stream())
                     .map(future -> {
                         try {
-                            return future.get(5, TimeUnit.MINUTES);
+                            return future.get(timeoutInMinutes, TimeUnit.MINUTES);
                         }
                         catch (Exception e) {
-                            throw new RuntimeException(e);
+                            return ValidationResult.error("UnknownRule", Duration.ZERO, "Unexpected error: " + e.getMessage());
                         }
                     })
                     .collect(toUnmodifiableList());

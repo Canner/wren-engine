@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static io.cml.graphml.validation.ValidationResult.error;
+import static io.cml.graphml.validation.ValidationResult.fail;
 import static io.cml.graphml.validation.ValidationResult.formatRuleWithIdentifier;
 import static io.cml.graphml.validation.ValidationResult.pass;
 import static java.lang.String.format;
@@ -58,9 +59,9 @@ public class NotNullValidation
                 if ((boolean) row[0]) {
                     return pass(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS));
                 }
-                return error(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
+                return fail(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
             }
-            throw new RuntimeException("Query execution failed");
+            return error(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Query executed failed");
         });
     }
 

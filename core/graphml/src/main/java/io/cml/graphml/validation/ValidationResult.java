@@ -32,6 +32,11 @@ public class ValidationResult
         return new ValidationResult(name, Status.ERROR, duration, message);
     }
 
+    public static ValidationResult fail(String name, Duration duration, String message)
+    {
+        return new ValidationResult(name, Status.FAIL, duration, message);
+    }
+
     public static ValidationResult warn(String name, Duration duration, String message)
     {
         return new ValidationResult(name, Status.WARN, duration, message);
@@ -42,6 +47,7 @@ public class ValidationResult
         PASS,
         WARN,
         ERROR,
+        FAIL,
         SKIP
     }
 
