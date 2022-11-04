@@ -26,7 +26,7 @@ import static io.cml.graphml.dto.Column.column;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
 import static io.cml.graphml.dto.Type.STRING;
-import static io.cml.graphml.validation.ValidationResult.Status.ERROR;
+import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -59,18 +59,18 @@ public class TestMetricValidation
         assertThat(validationResults.size()).isEqualTo(3);
 
         ValidationResult flightDate =
-                validationResults.stream().filter(validationResult -> validationResult.getName().equals("not_null-FlightDate"))
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("not_null:Flight:FlightDate"))
                         .findAny()
-                        .orElseThrow(() -> new AssertionError("not_null-FlightDate result is not found"));
+                        .orElseThrow(() -> new AssertionError("not_null:Flight:FlightDate result is not found"));
         assertThat(flightDate.getStatus()).isEqualTo(PASS);
         assertThat(flightDate.getDuration()).isNotNull();
         assertThat(flightDate.getMessage()).isNull();
 
         ValidationResult uniqueCarrier =
-                validationResults.stream().filter(validationResult -> validationResult.getName().equals("not_null-UniqueCarrier"))
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("not_null:Flight:UniqueCarrier"))
                         .findAny()
-                        .orElseThrow(() -> new AssertionError("not_null-UniqueCarrier result is not found"));
-        assertThat(uniqueCarrier.getStatus()).isEqualTo(ERROR);
+                        .orElseThrow(() -> new AssertionError("not_null:Flight:UniqueCarrier result is not found"));
+        assertThat(uniqueCarrier.getStatus()).isEqualTo(FAIL);
         assertThat(flightDate.getDuration()).isNotNull();
         assertThat(uniqueCarrier.getMessage()).isEqualTo("Got null value in UniqueCarrier");
     }
