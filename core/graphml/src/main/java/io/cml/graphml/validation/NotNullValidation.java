@@ -43,11 +43,11 @@ public class NotNullValidation
                 .flatMap(model ->
                         model.getColumns().stream()
                                 .filter(Column::isNotNull)
-                                .map(column -> validateColumn(client, model.getRefSql(), column.getName())))
+                                .map(column -> validateColumn(client, model.getRefSql(), model.getName(), column.getName())))
                 .collect(Collectors.toList());
     }
 
-    public CompletableFuture<ValidationResult> validateColumn(Client client, String refSql, String columName)
+    public CompletableFuture<ValidationResult> validateColumn(Client client, String refSql, String modelName, String columName)
     {
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
@@ -56,9 +56,9 @@ public class NotNullValidation
             if (result.hasNext()) {
                 Object[] row = result.next();
                 if ((boolean) row[0]) {
-                    return pass(formatRuleWithIdentifier(RULE_NAME, columName), Duration.of(total, ChronoUnit.MILLIS));
+                    return pass(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS));
                 }
-                return error(formatRuleWithIdentifier(RULE_NAME, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
+                return error(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
             }
             throw new RuntimeException("Query execution failed");
         });

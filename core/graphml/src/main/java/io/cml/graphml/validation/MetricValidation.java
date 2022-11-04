@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 public final class MetricValidation
 {
@@ -55,6 +55,7 @@ public final class MetricValidation
 
         public List<ValidationResult> validate()
         {
+            // TODO: parallel execute the validation rule
             return tasks.stream().flatMap(task -> task.validate(dbClient, graphML).stream())
                     .map(future -> {
                         try {
@@ -64,7 +65,7 @@ public final class MetricValidation
                             throw new RuntimeException(e);
                         }
                     })
-                    .collect(toList());
+                    .collect(toUnmodifiableList());
         }
     }
 }

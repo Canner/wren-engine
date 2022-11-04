@@ -99,6 +99,10 @@ public final class CannerClient
         }
     }
 
+    /**
+     * We invoke Trino sync API to describe the specific sql because describe doesn't
+     * be supported by Canner PG wire protocol.
+     */
     @Override
     public Iterator<Object[]> describe(String sql)
     {

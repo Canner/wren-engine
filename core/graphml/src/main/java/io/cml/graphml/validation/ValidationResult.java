@@ -63,9 +63,9 @@ public class ValidationResult
         return name;
     }
 
-    public static String formatRuleWithIdentifier(String ruleName, String identifier)
+    public static String formatRuleWithIdentifier(String ruleName, String modelName, String identifier)
     {
-        return format("%s-%s", ruleName, identifier);
+        return format("%s:%s:%s", ruleName, modelName, identifier);
     }
 
     public Status getStatus()
