@@ -16,6 +16,8 @@ package io.cml.graphml;
 
 public class DummyClass
 {
+    private DummyClass() {}
+
     public static void main(String[] args)
     {
         System.out.println("dummy file");
