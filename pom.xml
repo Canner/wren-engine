@@ -70,8 +70,8 @@
         <module>core/cml-spi</module>
         <module>core/cml-testing</module>
         <module>core/graphml</module>
-        <module>core/graphml-validation</module>
         <module>core/graphml-spi</module>
+        <module>core/graphml-validation</module>
         <module>core/trino-parser</module>
     </modules>
 
