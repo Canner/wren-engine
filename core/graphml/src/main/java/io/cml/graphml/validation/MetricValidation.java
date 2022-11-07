@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public final class MetricValidation
@@ -44,8 +45,8 @@ public final class MetricValidation
 
         public Validator(Client client, GraphML graphML)
         {
-            this.dbClient = client;
-            this.graphML = graphML;
+            this.dbClient = requireNonNull(client);
+            this.graphML = requireNonNull(graphML);
         }
 
         public Validator register(ValidationRule task)
@@ -64,6 +65,7 @@ public final class MetricValidation
                             return future.get(timeoutInMinutes, TimeUnit.MINUTES);
                         }
                         catch (Exception e) {
+                            // TODO: remind user which rule is failed
                             return ValidationResult.error("UnknownRule", Duration.ZERO, "Unexpected error: " + e.getMessage());
                         }
                     })
