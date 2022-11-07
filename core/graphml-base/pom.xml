@@ -23,7 +23,7 @@
         <version>1</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    <artifactId>graphml-spi</artifactId>
+    <artifactId>graphml-base</artifactId>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>

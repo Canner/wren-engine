@@ -51,7 +51,7 @@
 
         <dependency>
             <groupId>io.cml</groupId>
-            <artifactId>graphml-spi</artifactId>
+            <artifactId>graphml-base</artifactId>
         </dependency>
 
         <dependency>

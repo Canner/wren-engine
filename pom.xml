@@ -70,7 +70,7 @@
         <module>core/cml-spi</module>
         <module>core/cml-testing</module>
         <module>core/graphml</module>
-        <module>core/graphml-spi</module>
+        <module>core/graphml-base</module>
         <module>core/graphml-validation</module>
         <module>core/trino-parser</module>
     </modules>
@@ -264,7 +264,7 @@
 
             <dependency>
                 <groupId>io.cml</groupId>
-                <artifactId>graphml-spi</artifactId>
+                <artifactId>graphml-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
