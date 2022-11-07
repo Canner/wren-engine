@@ -27,6 +27,11 @@ public class Model
     private final String refSql;
     private final List<Column> columns;
 
+    public static Model model(String name, String refSql, List<Column> columns)
+    {
+        return new Model(name, refSql, columns);
+    }
+
     @JsonCreator
     public Model(
             @JsonProperty("name") String name,

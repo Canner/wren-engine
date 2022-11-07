@@ -25,17 +25,26 @@ public class Column
 {
     private final String name;
     private final Type type;
+
+    private final boolean notNull;
     private final Optional<String> relationship;
+
+    public static Column column(String name, Type type, String relationship, boolean notNull)
+    {
+        return new Column(name, type, relationship, notNull);
+    }
 
     @JsonCreator
     public Column(
             @JsonProperty("name") String name,
             @JsonProperty("type") Type type,
-            @JsonProperty("relationship") String relationship)
+            @JsonProperty("relationship") String relationship,
+            @JsonProperty("notNull") boolean notNull)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = Optional.ofNullable(relationship);
+        this.notNull = notNull;
     }
 
     public String getName()
@@ -51,5 +60,10 @@ public class Column
     public Optional<String> getRelationship()
     {
         return relationship;
+    }
+
+    public boolean isNotNull()
+    {
+        return notNull;
     }
 }
