@@ -12,6 +12,20 @@
  * limitations under the License.
  */
 
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.cml.graphml;
 
 import io.cml.graphml.connector.Client;
@@ -22,10 +36,13 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.Column.column;
+import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
-import static io.cml.graphml.dto.Type.STRING;
+import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
+import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
@@ -45,17 +62,18 @@ public class TestMetricValidation
                 List.of(model("Flight",
                         format("SELECT * FROM '%s'", flightCsv),
                         List.of(
-                                column("FlightDate", STRING, null, true),
-                                column("UniqueCarrier", STRING, null, true),
-                                column("OriginCityName", STRING, null, true),
-                                column("DestCityName", STRING, null, false)))),
-                List.of()));
+                                column("FlightDate", STRING.name(), null, true),
+                                column("UniqueCarrier", "Carrier", null, true),
+                                column("OriginCityName", STRING.name(), null, true),
+                                column("DestCityName", STRING.name(), null, false)))),
+                List.of(),
+                List.of(enumDefinition("Carrier", List.of("AA", "UA")))));
     }
 
     @Test
     public void testNotNullCheck()
     {
-        List<ValidationResult> validationResults = MetricValidation.validate(client, sample);
+        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(NOT_NULL));
         assertThat(validationResults.size()).isEqualTo(3);
 
         ValidationResult flightDate =
@@ -73,5 +91,20 @@ public class TestMetricValidation
         assertThat(uniqueCarrier.getStatus()).isEqualTo(FAIL);
         assertThat(flightDate.getDuration()).isNotNull();
         assertThat(uniqueCarrier.getMessage()).isEqualTo("Got null value in UniqueCarrier");
+    }
+
+    @Test
+    public void testEnumDefinition()
+    {
+        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(ENUM_VALUE_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(1);
+
+        ValidationResult enumUniqueCarrier =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("enum_Carrier:Flight:UniqueCarrier"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("enum_Carrier:Flight:UniqueCarrier result is not found"));
+        assertThat(enumUniqueCarrier.getStatus()).isEqualTo(PASS);
+        assertThat(enumUniqueCarrier.getDuration()).isNotNull();
+        assertThat(enumUniqueCarrier.getMessage()).isNull();
     }
 }

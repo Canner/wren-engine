@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -30,10 +31,26 @@ public final class MetricValidation
 {
     private MetricValidation() {}
 
+    /**
+     * Validate with all rules.
+     */
     public static List<ValidationResult> validate(Client client, GraphML graphML)
     {
-        Validator validator = new Validator(client, graphML)
-                .register(NOT_NULL);
+        List<ValidationRule> allRule = List.of(
+                NOT_NULL,
+                ENUM_VALUE_VALIDATION);
+        return validate(client, graphML, allRule);
+    }
+
+    /**
+     * Validate with specific rules.
+     */
+    public static List<ValidationResult> validate(Client client, GraphML graphML, List<ValidationRule> rules)
+    {
+        Validator validator = new Validator(client, graphML);
+        for (ValidationRule rule : rules) {
+            validator.register(rule);
+        }
         return validator.validate();
     }
 
