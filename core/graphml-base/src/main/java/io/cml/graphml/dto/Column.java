@@ -24,12 +24,12 @@ import static java.util.Objects.requireNonNull;
 public class Column
 {
     private final String name;
-    private final Type type;
+    private final String type;
 
     private final boolean notNull;
     private final Optional<String> relationship;
 
-    public static Column column(String name, Type type, String relationship, boolean notNull)
+    public static Column column(String name, String type, String relationship, boolean notNull)
     {
         return new Column(name, type, relationship, notNull);
     }
@@ -37,7 +37,7 @@ public class Column
     @JsonCreator
     public Column(
             @JsonProperty("name") String name,
-            @JsonProperty("type") Type type,
+            @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
             @JsonProperty("notNull") boolean notNull)
     {
@@ -52,7 +52,7 @@ public class Column
         return name;
     }
 
-    public Type getType()
+    public String getType()
     {
         return type;
     }

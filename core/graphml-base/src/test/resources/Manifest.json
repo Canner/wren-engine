@@ -39,5 +39,14 @@
         "User"
       ]
     }
+  ],
+  "enums": [
+    {
+      "name": "STATUS",
+      "values": [
+        "OK",
+        "NOT_OK"
+      ]
+    }
   ]
 }

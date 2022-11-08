@@ -16,6 +16,7 @@ package io.cml.graphml;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.cml.graphml.dto.EnumDefinition;
 import io.cml.graphml.dto.Manifest;
 import io.cml.graphml.dto.Model;
 import io.cml.graphml.dto.Relationship;
@@ -67,6 +68,18 @@ public class GraphML
     {
         return manifest.getRelationships().stream()
                 .filter(relationship -> relationship.getName().equals(name))
+                .findAny();
+    }
+
+    public List<EnumDefinition> listEnums()
+    {
+        return manifest.getEnumFields();
+    }
+
+    public Optional<EnumDefinition> getEnum(String name)
+    {
+        return manifest.getEnumFields().stream()
+                .filter(enumField -> enumField.getName().equals(name))
                 .findAny();
     }
 }
