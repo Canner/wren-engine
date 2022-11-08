@@ -51,9 +51,12 @@ public class TestMetricValidation
                                 column("FlightDate", STRING.name(), null, true),
                                 column("UniqueCarrier", "Carrier", null, true),
                                 column("OriginCityName", STRING.name(), null, true),
-                                column("DestCityName", STRING.name(), null, false)))),
+                                column("DestCityName", STRING.name(), null, false),
+                                column("Status", "Status", null, false)))),
                 List.of(),
-                List.of(enumDefinition("Carrier", List.of("AA", "UA")))));
+                List.of(
+                        enumDefinition("Carrier", List.of("AA", "UA")),
+                        enumDefinition("Status", List.of("OK", "NOT_OK")))));
     }
 
     @Test
@@ -83,7 +86,7 @@ public class TestMetricValidation
     public void testEnumDefinition()
     {
         List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(ENUM_VALUE_VALIDATION));
-        assertThat(validationResults.size()).isEqualTo(1);
+        assertThat(validationResults.size()).isEqualTo(2);
 
         ValidationResult enumUniqueCarrier =
                 validationResults.stream().filter(validationResult -> validationResult.getName().equals("enum_Carrier:Flight:UniqueCarrier"))
@@ -92,5 +95,14 @@ public class TestMetricValidation
         assertThat(enumUniqueCarrier.getStatus()).isEqualTo(PASS);
         assertThat(enumUniqueCarrier.getDuration()).isNotNull();
         assertThat(enumUniqueCarrier.getMessage()).isNull();
+
+        ValidationResult enumStatus =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("enum_Status:Flight:Status"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("enum_Status:Flight:Status result is not found"));
+
+        assertThat(enumStatus.getStatus()).isEqualTo(FAIL);
+        assertThat(enumStatus.getDuration()).isNotNull();
+        assertThat(enumStatus.getMessage()).isEqualTo("Got invalid enum value in Status");
     }
 }

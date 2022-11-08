@@ -62,7 +62,7 @@ public class EnumValueValidation
                 if ((boolean) row[0]) {
                     return pass(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS));
                 }
-                return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got null value in " + columName);
+                return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got invalid enum value in " + columName);
             }
             return error(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Query executed failed");
         });
