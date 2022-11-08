@@ -13,7 +13,7 @@
  */
 package io.cml.graphml.connector.canner;
 
-public final class StandardTypes
+public final class GraphMLTypes
 {
     public static final String BIGINT = "bigint";
     public static final String INTEGER = "integer";
@@ -48,5 +48,5 @@ public final class StandardTypes
     public static final String BING_TILE = "BingTile";
     public static final String UUID = "uuid";
 
-    private StandardTypes() {}
+    private GraphMLTypes() {}
 }

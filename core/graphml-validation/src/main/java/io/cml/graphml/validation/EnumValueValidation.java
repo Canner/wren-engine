@@ -23,7 +23,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static io.cml.graphml.validation.ValidationResult.error;
 import static io.cml.graphml.validation.ValidationResult.fail;
@@ -31,6 +30,7 @@ import static io.cml.graphml.validation.ValidationResult.formatRuleWithIdentifie
 import static io.cml.graphml.validation.ValidationResult.pass;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class EnumValueValidation
         extends ValidationRule
@@ -48,7 +48,7 @@ public class EnumValueValidation
                                         model.getColumns().stream()
                                                 .filter(column -> column.getType().equals(enumDefinition.getName()))
                                                 .map(column -> validateColumn(client, model.getRefSql(), model.getName(), column.getName(), enumDefinition))))
-                .collect(Collectors.toList());
+                .collect(toUnmodifiableList());
     }
 
     public CompletableFuture<ValidationResult> validateColumn(Client client, String refSql, String modelName, String columName, EnumDefinition enumDefinition)
@@ -56,15 +56,15 @@ public class EnumValueValidation
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
             Iterator<Object[]> result = client.query(buildEnumCheck(refSql, columName, enumDefinition.getValues()));
-            long total = System.currentTimeMillis() - start;
+            long elapsed = System.currentTimeMillis() - start;
             if (result.hasNext()) {
                 Object[] row = result.next();
                 if ((boolean) row[0]) {
-                    return pass(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(total, ChronoUnit.MILLIS));
+                    return pass(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS));
                 }
-                return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
+                return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got null value in " + columName);
             }
-            return error(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Query executed failed");
+            return error(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Query executed failed");
         });
     }
 

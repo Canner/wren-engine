@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNull;
+
 public class EnumDefinition
 {
     public static EnumDefinition enumDefinition(String name, List<String> values)
@@ -35,8 +37,8 @@ public class EnumDefinition
             @JsonProperty("name") String name,
             @JsonProperty("values") List<String> values)
     {
-        this.name = name;
-        this.values = values;
+        this.name = requireNonNull(name);
+        this.values = requireNonNull(values);
     }
 
     public List<String> getValues()
