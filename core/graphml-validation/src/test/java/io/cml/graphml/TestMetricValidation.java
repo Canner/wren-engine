@@ -22,10 +22,13 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.Column.column;
+import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
-import static io.cml.graphml.dto.Type.STRING;
+import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
+import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
@@ -45,17 +48,21 @@ public class TestMetricValidation
                 List.of(model("Flight",
                         format("SELECT * FROM '%s'", flightCsv),
                         List.of(
-                                column("FlightDate", STRING, null, true),
-                                column("UniqueCarrier", STRING, null, true),
-                                column("OriginCityName", STRING, null, true),
-                                column("DestCityName", STRING, null, false)))),
-                List.of()));
+                                column("FlightDate", STRING.name(), null, true),
+                                column("UniqueCarrier", "Carrier", null, true),
+                                column("OriginCityName", STRING.name(), null, true),
+                                column("DestCityName", STRING.name(), null, false),
+                                column("Status", "Status", null, false)))),
+                List.of(),
+                List.of(
+                        enumDefinition("Carrier", List.of("AA", "UA")),
+                        enumDefinition("Status", List.of("OK", "NOT_OK")))));
     }
 
     @Test
     public void testNotNullCheck()
     {
-        List<ValidationResult> validationResults = MetricValidation.validate(client, sample);
+        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(NOT_NULL));
         assertThat(validationResults.size()).isEqualTo(3);
 
         ValidationResult flightDate =
@@ -73,5 +80,29 @@ public class TestMetricValidation
         assertThat(uniqueCarrier.getStatus()).isEqualTo(FAIL);
         assertThat(flightDate.getDuration()).isNotNull();
         assertThat(uniqueCarrier.getMessage()).isEqualTo("Got null value in UniqueCarrier");
+    }
+
+    @Test
+    public void testEnumDefinition()
+    {
+        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(ENUM_VALUE_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(2);
+
+        ValidationResult enumUniqueCarrier =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("enum_Carrier:Flight:UniqueCarrier"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("enum_Carrier:Flight:UniqueCarrier result is not found"));
+        assertThat(enumUniqueCarrier.getStatus()).isEqualTo(PASS);
+        assertThat(enumUniqueCarrier.getDuration()).isNotNull();
+        assertThat(enumUniqueCarrier.getMessage()).isNull();
+
+        ValidationResult enumStatus =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("enum_Status:Flight:Status"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("enum_Status:Flight:Status result is not found"));
+
+        assertThat(enumStatus.getStatus()).isEqualTo(FAIL);
+        assertThat(enumStatus.getDuration()).isNotNull();
+        assertThat(enumStatus.getMessage()).isEqualTo("Got invalid enum value in Status");
     }
 }

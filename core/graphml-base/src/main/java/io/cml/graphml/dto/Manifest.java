@@ -24,18 +24,22 @@ public class Manifest
     private final List<Model> models;
     private final List<Relationship> relationships;
 
-    public static Manifest manifest(List<Model> models, List<Relationship> relationships)
+    private final List<EnumDefinition> enumDefinitions;
+
+    public static Manifest manifest(List<Model> models, List<Relationship> relationships, List<EnumDefinition> enumDefinitions)
     {
-        return new Manifest(models, relationships);
+        return new Manifest(models, relationships, enumDefinitions);
     }
 
     @JsonCreator
     public Manifest(
             @JsonProperty("models") List<Model> models,
-            @JsonProperty("relationships") List<Relationship> relationships)
+            @JsonProperty("relationships") List<Relationship> relationships,
+            @JsonProperty("enums") List<EnumDefinition> enumDefinitions)
     {
         this.models = models == null ? List.of() : models;
         this.relationships = relationships == null ? List.of() : relationships;
+        this.enumDefinitions = enumDefinitions == null ? List.of() : enumDefinitions;
     }
 
     public List<Model> getModels()
@@ -46,5 +50,10 @@ public class Manifest
     public List<Relationship> getRelationships()
     {
         return relationships;
+    }
+
+    public List<EnumDefinition> getEnumFields()
+    {
+        return enumDefinitions;
     }
 }

@@ -15,6 +15,7 @@
 package io.cml.graphml;
 
 import io.cml.graphml.dto.Column;
+import io.cml.graphml.dto.EnumDefinition;
 import io.cml.graphml.dto.Model;
 import io.cml.graphml.dto.Relationship;
 import org.testng.annotations.BeforeClass;
@@ -27,8 +28,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
+import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.JoinType.MANY_TO_MANY;
-import static io.cml.graphml.dto.Type.STRING;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,16 +52,17 @@ public class TestGraphML
         assertThat(graphML.listModels().size()).isEqualTo(2);
 
         Optional<Model> user = graphML.getModel("User");
-        assertThat(user.isPresent()).isTrue();
+        assertThat(user).isPresent();
         assertThat(user.get().getRefSql()).isEqualTo("SELECT * FROM User");
         assertThat(user.get().getColumns().stream().map(Column::getName).collect(toUnmodifiableList()))
                 .isEqualTo(List.of("id", "email"));
         assertThat(user.get().getColumns().stream().map(Column::getType).collect(toUnmodifiableList()))
-                .isEqualTo(List.of(STRING, STRING));
+                .isEqualTo(List.of(STRING.name(), STRING.name()));
         assertThat(user.get().getColumns().stream().map(col -> col.getRelationship().isPresent()).collect(toUnmodifiableList()))
                 .isEqualTo(List.of(false, false));
 
-        assertThat(graphML.getModel("Book").isPresent()).isTrue();
+        assertThat(graphML.getModel("Book")).isPresent();
+        assertThat(graphML.getModel("notfound")).isNotPresent();
     }
 
     @Test
@@ -69,9 +71,20 @@ public class TestGraphML
         assertThat(graphML.listRelationships().size()).isEqualTo(1);
 
         Optional<Relationship> bookUser = graphML.getRelationship("BookUser");
-        assertThat(bookUser.isPresent()).isTrue();
+        assertThat(bookUser).isPresent();
         assertThat(bookUser.get().getModels()).isEqualTo(List.of("Book", "User"));
         assertThat(bookUser.get().getJoinType()).isEqualTo(MANY_TO_MANY);
         assertThat(bookUser.get().getCondition()).isEqualTo("user.id = book.authorId");
+        assertThat(graphML.getRelationship("notfound")).isNotPresent();
+    }
+
+    @Test
+    public void testListAndGetEnums()
+    {
+        assertThat(graphML.listEnums().size()).isEqualTo(1);
+        Optional<EnumDefinition> enumField = graphML.getEnum("STATUS");
+        assertThat(enumField).isPresent();
+        assertThat(enumField.get().getValues()).isEqualTo(List.of("OK", "NOT_OK"));
+        assertThat(graphML.getEnum("notfound")).isNotPresent();
     }
 }

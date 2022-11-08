@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.dto;
+package io.cml.graphml;
 
-public enum Type
+public enum StandardType
 {
     STRING,
     INT,

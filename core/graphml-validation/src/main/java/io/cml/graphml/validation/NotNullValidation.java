@@ -53,15 +53,15 @@ public class NotNullValidation
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
             Iterator<Object[]> result = client.query(buildNotNullCheck(refSql, columName));
-            long total = System.currentTimeMillis() - start;
+            long elapsed = System.currentTimeMillis() - start;
             if (result.hasNext()) {
                 Object[] row = result.next();
                 if ((boolean) row[0]) {
-                    return pass(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS));
+                    return pass(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS));
                 }
-                return fail(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Got null value in " + columName);
+                return fail(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got null value in " + columName);
             }
-            return error(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(total, ChronoUnit.MILLIS), "Query executed failed");
+            return error(formatRuleWithIdentifier(RULE_NAME, modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Query executed failed");
         });
     }
 
