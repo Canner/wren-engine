@@ -14,6 +14,8 @@
 
 package io.cml.graphml.connector;
 
+import static java.util.Objects.requireNonNull;
+
 public class ColumnDescription
 {
     private final String name;
@@ -21,8 +23,8 @@ public class ColumnDescription
 
     public ColumnDescription(String name, String type)
     {
-        this.name = name;
-        this.type = type;
+        this.name = requireNonNull(name);
+        this.type = requireNonNull(type);
     }
 
     public String getName()
