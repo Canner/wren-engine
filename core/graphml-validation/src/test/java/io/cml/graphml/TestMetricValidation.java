@@ -22,13 +22,13 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.Column.column;
 import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
+import static io.cml.graphml.validation.TypeValidation.TYPE_VALIDATION;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
@@ -48,10 +48,10 @@ public class TestMetricValidation
                 List.of(model("Flight",
                         format("SELECT * FROM '%s'", flightCsv),
                         List.of(
-                                column("FlightDate", STRING.name(), null, true),
+                                column("FlightDate", GraphMLTypes.TIMESTAMP, null, true),
                                 column("UniqueCarrier", "Carrier", null, true),
-                                column("OriginCityName", STRING.name(), null, true),
-                                column("DestCityName", STRING.name(), null, false),
+                                column("OriginCityName", GraphMLTypes.VARCHAR, null, true),
+                                column("DestCityName", GraphMLTypes.VARCHAR, null, false),
                                 column("Status", "Status", null, false)))),
                 List.of(),
                 List.of(
@@ -104,5 +104,29 @@ public class TestMetricValidation
         assertThat(enumStatus.getStatus()).isEqualTo(FAIL);
         assertThat(enumStatus.getDuration()).isNotNull();
         assertThat(enumStatus.getMessage()).isEqualTo("Got invalid enum value in Status");
+    }
+
+    @Test
+    public void testTypeValidation()
+    {
+        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(TYPE_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(3);
+
+        ValidationResult flightDate =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("type:Flight:FlightDate"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("type:Flight:FlightDate result is not found"));
+        assertThat(flightDate.getStatus()).isEqualTo(FAIL);
+        assertThat(flightDate.getDuration()).isNotNull();
+        assertThat(flightDate.getMessage()).isEqualTo("Got incompatible type in FlightDate");
+
+        ValidationResult originCityName =
+                validationResults.stream().filter(validationResult -> validationResult.getName().equals("type:Flight:OriginCityName"))
+                        .findAny()
+                        .orElseThrow(() -> new AssertionError("type:Flight:OriginCityName result is not found"));
+
+        assertThat(originCityName.getStatus()).isEqualTo(PASS);
+        assertThat(originCityName.getDuration()).isNotNull();
+        assertThat(originCityName.getMessage()).isNull();
     }
 }
