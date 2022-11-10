@@ -14,11 +14,24 @@
 
 package io.cml.graphml.connector;
 
-import java.util.Iterator;
-
-public interface Client
+public class ColumnDescription
 {
-    Iterator<Object[]> query(String sql);
+    private final String name;
+    private final String type;
 
-    Iterator<ColumnDescription> describe(String sql);
+    public ColumnDescription(String name, String type)
+    {
+        this.name = name;
+        this.type = type;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public String getType()
+    {
+        return type;
+    }
 }

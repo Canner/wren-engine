@@ -12,13 +12,26 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.connector;
+package io.cml.graphml.connector.jdbc;
 
-import java.util.Iterator;
+import io.cml.graphml.GraphMLTypes;
 
-public interface Client
+import java.sql.JDBCType;
+
+public final class JdbcTypeMapping
 {
-    Iterator<Object[]> query(String sql);
+    private JdbcTypeMapping() {}
 
-    Iterator<ColumnDescription> describe(String sql);
+    public static String toGraphMLType(JDBCType jdbcType)
+    {
+        switch (jdbcType) {
+            case BIGINT:
+                return GraphMLTypes.BIGINT;
+            case INTEGER:
+                return GraphMLTypes.INTEGER;
+            case VARCHAR:
+            default:
+                return GraphMLTypes.VARCHAR;
+        }
+    }
 }
