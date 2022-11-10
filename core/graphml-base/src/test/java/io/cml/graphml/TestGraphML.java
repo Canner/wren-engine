@@ -28,8 +28,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.JoinType.MANY_TO_MANY;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +57,7 @@ public class TestGraphML
         assertThat(user.get().getColumns().stream().map(Column::getName).collect(toUnmodifiableList()))
                 .isEqualTo(List.of("id", "email"));
         assertThat(user.get().getColumns().stream().map(Column::getType).collect(toUnmodifiableList()))
-                .isEqualTo(List.of(STRING.name(), STRING.name()));
+                .isEqualTo(List.of(GraphMLTypes.VARCHAR.toUpperCase(ENGLISH), GraphMLTypes.VARCHAR.toUpperCase(ENGLISH)));
         assertThat(user.get().getColumns().stream().map(col -> col.getRelationship().isPresent()).collect(toUnmodifiableList()))
                 .isEqualTo(List.of(false, false));
 

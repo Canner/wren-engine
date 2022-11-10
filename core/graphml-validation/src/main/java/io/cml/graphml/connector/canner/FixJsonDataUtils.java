@@ -14,31 +14,33 @@
 
 package io.cml.graphml.connector.canner;
 
+import io.cml.graphml.GraphMLTypes;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static io.cml.graphml.GraphMLTypes.BIGINT;
+import static io.cml.graphml.GraphMLTypes.BOOLEAN;
+import static io.cml.graphml.GraphMLTypes.CHAR;
+import static io.cml.graphml.GraphMLTypes.DATE;
+import static io.cml.graphml.GraphMLTypes.DECIMAL;
+import static io.cml.graphml.GraphMLTypes.DOUBLE;
+import static io.cml.graphml.GraphMLTypes.GEOMETRY;
+import static io.cml.graphml.GraphMLTypes.INTEGER;
+import static io.cml.graphml.GraphMLTypes.INTERVAL_DAY_TO_SECOND;
+import static io.cml.graphml.GraphMLTypes.INTERVAL_YEAR_TO_MONTH;
+import static io.cml.graphml.GraphMLTypes.IPADDRESS;
+import static io.cml.graphml.GraphMLTypes.REAL;
+import static io.cml.graphml.GraphMLTypes.SMALLINT;
+import static io.cml.graphml.GraphMLTypes.TIME;
+import static io.cml.graphml.GraphMLTypes.TIMESTAMP;
+import static io.cml.graphml.GraphMLTypes.TIMESTAMP_WITH_TIME_ZONE;
+import static io.cml.graphml.GraphMLTypes.TIME_WITH_TIME_ZONE;
+import static io.cml.graphml.GraphMLTypes.TINYINT;
+import static io.cml.graphml.GraphMLTypes.UUID;
+import static io.cml.graphml.GraphMLTypes.VARCHAR;
 import static io.cml.graphml.Utils.checkArgument;
-import static io.cml.graphml.connector.canner.GraphMLTypes.BIGINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.BOOLEAN;
-import static io.cml.graphml.connector.canner.GraphMLTypes.CHAR;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DATE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DECIMAL;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DOUBLE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.GEOMETRY;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTEGER;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTERVAL_DAY_TO_SECOND;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTERVAL_YEAR_TO_MONTH;
-import static io.cml.graphml.connector.canner.GraphMLTypes.IPADDRESS;
-import static io.cml.graphml.connector.canner.GraphMLTypes.REAL;
-import static io.cml.graphml.connector.canner.GraphMLTypes.SMALLINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIME;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIMESTAMP;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIMESTAMP_WITH_TIME_ZONE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIME_WITH_TIME_ZONE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TINYINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.UUID;
-import static io.cml.graphml.connector.canner.GraphMLTypes.VARCHAR;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
