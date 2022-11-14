@@ -43,7 +43,7 @@ public class ModelValidation
 {
     public static final ModelValidation MODEL_VALIDATION = new ModelValidation();
     private static final String RULE_NAME = "model";
-    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]+");
+    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*");
 
     @Override
     public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)

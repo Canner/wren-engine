@@ -1,5 +1,5 @@
-FlightDate|UniqueCarrier|OriginCityName|DestCityName|Status
-1988-01-01|AA|New York, NY|Los Angeles, CA|OK
-1988-01-02|AA|New York, NY|Los Angeles, CA|PASSED
-1988-01-03||New York, NY|Los Angeles, CA|NOT_OK
-1988-01-04|UA|New York, NY|Los Angeles, CA|OK
+FlightDate|UniqueCarrier|OriginCityName|DestCityName|Status|A
+1988-01-01|AA|New York, NY|Los Angeles, CA|OK|1
+1988-01-02|AA|New York, NY|Los Angeles, CA|PASSED|2
+1988-01-03||New York, NY|Los Angeles, CA|NOT_OK|3
+1988-01-04|UA|New York, NY|Los Angeles, CA|OK|4
