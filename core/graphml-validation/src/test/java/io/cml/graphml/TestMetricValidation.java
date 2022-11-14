@@ -27,8 +27,8 @@ import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
+import static io.cml.graphml.validation.ModelValidation.MODEL_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
-import static io.cml.graphml.validation.TypeValidation.TYPE_VALIDATION;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
@@ -39,10 +39,10 @@ public class TestMetricValidation
 {
     private final Client client;
     private final GraphML sample;
+    private final String flightCsv = requireNonNull(getClass().getClassLoader().getResource("flight.csv")).getPath();
 
     public TestMetricValidation()
     {
-        String flightCsv = requireNonNull(getClass().getClassLoader().getResource("flight.csv")).getPath();
         client = new DuckdbClient();
         sample = GraphML.fromManifest(manifest(
                 List.of(model("Flight",
@@ -107,26 +107,24 @@ public class TestMetricValidation
     }
 
     @Test
-    public void testTypeValidation()
+    public void testModelValidation()
     {
-        List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(TYPE_VALIDATION));
-        assertThat(validationResults.size()).isEqualTo(3);
+        GraphML wrongManifest = GraphML.fromManifest(manifest(
+                List.of(model("Flight",
+                        format("SELECT * FROM '%s'", flightCsv),
+                        List.of(
+                                column("FlightDate", GraphMLTypes.TIMESTAMP, null, true),
+                                column("illegal^name", GraphMLTypes.VARCHAR, null, true),
+                                column("notfound", GraphMLTypes.VARCHAR, null, true)))),
+                List.of(),
+                List.of()));
 
-        ValidationResult flightDate =
-                validationResults.stream().filter(validationResult -> validationResult.getName().equals("type:Flight:FlightDate"))
-                        .findAny()
-                        .orElseThrow(() -> new AssertionError("type:Flight:FlightDate result is not found"));
-        assertThat(flightDate.getStatus()).isEqualTo(FAIL);
-        assertThat(flightDate.getDuration()).isNotNull();
-        assertThat(flightDate.getMessage()).isEqualTo("Got incompatible type in FlightDate");
+        List<ValidationResult> validationResults = MetricValidation.validate(client, wrongManifest, List.of(MODEL_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(1);
 
-        ValidationResult originCityName =
-                validationResults.stream().filter(validationResult -> validationResult.getName().equals("type:Flight:OriginCityName"))
-                        .findAny()
-                        .orElseThrow(() -> new AssertionError("type:Flight:OriginCityName result is not found"));
-
-        assertThat(originCityName.getStatus()).isEqualTo(PASS);
-        assertThat(originCityName.getDuration()).isNotNull();
-        assertThat(originCityName.getMessage()).isNull();
+        String[] errorMessage = validationResults.get(0).getMessage().split(",");
+        assertThat(errorMessage[0]).isEqualTo("[FlightDate:Got incompatible type in column FlightDate. Expected timestamp but actual varchar]");
+        assertThat(errorMessage[1]).isEqualTo("[illegal^name:Column name contains illegal character]");
+        assertThat(errorMessage[2]).isEqualTo("[notfound:Can't be found in model Flight]");
     }
 }
