@@ -22,12 +22,12 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.cml.graphml.StandardType.STRING;
 import static io.cml.graphml.dto.Column.column;
 import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
+import static io.cml.graphml.validation.ModelValidation.MODEL_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
@@ -39,19 +39,19 @@ public class TestMetricValidation
 {
     private final Client client;
     private final GraphML sample;
+    private final String flightCsv = requireNonNull(getClass().getClassLoader().getResource("flight.csv")).getPath();
 
     public TestMetricValidation()
     {
-        String flightCsv = requireNonNull(getClass().getClassLoader().getResource("flight.csv")).getPath();
         client = new DuckdbClient();
         sample = GraphML.fromManifest(manifest(
                 List.of(model("Flight",
                         format("SELECT * FROM '%s'", flightCsv),
                         List.of(
-                                column("FlightDate", STRING.name(), null, true),
+                                column("FlightDate", GraphMLTypes.TIMESTAMP, null, true),
                                 column("UniqueCarrier", "Carrier", null, true),
-                                column("OriginCityName", STRING.name(), null, true),
-                                column("DestCityName", STRING.name(), null, false),
+                                column("OriginCityName", GraphMLTypes.VARCHAR, null, true),
+                                column("DestCityName", GraphMLTypes.VARCHAR, null, false),
                                 column("Status", "Status", null, false)))),
                 List.of(),
                 List.of(
@@ -104,5 +104,36 @@ public class TestMetricValidation
         assertThat(enumStatus.getStatus()).isEqualTo(FAIL);
         assertThat(enumStatus.getDuration()).isNotNull();
         assertThat(enumStatus.getMessage()).isEqualTo("Got invalid enum value in Status");
+    }
+
+    @Test
+    public void testModelValidation()
+    {
+        GraphML wrongManifest = GraphML.fromManifest(manifest(
+                List.of(model("Flight",
+                        format("SELECT * FROM '%s'", flightCsv),
+                        List.of(
+                                column("FlightDate", GraphMLTypes.TIMESTAMP, null, true),
+                                column("illegal^name", GraphMLTypes.VARCHAR, null, true),
+                                column("123illegalname", GraphMLTypes.VARCHAR, null, true),
+                                column("notfound", GraphMLTypes.VARCHAR, null, true),
+                                column("A", GraphMLTypes.INTEGER, null, false)))),
+                List.of(),
+                List.of()));
+
+        List<ValidationResult> validationResults = MetricValidation.validate(client, wrongManifest, List.of(MODEL_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(1);
+
+        ValidationResult result = validationResults.get(0);
+        assertThat(result.getStatus()).isEqualTo(FAIL);
+        assertThat(result.getName()).isEqualTo("model:Flight");
+        assertThat(result.getDuration()).isNotNull();
+        assertThat(result.getMessage()).isNotNull();
+        String[] errorMessage = result.getMessage().split(",");
+        assertThat(errorMessage.length).isEqualTo(4);
+        assertThat(errorMessage[0]).isEqualTo("[FlightDate:Got incompatible type in column FlightDate. Expected timestamp but actual varchar]");
+        assertThat(errorMessage[1]).isEqualTo("[illegal^name:Illegal column name]");
+        assertThat(errorMessage[2]).isEqualTo("[123illegalname:Illegal column name]");
+        assertThat(errorMessage[3]).isEqualTo("[notfound:Can't be found in model Flight]");
     }
 }

@@ -23,6 +23,7 @@ import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
 import io.cml.graphml.connector.Client;
+import io.cml.graphml.connector.ColumnDescription;
 import io.cml.graphml.connector.jdbc.JdbcRecordIterator;
 
 import javax.ws.rs.WebApplicationException;
@@ -104,7 +105,7 @@ public final class CannerClient
      * be supported by Canner PG wire protocol.
      */
     @Override
-    public Iterator<Object[]> describe(String sql)
+    public Iterator<ColumnDescription> describe(String sql)
     {
         String statementName = "statement_" + randomIntString();
 
@@ -187,7 +188,7 @@ public final class CannerClient
     }
 
     public class TrinoRecordIterator
-            implements Iterator<Object[]>
+            implements Iterator<ColumnDescription>
     {
         private TrinoQueryResult buffer;
 
@@ -216,13 +217,19 @@ public final class CannerClient
         }
 
         @Override
-        public Object[] next()
+        public ColumnDescription next()
         {
             if (!dataIter.hasNext()) {
                 buffer = waitForData(getNextUri(buffer.getNextUri()));
                 dataIter = buffer.getData().iterator();
             }
-            return dataIter.next().toArray();
+            List<Object> row = dataIter.next();
+
+            // Trino's DescribeOutput Schema
+            //   Column Name  | Catalog | Schema | Table  |    Type     | Type Size | Aliased
+            // ---------------+---------+--------+--------+-------------+-----------+---------
+            //  orderkey      | tpch    | tiny   | orders | bigint      |         8 | false
+            return new ColumnDescription((String) row.get(0), (String) row.get(4));
         }
     }
 }

@@ -12,11 +12,28 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.connector;
 
-public enum StandardType
+import static java.util.Objects.requireNonNull;
+
+public class ColumnDescription
 {
-    STRING,
-    INT,
-    TIMESTAMP,
+    private final String name;
+    private final String type;
+
+    public ColumnDescription(String name, String type)
+    {
+        this.name = requireNonNull(name);
+        this.type = requireNonNull(type);
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public String getType()
+    {
+        return type;
+    }
 }

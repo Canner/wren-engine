@@ -6,11 +6,11 @@
       "columns": [
         {
           "name": "id",
-          "type": "STRING"
+          "type": "VARCHAR"
         },
         {
           "name": "email",
-          "type": "STRING"
+          "type": "VARCHAR"
         }
       ]
     },
@@ -20,7 +20,7 @@
       "columns": [
         {
           "name": "authorId",
-          "type": "STRING"
+          "type": "VARCHAR"
         },
         {
           "name": "publish_date",

@@ -15,14 +15,19 @@
 package io.cml.graphml.connector.duckdb;
 
 import io.cml.graphml.connector.Client;
+import io.cml.graphml.connector.ColumnDescription;
 import io.cml.graphml.connector.jdbc.JdbcRecordIterator;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.JDBCType;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
+
+import static io.cml.graphml.connector.jdbc.JdbcTypeMapping.toGraphMLType;
 
 public final class DuckdbClient
         implements Client
@@ -46,9 +51,55 @@ public final class DuckdbClient
     }
 
     @Override
-    public Iterator<Object[]> describe(String sql)
+    public Iterator<ColumnDescription> describe(String sql)
     {
-        return null;
+        // TODO: DuckDB 0.5.1 exists some issue about handling describe statement result.
+        //  Before [duckdb#4796](https://github.com/duckdb/duckdb/pull/4799) released,
+        //  execute query with `LIMIT 1` to get the ResultSetMetadata.
+        String dryRunSql = sql + " LIMIT 1";
+        try (Connection connection = createConnection()) {
+            Statement statement = connection.createStatement();
+            statement.execute(dryRunSql);
+            ResultSet resultSet = statement.getResultSet();
+            return new ColumnMetadataIterator(resultSet.getMetaData());
+        }
+        catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
+    }
+
+    static class ColumnMetadataIterator
+            implements Iterator<ColumnDescription>
+    {
+        private final ResultSetMetaData metaData;
+        private final int totalCount;
+        private int index = 1;
+
+        protected ColumnMetadataIterator(ResultSetMetaData metaData)
+                throws SQLException
+        {
+            this.metaData = metaData;
+            this.totalCount = metaData.getColumnCount();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return index <= totalCount;
+        }
+
+        @Override
+        public ColumnDescription next()
+        {
+            try {
+                return new ColumnDescription(
+                        metaData.getColumnName(index),
+                        toGraphMLType(JDBCType.valueOf(metaData.getColumnType(index++))));
+            }
+            catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private Connection createConnection()

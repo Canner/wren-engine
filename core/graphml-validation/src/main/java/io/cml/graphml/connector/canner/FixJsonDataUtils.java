@@ -19,26 +19,26 @@ import java.util.List;
 import java.util.Map;
 
 import static io.cml.graphml.Utils.checkArgument;
-import static io.cml.graphml.connector.canner.GraphMLTypes.BIGINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.BOOLEAN;
-import static io.cml.graphml.connector.canner.GraphMLTypes.CHAR;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DATE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DECIMAL;
-import static io.cml.graphml.connector.canner.GraphMLTypes.DOUBLE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.GEOMETRY;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTEGER;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTERVAL_DAY_TO_SECOND;
-import static io.cml.graphml.connector.canner.GraphMLTypes.INTERVAL_YEAR_TO_MONTH;
-import static io.cml.graphml.connector.canner.GraphMLTypes.IPADDRESS;
-import static io.cml.graphml.connector.canner.GraphMLTypes.REAL;
-import static io.cml.graphml.connector.canner.GraphMLTypes.SMALLINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIME;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIMESTAMP;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIMESTAMP_WITH_TIME_ZONE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TIME_WITH_TIME_ZONE;
-import static io.cml.graphml.connector.canner.GraphMLTypes.TINYINT;
-import static io.cml.graphml.connector.canner.GraphMLTypes.UUID;
-import static io.cml.graphml.connector.canner.GraphMLTypes.VARCHAR;
+import static io.cml.graphml.connector.canner.TrinoType.BIGINT;
+import static io.cml.graphml.connector.canner.TrinoType.BOOLEAN;
+import static io.cml.graphml.connector.canner.TrinoType.CHAR;
+import static io.cml.graphml.connector.canner.TrinoType.DATE;
+import static io.cml.graphml.connector.canner.TrinoType.DECIMAL;
+import static io.cml.graphml.connector.canner.TrinoType.DOUBLE;
+import static io.cml.graphml.connector.canner.TrinoType.GEOMETRY;
+import static io.cml.graphml.connector.canner.TrinoType.INTEGER;
+import static io.cml.graphml.connector.canner.TrinoType.INTERVAL_DAY_TO_SECOND;
+import static io.cml.graphml.connector.canner.TrinoType.INTERVAL_YEAR_TO_MONTH;
+import static io.cml.graphml.connector.canner.TrinoType.IPADDRESS;
+import static io.cml.graphml.connector.canner.TrinoType.REAL;
+import static io.cml.graphml.connector.canner.TrinoType.SMALLINT;
+import static io.cml.graphml.connector.canner.TrinoType.TIME;
+import static io.cml.graphml.connector.canner.TrinoType.TIMESTAMP;
+import static io.cml.graphml.connector.canner.TrinoType.TIMESTAMP_WITH_TIME_ZONE;
+import static io.cml.graphml.connector.canner.TrinoType.TIME_WITH_TIME_ZONE;
+import static io.cml.graphml.connector.canner.TrinoType.TINYINT;
+import static io.cml.graphml.connector.canner.TrinoType.UUID;
+import static io.cml.graphml.connector.canner.TrinoType.VARCHAR;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -114,7 +114,7 @@ public final class FixJsonDataUtils
                 }
                 return Boolean.class.cast(value);
             case VARCHAR:
-            case GraphMLTypes.JSON:
+            case TrinoType.JSON:
             case TIME:
             case TIME_WITH_TIME_ZONE:
             case TIMESTAMP:

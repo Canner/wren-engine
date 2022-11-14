@@ -11,9 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.cml.graphml.connector.canner;
 
-public final class GraphMLTypes
+public final class TrinoType
 {
     public static final String BIGINT = "bigint";
     public static final String INTEGER = "integer";
@@ -48,5 +49,5 @@ public final class GraphMLTypes
     public static final String BING_TILE = "BingTile";
     public static final String UUID = "uuid";
 
-    private GraphMLTypes() {}
+    private TrinoType() {}
 }
