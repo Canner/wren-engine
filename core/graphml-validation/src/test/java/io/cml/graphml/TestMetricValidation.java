@@ -124,7 +124,7 @@ public class TestMetricValidation
 
         ValidationResult result = validationResults.get(0);
         assertThat(result.getStatus()).isEqualTo(FAIL);
-        assertThat(result.getName()).isEqualTo("Model:Flight");
+        assertThat(result.getName()).isEqualTo("model:Flight");
         assertThat(result.getDuration()).isNotNull();
         assertThat(result.getMessage()).isNotNull();
         String[] errorMessage = result.getMessage().split(",");
