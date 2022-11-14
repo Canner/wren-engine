@@ -43,7 +43,7 @@ public class ModelValidation
 {
     public static final ModelValidation MODEL_VALIDATION = new ModelValidation();
     private static final String RULE_NAME = "model";
-    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("[^a-zA-Z0-9_]+");
+    private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]+");
 
     @Override
     public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
@@ -67,10 +67,9 @@ public class ModelValidation
 
             List<ColumnValidationFailed> validationFaileds = model.getColumns().stream().map(modelColumn -> {
                 Matcher matcher = COLUMN_NAME_PATTERN.matcher(modelColumn.getName());
-                if (matcher.find()) {
-                    return new ColumnValidationFailed(modelColumn.getName(), "Column name contains illegal character");
+                if (!matcher.matches()) {
+                    return new ColumnValidationFailed(modelColumn.getName(), "Illegal column name");
                 }
-
                 Optional<ColumnDescription> descriptionOptional = columnDescriptions.stream()
                         .filter(columnDescription -> columnDescription.getName().equals(modelColumn.getName())).findAny();
                 if (descriptionOptional.isEmpty()) {

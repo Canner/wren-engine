@@ -129,7 +129,7 @@ public class TestMetricValidation
         assertThat(result.getMessage()).isNotNull();
         String[] errorMessage = result.getMessage().split(",");
         assertThat(errorMessage[0]).isEqualTo("[FlightDate:Got incompatible type in column FlightDate. Expected timestamp but actual varchar]");
-        assertThat(errorMessage[1]).isEqualTo("[illegal^name:Column name contains illegal character]");
+        assertThat(errorMessage[1]).isEqualTo("[illegal^name:Illegal column name]");
         assertThat(errorMessage[2]).isEqualTo("[notfound:Can't be found in model Flight]");
     }
 }
