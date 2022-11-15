@@ -26,7 +26,9 @@ import static io.cml.graphml.dto.Column.column;
 import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
+import static io.cml.graphml.validation.DuplicateModelNameValidation.DUPLICATE_MODEL_NAME_VALIDATION;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
+import static io.cml.graphml.validation.ModelNameValidation.MODEL_NAME_VALIDATION;
 import static io.cml.graphml.validation.ModelValidation.MODEL_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
@@ -135,5 +137,51 @@ public class TestMetricValidation
         assertThat(errorMessage[1]).isEqualTo("[illegal^name:Illegal column name]");
         assertThat(errorMessage[2]).isEqualTo("[123illegalname:Illegal column name]");
         assertThat(errorMessage[3]).isEqualTo("[notfound:Can't be found in model Flight]");
+    }
+
+    @Test
+    public void testDuplicateModelNameValidation()
+    {
+        try {
+            client.queryDDL(format("CREATE TABLE Flight AS SELECT * FROM '%s'", flightCsv));
+            List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(DUPLICATE_MODEL_NAME_VALIDATION));
+            assertThat(validationResults.size()).isEqualTo(1);
+
+            ValidationResult validationResult = validationResults.get(0);
+            assertThat(validationResult.getName()).isEqualTo("duplicate_model_name");
+            assertThat(validationResult.getDuration()).isNotNull();
+            assertThat(validationResult.getStatus()).isEqualTo(FAIL);
+            assertThat(validationResult.getMessage()).isEqualTo("Find duplicate table name in the remote data source. Duplicate table: Flight");
+        }
+        finally {
+            client.queryDDL("DROP TABLE Flight");
+        }
+    }
+
+    @Test
+    public void testInvalidModelNameValidation()
+    {
+        GraphML invalidModels = GraphML.fromManifest(manifest(
+                List.of(model("123Flight",
+                                format("SELECT * FROM '%s'", flightCsv),
+                                List.of(
+                                        column("FlightDate", GraphMLTypes.TIMESTAMP, null, true))),
+                        model("Fl^ight",
+                                format("SELECT * FROM '%s'", flightCsv),
+                                List.of(
+                                        column("FlightDate", GraphMLTypes.TIMESTAMP, null, true))),
+                        model("_Flight",
+                                format("SELECT * FROM '%s'", flightCsv),
+                                List.of(
+                                        column("FlightDate", GraphMLTypes.TIMESTAMP, null, true)))),
+                List.of(),
+                List.of()));
+        List<ValidationResult> validationResults = MetricValidation.validate(client, invalidModels, List.of(MODEL_NAME_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(1);
+        ValidationResult first = validationResults.get(0);
+        assertThat(first.getName()).isEqualTo("model_name");
+        assertThat(first.getStatus()).isEqualTo(FAIL);
+        assertThat(first.getDuration()).isNotNull();
+        assertThat(first.getMessage()).isEqualTo("Find invalid model name: 123Flight,Fl^ight");
     }
 }
