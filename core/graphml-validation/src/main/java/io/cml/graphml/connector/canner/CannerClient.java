@@ -36,6 +36,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -125,6 +126,29 @@ public final class CannerClient
         }
 
         return new TrinoRecordIterator(TRINO_QUERY_RESULT_JSON_CODEC.fromJson(response.getBody()));
+    }
+
+    @Override
+    public void queryDDL(String sql)
+    {
+        throw new UnsupportedOperationException("Canner client doesn't supports to query ddl");
+    }
+
+    @Override
+    public List<String> listTables()
+    {
+        try (Connection connection = createConnection()) {
+            ResultSet resultSet = connection.getMetaData().getTables("canner", cannerAvailableWorkspace, null, null);
+            List<String> names = new ArrayList<>();
+            while (resultSet.next()) {
+                String tableName = resultSet.getString(3);
+                names.add(tableName);
+            }
+            return names;
+        }
+        catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
     }
 
     private static String toTrinoPreparedStatement(String name, String sql)

@@ -15,10 +15,15 @@
 package io.cml.graphml.connector;
 
 import java.util.Iterator;
+import java.util.List;
 
 public interface Client
 {
     Iterator<Object[]> query(String sql);
 
+    void queryDDL(String sql);
+
     Iterator<ColumnDescription> describe(String sql);
+
+    List<String> listTables();
 }

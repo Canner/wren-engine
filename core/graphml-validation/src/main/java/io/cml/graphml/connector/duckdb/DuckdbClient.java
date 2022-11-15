@@ -17,6 +17,7 @@ package io.cml.graphml.connector.duckdb;
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.connector.ColumnDescription;
 import io.cml.graphml.connector.jdbc.JdbcRecordIterator;
+import org.duckdb.DuckDBConnection;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -25,15 +26,27 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import static io.cml.graphml.connector.jdbc.JdbcTypeMapping.toGraphMLType;
 
 public final class DuckdbClient
         implements Client
 {
+    private final Connection duckDBConnection;
+
     public DuckdbClient()
     {
+        try {
+            // The instance will be cleared after the process end. We don't need to
+            // close this connection.
+            this.duckDBConnection = DriverManager.getConnection("jdbc:duckdb:");
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -62,6 +75,35 @@ public final class DuckdbClient
             statement.execute(dryRunSql);
             ResultSet resultSet = statement.getResultSet();
             return new ColumnMetadataIterator(resultSet.getMetaData());
+        }
+        catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
+    }
+
+    @Override
+    public void queryDDL(String sql)
+    {
+        try (Connection connection = createConnection()) {
+            Statement statement = connection.createStatement();
+            statement.execute(sql);
+        }
+        catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
+    }
+
+    @Override
+    public List<String> listTables()
+    {
+        try (Connection connection = createConnection()) {
+            ResultSet resultSet = connection.getMetaData().getTables(null, null, null, null);
+            List<String> names = new ArrayList<>();
+            while (resultSet.next()) {
+                String tableName = resultSet.getString(3);
+                names.add(tableName);
+            }
+            return names;
         }
         catch (SQLException se) {
             throw new RuntimeException(se);
@@ -105,6 +147,10 @@ public final class DuckdbClient
     private Connection createConnection()
             throws SQLException
     {
-        return DriverManager.getConnection("jdbc:duckdb:");
+        // Refer to the official doc, if we want to create multiple read-write connections,
+        // to the same database in-memory database instance, we can use the custom `duplicate()` method.
+        // https://duckdb.org/docs/api/java
+
+        return ((DuckDBConnection) duckDBConnection).duplicate();
     }
 }
