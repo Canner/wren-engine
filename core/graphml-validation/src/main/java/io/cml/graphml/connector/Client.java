@@ -21,7 +21,7 @@ public interface Client
 {
     Iterator<Object[]> query(String sql);
 
-    void queryDDL(String sql);
+    void executeDDL(String sql);
 
     Iterator<ColumnDescription> describe(String sql);
 

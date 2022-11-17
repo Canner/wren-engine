@@ -129,9 +129,9 @@ public final class CannerClient
     }
 
     @Override
-    public void queryDDL(String sql)
+    public void executeDDL(String sql)
     {
-        throw new UnsupportedOperationException("Canner client doesn't supports to query ddl");
+        throw new UnsupportedOperationException("Canner client doesn't supports to execute ddl");
     }
 
     @Override

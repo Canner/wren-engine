@@ -143,7 +143,7 @@ public class TestMetricValidation
     public void testDuplicateModelNameValidation()
     {
         try {
-            client.queryDDL(format("CREATE TABLE Flight AS SELECT * FROM '%s'", flightCsv));
+            client.executeDDL(format("CREATE TABLE Flight AS SELECT * FROM '%s'", flightCsv));
             List<ValidationResult> validationResults = MetricValidation.validate(client, sample, List.of(DUPLICATE_MODEL_NAME_VALIDATION));
             assertThat(validationResults.size()).isEqualTo(1);
 
@@ -154,7 +154,7 @@ public class TestMetricValidation
             assertThat(validationResult.getMessage()).isEqualTo("Find duplicate table name in the remote data source. Duplicate table: Flight");
         }
         finally {
-            client.queryDDL("DROP TABLE Flight");
+            client.executeDDL("DROP TABLE Flight");
         }
     }
 

@@ -82,7 +82,7 @@ public final class DuckdbClient
     }
 
     @Override
-    public void queryDDL(String sql)
+    public void executeDDL(String sql)
     {
         try (Connection connection = createConnection()) {
             Statement statement = connection.createStatement();
