@@ -14,15 +14,18 @@
 
 package io.cml.graphml.connector.jdbc;
 
+import io.cml.graphml.connector.AutoCloseableIterator;
+
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
+
 public class JdbcRecordIterator
-        implements Iterator<Object[]>
+        implements AutoCloseableIterator<Object[]>
 {
     private final ResultSet resultSet;
     private final int columnCount;
@@ -34,7 +37,7 @@ public class JdbcRecordIterator
     public JdbcRecordIterator(ResultSet resultSet)
             throws SQLException
     {
-        this.resultSet = resultSet;
+        this.resultSet = requireNonNull(resultSet);
         ResultSetMetaData metaData = resultSet.getMetaData();
         this.columnCount = metaData.getColumnCount();
 
@@ -64,6 +67,13 @@ public class JdbcRecordIterator
             throw new RuntimeException(e);
         }
         return nowRecord;
+    }
+
+    @Override
+    public void close()
+            throws Exception
+    {
+        this.resultSet.close();
     }
 
     private Object[] getCurrentRecord()

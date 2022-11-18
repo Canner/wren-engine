@@ -14,6 +14,7 @@
 
 package io.cml.graphml.connector.duckdb;
 
+import io.cml.graphml.connector.AutoCloseableIterator;
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.connector.ColumnDescription;
 import io.cml.graphml.connector.jdbc.JdbcRecordIterator;
@@ -23,11 +24,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import static io.cml.graphml.connector.jdbc.JdbcTypeMapping.toGraphMLType;
@@ -50,7 +49,7 @@ public final class DuckdbClient
     }
 
     @Override
-    public Iterator<Object[]> query(String sql)
+    public AutoCloseableIterator<Object[]> query(String sql)
     {
         try (Connection connection = createConnection()) {
             Statement statement = connection.createStatement();
@@ -64,17 +63,14 @@ public final class DuckdbClient
     }
 
     @Override
-    public Iterator<ColumnDescription> describe(String sql)
+    public AutoCloseableIterator<ColumnDescription> describe(String sql)
     {
-        // TODO: DuckDB 0.5.1 exists some issue about handling describe statement result.
-        //  Before [duckdb#4796](https://github.com/duckdb/duckdb/pull/4799) released,
-        //  execute query with `LIMIT 1` to get the ResultSetMetadata.
-        String dryRunSql = sql + " LIMIT 1";
+        String describeSql = "describe " + sql;
         try (Connection connection = createConnection()) {
             Statement statement = connection.createStatement();
-            statement.execute(dryRunSql);
+            statement.execute(describeSql);
             ResultSet resultSet = statement.getResultSet();
-            return new ColumnMetadataIterator(resultSet.getMetaData());
+            return new ColumnMetadataIterator(resultSet);
         }
         catch (SQLException se) {
             throw new RuntimeException(se);
@@ -96,8 +92,8 @@ public final class DuckdbClient
     @Override
     public List<String> listTables()
     {
-        try (Connection connection = createConnection()) {
-            ResultSet resultSet = connection.getMetaData().getTables(null, null, null, null);
+        try (Connection connection = createConnection();
+                ResultSet resultSet = connection.getMetaData().getTables(null, null, null, null)) {
             List<String> names = new ArrayList<>();
             while (resultSet.next()) {
                 String tableName = resultSet.getString(3);
@@ -111,36 +107,65 @@ public final class DuckdbClient
     }
 
     static class ColumnMetadataIterator
-            implements Iterator<ColumnDescription>
+            implements AutoCloseableIterator<ColumnDescription>
     {
-        private final ResultSetMetaData metaData;
-        private final int totalCount;
-        private int index = 1;
+        private final ResultSet resultSet;
 
-        protected ColumnMetadataIterator(ResultSetMetaData metaData)
+        private boolean hasNext;
+
+        private ColumnDescription nowBuffer;
+
+        public ColumnMetadataIterator(ResultSet resultSet)
                 throws SQLException
         {
-            this.metaData = metaData;
-            this.totalCount = metaData.getColumnCount();
+            this.resultSet = resultSet;
+
+            hasNext = resultSet.next();
+            if (hasNext) {
+                nowBuffer = getCurrentRecord();
+            }
         }
 
         @Override
         public boolean hasNext()
         {
-            return index <= totalCount;
+            return hasNext;
         }
 
         @Override
         public ColumnDescription next()
         {
+            ColumnDescription nowRecord = nowBuffer;
             try {
-                return new ColumnDescription(
-                        metaData.getColumnName(index),
-                        toGraphMLType(JDBCType.valueOf(metaData.getColumnType(index++))));
+                hasNext = resultSet.next();
+                if (hasNext) {
+                    nowBuffer = getCurrentRecord();
+                }
             }
             catch (SQLException e) {
                 throw new RuntimeException(e);
             }
+            return nowRecord;
+        }
+
+        // The schema of a describe query in duckDB:
+        // │ column_name ┆ column_type ┆ null ┆ key ┆ default ┆ extra │
+        // ╞═════════════╪═════════════╪══════╪═════╪═════════╪═══════╡
+        // │ 1           ┆ INTEGER     ┆ YES  ┆     ┆         ┆       │
+
+        private ColumnDescription getCurrentRecord()
+                throws SQLException
+        {
+            return new ColumnDescription(
+                    resultSet.getString(1),
+                    toGraphMLType(JDBCType.valueOf(resultSet.getString(2))));
+        }
+
+        @Override
+        public void close()
+                throws Exception
+        {
+            this.resultSet.close();
         }
     }
 

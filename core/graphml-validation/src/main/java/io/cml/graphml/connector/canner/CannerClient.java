@@ -22,6 +22,7 @@ import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
+import io.cml.graphml.connector.AutoCloseableIterator;
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.connector.ColumnDescription;
 import io.cml.graphml.connector.jdbc.JdbcRecordIterator;
@@ -88,7 +89,7 @@ public final class CannerClient
     }
 
     @Override
-    public Iterator<Object[]> query(String sql)
+    public AutoCloseableIterator<Object[]> query(String sql)
     {
         try (Connection connection = createConnection()) {
             Statement statement = connection.createStatement();
@@ -106,7 +107,7 @@ public final class CannerClient
      * be supported by Canner PG wire protocol.
      */
     @Override
-    public Iterator<ColumnDescription> describe(String sql)
+    public AutoCloseableIterator<ColumnDescription> describe(String sql)
     {
         String statementName = "statement_" + randomIntString();
 
@@ -212,7 +213,7 @@ public final class CannerClient
     }
 
     public class TrinoRecordIterator
-            implements Iterator<ColumnDescription>
+            implements AutoCloseableIterator<ColumnDescription>
     {
         private TrinoQueryResult buffer;
 
@@ -254,6 +255,11 @@ public final class CannerClient
             // ---------------+---------+--------+--------+-------------+-----------+---------
             //  orderkey      | tpch    | tiny   | orders | bigint      |         8 | false
             return new ColumnDescription((String) row.get(0), (String) row.get(4));
+        }
+
+        @Override
+        public void close()
+        {
         }
     }
 }
