@@ -14,15 +14,9 @@
 
 package io.cml.graphml.connector;
 
-import java.util.List;
+import java.util.Iterator;
 
-public interface Client
+public abstract class AutoCloseableIterator<E>
+        implements Iterator<E>, AutoCloseable
 {
-    AutoCloseableIterator<Object[]> query(String sql);
-
-    void executeDDL(String sql);
-
-    AutoCloseableIterator<ColumnDescription> describe(String sql);
-
-    List<String> listTables();
 }

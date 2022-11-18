@@ -15,12 +15,12 @@
 package io.cml.graphml.validation;
 
 import io.cml.graphml.GraphML;
+import io.cml.graphml.connector.AutoCloseableIterator;
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.dto.EnumDefinition;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -55,16 +55,20 @@ public class EnumValueValidation
     {
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
-            Iterator<Object[]> result = client.query(buildEnumCheck(refSql, columName, enumDefinition.getValues()));
-            long elapsed = System.currentTimeMillis() - start;
-            if (result.hasNext()) {
-                Object[] row = result.next();
-                if ((boolean) row[0]) {
-                    return pass(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS));
+            try (AutoCloseableIterator<Object[]> result = client.query(buildEnumCheck(refSql, columName, enumDefinition.getValues()))) {
+                long elapsed = System.currentTimeMillis() - start;
+                if (result.hasNext()) {
+                    Object[] row = result.next();
+                    if ((boolean) row[0]) {
+                        return pass(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS));
+                    }
+                    return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got invalid enum value in " + columName);
                 }
-                return fail(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Got invalid enum value in " + columName);
+                return error(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Query executed failed");
             }
-            return error(formatRuleWithIdentifier(RULE_PREFIX + enumDefinition.getName(), modelName, columName), Duration.of(elapsed, ChronoUnit.MILLIS), "Query executed failed");
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 
