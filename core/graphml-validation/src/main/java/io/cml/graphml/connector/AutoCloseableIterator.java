@@ -16,7 +16,7 @@ package io.cml.graphml.connector;
 
 import java.util.Iterator;
 
-public abstract class AutoCloseableIterator<E>
-        implements Iterator<E>, AutoCloseable
+public interface AutoCloseableIterator<E>
+        extends Iterator<E>, AutoCloseable
 {
 }

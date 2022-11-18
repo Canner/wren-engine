@@ -107,7 +107,7 @@ public final class DuckdbClient
     }
 
     static class ColumnMetadataIterator
-            extends AutoCloseableIterator<ColumnDescription>
+            implements AutoCloseableIterator<ColumnDescription>
     {
         private final ResultSet resultSet;
 

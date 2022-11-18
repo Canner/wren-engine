@@ -213,7 +213,7 @@ public final class CannerClient
     }
 
     public class TrinoRecordIterator
-            extends AutoCloseableIterator<ColumnDescription>
+            implements AutoCloseableIterator<ColumnDescription>
     {
         private TrinoQueryResult buffer;
 

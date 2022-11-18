@@ -25,7 +25,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 public class JdbcRecordIterator
-        extends AutoCloseableIterator<Object[]>
+        implements AutoCloseableIterator<Object[]>
 {
     private final ResultSet resultSet;
     private final int columnCount;
