@@ -29,6 +29,11 @@ public class Relationship
     private final JoinType joinType;
     private final String condition;
 
+    public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition)
+    {
+        return new Relationship(name, models, joinType, condition);
+    }
+
     @JsonCreator
     public Relationship(
             @JsonProperty("name") String name,
