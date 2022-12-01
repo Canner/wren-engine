@@ -20,6 +20,7 @@ import io.cml.graphml.connector.Client;
 import io.cml.graphml.dto.JoinType;
 import io.cml.graphml.dto.Model;
 import io.cml.graphml.dto.Relationship;
+import io.cml.graphml.validation.exception.NotFoundException;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.ComparisonExpression;
@@ -60,26 +61,35 @@ public class RelationshipValidation
     {
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
-            String sql = generateValidationSql(relationship, models);
-            try (AutoCloseableIterator<Object[]> iterator = client.query(sql)) {
-                if (iterator.hasNext()) {
-                    Object[] row = iterator.next();
-                    if ((boolean) row[0]) {
-                        return pass(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()), Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS));
-                    }
+            try {
+                String sql = generateValidationSql(relationship, models);
+                try (AutoCloseableIterator<Object[]> iterator = client.query(sql)) {
+                    if (iterator.hasNext()) {
+                        Object[] row = iterator.next();
+                        if ((boolean) row[0]) {
+                            return pass(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()),
+                                    Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS));
+                        }
 
-                    List<String> invalidModels = new ArrayList<>();
-                    // left table failed
-                    if (!(boolean) row[1]) {
-                        invalidModels.add(relationship.getModels().get(0));
+                        List<String> invalidModels = new ArrayList<>();
+                        // left table failed
+                        if (!(boolean) row[1]) {
+                            invalidModels.add(relationship.getModels().get(0));
+                        }
+                        // right table failed
+                        if (!(boolean) row[2]) {
+                            invalidModels.add(relationship.getModels().get(1));
+                        }
+                        return fail(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()),
+                                Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS), buildFailMessage(invalidModels));
                     }
-                    // right table failed
-                    if (!(boolean) row[2]) {
-                        invalidModels.add(relationship.getModels().get(1));
-                    }
-                    return fail(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()), Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS), buildFailMessage(invalidModels));
+                    return error(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()),
+                            Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS), "Query executed failed");
                 }
-                return error(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()), Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS), "Query executed failed");
+            }
+            catch (NotFoundException e) {
+                return fail(formatRuleWithIdentifier(getJoinTypeRuleName(relationship.getJoinType()), relationship.getName()),
+                        Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS), e.getMessage());
             }
             catch (Exception e) {
                 throw new RuntimeException(e);
@@ -98,6 +108,7 @@ public class RelationshipValidation
     }
 
     private String generateValidationSql(Relationship relationship, List<Model> models)
+            throws NotFoundException
     {
         switch (relationship.getJoinType()) {
             case ONE_TO_ONE:
@@ -113,6 +124,7 @@ public class RelationshipValidation
     }
 
     private String validateOneToOne(Relationship relationship, List<Model> models)
+            throws NotFoundException
     {
         ComparisonExpression expression = getConditionNode(relationship.getCondition());
         return format("WITH lefttable AS (%s), righttable AS (%s) SELECT lefttable.result AND righttable.result, lefttable.result, righttable.result FROM lefttable, righttable",
@@ -121,6 +133,7 @@ public class RelationshipValidation
     }
 
     private String validateManyToOne(Relationship relationship, List<Model> models)
+            throws NotFoundException
     {
         ComparisonExpression expression = getConditionNode(relationship.getCondition());
         return format("WITH righttable AS (%s) SELECT righttable.result, true, righttable.result FROM righttable",
@@ -128,6 +141,7 @@ public class RelationshipValidation
     }
 
     private String validateOneToMany(Relationship relationship, List<Model> models)
+            throws NotFoundException
     {
         ComparisonExpression expression = getConditionNode(relationship.getCondition());
 
@@ -141,9 +155,10 @@ public class RelationshipValidation
     }
 
     private String buildColumnUniqueValidationSql(DereferenceExpression expression, List<Model> models)
+            throws NotFoundException
     {
         Model model = models.stream().filter(m -> m.getName().equals(expression.getBase().toString()))
-                .findFirst().orElseThrow(() -> new RuntimeException(expression.getBase().toString() + " model not found"));
+                .findFirst().orElseThrow(() -> new NotFoundException(expression.getBase().toString() + " model is not found"));
         return format("SELECT count(*) = count(distinct %s) AS result FROM (%s)", expression.getField(), model.getRefSql());
     }
 

@@ -224,11 +224,12 @@ public class TestMetricValidation
                         relationship("FakeBookUserOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.fakeId = User.fakeId"),
                         relationship("FakeBookUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.fakeId = User.fakeId"),
                         relationship("FakeBookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.fakeId = User.fakeId"),
-                        relationship("FakeBookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.fakeId")),
+                        relationship("FakeBookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.fakeId"),
+                        relationship("NotFoundModelInCondition", List.of("Book", "User"), JoinType.ONE_TO_ONE, "notfound.id = wrong.id")),
                 List.of()));
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, graphML, List.of(RELATIONSHIP_VALIDATION));
-        assertThat(validationResults.size()).isEqualTo(16);
+        assertThat(validationResults.size()).isEqualTo(17);
         assertRelationshipPassed("relationship_ONE_TO_ONE:BookUserOneToOne", validationResults);
         assertRelationshipPassed("relationship_ONE_TO_MANY:BookUserOneToMany", validationResults);
         assertRelationshipPassed("relationship_MANY_TO_ONE:BookUserManyToOne", validationResults);
@@ -248,6 +249,15 @@ public class TestMetricValidation
         assertRelationshipFailed("relationship_ONE_TO_ONE:FakeBookUserOneToOne", List.of("Book", "User"), validationResults);
         assertRelationshipFailed("relationship_MANY_TO_ONE:FakeBookUserManyToOne", List.of("User"), validationResults);
         assertRelationshipFailed("relationship_ONE_TO_MANY:FakeBookUserOneToMany", List.of("Book"), validationResults);
+
+        {
+            String name = "relationship_ONE_TO_ONE:NotFoundModelInCondition";
+            ValidationResult validationResult = validationResults.stream().filter(result -> result.getName().equals(name)).findAny()
+                    .orElseThrow(() -> new AssertionError(format("%s result is not found", name)));
+            assertThat(validationResult.getStatus()).isEqualTo(FAIL);
+            assertThat(validationResult.getDuration()).isNotNull();
+            assertThat(validationResult.getMessage()).isEqualTo("notfound model is not found");
+        }
     }
 
     private void assertRelationshipPassed(String name, List<ValidationResult> results)
