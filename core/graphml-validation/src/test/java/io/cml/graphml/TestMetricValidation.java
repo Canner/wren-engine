@@ -16,6 +16,7 @@ package io.cml.graphml;
 
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.connector.duckdb.DuckdbClient;
+import io.cml.graphml.dto.JoinType;
 import io.cml.graphml.validation.MetricValidation;
 import io.cml.graphml.validation.ValidationResult;
 import org.testng.annotations.Test;
@@ -26,14 +27,17 @@ import static io.cml.graphml.dto.Column.column;
 import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
 import static io.cml.graphml.dto.Manifest.manifest;
 import static io.cml.graphml.dto.Model.model;
+import static io.cml.graphml.dto.Relationship.relationship;
 import static io.cml.graphml.validation.DuplicateModelNameValidation.DUPLICATE_MODEL_NAME_VALIDATION;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
 import static io.cml.graphml.validation.ModelNameValidation.MODEL_NAME_VALIDATION;
 import static io.cml.graphml.validation.ModelValidation.MODEL_VALIDATION;
 import static io.cml.graphml.validation.NotNullValidation.NOT_NULL;
+import static io.cml.graphml.validation.RelationshipValidation.RELATIONSHIP_VALIDATION;
 import static io.cml.graphml.validation.ValidationResult.Status.FAIL;
 import static io.cml.graphml.validation.ValidationResult.Status.PASS;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -183,5 +187,84 @@ public class TestMetricValidation
         assertThat(first.getStatus()).isEqualTo(FAIL);
         assertThat(first.getDuration()).isNotNull();
         assertThat(first.getMessage()).isEqualTo("Find invalid model name: 123Flight,Fl^ight");
+    }
+
+    @Test
+    public void testRelationshipValidation()
+    {
+        String bookCsv = requireNonNull(getClass().getClassLoader().getResource("book.csv")).getPath();
+        String userCsv = requireNonNull(getClass().getClassLoader().getResource("user.csv")).getPath();
+
+        GraphML graphML = GraphML.fromManifest(manifest(
+                List.of(model(
+                                "Book",
+                                format("SELECT * FROM '%s'", bookCsv),
+                                List.of(
+                                        column("name", GraphMLTypes.VARCHAR, null, false),
+                                        column("author", GraphMLTypes.VARCHAR, "User", false))),
+                        model("User",
+                                format("SELECT * FROM '%s'", userCsv),
+                                List.of(
+                                        column("id", GraphMLTypes.INTEGER, null, false),
+                                        column("name", GraphMLTypes.VARCHAR, null, false),
+                                        column("email", GraphMLTypes.VARCHAR, null, false)))),
+                List.of(
+                        relationship("BookUserOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.authorId = User.id"),
+                        relationship("BookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.authorId = User.id"),
+                        relationship("BookUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.authorId = User.id"),
+                        relationship("BookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.authorId = User.id"),
+                        relationship("FakeBookOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.fakeId = User.id"),
+                        relationship("FakeBookManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.fakeId = User.id"),
+                        relationship("FakeBookOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.fakeId = User.id"),
+                        relationship("FakeBookManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.id"),
+                        relationship("FakeUserOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.authorId = User.fakeId"),
+                        relationship("FakeUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.authorId = User.fakeId"),
+                        relationship("FakeUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.authorId = User.fakeId"),
+                        relationship("FakeUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.authorId = User.fakeId"),
+                        relationship("FakeBookUserOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.fakeId = User.fakeId"),
+                        relationship("FakeBookUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.fakeId = User.fakeId"),
+                        relationship("FakeBookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.fakeId = User.fakeId"),
+                        relationship("FakeBookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.fakeId")),
+                List.of()));
+
+        List<ValidationResult> validationResults = MetricValidation.validate(client, graphML, List.of(RELATIONSHIP_VALIDATION));
+        assertThat(validationResults.size()).isEqualTo(16);
+        assertRelationshipPassed("relationship_ONE_TO_ONE:BookUserOneToOne", validationResults);
+        assertRelationshipPassed("relationship_ONE_TO_MANY:BookUserOneToMany", validationResults);
+        assertRelationshipPassed("relationship_MANY_TO_ONE:BookUserManyToOne", validationResults);
+        assertRelationshipPassed("relationship_MANY_TO_MANY:BookUserManyToMany", validationResults);
+
+        assertRelationshipPassed("relationship_MANY_TO_ONE:FakeBookManyToOne", validationResults);
+        assertRelationshipPassed("relationship_MANY_TO_MANY:FakeBookManyToMany", validationResults);
+        assertRelationshipFailed("relationship_ONE_TO_ONE:FakeBookOneToOne", List.of("Book"), validationResults);
+        assertRelationshipFailed("relationship_ONE_TO_MANY:FakeBookOneToMany", List.of("Book"), validationResults);
+
+        assertRelationshipPassed("relationship_ONE_TO_MANY:FakeUserOneToMany", validationResults);
+        assertRelationshipPassed("relationship_MANY_TO_MANY:FakeUserManyToMany", validationResults);
+        assertRelationshipFailed("relationship_ONE_TO_ONE:FakeUserOneToOne", List.of("User"), validationResults);
+        assertRelationshipFailed("relationship_MANY_TO_ONE:FakeUserManyToOne", List.of("User"), validationResults);
+
+        assertRelationshipPassed("relationship_MANY_TO_MANY:FakeBookUserManyToMany", validationResults);
+        assertRelationshipFailed("relationship_ONE_TO_ONE:FakeBookUserOneToOne", List.of("Book", "User"), validationResults);
+        assertRelationshipFailed("relationship_MANY_TO_ONE:FakeBookUserManyToOne", List.of("User"), validationResults);
+        assertRelationshipFailed("relationship_ONE_TO_MANY:FakeBookUserOneToMany", List.of("Book"), validationResults);
+    }
+
+    private void assertRelationshipPassed(String name, List<ValidationResult> results)
+    {
+        ValidationResult validationResult = results.stream().filter(result -> result.getName().equals(name)).findAny()
+                .orElseThrow(() -> new AssertionError(format("%s result is not found", name)));
+        assertThat(validationResult.getStatus()).isEqualTo(PASS);
+        assertThat(validationResult.getDuration()).isNotNull();
+        assertThat(validationResult.getMessage()).isNull();
+    }
+
+    private void assertRelationshipFailed(String name, List<String> wrongTables, List<ValidationResult> results)
+    {
+        ValidationResult validationResult = results.stream().filter(result -> result.getName().equals(name)).findAny()
+                .orElseThrow(() -> new AssertionError(format("%s result is not found", name)));
+        assertThat(validationResult.getStatus()).isEqualTo(FAIL);
+        assertThat(validationResult.getDuration()).isNotNull();
+        assertThat(validationResult.getMessage()).isEqualTo("Got duplicate join key in " + join(",", wrongTables));
     }
 }
