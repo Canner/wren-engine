@@ -12,12 +12,13 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.dto;
+package io.cml.graphml.validation.exception;
 
-public enum JoinType
+public class NotFoundException
+        extends Exception
 {
-    MANY_TO_MANY,
-    ONE_TO_ONE,
-    MANY_TO_ONE,
-    ONE_TO_MANY,
+    public NotFoundException(String message)
+    {
+        super(message);
+    }
 }
