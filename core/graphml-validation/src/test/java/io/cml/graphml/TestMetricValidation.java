@@ -250,14 +250,12 @@ public class TestMetricValidation
         assertRelationshipFailed("relationship_MANY_TO_ONE:FakeBookUserManyToOne", List.of("User"), validationResults);
         assertRelationshipFailed("relationship_ONE_TO_MANY:FakeBookUserOneToMany", List.of("Book"), validationResults);
 
-        {
-            String name = "relationship_ONE_TO_ONE:NotFoundModelInCondition";
-            ValidationResult validationResult = validationResults.stream().filter(result -> result.getName().equals(name)).findAny()
-                    .orElseThrow(() -> new AssertionError(format("%s result is not found", name)));
-            assertThat(validationResult.getStatus()).isEqualTo(FAIL);
-            assertThat(validationResult.getDuration()).isNotNull();
-            assertThat(validationResult.getMessage()).isEqualTo("notfound model is not found");
-        }
+        String name = "relationship_ONE_TO_ONE:NotFoundModelInCondition";
+        ValidationResult validationResult = validationResults.stream().filter(result -> result.getName().equals(name)).findAny()
+                .orElseThrow(() -> new AssertionError(format("%s result is not found", name)));
+        assertThat(validationResult.getStatus()).isEqualTo(FAIL);
+        assertThat(validationResult.getDuration()).isNotNull();
+        assertThat(validationResult.getMessage()).isEqualTo("notfound model is not found");
     }
 
     private void assertRelationshipPassed(String name, List<ValidationResult> results)
