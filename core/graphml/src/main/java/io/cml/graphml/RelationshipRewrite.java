@@ -14,7 +14,7 @@
 
 package io.cml.graphml;
 
-import io.cml.graphml.analyzer.Analyzer;
+import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.DereferenceExpression;
@@ -43,7 +43,7 @@ public class RelationshipRewrite
     public static final GraphMLRule RELATIONSHIP_REWRITE = new RelationshipRewrite();
 
     @Override
-    public Node apply(Node root, Analyzer.Analysis analysis, GraphML graphML)
+    public Node apply(Node root, Analysis analysis, GraphML graphML)
     {
         return new RelationshipRewrite.Rewriter(analysis).process(root);
     }
@@ -51,9 +51,9 @@ public class RelationshipRewrite
     private static class Rewriter
             extends BaseVisitor
     {
-        private final Analyzer.Analysis analysis;
+        private final Analysis analysis;
 
-        Rewriter(Analyzer.Analysis analysis)
+        Rewriter(Analysis analysis)
         {
             this.analysis = analysis;
         }

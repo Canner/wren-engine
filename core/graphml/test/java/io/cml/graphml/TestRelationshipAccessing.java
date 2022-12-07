@@ -15,6 +15,7 @@
 package io.cml.graphml;
 
 import com.google.common.collect.ImmutableMap;
+import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.analyzer.Analyzer;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.GraphMLTypes;
@@ -178,7 +179,7 @@ public class TestRelationshipAccessing
     {
         SqlParser SQL_PARSER = new SqlParser();
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
-        Analyzer.Analysis analysis = Analyzer.analyze(statement, generator);
+        Analysis analysis = Analyzer.analyze(statement, generator);
 
         Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
         Statement expectedResult = SQL_PARSER.createStatement(strSubstitutor.replace(expected), new ParsingOptions(AS_DECIMAL));

@@ -14,11 +14,11 @@
 
 package io.cml.graphml;
 
-import io.cml.graphml.analyzer.Analyzer;
+import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.tree.Node;
 
 public interface GraphMLRule
 {
-    Node apply(Node root, Analyzer.Analysis analysis, GraphML graphML);
+    Node apply(Node root, Analysis analysis, GraphML graphML);
 }

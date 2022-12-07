@@ -14,8 +14,7 @@
 
 package io.cml.graphml;
 
-import io.cml.graphml.analyzer.Analyzer;
-import io.cml.graphml.analyzer.Analyzer.Analysis;
+import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Model;
 import io.trino.sql.parser.ParsingOptions;
@@ -99,7 +98,7 @@ public class ModelSqlRewrite
             extends BaseVisitor
     {
         private final Map<String, Query> modelQueries;
-        private final Analyzer.Analysis analysis;
+        private final Analysis analysis;
 
         public Rewriter(Map<String, Query> modelQueries, Analysis analysis)
         {

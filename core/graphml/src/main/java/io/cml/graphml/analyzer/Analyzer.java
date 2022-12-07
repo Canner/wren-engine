@@ -17,19 +17,9 @@ package io.cml.graphml.analyzer;
 import io.cml.graphml.BaseVisitor;
 import io.cml.graphml.RelationshipCteGenerator;
 import io.cml.graphml.base.GraphML;
-import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Node;
-import io.trino.sql.tree.NodeRef;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
-import io.trino.sql.tree.WithQuery;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
@@ -47,49 +37,6 @@ public final class Analyzer
         Analysis analysis = new Analysis(relationshipCteGenerator);
         new Visitor(analysis).process(statement);
         return analysis;
-    }
-
-    public static class Analysis
-    {
-        private final RelationshipCteGenerator relationshipCteGenerator;
-        private final Map<NodeRef, DereferenceExpression> boundRelationshipNodes = new HashMap<>();
-
-        Analysis(RelationshipCteGenerator relationshipCteGenerator)
-        {
-            this.relationshipCteGenerator = relationshipCteGenerator;
-        }
-
-        private final Set<QualifiedName> tables = new HashSet<>();
-
-        private void addTable(QualifiedName tableName)
-        {
-            tables.add(tableName);
-        }
-
-        public Set<QualifiedName> getTables()
-        {
-            return Set.copyOf(tables);
-        }
-
-        public Optional<String> getRelationshipCTEName(String rsName)
-        {
-            return Optional.ofNullable(relationshipCteGenerator.getNameMapping().get(rsName));
-        }
-
-        public Map<String, WithQuery> getRelationshipCTE()
-        {
-            return relationshipCteGenerator.getRegisteredCte();
-        }
-
-        public void bindRelationship(NodeRef original, DereferenceExpression target)
-        {
-            boundRelationshipNodes.put(original, target);
-        }
-
-        public DereferenceExpression transferRelationship(NodeRef node)
-        {
-            return boundRelationshipNodes.get(node);
-        }
     }
 
     private static class Visitor
