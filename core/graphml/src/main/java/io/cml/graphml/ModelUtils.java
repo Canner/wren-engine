@@ -17,13 +17,21 @@ package io.cml.graphml;
 import io.cml.graphml.dto.Column;
 import io.cml.graphml.dto.Model;
 
+import java.security.SecureRandom;
+
+import static java.lang.Character.MAX_RADIX;
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
-public final class Utils
+public final class ModelUtils
 {
-    private Utils() {}
+    private ModelUtils() {}
+
+    private static final SecureRandom random = new SecureRandom();
+    private static final int RANDOM_SUFFIX_LENGTH = 10;
 
     public static String getModelSql(Model model)
     {
@@ -32,5 +40,11 @@ public final class Utils
             return model.getRefSql();
         }
         return format("SELECT %s FROM (%s)", model.getColumns().stream().map(Column::getName).collect(joining(", ")), model.getRefSql());
+    }
+
+    public static String randomTableSuffix()
+    {
+        String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
+        return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
     }
 }
