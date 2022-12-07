@@ -14,6 +14,7 @@
 
 package io.cml.graphml;
 
+import io.cml.graphml.analyzer.Analyzer;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.DereferenceExpression;

@@ -12,8 +12,10 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.analyzer;
 
+import io.cml.graphml.BaseVisitor;
+import io.cml.graphml.RelationshipCteGenerator;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Node;

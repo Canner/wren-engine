@@ -15,6 +15,7 @@
 package io.cml.graphml;
 
 import com.google.common.collect.ImmutableMap;
+import io.cml.graphml.analyzer.Analyzer;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.GraphMLTypes;
 import io.cml.graphml.base.dto.JoinType;
