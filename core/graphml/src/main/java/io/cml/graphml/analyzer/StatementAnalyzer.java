@@ -23,9 +23,9 @@ import io.trino.sql.tree.Table;
 
 import static java.util.Objects.requireNonNull;
 
-public final class Analyzer
+public final class StatementAnalyzer
 {
-    private Analyzer() {}
+    private StatementAnalyzer() {}
 
     public static Analysis analyze(Statement statement, GraphML graphML)
     {
