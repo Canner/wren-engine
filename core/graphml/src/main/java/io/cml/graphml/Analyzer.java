@@ -14,12 +14,17 @@
 
 package io.cml.graphml;
 
+import com.google.common.annotations.VisibleForTesting;
+import io.cml.graphml.base.GraphML;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
+import io.trino.sql.tree.WithQuery;
 
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -28,15 +33,28 @@ public final class Analyzer
 {
     private Analyzer() {}
 
-    public static Analysis analyze(Statement statement)
+    public static Analysis analyze(Statement statement, GraphML graphML)
     {
-        Analysis analysis = new Analysis();
+        return analyze(statement, new RelationshipCteGenerator(graphML));
+    }
+
+    @VisibleForTesting
+    public static Analysis analyze(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
+    {
+        Analysis analysis = new Analysis(relationshipCteGenerator);
         new Visitor(analysis).process(statement);
         return analysis;
     }
 
     public static class Analysis
     {
+        private final RelationshipCteGenerator relationshipCteGenerator;
+
+        Analysis(RelationshipCteGenerator relationshipCteGenerator)
+        {
+            this.relationshipCteGenerator = relationshipCteGenerator;
+        }
+
         private final Set<QualifiedName> tables = new HashSet<>();
 
         private void addTable(QualifiedName tableName)
@@ -47,6 +65,16 @@ public final class Analyzer
         public Set<QualifiedName> getTables()
         {
             return Set.copyOf(tables);
+        }
+
+        public Optional<String> getRelationshipCTEName(String rsName)
+        {
+            return Optional.ofNullable(relationshipCteGenerator.getNameMapping().get(rsName));
+        }
+
+        public Map<String, WithQuery> getRelationshipCTE()
+        {
+            return relationshipCteGenerator.getRegisteredCte();
         }
     }
 
