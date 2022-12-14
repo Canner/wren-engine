@@ -14,8 +14,8 @@
 
 package io.cml.graphml;
 
-import io.cml.graphml.dto.Column;
-import io.cml.graphml.dto.Model;
+import io.cml.graphml.base.dto.Column;
+import io.cml.graphml.base.dto.Model;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;

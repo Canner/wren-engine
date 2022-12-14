@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.base;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.cml.graphml.dto.EnumDefinition;
-import io.cml.graphml.dto.Manifest;
-import io.cml.graphml.dto.Model;
-import io.cml.graphml.dto.Relationship;
+import io.cml.graphml.base.dto.EnumDefinition;
+import io.cml.graphml.base.dto.Manifest;
+import io.cml.graphml.base.dto.Model;
+import io.cml.graphml.base.dto.Relationship;
 
 import java.util.List;
 import java.util.Optional;

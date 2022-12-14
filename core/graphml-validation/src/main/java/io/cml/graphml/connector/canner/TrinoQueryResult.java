@@ -23,8 +23,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-import static io.cml.graphml.Utils.checkArgument;
-import static io.cml.graphml.Utils.firstNonNull;
+import static io.cml.graphml.base.Utils.checkArgument;
+import static io.cml.graphml.base.Utils.firstNonNull;
 import static io.cml.graphml.connector.canner.FixJsonDataUtils.fixData;
 import static java.util.Objects.requireNonNull;
 

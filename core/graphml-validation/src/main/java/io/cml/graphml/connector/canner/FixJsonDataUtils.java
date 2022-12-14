@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static io.cml.graphml.Utils.checkArgument;
+import static io.cml.graphml.base.Utils.checkArgument;
 import static io.cml.graphml.connector.canner.TrinoType.BIGINT;
 import static io.cml.graphml.connector.canner.TrinoType.BOOLEAN;
 import static io.cml.graphml.connector.canner.TrinoType.CHAR;

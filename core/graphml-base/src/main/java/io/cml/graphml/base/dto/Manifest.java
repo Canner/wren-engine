@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.dto;
+package io.cml.graphml.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

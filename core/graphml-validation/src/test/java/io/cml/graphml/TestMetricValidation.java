@@ -14,20 +14,22 @@
 
 package io.cml.graphml;
 
+import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.GraphMLTypes;
+import io.cml.graphml.base.dto.JoinType;
 import io.cml.graphml.connector.Client;
 import io.cml.graphml.connector.duckdb.DuckdbClient;
-import io.cml.graphml.dto.JoinType;
 import io.cml.graphml.validation.MetricValidation;
 import io.cml.graphml.validation.ValidationResult;
 import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.cml.graphml.dto.Column.column;
-import static io.cml.graphml.dto.EnumDefinition.enumDefinition;
-import static io.cml.graphml.dto.Manifest.manifest;
-import static io.cml.graphml.dto.Model.model;
-import static io.cml.graphml.dto.Relationship.relationship;
+import static io.cml.graphml.base.dto.Column.column;
+import static io.cml.graphml.base.dto.EnumDefinition.enumDefinition;
+import static io.cml.graphml.base.dto.Manifest.manifest;
+import static io.cml.graphml.base.dto.Model.model;
+import static io.cml.graphml.base.dto.Relationship.relationship;
 import static io.cml.graphml.validation.DuplicateModelNameValidation.DUPLICATE_MODEL_NAME_VALIDATION;
 import static io.cml.graphml.validation.EnumValueValidation.ENUM_VALUE_VALIDATION;
 import static io.cml.graphml.validation.ModelNameValidation.MODEL_NAME_VALIDATION;

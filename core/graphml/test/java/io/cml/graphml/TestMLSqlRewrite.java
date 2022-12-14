@@ -14,6 +14,7 @@
 
 package io.cml.graphml;
 
+import io.cml.graphml.base.GraphML;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;

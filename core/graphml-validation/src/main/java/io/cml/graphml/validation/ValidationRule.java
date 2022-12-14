@@ -14,7 +14,7 @@
 
 package io.cml.graphml.validation;
 
-import io.cml.graphml.GraphML;
+import io.cml.graphml.base.GraphML;
 import io.cml.graphml.connector.Client;
 
 import java.util.List;
