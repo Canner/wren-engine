@@ -33,7 +33,7 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 public class RelationshipRewrite
         implements GraphMLRule
 {
-    public static GraphMLRule RELATIONSHIP_REWRITE = new RelationshipRewrite();
+    public static final GraphMLRule RELATIONSHIP_REWRITE = new RelationshipRewrite();
 
     @Override
     public Node apply(Node root, Analyzer.Analysis analysis, GraphML graphML)

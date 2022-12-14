@@ -14,7 +14,6 @@
 
 package io.cml.graphml;
 
-import com.google.common.annotations.VisibleForTesting;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
@@ -38,7 +37,6 @@ public final class Analyzer
         return analyze(statement, new RelationshipCteGenerator(graphML));
     }
 
-    @VisibleForTesting
     public static Analysis analyze(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
         Analysis analysis = new Analysis(relationshipCteGenerator);

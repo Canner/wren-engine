@@ -14,7 +14,6 @@
 
 package io.cml.graphml;
 
-import com.google.common.collect.ImmutableMap;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.GraphMLTypes;
 import io.cml.graphml.base.dto.JoinType;
@@ -28,6 +27,7 @@ import io.trino.sql.tree.With;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -64,11 +64,10 @@ public class TestRelationshipCteGenerator
                 List.of()));
 
         RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
-        Map<String, List<RsItem>> relationShipRefs = ImmutableMap.<String, List<RsItem>>builder()
-                .put("author", List.of(rsItem("BookUser", RsItem.Type.RS)))
-                .put("author.book", List.of(rsItem("author", RsItem.Type.CTE), rsItem("BookUser", RsItem.Type.REVERSE_RS)))
-                .put("author.book.author", List.of(rsItem("author.book", RsItem.Type.CTE), rsItem("BookUser", RsItem.Type.RS)))
-                .build();
+        Map<String, List<RsItem>> relationShipRefs = new HashMap<>();
+        relationShipRefs.put("author", List.of(rsItem("BookUser", RsItem.Type.RS)));
+        relationShipRefs.put("author.book", List.of(rsItem("author", RsItem.Type.CTE), rsItem("BookUser", RsItem.Type.REVERSE_RS)));
+        relationShipRefs.put("author.book.author", List.of(rsItem("author.book", RsItem.Type.CTE), rsItem("BookUser", RsItem.Type.RS)));
         relationShipRefs.forEach(generator::register);
         Query query = new Query(
                 Optional.of(new With(false, new ArrayList<>(generator.getRegisteredCte().values()))),

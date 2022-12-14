@@ -41,7 +41,7 @@ import static java.util.stream.Collectors.toUnmodifiableMap;
 public class ModelSqlRewrite
         implements GraphMLRule
 {
-    public static ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
+    public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
     private static final SqlParser SQL_PARSER = new SqlParser();
 
     private ModelSqlRewrite() {}
