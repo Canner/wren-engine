@@ -12,12 +12,12 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.base;
 
-import io.cml.graphml.dto.Column;
-import io.cml.graphml.dto.EnumDefinition;
-import io.cml.graphml.dto.Model;
-import io.cml.graphml.dto.Relationship;
+import io.cml.graphml.base.dto.Column;
+import io.cml.graphml.base.dto.EnumDefinition;
+import io.cml.graphml.base.dto.Model;
+import io.cml.graphml.base.dto.Relationship;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -28,7 +28,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-import static io.cml.graphml.dto.JoinType.MANY_TO_MANY;
+import static io.cml.graphml.base.dto.JoinType.MANY_TO_MANY;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;

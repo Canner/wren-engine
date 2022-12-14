@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.base;
 
 public final class GraphMLTypes
 {

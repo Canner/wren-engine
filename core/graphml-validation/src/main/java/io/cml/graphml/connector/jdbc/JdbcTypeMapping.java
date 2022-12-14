@@ -14,7 +14,7 @@
 
 package io.cml.graphml.connector.jdbc;
 
-import io.cml.graphml.GraphMLTypes;
+import io.cml.graphml.base.GraphMLTypes;
 
 import java.sql.JDBCType;
 

@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.dto;
+package io.cml.graphml.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-import static io.cml.graphml.Utils.checkArgument;
+import static io.cml.graphml.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class Relationship

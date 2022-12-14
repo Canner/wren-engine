@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.cml.graphml.dto;
+package io.cml.graphml.base.dto;
 
 public enum JoinType
 {

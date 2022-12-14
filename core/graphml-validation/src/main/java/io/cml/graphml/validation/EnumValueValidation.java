@@ -14,10 +14,10 @@
 
 package io.cml.graphml.validation;
 
-import io.cml.graphml.GraphML;
+import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.dto.EnumDefinition;
 import io.cml.graphml.connector.AutoCloseableIterator;
 import io.cml.graphml.connector.Client;
-import io.cml.graphml.dto.EnumDefinition;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

@@ -14,12 +14,12 @@
 
 package io.cml.graphml.validation;
 
-import io.cml.graphml.GraphML;
+import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.dto.JoinType;
+import io.cml.graphml.base.dto.Model;
+import io.cml.graphml.base.dto.Relationship;
 import io.cml.graphml.connector.AutoCloseableIterator;
 import io.cml.graphml.connector.Client;
-import io.cml.graphml.dto.JoinType;
-import io.cml.graphml.dto.Model;
-import io.cml.graphml.dto.Relationship;
 import io.cml.graphml.validation.exception.NotFoundException;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
