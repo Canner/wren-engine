@@ -20,6 +20,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.cml</groupId>
             <artifactId>graphml-base</artifactId>
         </dependency>
@@ -27,6 +32,13 @@
         <dependency>
             <groupId>io.cml</groupId>
             <artifactId>trino-parser</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.5</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
