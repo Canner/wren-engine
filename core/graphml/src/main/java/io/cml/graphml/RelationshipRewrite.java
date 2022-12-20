@@ -154,7 +154,6 @@ public class RelationshipRewrite
         private Expression getRegisteredRelationship(QualifiedName node)
         {
             // TODO: handling alias name
-            
             if (node.getPrefix().isEmpty()) {
                 return DereferenceExpression.from(node);
             }
