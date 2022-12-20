@@ -131,6 +131,11 @@ public final class QueryUtil
         return new Join(Join.Type.LEFT, left, right, Optional.ofNullable(joinCriteria));
     }
 
+    public static Join implicitJoin(Relation left, Relation right)
+    {
+        return new Join(Join.Type.IMPLICIT, left, right, Optional.empty());
+    }
+
     public static JoinOn joinOn(Expression conditionSql)
     {
         return new JoinOn(conditionSql);
