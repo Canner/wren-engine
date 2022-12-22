@@ -14,6 +14,8 @@
 package io.trino.sql;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.parser.ParsingOptions;
+import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.CoalesceExpression;
@@ -23,6 +25,9 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.Join;
+import io.trino.sql.tree.JoinCriteria;
+import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.LogicalBinaryExpression;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Offset;
@@ -49,6 +54,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.trino.sql.tree.BooleanLiteral.FALSE_LITERAL;
 import static io.trino.sql.tree.BooleanLiteral.TRUE_LITERAL;
 import static java.util.Arrays.asList;
@@ -118,6 +124,29 @@ public final class QueryUtil
     public static Table table(QualifiedName name)
     {
         return new Table(name);
+    }
+
+    public static Join leftJoin(Relation left, Relation right, JoinCriteria joinCriteria)
+    {
+        return new Join(Join.Type.LEFT, left, right, Optional.ofNullable(joinCriteria));
+    }
+
+    public static Join implicitJoin(Relation left, Relation right)
+    {
+        return new Join(Join.Type.IMPLICIT, left, right, Optional.empty());
+    }
+
+    public static JoinOn joinOn(Expression conditionSql)
+    {
+        return new JoinOn(conditionSql);
+    }
+
+    public static ComparisonExpression getConditionNode(String condition)
+    {
+        SqlParser sqlParser = new SqlParser();
+        Query statement = (Query) sqlParser.createStatement("SELECT " + condition, new ParsingOptions(AS_DOUBLE));
+        return (ComparisonExpression)
+                ((SingleColumn) ((QuerySpecification) statement.getQueryBody()).getSelect().getSelectItems().get(0)).getExpression();
     }
 
     public static Relation subquery(Query query)

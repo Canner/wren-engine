@@ -17,7 +17,6 @@ package io.cml.graphml;
 import io.cml.graphml.Analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Model;
-import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Identifier;
@@ -39,24 +38,25 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-public class MLSqlRewrite
+public class ModelSqlRewrite
+        implements GraphMLRule
 {
+    public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    private MLSqlRewrite() {}
+    private ModelSqlRewrite() {}
 
-    public static String rewrite(String sql, GraphML graphML)
+    @Override
+    public Node apply(Node root, Analysis analysis, GraphML graphML)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        Analysis analysis = Analyzer.analyze(statement);
         Map<String, Query> modelQueries = graphML.listModels().stream()
                 .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
-                .collect(toUnmodifiableMap(Model::getName, MLSqlRewrite::parseModelSql));
+                .collect(toUnmodifiableMap(Model::getName, ModelSqlRewrite::parseModelSql));
 
         if (modelQueries.isEmpty()) {
-            return sql;
+            return root;
         }
-        return SqlFormatter.formatSql(new MLRewriter(modelQueries).process(statement));
+        return new Rewriter(modelQueries, analysis).process(root);
     }
 
     private static Query parseModelSql(Model model)
@@ -94,14 +94,16 @@ public class MLSqlRewrite
      *     SELECT * FROM a JOIN b on a.id=b.id
      * </pre>
      */
-    private static class MLRewriter
+    private static class Rewriter
             extends BaseVisitor
     {
         private final Map<String, Query> modelQueries;
+        private final Analyzer.Analysis analysis;
 
-        public MLRewriter(Map<String, Query> modelQueries)
+        public Rewriter(Map<String, Query> modelQueries, Analysis analysis)
         {
             this.modelQueries = requireNonNull(modelQueries, "modelQueries is null");
+            this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
         @Override

@@ -26,21 +26,24 @@ public class Model
     private final String name;
     private final String refSql;
     private final List<Column> columns;
+    private final String primaryKey;
 
     public static Model model(String name, String refSql, List<Column> columns)
     {
-        return new Model(name, refSql, columns);
+        return new Model(name, refSql, columns, null);
     }
 
     @JsonCreator
     public Model(
             @JsonProperty("name") String name,
             @JsonProperty("refSql") String refSql,
-            @JsonProperty("columns") List<Column> columns)
+            @JsonProperty("columns") List<Column> columns,
+            @JsonProperty("primaryKey") String primaryKey)
     {
         this.name = requireNonNull(name, "name is null");
         this.refSql = requireNonNull(refSql, "refSql is null");
         this.columns = columns == null ? List.of() : columns;
+        this.primaryKey = primaryKey;
     }
 
     public String getName()
@@ -56,5 +59,10 @@ public class Model
     public List<Column> getColumns()
     {
         return columns;
+    }
+
+    public String getPrimaryKey()
+    {
+        return primaryKey;
     }
 }

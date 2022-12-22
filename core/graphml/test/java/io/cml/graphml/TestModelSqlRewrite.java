@@ -25,13 +25,14 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
-import static io.cml.graphml.MLSqlRewrite.rewrite;
+import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestMLSqlRewrite
+public class TestModelSqlRewrite
 {
     @Test
     public void testModelRewrite()
@@ -68,6 +69,11 @@ public class TestMLSqlRewrite
                 "WITH User AS (SELECT id, email FROM (SELECT * FROM User)),\n" +
                         "a AS (SELECT * FROM User)\n" +
                         "SELECT * FROM a");
+    }
+
+    private String rewrite(String sql, GraphML graphML)
+    {
+        return GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE));
     }
 
     private static void assertSqlEquals(String actual, String expected)

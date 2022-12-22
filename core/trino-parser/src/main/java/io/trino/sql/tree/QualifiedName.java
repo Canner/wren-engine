@@ -38,6 +38,12 @@ public class QualifiedName
         return of(ImmutableList.copyOf(Lists.asList(first, rest).stream().map(Identifier::new).collect(Collectors.toList())));
     }
 
+    public static QualifiedName of(List<String> parts)
+    {
+        requireNonNull(parts, "parts is null");
+        return of(ImmutableList.copyOf(parts.stream().map(Identifier::new).collect(Collectors.toList())));
+    }
+
     public static QualifiedName of(String name)
     {
         requireNonNull(name, "name is null");
