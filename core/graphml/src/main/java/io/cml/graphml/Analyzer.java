@@ -15,12 +15,15 @@
 package io.cml.graphml;
 
 import io.cml.graphml.base.GraphML;
+import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.WithQuery;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +50,7 @@ public final class Analyzer
     public static class Analysis
     {
         private final RelationshipCteGenerator relationshipCteGenerator;
+        private final Map<NodeRef, DereferenceExpression> boundRelationshipNodes = new HashMap<>();
 
         Analysis(RelationshipCteGenerator relationshipCteGenerator)
         {
@@ -73,6 +77,16 @@ public final class Analyzer
         public Map<String, WithQuery> getRelationshipCTE()
         {
             return relationshipCteGenerator.getRegisteredCte();
+        }
+
+        public void bindRelationship(NodeRef original, DereferenceExpression target)
+        {
+            boundRelationshipNodes.put(original, target);
+        }
+
+        public DereferenceExpression transferRelationship(NodeRef node)
+        {
+            return boundRelationshipNodes.get(node);
         }
     }
 
