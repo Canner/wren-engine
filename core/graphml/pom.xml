@@ -20,11 +20,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>io.cml</groupId>
             <artifactId>graphml-base</artifactId>
         </dependency>
