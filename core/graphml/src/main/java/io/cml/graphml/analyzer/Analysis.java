@@ -18,6 +18,7 @@ import io.cml.graphml.RelationshipCteGenerator;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
@@ -26,15 +27,25 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static java.util.Objects.requireNonNull;
+
 public class Analysis
 {
+    private final Statement root;
     private final Set<QualifiedName> tables = new HashSet<>();
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef, DereferenceExpression> boundRelationshipNodes = new HashMap<>();
+    private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
 
-    Analysis(RelationshipCteGenerator relationshipCteGenerator)
+    Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
+        this.root = requireNonNull(statement, "statement is null");
         this.relationshipCteGenerator = relationshipCteGenerator;
+    }
+
+    public Statement getRoot()
+    {
+        return root;
     }
 
     void addTable(QualifiedName tableName)
@@ -65,5 +76,15 @@ public class Analysis
     public DereferenceExpression transferRelationship(NodeRef node)
     {
         return boundRelationshipNodes.get(node);
+    }
+
+    void addRelationshipFields(Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields)
+    {
+        this.relationshipFields.putAll(relationshipFields);
+    }
+
+    public Map<NodeRef<DereferenceExpression>, DereferenceExpression> getRelationshipFields()
+    {
+        return Map.copyOf(relationshipFields);
     }
 }

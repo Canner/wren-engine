@@ -159,7 +159,7 @@ public class RelationshipCteGenerator
         return nameMapping;
     }
 
-    static class RsItem
+    public static class RsItem
     {
         public static RsItem rsItem(String name, Type type)
         {

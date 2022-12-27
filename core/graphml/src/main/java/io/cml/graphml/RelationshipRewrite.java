@@ -145,7 +145,7 @@ public class RelationshipRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
-            return analysis.transferRelationship(NodeRef.of(node));
+            return analysis.getRelationshipFields().get(NodeRef.of(node));
         }
     }
 }
