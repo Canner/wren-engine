@@ -1717,7 +1717,6 @@ public class BaseVisitor
                     node.getAlias());
         }
         return new SingleColumn(
-                node.getLocation().get(),
                 visitAndCast(node.getExpression()),
                 node.getAlias());
     }

@@ -12,13 +12,23 @@
  * limitations under the License.
  */
 
-package io.cml.graphml;
+package io.cml.graphml.analyzer;
 
-import io.cml.graphml.analyzer.Analysis;
-import io.cml.graphml.base.GraphML;
-import io.trino.sql.tree.Node;
+import com.google.common.collect.ImmutableList;
 
-public interface GraphMLRule
+import java.util.List;
+
+public class RelationType
 {
-    Node apply(Node root, Analysis analysis, GraphML graphML);
+    private final List<Field> fields;
+
+    public RelationType(List<Field> fields)
+    {
+        this.fields = ImmutableList.copyOf(fields);
+    }
+
+    public List<Field> getFields()
+    {
+        return fields;
+    }
 }

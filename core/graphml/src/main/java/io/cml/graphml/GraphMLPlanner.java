@@ -14,6 +14,8 @@
 
 package io.cml.graphml;
 
+import io.cml.graphml.analyzer.Analysis;
+import io.cml.graphml.analyzer.StatementAnalyzer;
 import io.cml.graphml.base.GraphML;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -45,7 +47,7 @@ public class GraphMLPlanner
     public static String rewrite(String sql, GraphML graphML, List<GraphMLRule> rules)
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        Analyzer.Analysis analysis = Analyzer.analyze(statement, graphML);
+        Analysis analysis = StatementAnalyzer.analyze(statement, graphML);
         Node result = statement;
         for (GraphMLRule rule : rules) {
             result = rule.apply(result, analysis, graphML);
