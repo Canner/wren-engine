@@ -105,7 +105,9 @@ public final class ExpressionAnalyzer
                 return;
             }
 
-            List<Field> scopeFields = scope.getRelationType().get().getFields();
+            List<Field> scopeFields = scope.getRelationType()
+                    .orElseThrow(() -> new IllegalArgumentException("relation type is empty"))
+                    .getFields();
             String firstName = qualifiedName.getParts().get(0);
             int index = 0;
             boolean isModelName = scopeFields.stream().anyMatch(scopeField -> scopeField.getModelName().equals(firstName));
@@ -129,8 +131,12 @@ public final class ExpressionAnalyzer
             List<String> relNameParts = new ArrayList<>();
             relNameParts.add(modelName);
             for (; index < qualifiedName.getParts().size(); index++) {
+                checkArgument(graphML.getModel(modelName).isPresent(), modelName + " model not found");
                 String partName = qualifiedName.getParts().get(index);
-                Column column = graphML.getModel(modelName).get().getColumns().stream().filter(col -> col.getName().equals(partName)).findAny().get();
+                Column column = graphML.getModel(modelName).get().getColumns().stream()
+                        .filter(col -> col.getName().equals(partName))
+                        .findAny()
+                        .orElseThrow(() -> new IllegalArgumentException(partName + " column not found"));
                 if (column.getRelationship().isPresent()) {
                     // if column is a relationship, it's type name is model name
                     modelName = column.getType();
