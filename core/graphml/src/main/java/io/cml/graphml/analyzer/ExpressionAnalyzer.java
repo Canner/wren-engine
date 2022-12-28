@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.cml.graphml.RelationshipCteGenerator.RsItem.rsItem;
 import static io.cml.graphml.base.Utils.checkArgument;
@@ -113,10 +114,14 @@ public final class ExpressionAnalyzer
             }
 
             String name = qualifiedName.getParts().get(index);
-            Field field = scopeFields.stream()
+            Optional<Field> optField = scopeFields.stream()
                     .filter(scopeField -> scopeField.getColumnName().equals(name))
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException(name + " field not found in scope"));
+                    .findAny();
+            // field not found, maybe it's not part of model
+            if (optField.isEmpty()) {
+                return;
+            }
+            Field field = optField.get();
 
             Model model = graphML.getModel(field.getModelName()).orElseThrow(() -> new IllegalArgumentException(field.getModelName() + " model not found"));
 

@@ -67,7 +67,10 @@ public class RelationshipRewrite
                                     with.isRecursive(),
                                     Stream.concat(with.getQueries().stream(), analysis.getRelationshipCTE().values().stream())
                                             .collect(toUnmodifiableList())))
-                            .or(() -> Optional.of(new With(false, analysis.getRelationshipCTE().values().stream().collect(toUnmodifiableList())))),
+                            .or(() ->
+                                    analysis.getRelationshipCTE().values().isEmpty() ?
+                                            Optional.empty() :
+                                            Optional.of(new With(false, List.copyOf(analysis.getRelationshipCTE().values())))),
                     visitAndCast(node.getQueryBody()),
                     node.getOrderBy(),
                     node.getOffset(),
@@ -145,7 +148,7 @@ public class RelationshipRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
-            return analysis.getRelationshipFields().get(NodeRef.of(node));
+            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
         }
     }
 }

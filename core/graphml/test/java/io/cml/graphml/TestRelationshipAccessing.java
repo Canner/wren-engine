@@ -42,7 +42,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 public class TestRelationshipAccessing
 {
     private final GraphML graphML;
-    private final RelationshipCteGenerator generator;
 
     private static final String EXPECTED_WITH_QUERIES = "WITH\n" +
             "  ${rs1} (id, name, book) AS (\n" +
@@ -177,6 +176,33 @@ public class TestRelationshipAccessing
 
         Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        assertThat(SqlFormatter.formatSql(result)).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
+
+    @DataProvider
+    public Object[][] notRewritten()
+    {
+        return new Object[][] {
+                {"SELECT col_1 FROM foo"},
+                {"SELECT foo.col_1 FROM foo"},
+                {"SELECT col_1.a FROM foo"},
+                {"WITH foo AS (SELECT 1 AS col_1) SELECT col_1 FROM foo"},
+        };
+    }
+
+    @Test(dataProvider = "notRewritten")
+    public void testNotRewritten(String sql)
+    {
+        SqlParser SQL_PARSER = new SqlParser();
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
+        Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
+
+        assertThat(generator.getRegisteredCte().size()).isEqualTo(0);
+
+        Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
+        Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+
         assertThat(SqlFormatter.formatSql(result)).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
 }
