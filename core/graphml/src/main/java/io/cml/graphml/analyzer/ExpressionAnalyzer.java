@@ -81,8 +81,8 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitComparisonExpression(ComparisonExpression node, Void ignored)
         {
-            collectRelationshipFields(node.getLeft());
-            collectRelationshipFields(node.getLeft());
+            process(node.getLeft());
+            process(node.getRight());
             return ignored;
         }
 
@@ -93,17 +93,13 @@ public final class ExpressionAnalyzer
             return ignored;
         }
 
-        private void collectRelationshipFields(Expression expression)
+        private void collectRelationshipFields(DereferenceExpression expression)
         {
             // we only collect select items in table scope
             if (!scope.isTableScope()) {
                 return;
             }
-            if (!(expression instanceof DereferenceExpression)) {
-                return;
-            }
-            DereferenceExpression node = (DereferenceExpression) expression;
-            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(node);
+            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(expression);
             if (qualifiedName == null) {
                 return;
             }
@@ -162,7 +158,7 @@ public final class ExpressionAnalyzer
             List<String> remainingParts = qualifiedName.getParts().subList(index, qualifiedName.getParts().size());
             if (relNameParts.size() > 1) {
                 relationshipFieldsRewrite.put(
-                        NodeRef.of(node),
+                        NodeRef.of(expression),
                         (DereferenceExpression) DereferenceExpression.from(
                                 QualifiedName.of(
                                         ImmutableList.<String>builder()

@@ -29,6 +29,6 @@ public class RelationType
 
     public List<Field> getFields()
     {
-        return ImmutableList.copyOf(fields);
+        return fields;
     }
 }

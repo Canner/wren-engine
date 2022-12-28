@@ -24,7 +24,6 @@ import io.trino.sql.tree.WithQuery;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -34,7 +33,6 @@ public class Analysis
     private final Statement root;
     private final Set<QualifiedName> tables = new HashSet<>();
     private final RelationshipCteGenerator relationshipCteGenerator;
-    private final Map<NodeRef, DereferenceExpression> boundRelationshipNodes = new HashMap<>();
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
@@ -58,24 +56,9 @@ public class Analysis
         return Set.copyOf(tables);
     }
 
-    public Optional<String> getRelationshipCTEName(String rsName)
-    {
-        return Optional.ofNullable(relationshipCteGenerator.getNameMapping().get(rsName));
-    }
-
     public Map<String, WithQuery> getRelationshipCTE()
     {
         return relationshipCteGenerator.getRegisteredCte();
-    }
-
-    public void bindRelationship(NodeRef original, DereferenceExpression target)
-    {
-        boundRelationshipNodes.put(original, target);
-    }
-
-    public DereferenceExpression transferRelationship(NodeRef node)
-    {
-        return boundRelationshipNodes.get(node);
     }
 
     void addRelationshipFields(Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields)
