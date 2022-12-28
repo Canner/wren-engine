@@ -90,7 +90,6 @@ public class TestRelationshipAccessing
                                         column("book", "Book", "BookUser", true)))),
                 List.of(relationship("BookUser", List.of("Book", "User"), JoinType.ONE_TO_ONE, "book.authorId  = user.id")),
                 List.of()));
-        generator = new RelationshipCteGenerator(graphML);
     }
 
     @DataProvider
@@ -160,6 +159,7 @@ public class TestRelationshipAccessing
     {
         SqlParser SQL_PARSER = new SqlParser();
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
         Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
 
         assertThat(generator.getRegisteredCte().size()).isEqualTo(3);
