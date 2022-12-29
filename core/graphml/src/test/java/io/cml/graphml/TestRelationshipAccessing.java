@@ -69,6 +69,7 @@ public class TestRelationshipAccessing
             "     (${rs2} l\n" +
             "   LEFT JOIN User r ON (l.authorId = r.id))\n" +
             ") \n";
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private final GraphML graphML;
 
@@ -156,7 +157,6 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "relationshipAccessCases")
     public void testRelationshipAccessingRewrite(String original, String expected)
     {
-        SqlParser SQL_PARSER = new SqlParser();
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
         RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
         Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
@@ -193,7 +193,6 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        SqlParser SQL_PARSER = new SqlParser();
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
         Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
