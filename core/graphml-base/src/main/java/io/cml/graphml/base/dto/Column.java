@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Column
@@ -29,9 +30,16 @@ public class Column
     private final boolean notNull;
     private final Optional<String> relationship;
 
+    private final Optional<String> measureExpression;
+
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return new Column(name, type, relationship, notNull);
+        return column(name, type, relationship, notNull, null);
+    }
+
+    public static Column column(String name, String type, String relationship, boolean notNull, String measureExpression)
+    {
+        return new Column(name, type, relationship, notNull, measureExpression);
     }
 
     @JsonCreator
@@ -39,12 +47,14 @@ public class Column
             @JsonProperty("name") String name,
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
-            @JsonProperty("notNull") boolean notNull)
+            @JsonProperty("notNull") boolean notNull,
+            @JsonProperty("measureExpression") String measureExpression)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = Optional.ofNullable(relationship);
         this.notNull = notNull;
+        this.measureExpression = Optional.ofNullable(measureExpression);
     }
 
     public String getName()
@@ -65,5 +75,19 @@ public class Column
     public boolean isNotNull()
     {
         return notNull;
+    }
+
+    public Optional<String> getMeasureExpression()
+    {
+        return measureExpression;
+    }
+
+    public String getSqlExpression()
+    {
+        if (measureExpression.isEmpty()) {
+            return getName();
+        }
+
+        return format("%s as %s", measureExpression.get(), name);
     }
 }

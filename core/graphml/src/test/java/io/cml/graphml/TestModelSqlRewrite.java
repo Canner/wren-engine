@@ -47,12 +47,12 @@ public class TestModelSqlRewrite
         assertSqlEquals(rewrite("SELECT * FROM User", graphML),
                 "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User");
         assertSqlEquals(rewrite("SELECT * FROM Book", graphML),
-                "WITH Book AS (SELECT authorId, publish_date FROM (SELECT * FROM Book)) SELECT * FROM Book");
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)) SELECT * FROM Book");
         assertSqlEquals(rewrite("SELECT * FROM User WHERE id = 'SN1001'", graphML),
                 "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User WHERE id = 'SN1001'");
 
         assertSqlEquals(rewrite("SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'", graphML),
-                "WITH Book AS (SELECT authorId, publish_date FROM (SELECT * FROM Book)),\n" +
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)),\n" +
                         "User AS (SELECT id, email FROM (SELECT * FROM User))\n" +
                         "SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'");
 

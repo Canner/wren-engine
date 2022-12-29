@@ -25,6 +25,11 @@
         {
           "name": "publish_date",
           "type": "TIMESTAMP"
+        },
+        {
+          "name": "publish_year",
+          "type": "DATE",
+          "measureExpression": "date_trunc('year', publish_date)"
         }
       ]
     }

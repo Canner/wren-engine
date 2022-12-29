@@ -39,7 +39,7 @@ public final class Utils
         if (model.getColumns().isEmpty()) {
             return model.getRefSql();
         }
-        return format("SELECT %s FROM (%s)", model.getColumns().stream().map(Column::getName).collect(joining(", ")), model.getRefSql());
+        return format("SELECT %s FROM (%s)", model.getColumns().stream().map(Column::getSqlExpression).collect(joining(", ")), model.getRefSql());
     }
 
     public static String randomTableSuffix()
