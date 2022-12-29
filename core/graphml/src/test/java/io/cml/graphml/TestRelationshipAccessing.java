@@ -41,8 +41,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestRelationshipAccessing
 {
-    private final GraphML graphML;
-
     private static final String EXPECTED_WITH_QUERIES = "WITH\n" +
             "  ${rs1} (id, name, book) AS (\n" +
             "   SELECT\n" +
@@ -71,6 +69,8 @@ public class TestRelationshipAccessing
             "     (${rs2} l\n" +
             "   LEFT JOIN User r ON (l.authorId = r.id))\n" +
             ") \n";
+
+    private final GraphML graphML;
 
     public TestRelationshipAccessing()
     {
