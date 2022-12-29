@@ -17,10 +17,12 @@ package io.cml.graphml.analyzer;
 import io.cml.graphml.RelationshipCteGenerator;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Model;
+import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.GroupingElement;
+import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
@@ -30,6 +32,8 @@ import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
+import io.trino.sql.tree.With;
+import io.trino.sql.tree.WithQuery;
 
 import java.util.Collection;
 import java.util.List;
@@ -136,10 +140,36 @@ public final class StatementAnalyzer
             return Scope.builder().parent(scope).build();
         }
 
+        @Override
+        protected Scope visitJoin(Join node, Optional<Scope> scope)
+        {
+            process(node.getLeft(), scope);
+            process(node.getRight(), scope);
+            // TODO: output scope here isn't right
+            return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitAliasedRelation(AliasedRelation relation, Optional<Scope> scope)
+        {
+            process(relation.getRelation(), scope);
+            // TODO: output scope here isn't right
+            return Scope.builder().parent(scope).build();
+        }
+
         // TODO: implement analyze with
         private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
         {
-            return Optional.empty();
+            if (node.getWith().isEmpty()) {
+                return Optional.empty();
+            }
+
+            With with = node.getWith().get();
+            for (WithQuery withQuery : with.getQueries()) {
+                process(withQuery.getQuery(), scope);
+            }
+            // TODO: output scope here isn't right
+            return Optional.of(Scope.builder().parent(scope).build());
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
