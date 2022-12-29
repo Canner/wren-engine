@@ -32,6 +32,7 @@ import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
+import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
@@ -153,6 +154,14 @@ public final class StatementAnalyzer
         protected Scope visitAliasedRelation(AliasedRelation relation, Optional<Scope> scope)
         {
             process(relation.getRelation(), scope);
+            // TODO: output scope here isn't right
+            return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
+        {
+            process(node.getQuery());
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }

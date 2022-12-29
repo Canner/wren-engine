@@ -189,6 +189,9 @@ public class TestRelationshipAccessing
                 {"SELECT foo.col_1 FROM foo"},
                 {"SELECT col_1.a FROM foo"},
                 {"WITH foo AS (SELECT 1 AS col_1) SELECT col_1 FROM foo"},
+                // this is invalid since we don't allow access to relationship field outside the sub-query
+                // hence this sql shouldn't be rewritten
+                {"SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a"},
         };
     }
 
