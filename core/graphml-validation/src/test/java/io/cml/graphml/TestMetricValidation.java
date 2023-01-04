@@ -64,7 +64,8 @@ public class TestMetricValidation
                 List.of(),
                 List.of(
                         enumDefinition("Carrier", List.of("AA", "UA")),
-                        enumDefinition("Status", List.of("OK", "NOT_OK")))));
+                        enumDefinition("Status", List.of("OK", "NOT_OK"))),
+                List.of()));
     }
 
     @Test
@@ -127,6 +128,7 @@ public class TestMetricValidation
                                 column("notfound", GraphMLTypes.VARCHAR, null, true),
                                 column("A", GraphMLTypes.INTEGER, null, false)))),
                 List.of(),
+                List.of(),
                 List.of()));
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, wrongManifest, List.of(MODEL_VALIDATION));
@@ -181,6 +183,7 @@ public class TestMetricValidation
                                 List.of(
                                         column("FlightDate", GraphMLTypes.TIMESTAMP, null, true)))),
                 List.of(),
+                List.of(),
                 List.of()));
         List<ValidationResult> validationResults = MetricValidation.validate(client, invalidModels, List.of(MODEL_NAME_VALIDATION));
         assertThat(validationResults.size()).isEqualTo(1);
@@ -228,6 +231,7 @@ public class TestMetricValidation
                         relationship("FakeBookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.fakeId = User.fakeId"),
                         relationship("FakeBookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.fakeId"),
                         relationship("NotFoundModelInCondition", List.of("Book", "User"), JoinType.ONE_TO_ONE, "notfound.id = wrong.id")),
+                List.of(),
                 List.of()));
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, graphML, List.of(RELATIONSHIP_VALIDATION));

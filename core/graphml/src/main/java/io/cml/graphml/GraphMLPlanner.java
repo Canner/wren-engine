@@ -25,6 +25,7 @@ import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
+import static io.cml.graphml.MetricSqlRewrite.METRIC_SQL_REWRITE;
 import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.cml.graphml.RelationshipRewrite.RELATIONSHIP_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -32,16 +33,17 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 public class GraphMLPlanner
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
-    private static List<GraphMLRule> allRules = List.of(
+    private static final List<GraphMLRule> ALL_RULE = List.of(
             // The ordering shouldn't be changed.
             MODEL_SQL_REWRITE,
+            METRIC_SQL_REWRITE,
             RELATIONSHIP_REWRITE);
 
     private GraphMLPlanner() {}
 
     public static String rewrite(String sql, GraphML graphML)
     {
-        return rewrite(sql, graphML, allRules);
+        return rewrite(sql, graphML, ALL_RULE);
     }
 
     public static String rewrite(String sql, GraphML graphML, List<GraphMLRule> rules)

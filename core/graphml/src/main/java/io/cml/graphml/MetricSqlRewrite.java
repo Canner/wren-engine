@@ -44,7 +44,13 @@ public class MetricSqlRewrite
         Map<String, Query> metricQueries = graphML.listMetrics().stream()
                 .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
                 .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
-        Map<String, Query> baseModelQueries = graphML.listMetrics().stream().map(Metric::getBaseModel).distinct()
+
+        Map<String, Query> baseModelQueries = graphML.listMetrics().stream()
+                // only process the visited metric
+                .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
+                .map(Metric::getBaseModel).distinct()
+                // filter the model processed by ModelSqlRewrite
+                .filter(model -> !analysis.getTables().contains(model))
                 .map(model -> graphML.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("model %s is not found", model))))
                 .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
         return new MetricSqlRewrite.Rewriter(metricQueries, baseModelQueries, analysis).process(root);

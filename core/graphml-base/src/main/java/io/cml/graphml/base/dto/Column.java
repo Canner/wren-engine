@@ -37,16 +37,20 @@ public class Column
         return new Column(name, type, relationship, notNull, null, false);
     }
 
-    public static Column measure(String name, String type, String relationship, boolean notNull, String expression)
+    public static Column column(String name, String type, String relationship, boolean notNull, String expression)
     {
         return new Column(name, type, relationship, notNull, expression, false);
+    }
+
+    public static Column relationshipColumn(String name, String type, String relationship)
+    {
+        return new Column(name, type, relationship, false, null, false);
     }
 
     public static Column time(String name, String type, boolean notNull)
     {
         return new Column(name, type, null, notNull, null, true);
     }
-    
 
     @JsonCreator
     public Column(
@@ -63,7 +67,6 @@ public class Column
         this.notNull = notNull;
         this.expression = Optional.ofNullable(expression);
         this.isTime = isTime;
-
     }
 
     public String getName()

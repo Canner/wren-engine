@@ -15,6 +15,7 @@
 package io.cml.graphml;
 
 import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.dto.Column;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
@@ -24,12 +25,10 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.cml.graphml.MetricSqlRewrite.METRIC_SQL_REWRITE;
-import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.cml.graphml.Utils.SQL_PARSER;
 import static io.cml.graphml.base.GraphMLTypes.INTEGER;
 import static io.cml.graphml.base.GraphMLTypes.VARCHAR;
 import static io.cml.graphml.base.dto.Column.column;
-import static io.cml.graphml.base.dto.Column.measure;
 import static io.cml.graphml.base.dto.Manifest.manifest;
 import static io.cml.graphml.base.dto.Metric.metric;
 import static io.cml.graphml.base.dto.Model.model;
@@ -59,8 +58,7 @@ public class TestMetricSqlRewrite
                         "Collection",
                         "Album",
                         List.of(column("author", VARCHAR, null, true)),
-                        List.of(measure("price", INTEGER, null, true, "sum(Album.price)"))
-                ))));
+                        List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)"))))));
     }
 
     @DataProvider
@@ -111,6 +109,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE, METRIC_SQL_REWRITE));
+        return GraphMLPlanner.rewrite(sql, graphML, List.of(METRIC_SQL_REWRITE));
     }
 }

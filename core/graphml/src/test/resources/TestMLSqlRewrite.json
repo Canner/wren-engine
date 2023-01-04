@@ -29,7 +29,7 @@
         {
           "name": "publish_year",
           "type": "DATE",
-          "measureExpression": "date_trunc('year', publish_date)"
+          "expression": "date_trunc('year', publish_date)"
         }
       ]
     }
