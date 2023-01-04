@@ -29,18 +29,24 @@ public class Column
 
     private final boolean notNull;
     private final Optional<String> relationship;
-
-    private final Optional<String> measureExpression;
+    private final Optional<String> expression;
+    private final boolean isTime;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return column(name, type, relationship, notNull, null);
+        return new Column(name, type, relationship, notNull, null, false);
     }
 
-    public static Column column(String name, String type, String relationship, boolean notNull, String measureExpression)
+    public static Column measure(String name, String type, String relationship, boolean notNull, String expression)
     {
-        return new Column(name, type, relationship, notNull, measureExpression);
+        return new Column(name, type, relationship, notNull, expression, false);
     }
+
+    public static Column time(String name, String type, boolean notNull)
+    {
+        return new Column(name, type, null, notNull, null, true);
+    }
+    
 
     @JsonCreator
     public Column(
@@ -48,13 +54,16 @@ public class Column
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
             @JsonProperty("notNull") boolean notNull,
-            @JsonProperty("measureExpression") String measureExpression)
+            @JsonProperty("expression") String expression,
+            @JsonProperty("isTime") boolean isTime)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = Optional.ofNullable(relationship);
         this.notNull = notNull;
-        this.measureExpression = Optional.ofNullable(measureExpression);
+        this.expression = Optional.ofNullable(expression);
+        this.isTime = isTime;
+
     }
 
     public String getName()
@@ -77,17 +86,17 @@ public class Column
         return notNull;
     }
 
-    public Optional<String> getMeasureExpression()
+    public Optional<String> getExpression()
     {
-        return measureExpression;
+        return expression;
     }
 
     public String getSqlExpression()
     {
-        if (measureExpression.isEmpty()) {
+        if (expression.isEmpty()) {
             return getName();
         }
 
-        return format("%s as %s", measureExpression.get(), name);
+        return format("%s as %s", expression.get(), name);
     }
 }

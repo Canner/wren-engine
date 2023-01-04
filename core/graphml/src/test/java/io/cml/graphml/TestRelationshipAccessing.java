@@ -89,6 +89,7 @@ public class TestRelationshipAccessing
                                         column("name", GraphMLTypes.VARCHAR, null, true),
                                         column("book", "Book", "BookUser", true)))),
                 List.of(relationship("BookUser", List.of("Book", "User"), JoinType.ONE_TO_ONE, "book.authorId  = user.id")),
+                List.of(),
                 List.of()));
     }
 
