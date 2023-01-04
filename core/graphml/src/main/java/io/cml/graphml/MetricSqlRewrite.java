@@ -16,6 +16,7 @@ package io.cml.graphml;
 
 import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.dto.Metric;
 import io.cml.graphml.base.dto.Model;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
@@ -28,85 +29,67 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.util.Objects.requireNonNull;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-public class ModelSqlRewrite
+public class MetricSqlRewrite
         implements GraphMLRule
 {
-    public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
-
-    private ModelSqlRewrite() {}
+    public static final MetricSqlRewrite METRIC_SQL_REWRITE = new MetricSqlRewrite();
 
     @Override
     public Node apply(Node root, Analysis analysis, GraphML graphML)
     {
-        Map<String, Query> modelQueries = graphML.listModels().stream()
-                .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
+        Map<String, Query> metricQueries = graphML.listMetrics().stream()
+                .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
+                .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
+        Map<String, Query> baseModelQueries = graphML.listMetrics().stream().map(Metric::getBaseModel).distinct()
+                .map(model -> graphML.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("model %s is not found", model))))
                 .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
-
-        if (modelQueries.isEmpty()) {
-            return root;
-        }
-        return new Rewriter(modelQueries, analysis).process(root);
+        return new MetricSqlRewrite.Rewriter(metricQueries, baseModelQueries, analysis).process(root);
     }
 
-    /**
-     * In MLRewriter, we will add all participated model sql in WITH-QUERY, and rewrite
-     * all tables that are models to TableSubQuery in WITH-QUERYs
-     * <p>
-     * e.g. Given model "foo" and its reference sql is SELECT * FROM t1
-     * <pre>
-     *     SELECT * FROM foo
-     * </pre>
-     * will be rewritten to
-     * <pre>
-     *     WITH foo AS (SELECT * FROM t1)
-     *     SELECT * FROM foo
-     * </pre>
-     * and
-     * <pre>
-     *     WITH a AS (SELECT * FROM foo)
-     *     SELECT * FROM a JOIN b on a.id=b.id
-     * </pre>
-     * will be rewritten to
-     * <pre>
-     *     WITH foo AS (SELECT * FROM t1),
-     *          a AS (SELECT * FROM foo)
-     *     SELECT * FROM a JOIN b on a.id=b.id
-     * </pre>
-     */
     private static class Rewriter
             extends BaseVisitor
     {
-        private final Map<String, Query> modelQueries;
+        private final Map<String, Query> metricQueries;
+        private final Map<String, Query> baseModelQueries;
         private final Analysis analysis;
 
-        public Rewriter(Map<String, Query> modelQueries, Analysis analysis)
+        public Rewriter(
+                Map<String, Query> metricQueries,
+                Map<String, Query> baseModelQueries,
+                Analysis analysis)
         {
-            this.modelQueries = requireNonNull(modelQueries, "modelQueries is null");
-            this.analysis = requireNonNull(analysis, "analysis is null");
+            this.metricQueries = metricQueries;
+            this.analysis = analysis;
+            this.baseModelQueries = baseModelQueries;
         }
 
         @Override
         protected Node visitQuery(Query node, Void context)
         {
-            List<WithQuery> modelWithQueries = modelQueries.entrySet().stream()
+            List<WithQuery> metricWithQueries = metricQueries.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
+
+            List<WithQuery> baseModelWithQueries = baseModelQueries.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
+                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
+                    .collect(toUnmodifiableList());
+
+            // The base model should be first.
+            Stream<WithQuery> orderedWithQuery = Stream.concat(baseModelWithQueries.stream(), metricWithQueries.stream());
 
             return new Query(
                     node.getWith()
                             .map(with -> new With(
                                     with.isRecursive(),
-                                    // model queries must come first since tables in with query should all be in order
-                                    // e.g. WITH foo AS (SELECT * FROM a), bar AS (SELECT col FROM foo) SELECT * FROM bar
-                                    // "bar" must come after "foo"
-                                    Stream.concat(modelWithQueries.stream(), with.getQueries().stream())
+                                    Stream.concat(orderedWithQuery, with.getQueries().stream())
                                             .collect(toUnmodifiableList())))
-                            .or(() -> Optional.of(new With(false, modelWithQueries))),
+                            .or(() -> Optional.of(new With(false, orderedWithQuery.collect(toUnmodifiableList())))),
                     node.getQueryBody(),
                     node.getOrderBy(),
                     node.getOffset(),
