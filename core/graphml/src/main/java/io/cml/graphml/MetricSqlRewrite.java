@@ -87,15 +87,15 @@ public class MetricSqlRewrite
                     .collect(toUnmodifiableList());
 
             // The base model should be first.
-            Stream<WithQuery> orderedWithQuery = Stream.concat(baseModelWithQueries.stream(), metricWithQueries.stream());
+            List<WithQuery> orderedWithQuery = Stream.concat(baseModelWithQueries.stream(), metricWithQueries.stream()).collect(toUnmodifiableList());
 
             return new Query(
                     node.getWith()
                             .map(with -> new With(
                                     with.isRecursive(),
-                                    Stream.concat(orderedWithQuery, with.getQueries().stream())
+                                    Stream.concat(orderedWithQuery.stream(), with.getQueries().stream())
                                             .collect(toUnmodifiableList())))
-                            .or(() -> Optional.of(new With(false, orderedWithQuery.collect(toUnmodifiableList())))),
+                            .or(() -> Optional.ofNullable(orderedWithQuery.isEmpty() ? null : new With(false, orderedWithQuery))),
                     node.getQueryBody(),
                     node.getOrderBy(),
                     node.getOffset(),

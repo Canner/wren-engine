@@ -33,7 +33,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 public class GraphMLPlanner
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
-    private static final List<GraphMLRule> ALL_RULE = List.of(
+    private static final List<GraphMLRule> ALL_RULES = List.of(
             // The ordering shouldn't be changed.
             MODEL_SQL_REWRITE,
             METRIC_SQL_REWRITE,
@@ -43,7 +43,7 @@ public class GraphMLPlanner
 
     public static String rewrite(String sql, GraphML graphML)
     {
-        return rewrite(sql, graphML, ALL_RULE);
+        return rewrite(sql, graphML, ALL_RULES);
     }
 
     public static String rewrite(String sql, GraphML graphML, List<GraphMLRule> rules)
