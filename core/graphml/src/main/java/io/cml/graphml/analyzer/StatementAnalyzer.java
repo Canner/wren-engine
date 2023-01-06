@@ -24,6 +24,7 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
@@ -36,12 +37,15 @@ import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Inspired by io.trino.sql.analyzer.StatementAnalyzer
@@ -125,18 +129,25 @@ public final class StatementAnalyzer
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
             Scope sourceScope = analyzeFrom(node, scope);
-            analyzeSelect(node, sourceScope);
-            node.getWhere().ifPresent(where -> analyzeExpression(where, sourceScope));
+            Set<String> relationshipCTENames = analyzeSelect(node, sourceScope).stream()
+                    .map(ExpressionAnalysis::getRelationshipCTENames)
+                    .flatMap(Set::stream)
+                    .collect(toSet());
+            node.getWhere().ifPresent(where -> relationshipCTENames.addAll(analyzeExpression(where, sourceScope).getRelationshipCTENames()));
             node.getGroupBy().ifPresent(groupBy ->
                     groupBy.getGroupingElements().stream()
                             .map(GroupingElement::getExpressions)
                             .flatMap(Collection::stream)
-                            .forEach(expression -> analyzeExpression(expression, sourceScope)));
-            node.getHaving().ifPresent(having -> analyzeExpression(having, sourceScope));
+                            .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
+            node.getHaving().ifPresent(having -> relationshipCTENames.addAll(analyzeExpression(having, sourceScope).getRelationshipCTENames()));
             node.getOrderBy().ifPresent(orderBy ->
                     orderBy.getSortItems().stream()
                             .map(SortItem::getSortKey)
-                            .forEach(expression -> analyzeExpression(expression, sourceScope)));
+                            .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
+            node.getFrom()
+                    .filter(from -> from instanceof Table)
+                    .map(from -> (Table) from)
+                    .ifPresent(table -> analysis.addReplaceTableWithCTEs(NodeRef.of(table), relationshipCTENames));
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
@@ -189,11 +200,12 @@ public final class StatementAnalyzer
             return Scope.builder().parent(scope).build();
         }
 
-        private void analyzeSelect(QuerySpecification node, Scope scope)
+        private List<ExpressionAnalysis> analyzeSelect(QuerySpecification node, Scope scope)
         {
+            List<ExpressionAnalysis> selectExpressionAnalyses = new ArrayList<>();
             for (SelectItem item : node.getSelect().getSelectItems()) {
                 if (item instanceof SingleColumn) {
-                    analyzeSelectSingleColumn((SingleColumn) item, scope);
+                    selectExpressionAnalyses.add(analyzeSelectSingleColumn((SingleColumn) item, scope));
                 }
                 else if (item instanceof AllColumns) {
                     // DO NOTHING
@@ -202,18 +214,20 @@ public final class StatementAnalyzer
                     throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
                 }
             }
+            return List.copyOf(selectExpressionAnalyses);
         }
 
-        private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
+        private ExpressionAnalysis analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
         {
             Expression expression = singleColumn.getExpression();
-            analyzeExpression(expression, scope);
+            return analyzeExpression(expression, scope);
         }
 
-        private void analyzeExpression(Expression expression, Scope scope)
+        private ExpressionAnalysis analyzeExpression(Expression expression, Scope scope)
         {
             ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, graphML, relationshipCteGenerator, scope);
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
+            return expressionAnalysis;
         }
     }
 }

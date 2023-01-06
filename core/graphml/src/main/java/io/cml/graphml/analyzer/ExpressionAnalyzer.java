@@ -30,9 +30,11 @@ import io.trino.sql.tree.QualifiedName;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static io.cml.graphml.RelationshipCteGenerator.RsItem.rsItem;
 import static io.cml.graphml.base.Utils.checkArgument;
@@ -44,6 +46,7 @@ public final class ExpressionAnalyzer
     private ExpressionAnalyzer() {}
 
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFieldsRewrite = new HashMap<>();
+    private final Set<String> relationshipCTENames = new HashSet<>();
 
     public static ExpressionAnalysis analyze(
             Expression expression,
@@ -62,7 +65,7 @@ public final class ExpressionAnalyzer
             Scope scope)
     {
         new Visitor(graphML, relationshipCteGenerator, scope).process(expression);
-        return new ExpressionAnalysis(relationshipFieldsRewrite);
+        return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames);
     }
 
     private class Visitor
@@ -146,6 +149,7 @@ public final class ExpressionAnalyzer
 
                     relNameParts.add(partName);
                     String relNameStr = String.join(".", relNameParts);
+                    relationshipCTENames.add(relNameStr);
                     if (!relationshipCteGenerator.getNameMapping().containsKey(relNameStr)) {
                         if (relNameParts.size() == 2) {
                             relationshipCteGenerator.register(

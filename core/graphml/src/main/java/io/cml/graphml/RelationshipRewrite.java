@@ -23,7 +23,6 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
-import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.With;
@@ -34,7 +33,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static io.trino.sql.QueryUtil.implicitJoin;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class RelationshipRewrite
@@ -45,15 +43,16 @@ public class RelationshipRewrite
     @Override
     public Node apply(Node root, Analysis analysis, GraphML graphML)
     {
-        return new RelationshipRewrite.Rewriter(analysis).process(root);
+        Node rewriteWith = new WithRewriter(analysis).process(root);
+        return new RelationshipRewrite.Rewriter(analysis).process(rewriteWith);
     }
 
-    private static class Rewriter
+    private static class WithRewriter
             extends BaseVisitor
     {
         private final Analysis analysis;
 
-        Rewriter(Analysis analysis)
+        WithRewriter(Analysis analysis)
         {
             this.analysis = analysis;
         }
@@ -71,78 +70,45 @@ public class RelationshipRewrite
                                     analysis.getRelationshipCTE().values().isEmpty() ?
                                             Optional.empty() :
                                             Optional.of(new With(false, List.copyOf(analysis.getRelationshipCTE().values())))),
-                    visitAndCast(node.getQueryBody()),
+                    node.getQueryBody(),
                     node.getOrderBy(),
                     node.getOffset(),
                     node.getLimit());
         }
+    }
 
-        @Override
-        protected Node visitQuerySpecification(QuerySpecification node, Void context)
+    private static class Rewriter
+            extends BaseVisitor
+    {
+        private final Analysis analysis;
+
+        Rewriter(Analysis analysis)
         {
-            Optional<Relation> from;
-            List<Table> cteTables = analysis.getRelationshipCTE().values().stream()
-                    .map(WithQuery::getName)
-                    .map(Identifier::getValue)
-                    .map(QualifiedName::of)
-                    .map(QueryUtil::table)
-                    .collect(toList());
-
-            if (node.getFrom().isPresent()) {
-                from = implicitJoinCTE(node.getFrom().get(), cteTables);
-            }
-            else {
-                from = implicitJoinCTE(null, cteTables);
-            }
-
-            if (node.getLocation().isPresent()) {
-                return new QuerySpecification(
-                        node.getLocation().get(),
-                        visitAndCast(node.getSelect()),
-                        from,
-                        node.getWhere().map(this::visitAndCast),
-                        node.getGroupBy().map(this::visitAndCast),
-                        node.getHaving().map(this::visitAndCast),
-                        visitNodes(node.getWindows()),
-                        node.getOrderBy().map(this::visitAndCast),
-                        node.getOffset(),
-                        node.getLimit());
-            }
-
-            return new QuerySpecification(
-                    visitAndCast(node.getSelect()),
-                    from,
-                    node.getWhere().map(this::visitAndCast),
-                    node.getGroupBy().map(this::visitAndCast),
-                    node.getHaving().map(this::visitAndCast),
-                    visitNodes(node.getWindows()),
-                    node.getOrderBy().map(this::visitAndCast),
-                    node.getOffset(),
-                    node.getLimit());
+            this.analysis = analysis;
         }
 
-        private Optional<Relation> implicitJoinCTE(Relation left, List<Table> rights)
+        @Override
+        protected Node visitTable(Table node, Void context)
         {
-            if (left != null) {
-                for (Table right : rights) {
-                    left = implicitJoin(left, right);
-                }
-                return Optional.of(left);
+            if (analysis.getReplaceTableWithCTEs().containsKey(NodeRef.of(node))) {
+                List<Table> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                        .map(name -> analysis.getRelationshipCTE().get(name))
+                        .map(WithQuery::getName)
+                        .map(Identifier::getValue)
+                        .map(QualifiedName::of)
+                        .map(QueryUtil::table)
+                        .collect(toUnmodifiableList());
+                return implicitJoinCTE(node, cteTables);
             }
+            return super.visitTable(node, context);
+        }
 
-            if (rights.size() > 1) {
-                left = implicitJoin(rights.get(0), rights.get(1));
-                for (Table right : rights.subList(2, rights.size())) {
-                    left = implicitJoin(left, right);
-                }
-                return Optional.of(left);
+        private Relation implicitJoinCTE(Relation left, List<Table> rights)
+        {
+            for (Table right : rights) {
+                left = implicitJoin(left, right);
             }
-
-            if (rights.size() == 1) {
-                return Optional.of(rights.get(0));
-            }
-
-            return Optional.empty();
+            return left;
         }
 
         @Override

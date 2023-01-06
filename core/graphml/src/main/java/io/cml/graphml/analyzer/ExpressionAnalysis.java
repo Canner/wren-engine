@@ -18,20 +18,30 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.NodeRef;
 
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalysis
 {
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFieldRewrites;
+    private final Set<String> relationshipCTENames;
 
-    public ExpressionAnalysis(Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields)
+    public ExpressionAnalysis(
+            Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields,
+            Set<String> relationshipCTENames)
     {
         this.relationshipFieldRewrites = requireNonNull(relationshipFields, "relationshipFields is null");
+        this.relationshipCTENames = requireNonNull(relationshipCTENames, "relationshipCTENames is null");
     }
 
     public Map<NodeRef<DereferenceExpression>, DereferenceExpression> getRelationshipFieldRewrites()
     {
         return relationshipFieldRewrites;
+    }
+
+    public Set<String> getRelationshipCTENames()
+    {
+        return relationshipCTENames;
     }
 }
