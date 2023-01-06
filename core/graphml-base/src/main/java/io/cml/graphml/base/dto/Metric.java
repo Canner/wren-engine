@@ -14,6 +14,9 @@
 
 package io.cml.graphml.base.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 import static io.cml.graphml.base.Utils.checkArgument;
@@ -31,7 +34,12 @@ public class Metric
         return new Metric(name, baseModel, dimension, measure);
     }
 
-    public Metric(String name, String baseModel, List<Column> dimension, List<Column> measure)
+    @JsonCreator
+    public Metric(
+            @JsonProperty("name") String name,
+            @JsonProperty("baseModel") String baseModel,
+            @JsonProperty("dimension") List<Column> dimension,
+            @JsonProperty("measure") List<Column> measure)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseModel = requireNonNull(baseModel, "baseModel is null");
