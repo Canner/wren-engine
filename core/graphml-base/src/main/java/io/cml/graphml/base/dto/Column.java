@@ -30,26 +30,20 @@ public class Column
     private final boolean notNull;
     private final Optional<String> relationship;
     private final Optional<String> expression;
-    private final boolean isTime;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return new Column(name, type, relationship, notNull, null, false);
+        return new Column(name, type, relationship, notNull, null);
     }
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression)
     {
-        return new Column(name, type, relationship, notNull, expression, false);
+        return new Column(name, type, relationship, notNull, expression);
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, null, false);
-    }
-
-    public static Column time(String name, String type, boolean notNull)
-    {
-        return new Column(name, type, null, notNull, null, true);
+        return new Column(name, type, relationship, false, null);
     }
 
     @JsonCreator
@@ -58,15 +52,13 @@ public class Column
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
             @JsonProperty("notNull") boolean notNull,
-            @JsonProperty("expression") String expression,
-            @JsonProperty("isTime") boolean isTime)
+            @JsonProperty("expression") String expression)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = Optional.ofNullable(relationship);
         this.notNull = notNull;
         this.expression = Optional.ofNullable(expression);
-        this.isTime = isTime;
     }
 
     public String getName()
