@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Column
@@ -28,10 +29,21 @@ public class Column
 
     private final boolean notNull;
     private final Optional<String> relationship;
+    private final Optional<String> expression;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return new Column(name, type, relationship, notNull);
+        return new Column(name, type, relationship, notNull, null);
+    }
+
+    public static Column column(String name, String type, String relationship, boolean notNull, String expression)
+    {
+        return new Column(name, type, relationship, notNull, expression);
+    }
+
+    public static Column relationshipColumn(String name, String type, String relationship)
+    {
+        return new Column(name, type, relationship, false, null);
     }
 
     @JsonCreator
@@ -39,12 +51,14 @@ public class Column
             @JsonProperty("name") String name,
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
-            @JsonProperty("notNull") boolean notNull)
+            @JsonProperty("notNull") boolean notNull,
+            @JsonProperty("expression") String expression)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = Optional.ofNullable(relationship);
         this.notNull = notNull;
+        this.expression = Optional.ofNullable(expression);
     }
 
     public String getName()
@@ -65,5 +79,19 @@ public class Column
     public boolean isNotNull()
     {
         return notNull;
+    }
+
+    public Optional<String> getExpression()
+    {
+        return expression;
+    }
+
+    public String getSqlExpression()
+    {
+        if (expression.isEmpty()) {
+            return getName();
+        }
+
+        return format("%s as %s", expression.get(), name);
     }
 }

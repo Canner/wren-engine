@@ -18,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cml.graphml.base.dto.EnumDefinition;
 import io.cml.graphml.base.dto.Manifest;
+import io.cml.graphml.base.dto.Metric;
 import io.cml.graphml.base.dto.Model;
 import io.cml.graphml.base.dto.Relationship;
 
@@ -80,6 +81,18 @@ public class GraphML
     {
         return manifest.getEnumFields().stream()
                 .filter(enumField -> enumField.getName().equals(name))
+                .findAny();
+    }
+
+    public List<Metric> listMetrics()
+    {
+        return manifest.getMetrics();
+    }
+
+    public Optional<Metric> getMetric(String name)
+    {
+        return manifest.getMetrics().stream()
+                .filter(metric -> metric.getName().equals(name))
                 .findAny();
     }
 }

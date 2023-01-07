@@ -21,25 +21,37 @@ import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.cml.graphml.base.dto.Column.column;
+import static io.cml.graphml.base.dto.Manifest.manifest;
+import static io.cml.graphml.base.dto.Model.model;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestModelSqlRewrite
 {
     @Test
     public void testModelRewrite()
-            throws URISyntaxException, IOException
     {
-        GraphML graphML = GraphML.fromJson(Files.readString(Path.of(
-                requireNonNull(getClass().getClassLoader().getResource("TestMLSqlRewrite.json")).toURI())));
+        GraphML graphML = GraphML.fromManifest(manifest(
+                List.of(model(
+                                "User",
+                                "SELECT * FROM User",
+                                List.of(
+                                        column("id", "STRING", null, false),
+                                        column("email", "STRING", null, false))),
+                        model(
+                                "Book",
+                                "SELECT * FROM Book",
+                                List.of(
+                                        column("authorId", "STRING", null, false),
+                                        column("publish_date", "STRING", null, false),
+                                        column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)")))),
+                List.of(),
+                List.of(),
+                List.of()));
 
         // no rewrite since foo is not a model
         assertSqlEquals(rewrite("SELECT * FROM foo", graphML), "SELECT * FROM foo");
@@ -47,12 +59,12 @@ public class TestModelSqlRewrite
         assertSqlEquals(rewrite("SELECT * FROM User", graphML),
                 "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User");
         assertSqlEquals(rewrite("SELECT * FROM Book", graphML),
-                "WITH Book AS (SELECT authorId, publish_date FROM (SELECT * FROM Book)) SELECT * FROM Book");
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)) SELECT * FROM Book");
         assertSqlEquals(rewrite("SELECT * FROM User WHERE id = 'SN1001'", graphML),
                 "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User WHERE id = 'SN1001'");
 
         assertSqlEquals(rewrite("SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'", graphML),
-                "WITH Book AS (SELECT authorId, publish_date FROM (SELECT * FROM Book)),\n" +
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)),\n" +
                         "User AS (SELECT id, email FROM (SELECT * FROM User))\n" +
                         "SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'");
 

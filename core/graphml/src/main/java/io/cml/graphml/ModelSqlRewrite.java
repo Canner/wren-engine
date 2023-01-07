@@ -17,12 +17,9 @@ package io.cml.graphml;
 import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Model;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Query;
-import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
@@ -31,9 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static io.cml.graphml.Utils.getModelSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
@@ -42,7 +36,6 @@ public class ModelSqlRewrite
         implements GraphMLRule
 {
     public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
-    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private ModelSqlRewrite() {}
 
@@ -51,22 +44,12 @@ public class ModelSqlRewrite
     {
         Map<String, Query> modelQueries = graphML.listModels().stream()
                 .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
-                .collect(toUnmodifiableMap(Model::getName, ModelSqlRewrite::parseModelSql));
+                .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
 
         if (modelQueries.isEmpty()) {
             return root;
         }
         return new Rewriter(modelQueries, analysis).process(root);
-    }
-
-    private static Query parseModelSql(Model model)
-    {
-        String sql = getModelSql(model);
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
-        }
-        throw new IllegalArgumentException(format("model %s is not a query, sql %s", model.getName(), sql));
     }
 
     /**
