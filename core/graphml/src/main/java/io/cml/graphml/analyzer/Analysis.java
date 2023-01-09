@@ -19,6 +19,7 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.Table;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
@@ -34,6 +35,7 @@ public class Analysis
     private final Set<QualifiedName> tables = new HashSet<>();
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
+    private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -69,5 +71,15 @@ public class Analysis
     public Map<NodeRef<DereferenceExpression>, DereferenceExpression> getRelationshipFields()
     {
         return Map.copyOf(relationshipFields);
+    }
+
+    void addReplaceTableWithCTEs(NodeRef<Table> tableNodeRef, Set<String> relationshipCTENames)
+    {
+        this.replaceTableWithCTEs.put(tableNodeRef, relationshipCTENames);
+    }
+
+    public Map<NodeRef<Table>, Set<String>> getReplaceTableWithCTEs()
+    {
+        return Map.copyOf(replaceTableWithCTEs);
     }
 }

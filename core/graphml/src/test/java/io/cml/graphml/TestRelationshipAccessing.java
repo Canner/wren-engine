@@ -153,6 +153,20 @@ public class TestRelationshipAccessing
                                 ", ${rs3}\n" +
                                 "ORDER BY\n" +
                                 "  ${rs3}.name"},
+                {"select a.* from (select name, author.book.author.name from Book order by author.book.author.name) a",
+                        EXPECTED_WITH_QUERIES +
+                                "SELECT a.* FROM (SELECT name, ${rs3}.name\n" +
+                                "FROM\n" +
+                                "  Book\n" +
+                                ", ${rs1}\n" +
+                                ", ${rs2}\n" +
+                                ", ${rs3}\n" +
+                                "ORDER BY\n" +
+                                "  ${rs3}.name) a"},
+                // TODO: enable this test and find a way to reorder queries in with-clause
+//                {"with a as (select b.* from (select name, author.book.author.name from Book order by author.book.author.name) b)\n" +
+//                        "select * from a", "" // TODO fill expected sql
+//                },
         };
     }
 
@@ -189,6 +203,9 @@ public class TestRelationshipAccessing
                 {"SELECT foo.col_1 FROM foo"},
                 {"SELECT col_1.a FROM foo"},
                 {"WITH foo AS (SELECT 1 AS col_1) SELECT col_1 FROM foo"},
+                // this is invalid since we don't allow access to relationship field outside the sub-query
+                // hence this sql shouldn't be rewritten
+                {"SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a"},
         };
     }
 
