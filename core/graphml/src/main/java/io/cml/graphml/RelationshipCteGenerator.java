@@ -14,6 +14,7 @@
 
 package io.cml.graphml;
 
+import com.google.common.collect.ImmutableSet;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Column;
 import io.cml.graphml.base.dto.Model;
@@ -67,7 +68,14 @@ public class RelationshipCteGenerator
 
     private WithQuery transferToCte(RelationshipCTE relationshipCTE)
     {
-        List<Expression> selectItems = relationshipCTE.getRight().getColumns().stream().map(column -> nameReference("r", column)).collect(toList());
+        List<Expression> selectItems =
+                ImmutableSet.<String>builder()
+                        .addAll(relationshipCTE.getRight().getColumns())
+                        .add(relationshipCTE.getRight().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference("r", column))
+                        .collect(toList());
         List<Identifier> outputSchema = selectItems.stream().map(this::getReferenceField).map(QueryUtil::identifier).collect(toList());
 
         return new WithQuery(identifier(relationshipCTE.getName()),
