@@ -51,11 +51,12 @@ public class TestRelationshipAccessing
             "     (Book l\n" +
             "   LEFT JOIN User r ON (l.authorId = r.id))\n" +
             ") \n" +
-            ", ${rs2} (id, name, author) AS (\n" +
+            ", ${rs2} (id, name, author, authorId) AS (\n" +
             "   SELECT\n" +
             "     r.id\n" +
             "   , r.name\n" +
             "   , r.author\n" +
+            "   , r.authorId\n" +
             "   FROM\n" +
             "     (${rs1} l\n" +
             "   LEFT JOIN Book r ON (l.id = r.authorId))\n" +
