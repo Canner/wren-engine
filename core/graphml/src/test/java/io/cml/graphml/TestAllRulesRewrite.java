@@ -16,6 +16,7 @@ package io.cml.graphml;
 
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.JoinType;
+import io.cml.graphml.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
@@ -37,6 +38,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestAllRulesRewrite
+        extends AbstractTestFramework
 {
     private final GraphML graphML;
 
