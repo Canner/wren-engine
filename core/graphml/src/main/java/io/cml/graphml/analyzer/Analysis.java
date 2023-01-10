@@ -63,6 +63,11 @@ public class Analysis
         return relationshipCteGenerator.getRegisteredCte();
     }
 
+    public Map<String, String> getRelationshipNameMapping()
+    {
+        return relationshipCteGenerator.getNameMapping();
+    }
+
     public Map<String, RelationshipCteGenerator.RsRelationInfo> getRelationshipInfoMapping()
     {
         return relationshipCteGenerator.getRelationshipInfoMapping();

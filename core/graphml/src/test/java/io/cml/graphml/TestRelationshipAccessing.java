@@ -135,9 +135,7 @@ public class TestRelationshipAccessing
                         EXPECTED_WITH_QUERIES +
                                 "SELECT name\n" +
                                 "FROM\n" +
-                                "  (((Book\n" +
-                                "LEFT JOIN ${rs1} ON (Book.authorId = ${rs1}.userId))\n" +
-                                "LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
+                                "  (Book\n" +
                                 "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
                                 "WHERE (${rs3}.name = 'jax')"},
                 {"select name, author.book.author.name from Book group by author.book.author.name having author.book.name = 'destiny'",
@@ -146,8 +144,7 @@ public class TestRelationshipAccessing
                                 "  name\n" +
                                 ", ${rs3}.name\n" +
                                 "FROM\n" +
-                                "  (((Book\n" +
-                                "LEFT JOIN ${rs1} ON (Book.authorId = ${rs1}.userId))\n" +
+                                "  ((Book\n" +
                                 "LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
                                 "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
                                 "GROUP BY ${rs3}.name\n" +
@@ -158,9 +155,7 @@ public class TestRelationshipAccessing
                                 "  name\n" +
                                 ", ${rs3}.name\n" +
                                 "FROM\n" +
-                                "  (((Book\n" +
-                                "LEFT JOIN ${rs1} ON (Book.authorId = ${rs1}.userId))\n" +
-                                "LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
+                                "  (Book\n" +
                                 "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
                                 "ORDER BY ${rs3}.name ASC"},
                 {"select a.* from (select name, author.book.author.name from Book order by author.book.author.name) a",
@@ -172,9 +167,7 @@ public class TestRelationshipAccessing
                                 "     name\n" +
                                 "   , ${rs3}.name\n" +
                                 "   FROM\n" +
-                                "     (((Book\n" +
-                                "   LEFT JOIN ${rs1} ON (Book.authorId = ${rs1}.userId))\n" +
-                                "   LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
+                                "     (Book\n" +
                                 "   LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
                                 "   ORDER BY ${rs3}.name ASC\n" +
                                 ")  a"},

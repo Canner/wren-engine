@@ -31,9 +31,11 @@ import io.trino.sql.tree.WithQuery;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static io.trino.sql.QueryUtil.table;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class RelationshipRewrite
@@ -93,7 +95,12 @@ public class RelationshipRewrite
         {
             if (analysis.getReplaceTableWithCTEs().containsKey(NodeRef.of(node))) {
                 Map<String, RelationshipCteGenerator.RsRelationInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
+                Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
+                        .map(expression -> expression.getBase().toString())
+                        .collect(toSet());
+
                 List<RelationshipCteGenerator.RsRelationInfo> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                        .filter(name -> requiredRsCteName.contains(analysis.getRelationshipNameMapping().get(name)))
                         .map(name -> analysis.getRelationshipCTE().get(name))
                         .map(WithQuery::getName)
                         .map(Identifier::getValue)
