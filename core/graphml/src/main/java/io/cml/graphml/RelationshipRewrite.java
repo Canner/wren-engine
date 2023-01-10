@@ -29,10 +29,11 @@ import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static io.trino.sql.QueryUtil.implicitJoin;
+import static io.trino.sql.QueryUtil.table;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class RelationshipRewrite
@@ -91,22 +92,23 @@ public class RelationshipRewrite
         protected Node visitTable(Table node, Void context)
         {
             if (analysis.getReplaceTableWithCTEs().containsKey(NodeRef.of(node))) {
-                List<Table> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                Map<String, RelationshipCteGenerator.RsRelationInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
+                List<RelationshipCteGenerator.RsRelationInfo> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
                         .map(name -> analysis.getRelationshipCTE().get(name))
                         .map(WithQuery::getName)
                         .map(Identifier::getValue)
                         .map(QualifiedName::of)
-                        .map(QueryUtil::table)
+                        .map(name -> relationshipInfoMapping.get(name.toString()))
                         .collect(toUnmodifiableList());
-                return implicitJoinCTE(node, cteTables);
+                return leftJoin(node, cteTables);
             }
             return super.visitTable(node, context);
         }
 
-        private Relation implicitJoinCTE(Relation left, List<Table> rights)
+        private Relation leftJoin(Relation left, List<RelationshipCteGenerator.RsRelationInfo> rsRelationInfos)
         {
-            for (Table right : rights) {
-                left = implicitJoin(left, right);
+            for (RelationshipCteGenerator.RsRelationInfo info : rsRelationInfos) {
+                left = QueryUtil.leftJoin(left, table(QualifiedName.of(info.getCteName())), info.getCondition());
             }
             return left;
         }

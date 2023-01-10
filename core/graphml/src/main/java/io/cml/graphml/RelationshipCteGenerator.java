@@ -24,6 +24,7 @@ import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.WithQuery;
 
@@ -52,6 +53,7 @@ public class RelationshipCteGenerator
     private final GraphML graphML;
     private final Map<String, WithQuery> registeredCte = new LinkedHashMap<>();
     private final Map<String, String> nameMapping = new HashMap<>();
+    private final Map<String, RsRelationInfo> relationshipInfoMapping = new HashMap<>();
 
     public RelationshipCteGenerator(GraphML graphML)
     {
@@ -64,6 +66,29 @@ public class RelationshipCteGenerator
         WithQuery withQuery = transferToCte(relationshipCTE);
         registeredCte.put(name, withQuery);
         nameMapping.put(name, withQuery.getName().getValue());
+        relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRsRelation(withQuery.getName().getValue(), relationshipCTE));
+    }
+
+    private RsRelationInfo transferToRsRelation(String rsName, RelationshipCTE relationshipCTE)
+    {
+        // TODO: There are some issues about reverse relationship.
+        //  We should choose the base model according to the relationship but the reverse rs doesn't work now.
+        String baseModel = relationshipCTE.getRelationship().getModels().get(0);
+        if (relationshipCTE.getRelationship().isLeft(relationshipCTE.getRight().getName())) {
+            // The output of relationship is same as the base model.
+            return new RsRelationInfo(relationshipCTE.getName(),
+                    buildCondition(baseModel, relationshipCTE.getRight().getPrimaryKey(), rsName, relationshipCTE.getRight().getPrimaryKey()));
+        }
+        else {
+            // The output of relationship is the opposing side of the base model.
+            return new RsRelationInfo(relationshipCTE.getName(),
+                    buildCondition(baseModel, relationshipCTE.getLeft().getJoinKey(), rsName, relationshipCTE.getRight().getJoinKey()));
+        }
+    }
+
+    private JoinCriteria buildCondition(String leftName, String leftKey, String rightName, String rightKey)
+    {
+        return joinOn(equal(nameReference(leftName, leftKey), nameReference(rightName, rightKey)));
     }
 
     private WithQuery transferToCte(RelationshipCTE relationshipCTE)
@@ -145,7 +170,7 @@ public class RelationshipCteGenerator
                     rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                     rightModel.getPrimaryKey(), getReferenceField(comparisonExpression.getRight()));
         }
-        return new RelationshipCTE("rs_" + randomTableSuffix(), left, right, relationship.getCondition());
+        return new RelationshipCTE("rs_" + randomTableSuffix(), left, right, relationship);
     }
 
     private String getReferenceField(Expression expression)
@@ -165,6 +190,11 @@ public class RelationshipCteGenerator
     public Map<String, String> getNameMapping()
     {
         return nameMapping;
+    }
+
+    public Map<String, RsRelationInfo> getRelationshipInfoMapping()
+    {
+        return relationshipInfoMapping;
     }
 
     public static class RsItem
@@ -198,6 +228,31 @@ public class RelationshipCteGenerator
         public Type getType()
         {
             return type;
+        }
+    }
+
+    /**
+     * Used for build the join node between the base model and relationship cte.
+     */
+    public static class RsRelationInfo
+    {
+        private final String cteName;
+        private final JoinCriteria condition;
+
+        public RsRelationInfo(String cteName, JoinCriteria condition)
+        {
+            this.cteName = cteName;
+            this.condition = condition;
+        }
+
+        public String getCteName()
+        {
+            return cteName;
+        }
+
+        public JoinCriteria getCondition()
+        {
+            return condition;
         }
     }
 }
