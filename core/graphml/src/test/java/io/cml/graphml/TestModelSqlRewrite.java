@@ -15,10 +15,12 @@
 package io.cml.graphml;
 
 import io.cml.graphml.base.GraphML;
+import io.cml.graphml.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -28,67 +30,105 @@ import static io.cml.graphml.base.dto.Column.column;
 import static io.cml.graphml.base.dto.Manifest.manifest;
 import static io.cml.graphml.base.dto.Model.model;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestModelSqlRewrite
+        extends AbstractTestFramework
 {
+    private static final GraphML GRAPH_ML = GraphML.fromManifest(manifest(
+            List.of(
+                    model(
+                            "People",
+                            "SELECT * FROM People",
+                            List.of(
+                                    column("id", "STRING", null, false),
+                                    column("email", "STRING", null, false))),
+                    model(
+                            "Book",
+                            "SELECT * FROM Book",
+                            List.of(
+                                    column("authorId", "STRING", null, false),
+                                    column("publish_date", "STRING", null, false),
+                                    column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)")))),
+            List.of(),
+            List.of(),
+            List.of()));
+
+    @Override
+    protected void prepareData()
+    {
+        exec("CREATE TABLE People AS SELECT * FROM\n" +
+                "(VALUES\n" +
+                "('SN1001', 'foo@foo.org'),\n" +
+                "('SN1002', 'bar@bar.org'),\n" +
+                "('SN1003', 'code@code.org'))\n" +
+                "People (id, email)");
+        exec("CREATE TABLE Book AS SELECT * FROM\n" +
+                "(VALUES\n" +
+                "('P1001', CAST('1991-01-01' AS TIMESTAMP)),\n" +
+                "('P1002', CAST('1992-02-02' AS TIMESTAMP)),\n" +
+                "('P1003', CAST('1993-03-03' AS TIMESTAMP)))\n" +
+                "Book (authorId, publish_date)");
+        exec("CREATE TABLE WishList AS SELECT * FROM\n" +
+                "(VALUES\n" +
+                "('SN1001'),\n" +
+                "('SN1002'),\n" +
+                "('SN10010'))\n" +
+                "WishList (id)");
+    }
+
     @Test
     public void testModelRewrite()
     {
-        GraphML graphML = GraphML.fromManifest(manifest(
-                List.of(model(
-                                "User",
-                                "SELECT * FROM User",
-                                List.of(
-                                        column("id", "STRING", null, false),
-                                        column("email", "STRING", null, false))),
-                        model(
-                                "Book",
-                                "SELECT * FROM Book",
-                                List.of(
-                                        column("authorId", "STRING", null, false),
-                                        column("publish_date", "STRING", null, false),
-                                        column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)")))),
-                List.of(),
-                List.of(),
-                List.of()));
-
-        // no rewrite since foo is not a model
-        assertSqlEquals(rewrite("SELECT * FROM foo", graphML), "SELECT * FROM foo");
-
-        assertSqlEquals(rewrite("SELECT * FROM User", graphML),
-                "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User");
-        assertSqlEquals(rewrite("SELECT * FROM Book", graphML),
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM People"),
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)) SELECT * FROM People");
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM Book"),
                 "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)) SELECT * FROM Book");
-        assertSqlEquals(rewrite("SELECT * FROM User WHERE id = 'SN1001'", graphML),
-                "WITH User AS (SELECT id, email FROM (SELECT * FROM User)) SELECT * FROM User WHERE id = 'SN1001'");
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM People WHERE id = 'SN1001'"),
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)) SELECT * FROM People WHERE id = 'SN1001'");
 
-        assertSqlEquals(rewrite("SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'", graphML),
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM People a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'"),
                 "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)),\n" +
-                        "User AS (SELECT id, email FROM (SELECT * FROM User))\n" +
-                        "SELECT * FROM User a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'");
+                        "People AS (SELECT id, email FROM (SELECT * FROM People))\n" +
+                        "SELECT * FROM People a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'");
 
-        assertSqlEquals(rewrite("SELECT * FROM User a join foo b ON a.id = b.id WHERE a.id = 'SN1001'", graphML),
-                "WITH User AS (SELECT id, email FROM (SELECT * FROM User))\n" +
-                        "SELECT * FROM User a join foo b ON a.id = b.id WHERE a.id = 'SN1001'");
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM People a join WishList b ON a.id = b.id WHERE a.id = 'SN1001'"),
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People))\n" +
+                        "SELECT * FROM People a join WishList b ON a.id = b.id WHERE a.id = 'SN1001'");
 
-        assertSqlEquals(rewrite("WITH a AS (SELECT * FROM foo) SELECT * FROM a JOIN User ON a.id = User.id", graphML),
-                "WITH User AS (SELECT id, email FROM (SELECT * FROM User)), a AS (SELECT * FROM foo)\n" +
-                        "SELECT * FROM a JOIN User ON a.id = User.id");
+        assertSqlEqualsAndValid(rewrite("WITH a AS (SELECT * FROM WishList) SELECT * FROM a JOIN People ON a.id = People.id"),
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)), a AS (SELECT * FROM WishList)\n" +
+                        "SELECT * FROM a JOIN People ON a.id = People.id");
 
         // rewrite table in with query
-        assertSqlEquals(rewrite("WITH a AS (SELECT * FROM User) SELECT * FROM a", graphML),
-                "WITH User AS (SELECT id, email FROM (SELECT * FROM User)),\n" +
-                        "a AS (SELECT * FROM User)\n" +
+        assertSqlEqualsAndValid(rewrite("WITH a AS (SELECT * FROM People) SELECT * FROM a"),
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)),\n" +
+                        "a AS (SELECT * FROM People)\n" +
                         "SELECT * FROM a");
     }
 
-    private String rewrite(String sql, GraphML graphML)
+    @Test
+    public void testNoRewrite()
     {
-        return GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE));
+        assertSqlEquals(rewrite("SELECT * FROM WithList"), "SELECT * FROM WithList");
     }
 
-    private static void assertSqlEquals(String actual, String expected)
+    private String rewrite(String sql)
+    {
+        return GraphMLPlanner.rewrite(sql, GRAPH_ML, List.of(MODEL_SQL_REWRITE));
+    }
+
+    private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)
+    {
+        assertSqlEquals(actual, expected);
+        assertThatNoException()
+                .describedAs(format("actual sql: %s is invalid", actual))
+                .isThrownBy(() -> query(actual));
+    }
+
+    private void assertSqlEquals(String actual, String expected)
     {
         SqlParser sqlParser = new SqlParser();
         ParsingOptions parsingOptions = new ParsingOptions(AS_DECIMAL);

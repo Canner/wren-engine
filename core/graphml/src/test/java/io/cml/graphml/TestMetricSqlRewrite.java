@@ -16,6 +16,7 @@ package io.cml.graphml;
 
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Column;
+import io.cml.graphml.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
@@ -33,9 +34,12 @@ import static io.cml.graphml.base.dto.Manifest.manifest;
 import static io.cml.graphml.base.dto.Metric.metric;
 import static io.cml.graphml.base.dto.Model.model;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestMetricSqlRewrite
+        extends AbstractTestFramework
 {
     private final GraphML graphML;
 
@@ -104,7 +108,15 @@ public class TestMetricSqlRewrite
     public void testMetricSqlRewrite(String original, String expected)
     {
         Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
-        assertThat(rewrite(original)).isEqualTo(SqlFormatter.formatSql(expectedState));
+        String actualSql = rewrite(original);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
+        assertThatNoException()
+                .describedAs(format("actual sql: %s is invalid", actualSql))
+                .isThrownBy(() -> query(actualSql));
+        // TODO: open this assertion, currently missing relationship models and cast relationship to varchar const
+//        assertThatNoException()
+//                .describedAs(format("actual sql: %s is invalid", actualSql))
+//                .isThrownBy(() -> query(actualSql));
     }
 
     private String rewrite(String sql)

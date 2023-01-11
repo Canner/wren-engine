@@ -39,7 +39,7 @@
         <air.java.version>11.0.7</air.java.version>
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
-        <dep.antlr.version>4.9</dep.antlr.version>
+        <dep.antlr.version>4.9.2</dep.antlr.version>
         <dep.airlift.version>203</dep.airlift.version>
         <dep.calcite.version>1.31.0</dep.calcite.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
@@ -71,6 +71,7 @@
         <module>core/cml-testing</module>
         <module>core/graphml</module>
         <module>core/graphml-base</module>
+        <module>core/graphml-testing</module>
         <module>core/graphml-validation</module>
         <module>core/trino-parser</module>
     </modules>
@@ -227,6 +228,12 @@
             </dependency>
 
             <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>1.4.200</version>
+            </dependency>
+
+            <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
                 <version>1.15</version>
@@ -265,6 +272,12 @@
             <dependency>
                 <groupId>io.cml</groupId>
                 <artifactId>graphml-base</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
+                <artifactId>graphml-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -345,6 +358,14 @@
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
                 <version>0.6.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jdbi</groupId>
+                <artifactId>jdbi3-bom</artifactId>
+                <type>pom</type>
+                <version>3.23.0</version>
+                <scope>import</scope>
             </dependency>
 
             <dependency>

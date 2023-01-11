@@ -19,12 +19,14 @@ import io.cml.graphml.analyzer.StatementAnalyzer;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.GraphMLTypes;
 import io.cml.graphml.base.dto.JoinType;
+import io.cml.graphml.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Statement;
 import org.apache.commons.lang3.text.StrSubstitutor;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -40,6 +42,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestRelationshipAccessing
+        extends AbstractTestFramework
 {
     private static final String EXPECTED_WITH_QUERIES = "WITH\n" +
             "  ${rs1} (id, name, book) AS (\n" +
@@ -49,7 +52,7 @@ public class TestRelationshipAccessing
             "   , r.book\n" +
             "   FROM\n" +
             "     (Book l\n" +
-            "   LEFT JOIN User r ON (l.authorId = r.id))\n" +
+            "   LEFT JOIN People r ON (l.authorId = r.id))\n" +
             ") \n" +
             ", ${rs2} (id, name, author, authorId) AS (\n" +
             "   SELECT\n" +
@@ -68,7 +71,7 @@ public class TestRelationshipAccessing
             "   , r.book\n" +
             "   FROM\n" +
             "     (${rs2} l\n" +
-            "   LEFT JOIN User r ON (l.authorId = r.id))\n" +
+            "   LEFT JOIN People r ON (l.authorId = r.id))\n" +
             ") \n";
     private static final SqlParser SQL_PARSER = new SqlParser();
 
@@ -82,14 +85,14 @@ public class TestRelationshipAccessing
                                 List.of(
                                         column("id", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
-                                        column("author", "User", "BookUser", true))),
-                        model("User",
-                                "select * from (values (1, 'user1'), (2, 'user2'), (3, 'user3')) user(id, name))",
+                                        column("author", "People", "BookPeople", true))),
+                        model("People",
+                                "select * from (values (1, 'people1'), (2, 'people2'), (3, 'people3g')) People(id, name))",
                                 List.of(
                                         column("id", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
-                                        column("book", "Book", "BookUser", true)))),
-                List.of(relationship("BookUser", List.of("Book", "User"), JoinType.ONE_TO_ONE, "book.authorId  = user.id")),
+                                        column("book", "Book", "BookPeople", true)))),
+                List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "book.authorId  = people.id")),
                 List.of(),
                 List.of()));
     }
@@ -192,7 +195,12 @@ public class TestRelationshipAccessing
 
         Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
-        assertThat(SqlFormatter.formatSql(result)).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        @Language("SQL") String actualSql = SqlFormatter.formatSql(result);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        // TODO: open this assertion, currently relationship rewrite will fail due to ambiguous column name and missing relationship models and cast relationship to varchar const
+//        assertThatNoException()
+//                .describedAs(format("actual sql: %s is invalid", actualSql))
+//                .isThrownBy(() -> query(actualSql));
     }
 
     @DataProvider
