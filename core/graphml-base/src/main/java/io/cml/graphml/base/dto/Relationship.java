@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.cml.graphml.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -66,5 +67,27 @@ public class Relationship
     public String getCondition()
     {
         return condition;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Relationship that = (Relationship) obj;
+        return Objects.equals(name, that.name)
+                && Objects.equals(models, that.models)
+                && joinType == that.joinType
+                && Objects.equals(condition, that.condition);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, models, joinType, condition);
     }
 }

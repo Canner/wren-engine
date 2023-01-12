@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.cml.graphml.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -66,5 +67,27 @@ public class Metric
     public List<Column> getMeasure()
     {
         return measure;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Metric that = (Metric) obj;
+        return Objects.equals(name, that.name)
+                && Objects.equals(baseModel, that.baseModel)
+                && Objects.equals(dimension, that.dimension)
+                && Objects.equals(measure, that.measure);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, baseModel, dimension, measure);
     }
 }

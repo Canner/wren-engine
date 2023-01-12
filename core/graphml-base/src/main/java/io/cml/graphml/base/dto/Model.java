@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -69,5 +70,27 @@ public class Model
     public String getPrimaryKey()
     {
         return primaryKey;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Model that = (Model) obj;
+        return Objects.equals(name, that.name)
+                && Objects.equals(refSql, that.refSql)
+                && Objects.equals(columns, that.columns)
+                && Objects.equals(primaryKey, that.primaryKey);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, refSql, columns, primaryKey);
     }
 }
