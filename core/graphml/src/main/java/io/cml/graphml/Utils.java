@@ -52,7 +52,7 @@ public final class Utils
         throw new IllegalArgumentException(format("model %s is not a query, sql %s", model.getName(), sql));
     }
 
-    private static String getModelSql(Model model)
+    public static String getModelSql(Model model)
     {
         requireNonNull(model, "model is null");
         if (model.getColumns().isEmpty()) {

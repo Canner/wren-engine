@@ -35,7 +35,9 @@ import static io.cml.graphml.base.dto.Metric.metric;
 import static io.cml.graphml.base.dto.Model.model;
 import static io.cml.graphml.base.dto.Relationship.relationship;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestAllRulesRewrite
         extends AbstractTestFramework
@@ -81,8 +83,7 @@ public class TestAllRulesRewrite
                         "   SELECT\n" +
                         "     id\n" +
                         "   , name\n" +
-                        // TODO: don't select the relationship column
-                        "   , band\n" +
+                        "   , 'relationship<AlbumBand>' band\n" +
                         "   , price\n" +
                         "   FROM\n" +
                         "     (\n" +
@@ -110,7 +111,11 @@ public class TestAllRulesRewrite
     public void testGraphMLRewrite(String original, String expected)
     {
         Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
-        assertThat(rewrite(original)).isEqualTo(SqlFormatter.formatSql(expectedState));
+        String actualSql = rewrite(original);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
+        assertThatNoException()
+                .describedAs(format("actual sql: %s is invalid", actualSql))
+                .isThrownBy(() -> query(actualSql));
     }
 
     @DataProvider

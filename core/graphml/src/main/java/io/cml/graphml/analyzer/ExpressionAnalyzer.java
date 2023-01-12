@@ -47,6 +47,7 @@ public final class ExpressionAnalyzer
 
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFieldsRewrite = new HashMap<>();
     private final Set<String> relationshipCTENames = new HashSet<>();
+    private final Set<Relationship> relationships = new HashSet<>();
 
     public static ExpressionAnalysis analyze(
             Expression expression,
@@ -65,7 +66,7 @@ public final class ExpressionAnalyzer
             Scope scope)
     {
         new Visitor(graphML, relationshipCteGenerator, scope).process(expression);
-        return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames);
+        return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames, relationships);
     }
 
     private class Visitor
@@ -146,6 +147,7 @@ public final class ExpressionAnalyzer
                     Relationship relationship = graphML.getRelationship(column.getRelationship().get())
                             .orElseThrow(() -> new IllegalArgumentException(column.getRelationship().get() + " relationship not found"));
                     checkArgument(relationship.getModels().contains(modelName), format("relationship %s doesn't contain model %s", relationship.getName(), modelName));
+                    relationships.add(relationship);
 
                     relNameParts.add(partName);
                     String relNameStr = String.join(".", relNameParts);

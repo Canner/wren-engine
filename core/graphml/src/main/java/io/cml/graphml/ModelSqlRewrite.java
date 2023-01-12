@@ -42,9 +42,9 @@ public class ModelSqlRewrite
     @Override
     public Node apply(Node root, Analysis analysis, GraphML graphML)
     {
-        Map<String, Query> modelQueries = graphML.listModels().stream()
-                .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
-                .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
+        Map<String, Query> modelQueries =
+                analysis.getModels().stream()
+                        .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
 
         if (modelQueries.isEmpty()) {
             return root;

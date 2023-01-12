@@ -15,6 +15,8 @@
 package io.cml.graphml.analyzer;
 
 import io.cml.graphml.RelationshipCteGenerator;
+import io.cml.graphml.base.dto.Model;
+import io.cml.graphml.base.dto.Relationship;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -36,6 +38,8 @@ public class Analysis
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
     private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
+    private final Set<Relationship> relationships = new HashSet<>();
+    private final Set<Model> models = new HashSet<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -91,5 +95,25 @@ public class Analysis
     public Map<NodeRef<Table>, Set<String>> getReplaceTableWithCTEs()
     {
         return Map.copyOf(replaceTableWithCTEs);
+    }
+
+    void addRelationships(Set<Relationship> relationships)
+    {
+        this.relationships.addAll(relationships);
+    }
+
+    public Set<Relationship> getRelationships()
+    {
+        return relationships;
+    }
+
+    void addModels(Set<Model> models)
+    {
+        this.models.addAll(models);
+    }
+
+    public Set<Model> getModels()
+    {
+        return models;
     }
 }

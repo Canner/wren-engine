@@ -34,17 +34,59 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.cml.graphml.RelationshipRewrite.RELATIONSHIP_REWRITE;
 import static io.cml.graphml.base.dto.Column.column;
 import static io.cml.graphml.base.dto.Manifest.manifest;
 import static io.cml.graphml.base.dto.Model.model;
 import static io.cml.graphml.base.dto.Relationship.relationship;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static java.lang.String.format;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestRelationshipAccessing
         extends AbstractTestFramework
 {
-    private static final String EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES = "WITH\n" +
+    @Language("SQL")
+    private static final String MODEL_CTE = "" +
+            "  Book AS (\n" +
+            "     SELECT\n" +
+            "        bookId,\n" +
+            "        name,\n" +
+            "        'relationship<BookPeople>' as author,\n" +
+            "        authorId\n" +
+            "     FROM (\n" +
+            "        SELECT *\n" +
+            "        FROM (\n" +
+            "           VALUES\n" +
+            "           (1, 'book1', 1),\n" +
+            "           (2, 'book2', 2),\n" +
+            "           (3, 'book3', 3)\n" +
+            "        ) Book(bookId, name, authorId)\n" +
+            "     )\n" +
+            "  ),\n" +
+            "  People AS (\n" +
+            "   SELECT\n" +
+            "     userId,\n" +
+            "     name,\n" +
+            "     'relationship<BookPeople>' AS book\n" +
+            "   FROM\n" +
+            "     (\n" +
+            "      SELECT *\n" +
+            "      FROM\n" +
+            "        (\n" +
+            "           VALUES\n" +
+            "           (1, 'user1'),\n" +
+            "           (2, 'user2'),\n" +
+            "           (3, 'user3')\n" +
+            "        ) People (userId, name)\n" +
+            "     )\n" +
+            "  )\n";
+
+    @Language("SQL")
+    private static final String EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES = "" +
+            "WITH\n" + MODEL_CTE + ",\n" +
             "  ${Book.author} (userId, name, book) AS (\n" +
             "   SELECT\n" +
             "     r.userId\n" +
@@ -85,11 +127,11 @@ public class TestRelationshipAccessing
                                 List.of(
                                         column("bookId", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
-
-                                        column("author", "People", "BookPeople", true)),
+                                        column("author", "People", "BookPeople", true),
+                                        column("authorId", GraphMLTypes.INTEGER, null, true)),
                                 "bookId"),
                         model("People",
-                                "select * from (values (1, 'user1'), (2, 'user2'), (3, 'user3')) People(userId, name))",
+                                "select * from (values (1, 'user1'), (2, 'user2'), (3, 'user3')) People(userId, name)",
                                 List.of(
                                         column("userId", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
@@ -130,14 +172,16 @@ public class TestRelationshipAccessing
                                 "  (((Book\n" +
                                 "LEFT JOIN ${Book.author} ON (Book.authorId = ${Book.author}.userId))\n" +
                                 "LEFT JOIN ${Book.author.book} ON (Book.bookId = ${Book.author.book}.bookId))\n" +
-                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))"},
+                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))",
+                        true},
                 {"select name from Book where author.book.author.name = 'jax'",
                         EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
                                 "SELECT name\n" +
                                 "FROM\n" +
                                 "  (Book\n" +
                                 "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
-                                "WHERE (${Book.author.book.author}.name = 'jax')"},
+                                "WHERE (${Book.author.book.author}.name = 'jax')",
+                        false},
                 {"select name, author.book.author.name from Book group by author.book.author.name having author.book.name = 'destiny'",
                         EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
                                 "SELECT\n" +
@@ -148,7 +192,8 @@ public class TestRelationshipAccessing
                                 "LEFT JOIN ${Book.author.book} ON (Book.bookId = ${Book.author.book}.bookId))\n" +
                                 "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
                                 "GROUP BY ${Book.author.book.author}.name\n" +
-                                "HAVING (${Book.author.book}.name = 'destiny')"},
+                                "HAVING (${Book.author.book}.name = 'destiny')",
+                        false},
                 {"select name, author.book.author.name from Book order by author.book.author.name",
                         EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
                                 "SELECT\n" +
@@ -157,7 +202,8 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (Book\n" +
                                 "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
-                                "ORDER BY ${Book.author.book.author}.name ASC"},
+                                "ORDER BY ${Book.author.book.author}.name ASC",
+                        false},
                 {"select a.* from (select name, author.book.author.name from Book order by author.book.author.name) a",
                         EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
                                 "SELECT a.*\n" +
@@ -170,13 +216,15 @@ public class TestRelationshipAccessing
                                 "     (Book\n" +
                                 "   LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
                                 "   ORDER BY ${Book.author.book.author}.name ASC\n" +
-                                ")  a"},
+                                ")  a",
+                        false},
                 // TODO: enable this test and find a way to reorder queries in with-clause
 //                {"with a as (select b.* from (select name, author.book.author.name from Book order by author.book.author.name) b)\n" +
 //                        "select * from a", "" // TODO fill expected sql
 //                },
                 // test the reverse relationship accessing
-                {"select book.author.book.name, book.author.name, book.name from People", "WITH\n" +
+                {"select book.author.book.name, book.author.name, book.name from People", "" +
+                        "WITH\n" + MODEL_CTE + ",\n" +
                         "  ${People.book} (bookId, name, author, authorId) AS (\n" +
                         "   SELECT\n" +
                         "     r.bookId\n" +
@@ -214,12 +262,13 @@ public class TestRelationshipAccessing
                         "  (((People\n" +
                         "LEFT JOIN ${People.book.author} ON (People.userId = ${People.book.author}.userId))\n" +
                         "LEFT JOIN ${People.book.author.book} ON (People.userId = ${People.book.author.book}.authorId))\n" +
-                        "LEFT JOIN ${People.book} ON (People.userId = ${People.book}.authorId))"},
+                        "LEFT JOIN ${People.book} ON (People.userId = ${People.book}.authorId))",
+                        true},
         };
     }
 
     @Test(dataProvider = "relationshipAccessCases")
-    public void testRelationshipAccessingRewrite(String original, String expected)
+    public void testRelationshipAccessingRewrite(String original, String expected, boolean enableH2Assertion)
     {
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
         RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
@@ -233,14 +282,20 @@ public class TestRelationshipAccessing
         replaceMap.put("People.book.author", generator.getNameMapping().get("People.book.author"));
         replaceMap.put("People.book.author.book", generator.getNameMapping().get("People.book.author.book"));
 
-        Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
+        Node rewrittenStatement = statement;
+        for (GraphMLRule rule : List.of(MODEL_SQL_REWRITE, RELATIONSHIP_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, analysis, graphML);
+        }
+
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
-        @Language("SQL") String actualSql = SqlFormatter.formatSql(result);
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
-        // TODO: open this assertion, currently relationship rewrite will fail due to ambiguous column name and missing relationship models and cast relationship to varchar const
-//        assertThatNoException()
-//                .describedAs(format("actual sql: %s is invalid", actualSql))
-//                .isThrownBy(() -> query(actualSql));
+        // TODO: remove this flag, disabled h2 assertion due to ambiguous column name
+        if (enableH2Assertion) {
+            assertThatNoException()
+                    .describedAs(format("actual sql: %s is invalid", actualSql))
+                    .isThrownBy(() -> query(actualSql));
+        }
     }
 
     @DataProvider
@@ -251,24 +306,28 @@ public class TestRelationshipAccessing
                 {"SELECT foo.col_1 FROM foo"},
                 {"SELECT col_1.a FROM foo"},
                 {"WITH foo AS (SELECT 1 AS col_1) SELECT col_1 FROM foo"},
-                // this is invalid since we don't allow access to relationship field outside the sub-query
-                // hence this sql shouldn't be rewritten
-                {"SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a"},
         };
     }
 
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
-        Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
-
-        assertThat(generator.getRegisteredCte().size()).isEqualTo(0);
-
-        Node result = RelationshipRewrite.RELATIONSHIP_REWRITE.apply(statement, analysis, graphML);
+        String rewrittenSql = GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE, RELATIONSHIP_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
 
-        assertThat(SqlFormatter.formatSql(result)).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    @Test
+    public void testRelationshipOutsideQuery()
+    {
+        // this is invalid since we don't allow access to relationship field outside the sub-query
+        // hence this sql shouldn't be rewritten
+        String actualSql = "SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a";
+        String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
+                Utils.getModelSql(graphML.getModel("Book").orElseThrow()));
+
+        String rewrittenSql = GraphMLPlanner.rewrite(actualSql, graphML, List.of(MODEL_SQL_REWRITE, RELATIONSHIP_REWRITE));
+        Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
+        assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
 }
