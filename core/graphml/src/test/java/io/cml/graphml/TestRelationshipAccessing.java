@@ -45,33 +45,33 @@ public class TestRelationshipAccessing
         extends AbstractTestFramework
 {
     private static final String EXPECTED_WITH_QUERIES = "WITH\n" +
-            "  ${rs1} (id, name, book) AS (\n" +
+            "  ${rs1} (userId, name, book) AS (\n" +
             "   SELECT\n" +
-            "     r.id\n" +
+            "     r.userId\n" +
             "   , r.name\n" +
             "   , r.book\n" +
             "   FROM\n" +
             "     (Book l\n" +
-            "   LEFT JOIN People r ON (l.authorId = r.id))\n" +
+            "   LEFT JOIN People r ON (l.authorId = r.userId))\n" +
             ") \n" +
-            ", ${rs2} (id, name, author, authorId) AS (\n" +
+            ", ${rs2} (bookId, name, author, authorId) AS (\n" +
             "   SELECT\n" +
-            "     r.id\n" +
+            "     r.bookId\n" +
             "   , r.name\n" +
             "   , r.author\n" +
             "   , r.authorId\n" +
             "   FROM\n" +
             "     (${rs1} l\n" +
-            "   LEFT JOIN Book r ON (l.id = r.authorId))\n" +
+            "   LEFT JOIN Book r ON (l.userId = r.authorId))\n" +
             ") \n" +
-            ", ${rs3} (id, name, book) AS (\n" +
+            ", ${rs3} (userId, name, book) AS (\n" +
             "   SELECT\n" +
-            "     r.id\n" +
+            "     r.userId\n" +
             "   , r.name\n" +
             "   , r.book\n" +
             "   FROM\n" +
             "     (${rs2} l\n" +
-            "   LEFT JOIN People r ON (l.authorId = r.id))\n" +
+            "   LEFT JOIN People r ON (l.authorId = r.userId))\n" +
             ") \n";
     private static final SqlParser SQL_PARSER = new SqlParser();
 
@@ -81,18 +81,22 @@ public class TestRelationshipAccessing
     {
         graphML = GraphML.fromManifest(manifest(
                 List.of(model("Book",
-                                "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 3)) book(id, name, authorId)",
+                                "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 3)) Book(bookId, name, authorId)",
                                 List.of(
-                                        column("id", GraphMLTypes.INTEGER, null, true),
+                                        column("bookId", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
-                                        column("author", "People", "BookPeople", true))),
+
+                                        column("author", "People", "BookPeople", true)),
+                                "bookId"),
                         model("People",
-                                "select * from (values (1, 'people1'), (2, 'people2'), (3, 'people3g')) People(id, name))",
+                                "select * from (values (1, 'user1'), (2, 'user2'), (3, 'user3')) People(userId, name))",
                                 List.of(
-                                        column("id", GraphMLTypes.INTEGER, null, true),
+                                        column("userId", GraphMLTypes.INTEGER, null, true),
                                         column("name", GraphMLTypes.VARCHAR, null, true),
-                                        column("book", "Book", "BookPeople", true)))),
-                List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "book.authorId  = people.id")),
+
+                                        column("book", "Book", "BookPeople", true)),
+                                "userId")),
+                List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId")),
                 List.of(),
                 List.of()));
     }
@@ -118,58 +122,61 @@ public class TestRelationshipAccessing
                         "author.name\n" +
                         "from Book",
                         EXPECTED_WITH_QUERIES +
-                                "SELECT ${rs3}.name, ${rs2}.name, ${rs1}.name\n" +
+                                "SELECT\n" +
+                                "  ${rs3}.name\n" +
+                                ", ${rs2}.name\n" +
+                                ", ${rs1}.name\n" +
                                 "FROM\n" +
-                                "  Book\n" +
-                                ", ${rs1}\n" +
-                                ", ${rs2}\n" +
-                                ", ${rs3}\n"},
+                                "  (((Book\n" +
+                                "LEFT JOIN ${rs1} ON (Book.authorId = ${rs1}.userId))\n" +
+                                "LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
+                                "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))"},
                 {"select name from Book where author.book.author.name = 'jax'",
                         EXPECTED_WITH_QUERIES +
                                 "SELECT name\n" +
                                 "FROM\n" +
-                                "  Book\n" +
-                                ", ${rs1}\n" +
-                                ", ${rs2}\n" +
-                                ", ${rs3}\n" +
-                                "WHERE\n" +
-                                "  ${rs3}.name = 'jax'"},
+                                "  (Book\n" +
+                                "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
+                                "WHERE (${rs3}.name = 'jax')"},
                 {"select name, author.book.author.name from Book group by author.book.author.name having author.book.name = 'destiny'",
                         EXPECTED_WITH_QUERIES +
-                                "SELECT name, ${rs3}.name\n" +
+                                "SELECT\n" +
+                                "  name\n" +
+                                ", ${rs3}.name\n" +
                                 "FROM\n" +
-                                "  Book\n" +
-                                ", ${rs1}\n" +
-                                ", ${rs2}\n" +
-                                ", ${rs3}\n" +
-                                "GROUP BY\n" +
-                                "  ${rs3}.name\n" +
-                                "HAVING\n" +
-                                "  ${rs2}.name = 'destiny'"},
+                                "  ((Book\n" +
+                                "LEFT JOIN ${rs2} ON (Book.bookId = ${rs2}.bookId))\n" +
+                                "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
+                                "GROUP BY ${rs3}.name\n" +
+                                "HAVING (${rs2}.name = 'destiny')"},
                 {"select name, author.book.author.name from Book order by author.book.author.name",
                         EXPECTED_WITH_QUERIES +
-                                "SELECT name, ${rs3}.name\n" +
+                                "SELECT\n" +
+                                "  name\n" +
+                                ", ${rs3}.name\n" +
                                 "FROM\n" +
-                                "  Book\n" +
-                                ", ${rs1}\n" +
-                                ", ${rs2}\n" +
-                                ", ${rs3}\n" +
-                                "ORDER BY\n" +
-                                "  ${rs3}.name"},
+                                "  (Book\n" +
+                                "LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
+                                "ORDER BY ${rs3}.name ASC"},
                 {"select a.* from (select name, author.book.author.name from Book order by author.book.author.name) a",
                         EXPECTED_WITH_QUERIES +
-                                "SELECT a.* FROM (SELECT name, ${rs3}.name\n" +
+                                "SELECT a.*\n" +
                                 "FROM\n" +
-                                "  Book\n" +
-                                ", ${rs1}\n" +
-                                ", ${rs2}\n" +
-                                ", ${rs3}\n" +
-                                "ORDER BY\n" +
-                                "  ${rs3}.name) a"},
+                                "  (\n" +
+                                "   SELECT\n" +
+                                "     name\n" +
+                                "   , ${rs3}.name\n" +
+                                "   FROM\n" +
+                                "     (Book\n" +
+                                "   LEFT JOIN ${rs3} ON (Book.authorId = ${rs3}.userId))\n" +
+                                "   ORDER BY ${rs3}.name ASC\n" +
+                                ")  a"},
                 // TODO: enable this test and find a way to reorder queries in with-clause
 //                {"with a as (select b.* from (select name, author.book.author.name from Book order by author.book.author.name) b)\n" +
 //                        "select * from a", "" // TODO fill expected sql
 //                },
+                // TODO: Enable this test after fix the reverse relationship issue.
+                // {"select name, book.name from User", ""},
         };
     }
 

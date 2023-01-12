@@ -63,6 +63,16 @@ public class Analysis
         return relationshipCteGenerator.getRegisteredCte();
     }
 
+    public Map<String, String> getRelationshipNameMapping()
+    {
+        return relationshipCteGenerator.getNameMapping();
+    }
+
+    public Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> getRelationshipInfoMapping()
+    {
+        return relationshipCteGenerator.getRelationshipInfoMapping();
+    }
+
     void addRelationshipFields(Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields)
     {
         this.relationshipFields.putAll(relationshipFields);

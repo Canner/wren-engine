@@ -33,6 +33,11 @@ public class Model
         return new Model(name, refSql, columns, null);
     }
 
+    public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
+    {
+        return new Model(name, refSql, columns, primaryKey);
+    }
+
     @JsonCreator
     public Model(
             @JsonProperty("name") String name,

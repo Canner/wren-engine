@@ -14,6 +14,8 @@
 
 package io.cml.graphml;
 
+import io.cml.graphml.base.dto.Relationship;
+
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -25,14 +27,14 @@ public class RelationshipCTE
     private final Relation left;
     private final Relation right;
 
-    private final String condition;
+    private final Relationship relationship;
 
-    public RelationshipCTE(String name, Relation left, Relation right, String condition)
+    public RelationshipCTE(String name, Relation left, Relation right, Relationship relationship)
     {
         this.name = name;
         this.left = left;
         this.right = right;
-        this.condition = condition;
+        this.relationship = relationship;
     }
 
     public String getName()
@@ -50,9 +52,9 @@ public class RelationshipCTE
         return right;
     }
 
-    public String getCondition()
+    public Relationship getRelationship()
     {
-        return condition;
+        return relationship;
     }
 
     public List<String> getOutputColumn()

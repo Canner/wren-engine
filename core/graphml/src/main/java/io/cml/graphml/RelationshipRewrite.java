@@ -29,10 +29,13 @@ import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import static io.trino.sql.QueryUtil.implicitJoin;
+import static io.trino.sql.QueryUtil.table;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class RelationshipRewrite
@@ -91,22 +94,28 @@ public class RelationshipRewrite
         protected Node visitTable(Table node, Void context)
         {
             if (analysis.getReplaceTableWithCTEs().containsKey(NodeRef.of(node))) {
-                List<Table> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
+                Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
+                        .map(expression -> expression.getBase().toString())
+                        .collect(toSet());
+
+                List<RelationshipCteGenerator.RelationshipCTEJoinInfo> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                        .filter(name -> requiredRsCteName.contains(analysis.getRelationshipNameMapping().get(name)))
                         .map(name -> analysis.getRelationshipCTE().get(name))
                         .map(WithQuery::getName)
                         .map(Identifier::getValue)
                         .map(QualifiedName::of)
-                        .map(QueryUtil::table)
+                        .map(name -> relationshipInfoMapping.get(name.toString()))
                         .collect(toUnmodifiableList());
-                return implicitJoinCTE(node, cteTables);
+                return leftJoin(node, cteTables);
             }
             return super.visitTable(node, context);
         }
 
-        private Relation implicitJoinCTE(Relation left, List<Table> rights)
+        private Relation leftJoin(Relation left, List<RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipCTEJoinInfos)
         {
-            for (Table right : rights) {
-                left = implicitJoin(left, right);
+            for (RelationshipCteGenerator.RelationshipCTEJoinInfo info : relationshipCTEJoinInfos) {
+                left = QueryUtil.leftJoin(left, table(QualifiedName.of(info.getCteName())), info.getCondition());
             }
             return left;
         }
