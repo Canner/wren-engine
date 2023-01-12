@@ -75,4 +75,16 @@ public class Relationship
         }
         throw new IllegalArgumentException(String.format("model %s doesn't belong to relationship %s", model, name));
     }
+
+    public Model getLeft(List<Model> models)
+    {
+        return models.stream().filter(model -> model.getName().equals(getModels().get(0))).findAny()
+                .orElseThrow(() -> new IllegalArgumentException(String.format("Left model %s not found in the given models.", getModels().get(0))));
+    }
+
+    public Model getRight(List<Model> models)
+    {
+        return models.stream().filter(model -> model.getName().equals(getModels().get(1))).findAny()
+                .orElseThrow(() -> new IllegalArgumentException(String.format("Right model %s not found in the given models.", getModels().get(0))));
+    }
 }

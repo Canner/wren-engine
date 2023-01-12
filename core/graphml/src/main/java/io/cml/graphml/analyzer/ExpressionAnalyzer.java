@@ -153,12 +153,12 @@ public final class ExpressionAnalyzer
                     if (!relationshipCteGenerator.getNameMapping().containsKey(relNameStr)) {
                         if (relNameParts.size() == 2) {
                             relationshipCteGenerator.register(
-                                    relNameStr,
-                                    List.of(rsItem(relationship.getName(), RsItem.Type.RS)));
+                                    relNameParts,
+                                    List.of(rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RsItem.Type.REVERSE_RS : RsItem.Type.RS)));
                         }
                         else {
                             relationshipCteGenerator.register(
-                                    relNameStr,
+                                    relNameParts,
                                     List.of(
                                             rsItem(String.join(".", relNameParts.subList(0, relNameParts.size() - 1)), RsItem.Type.CTE),
                                             rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RsItem.Type.REVERSE_RS : RsItem.Type.RS)));
