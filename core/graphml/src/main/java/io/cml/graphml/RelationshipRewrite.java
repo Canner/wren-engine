@@ -94,12 +94,12 @@ public class RelationshipRewrite
         protected Node visitTable(Table node, Void context)
         {
             if (analysis.getReplaceTableWithCTEs().containsKey(NodeRef.of(node))) {
-                Map<String, RelationshipCteGenerator.RsRelationInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
+                Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
                 Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
                         .map(expression -> expression.getBase().toString())
                         .collect(toSet());
 
-                List<RelationshipCteGenerator.RsRelationInfo> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
+                List<RelationshipCteGenerator.RelationshipCTEJoinInfo> cteTables = analysis.getReplaceTableWithCTEs().get(NodeRef.of(node)).stream()
                         .filter(name -> requiredRsCteName.contains(analysis.getRelationshipNameMapping().get(name)))
                         .map(name -> analysis.getRelationshipCTE().get(name))
                         .map(WithQuery::getName)
@@ -112,9 +112,9 @@ public class RelationshipRewrite
             return super.visitTable(node, context);
         }
 
-        private Relation leftJoin(Relation left, List<RelationshipCteGenerator.RsRelationInfo> rsRelationInfos)
+        private Relation leftJoin(Relation left, List<RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipCTEJoinInfos)
         {
-            for (RelationshipCteGenerator.RsRelationInfo info : rsRelationInfos) {
+            for (RelationshipCteGenerator.RelationshipCTEJoinInfo info : relationshipCTEJoinInfos) {
                 left = QueryUtil.leftJoin(left, table(QualifiedName.of(info.getCteName())), info.getCondition());
             }
             return left;
