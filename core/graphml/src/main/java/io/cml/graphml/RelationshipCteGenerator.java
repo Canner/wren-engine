@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -105,7 +104,7 @@ public class RelationshipCteGenerator
      */
     private RelationshipCTEJoinInfo transferToRelationshipCTEJoinInfo(String rsName, RelationshipCTE relationshipCTE, String baseModel)
     {
-        if (Objects.equals(baseModel, relationshipCTE.getRight().getName())) {
+        if (baseModel.equals(relationshipCTE.getRight().getName())) {
             // The base model is same as the right side of `relationshipCTE`.
             return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                     // Use the primary key to do 1-1 mapping with the relationship CTE.
@@ -162,7 +161,7 @@ public class RelationshipCteGenerator
                         leftQuery.getColumnNames().get().stream().map(Identifier::getValue).collect(toList()),
                         null,
                         getReferenceField(comparisonExpression.getLeft()));
-                Model rightModel = relationship.getRight(graphML.listModels());
+                Model rightModel = getRightModel(relationship, graphML.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -177,7 +176,7 @@ public class RelationshipCteGenerator
                         // If it's a REVERSE relationship, the left and right side will be swapped.
                         getReferenceField(comparisonExpression.getRight()));
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model rightModel = relationship.getLeft(graphML.listModels());
+                Model rightModel = getLeftModel(relationship, graphML.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -190,13 +189,13 @@ public class RelationshipCteGenerator
             if (rsItems.get(0).getType() == RS) {
                 relationship = graphML.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
-                Model leftModel = relationship.getLeft(graphML.listModels());
+                Model leftModel = getLeftModel(relationship, graphML.listModels());
                 left = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
                         leftModel.getPrimaryKey(), getReferenceField(comparisonExpression.getLeft()));
 
-                Model rightModel = relationship.getRight(graphML.listModels());
+                Model rightModel = getRightModel(relationship, graphML.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -206,7 +205,7 @@ public class RelationshipCteGenerator
                 relationship = graphML.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model leftModel = relationship.getRight(graphML.listModels());
+                Model leftModel = getRightModel(relationship, graphML.listModels());
                 left = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -214,7 +213,7 @@ public class RelationshipCteGenerator
                         leftModel.getPrimaryKey(), getReferenceField(comparisonExpression.getRight()));
 
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model rightModel = relationship.getLeft(graphML.listModels());
+                Model rightModel = getLeftModel(relationship, graphML.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -223,6 +222,18 @@ public class RelationshipCteGenerator
             }
         }
         return new RelationshipCTE("rs_" + randomTableSuffix(), left, right, relationship);
+    }
+
+    private static Model getLeftModel(Relationship relationship, List<Model> models)
+    {
+        return models.stream().filter(model -> model.getName().equals(relationship.getModels().get(0))).findAny()
+                .orElseThrow(() -> new IllegalArgumentException(String.format("Left model %s not found in the given models.", relationship.getModels().get(0))));
+    }
+
+    private static Model getRightModel(Relationship relationship, List<Model> models)
+    {
+        return models.stream().filter(model -> model.getName().equals(relationship.getModels().get(1))).findAny()
+                .orElseThrow(() -> new IllegalArgumentException(String.format("Right model %s not found in the given models.", relationship.getModels().get(1))));
     }
 
     private String getReferenceField(Expression expression)
