@@ -67,12 +67,4 @@ public class Relationship
     {
         return condition;
     }
-
-    public boolean isLeft(String model)
-    {
-        if (models.contains(model)) {
-            return models.indexOf(model) == 0;
-        }
-        throw new IllegalArgumentException(String.format("model %s doesn't belong to relationship %s", model, name));
-    }
 }
