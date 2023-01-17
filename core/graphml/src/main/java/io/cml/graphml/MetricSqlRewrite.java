@@ -17,7 +17,6 @@ package io.cml.graphml;
 import io.cml.graphml.analyzer.Analysis;
 import io.cml.graphml.base.GraphML;
 import io.cml.graphml.base.dto.Metric;
-import io.cml.graphml.base.dto.Model;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Query;
@@ -29,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
@@ -44,33 +42,21 @@ public class MetricSqlRewrite
         Map<String, Query> metricQueries = graphML.listMetrics().stream()
                 .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
                 .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
-
-        Map<String, Query> baseModelQueries = graphML.listMetrics().stream()
-                // only process the visited metric
-                .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
-                .map(Metric::getBaseModel).distinct()
-                // filter the model processed by ModelSqlRewrite
-                .filter(model -> !analysis.getTables().contains(model))
-                .map(model -> graphML.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("model %s is not found", model))))
-                .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
-        return new MetricSqlRewrite.Rewriter(metricQueries, baseModelQueries, analysis).process(root);
+        return new MetricSqlRewrite.Rewriter(metricQueries, analysis).process(root);
     }
 
     private static class Rewriter
             extends BaseVisitor
     {
         private final Map<String, Query> metricQueries;
-        private final Map<String, Query> baseModelQueries;
         private final Analysis analysis;
 
         public Rewriter(
                 Map<String, Query> metricQueries,
-                Map<String, Query> baseModelQueries,
                 Analysis analysis)
         {
             this.metricQueries = metricQueries;
             this.analysis = analysis;
-            this.baseModelQueries = baseModelQueries;
         }
 
         @Override
@@ -81,21 +67,13 @@ public class MetricSqlRewrite
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
 
-            List<WithQuery> baseModelWithQueries = baseModelQueries.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
-                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
-                    .collect(toUnmodifiableList());
-
-            // The base model should be first.
-            List<WithQuery> orderedWithQuery = Stream.concat(baseModelWithQueries.stream(), metricWithQueries.stream()).collect(toUnmodifiableList());
-
             return new Query(
                     node.getWith()
                             .map(with -> new With(
                                     with.isRecursive(),
-                                    Stream.concat(orderedWithQuery.stream(), with.getQueries().stream())
+                                    Stream.concat(with.getQueries().stream(), metricWithQueries.stream())
                                             .collect(toUnmodifiableList())))
-                            .or(() -> Optional.ofNullable(orderedWithQuery.isEmpty() ? null : new With(false, orderedWithQuery))),
+                            .or(() -> Optional.ofNullable(metricWithQueries.isEmpty() ? null : new With(false, metricWithQueries))),
                     node.getQueryBody(),
                     node.getOrderBy(),
                     node.getOffset(),

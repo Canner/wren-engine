@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -56,5 +57,24 @@ public class EnumDefinition
         return values.stream()
                 .filter(candidate -> candidate.equals(value))
                 .findAny();
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        EnumDefinition that = (EnumDefinition) obj;
+        return Objects.equals(name, that.name) && Objects.equals(values, that.values);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, values);
     }
 }

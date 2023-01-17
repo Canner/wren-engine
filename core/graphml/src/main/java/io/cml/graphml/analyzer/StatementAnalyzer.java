@@ -16,7 +16,9 @@ package io.cml.graphml.analyzer;
 
 import io.cml.graphml.RelationshipCteGenerator;
 import io.cml.graphml.base.GraphML;
+import io.cml.graphml.base.dto.Metric;
 import io.cml.graphml.base.dto.Model;
+import io.cml.graphml.base.dto.Relationship;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
@@ -44,8 +46,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 /**
  * Inspired by io.trino.sql.analyzer.StatementAnalyzer
@@ -63,6 +67,33 @@ public final class StatementAnalyzer
     {
         Analysis analysis = new Analysis(statement, relationshipCteGenerator);
         new Visitor(analysis, graphML, relationshipCteGenerator).process(statement, Optional.empty());
+
+        // add models directly used in sql query
+        analysis.addModels(
+                graphML.listModels().stream()
+                        .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
+                        .collect(toUnmodifiableSet()));
+
+        // add models required for relationships
+        analysis.addModels(
+                analysis.getRelationships().stream()
+                        .map(Relationship::getModels)
+                        .flatMap(List::stream)
+                        .distinct()
+                        .map(modelName ->
+                                graphML.getModel(modelName)
+                                        .orElseThrow(() -> new IllegalArgumentException(format("relationship model %s not exists", modelName))))
+                        .collect(toUnmodifiableSet()));
+
+        // add models required for metrics
+        analysis.addModels(
+                graphML.listMetrics().stream()
+                        .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
+                        .map(Metric::getBaseModel)
+                        .distinct()
+                        .map(model -> graphML.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
+                        .collect(toUnmodifiableSet()));
+
         return analysis;
     }
 
@@ -227,6 +258,7 @@ public final class StatementAnalyzer
         {
             ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, graphML, relationshipCteGenerator, scope);
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
+            analysis.addRelationships(expressionAnalysis.getRelationships());
             return expressionAnalysis;
         }
     }

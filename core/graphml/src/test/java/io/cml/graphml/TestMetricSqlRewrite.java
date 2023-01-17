@@ -26,6 +26,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.cml.graphml.MetricSqlRewrite.METRIC_SQL_REWRITE;
+import static io.cml.graphml.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.cml.graphml.Utils.SQL_PARSER;
 import static io.cml.graphml.base.GraphMLTypes.INTEGER;
 import static io.cml.graphml.base.GraphMLTypes.VARCHAR;
@@ -113,14 +114,10 @@ public class TestMetricSqlRewrite
         assertThatNoException()
                 .describedAs(format("actual sql: %s is invalid", actualSql))
                 .isThrownBy(() -> query(actualSql));
-        // TODO: open this assertion, currently missing relationship models and cast relationship to varchar const
-//        assertThatNoException()
-//                .describedAs(format("actual sql: %s is invalid", actualSql))
-//                .isThrownBy(() -> query(actualSql));
     }
 
     private String rewrite(String sql)
     {
-        return GraphMLPlanner.rewrite(sql, graphML, List.of(METRIC_SQL_REWRITE));
+        return GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE, METRIC_SQL_REWRITE));
     }
 }

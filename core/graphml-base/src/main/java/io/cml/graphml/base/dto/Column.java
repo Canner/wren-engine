@@ -17,6 +17,7 @@ package io.cml.graphml.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -88,10 +89,37 @@ public class Column
 
     public String getSqlExpression()
     {
+        if (relationship.isPresent()) {
+            return format("'relationship<%s>' as %s", relationship.get(), name);
+        }
+
         if (expression.isEmpty()) {
             return getName();
         }
 
         return format("%s as %s", expression.get(), name);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Column that = (Column) obj;
+        return notNull == that.notNull
+                && Objects.equals(name, that.name)
+                && Objects.equals(type, that.type)
+                && Objects.equals(relationship, that.relationship)
+                && Objects.equals(expression, that.expression);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, type, notNull, relationship, expression);
     }
 }
