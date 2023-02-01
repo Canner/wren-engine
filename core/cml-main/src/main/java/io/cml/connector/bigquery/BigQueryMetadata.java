@@ -350,7 +350,7 @@ public class BigQueryMetadata
     @Override
     public TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName)
     {
-        Table table = bigQueryClient.getTable(catalogSchemaTableName);
+        Table table = requireNonNull(bigQueryClient.getTable(catalogSchemaTableName), format("%s table not found", catalogSchemaTableName));
         return new TableMetadata(
                 catalogSchemaTableName.getSchemaTableName(),
                 table.getDefinition().getSchema().getFields().stream()
