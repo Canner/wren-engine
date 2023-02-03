@@ -22,6 +22,7 @@ import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.cml.graphml.GraphMLModule;
 import io.cml.metrics.MetricResourceModule;
 import io.cml.pgcatalog.PgCatalogManager;
 import io.cml.server.module.BigQueryConnectorModule;
@@ -54,6 +55,7 @@ public class CmlServer
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
-                new MetricResourceModule());
+                new MetricResourceModule(),
+                new GraphMLModule());
     }
 }

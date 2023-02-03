@@ -16,6 +16,8 @@ package io.cml.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.cml.graphml.GraphMLMetastore;
+import io.cml.graphml.GraphMLPlanner;
 import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.spi.CmlException;
@@ -78,14 +80,16 @@ public class WireProtocolSession
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
+    private final GraphMLMetastore graphMLMetastore;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter)
+    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter, GraphMLMetastore graphMLMetastore)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
+        this.graphMLMetastore = requireNonNull(graphMLMetastore, "graphMLMetastore is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -184,8 +188,9 @@ public class WireProtocolSession
         }
         else {
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
+            String graphMLRewritten = GraphMLPlanner.rewrite(statementPreRewritten, graphMLMetastore.getGraphML());
             // validateSetSessionProperty(statementPreRewritten);
-            Statement parsedStatement = sqlParser.createStatement(statementPreRewritten, PARSE_AS_DECIMAL);
+            Statement parsedStatement = sqlParser.createStatement(graphMLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,

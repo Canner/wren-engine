@@ -29,6 +29,14 @@ import static java.util.Objects.requireNonNull;
 
 public class GraphML
 {
+    public static final GraphML EMPTY_GRAPHML =
+            GraphML.fromManifest(
+                    Manifest.manifest(
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            List.of()));
+
     private final Manifest manifest;
 
     public static GraphML fromJson(String manifest)
