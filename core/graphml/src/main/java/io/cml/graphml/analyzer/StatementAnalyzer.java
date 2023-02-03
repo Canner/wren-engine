@@ -36,6 +36,7 @@ import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
+import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
@@ -180,6 +181,12 @@ public final class StatementAnalyzer
                     .map(from -> (Table) from)
                     .ifPresent(table -> analysis.addReplaceTableWithCTEs(NodeRef.of(table), relationshipCTENames));
             // TODO: output scope here isn't right
+            return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitValues(Values node, Optional<Scope> scope)
+        {
             return Scope.builder().parent(scope).build();
         }
 
