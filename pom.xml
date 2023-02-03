@@ -271,6 +271,12 @@
 
             <dependency>
                 <groupId>io.cml</groupId>
+                <artifactId>graphml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
                 <artifactId>graphml-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -278,6 +284,12 @@
             <dependency>
                 <groupId>io.cml</groupId>
                 <artifactId>graphml-testing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.cml</groupId>
+                <artifactId>graphml-validation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
