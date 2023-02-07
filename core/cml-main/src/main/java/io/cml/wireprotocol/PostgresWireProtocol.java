@@ -281,7 +281,7 @@ public class PostgresWireProtocol
             return wireProtocolSession.sync();
         }
         catch (Exception e) {
-            LOG.error(format("Query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
+            LOG.error(e, format("Query failed. Statement: %s", statement));
             Messages.sendErrorResponse(channel, e);
             CompletableFuture<?> future = CompletableFuture.completedFuture(null);
             future.completeExceptionally(e);
