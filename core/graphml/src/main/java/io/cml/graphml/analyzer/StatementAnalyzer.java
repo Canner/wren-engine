@@ -36,6 +36,8 @@ import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
+import io.trino.sql.tree.Union;
+import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
@@ -187,6 +189,20 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitValues(Values node, Optional<Scope> scope)
         {
+            return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitUnnest(Unnest node, Optional<Scope> scope)
+        {
+            // TODO: output scope here isn't right
+            return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitUnion(Union node, Optional<Scope> scope)
+        {
+            // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
 
