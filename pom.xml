@@ -65,14 +65,14 @@
     </properties>
 
     <modules>
-        <module>cml-main</module>
-        <module>cml-server</module>
-        <module>cml-spi</module>
-        <module>cml-testing</module>
-        <module>graphml</module>
-        <module>graphml-base</module>
-        <module>graphml-testing</module>
-        <module>graphml-validation</module>
+        <module>graphmdl</module>
+        <module>graphmdl-base</module>
+        <module>graphmdl-main</module>
+        <module>graphmdl-server</module>
+        <module>graphmdl-spi</module>
+        <module>graphmdl-testing</module>
+        <module>graphmdl-tests</module>
+        <module>graphmdl-validation</module>
         <module>trino-parser</module>
     </modules>
 
@@ -241,55 +241,49 @@
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>cml-main</artifactId>
+                <artifactId>graphmdl</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>cml-postgres-wire-protocol</artifactId>
+                <artifactId>graphmdl-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>cml-server</artifactId>
+                <artifactId>graphmdl-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>cml-spi</artifactId>
+                <artifactId>graphmdl-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>cml-testing</artifactId>
+                <artifactId>graphmdl-spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>graphml</artifactId>
+                <artifactId>graphmdl-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>graphml-base</artifactId>
+                <artifactId>graphmdl-tests</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>graphml-testing</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphml-validation</artifactId>
+                <artifactId>graphmdl-validation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

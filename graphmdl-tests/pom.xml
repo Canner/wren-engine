@@ -24,8 +24,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>cml-testing</artifactId>
-    <name>cml-testing</name>
+    <artifactId>graphmdl-tests</artifactId>
+    <name>graphmdl-testing</name>
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
     </properties>
@@ -88,17 +88,17 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>cml-main</artifactId>
+            <artifactId>graphmdl-main</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>cml-server</artifactId>
+            <artifactId>graphmdl-server</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>cml-spi</artifactId>
+            <artifactId>graphmdl-spi</artifactId>
         </dependency>
 
         <dependency>

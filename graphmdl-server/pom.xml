@@ -9,8 +9,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>cml-server</artifactId>
-    <name>cml-server</name>
+    <artifactId>graphmdl-server</artifactId>
+    <name>graphmdl-server</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -90,7 +90,7 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>cml-main</artifactId>
+            <artifactId>graphmdl-main</artifactId>
         </dependency>
 
         <dependency>

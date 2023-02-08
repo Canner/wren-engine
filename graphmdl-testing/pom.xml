@@ -24,7 +24,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>graphml-testing</artifactId>
+    <artifactId>graphmdl-testing</artifactId>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>

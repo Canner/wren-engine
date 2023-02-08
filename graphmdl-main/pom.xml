@@ -9,8 +9,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>cml-main</artifactId>
-    <name>cml-main</name>
+    <artifactId>graphmdl-main</artifactId>
+    <name>graphmdl-main</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -115,17 +115,17 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>cml-spi</artifactId>
+            <artifactId>graphmdl</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>graphml</artifactId>
+            <artifactId>graphmdl-base</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>graphml-base</artifactId>
+            <artifactId>graphmdl-spi</artifactId>
         </dependency>
 
         <dependency>

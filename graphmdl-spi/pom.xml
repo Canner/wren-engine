@@ -9,8 +9,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>cml-spi</artifactId>
-    <name>cml-spi</name>
+    <artifactId>graphmdl-spi</artifactId>
+    <name>graphmdl-spi</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
