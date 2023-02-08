@@ -22,12 +22,17 @@ public final class PostgreSqlRewriteUtil
 {
     private PostgreSqlRewriteUtil() {}
 
-    private static final List<QueryPattern> PATTERNS = new ImmutableList.Builder<QueryPattern>()
+    private static final List<QueryPattern> PATTERNS = ImmutableList.<QueryPattern>builder()
+            .add(CorrelatedSubQueryPattern.INSTANCE)
             .add(ShowTransIsoPattern.INSTANCE)
             .add(SetPattern.INSTANCE)
             .add(SetSessionPattern.INSTANCE)
             .add(ShowMaxIdentifierLengthPattern.INSTANCE)
             .add(DeallocatePattern.INSTANCE)
+            .add(PgExtensionUpdatePathsPattern.INSTANCE)
+            .add(ArraySelectPattern.INSTANCE)
+            .add(ShowDateStylePattern.INSTANCE)
+            .add(ShowStandardConformingPattern.INSTANCE)
             .build();
 
     public static String rewrite(String statement)
