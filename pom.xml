@@ -8,7 +8,7 @@
         <version>112</version>
     </parent>
 
-    <groupId>io.cml</groupId>
+    <groupId>io.graphmdl</groupId>
     <artifactId>graphmdl-root</artifactId>
     <version>1</version>
 
@@ -240,61 +240,61 @@
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>cml-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>cml-postgres-wire-protocol</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>cml-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>cml-spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>cml-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphml</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphml-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphml-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphml-validation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
             </dependency>

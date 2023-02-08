@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.cml</groupId>
+        <groupId>io.graphmdl</groupId>
         <artifactId>graphmdl-root</artifactId>
         <version>1</version>
         <relativePath>../pom.xml</relativePath>
@@ -89,12 +89,12 @@
         </dependency>
 
         <dependency>
-            <groupId>io.cml</groupId>
+            <groupId>io.graphmdl</groupId>
             <artifactId>cml-main</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>io.cml</groupId>
+            <groupId>io.graphmdl</groupId>
             <artifactId>trino-parser</artifactId>
         </dependency>
     </dependencies>
