@@ -4,7 +4,7 @@
 
     <parent>
         <groupId>io.cml</groupId>
-        <artifactId>cml-root</artifactId>
+        <artifactId>graphmdl-root</artifactId>
         <version>1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>

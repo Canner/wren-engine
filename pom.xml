@@ -9,11 +9,11 @@
     </parent>
 
     <groupId>io.cml</groupId>
-    <artifactId>cml-root</artifactId>
+    <artifactId>graphmdl-root</artifactId>
     <version>1</version>
 
-    <name>cml</name>
-    <description>canner-metric-layer</description>
+    <name>graphmdl</name>
+    <description>Graph Metric Definition Language</description>
     <packaging>pom</packaging>
 
     <inceptionYear>2022</inceptionYear>

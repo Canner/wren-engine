@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>cml-root</artifactId>
+        <artifactId>graphmdl-root</artifactId>
         <groupId>io.cml</groupId>
         <version>1</version>
         <relativePath>../pom.xml</relativePath>
