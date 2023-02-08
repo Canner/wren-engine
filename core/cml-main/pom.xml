@@ -54,6 +54,11 @@
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
@@ -111,6 +116,16 @@
         <dependency>
             <groupId>io.cml</groupId>
             <artifactId>cml-spi</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.cml</groupId>
+            <artifactId>graphml</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.cml</groupId>
+            <artifactId>graphml-base</artifactId>
         </dependency>
 
         <dependency>

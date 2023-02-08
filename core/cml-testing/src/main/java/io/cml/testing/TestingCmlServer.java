@@ -28,6 +28,7 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.cml.graphml.GraphMLModule;
 import io.cml.metrics.MetricResourceModule;
 import io.cml.server.module.BigQueryConnectorModule;
 import io.cml.server.module.PostgresWireProtocolModule;
@@ -74,7 +75,8 @@ public class TestingCmlServer
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
-                new MetricResourceModule()));
+                new MetricResourceModule(),
+                new GraphMLModule()));
 
         injector = app
                 .doNotInitializeLogging()

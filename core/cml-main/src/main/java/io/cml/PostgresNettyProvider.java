@@ -15,6 +15,7 @@
 package io.cml;
 
 import com.google.common.collect.ImmutableList;
+import io.cml.graphml.GraphMLMetastore;
 import io.cml.metadata.Metadata;
 import io.cml.pgcatalog.regtype.RegObjectFactory;
 import io.cml.sql.SqlConverter;
@@ -36,6 +37,7 @@ public class PostgresNettyProvider
 
     private final Metadata connector;
     private final SqlConverter sqlConverter;
+    private final GraphMLMetastore graphMLMetastore;
 
     @Inject
     public PostgresNettyProvider(
@@ -43,13 +45,15 @@ public class PostgresNettyProvider
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
             Metadata connector,
-            SqlConverter sqlConverter)
+            SqlConverter sqlConverter,
+            GraphMLMetastore graphMLMetastore)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
+        this.graphMLMetastore = requireNonNull(graphMLMetastore, "graphMLMetastore is null");
     }
 
     @Override
@@ -62,7 +66,8 @@ public class PostgresNettyProvider
                 sslContextProvider,
                 regObjectFactory,
                 connector,
-                sqlConverter);
+                sqlConverter,
+                graphMLMetastore);
         postgresNetty.start();
         return postgresNetty;
     }
