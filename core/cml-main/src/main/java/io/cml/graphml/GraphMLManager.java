@@ -15,6 +15,7 @@
 package io.cml.graphml;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.airlift.log.Logger;
 import io.cml.graphml.base.GraphML;
 
 import javax.inject.Inject;
@@ -30,6 +31,7 @@ import static java.util.Objects.requireNonNull;
 public class GraphMLManager
         implements GraphMLMetastore
 {
+    private static final Logger LOG = Logger.get(GraphMLManager.class);
     private final AtomicReference<GraphML> graphML = new AtomicReference<>(EMPTY_GRAPHML);
     private final File graphMLFile;
 
@@ -40,6 +42,9 @@ public class GraphMLManager
         this.graphMLFile = requireNonNull(graphMLConfig.getGraphMLFile(), "graphMLFile is null");
         if (graphMLFile.exists()) {
             loadGraphMLFromFile();
+        }
+        else {
+            LOG.warn("GraphML file %s does not exist", graphMLFile);
         }
     }
 
