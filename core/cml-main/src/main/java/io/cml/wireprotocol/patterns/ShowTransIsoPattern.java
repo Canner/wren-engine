@@ -29,6 +29,6 @@ public class ShowTransIsoPattern
     @Override
     public String rewrite(String statement)
     {
-        return "SELECT * FROM (VALUES('read uncommitted')) RESPONSE(transaction_isolation)";
+        return "SELECT * FROM (VALUES(ROW('read uncommitted'))) RESPONSE(transaction_isolation)";
     }
 }
