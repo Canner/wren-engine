@@ -14,9 +14,18 @@
 
 package io.cml.wireprotocol;
 
+import com.google.common.collect.ImmutableList;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Locale.ENGLISH;
+import static org.apache.commons.lang3.StringUtils.isNumeric;
+import static org.elasticsearch.common.Booleans.isBoolean;
 
 public final class PostgresSessionProperties
 {
@@ -432,6 +441,9 @@ public final class PostgresSessionProperties
             STANDARD_CONFORMING_STRINGS,
             APPLICATION_NAME);
 
+    public static final Function<String, String> QUOTE_STRATEGY = text -> isQuoted(text) ? text : "'" + text + "'";
+    public static final Function<String, String> UNQUOTE_STRATEGY = text -> isQuoted(text) ? text.substring(1, text.length() - 1) : text;
+
     public static boolean isIgnoredSessionProperties(String property)
     {
         return ignoredSessionProperties.contains(property.toLowerCase(ENGLISH));
@@ -440,5 +452,60 @@ public final class PostgresSessionProperties
     public static boolean isHardWiredSessionProperty(String property)
     {
         return hardWiredSessionProperties.contains(property.toLowerCase(ENGLISH));
+    }
+
+    public static String formatValue(String value, Function<String, String> strategy)
+    {
+        if (isNumeric(value) ||
+                isBoolean(value)) {
+            return value;
+        }
+
+        return splitString(value).stream()
+                .map(strategy)
+                .collect(Collectors.joining(", "));
+    }
+
+    private static List<String> splitString(String value)
+    {
+        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        Queue<Character> queue = new LinkedList<>();
+        int counter = 0;
+
+        for (char c : value.toCharArray()) {
+            if (isCompleteParameter(queue, counter, c)) {
+                builder.add(combineToString(queue));
+                queue.clear();
+                counter = 0;
+                continue;
+            }
+
+            if (c == '\'') {
+                counter++;
+            }
+            queue.add(c);
+        }
+
+        // add last parameter
+        if (!queue.isEmpty()) {
+            builder.add(combineToString(queue));
+        }
+
+        return builder.build();
+    }
+
+    private static boolean isCompleteParameter(Queue<Character> queue, int counter, char c)
+    {
+        return c == ',' && !queue.isEmpty() && (queue.peek() != '\'' || counter % 2 == 0);
+    }
+
+    private static String combineToString(Queue<Character> list)
+    {
+        return list.stream().map(Object::toString).collect(Collectors.joining("")).trim();
+    }
+
+    private static boolean isQuoted(String text)
+    {
+        return text.charAt(0) == '\'' && text.charAt(text.length() - 1) == '\'';
     }
 }

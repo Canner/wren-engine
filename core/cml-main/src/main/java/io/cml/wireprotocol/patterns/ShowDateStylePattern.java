@@ -16,19 +16,19 @@ package io.cml.wireprotocol.patterns;
 
 import java.util.regex.Pattern;
 
-public class ShowTransIsoPattern
+public class ShowDateStylePattern
         extends QueryPattern
 {
-    static final QueryPattern INSTANCE = new ShowTransIsoPattern();
+    static final QueryPattern INSTANCE = new ShowDateStylePattern();
 
-    private ShowTransIsoPattern()
+    private ShowDateStylePattern()
     {
-        super(Pattern.compile("(?i)^ *SHOW +TRANSACTION( *ISOLATION *LEVEL|_ISOLATION) *$"));
+        super(Pattern.compile("(?i)^ *SHOW +DateStyle"));
     }
 
     @Override
-    public String rewrite(String statement)
+    protected String rewrite(String statement)
     {
-        return "SELECT * FROM (VALUES(ROW('read uncommitted'))) RESPONSE(transaction_isolation)";
+        return "SELECT 'ISO' AS DateStyle";
     }
 }

@@ -17,6 +17,9 @@ package io.cml.wireprotocol.patterns;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.cml.wireprotocol.PostgresSessionProperties.QUOTE_STRATEGY;
+import static io.cml.wireprotocol.PostgresSessionProperties.formatValue;
+import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 
 public class SetSessionPropertyPattern
@@ -26,7 +29,7 @@ public class SetSessionPropertyPattern
 
     private SetSessionPropertyPattern()
     {
-        super(Pattern.compile("(?i)^ *SET +SESSION +([a-zA-Z0-9_]+)( *=| +TO)"));
+        super(Pattern.compile("(?i)^ *SET +SESSION +(?<property>[a-zA-Z0-9_]+)( *=| +TO) +(?<value>(.*))"));
     }
 
     @Override
@@ -34,8 +37,9 @@ public class SetSessionPropertyPattern
     {
         Matcher matcher = matcher(statement);
         if (matcher.find()) {
-            String property = matcher.group(1).toLowerCase(ENGLISH);
-            return matcher.replaceFirst("SET SESSION " + property + " =");
+            String property = matcher.group("property").toLowerCase(ENGLISH);
+            String value = formatValue(matcher.group("value"), QUOTE_STRATEGY);
+            return format("SET SESSION %s = %s", property, value);
         }
         return statement;
     }

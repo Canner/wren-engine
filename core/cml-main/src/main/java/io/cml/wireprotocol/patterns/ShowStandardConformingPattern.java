@@ -16,19 +16,19 @@ package io.cml.wireprotocol.patterns;
 
 import java.util.regex.Pattern;
 
-public class ShowTransIsoPattern
+public class ShowStandardConformingPattern
         extends QueryPattern
 {
-    static final QueryPattern INSTANCE = new ShowTransIsoPattern();
+    static final QueryPattern INSTANCE = new ShowStandardConformingPattern();
 
-    private ShowTransIsoPattern()
+    private ShowStandardConformingPattern()
     {
-        super(Pattern.compile("(?i)^ *SHOW +TRANSACTION( *ISOLATION *LEVEL|_ISOLATION) *$"));
+        super(Pattern.compile("(?i)^ *SHOW +standard_conforming_strings"));
     }
 
     @Override
-    public String rewrite(String statement)
+    protected String rewrite(String statement)
     {
-        return "SELECT * FROM (VALUES(ROW('read uncommitted'))) RESPONSE(transaction_isolation)";
+        return "SELECT 'on' AS standard_conforming_strings";
     }
 }

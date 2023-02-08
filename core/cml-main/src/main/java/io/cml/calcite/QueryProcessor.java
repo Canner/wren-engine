@@ -126,7 +126,7 @@ public class QueryProcessor
         // provided rule set.
         RelNode bestExp = planner.findBestExp();
 
-        LOG.info(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
+        LOG.debug(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect);
@@ -162,7 +162,7 @@ public class QueryProcessor
         RelOptTable relOptTable = requireNonNull(queryContext.getCatalogReader().getTable(mvName), mvNameStr + " not found in catalogReader");
         RelNode queryRel = queryContext.getRelNode();
 
-        LOG.info(RelOptUtil.dumpPlan("[MV " + mvNameStr + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
+        LOG.debug(RelOptUtil.dumpPlan("[MV " + mvNameStr + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         return new RelOptMaterialization(
@@ -196,7 +196,7 @@ public class QueryProcessor
     {
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        LOG.info("[Parsed query]: %s", SqlFormatter.formatSql(statement));
+        LOG.debug("[Parsed query]: %s", SqlFormatter.formatSql(statement));
         Analysis analysis = new Analysis();
         SqlNode calciteStatement = CalciteSqlNodeConverter.convert(statement, analysis, metadata);
 
@@ -229,13 +229,13 @@ public class QueryProcessor
         // Convert the valid AST into a logical plan
         RelNode logPlan = relConverter.convertQuery(validNode, false, true).rel;
 
-        LOG.info(RelOptUtil.dumpPlan("[Logical plan]", logPlan, SqlExplainFormat.TEXT,
+        LOG.debug(RelOptUtil.dumpPlan("[Logical plan]", logPlan, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         // BigQuery doesn't support LATERAL Join statement. Do decorrelate to remove correlation statement.
         RelNode decorrelated = relConverter.decorrelate(validNode, logPlan);
 
-        LOG.info(RelOptUtil.dumpPlan("[Decorrelated Logical plan]", decorrelated, SqlExplainFormat.TEXT,
+        LOG.debug(RelOptUtil.dumpPlan("[Decorrelated Logical plan]", decorrelated, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
         return new QueryContext(catalogReader, relConverter, decorrelated);
