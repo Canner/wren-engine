@@ -21,7 +21,7 @@
         <artifactId>cml-root</artifactId>
         <groupId>io.cml</groupId>
         <version>1</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>graphml-base</artifactId>
 

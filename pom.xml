@@ -65,15 +65,15 @@
     </properties>
 
     <modules>
-        <module>core/cml-main</module>
-        <module>core/cml-server</module>
-        <module>core/cml-spi</module>
-        <module>core/cml-testing</module>
-        <module>core/graphml</module>
-        <module>core/graphml-base</module>
-        <module>core/graphml-testing</module>
-        <module>core/graphml-validation</module>
-        <module>core/trino-parser</module>
+        <module>cml-main</module>
+        <module>cml-server</module>
+        <module>cml-spi</module>
+        <module>cml-testing</module>
+        <module>graphml</module>
+        <module>graphml-base</module>
+        <module>graphml-testing</module>
+        <module>graphml-validation</module>
+        <module>trino-parser</module>
     </modules>
 
     <repositories>

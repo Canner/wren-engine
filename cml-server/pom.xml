@@ -6,7 +6,7 @@
         <groupId>io.cml</groupId>
         <artifactId>cml-root</artifactId>
         <version>1</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>cml-server</artifactId>
