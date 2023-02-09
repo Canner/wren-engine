@@ -19,28 +19,28 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class CmlException
+public class GraphMDLException
         extends RuntimeException
 {
     private final ErrorCode errorCode;
     private final Optional<Location> location;
 
-    public CmlException(ErrorCodeSupplier errorCode, String message)
+    public GraphMDLException(ErrorCodeSupplier errorCode, String message)
     {
         this(errorCode, message, null);
     }
 
-    public CmlException(ErrorCodeSupplier errorCode, Throwable throwable)
+    public GraphMDLException(ErrorCodeSupplier errorCode, Throwable throwable)
     {
         this(errorCode, null, throwable);
     }
 
-    public CmlException(ErrorCodeSupplier errorCode, String message, Throwable cause)
+    public GraphMDLException(ErrorCodeSupplier errorCode, String message, Throwable cause)
     {
         this(errorCode, Optional.empty(), message, cause);
     }
 
-    public CmlException(ErrorCodeSupplier errorCodeSupplier, Optional<Location> location, String message, Throwable cause)
+    public GraphMDLException(ErrorCodeSupplier errorCodeSupplier, Optional<Location> location, String message, Throwable cause)
     {
         super(message, cause);
         this.errorCode = errorCodeSupplier.toErrorCode();

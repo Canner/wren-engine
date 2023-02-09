@@ -14,7 +14,7 @@
 
 package io.graphmdl.spi.type.parser;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.parser.antlr.v4.PgNumericFormatBaseVisitor;
 import io.graphmdl.spi.type.parser.antlr.v4.PgNumericFormatLexer;
 import io.graphmdl.spi.type.parser.antlr.v4.PgNumericFormatParser;
@@ -42,7 +42,7 @@ public final class PgNumericFormatParserWrapper
                 String message,
                 RecognitionException e)
         {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e);
         }
     };
 
@@ -107,7 +107,7 @@ public final class PgNumericFormatParserWrapper
         @Override
         public String visitNonReservedPattern(PgNumericFormatParser.NonReservedPatternContext ctx)
         {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, String.format("we didn't support the pattern %s.", ctx.getText()));
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, String.format("we didn't support the pattern %s.", ctx.getText()));
         }
     }
 }

@@ -32,17 +32,17 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 
-public class BigQueryCmlSqlDialect
+public class BigQueryGraphMDLSqlDialect
         extends BigQuerySqlDialect
 {
-    private static final Logger LOG = Logger.get(BigQueryCmlSqlDialect.class);
+    private static final Logger LOG = Logger.get(BigQueryGraphMDLSqlDialect.class);
 
     /**
      * Creates a BigQuerySqlDialect.
      *
      * @param context
      */
-    public BigQueryCmlSqlDialect(Context context)
+    public BigQueryGraphMDLSqlDialect(Context context)
     {
         super(context);
     }

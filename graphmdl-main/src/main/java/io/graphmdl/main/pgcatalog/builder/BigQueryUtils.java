@@ -17,7 +17,7 @@ package io.graphmdl.main.pgcatalog.builder;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.PGArray;
 import io.graphmdl.spi.type.PGType;
 
@@ -133,7 +133,7 @@ public final class BigQueryUtils
                 schemas.stream()
                         .map(schema -> format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES", schema))
                         .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+                        .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
 
     /**
@@ -150,7 +150,7 @@ public final class BigQueryUtils
                                 "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
                                 "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, CML_TEMP_NAME + ".pg_type_mapping"))
                         .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+                        .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
 
     public static String createOrReplacePgTypeMapping()
@@ -159,7 +159,7 @@ public final class BigQueryUtils
         String records = getBqTypeToPgType().entrySet().stream()
                 .map(entry -> format("('%s', %s)", entry.getKey(), entry.getValue().oid()))
                 .reduce((a, b) -> a + "," + b)
-                .orElseThrow(() -> new CmlException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed"));
+                .orElseThrow(() -> new GraphMDLException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed"));
         return buildPgCatalogTableView(CML_TEMP_NAME, "pg_type_mapping", columnDefinition, records, false);
     }
 

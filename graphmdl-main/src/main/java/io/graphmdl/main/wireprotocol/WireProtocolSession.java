@@ -22,9 +22,9 @@ import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
-import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.SessionContext;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.trino.sql.parser.ParsingOptions;
@@ -98,7 +98,7 @@ public class WireProtocolSession
             return preparedStatements.get(statementName).getParamTypeOids().get(fieldPosition);
         }
         else {
-            throw new CmlException(NOT_FOUND, format("prepared statement %s not found", statementName));
+            throw new GraphMDLException(NOT_FOUND, format("prepared statement %s not found", statementName));
         }
     }
 
@@ -108,7 +108,7 @@ public class WireProtocolSession
             return portals.get(portalName);
         }
         else {
-            throw new CmlException(NOT_FOUND, format("portal %s not found", portalName));
+            throw new GraphMDLException(NOT_FOUND, format("portal %s not found", portalName));
         }
     }
 
@@ -180,7 +180,7 @@ public class WireProtocolSession
     public void parse(String statementName, String statement, List<Integer> paramTypes)
     {
         if (statementName.equalsIgnoreCase(ALL)) {
-            throw new CmlException(INVALID_PREPARED_STATEMENT_NAME, format("%s is a preserved word. Can't be the name of prepared statement", statementName));
+            throw new GraphMDLException(INVALID_PREPARED_STATEMENT_NAME, format("%s is a preserved word. Can't be the name of prepared statement", statementName));
         }
         String statementTrimmed = rewritePreparedChar(statement.split(";")[0].trim());
         if (statementTrimmed.isEmpty() || isIgnoredCommand(statementTrimmed)) {
@@ -274,7 +274,7 @@ public class WireProtocolSession
                 }
                 break;
             default:
-                throw new CmlException(INVALID_PARAMETER_USAGE, format("Type %s is invalid. We only support 'P' and 'S'", type));
+                throw new GraphMDLException(INVALID_PARAMETER_USAGE, format("Type %s is invalid. We only support 'P' and 'S'", type));
         }
     }
 

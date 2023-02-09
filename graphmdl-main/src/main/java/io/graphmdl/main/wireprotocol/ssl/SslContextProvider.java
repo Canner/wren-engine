@@ -17,7 +17,7 @@ package io.graphmdl.main.wireprotocol.ssl;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.graphmdl.main.PostgresWireProtocolConfig;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
@@ -120,7 +120,7 @@ public class SslContextProvider
         }
         catch (Exception e) {
             LOG.error(e);
-            throw new CmlException(WRONG_SSL_CONFIGURATION, "Failed to build SSL configuration: " + e.getMessage(), e);
+            throw new GraphMDLException(WRONG_SSL_CONFIGURATION, "Failed to build SSL configuration: " + e.getMessage(), e);
         }
     }
 

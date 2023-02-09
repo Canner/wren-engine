@@ -29,16 +29,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.graphmdl.main.calcite.CalciteTypes;
-import io.graphmdl.main.calcite.CmlSchemaUtil;
 import io.graphmdl.main.calcite.CustomCharsetJavaTypeFactoryImpl;
+import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunction;
 import io.graphmdl.main.pgcatalog.function.PgFunctionRegistry;
 import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.Parameter;
 import io.graphmdl.spi.SessionContext;
 import io.graphmdl.spi.metadata.CatalogName;
@@ -127,7 +127,7 @@ public class BigQueryMetadata
         this.pgNameToBqFunction = initPgNameToBqFunctions();
         this.calciteOperatorTable = initCalciteOperators();
         this.location = bigQueryConfig.getLocation()
-                .orElseThrow(() -> new CmlException(GENERIC_USER_ERROR, "Location must be set"));
+                .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Location must be set"));
 
         String mvSchema = getMaterializedViewSchema();
         if (!listSchemas().contains(mvSchema)) {
@@ -239,7 +239,7 @@ public class BigQueryMetadata
     {
         Optional<Dataset> dataset = getDataset(schemaName);
         if (dataset.isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("Dataset %s is not found", schemaName));
+            throw new GraphMDLException(NOT_FOUND, format("Dataset %s is not found", schemaName));
         }
         Iterable<Table> result = bigQueryClient.listTables(dataset.get().getDatasetId());
         return Streams.stream(result)
@@ -314,11 +314,11 @@ public class BigQueryMetadata
     {
         Optional<Dataset> dataset = getDataset(schemaName);
         if (dataset.isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("Dataset %s is not found", schemaName));
+            throw new GraphMDLException(NOT_FOUND, format("Dataset %s is not found", schemaName));
         }
         Iterable<Routine> routines = bigQueryClient.listRoutines(dataset.get().getDatasetId());
         if (routines == null) {
-            throw new CmlException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
+            throw new GraphMDLException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
         }
         return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).map(routine -> {
             Matcher matcher = PG_FUNCTION_PATTERN.matcher(routine);
@@ -362,9 +362,9 @@ public class BigQueryMetadata
     }
 
     @Override
-    public CmlSchemaUtil.Dialect getDialect()
+    public GraphMDLSchemaUtil.Dialect getDialect()
     {
-        return CmlSchemaUtil.Dialect.BIGQUERY;
+        return GraphMDLSchemaUtil.Dialect.BIGQUERY;
     }
 
     @Override

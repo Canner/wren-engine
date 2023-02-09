@@ -16,7 +16,7 @@ package io.graphmdl.main.connector.bigquery;
 
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.DateType;
 import io.graphmdl.spi.type.PGType;
 import io.graphmdl.spi.type.TimestampType;
@@ -77,12 +77,12 @@ public final class BigQueryType
     public static PGType<?> toPGType(StandardSQLTypeName bigQueryType)
     {
         return Optional.ofNullable(bqTypeToPgTypeMap.get(bigQueryType))
-                .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + bigQueryType));
+                .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + bigQueryType));
     }
 
     public static StandardSQLTypeName toBqType(PGType<?> pgType)
     {
         return Optional.ofNullable(pgTypeToBqTypeMap.get(pgType))
-                .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + pgType.typName()));
+                .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + pgType.typName()));
     }
 }

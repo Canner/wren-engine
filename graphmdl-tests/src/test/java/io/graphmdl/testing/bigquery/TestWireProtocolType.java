@@ -113,8 +113,8 @@ public class TestWireProtocolType
                 .addInput(varcharDataType(65535), "text_d")
                 .addInput(varcharDataType(10485760), "text_f")
                 .addInput(varcharDataType(), "unbounded")
-                .addInput(textDataType(), "cml_text")
-                .addInput(nameDataType(), "cml_name");
+                .addInput(textDataType(), "graphmdl_text")
+                .addInput(nameDataType(), "graphmdl_name");
     }
 
     @Test

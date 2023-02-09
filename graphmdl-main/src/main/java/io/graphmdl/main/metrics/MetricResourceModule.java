@@ -17,7 +17,7 @@ package io.graphmdl.main.metrics;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.graphmdl.main.web.CmlExceptionMapper;
+import io.graphmdl.main.web.GraphMDLExceptionMapper;
 import io.graphmdl.main.web.MetricResource;
 
 import java.nio.file.Path;
@@ -36,6 +36,6 @@ public class MetricResourceModule
         binder.bind(MetricHook.class).in(Scopes.SINGLETON);
 
         jaxrsBinder(binder).bind(MetricResource.class);
-        jaxrsBinder(binder).bindInstance(new CmlExceptionMapper());
+        jaxrsBinder(binder).bindInstance(new GraphMDLExceptionMapper());
     }
 }

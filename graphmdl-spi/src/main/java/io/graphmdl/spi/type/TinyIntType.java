@@ -14,7 +14,7 @@
 
 package io.graphmdl.spi.type;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
@@ -76,12 +76,12 @@ public class TinyIntType
     @Override
     public Byte readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        throw new CmlException(GENERIC_INTERNAL_ERROR, new IllegalAccessException("PostgreSQL doesn't have TinyIntType. We never read TinyInt from client."));
+        throw new GraphMDLException(GENERIC_INTERNAL_ERROR, new IllegalAccessException("PostgreSQL doesn't have TinyIntType. We never read TinyInt from client."));
     }
 
     @Override
     public Byte decodeUTF8Text(byte[] bytes)
     {
-        throw new CmlException(GENERIC_INTERNAL_ERROR, new IllegalAccessException("PostgreSQL doesn't have TinyIntType. We never read TinyInt from client."));
+        throw new GraphMDLException(GENERIC_INTERNAL_ERROR, new IllegalAccessException("PostgreSQL doesn't have TinyIntType. We never read TinyInt from client."));
     }
 }

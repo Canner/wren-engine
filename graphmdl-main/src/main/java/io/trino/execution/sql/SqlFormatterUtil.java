@@ -13,7 +13,7 @@
  */
 package io.trino.execution.sql;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingException;
 import io.trino.sql.parser.ParsingOptions;
@@ -50,9 +50,9 @@ public final class SqlFormatterUtil
         return sql;
     }
 
-    private static CmlException formattingFailure(@Nullable Throwable cause, String message, Statement statement, String sql)
+    private static GraphMDLException formattingFailure(@Nullable Throwable cause, String message, Statement statement, String sql)
     {
-        CmlException exception = new CmlException(GENERIC_INTERNAL_ERROR, message, cause);
+        GraphMDLException exception = new GraphMDLException(GENERIC_INTERNAL_ERROR, message, cause);
         exception.addSuppressed(new RuntimeException("Statement: " + statement));
         exception.addSuppressed(new RuntimeException(format("Formatted: [%s]", sql)));
         return exception;

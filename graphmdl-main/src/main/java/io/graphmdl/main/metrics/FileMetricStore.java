@@ -15,7 +15,7 @@
 package io.graphmdl.main.metrics;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,7 +48,7 @@ public class FileMetricStore
     public List<Metric> listMetrics()
     {
         if (!Files.exists(rootPath)) {
-            throw new CmlException(NOT_FOUND, format("rootPath is not found. path: %s", rootPath));
+            throw new GraphMDLException(NOT_FOUND, format("rootPath is not found. path: %s", rootPath));
         }
 
         try (Stream<Path> stream = Files.list(rootPath)) {
@@ -64,7 +64,7 @@ public class FileMetricStore
                     .collect(toUnmodifiableList());
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
         }
     }
 
@@ -80,7 +80,7 @@ public class FileMetricStore
             return Optional.of(objectMapper.readValue(path.toFile(), Metric.class));
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be accessed", metricName), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("metric %s can't be accessed", metricName), e);
         }
     }
 
@@ -89,7 +89,7 @@ public class FileMetricStore
     {
         Path dir = rootPath.resolve(metric.getName());
         if (Files.exists(dir)) {
-            throw new CmlException(ALREADY_EXISTS, format("metric %s already exists", metric.getName()));
+            throw new GraphMDLException(ALREADY_EXISTS, format("metric %s already exists", metric.getName()));
         }
 
         try {
@@ -98,7 +98,7 @@ public class FileMetricStore
             objectMapper.writeValue(path.toFile(), metric);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be created", metric.getName()), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("metric %s can't be created", metric.getName()), e);
         }
     }
 
@@ -107,7 +107,7 @@ public class FileMetricStore
     {
         Path path = rootPath.resolve(metricName);
         if (!Files.exists(path)) {
-            throw new CmlException(NOT_FOUND, format("metric %s not found", metricName));
+            throw new GraphMDLException(NOT_FOUND, format("metric %s not found", metricName));
         }
 
         try (Stream<Path> files = Files.list(path)) {
@@ -117,7 +117,7 @@ public class FileMetricStore
             Files.delete(path);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric %s can't be dropped", metricName), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("metric %s can't be dropped", metricName), e);
         }
     }
 
@@ -126,14 +126,14 @@ public class FileMetricStore
     {
         Path path = rootPath.resolve(metricSql.getBaseMetricName()).resolve(withJsonFileExtension(metricSql.getName()));
         if (Files.exists(path)) {
-            throw new CmlException(ALREADY_EXISTS, format("metricSql %s already exists", metricSql.getName()));
+            throw new GraphMDLException(ALREADY_EXISTS, format("metricSql %s already exists", metricSql.getName()));
         }
 
         try {
             objectMapper.writeValue(path.toFile(), metricSql);
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metricSql %s can't be created", metricSql.getName()), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("metricSql %s can't be created", metricSql.getName()), e);
         }
     }
 
@@ -142,7 +142,7 @@ public class FileMetricStore
     {
         Path filePath = rootPath.resolve(metricName);
         if (!Files.exists(filePath)) {
-            throw new CmlException(NOT_FOUND, format("metric %s not found", metricName));
+            throw new GraphMDLException(NOT_FOUND, format("metric %s not found", metricName));
         }
 
         try (Stream<Path> stream = Files.list(filePath)) {
@@ -159,7 +159,7 @@ public class FileMetricStore
                     .collect(toUnmodifiableList());
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e.getMessage(), e);
         }
     }
 
@@ -175,7 +175,7 @@ public class FileMetricStore
             return Optional.of(objectMapper.readValue(filePath.toFile(), MetricSql.class));
         }
         catch (Exception e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, format("metric sql %s can't be accessed", metricSqlName), e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("metric sql %s can't be accessed", metricSqlName), e);
         }
     }
 

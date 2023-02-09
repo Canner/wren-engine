@@ -16,7 +16,7 @@ package io.graphmdl.main.web;
 
 import io.airlift.log.Logger;
 import io.graphmdl.main.web.dto.ErrorMessageDto;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -30,20 +30,20 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
-public final class CmlExceptionMapper
+public final class GraphMDLExceptionMapper
         implements ExceptionMapper<Throwable>
 {
-    private static final Logger LOG = Logger.get(CmlExceptionMapper.class);
+    private static final Logger LOG = Logger.get(GraphMDLExceptionMapper.class);
 
     @Override
     public Response toResponse(Throwable throwable)
     {
         LOG.warn(throwable, format("Exception, type: %s, message: %s", throwable.getClass(), throwable.getMessage()));
-        if (throwable instanceof CmlException) {
-            return failure((CmlException) throwable);
+        if (throwable instanceof GraphMDLException) {
+            return failure((GraphMDLException) throwable);
         }
-        else if (throwable instanceof ExecutionException && throwable.getCause() instanceof CmlException) {
-            return failure((CmlException) throwable.getCause());
+        else if (throwable instanceof ExecutionException && throwable.getCause() instanceof GraphMDLException) {
+            return failure((GraphMDLException) throwable.getCause());
         }
         else {
             return Response
@@ -54,7 +54,7 @@ public final class CmlExceptionMapper
         }
     }
 
-    private static Response failure(CmlException exception)
+    private static Response failure(GraphMDLException exception)
     {
         switch (exception.getErrorCode().getType()) {
             case USER_ERROR:
@@ -82,7 +82,7 @@ public final class CmlExceptionMapper
         }
     }
 
-    private static ErrorMessageDto createErrorMessageDto(CmlException e)
+    private static ErrorMessageDto createErrorMessageDto(GraphMDLException e)
     {
         return new ErrorMessageDto(e.getErrorCode().getName(), e.getMessage());
     }

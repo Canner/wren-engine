@@ -16,7 +16,7 @@ package io.graphmdl.main.calcite;
 
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
@@ -543,7 +543,7 @@ public class CalciteSqlNodeConverter
                         null);
             }
 
-            JoinCriteria joinCriteria = node.getCriteria().orElseThrow(() -> new CmlException(GENERIC_INTERNAL_ERROR, "join criteria is empty"));
+            JoinCriteria joinCriteria = node.getCriteria().orElseThrow(() -> new GraphMDLException(GENERIC_INTERNAL_ERROR, "join criteria is empty"));
 
             if (node.getCriteria().isPresent() && node.getCriteria().get() instanceof NaturalJoin) {
                 return new SqlJoin(

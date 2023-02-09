@@ -37,7 +37,7 @@ import io.graphmdl.main.pgcatalog.table.PgTablespaceTable;
 import io.graphmdl.main.pgcatalog.table.PgTypeTable;
 import io.graphmdl.main.pgcatalog.table.ReferentialConstraints;
 import io.graphmdl.main.pgcatalog.table.TableConstraints;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import org.apache.commons.lang3.text.StrSubstitutor;
 
 import java.util.Map;
@@ -125,7 +125,7 @@ public abstract class PgCatalogTableBuilder
                 sql = createTableConstraints(pgCatalogTable);
                 break;
             default:
-                throw new CmlException(GENERIC_INTERNAL_ERROR, format("Unsupported table %s", pgCatalogTable.getName()));
+                throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("Unsupported table %s", pgCatalogTable.getName()));
         }
 
         metadata.directDDL(strSubstitutor.replace(sql));

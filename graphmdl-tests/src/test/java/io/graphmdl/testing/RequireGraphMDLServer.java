@@ -19,22 +19,22 @@ import org.testng.annotations.AfterClass;
 
 import java.io.IOException;
 
-public abstract class RequireCmlServer
+public abstract class RequireGraphMDLServer
 {
-    private final TestingCmlServer cmlServer;
+    private final TestingGraphMDLServer graphMDLServer;
     protected final Closer closer = Closer.create();
 
-    public RequireCmlServer()
+    public RequireGraphMDLServer()
     {
-        this.cmlServer = createCmlServer();
-        closer.register(cmlServer);
+        this.graphMDLServer = createGraphMDLServer();
+        closer.register(graphMDLServer);
     }
 
-    protected abstract TestingCmlServer createCmlServer();
+    protected abstract TestingGraphMDLServer createGraphMDLServer();
 
-    protected TestingCmlServer server()
+    protected TestingGraphMDLServer server()
     {
-        return cmlServer;
+        return graphMDLServer;
     }
 
     @AfterClass(alwaysRun = true)

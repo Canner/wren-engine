@@ -14,7 +14,7 @@
 
 package io.graphmdl.main.pgcatalog.regtype;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import java.util.regex.Matcher;
 
@@ -36,7 +36,7 @@ public class RegProc
             this.name = matcher.group("functionName");
         }
         else {
-            throw new CmlException(NOT_FOUND, format("%s doensn't match PG_FUNCTION_PATTERN", signature));
+            throw new GraphMDLException(NOT_FOUND, format("%s doensn't match PG_FUNCTION_PATTERN", signature));
         }
     }
 

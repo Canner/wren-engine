@@ -56,16 +56,16 @@ public class TestCalciteSqlNodeConverter
                         "  (typinput = 5004152699888335811) is_array\n" +
                         ", typtype\n" +
                         ", typname\n" +
-                        ", \"canner-cml\".pg_catalog.pg_type.oid\n" +
+                        ", \"graphmdl\".pg_catalog.pg_type.oid\n" +
                         "FROM\n" +
-                        "  \"canner-cml\".pg_catalog.pg_type\n" +
+                        "  \"graphmdl\".pg_catalog.pg_type\n" +
                         "LEFT JOIN (\n" +
                         "   SELECT\n" +
                         "     ns.oid nspoid\n" +
                         "   , nspname\n" +
                         "   , r.r\n" +
                         "   FROM\n" +
-                        "     \"canner-cml\".pg_catalog.pg_namespace ns\n" +
+                        "     \"graphmdl\".pg_catalog.pg_namespace ns\n" +
                         "   INNER JOIN (\n" +
                         "      SELECT\n" +
                         "        s.r\n" +
@@ -75,12 +75,12 @@ public class TestCalciteSqlNodeConverter
                         "   )  r USING (nspname)\n" +
                         ")  sp ON (sp.nspoid = typnamespace)"},
                 {"arrayConstructor", "select array[1, 2, 3], array['a', 'b', 'c']"},
-                {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"canner-cml\".pg_catalog.pg_attribute a"},
+                {"testNullIf", "SELECT nullif(a.attidentity, '') FROM \"graphmdl\".pg_catalog.pg_attribute a"},
                 {"testRowNumber", "SELECT row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum ASC) attnum\n" +
-                        "FROM \"canner-cml\".pg_catalog.pg_attribute a"},
-                {"testSimpleCase", "SELECT CASE (n.nspname = 'information_schema') WHEN true THEN 'YES' ELSE 'NO' END FROM \"canner-cml\".pg_catalog.pg_namespace n"},
+                        "FROM \"graphmdl\".pg_catalog.pg_attribute a"},
+                {"testSimpleCase", "SELECT CASE (n.nspname = 'information_schema') WHEN true THEN 'YES' ELSE 'NO' END FROM \"graphmdl\".pg_catalog.pg_namespace n"},
                 {"testSimpleCaseMultiWhen",
-                        "SELECT CASE c.relkind WHEN 'r' THEN 'SYSTEM TOAST TABLE' WHEN 'i' THEN 'SYSTEM TOAST INDEX' ELSE null END FROM \"canner-cml\".pg_catalog.pg_class c"},
+                        "SELECT CASE c.relkind WHEN 'r' THEN 'SYSTEM TOAST TABLE' WHEN 'i' THEN 'SYSTEM TOAST INDEX' ELSE null END FROM \"graphmdl\".pg_catalog.pg_class c"},
         };
     }
 

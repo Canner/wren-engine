@@ -14,7 +14,7 @@
 
 package io.graphmdl.main.wireprotocol.patterns;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import java.util.Stack;
 import java.util.regex.Matcher;
@@ -66,6 +66,6 @@ public class ArraySelectPattern
                     }
             }
         }
-        throw new CmlException(SYNTAX_ERROR, "lack of bracket ')'");
+        throw new GraphMDLException(SYNTAX_ERROR, "lack of bracket ')'");
     }
 }

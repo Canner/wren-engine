@@ -41,7 +41,7 @@ public class DataType<T>
     private final String insertType;
     private final PGType<?> pgResultType;
     private final Function<T, String> toLiteral;
-    private final Function<T, String> toCmlLiteral;
+    private final Function<T, String> toGraphMDLLiteral;
 
     public static DataType<Boolean> booleanDataType()
     {
@@ -167,22 +167,22 @@ public class DataType<T>
         return "X'" + base16().encode(value) + "'";
     }
 
-    private static <T> DataType<T> dataType(String insertType, PGType<?> cmlResultType)
+    private static <T> DataType<T> dataType(String insertType, PGType<?> graphMDLResultType)
     {
-        return new DataType<>(insertType, cmlResultType, Object::toString, Object::toString);
+        return new DataType<>(insertType, graphMDLResultType, Object::toString, Object::toString);
     }
 
-    public static <T> DataType<T> dataType(String insertType, PGType<?> cmlResultType, Function<T, String> toLiteral)
+    public static <T> DataType<T> dataType(String insertType, PGType<?> graphMDLResultType, Function<T, String> toLiteral)
     {
-        return new DataType<>(insertType, cmlResultType, toLiteral, toLiteral);
+        return new DataType<>(insertType, graphMDLResultType, toLiteral, toLiteral);
     }
 
-    private DataType(String insertType, PGType<?> pgResultType, Function<T, String> toLiteral, Function<T, String> toCmlLiteral)
+    private DataType(String insertType, PGType<?> pgResultType, Function<T, String> toLiteral, Function<T, String> toGraphMDLLiteral)
     {
         this.insertType = insertType;
         this.pgResultType = pgResultType;
         this.toLiteral = toLiteral;
-        this.toCmlLiteral = toCmlLiteral;
+        this.toGraphMDLLiteral = toGraphMDLLiteral;
     }
 
     public String toLiteral(T inputValue)
@@ -193,12 +193,12 @@ public class DataType<T>
         return toLiteral.apply(inputValue);
     }
 
-    public String toCmlLiteral(T inputValue)
+    public String toGraphMDLLiteral(T inputValue)
     {
         if (inputValue == null) {
             return "NULL";
         }
-        return toCmlLiteral.apply(inputValue);
+        return toGraphMDLLiteral.apply(inputValue);
     }
 
     public String getInsertType()

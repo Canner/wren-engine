@@ -15,7 +15,7 @@
 package io.graphmdl.main.calcite;
 
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.BigIntType;
 import io.graphmdl.spi.type.BooleanType;
 import io.graphmdl.spi.type.CharType;
@@ -109,12 +109,12 @@ public final class CalciteTypes
     public static SqlTypeName toCalciteType(String typeName)
     {
         return Optional.ofNullable(standardTypeToCalciteTypeMap.get(typeName.toLowerCase(ROOT)))
-                .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + typeName));
+                .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + typeName));
     }
 
     public static SqlTypeName toCalciteType(PGType<?> type)
     {
         return Optional.ofNullable(pgTypeToCalciteTypeMap.get(type))
-                .orElseThrow(() -> new CmlException(NOT_SUPPORTED, "Unsupported Type: " + type.typName()));
+                .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + type.typName()));
     }
 }

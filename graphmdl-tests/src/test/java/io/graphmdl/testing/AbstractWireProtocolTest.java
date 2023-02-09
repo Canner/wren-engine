@@ -29,14 +29,14 @@ import static java.lang.String.format;
 import static java.lang.System.getenv;
 
 public abstract class AbstractWireProtocolTest
-        extends RequireCmlServer
+        extends RequireGraphMDLServer
 {
     public static final String MOCK_PASSWORD = "ignored";
 
     @Override
-    protected TestingCmlServer createCmlServer()
+    protected TestingGraphMDLServer createGraphMDLServer()
     {
-        return TestingCmlServer.builder()
+        return TestingGraphMDLServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))

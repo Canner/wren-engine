@@ -14,7 +14,7 @@
 
 package io.graphmdl.spi.type.parser;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.parser.antlr.v4.PgArrayLexer;
 import io.graphmdl.spi.type.parser.antlr.v4.PgArrayParser;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -46,7 +46,7 @@ public class PgArrayParserWrapper
                 String message,
                 RecognitionException e)
         {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e);
         }
     };
 
@@ -94,7 +94,7 @@ public class PgArrayParserWrapper
             return tree.accept(new PgArrayASTVisitor(convert));
         }
         catch (StackOverflowError e) {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, "stack overflow while parsing: " + e.getLocalizedMessage());
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, "stack overflow while parsing: " + e.getLocalizedMessage());
         }
         catch (IOException e) {
             return new IllegalArgumentException(e);

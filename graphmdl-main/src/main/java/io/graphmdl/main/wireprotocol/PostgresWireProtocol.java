@@ -17,9 +17,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
 import io.graphmdl.main.wireprotocol.ssl.SslReqHandler;
-import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.PGType;
 import io.graphmdl.spi.type.PGTypes;
 import io.netty.buffer.ByteBuf;
@@ -415,7 +415,7 @@ public class PostgresWireProtocol
                         params.add(pgType.readBinaryValue(buffer, valueLength));
                         break;
                     default:
-                        throw new CmlException(GENERIC_INTERNAL_ERROR,
+                        throw new GraphMDLException(GENERIC_INTERNAL_ERROR,
                                 format("Unsupported format code '%d' for param '%s'", formatCode.ordinal(), paramType));
                 }
             }
@@ -534,7 +534,7 @@ public class PostgresWireProtocol
                     }
                     break;
                 default:
-                    throw new CmlException(GENERIC_INTERNAL_ERROR, format("Type %s is invalid. We only support 'P' and 'S'.", type));
+                    throw new GraphMDLException(GENERIC_INTERNAL_ERROR, format("Type %s is invalid. We only support 'P' and 'S'.", type));
             }
         }
         catch (Exception e) {
@@ -681,7 +681,7 @@ public class PostgresWireProtocol
                 default:
                     Messages.sendErrorResponse(
                             channel,
-                            new CmlException(GENERIC_INTERNAL_ERROR, "Unsupported messageType: " + msgType));
+                            new GraphMDLException(GENERIC_INTERNAL_ERROR, "Unsupported messageType: " + msgType));
             }
         }
 

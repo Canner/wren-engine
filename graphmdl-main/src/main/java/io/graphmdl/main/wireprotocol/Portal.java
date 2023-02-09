@@ -17,8 +17,8 @@ package io.graphmdl.main.wireprotocol;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
-import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.ConnectorRecordIterator;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.Parameter;
 import io.graphmdl.spi.type.PGType;
 import io.graphmdl.spi.type.PGTypes;
@@ -135,7 +135,7 @@ public class Portal
             case "int4":
                 return 0;
         }
-        throw new CmlException(NOT_SUPPORTED, "Unsupported type: " + pgType.typName());
+        throw new GraphMDLException(NOT_SUPPORTED, "Unsupported type: " + pgType.typName());
     }
 
     // TODO: make sure this annotation works.

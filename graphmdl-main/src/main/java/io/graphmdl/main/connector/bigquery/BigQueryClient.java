@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
 import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.Parameter;
 import io.graphmdl.spi.metadata.SchemaTableName;
 
@@ -160,18 +160,18 @@ public class BigQueryClient
             LOG.error(e);
             if (INVALID_QUERY.contains(e.getReason())) {
                 if (e.getMessage().contains("ambiguous at")) {
-                    throw new CmlException(AMBIGUOUS_NAME, "There are ambiguous column names", e);
+                    throw new GraphMDLException(AMBIGUOUS_NAME, "There are ambiguous column names", e);
                 }
-                throw new CmlException(GENERIC_USER_ERROR, format("Invalid statement: %s", query), e);
+                throw new GraphMDLException(GENERIC_USER_ERROR, format("Invalid statement: %s", query), e);
             }
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 
     public void dropTable(SchemaTableName schemaTableName)
     {
         if (!bigQuery.delete(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))) {
-            throw new CmlException(NOT_FOUND, schemaTableName + " was not found");
+            throw new GraphMDLException(NOT_FOUND, schemaTableName + " was not found");
         }
     }
 }

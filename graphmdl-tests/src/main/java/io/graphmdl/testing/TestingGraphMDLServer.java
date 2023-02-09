@@ -44,7 +44,7 @@ import java.util.Map;
 
 import static io.graphmdl.main.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
-public class TestingCmlServer
+public class TestingGraphMDLServer
         implements Closeable
 {
     private static final String HTTP_SERVER_PORT = "http-server.http.port";
@@ -57,7 +57,7 @@ public class TestingCmlServer
         return new Builder();
     }
 
-    private TestingCmlServer(Map<String, String> requiredConfigs)
+    private TestingGraphMDLServer(Map<String, String> requiredConfigs)
             throws IOException
     {
         Map<String, String> requiredConfigProps = new HashMap<>();
@@ -130,10 +130,10 @@ public class TestingCmlServer
             return this;
         }
 
-        public TestingCmlServer build()
+        public TestingGraphMDLServer build()
         {
             try {
-                return new TestingCmlServer(configs);
+                return new TestingGraphMDLServer(configs);
             }
             catch (IOException ex) {
                 throw new RuntimeException(ex);

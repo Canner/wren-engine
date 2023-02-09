@@ -15,7 +15,7 @@
 package io.graphmdl.main.pgcatalog.regtype;
 
 import io.graphmdl.main.sql.PgOidTypeTableInfo;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import java.util.List;
 
@@ -32,7 +32,7 @@ public abstract class PgMetadata
             case REGPROC:
                 return listRegProc();
         }
-        throw new CmlException(NOT_FOUND, format("Undefined oid type %s", pgOidTypeTableInfo.name()));
+        throw new GraphMDLException(NOT_FOUND, format("Undefined oid type %s", pgOidTypeTableInfo.name()));
     }
 
     protected abstract List<RegObject> listRegProc();

@@ -16,7 +16,7 @@ package io.graphmdl.main.pgcatalog.regtype;
 
 import com.google.common.collect.Streams;
 import io.graphmdl.main.sql.PgOidTypeTableInfo;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -41,7 +41,7 @@ public abstract class AbstractRegObjectFactory
         requireNonNull(objName, "obj name can't be null");
         Optional<RegObject> result = Streams.stream(this::getPgTableRecords).filter(regObject -> regObject.getName().equals(objName)).findFirst();
         if (result.isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("%s does not exist", objName));
+            throw new GraphMDLException(NOT_FOUND, format("%s does not exist", objName));
         }
         return result.get();
     }
@@ -50,7 +50,7 @@ public abstract class AbstractRegObjectFactory
     {
         Optional<RegObject> result = Streams.stream(this::getPgTableRecords).filter(regObject -> regObject.getOid() == oid).findFirst();
         if (result.isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("RegObject oid %s does not exist", oid));
+            throw new GraphMDLException(NOT_FOUND, format("RegObject oid %s does not exist", oid));
         }
         return result.get();
     }

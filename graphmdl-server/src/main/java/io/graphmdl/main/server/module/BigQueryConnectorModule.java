@@ -96,6 +96,6 @@ public class BigQueryConnectorModule
     @Singleton
     public static HeaderProvider createHeaderProvider()
     {
-        return FixedHeaderProvider.create("user-agent", "cml/1");
+        return FixedHeaderProvider.create("user-agent", "graphmdl/1");
     }
 }

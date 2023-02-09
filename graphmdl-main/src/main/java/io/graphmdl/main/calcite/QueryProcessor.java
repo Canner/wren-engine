@@ -205,7 +205,7 @@ public class QueryProcessor
                 .collect(toImmutableList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(CmlSchemaUtil.schemaPlus(Stream.of(visitedTable, extraTables).flatMap(Collection::stream).collect(Collectors.toList()), metadata)),
+                CalciteSchema.from(GraphMDLSchemaUtil.schemaPlus(Stream.of(visitedTable, extraTables).flatMap(Collection::stream).collect(Collectors.toList()), metadata)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);

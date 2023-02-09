@@ -29,12 +29,12 @@ import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
 import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
 
-public class CmlServer
+public class GraphMDLServer
         extends Server
 {
     public static void main(String[] args)
     {
-        new CmlServer().start();
+        new GraphMDLServer().start();
     }
 
     @Override

@@ -15,7 +15,7 @@
 package io.graphmdl.main.metrics;
 
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.metadata.SchemaTableName;
 
 import javax.inject.Inject;
@@ -48,7 +48,7 @@ public class MetricHook
     public void handleCreate(Metric metric)
     {
         if (metricStore.getMetric(metric.getName()).isPresent()) {
-            throw new CmlException(ALREADY_EXISTS, format("metric %s already exist", metric.getName()));
+            throw new GraphMDLException(ALREADY_EXISTS, format("metric %s already exist", metric.getName()));
         }
 
         createMetric(metric);
@@ -84,7 +84,7 @@ public class MetricHook
     public void handleUpdate(Metric metric)
     {
         if (metricStore.getMetric(metric.getName()).isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("metric %s is not found", metric.getName()));
+            throw new GraphMDLException(NOT_FOUND, format("metric %s is not found", metric.getName()));
         }
 
         dropMetric(metric.getName());
@@ -104,7 +104,7 @@ public class MetricHook
     public void handleDrop(String metricName)
     {
         if (metricStore.getMetric(metricName).isEmpty()) {
-            throw new CmlException(NOT_FOUND, format("metric %s is not found", metricName));
+            throw new GraphMDLException(NOT_FOUND, format("metric %s is not found", metricName));
         }
 
         dropMetric(metricName);

@@ -50,7 +50,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public class AbstractMetricTestingFramework
-        extends RequireCmlServer
+        extends RequireGraphMDLServer
 {
     private static final long QUERY_TIMEOUT_SECONDS = parseLong(getenv().getOrDefault("TEST_QUERY_TIMEOUT", "20"));
     private static final JsonCodec<Metric> METRIC_JSON_CODEC = jsonCodec(Metric.class);
@@ -68,9 +68,9 @@ public class AbstractMetricTestingFramework
     }
 
     @Override
-    protected TestingCmlServer createCmlServer()
+    protected TestingGraphMDLServer createGraphMDLServer()
     {
-        return TestingCmlServer.builder()
+        return TestingGraphMDLServer.builder()
                 .setRequiredConfigs(
                         ImmutableMap.<String, String>builder()
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))

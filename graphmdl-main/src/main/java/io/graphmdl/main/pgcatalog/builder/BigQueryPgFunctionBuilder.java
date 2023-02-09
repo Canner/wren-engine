@@ -16,7 +16,7 @@ package io.graphmdl.main.pgcatalog.builder;
 
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunction;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import javax.inject.Inject;
 
@@ -46,7 +46,7 @@ public class BigQueryPgFunctionBuilder
             case JS:
                 return generateCreateJsFunction(pgFunction);
         }
-        throw new CmlException(GENERIC_INTERNAL_ERROR, "Unsupported language: " + pgFunction.getLanguage());
+        throw new GraphMDLException(GENERIC_INTERNAL_ERROR, "Unsupported language: " + pgFunction.getLanguage());
     }
 
     private String generateCreateSqlFunction(PgFunction pgFunction)

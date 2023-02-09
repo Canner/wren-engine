@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static io.graphmdl.main.calcite.BigQueryCmlSqlDialect.DEFAULT_CONTEXT;
+import static io.graphmdl.main.calcite.BigQueryGraphMDLSqlDialect.DEFAULT_CONTEXT;
 import static io.graphmdl.spi.type.BigIntType.BIGINT;
 import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
 import static io.graphmdl.spi.type.DateType.DATE;
@@ -43,13 +43,13 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static org.apache.calcite.jdbc.CalciteSchema.createRootSchema;
 
-public final class CmlSchemaUtil
+public final class GraphMDLSchemaUtil
 {
-    private CmlSchemaUtil() {}
+    private GraphMDLSchemaUtil() {}
 
     public enum Dialect
     {
-        BIGQUERY(new BigQueryCmlSqlDialect(DEFAULT_CONTEXT));
+        BIGQUERY(new BigQueryGraphMDLSqlDialect(DEFAULT_CONTEXT));
 
         private final SqlDialect sqlDialect;
 
@@ -70,16 +70,16 @@ public final class CmlSchemaUtil
         tableMetadatas.stream()
                 .collect(groupingBy(tableMetadata -> metadata.getDefaultCatalog(),
                         groupingBy(tableMetadata -> tableMetadata.getTable().getSchemaName(),
-                                mapping(tableMetadata -> Map.entry(tableMetadata.getTable().getTableName(), toCmlTable(tableMetadata, metadata)),
+                                mapping(tableMetadata -> Map.entry(tableMetadata.getTable().getTableName(), toGraphMDLTable(tableMetadata, metadata)),
                                         toImmutableMap(Map.Entry::getKey, Map.Entry::getValue)))))
                 .forEach((catalogName, schemaTableMap) -> {
                     SchemaPlus secondSchema = rootSchema.add(catalogName, new AbstractSchema());
-                    schemaTableMap.forEach((schemaName, cmlTableMap) -> secondSchema.add(schemaName, new CmlSchema(cmlTableMap)));
+                    schemaTableMap.forEach((schemaName, graphMDLTableMap) -> secondSchema.add(schemaName, new GraphMDLSchema(graphMDLTableMap)));
                 });
         return rootSchema;
     }
 
-    private static CmlTable toCmlTable(TableMetadata tableMetadata, Metadata metadata)
+    private static GraphMDLTable toGraphMDLTable(TableMetadata tableMetadata, Metadata metadata)
     {
         JavaTypeFactoryImpl typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, metadata.getRelDataTypeSystem());
         RelDataTypeFactory.Builder builder = new RelDataTypeFactory.Builder(typeFactory);
@@ -87,7 +87,7 @@ public final class CmlSchemaUtil
             builder.add(columnMetadata.getName(), toRelDataType(typeFactory, columnMetadata.getType()));
         }
 
-        return new CmlTable(tableMetadata.getTable().getTableName(), builder.build());
+        return new GraphMDLTable(tableMetadata.getTable().getTableName(), builder.build());
     }
 
     // TODO: handle nested types

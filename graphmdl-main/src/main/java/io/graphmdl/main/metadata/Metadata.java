@@ -13,7 +13,7 @@
  */
 package io.graphmdl.main.metadata;
 
-import io.graphmdl.main.calcite.CmlSchemaUtil;
+import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.spi.CatalogSchemaTableName;
 import io.graphmdl.spi.Column;
@@ -87,7 +87,7 @@ public interface Metadata
 
     TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName);
 
-    CmlSchemaUtil.Dialect getDialect();
+    GraphMDLSchemaUtil.Dialect getDialect();
 
     RelDataTypeSystem getRelDataTypeSystem();
 

@@ -15,7 +15,7 @@
 package io.graphmdl.main.metadata;
 
 import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -40,19 +40,19 @@ public final class MetadataUtil
         else if (parts.size() == 2) {
             return new CatalogSchemaTableName(
                     Optional.ofNullable(defaultCatalog).orElseThrow(() ->
-                            new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
+                            new GraphMDLException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
                     parts.get(0),
                     parts.get(1));
         }
         else if (parts.size() == 1) {
             return new CatalogSchemaTableName(
                     Optional.ofNullable(defaultCatalog).orElseThrow(() ->
-                            new CmlException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
+                            new GraphMDLException(MISSING_CATALOG_NAME, "Default catalog must be specified")),
                     Optional.ofNullable(defaultSchema).orElseThrow(() ->
-                            new CmlException(MISSING_CATALOG_NAME, "Default schema must be specified")),
+                            new GraphMDLException(MISSING_CATALOG_NAME, "Default schema must be specified")),
                     parts.get(0));
         }
 
-        throw new CmlException(SYNTAX_ERROR, format("Too many dots in table name: %s", name));
+        throw new GraphMDLException(SYNTAX_ERROR, format("Too many dots in table name: %s", name));
     }
 }

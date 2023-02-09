@@ -21,7 +21,7 @@ import io.graphmdl.main.metrics.Metric;
 import io.graphmdl.main.metrics.MetricHook;
 import io.graphmdl.main.metrics.MetricStore;
 import io.graphmdl.main.web.dto.MetricDto;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -82,7 +82,7 @@ public class MetricResource
     {
         ListenableFuture<MetricDto> future = FluentFuture.from(createDirectListenableFuture(() -> metricStore.getMetric(metricName)))
                 .transform(metricOptional -> MetricDto.from(
-                        metricOptional.orElseThrow(() -> new CmlException(NOT_FOUND, format("metric %s is not found", metricName))),
+                        metricOptional.orElseThrow(() -> new GraphMDLException(NOT_FOUND, format("metric %s is not found", metricName))),
                         metricStore.listMetricSqls(metricName)), directExecutor());
         bindAsyncResponse(asyncResponse, future, directExecutor());
     }

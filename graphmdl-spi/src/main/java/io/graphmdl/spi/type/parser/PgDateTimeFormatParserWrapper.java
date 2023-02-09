@@ -14,7 +14,7 @@
 
 package io.graphmdl.spi.type.parser;
 
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.type.parser.antlr.v4.PgDateTimeFormatBaseVisitor;
 import io.graphmdl.spi.type.parser.antlr.v4.PgDateTimeFormatLexer;
 import io.graphmdl.spi.type.parser.antlr.v4.PgDateTimeFormatParser;
@@ -50,7 +50,7 @@ public final class PgDateTimeFormatParserWrapper
                 String message,
                 RecognitionException e)
         {
-            throw new CmlException(GENERIC_INTERNAL_ERROR, e);
+            throw new GraphMDLException(GENERIC_INTERNAL_ERROR, e);
         }
     };
 

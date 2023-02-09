@@ -14,7 +14,7 @@
 
 package io.graphmdl.main;
 
-import io.graphmdl.main.calcite.CmlSchemaUtil;
+import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.spi.CatalogSchemaTableName;
 import io.graphmdl.spi.Column;
@@ -93,7 +93,7 @@ public class TestingMetadata
     }
 
     @Override
-    public CmlSchemaUtil.Dialect getDialect()
+    public GraphMDLSchemaUtil.Dialect getDialect()
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

@@ -14,27 +14,30 @@
 
 package io.graphmdl.main.calcite;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.schema.impl.AbstractTable;
 
-import java.util.Map;
-
-import static java.util.Objects.requireNonNull;
-
-class CmlSchema
-        extends AbstractSchema
+class GraphMDLTable
+        extends AbstractTable
 {
-    private final Map<String, Table> tableMap;
+    private final String name;
+    private final RelDataType rowType;
 
-    public CmlSchema(Map<String, ? extends Table> tableMap)
+    public GraphMDLTable(String name, RelDataType rowType)
     {
-        this.tableMap = ImmutableMap.copyOf(requireNonNull(tableMap, "tableMap is null"));
+        this.rowType = rowType;
+        this.name = name;
     }
 
     @Override
-    protected Map<String, Table> getTableMap()
+    public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-        return tableMap;
+        return rowType;
+    }
+
+    public String getName()
+    {
+        return name;
     }
 }

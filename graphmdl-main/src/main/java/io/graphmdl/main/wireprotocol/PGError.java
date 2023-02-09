@@ -15,10 +15,10 @@
 package io.graphmdl.main.wireprotocol;
 
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.ErrorCode;
 import io.graphmdl.spi.ErrorCodeSupplier;
 import io.graphmdl.spi.ErrorType;
+import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.metadata.StandardErrorCode;
 
 import javax.annotation.Nullable;
@@ -76,9 +76,9 @@ public class PGError
 
     public static PGError fromThrowable(Throwable throwable)
     {
-        if (throwable instanceof CmlException) {
+        if (throwable instanceof GraphMDLException) {
             return new PGError(
-                    Converter.from(((CmlException) throwable).getErrorCode()),
+                    Converter.from(((GraphMDLException) throwable).getErrorCode()),
                     throwable.getMessage(),
                     throwable);
         }

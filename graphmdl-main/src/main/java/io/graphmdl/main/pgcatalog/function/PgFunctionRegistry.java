@@ -15,7 +15,7 @@
 package io.graphmdl.main.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.spi.CmlException;
+import io.graphmdl.spi.GraphMDLException;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -78,7 +78,7 @@ public final class PgFunctionRegistry
     public PgFunction getPgFunction(String name, int numArgument)
     {
         return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, numArgument)))
-                .orElseThrow(() -> new CmlException(NOT_FOUND, format("%s is undefined", name)));
+                .orElseThrow(() -> new GraphMDLException(NOT_FOUND, format("%s is undefined", name)));
     }
 
     /**
