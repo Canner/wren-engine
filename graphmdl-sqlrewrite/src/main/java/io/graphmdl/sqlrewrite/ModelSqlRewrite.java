@@ -14,7 +14,7 @@
 
 package io.graphmdl.sqlrewrite;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.tree.Identifier;
@@ -33,14 +33,14 @@ import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
 public class ModelSqlRewrite
-        implements GraphMLRule
+        implements GraphMDLRule
 {
     public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
 
     private ModelSqlRewrite() {}
 
     @Override
-    public Node apply(Node root, Analysis analysis, GraphML graphML)
+    public Node apply(Node root, Analysis analysis, GraphMDL graphMDL)
     {
         Map<String, Query> modelQueries =
                 analysis.getModels().stream()

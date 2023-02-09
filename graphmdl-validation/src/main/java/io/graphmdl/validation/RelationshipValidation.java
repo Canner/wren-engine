@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
@@ -47,9 +47,9 @@ public class RelationshipValidation
     private static final String RULE_NAME = "relationship";
 
     @Override
-    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
+    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL)
     {
-        return graphML.listRelationships().stream().map(relationship -> validateRelationship(client, relationship, graphML.listModels()))
+        return graphMDL.listRelationships().stream().map(relationship -> validateRelationship(client, relationship, graphMDL.listModels()))
                 .collect(toUnmodifiableList());
     }
 

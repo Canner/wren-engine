@@ -18,7 +18,7 @@ import com.carrotsearch.hppc.IntHashSet;
 import com.carrotsearch.hppc.IntSet;
 import com.google.common.net.HostAndPort;
 import io.airlift.log.Logger;
-import io.graphmdl.main.GraphMLMetastore;
+import io.graphmdl.main.GraphMDLMetastore;
 import io.graphmdl.main.PostgresWireProtocolConfig;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.netty.ChannelBootstrapFactory;
@@ -85,7 +85,7 @@ public class PostgresNetty
 
     private final SqlConverter sqlConverter;
     private BoundTransportAddress boundAddress;
-    private GraphMLMetastore graphMLMetastore;
+    private GraphMDLMetastore graphMDLMetastore;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -94,7 +94,7 @@ public class PostgresNetty
             RegObjectFactory regObjectFactory,
             Metadata connector,
             SqlConverter sqlConverter,
-            GraphMLMetastore graphMLMetastore)
+            GraphMDLMetastore graphMDLMetastore)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -106,7 +106,7 @@ public class PostgresNetty
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
-        this.graphMLMetastore = requireNonNull(graphMLMetastore, "graphMLMetastore is null");
+        this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
     }
 
     public void start()
@@ -121,7 +121,7 @@ public class PostgresNetty
             {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
-                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory, connector, sqlConverter, graphMLMetastore);
+                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory, connector, sqlConverter, graphMDLMetastore);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

@@ -36,7 +36,7 @@ public class PostgresNettyProvider
 
     private final Metadata connector;
     private final SqlConverter sqlConverter;
-    private final GraphMLMetastore graphMLMetastore;
+    private final GraphMDLMetastore graphMDLMetastore;
 
     @Inject
     public PostgresNettyProvider(
@@ -45,14 +45,14 @@ public class PostgresNettyProvider
             RegObjectFactory regObjectFactory,
             Metadata connector,
             SqlConverter sqlConverter,
-            GraphMLMetastore graphMLMetastore)
+            GraphMDLMetastore graphMDLMetastore)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
-        this.graphMLMetastore = requireNonNull(graphMLMetastore, "graphMLMetastore is null");
+        this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
     }
 
     @Override
@@ -66,7 +66,7 @@ public class PostgresNettyProvider
                 regObjectFactory,
                 connector,
                 sqlConverter,
-                graphMLMetastore);
+                graphMDLMetastore);
         postgresNetty.start();
         return postgresNetty;
     }

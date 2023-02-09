@@ -14,7 +14,7 @@
 
 package io.graphmdl.sqlrewrite;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.DereferenceExpression;
@@ -39,12 +39,12 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class RelationshipRewrite
-        implements GraphMLRule
+        implements GraphMDLRule
 {
-    public static final GraphMLRule RELATIONSHIP_REWRITE = new RelationshipRewrite();
+    public static final GraphMDLRule RELATIONSHIP_REWRITE = new RelationshipRewrite();
 
     @Override
-    public Node apply(Node root, Analysis analysis, GraphML graphML)
+    public Node apply(Node root, Analysis analysis, GraphMDL graphMDL)
     {
         Node rewriteWith = new WithRewriter(analysis).process(root);
         return new RelationshipRewrite.Rewriter(analysis).process(rewriteWith);

@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>graphmdl-validation</artifactId>
-    <name>graphml-validation</name>
+    <name>graphmdl-validation</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>

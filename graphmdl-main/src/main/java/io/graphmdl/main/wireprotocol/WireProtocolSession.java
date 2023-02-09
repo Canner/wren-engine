@@ -16,7 +16,7 @@ package io.graphmdl.main.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
-import io.graphmdl.main.GraphMLMetastore;
+import io.graphmdl.main.GraphMDLMetastore;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
@@ -26,7 +26,7 @@ import io.graphmdl.spi.CmlException;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
 import io.graphmdl.spi.SessionContext;
-import io.graphmdl.sqlrewrite.GraphMLPlanner;
+import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Deallocate;
@@ -80,16 +80,16 @@ public class WireProtocolSession
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
-    private final GraphMLMetastore graphMLMetastore;
+    private final GraphMDLMetastore graphMDLMetastore;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter, GraphMLMetastore graphMLMetastore)
+    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter, GraphMDLMetastore graphMDLMetastore)
     {
         this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
-        this.graphMLMetastore = requireNonNull(graphMLMetastore, "graphMLMetastore is null");
+        this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -188,9 +188,9 @@ public class WireProtocolSession
         }
         else {
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
-            String graphMLRewritten = GraphMLPlanner.rewrite(statementPreRewritten, graphMLMetastore.getGraphML());
+            String graphMDLRewritten = GraphMDLPlanner.rewrite(statementPreRewritten, graphMDLMetastore.getGraphMDL());
             // validateSetSessionProperty(statementPreRewritten);
-            Statement parsedStatement = sqlParser.createStatement(graphMLRewritten, PARSE_AS_DECIMAL);
+            Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,

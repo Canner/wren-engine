@@ -14,7 +14,7 @@
 
 package io.graphmdl.base;
 
-public final class GraphMLTypes
+public final class GraphMDLTypes
 {
     public static final String BIGINT = "bigint";
     public static final String INTEGER = "integer";
@@ -49,5 +49,5 @@ public final class GraphMLTypes
     public static final String BING_TILE = "BingTile";
     public static final String UUID = "uuid";
 
-    private GraphMLTypes() {}
+    private GraphMDLTypes() {}
 }

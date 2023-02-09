@@ -14,12 +14,12 @@
 
 package io.graphmdl;
 
-import io.graphmdl.base.GraphML;
-import io.graphmdl.base.GraphMLTypes;
+import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.GraphMDLTypes;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
-import io.graphmdl.sqlrewrite.GraphMLPlanner;
-import io.graphmdl.sqlrewrite.GraphMLRule;
+import io.graphmdl.sqlrewrite.GraphMDLPlanner;
+import io.graphmdl.sqlrewrite.GraphMDLRule;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.graphmdl.sqlrewrite.RelationshipRewrite;
 import io.graphmdl.sqlrewrite.Utils;
@@ -121,24 +121,24 @@ public class TestRelationshipAccessing
             ")";
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    private final GraphML graphML;
+    private final GraphMDL graphMDL;
 
     public TestRelationshipAccessing()
     {
-        graphML = GraphML.fromManifest(manifest(
+        graphMDL = GraphMDL.fromManifest(manifest(
                 List.of(Model.model("Book",
                                 "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 3)) Book(bookId, name, authorId)",
                                 List.of(
-                                        column("bookId", GraphMLTypes.INTEGER, null, true),
-                                        column("name", GraphMLTypes.VARCHAR, null, true),
+                                        column("bookId", GraphMDLTypes.INTEGER, null, true),
+                                        column("name", GraphMDLTypes.VARCHAR, null, true),
                                         column("author", "People", "BookPeople", true),
-                                        column("authorId", GraphMLTypes.INTEGER, null, true)),
+                                        column("authorId", GraphMDLTypes.INTEGER, null, true)),
                                 "bookId"),
                         Model.model("People",
                                 "select * from (values (1, 'user1'), (2, 'user2'), (3, 'user3')) People(userId, name)",
                                 List.of(
-                                        column("userId", GraphMLTypes.INTEGER, null, true),
-                                        column("name", GraphMLTypes.VARCHAR, null, true),
+                                        column("userId", GraphMDLTypes.INTEGER, null, true),
+                                        column("name", GraphMDLTypes.VARCHAR, null, true),
 
                                         column("book", "Book", "BookPeople", true)),
                                 "userId")),
@@ -275,8 +275,8 @@ public class TestRelationshipAccessing
     public void testRelationshipAccessingRewrite(String original, String expected, boolean enableH2Assertion)
     {
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
-        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphML);
-        Analysis analysis = StatementAnalyzer.analyze(statement, graphML, generator);
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, graphMDL, generator);
 
         Map<String, String> replaceMap = new HashMap<>();
         replaceMap.put("Book.author", generator.getNameMapping().get("Book.author"));
@@ -287,8 +287,8 @@ public class TestRelationshipAccessing
         replaceMap.put("People.book.author.book", generator.getNameMapping().get("People.book.author.book"));
 
         Node rewrittenStatement = statement;
-        for (GraphMLRule rule : List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, analysis, graphML);
+        for (GraphMDLRule rule : List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, analysis, graphMDL);
         }
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
@@ -316,7 +316,7 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        String rewrittenSql = GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(sql, graphMDL, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -328,9 +328,9 @@ public class TestRelationshipAccessing
         // hence this sql shouldn't be rewritten
         String actualSql = "SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a";
         String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
-                Utils.getModelSql(graphML.getModel("Book").orElseThrow()));
+                Utils.getModelSql(graphMDL.getModel("Book").orElseThrow()));
 
-        String rewrittenSql = GraphMLPlanner.rewrite(actualSql, graphML, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, graphMDL, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }

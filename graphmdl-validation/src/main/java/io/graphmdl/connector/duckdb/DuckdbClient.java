@@ -29,7 +29,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.graphmdl.connector.jdbc.JdbcTypeMapping.toGraphMLType;
+import static io.graphmdl.connector.jdbc.JdbcTypeMapping.toGraphMDLType;
 
 public final class DuckdbClient
         implements Client
@@ -158,7 +158,7 @@ public final class DuckdbClient
         {
             return new ColumnDescription(
                     resultSet.getString(1),
-                    toGraphMLType(JDBCType.valueOf(resultSet.getString(2))));
+                    toGraphMDLType(JDBCType.valueOf(resultSet.getString(2))));
         }
 
         @Override

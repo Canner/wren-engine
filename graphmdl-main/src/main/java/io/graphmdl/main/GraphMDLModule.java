@@ -14,9 +14,19 @@
 
 package io.graphmdl.main;
 
-import io.graphmdl.base.GraphML;
+import com.google.inject.Binder;
+import com.google.inject.Scopes;
+import io.airlift.configuration.AbstractConfigurationAwareModule;
 
-public interface GraphMLMetastore
+import static io.airlift.configuration.ConfigBinder.configBinder;
+
+public class GraphMDLModule
+        extends AbstractConfigurationAwareModule
 {
-    GraphML getGraphML();
+    @Override
+    protected void setup(Binder binder)
+    {
+        configBinder(binder).bindConfig(GraphMDLConfig.class);
+        binder.bind(GraphMDLMetastore.class).to(GraphMDLManager.class).in(Scopes.SINGLETON);
+    }
 }

@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.connector.Client;
@@ -42,10 +42,10 @@ public class ModelValidation
     private static final Pattern COLUMN_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*");
 
     @Override
-    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
+    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL)
     {
-        return graphML.listModels().stream()
-                .map(model -> validateModel(client, model, graphML.listEnums()))
+        return graphMDL.listModels().stream()
+                .map(model -> validateModel(client, model, graphMDL.listEnums()))
                 .collect(toUnmodifiableList());
     }
 

@@ -14,9 +14,9 @@
 
 package io.graphmdl;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.JoinType;
-import io.graphmdl.sqlrewrite.GraphMLPlanner;
+import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -26,8 +26,8 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.graphmdl.base.GraphMLTypes.INTEGER;
-import static io.graphmdl.base.GraphMLTypes.VARCHAR;
+import static io.graphmdl.base.GraphMDLTypes.INTEGER;
+import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Column.relationshipColumn;
 import static io.graphmdl.base.dto.Manifest.manifest;
@@ -43,11 +43,11 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestAllRulesRewrite
         extends AbstractTestFramework
 {
-    private final GraphML graphML;
+    private final GraphMDL graphMDL;
 
     public TestAllRulesRewrite()
     {
-        graphML = GraphML.fromManifest(manifest(
+        graphMDL = GraphMDL.fromManifest(manifest(
                 List.of(model("Album",
                                 "select * from (values (1, 'Gusare', 1, 2560), " +
                                         "(2, 'HisoHiso Banashi', 1, 1500), " +
@@ -76,7 +76,7 @@ public class TestAllRulesRewrite
     }
 
     @DataProvider
-    public Object[][] graphMLUsedCases()
+    public Object[][] graphMDLUsedCases()
     {
         return new Object[][] {
                 {"select name, price from Album", "WITH\n" +
@@ -108,8 +108,8 @@ public class TestAllRulesRewrite
         };
     }
 
-    @Test(dataProvider = "graphMLUsedCases")
-    public void testGraphMLRewrite(String original, String expected)
+    @Test(dataProvider = "graphMDLUsedCases")
+    public void testGraphMDLRewrite(String original, String expected)
     {
         Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
         String actualSql = rewrite(original);
@@ -130,7 +130,7 @@ public class TestAllRulesRewrite
     }
 
     @Test(dataProvider = "noRewriteCase")
-    public void testGraphMLNoRewrite(String original)
+    public void testGraphMDLNoRewrite(String original)
     {
         Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrite(original)).isEqualTo(SqlFormatter.formatSql(expectedState));
@@ -138,6 +138,6 @@ public class TestAllRulesRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMLPlanner.rewrite(sql, graphML);
+        return GraphMDLPlanner.rewrite(sql, graphMDL);
     }
 }

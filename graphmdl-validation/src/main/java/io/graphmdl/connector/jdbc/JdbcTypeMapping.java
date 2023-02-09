@@ -14,7 +14,7 @@
 
 package io.graphmdl.connector.jdbc;
 
-import io.graphmdl.base.GraphMLTypes;
+import io.graphmdl.base.GraphMDLTypes;
 
 import java.sql.JDBCType;
 
@@ -22,16 +22,16 @@ public final class JdbcTypeMapping
 {
     private JdbcTypeMapping() {}
 
-    public static String toGraphMLType(JDBCType jdbcType)
+    public static String toGraphMDLType(JDBCType jdbcType)
     {
         switch (jdbcType) {
             case BIGINT:
-                return GraphMLTypes.BIGINT;
+                return GraphMDLTypes.BIGINT;
             case INTEGER:
-                return GraphMLTypes.INTEGER;
+                return GraphMDLTypes.INTEGER;
             case VARCHAR:
             default:
-                return GraphMLTypes.VARCHAR;
+                return GraphMDLTypes.VARCHAR;
         }
     }
 }

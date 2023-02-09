@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.connector.Client;
 
@@ -34,12 +34,12 @@ public class DuplicateModelNameValidation
     private static final String RULE_NAME = "duplicate_model_name";
 
     @Override
-    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
+    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL)
     {
         return List.of(CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
             List<String> tableNames = client.listTables();
-            List<String> duplicateTable = graphML.listModels().stream().map(Model::getName).filter(tableNames::contains).collect(toUnmodifiableList());
+            List<String> duplicateTable = graphMDL.listModels().stream().map(Model::getName).filter(tableNames::contains).collect(toUnmodifiableList());
             if (duplicateTable.isEmpty()) {
                 return ValidationResult.pass(RULE_NAME, Duration.of(System.currentTimeMillis() - start, ChronoUnit.MILLIS));
             }

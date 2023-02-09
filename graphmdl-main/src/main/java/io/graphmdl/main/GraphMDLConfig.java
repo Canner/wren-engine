@@ -12,13 +12,28 @@
  * limitations under the License.
  */
 
-package io.graphmdl.sqlrewrite;
+package io.graphmdl.main;
 
-import io.graphmdl.base.GraphML;
-import io.graphmdl.sqlrewrite.analyzer.Analysis;
-import io.trino.sql.tree.Node;
+import io.airlift.configuration.Config;
 
-public interface GraphMLRule
+import javax.validation.constraints.NotNull;
+
+import java.io.File;
+
+public class GraphMDLConfig
 {
-    Node apply(Node root, Analysis analysis, GraphML graphML);
+    private File graphMDLFile = new File("etc/graphmdl.json");
+
+    @NotNull
+    public File getGraphMDLFile()
+    {
+        return graphMDLFile;
+    }
+
+    @Config("graphmdl.file")
+    public GraphMDLConfig setGraphMDLFile(File graphMDLFile)
+    {
+        this.graphMDLFile = graphMDLFile;
+        return this;
+    }
 }

@@ -14,8 +14,8 @@
 
 package io.graphmdl;
 
-import io.graphmdl.base.GraphML;
-import io.graphmdl.sqlrewrite.GraphMLPlanner;
+import io.graphmdl.base.GraphMDL;
+import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestModelSqlRewrite
         extends AbstractTestFramework
 {
-    private static final GraphML GRAPH_ML = GraphML.fromManifest(manifest(
+    private static final GraphMDL GRAPH_ML = GraphMDL.fromManifest(manifest(
             List.of(
                     model(
                             "People",
@@ -118,7 +118,7 @@ public class TestModelSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMLPlanner.rewrite(sql, GRAPH_ML, List.of(MODEL_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, GRAPH_ML, List.of(MODEL_SQL_REWRITE));
     }
 
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)

@@ -14,9 +14,9 @@
 
 package io.graphmdl;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Column;
-import io.graphmdl.sqlrewrite.GraphMLPlanner;
+import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.sqlrewrite.MetricSqlRewrite;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
@@ -27,8 +27,8 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.graphmdl.base.GraphMLTypes.INTEGER;
-import static io.graphmdl.base.GraphMLTypes.VARCHAR;
+import static io.graphmdl.base.GraphMDLTypes.INTEGER;
+import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Manifest.manifest;
 import static io.graphmdl.base.dto.Metric.metric;
@@ -43,11 +43,11 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestMetricSqlRewrite
         extends AbstractTestFramework
 {
-    private final GraphML graphML;
+    private final GraphMDL graphMDL;
 
     public TestMetricSqlRewrite()
     {
-        graphML = GraphML.fromManifest(manifest(
+        graphMDL = GraphMDL.fromManifest(manifest(
                 List.of(model("Album",
                         "select * from (values (1, 'Gusare', 'ZUTOMAYO', 2560), " +
                                 "(2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500), " +
@@ -119,6 +119,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMLPlanner.rewrite(sql, graphML, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
     }
 }

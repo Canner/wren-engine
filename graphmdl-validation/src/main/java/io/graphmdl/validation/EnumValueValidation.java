@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.connector.AutoCloseableIterator;
 import io.graphmdl.connector.Client;
@@ -35,11 +35,11 @@ public class EnumValueValidation
     private static final String RULE_PREFIX = "enum_";
 
     @Override
-    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
+    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL)
     {
-        return graphML.listModels().stream()
+        return graphMDL.listModels().stream()
                 .flatMap(model ->
-                        graphML.listEnums().stream()
+                        graphMDL.listEnums().stream()
                                 .flatMap(enumDefinition ->
                                         model.getColumns().stream()
                                                 .filter(column -> column.getType().equals(enumDefinition.getName()))

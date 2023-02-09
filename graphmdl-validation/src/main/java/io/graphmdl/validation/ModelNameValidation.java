@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.connector.Client;
 
@@ -37,11 +37,11 @@ public class ModelNameValidation
     private static final Pattern MODEL_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*");
 
     @Override
-    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML)
+    public List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL)
     {
         return List.of(CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
-            List<String> invalidNames = graphML.listModels().stream()
+            List<String> invalidNames = graphMDL.listModels().stream()
                     .map(Model::getName)
                     .filter(name -> !MODEL_NAME_PATTERN.matcher(name).matches())
                     .collect(toUnmodifiableList());

@@ -14,7 +14,7 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
@@ -61,19 +61,19 @@ public final class StatementAnalyzer
 {
     private StatementAnalyzer() {}
 
-    public static Analysis analyze(Statement statement, GraphML graphML)
+    public static Analysis analyze(Statement statement, GraphMDL graphMDL)
     {
-        return analyze(statement, graphML, new RelationshipCteGenerator(graphML));
+        return analyze(statement, graphMDL, new RelationshipCteGenerator(graphMDL));
     }
 
-    public static Analysis analyze(Statement statement, GraphML graphML, RelationshipCteGenerator relationshipCteGenerator)
+    public static Analysis analyze(Statement statement, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
     {
         Analysis analysis = new Analysis(statement, relationshipCteGenerator);
-        new Visitor(analysis, graphML, relationshipCteGenerator).process(statement, Optional.empty());
+        new Visitor(analysis, graphMDL, relationshipCteGenerator).process(statement, Optional.empty());
 
         // add models directly used in sql query
         analysis.addModels(
-                graphML.listModels().stream()
+                graphMDL.listModels().stream()
                         .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
                         .collect(toUnmodifiableSet()));
 
@@ -84,17 +84,17 @@ public final class StatementAnalyzer
                         .flatMap(List::stream)
                         .distinct()
                         .map(modelName ->
-                                graphML.getModel(modelName)
+                                graphMDL.getModel(modelName)
                                         .orElseThrow(() -> new IllegalArgumentException(format("relationship model %s not exists", modelName))))
                         .collect(toUnmodifiableSet()));
 
         // add models required for metrics
         analysis.addModels(
-                graphML.listMetrics().stream()
+                graphMDL.listMetrics().stream()
                         .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
                         .map(Metric::getBaseModel)
                         .distinct()
-                        .map(model -> graphML.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
+                        .map(model -> graphMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
                         .collect(toUnmodifiableSet()));
 
         return analysis;
@@ -104,13 +104,13 @@ public final class StatementAnalyzer
             extends AstVisitor<Scope, Optional<Scope>>
     {
         private final Analysis analysis;
-        private final GraphML graphML;
+        private final GraphMDL graphMDL;
         private final RelationshipCteGenerator relationshipCteGenerator;
 
-        public Visitor(Analysis analysis, GraphML graphML, RelationshipCteGenerator relationshipCteGenerator)
+        public Visitor(Analysis analysis, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
         {
             this.analysis = requireNonNull(analysis, "analysis is null");
-            this.graphML = requireNonNull(graphML, "graphML is null");
+            this.graphMDL = requireNonNull(graphMDL, "graphMDL is null");
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
         }
 
@@ -126,7 +126,7 @@ public final class StatementAnalyzer
             analysis.addTable(node.getName());
             // only record model fields here, others are ignored
             String tableName = node.getName().toString();
-            List<Field> modelFields = graphML.getModel(tableName)
+            List<Field> modelFields = graphMDL.getModel(tableName)
                     .map(Model::getColumns)
                     .orElseGet(List::of)
                     .stream()
@@ -279,7 +279,7 @@ public final class StatementAnalyzer
 
         private ExpressionAnalysis analyzeExpression(Expression expression, Scope scope)
         {
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, graphML, relationshipCteGenerator, scope);
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, graphMDL, relationshipCteGenerator, scope);
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
             analysis.addRelationships(expressionAnalysis.getRelationships());
             return expressionAnalysis;

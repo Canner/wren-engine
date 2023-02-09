@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.connector.Client;
 
 import java.util.List;
@@ -22,5 +22,5 @@ import java.util.concurrent.CompletableFuture;
 
 public abstract class ValidationRule
 {
-    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphML graphML);
+    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL);
 }

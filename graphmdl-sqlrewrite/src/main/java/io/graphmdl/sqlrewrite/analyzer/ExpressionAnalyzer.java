@@ -15,7 +15,7 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.Utils;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Model;
@@ -49,34 +49,34 @@ public final class ExpressionAnalyzer
 
     public static ExpressionAnalysis analyze(
             Expression expression,
-            GraphML graphML,
+            GraphMDL graphMDL,
             RelationshipCteGenerator relationshipCteGenerator,
             Scope scope)
     {
         ExpressionAnalyzer expressionAnalyzer = new ExpressionAnalyzer();
-        return expressionAnalyzer.analyzeExpression(expression, graphML, relationshipCteGenerator, scope);
+        return expressionAnalyzer.analyzeExpression(expression, graphMDL, relationshipCteGenerator, scope);
     }
 
     private ExpressionAnalysis analyzeExpression(
             Expression expression,
-            GraphML graphML,
+            GraphMDL graphMDL,
             RelationshipCteGenerator relationshipCteGenerator,
             Scope scope)
     {
-        new Visitor(graphML, relationshipCteGenerator, scope).process(expression);
+        new Visitor(graphMDL, relationshipCteGenerator, scope).process(expression);
         return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames, relationships);
     }
 
     private class Visitor
             extends AstVisitor<Void, Void>
     {
-        private final GraphML graphML;
+        private final GraphMDL graphMDL;
         private final RelationshipCteGenerator relationshipCteGenerator;
         private final Scope scope;
 
-        public Visitor(GraphML graphML, RelationshipCteGenerator relationshipCteGenerator, Scope scope)
+        public Visitor(GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator, Scope scope)
         {
-            this.graphML = requireNonNull(graphML, "graphML is null");
+            this.graphMDL = requireNonNull(graphMDL, "graphMDL is null");
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
             this.scope = requireNonNull(scope, "scope is null");
         }
@@ -127,22 +127,22 @@ public final class ExpressionAnalyzer
             }
             Field field = optField.get();
 
-            Model model = graphML.getModel(field.getModelName()).orElseThrow(() -> new IllegalArgumentException(field.getModelName() + " model not found"));
+            Model model = graphMDL.getModel(field.getModelName()).orElseThrow(() -> new IllegalArgumentException(field.getModelName() + " model not found"));
 
             String modelName = model.getName();
             List<String> relNameParts = new ArrayList<>();
             relNameParts.add(modelName);
             for (; index < qualifiedName.getParts().size(); index++) {
-                Utils.checkArgument(graphML.getModel(modelName).isPresent(), modelName + " model not found");
+                Utils.checkArgument(graphMDL.getModel(modelName).isPresent(), modelName + " model not found");
                 String partName = qualifiedName.getParts().get(index);
-                Column column = graphML.getModel(modelName).get().getColumns().stream()
+                Column column = graphMDL.getModel(modelName).get().getColumns().stream()
                         .filter(col -> col.getName().equals(partName))
                         .findAny()
                         .orElseThrow(() -> new IllegalArgumentException(partName + " column not found"));
                 if (column.getRelationship().isPresent()) {
                     // if column is a relationship, it's type name is model name
                     modelName = column.getType();
-                    Relationship relationship = graphML.getRelationship(column.getRelationship().get())
+                    Relationship relationship = graphMDL.getRelationship(column.getRelationship().get())
                             .orElseThrow(() -> new IllegalArgumentException(column.getRelationship().get() + " relationship not found"));
                     Utils.checkArgument(relationship.getModels().contains(modelName), format("relationship %s doesn't contain model %s", relationship.getName(), modelName));
                     relationships.add(relationship);

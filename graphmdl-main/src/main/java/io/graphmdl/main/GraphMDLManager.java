@@ -16,7 +16,7 @@ package io.graphmdl.main;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.airlift.log.Logger;
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 
 import javax.inject.Inject;
 
@@ -25,44 +25,44 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.graphmdl.base.GraphML.EMPTY_GRAPHML;
+import static io.graphmdl.base.GraphMDL.EMPTY_GRAPHMDL;
 import static java.util.Objects.requireNonNull;
 
-public class GraphMLManager
-        implements GraphMLMetastore
+public class GraphMDLManager
+        implements GraphMDLMetastore
 {
-    private static final Logger LOG = Logger.get(GraphMLManager.class);
-    private final AtomicReference<GraphML> graphML = new AtomicReference<>(EMPTY_GRAPHML);
-    private final File graphMLFile;
+    private static final Logger LOG = Logger.get(GraphMDLManager.class);
+    private final AtomicReference<GraphMDL> graphMDL = new AtomicReference<>(EMPTY_GRAPHMDL);
+    private final File graphMDLFile;
 
     @Inject
-    public GraphMLManager(GraphMLConfig graphMLConfig)
+    public GraphMDLManager(GraphMDLConfig graphMDLConfig)
             throws IOException
     {
-        this.graphMLFile = requireNonNull(graphMLConfig.getGraphMLFile(), "graphMLFile is null");
-        if (graphMLFile.exists()) {
-            loadGraphMLFromFile();
+        this.graphMDLFile = requireNonNull(graphMDLConfig.getGraphMDLFile(), "graphMDLFile is null");
+        if (graphMDLFile.exists()) {
+            loadGraphMDLFromFile();
         }
         else {
-            LOG.warn("GraphML file %s does not exist", graphMLFile);
+            LOG.warn("GraphMDL file %s does not exist", graphMDLFile);
         }
     }
 
-    public void loadGraphMLFromFile()
+    public void loadGraphMDLFromFile()
             throws IOException
     {
-        loadGraphML(Files.readString(graphMLFile.toPath()));
+        loadGraphMDL(Files.readString(graphMDLFile.toPath()));
     }
 
-    private void loadGraphML(String json)
+    private void loadGraphMDL(String json)
             throws JsonProcessingException
     {
-        graphML.set(GraphML.fromJson(json));
+        graphMDL.set(GraphMDL.fromJson(json));
     }
 
     @Override
-    public GraphML getGraphML()
+    public GraphMDL getGraphMDL()
     {
-        return graphML.get();
+        return graphMDL.get();
     }
 }

@@ -14,7 +14,7 @@
 
 package io.graphmdl.validation;
 
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.connector.Client;
 
 import java.time.Duration;
@@ -34,20 +34,20 @@ public final class MetricValidation
     /**
      * Validate with all rules.
      */
-    public static List<ValidationResult> validate(Client client, GraphML graphML)
+    public static List<ValidationResult> validate(Client client, GraphMDL graphMDL)
     {
         List<ValidationRule> allRule = List.of(
                 NOT_NULL,
                 ENUM_VALUE_VALIDATION);
-        return validate(client, graphML, allRule);
+        return validate(client, graphMDL, allRule);
     }
 
     /**
      * Validate with specific rules.
      */
-    public static List<ValidationResult> validate(Client client, GraphML graphML, List<ValidationRule> rules)
+    public static List<ValidationResult> validate(Client client, GraphMDL graphMDL, List<ValidationRule> rules)
     {
-        Validator validator = new Validator(client, graphML);
+        Validator validator = new Validator(client, graphMDL);
         for (ValidationRule rule : rules) {
             validator.register(rule);
         }
@@ -57,13 +57,13 @@ public final class MetricValidation
     static class Validator
     {
         private final Client dbClient;
-        private final GraphML graphML;
+        private final GraphMDL graphMDL;
         private final List<ValidationRule> tasks = new ArrayList<>();
 
-        public Validator(Client client, GraphML graphML)
+        public Validator(Client client, GraphMDL graphMDL)
         {
             this.dbClient = requireNonNull(client);
-            this.graphML = requireNonNull(graphML);
+            this.graphMDL = requireNonNull(graphMDL);
         }
 
         public Validator register(ValidationRule task)
@@ -76,7 +76,7 @@ public final class MetricValidation
         {
             final int timeoutInMinutes = 5;
             // TODO: parallel execute the validation rule
-            return tasks.stream().flatMap(task -> task.validate(dbClient, graphML).stream())
+            return tasks.stream().flatMap(task -> task.validate(dbClient, graphMDL).stream())
                     .map(future -> {
                         try {
                             return future.get(timeoutInMinutes, TimeUnit.MINUTES);

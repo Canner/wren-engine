@@ -15,7 +15,7 @@
 package io.graphmdl.sqlrewrite;
 
 import com.google.common.collect.ImmutableSet;
-import io.graphmdl.base.GraphML;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
@@ -67,14 +67,14 @@ import static java.util.stream.Collectors.toList;
  */
 public class RelationshipCteGenerator
 {
-    private final GraphML graphML;
+    private final GraphMDL graphMDL;
     private final Map<String, WithQuery> registeredCte = new LinkedHashMap<>();
     private final Map<String, String> nameMapping = new HashMap<>();
     private final Map<String, RelationshipCTEJoinInfo> relationshipInfoMapping = new HashMap<>();
 
-    public RelationshipCteGenerator(GraphML graphML)
+    public RelationshipCteGenerator(GraphMDL graphMDL)
     {
-        this.graphML = requireNonNull(graphML);
+        this.graphMDL = requireNonNull(graphMDL);
     }
 
     public void register(List<String> nameParts, List<RsItem> rsItems)
@@ -151,7 +151,7 @@ public class RelationshipCteGenerator
         Relationship relationship;
         // If the first item is CTE, the second one is RS or REVERSE_RS.
         if (rsItems.get(0).getType().equals(RsItem.Type.CTE)) {
-            relationship = graphML.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(1).getName())).findAny().get();
+            relationship = graphMDL.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(1).getName())).findAny().get();
             ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
             WithQuery leftQuery = registeredCte.get(rsItems.get(0).getName());
 
@@ -161,7 +161,7 @@ public class RelationshipCteGenerator
                         leftQuery.getColumnNames().get().stream().map(Identifier::getValue).collect(toList()),
                         null,
                         getReferenceField(comparisonExpression.getLeft()));
-                Model rightModel = getRightModel(relationship, graphML.listModels());
+                Model rightModel = getRightModel(relationship, graphMDL.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -176,7 +176,7 @@ public class RelationshipCteGenerator
                         // If it's a REVERSE relationship, the left and right side will be swapped.
                         getReferenceField(comparisonExpression.getRight()));
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model rightModel = getLeftModel(relationship, graphML.listModels());
+                Model rightModel = getLeftModel(relationship, graphMDL.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -187,25 +187,25 @@ public class RelationshipCteGenerator
         }
         else {
             if (rsItems.get(0).getType() == RS) {
-                relationship = graphML.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
+                relationship = graphMDL.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
-                Model leftModel = getLeftModel(relationship, graphML.listModels());
+                Model leftModel = getLeftModel(relationship, graphMDL.listModels());
                 left = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
                         leftModel.getPrimaryKey(), getReferenceField(comparisonExpression.getLeft()));
 
-                Model rightModel = getRightModel(relationship, graphML.listModels());
+                Model rightModel = getRightModel(relationship, graphMDL.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                         rightModel.getPrimaryKey(), getReferenceField(comparisonExpression.getRight()));
             }
             else {
-                relationship = graphML.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
+                relationship = graphMDL.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model leftModel = getRightModel(relationship, graphML.listModels());
+                Model leftModel = getRightModel(relationship, graphMDL.listModels());
                 left = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
@@ -213,7 +213,7 @@ public class RelationshipCteGenerator
                         leftModel.getPrimaryKey(), getReferenceField(comparisonExpression.getRight()));
 
                 // If it's a REVERSE relationship, the left and right side will be swapped.
-                Model rightModel = getLeftModel(relationship, graphML.listModels());
+                Model rightModel = getLeftModel(relationship, graphMDL.listModels());
                 right = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),

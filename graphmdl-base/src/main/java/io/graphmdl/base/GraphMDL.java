@@ -27,10 +27,10 @@ import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
-public class GraphML
+public class GraphMDL
 {
-    public static final GraphML EMPTY_GRAPHML =
-            GraphML.fromManifest(
+    public static final GraphMDL EMPTY_GRAPHMDL =
+            GraphMDL.fromManifest(
                     Manifest.manifest(
                             List.of(),
                             List.of(),
@@ -39,21 +39,21 @@ public class GraphML
 
     private final Manifest manifest;
 
-    public static GraphML fromJson(String manifest)
+    public static GraphMDL fromJson(String manifest)
             throws JsonProcessingException
     {
         ObjectMapper objectMapper = new ObjectMapper();
-        return new GraphML(objectMapper.readValue(manifest, Manifest.class));
+        return new GraphMDL(objectMapper.readValue(manifest, Manifest.class));
     }
 
-    public static GraphML fromManifest(Manifest manifest)
+    public static GraphMDL fromManifest(Manifest manifest)
     {
-        return new GraphML(manifest);
+        return new GraphMDL(manifest);
     }
 
-    private GraphML(Manifest manifest)
+    private GraphMDL(Manifest manifest)
     {
-        this.manifest = requireNonNull(manifest, "graphML is null");
+        this.manifest = requireNonNull(manifest, "graphMDL is null");
     }
 
     public List<Model> listModels()
