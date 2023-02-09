@@ -19,8 +19,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.Utils;
 import io.graphmdl.spi.metadata.SchemaTableName;
+import io.graphmdl.sqlrewrite.Utils;
 
 import javax.annotation.Nullable;
 

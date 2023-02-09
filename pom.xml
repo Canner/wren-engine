@@ -65,11 +65,11 @@
     </properties>
 
     <modules>
-        <module>graphmdl</module>
         <module>graphmdl-base</module>
         <module>graphmdl-main</module>
         <module>graphmdl-server</module>
         <module>graphmdl-spi</module>
+        <module>graphmdl-sqlrewrite</module>
         <module>graphmdl-testing</module>
         <module>graphmdl-tests</module>
         <module>graphmdl-validation</module>
@@ -241,12 +241,6 @@
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.graphmdl</groupId>
                 <artifactId>graphmdl-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -266,6 +260,12 @@
             <dependency>
                 <groupId>io.graphmdl</groupId>
                 <artifactId>graphmdl-spi</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-sqlrewrite</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
