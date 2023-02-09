@@ -28,12 +28,12 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
-import io.graphmdl.GraphMLModule;
-import io.graphmdl.metrics.MetricResourceModule;
-import io.graphmdl.server.module.BigQueryConnectorModule;
-import io.graphmdl.server.module.PostgresWireProtocolModule;
-import io.graphmdl.wireprotocol.PostgresNetty;
-import io.graphmdl.wireprotocol.ssl.EmptyTlsDataProvider;
+import io.graphmdl.main.GraphMLModule;
+import io.graphmdl.main.metrics.MetricResourceModule;
+import io.graphmdl.main.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.server.module.PostgresWireProtocolModule;
+import io.graphmdl.main.wireprotocol.PostgresNetty;
+import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -42,7 +42,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.graphmdl.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
+import static io.graphmdl.main.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
 public class TestingCmlServer
         implements Closeable

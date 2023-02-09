@@ -24,7 +24,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import static io.graphmdl.metrics.MetricConfig.METRIC_ROOT_PATH;
+import static io.graphmdl.main.metrics.MetricConfig.METRIC_ROOT_PATH;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
 

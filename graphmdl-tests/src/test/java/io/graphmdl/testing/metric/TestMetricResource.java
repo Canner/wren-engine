@@ -14,17 +14,17 @@
 
 package io.graphmdl.testing.metric;
 
-import io.graphmdl.metrics.Metric;
+import io.graphmdl.main.metrics.Metric;
 import io.graphmdl.testing.AbstractMetricTestingFramework;
 import org.testng.annotations.Test;
 
 import java.util.Objects;
 import java.util.Set;
 
-import static io.graphmdl.Utils.randomIntString;
-import static io.graphmdl.Utils.randomTableSuffix;
-import static io.graphmdl.Utils.swallowException;
-import static io.graphmdl.metrics.Metric.Filter.Operator.GREATER_THAN;
+import static io.graphmdl.main.Utils.randomIntString;
+import static io.graphmdl.main.Utils.randomTableSuffix;
+import static io.graphmdl.main.Utils.swallowException;
+import static io.graphmdl.main.metrics.Metric.Filter.Operator.GREATER_THAN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

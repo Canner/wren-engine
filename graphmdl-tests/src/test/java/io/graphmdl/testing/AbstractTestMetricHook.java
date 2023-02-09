@@ -14,15 +14,15 @@
 
 package io.graphmdl.testing;
 
-import io.graphmdl.metadata.Metadata;
-import io.graphmdl.metrics.Metric;
-import io.graphmdl.metrics.MetricHook;
-import io.graphmdl.metrics.MetricSql;
-import io.graphmdl.metrics.MetricStore;
+import io.graphmdl.main.metadata.Metadata;
+import io.graphmdl.main.metrics.Metric;
+import io.graphmdl.main.metrics.MetricHook;
+import io.graphmdl.main.metrics.MetricSql;
+import io.graphmdl.main.metrics.MetricStore;
+import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.spi.SessionContext;
 import io.graphmdl.spi.metadata.SchemaTableName;
 import io.graphmdl.spi.metadata.TableMetadata;
-import io.graphmdl.sql.SqlConverter;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
 
@@ -31,12 +31,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import static io.graphmdl.Utils.randomIntString;
-import static io.graphmdl.Utils.randomTableSuffix;
-import static io.graphmdl.Utils.swallowException;
-import static io.graphmdl.metadata.MetadataUtil.createCatalogSchemaTableName;
-import static io.graphmdl.metrics.Metric.Filter.Operator.GREATER_THAN;
-import static io.graphmdl.metrics.MetricSql.Status.SUCCESS;
+import static io.graphmdl.main.Utils.randomIntString;
+import static io.graphmdl.main.Utils.randomTableSuffix;
+import static io.graphmdl.main.Utils.swallowException;
+import static io.graphmdl.main.metadata.MetadataUtil.createCatalogSchemaTableName;
+import static io.graphmdl.main.metrics.Metric.Filter.Operator.GREATER_THAN;
+import static io.graphmdl.main.metrics.MetricSql.Status.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

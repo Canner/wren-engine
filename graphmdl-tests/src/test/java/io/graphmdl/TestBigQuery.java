@@ -14,18 +14,18 @@
 
 package io.graphmdl;
 
-import io.graphmdl.connector.bigquery.BigQueryClient;
-import io.graphmdl.connector.bigquery.BigQueryConfig;
-import io.graphmdl.connector.bigquery.BigQueryMetadata;
-import io.graphmdl.connector.bigquery.BigQuerySqlConverter;
-import io.graphmdl.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.connector.bigquery.BigQueryClient;
+import io.graphmdl.main.connector.bigquery.BigQueryConfig;
+import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
+import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
+import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.spi.SessionContext;
 import io.graphmdl.spi.metadata.SchemaTableName;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import static io.graphmdl.Utils.randomTableSuffix;
-import static io.graphmdl.Utils.swallowException;
+import static io.graphmdl.main.Utils.randomTableSuffix;
+import static io.graphmdl.main.Utils.swallowException;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 

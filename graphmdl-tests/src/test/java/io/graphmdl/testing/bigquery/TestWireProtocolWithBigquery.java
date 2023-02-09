@@ -15,11 +15,11 @@
 package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.main.wireprotocol.PostgresWireProtocol;
 import io.graphmdl.spi.type.PGType;
 import io.graphmdl.spi.type.PGTypes;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingWireProtocolClient;
-import io.graphmdl.wireprotocol.PostgresWireProtocol;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;

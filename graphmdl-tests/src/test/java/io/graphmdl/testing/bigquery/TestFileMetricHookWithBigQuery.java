@@ -14,17 +14,17 @@
 
 package io.graphmdl.testing.bigquery;
 
-import io.graphmdl.connector.bigquery.BigQueryClient;
-import io.graphmdl.connector.bigquery.BigQueryConfig;
-import io.graphmdl.connector.bigquery.BigQueryMetadata;
-import io.graphmdl.connector.bigquery.BigQuerySqlConverter;
-import io.graphmdl.metadata.Metadata;
-import io.graphmdl.metrics.FileMetricStore;
-import io.graphmdl.metrics.MetricHook;
-import io.graphmdl.metrics.MetricStore;
-import io.graphmdl.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.connector.bigquery.BigQueryClient;
+import io.graphmdl.main.connector.bigquery.BigQueryConfig;
+import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
+import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
+import io.graphmdl.main.metadata.Metadata;
+import io.graphmdl.main.metrics.FileMetricStore;
+import io.graphmdl.main.metrics.MetricHook;
+import io.graphmdl.main.metrics.MetricStore;
+import io.graphmdl.main.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.spi.metadata.SchemaTableName;
-import io.graphmdl.sql.SqlConverter;
 import io.graphmdl.testing.AbstractTestMetricHook;
 import org.testng.annotations.Test;
 
