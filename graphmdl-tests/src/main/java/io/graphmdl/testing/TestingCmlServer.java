@@ -28,7 +28,7 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
-import io.graphmdl.graphml.GraphMLModule;
+import io.graphmdl.GraphMLModule;
 import io.graphmdl.metrics.MetricResourceModule;
 import io.graphmdl.server.module.BigQueryConnectorModule;
 import io.graphmdl.server.module.PostgresWireProtocolModule;

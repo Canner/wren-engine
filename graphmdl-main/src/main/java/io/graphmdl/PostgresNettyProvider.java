@@ -15,7 +15,6 @@
 package io.graphmdl;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.graphml.GraphMLMetastore;
 import io.graphmdl.metadata.Metadata;
 import io.graphmdl.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.sql.SqlConverter;

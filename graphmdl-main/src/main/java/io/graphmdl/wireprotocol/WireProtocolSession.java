@@ -16,8 +16,8 @@ package io.graphmdl.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
-import io.graphmdl.graphml.GraphMLMetastore;
-import io.graphmdl.graphml.GraphMLPlanner;
+import io.graphmdl.GraphMLMetastore;
+import io.graphmdl.GraphMLPlanner;
 import io.graphmdl.metadata.Metadata;
 import io.graphmdl.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.spi.CmlException;
