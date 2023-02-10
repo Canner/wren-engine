@@ -13,5 +13,5 @@ target/
 .checkstyle
 .mvn/timing.properties
 .mvn/maven.config
-core/cml-server/etc
-core/cml-server/var/log
+graphmdl-server/etc
+graphmdl-server/var/log

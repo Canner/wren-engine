@@ -8,12 +8,12 @@
         <version>112</version>
     </parent>
 
-    <groupId>io.cml</groupId>
-    <artifactId>cml-root</artifactId>
+    <groupId>io.graphmdl</groupId>
+    <artifactId>graphmdl-root</artifactId>
     <version>1</version>
 
-    <name>cml</name>
-    <description>canner-metric-layer</description>
+    <name>graphmdl</name>
+    <description>Graph Metric Definition Language</description>
     <packaging>pom</packaging>
 
     <inceptionYear>2022</inceptionYear>
@@ -65,15 +65,15 @@
     </properties>
 
     <modules>
-        <module>core/cml-main</module>
-        <module>core/cml-server</module>
-        <module>core/cml-spi</module>
-        <module>core/cml-testing</module>
-        <module>core/graphml</module>
-        <module>core/graphml-base</module>
-        <module>core/graphml-testing</module>
-        <module>core/graphml-validation</module>
-        <module>core/trino-parser</module>
+        <module>graphmdl-base</module>
+        <module>graphmdl-main</module>
+        <module>graphmdl-server</module>
+        <module>graphmdl-spi</module>
+        <module>graphmdl-sqlrewrite</module>
+        <module>graphmdl-testing</module>
+        <module>graphmdl-tests</module>
+        <module>graphmdl-validation</module>
+        <module>trino-parser</module>
     </modules>
 
     <repositories>
@@ -240,61 +240,55 @@
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-main</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-postgres-wire-protocol</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-server</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-spi</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>cml-testing</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-sqlrewrite</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>graphml</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>graphml-base</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-tests</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>graphml-testing</artifactId>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-validation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.cml</groupId>
-                <artifactId>graphml-validation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.cml</groupId>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
             </dependency>
