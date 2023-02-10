@@ -23,7 +23,6 @@ import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
 import io.graphmdl.main.GraphMDLModule;
-import io.graphmdl.main.metrics.MetricResourceModule;
 import io.graphmdl.main.pgcatalog.PgCatalogManager;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
@@ -55,7 +54,6 @@ public class GraphMDLServer
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
-                new MetricResourceModule(),
                 new GraphMDLModule());
     }
 }

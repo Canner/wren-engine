@@ -14,12 +14,9 @@
 
 package io.graphmdl.main.calcite;
 
-import com.google.common.base.Joiner;
 import io.airlift.log.Logger;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.spi.SessionContext;
-import io.graphmdl.spi.metadata.ColumnMetadata;
-import io.graphmdl.spi.metadata.MaterializedViewDefinition;
 import io.graphmdl.spi.metadata.TableMetadata;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -32,7 +29,6 @@ import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -59,19 +55,14 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.main.metadata.MetadataUtil.createCatalogSchemaTableName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
-import static org.apache.calcite.linq4j.Nullness.castNonNull;
-import static org.apache.calcite.plan.RelOptRules.MATERIALIZATION_RULES;
 
 public class QueryProcessor
 {
@@ -102,35 +93,13 @@ public class QueryProcessor
 
         this.cluster = newCluster(typeFactory);
         this.sqlParser = new SqlParser();
-        this.planner = new HepPlanner(
-                new HepProgramBuilder()
-                        .addRuleCollection(MATERIALIZATION_RULES)
-                        .build());
+        this.planner = new HepPlanner(new HepProgramBuilder().build());
     }
 
     public String convert(String sql, SessionContext sessionContext)
     {
-        if (sessionContext.enableMVReplacement()) {
-            for (MaterializedViewDefinition mvDef : metadata.listMaterializedViews()) {
-                try {
-                    planner.addMaterialization(getMvRel(mvDef, sessionContext));
-                }
-                catch (Exception ex) {
-                    LOG.error(ex, "planner add mv failed, name: %s, sql: %s", mvDef.getSchemaTableName(), mvDef.getOriginalSql());
-                }
-            }
-        }
-
-        planner.setRoot(convertSqlToRelNode(sql, sessionContext).getRelNode());
-        // Start the optimization process to obtain the most efficient plan based on the
-        // provided rule set.
-        RelNode bestExp = planner.findBestExp();
-
-        LOG.debug(RelOptUtil.dumpPlan("[Optimized Logical plan]", bestExp, SqlExplainFormat.TEXT,
-                SqlExplainLevel.NON_COST_ATTRIBUTES));
-
-        RelToSqlConverter relToSqlConverter = new RelToSqlConverter(dialect);
-        SqlNode sqlNode = relToSqlConverter.visitRoot(bestExp).asStatement();
+        RelNode relNode = convertSqlToRelNode(sql, sessionContext);
+        SqlNode sqlNode = new RelToSqlConverter(dialect).visitRoot(relNode).asStatement();
 
         SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
                 SqlWriterConfig.of().withDialect(dialect));
@@ -151,48 +120,9 @@ public class QueryProcessor
         return RelOptCluster.create(planner, new RexBuilder(factory));
     }
 
-    private RelOptMaterialization getMvRel(MaterializedViewDefinition mvDef, SessionContext sessionContext)
-    {
-        QueryContext queryContext = convertSqlToRelNode(mvDef.getOriginalSql(), sessionContext, List.of(toTableMetadata(mvDef)));
-        List<String> mvName = List.of(
-                mvDef.getCatalogName().getCatalogName(),
-                mvDef.getSchemaTableName().getSchemaName(),
-                mvDef.getSchemaTableName().getTableName());
-        String mvNameStr = Joiner.on(",").join(mvName);
-        RelOptTable relOptTable = requireNonNull(queryContext.getCatalogReader().getTable(mvName), mvNameStr + " not found in catalogReader");
-        RelNode queryRel = queryContext.getRelNode();
-
-        LOG.debug(RelOptUtil.dumpPlan("[MV " + mvNameStr + "Logical plan]", queryRel, SqlExplainFormat.TEXT,
-                SqlExplainLevel.NON_COST_ATTRIBUTES));
-
-        return new RelOptMaterialization(
-                castNonNull(queryContext.getSqlToRelConverter().toRel(relOptTable, List.of())),
-                castNonNull(queryRel),
-                null,
-                mvName);
-    }
-
-    private static TableMetadata toTableMetadata(MaterializedViewDefinition mvDef)
-    {
-        return new TableMetadata(
-                mvDef.getSchemaTableName(),
-                mvDef.getColumns().stream()
-                        .map(columnMetadata ->
-                                ColumnMetadata.builder()
-                                        .setName(columnMetadata.getName())
-                                        .setType(columnMetadata.getType())
-                                        .build())
-                        .collect(toImmutableList()));
-    }
-
     private static final RelOptTable.ViewExpander NOOP_EXPANDER = (type, query, schema, path) -> null;
 
-    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext)
-    {
-        return convertSqlToRelNode(sql, sessionContext, List.of());
-    }
-
-    private QueryContext convertSqlToRelNode(String sql, SessionContext sessionContext, List<TableMetadata> extraTables)
+    private RelNode convertSqlToRelNode(String sql, SessionContext sessionContext)
     {
         LOG.info("[Input query]: %s", sql);
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
@@ -205,7 +135,7 @@ public class QueryProcessor
                 .collect(toImmutableList());
 
         Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-                CalciteSchema.from(GraphMDLSchemaUtil.schemaPlus(Stream.of(visitedTable, extraTables).flatMap(Collection::stream).collect(Collectors.toList()), metadata)),
+                CalciteSchema.from(GraphMDLSchemaUtil.schemaPlus(visitedTable, metadata)),
                 Collections.singletonList(""),
                 typeFactory,
                 config);
@@ -238,35 +168,6 @@ public class QueryProcessor
         LOG.debug(RelOptUtil.dumpPlan("[Decorrelated Logical plan]", decorrelated, SqlExplainFormat.TEXT,
                 SqlExplainLevel.NON_COST_ATTRIBUTES));
 
-        return new QueryContext(catalogReader, relConverter, decorrelated);
-    }
-
-    private static class QueryContext
-    {
-        private final Prepare.CatalogReader catalogReader;
-        private final SqlToRelConverter sqlToRelConverter;
-        private final RelNode relNode;
-
-        private QueryContext(Prepare.CatalogReader catalogReader, SqlToRelConverter sqlToRelConverter, RelNode relNode)
-        {
-            this.catalogReader = requireNonNull(catalogReader, "catalogReader is null");
-            this.sqlToRelConverter = requireNonNull(sqlToRelConverter, "sqlToRelConverter is null");
-            this.relNode = requireNonNull(relNode, "relNode is null");
-        }
-
-        public Prepare.CatalogReader getCatalogReader()
-        {
-            return catalogReader;
-        }
-
-        public SqlToRelConverter getSqlToRelConverter()
-        {
-            return sqlToRelConverter;
-        }
-
-        public RelNode getRelNode()
-        {
-            return relNode;
-        }
+        return decorrelated;
     }
 }

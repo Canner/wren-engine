@@ -16,13 +16,11 @@ package io.graphmdl.main.connector.bigquery;
 
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
-import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
-import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,7 +29,6 @@ import io.airlift.log.Logger;
 import io.graphmdl.main.calcite.CalciteTypes;
 import io.graphmdl.main.calcite.CustomCharsetJavaTypeFactoryImpl;
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
-import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunction;
 import io.graphmdl.main.pgcatalog.function.PgFunctionRegistry;
@@ -40,10 +37,7 @@ import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
 import io.graphmdl.spi.GraphMDLException;
 import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.SessionContext;
-import io.graphmdl.spi.metadata.CatalogName;
 import io.graphmdl.spi.metadata.ColumnMetadata;
-import io.graphmdl.spi.metadata.MaterializedViewDefinition;
 import io.graphmdl.spi.metadata.SchemaTableName;
 import io.graphmdl.spi.metadata.TableMetadata;
 import io.graphmdl.spi.type.PGArray;
@@ -128,11 +122,6 @@ public class BigQueryMetadata
         this.calciteOperatorTable = initCalciteOperators();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Location must be set"));
-
-        String mvSchema = getMaterializedViewSchema();
-        if (!listSchemas().contains(mvSchema)) {
-            createSchema(mvSchema);
-        }
     }
 
     /**
@@ -253,60 +242,6 @@ public class BigQueryMetadata
                     return builder.build();
                 })
                 .collect(toImmutableList());
-    }
-
-    @Override
-    public void createMaterializedView(SchemaTableName schemaTableName, String pgSql)
-    {
-        try {
-            String bqSql = QueryProcessor.of(this).convert(pgSql, SessionContext.builder().enableMVReplacement(false).build());
-            bigQueryClient.query(format("CREATE TABLE %s AS %s", schemaTableName.toString(), bqSql), List.of());
-            bigQueryClient.updateTable(
-                    bigQueryClient.getTable(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))
-                            .toBuilder().setDescription(pgSql).build());
-        }
-        catch (Exception ex) {
-            try {
-                bigQueryClient.dropTable(schemaTableName);
-            }
-            catch (Exception ex2) {
-                LOG.error(ex2, "drop mv failed in createMaterializedView");
-            }
-            throw ex;
-        }
-    }
-
-    @Override
-    public List<MaterializedViewDefinition> listMaterializedViews()
-    {
-        return Streams.stream(bigQueryClient.listTables(DatasetId.of(getMaterializedViewSchema())))
-                .map(table -> bigQueryClient.getTable(table.getTableId())) // get detailed table info
-                // Filter mv that was created, but not update desc yet. There are two steps in
-                // BigQueryMetadata#createMaterializedView. 1. Do CTAS query 2. Update mv sql in table desc.
-                // There is a gap between step1 & step2. If listMaterializedViews is triggered while mv are
-                // created right after step1 and start before step2. We will get mvs that don't contain sql in desc.
-                // Add null check `table != null` here since there might exist a case that when we listTables
-                // mv still exist, while when we iterate through table list to get detailed info, mv was deleted,
-                // and bigQueryClient getTable will return null (i.e. table not found)
-                .filter(table -> table != null && table.getDescription() != null)
-                .map(table -> new MaterializedViewDefinition(
-                        new CatalogName(table.getTableId().getProject()),
-                        new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()),
-                        table.getDescription(), // we store sql in table desc
-                        table.getDefinition().getSchema().getFields().stream()
-                                .map(field ->
-                                        ColumnMetadata.builder()
-                                                .setName(field.getName())
-                                                .setType(BigQueryType.toPGType(field.getType().getStandardType()))
-                                                .build())
-                                .collect(toImmutableList())))
-                .collect(toImmutableList());
-    }
-
-    @Override
-    public void deleteMaterializedView(SchemaTableName schemaTableName)
-    {
-        bigQueryClient.dropTable(schemaTableName);
     }
 
     @Override

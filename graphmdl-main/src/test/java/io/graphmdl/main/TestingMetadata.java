@@ -20,8 +20,6 @@ import io.graphmdl.spi.CatalogSchemaTableName;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
 import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.metadata.MaterializedViewDefinition;
-import io.graphmdl.spi.metadata.SchemaTableName;
 import io.graphmdl.spi.metadata.TableMetadata;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -52,24 +50,6 @@ public class TestingMetadata
 
     @Override
     public List<TableMetadata> listTables(String schemaName)
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public void createMaterializedView(SchemaTableName schemaTableName, String sql)
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public List<MaterializedViewDefinition> listMaterializedViews()
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public void deleteMaterializedView(SchemaTableName schemaTableName)
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

@@ -20,12 +20,9 @@ import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
 import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.spi.SessionContext;
-import io.graphmdl.spi.metadata.SchemaTableName;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import static io.graphmdl.main.Utils.randomTableSuffix;
-import static io.graphmdl.main.Utils.swallowException;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,27 +51,6 @@ public class TestBigQuery
     }
 
     @Test
-    public void testBigQueryMVReplace()
-    {
-        SchemaTableName schemaTableName = new SchemaTableName(
-                bigQueryMetadata.getMaterializedViewSchema(), "mv_orders_group_by" + randomTableSuffix());
-
-        String sql = "SELECT o_custkey, COUNT(*) as cnt\n" +
-                "FROM \"canner-cml\".tpch_tiny.orders\n" +
-                "GROUP BY o_custkey";
-        try {
-            bigQueryMetadata.createMaterializedView(schemaTableName, sql);
-
-            String output = bigQuerySqlConverter.convert(sql, SessionContext.builder().build());
-            assertThat(output).isEqualTo("SELECT o_custkey, CAST(cnt AS INT64) AS cnt\n" +
-                    "FROM `canner-cml`." + schemaTableName);
-        }
-        finally {
-            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
-        }
-    }
-
-    @Test
     public void testBigQueryGroupByOrdinal()
     {
         assertThat(bigQuerySqlConverter.convert(
@@ -84,25 +60,6 @@ public class TestBigQuery
                 .isEqualTo("SELECT o_custkey, COUNT(*) AS cnt\n" +
                         "FROM `canner-cml`.tpch_tiny.orders\n" +
                         "GROUP BY o_custkey");
-    }
-
-    // test case-sensitive sql in mv
-    @Test
-    public void testBigQueryCaseSensitiveMVReplace()
-    {
-        SchemaTableName schemaTableName = new SchemaTableName(
-                bigQueryMetadata.getMaterializedViewSchema(), "mv_case_sensitive" + randomTableSuffix());
-
-        String sql = "SELECT b FROM \"canner-cml\".cml_temp.CANNER WHERE b = '1'";
-        try {
-            bigQueryMetadata.createMaterializedView(schemaTableName, sql);
-            String output = bigQuerySqlConverter.convert(sql, SessionContext.builder().build());
-            assertThat(output).isEqualTo("SELECT *\n" +
-                    "FROM `canner-cml`." + schemaTableName);
-        }
-        finally {
-            swallowException(() -> bigQueryClient.dropTable(schemaTableName));
-        }
     }
 
     @Test
