@@ -1,4 +1,6 @@
-# Canner Metric Layer (CML)
+# [Archived] Canner Metric Layer (CML)
+
+This is a backup version of Canner Metric Layer (CML) project. We keep this project for reference.
 
 This project is a metric layer framework which follow Postgres Wire Protocol to communicate with its client.
 Its codebase is based on [Trino](https://github.com/trinodb/trino) project and the part of
@@ -16,7 +18,7 @@ mvn clean install -DskipTests
 
 - `etc/config.properties`
 
-```dtd
+```text
 bigquery.project-id=         # The target bigQuery project
 bigquery.credentials-key=    # based 64 credentials key
 bigquery.location=           # BigQuery execution region
@@ -24,6 +26,6 @@ bigquery.location=           # BigQuery execution region
 
 - VM options
 
-```dtd
+```text
 -Dconfig=etc/config.properties   # the path of config file
 ```
