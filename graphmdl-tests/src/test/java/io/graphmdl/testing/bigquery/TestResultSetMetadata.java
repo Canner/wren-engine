@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
@@ -159,41 +160,41 @@ public class TestResultSetMetadata
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas();
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("graphmdl_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, null);
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("graphmdl_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, null);
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("graphmdl_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", null);
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("graphmdl_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("", null);
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp"), List.of("pg_catalog"), List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("graphmdl_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "cml_temp");
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
+            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "graphmdl_temp");
+            assertGetSchemasResult(rs, List.of("graphmdl_temp"));
         }
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "cml_temp");
-            assertGetSchemasResult(rs, List.of(List.of("cml_temp")));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "graphmdl_temp");
+            assertGetSchemasResult(rs, List.of("graphmdl_temp"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "tpch%");
-            assertGetSchemasResult(rs, List.of(List.of("tpch_sf1"), List.of("tpch_tiny")));
+            assertGetSchemasResult(rs, List.of("tpch_sf1", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
@@ -217,11 +218,9 @@ public class TestResultSetMetadata
         }
     }
 
-    private static void assertGetSchemasResult(ResultSet rs, List<List<String>> expectedSchemas)
+    private static void assertGetSchemasResult(ResultSet rs, List<String> expectedSchemas)
             throws SQLException
     {
-        assertThatNoException().isThrownBy(() -> readRows(rs));
-
         ResultSetMetaData metadata = rs.getMetaData();
         assertEquals(metadata.getColumnCount(), 2);
 
@@ -230,6 +229,9 @@ public class TestResultSetMetadata
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_CATALOG");
         assertEquals(metadata.getColumnType(2), Types.BIGINT);
+        List<String> results = readRows(rs).stream().map(row -> (String) row.get(0)).collect(toImmutableList());
+        // TODO: this should be containsExactlyInAnyOrder while currently our bigquery testing environment is not clean, so we have to use containsAll
+        assertThat(results).containsAll(expectedSchemas);
     }
 
     @Test
