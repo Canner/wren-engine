@@ -17,7 +17,7 @@ package io.graphmdl.main.pgcatalog;
 public final class PgCatalogUtils
 {
     public static final String PG_CATALOG_NAME = "pg_catalog";
-    public static final String CML_TEMP_NAME = "cml_temp";
+    public static final String GRAPHMDL_TEMP_NAME = "graphmdl_temp";
 
     private PgCatalogUtils() {}
 }

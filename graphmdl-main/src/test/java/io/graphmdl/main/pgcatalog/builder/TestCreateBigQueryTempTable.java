@@ -36,14 +36,14 @@ public class TestCreateBigQueryTempTable
     public void testAllColumns()
     {
         assertThat(createOrReplaceAllColumn(metadata))
-                .isEqualTo("CREATE OR REPLACE VIEW `cml_temp.all_columns` AS " +
+                .isEqualTo("CREATE OR REPLACE VIEW `graphmdl_temp.all_columns` AS " +
                         "SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                         "FROM `testing_schema1`.INFORMATION_SCHEMA.COLUMNS col " +
-                        "LEFT JOIN `cml_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `graphmdl_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
                         "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid " +
                         "UNION ALL SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                         "FROM `testing_schema2`.INFORMATION_SCHEMA.COLUMNS col " +
-                        "LEFT JOIN `cml_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `graphmdl_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
                         "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid;");
     }
 
@@ -51,7 +51,7 @@ public class TestCreateBigQueryTempTable
     public void testAllTables()
     {
         assertThat(createOrReplaceAllTable(metadata))
-                .isEqualTo("CREATE OR REPLACE VIEW `cml_temp.all_tables` AS " +
+                .isEqualTo("CREATE OR REPLACE VIEW `graphmdl_temp.all_tables` AS " +
                         "SELECT * FROM `testing_schema1`.INFORMATION_SCHEMA.TABLES " +
                         "UNION ALL SELECT * FROM `testing_schema2`.INFORMATION_SCHEMA.TABLES;");
     }
@@ -60,7 +60,7 @@ public class TestCreateBigQueryTempTable
     public void testPgTypeMapping()
     {
         assertThat(createOrReplacePgTypeMapping())
-                .isEqualTo("CREATE OR REPLACE VIEW `cml_temp.pg_type_mapping` AS SELECT * FROM " +
+                .isEqualTo("CREATE OR REPLACE VIEW `graphmdl_temp.pg_type_mapping` AS SELECT * FROM " +
                         "UNNEST([STRUCT<bq_type string, oid int64> ('BOOL', 16),('ARRAY<BOOL>', 1000),('BYTES', 17),('ARRAY<BYTES>', 1001),('FLOAT64', 701)," +
                         "('ARRAY<FLOAT64>', 1022),('INT64', 20),('ARRAY<INT64>', 1016),('STRING', 1043),('ARRAY<STRING>', 1015),('DATE', 1082),('ARRAY<DATE>', 1182)," +
                         "('NUMERIC', 1700),('ARRAY<NUMERIC>', 1231),('TIMESTAMP', 1114),('ARRAY<TIMESTAMP>', 1115)]);");

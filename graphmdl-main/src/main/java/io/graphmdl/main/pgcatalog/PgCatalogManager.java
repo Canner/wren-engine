@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.main.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
+import static io.graphmdl.main.pgcatalog.PgCatalogUtils.GRAPHMDL_TEMP_NAME;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.util.Objects.requireNonNull;
 
@@ -111,7 +111,7 @@ public class PgCatalogManager
 
     public void initPgTables()
     {
-        createCatalogIfNotExist(CML_TEMP_NAME);
+        createCatalogIfNotExist(GRAPHMDL_TEMP_NAME);
 
         // Some table has dependency with the high priority table.
         // Create them first.

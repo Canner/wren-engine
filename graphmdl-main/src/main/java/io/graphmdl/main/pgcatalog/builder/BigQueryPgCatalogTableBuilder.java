@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-import static io.graphmdl.main.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
+import static io.graphmdl.main.pgcatalog.PgCatalogUtils.GRAPHMDL_TEMP_NAME;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.buildPgCatalogTableView;
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
@@ -79,7 +79,7 @@ public final class BigQueryPgCatalogTableBuilder
             builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
-        builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
+        builder.append(format("FROM `%s.all_tables`;", GRAPHMDL_TEMP_NAME));
         return builder.toString();
     }
 
@@ -121,7 +121,7 @@ public final class BigQueryPgCatalogTableBuilder
             builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
-        builder.append(format("FROM `%s.all_columns`;", CML_TEMP_NAME));
+        builder.append(format("FROM `%s.all_columns`;", GRAPHMDL_TEMP_NAME));
         return builder.toString();
     }
 
@@ -150,7 +150,7 @@ public final class BigQueryPgCatalogTableBuilder
             builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
-        builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
+        builder.append(format("FROM `%s.all_tables`;", GRAPHMDL_TEMP_NAME));
         return builder.toString();
     }
 
@@ -184,7 +184,7 @@ public final class BigQueryPgCatalogTableBuilder
             builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
-        builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
+        builder.append(format("FROM `%s.all_tables`;", GRAPHMDL_TEMP_NAME));
         return builder.toString();
     }
 
@@ -241,7 +241,7 @@ public final class BigQueryPgCatalogTableBuilder
             builder.append(format("%s AS `%s`,", tableContent.get(columnName), columnName));
         }
         builder.setLength(builder.length() - 1);
-        builder.append(format("FROM `%s.all_tables`;", CML_TEMP_NAME));
+        builder.append(format("FROM `%s.all_tables`;", GRAPHMDL_TEMP_NAME));
         return builder.toString();
     }
 

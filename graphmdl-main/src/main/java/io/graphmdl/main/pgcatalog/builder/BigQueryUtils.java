@@ -24,7 +24,7 @@ import io.graphmdl.spi.type.PGType;
 import java.util.List;
 import java.util.Map;
 
-import static io.graphmdl.main.pgcatalog.PgCatalogUtils.CML_TEMP_NAME;
+import static io.graphmdl.main.pgcatalog.PgCatalogUtils.GRAPHMDL_TEMP_NAME;
 import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.graphmdl.spi.type.BigIntType.BIGINT;
@@ -129,7 +129,7 @@ public final class BigQueryUtils
     public static String createOrReplaceAllTable(Metadata connector)
     {
         List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", CML_TEMP_NAME) +
+        return format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", GRAPHMDL_TEMP_NAME) +
                 schemas.stream()
                         .map(schema -> format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES", schema))
                         .reduce((a, b) -> a + " UNION ALL " + b)
@@ -143,12 +143,12 @@ public final class BigQueryUtils
     {
         // TODO: we should check if pg_type has created or not.
         List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", CML_TEMP_NAME) +
+        return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", GRAPHMDL_TEMP_NAME) +
                 schemas.stream()
                         .map(schema -> format("SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                                 "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
                                 "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, CML_TEMP_NAME + ".pg_type_mapping"))
+                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, GRAPHMDL_TEMP_NAME + ".pg_type_mapping"))
                         .reduce((a, b) -> a + " UNION ALL " + b)
                         .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
@@ -160,7 +160,7 @@ public final class BigQueryUtils
                 .map(entry -> format("('%s', %s)", entry.getKey(), entry.getValue().oid()))
                 .reduce((a, b) -> a + "," + b)
                 .orElseThrow(() -> new GraphMDLException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed"));
-        return buildPgCatalogTableView(CML_TEMP_NAME, "pg_type_mapping", columnDefinition, records, false);
+        return buildPgCatalogTableView(GRAPHMDL_TEMP_NAME, "pg_type_mapping", columnDefinition, records, false);
     }
 
     public static String buildPgCatalogTableView(String datasetName, String viewName, String columnDefinition, String records, boolean isEmpty)
