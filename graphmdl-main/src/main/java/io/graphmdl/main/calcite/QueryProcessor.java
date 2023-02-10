@@ -98,13 +98,13 @@ public class QueryProcessor
 
     public String convert(String sql, SessionContext sessionContext)
     {
+        LOG.debug("[Input SQL]: %s", sql);
         RelNode relNode = convertSqlToRelNode(sql, sessionContext);
         SqlNode sqlNode = new RelToSqlConverter(dialect).visitRoot(relNode).asStatement();
 
-        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(
-                SqlWriterConfig.of().withDialect(dialect));
+        SqlPrettyWriter sqlPrettyWriter = new SqlPrettyWriter(SqlWriterConfig.of().withDialect(dialect));
         String result = sqlPrettyWriter.format(sqlNode);
-        LOG.info("[Converted calcite dialect SQL]: %s", result);
+        LOG.debug("[Dialect SQL]: %s", result);
         return result;
     }
 
