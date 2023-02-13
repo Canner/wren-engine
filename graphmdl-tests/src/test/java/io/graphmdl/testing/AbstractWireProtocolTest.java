@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.Properties;
 
 import static java.lang.String.format;
@@ -35,14 +36,23 @@ public abstract class AbstractWireProtocolTest
     @Override
     protected TestingGraphMDLServer createGraphMDLServer()
     {
+        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
+                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
+                .put("bigquery.location", "asia-east1")
+                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"));
+
+        if (getGraphMDLPath().isPresent()) {
+            properties.put("graphmdl.file", getGraphMDLPath().get());
+        }
+
         return TestingGraphMDLServer.builder()
-                .setRequiredConfigs(
-                        ImmutableMap.<String, String>builder()
-                                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                                .put("bigquery.location", "asia-east1")
-                                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .build())
+                .setRequiredConfigs(properties.build())
                 .build();
+    }
+
+    protected Optional<String> getGraphMDLPath()
+    {
+        return Optional.empty();
     }
 
     protected TestingWireProtocolClient wireProtocolClient()
