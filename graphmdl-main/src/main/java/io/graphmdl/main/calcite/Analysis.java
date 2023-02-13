@@ -23,6 +23,7 @@ import java.util.Set;
 public class Analysis
 {
     private final Set<QualifiedName> visitedTables = new HashSet<>();
+    private final Set<QualifiedName> visitedWithQueries = new HashSet<>();
 
     public void addVisitedTable(QualifiedName tableName)
     {
@@ -32,5 +33,15 @@ public class Analysis
     public List<QualifiedName> getVisitedTables()
     {
         return List.copyOf(visitedTables);
+    }
+
+    public void addVisitedWithQuery(QualifiedName withQueryName)
+    {
+        visitedWithQueries.add(withQueryName);
+    }
+
+    public List<QualifiedName> getVisitedWithQueries()
+    {
+        return List.copyOf(visitedWithQueries);
     }
 }

@@ -61,6 +61,7 @@ import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PatternRecognitionRelation;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Row;
@@ -200,6 +201,11 @@ public class CalciteSqlNodeConverter
                 queryBody = process(node.getQueryBody(), context);
             }
             else {
+                node.getWith().get().getQueries().stream()
+                        .map(WithQuery::getName)
+                        .map(identifier -> QualifiedName.of(List.of(identifier)))
+                        .forEach(analysis::addVisitedWithQuery);
+
                 queryBody = new SqlWith(
                         toCalcitePos(node.getLocation()),
                         SqlNodeList.of(POS, visitNodes(node.getWith().get().getQueries())),
@@ -281,8 +287,16 @@ public class CalciteSqlNodeConverter
         @Override
         public SqlNode visitTable(Table node, ConvertContext context)
         {
-            analysis.addVisitedTable(node.getName());
-            SqlIdentifier sqlIdentifier = new SqlIdentifier(new ArrayList<>(node.getName().getParts()), ZERO);
+            List<String> tableName;
+            if (!analysis.getVisitedWithQueries().contains(node.getName())) {
+                analysis.addVisitedTable(node.getName());
+                tableName = node.getName().getParts();
+            }
+            else {
+                tableName = List.of(node.getName().getSuffix());
+            }
+
+            SqlIdentifier sqlIdentifier = new SqlIdentifier(tableName, ZERO);
             return new SqlTableRef(
                     sqlIdentifier.getParserPosition(),
                     sqlIdentifier,
