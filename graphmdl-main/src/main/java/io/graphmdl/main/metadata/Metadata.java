@@ -14,14 +14,10 @@
 package io.graphmdl.main.metadata;
 
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
-import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.spi.CatalogSchemaTableName;
 import io.graphmdl.spi.Column;
 import io.graphmdl.spi.ConnectorRecordIterator;
 import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.SessionContext;
-import io.graphmdl.spi.metadata.MaterializedViewDefinition;
-import io.graphmdl.spi.metadata.SchemaTableName;
 import io.graphmdl.spi.metadata.TableMetadata;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -38,44 +34,6 @@ public interface Metadata
     List<String> listSchemas();
 
     List<TableMetadata> listTables(String schemaName);
-
-    /**
-     * Create mv by using pg syntax sql, each connector should
-     * convert pg syntax sql to connector-compatible sql by using
-     * {@link QueryProcessor#convert(String, SessionContext)}
-     * before create mv.
-     * <p>
-     * All mvs in canner-metric-layer should be placed under {@link Metadata#getMaterializedViewSchema}
-     * and use TABLE to create mv instead of using MATERIALIZED VIEW since in bq/snowflake
-     * there are many limitation in mv.
-     * <p>
-     * More info, see:
-     * <li><a href=https://cloud.google.com/bigquery/docs/materialized-views-intro#limitations>bigquery mv limitations</a></li>
-     * <li><a href=https://docs.snowflake.com/en/user-guide/views-materialized.html#limitations-on-creating-materialized-views>snowflake mv limitations</a></li>
-     *
-     * @param schemaTableName the table name we want to create
-     * @param sql mv sql that follow pg syntax
-     */
-    void createMaterializedView(SchemaTableName schemaTableName, String sql);
-
-    /**
-     * List all MVs, note that mv here is not the same as bigquery/snowflake mv,
-     * mv here is so-called "metric" which is backed by table, and all these mvs will
-     * be placed under {@link #getMaterializedViewSchema()}.
-     *
-     * @return list of MaterializedViewDefinition
-     */
-    List<MaterializedViewDefinition> listMaterializedViews();
-
-    /**
-     * Delete the specific materializedView.
-     * <p>
-     * Because we use TABLE to present the concept of materializedView in BigQuery,
-     * this method drop the specific TABLE in {@link Metadata#getMaterializedViewSchema} actually.
-     *
-     * @param schemaTableName the specific table name
-     */
-    void deleteMaterializedView(SchemaTableName schemaTableName);
 
     List<String> listFunctionNames(String schemaName);
 
@@ -98,9 +56,4 @@ public interface Metadata
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
     List<Column> describeQuery(String sql, List<Parameter> parameters);
-
-    default String getMaterializedViewSchema()
-    {
-        return "cml_mvs";
-    }
 }

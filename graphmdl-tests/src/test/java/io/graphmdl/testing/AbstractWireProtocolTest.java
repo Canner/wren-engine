@@ -24,7 +24,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import static io.graphmdl.main.metrics.MetricConfig.METRIC_ROOT_PATH;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
 
@@ -42,7 +41,6 @@ public abstract class AbstractWireProtocolTest
                                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                                 .put("bigquery.location", "asia-east1")
                                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                                .put(METRIC_ROOT_PATH, "ignored")
                                 .build())
                 .build();
     }
