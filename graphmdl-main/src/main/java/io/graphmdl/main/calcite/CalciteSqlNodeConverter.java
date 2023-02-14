@@ -287,14 +287,10 @@ public class CalciteSqlNodeConverter
         @Override
         public SqlNode visitTable(Table node, ConvertContext context)
         {
-            List<String> tableName;
             if (!analysis.getVisitedWithQueries().contains(node.getName())) {
                 analysis.addVisitedTable(node.getName());
-                tableName = node.getName().getParts();
             }
-            else {
-                tableName = List.of(node.getName().getSuffix());
-            }
+            List<String> tableName = node.getName().getParts();
 
             SqlIdentifier sqlIdentifier = new SqlIdentifier(tableName, ZERO);
             return new SqlTableRef(
