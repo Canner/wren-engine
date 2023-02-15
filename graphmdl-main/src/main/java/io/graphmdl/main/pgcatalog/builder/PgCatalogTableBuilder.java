@@ -15,6 +15,7 @@
 package io.graphmdl.main.pgcatalog.builder;
 
 import io.airlift.log.Logger;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.table.CharacterSets;
 import io.graphmdl.main.pgcatalog.table.KeyColumnUsage;
@@ -37,12 +38,11 @@ import io.graphmdl.main.pgcatalog.table.PgTablespaceTable;
 import io.graphmdl.main.pgcatalog.table.PgTypeTable;
 import io.graphmdl.main.pgcatalog.table.ReferentialConstraints;
 import io.graphmdl.main.pgcatalog.table.TableConstraints;
-import io.graphmdl.spi.GraphMDLException;
 import org.apache.commons.lang3.text.StrSubstitutor;
 
 import java.util.Map;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 

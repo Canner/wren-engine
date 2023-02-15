@@ -16,8 +16,8 @@ package io.graphmdl.main.wireprotocol.ssl;
 
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.PostgresWireProtocolConfig;
-import io.graphmdl.spi.GraphMDLException;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;

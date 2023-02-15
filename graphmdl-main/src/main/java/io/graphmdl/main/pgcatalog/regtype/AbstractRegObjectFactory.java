@@ -15,13 +15,13 @@
 package io.graphmdl.main.pgcatalog.regtype;
 
 import com.google.common.collect.Streams;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.sql.PgOidTypeTableInfo;
-import io.graphmdl.spi.GraphMDLException;
 
 import java.util.Iterator;
 import java.util.Optional;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 

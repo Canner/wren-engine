@@ -14,13 +14,13 @@
 
 package io.graphmdl.main.wireprotocol.patterns;
 
-import io.graphmdl.spi.GraphMDLException;
+import io.graphmdl.base.GraphMDLException;
 
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.SYNTAX_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.SYNTAX_ERROR;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
 public class ArraySelectPattern

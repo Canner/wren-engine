@@ -15,12 +15,12 @@
 package io.graphmdl.main.pgcatalog.table;
 
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
 
 import java.util.Map;
 
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 
 public class CharacterSets
         extends PgCatalogTable

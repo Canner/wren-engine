@@ -15,9 +15,9 @@
 package io.graphmdl.main.calcite;
 
 import io.airlift.log.Logger;
+import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.metadata.TableMetadata;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.SessionContext;
-import io.graphmdl.spi.metadata.TableMetadata;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;

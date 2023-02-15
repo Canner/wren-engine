@@ -14,15 +14,15 @@
 
 package io.graphmdl.main.metadata;
 
-import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.GraphMDLException;
+import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.GraphMDLException;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
 import java.util.Optional;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.MISSING_CATALOG_NAME;
-import static io.graphmdl.spi.metadata.StandardErrorCode.SYNTAX_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.MISSING_CATALOG_NAME;
+import static io.graphmdl.base.metadata.StandardErrorCode.SYNTAX_ERROR;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 

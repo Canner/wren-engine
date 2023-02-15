@@ -15,7 +15,7 @@
 package io.graphmdl.main.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.spi.type.PGType;
+import io.graphmdl.base.type.PGType;
 
 import java.io.Closeable;
 import java.util.Iterator;

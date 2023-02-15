@@ -16,10 +16,10 @@ package io.graphmdl.main.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.wireprotocol.BaseRewriteVisitor;
-import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.metadata.SchemaTableName;
 import io.trino.sql.parser.SqlBaseLexer;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CurrentUser;

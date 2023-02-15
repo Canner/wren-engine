@@ -15,16 +15,16 @@
 package io.graphmdl.main.web;
 
 import io.airlift.log.Logger;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.web.dto.ErrorMessageDto;
-import io.graphmdl.spi.GraphMDLException;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;

@@ -14,12 +14,12 @@
 
 package io.graphmdl;
 
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.connector.bigquery.BigQueryClient;
 import io.graphmdl.main.connector.bigquery.BigQueryConfig;
 import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
 import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
-import io.graphmdl.spi.SessionContext;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 

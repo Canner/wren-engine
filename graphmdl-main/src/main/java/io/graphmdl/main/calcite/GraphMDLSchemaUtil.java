@@ -14,10 +14,10 @@
 
 package io.graphmdl.main.calcite;
 
+import io.graphmdl.base.metadata.ColumnMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
+import io.graphmdl.base.type.PGType;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.metadata.ColumnMetadata;
-import io.graphmdl.spi.metadata.TableMetadata;
-import io.graphmdl.spi.type.PGType;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -31,13 +31,13 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.graphmdl.base.type.BigIntType.BIGINT;
+import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.DateType.DATE;
+import static io.graphmdl.base.type.DoubleType.DOUBLE;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.calcite.BigQueryGraphMDLSqlDialect.DEFAULT_CONTEXT;
-import static io.graphmdl.spi.type.BigIntType.BIGINT;
-import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
-import static io.graphmdl.spi.type.DateType.DATE;
-import static io.graphmdl.spi.type.DoubleType.DOUBLE;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;

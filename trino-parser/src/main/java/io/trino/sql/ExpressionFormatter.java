@@ -795,7 +795,7 @@ public final class ExpressionFormatter
 
         /**
          * Returns the formatted `LISTAGG` function call corresponding to the specified node.
-         *
+         * <p>
          * During the parsing of the syntax tree, the `LISTAGG` expression is synthetically converted
          * to a function call. This method formats the specified {@link FunctionCall} node to correspond
          * to the standardised syntax of the `LISTAGG` expression.

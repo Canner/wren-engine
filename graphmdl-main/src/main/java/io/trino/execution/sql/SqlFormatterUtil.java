@@ -13,7 +13,7 @@
  */
 package io.trino.execution.sql;
 
-import io.graphmdl.spi.GraphMDLException;
+import io.graphmdl.base.GraphMDLException;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingException;
 import io.trino.sql.parser.ParsingOptions;
@@ -22,7 +22,7 @@ import io.trino.sql.tree.Statement;
 
 import javax.annotation.Nullable;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.REJECT;
 import static java.lang.String.format;
 

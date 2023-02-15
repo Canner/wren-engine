@@ -14,9 +14,9 @@
 
 package io.graphmdl.main.pgcatalog.table;
 
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
 
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 
 public class KeyColumnUsage
         extends PgCatalogTable

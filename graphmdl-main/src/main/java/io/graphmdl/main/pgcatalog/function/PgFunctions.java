@@ -18,14 +18,14 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.List;
 
+import static io.graphmdl.base.type.BigIntType.BIGINT;
+import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.Argument.argument;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.Language.SQL;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.builder;
-import static io.graphmdl.spi.type.BigIntType.BIGINT;
-import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.PGArray.VARCHAR_ARRAY;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 
 public final class PgFunctions
 {

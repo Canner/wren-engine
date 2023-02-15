@@ -14,7 +14,7 @@
 
 package io.graphmdl.main.sql;
 
-import io.graphmdl.spi.SessionContext;
+import io.graphmdl.base.SessionContext;
 
 public interface SqlConverter
 {

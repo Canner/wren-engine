@@ -15,7 +15,7 @@
 package io.graphmdl.main.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.spi.GraphMDLException;
+import io.graphmdl.base.GraphMDLException;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.graphmdl.main.pgcatalog.function.PgFunctionRegistry.FunctionKey.functionKey;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_IN;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_OUT;
@@ -38,7 +39,6 @@ import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESULT;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 
 @ThreadSafe

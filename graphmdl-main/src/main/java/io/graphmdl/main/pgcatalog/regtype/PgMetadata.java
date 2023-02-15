@@ -14,12 +14,12 @@
 
 package io.graphmdl.main.pgcatalog.regtype;
 
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.sql.PgOidTypeTableInfo;
-import io.graphmdl.spi.GraphMDLException;
 
 import java.util.List;
 
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 
 public abstract class PgMetadata

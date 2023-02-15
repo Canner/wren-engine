@@ -15,8 +15,8 @@
 package io.graphmdl.main.wireprotocol;
 
 import io.airlift.log.Logger;
-import io.graphmdl.spi.Column;
-import io.graphmdl.spi.type.PGType;
+import io.graphmdl.base.Column;
+import io.graphmdl.base.type.PGType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

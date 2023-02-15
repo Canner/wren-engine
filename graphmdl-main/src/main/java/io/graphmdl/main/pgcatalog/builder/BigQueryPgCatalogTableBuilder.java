@@ -15,10 +15,10 @@
 package io.graphmdl.main.pgcatalog.builder;
 
 import com.google.common.collect.ImmutableMap;
+import io.graphmdl.base.metadata.ColumnMetadata;
+import io.graphmdl.base.type.PGType;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.table.PgCatalogTable;
-import io.graphmdl.spi.metadata.ColumnMetadata;
-import io.graphmdl.spi.type.PGType;
 
 import javax.inject.Inject;
 
@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
+import static io.graphmdl.base.type.CharType.CHAR;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.GRAPHMDL_TEMP_NAME;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.buildPgCatalogTableView;
@@ -34,8 +36,6 @@ import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.createOrReplaceAl
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.createOrReplacePgTypeMapping;
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.toBqType;
 import static io.graphmdl.main.pgcatalog.builder.PgCatalogTableBuilderUtils.generatePgTypeRecords;
-import static io.graphmdl.spi.type.CharType.CHAR;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 

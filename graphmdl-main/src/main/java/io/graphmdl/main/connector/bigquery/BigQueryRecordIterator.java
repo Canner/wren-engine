@@ -20,9 +20,9 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
 import com.google.common.collect.Streams;
-import io.graphmdl.spi.ConnectorRecordIterator;
-import io.graphmdl.spi.type.PGType;
-import io.graphmdl.spi.type.PGTypes;
+import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.PGTypes;
 
 import java.util.Iterator;
 import java.util.List;

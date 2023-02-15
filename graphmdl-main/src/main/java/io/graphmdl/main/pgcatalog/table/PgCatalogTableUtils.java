@@ -14,10 +14,10 @@
 
 package io.graphmdl.main.pgcatalog.table;
 
-import io.graphmdl.spi.metadata.SchemaTableName;
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.SchemaTableName;
+import io.graphmdl.base.metadata.TableMetadata;
 
-import static io.graphmdl.spi.metadata.TableMetadata.Builder.builder;
+import static io.graphmdl.base.metadata.TableMetadata.Builder.builder;
 
 public final class PgCatalogTableUtils
 {
