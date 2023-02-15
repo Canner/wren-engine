@@ -33,5 +33,4 @@ jobs:
           TEST_BIG_QUERY_PARENT_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PARENT_PROJECT_ID }}
           TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON: ${{ secrets.TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON }}
         run: |
-          mkdir /tmp/cml_file_metric_store
           ./mvnw test -B --fail-at-end

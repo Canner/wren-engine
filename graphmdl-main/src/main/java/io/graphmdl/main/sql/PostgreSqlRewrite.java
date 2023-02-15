@@ -165,6 +165,8 @@ public class PostgreSqlRewrite
                 expression = result.map(obj -> (Expression) obj).orElse(expression);
             }
             if (node.getAlias().isPresent()) {
+                // TODO: store the mapping according the scope
+                //  https://github.com/Canner/canner-metric-layer/issues/168
                 selectItemsMap.put(node.getAlias().get(), expression);
             }
 
