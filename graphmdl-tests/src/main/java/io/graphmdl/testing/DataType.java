@@ -14,17 +14,17 @@
 
 package io.graphmdl.testing;
 
-import io.graphmdl.spi.type.BigIntType;
-import io.graphmdl.spi.type.BooleanType;
-import io.graphmdl.spi.type.ByteaType;
-import io.graphmdl.spi.type.DoubleType;
-import io.graphmdl.spi.type.IntegerType;
-import io.graphmdl.spi.type.NumericType;
-import io.graphmdl.spi.type.PGType;
-import io.graphmdl.spi.type.RealType;
-import io.graphmdl.spi.type.SmallIntType;
-import io.graphmdl.spi.type.TinyIntType;
-import io.graphmdl.spi.type.VarcharType;
+import io.graphmdl.base.type.BigIntType;
+import io.graphmdl.base.type.BooleanType;
+import io.graphmdl.base.type.ByteaType;
+import io.graphmdl.base.type.DoubleType;
+import io.graphmdl.base.type.IntegerType;
+import io.graphmdl.base.type.NumericType;
+import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.RealType;
+import io.graphmdl.base.type.SmallIntType;
+import io.graphmdl.base.type.TinyIntType;
+import io.graphmdl.base.type.VarcharType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,7 +33,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static com.google.common.io.BaseEncoding.base16;
-import static io.graphmdl.spi.type.DateType.DATE;
+import static io.graphmdl.base.type.DateType.DATE;
 import static java.lang.String.format;
 
 public class DataType<T>

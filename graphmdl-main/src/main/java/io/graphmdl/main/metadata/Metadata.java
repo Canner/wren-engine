@@ -13,12 +13,12 @@
  */
 package io.graphmdl.main.metadata;
 
+import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.Column;
+import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.Parameter;
+import io.graphmdl.base.metadata.TableMetadata;
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
-import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.Column;
-import io.graphmdl.spi.ConnectorRecordIterator;
-import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.metadata.TableMetadata;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.sql.SqlOperatorTable;

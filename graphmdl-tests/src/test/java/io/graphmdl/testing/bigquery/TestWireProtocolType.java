@@ -16,7 +16,7 @@ package io.graphmdl.testing.bigquery;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.spi.type.PGTypes;
+import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.DataType;
 import org.postgresql.util.PGobject;
@@ -34,8 +34,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static io.graphmdl.spi.type.SmallIntType.SMALLINT;
-import static io.graphmdl.spi.type.TinyIntType.TINYINT;
+import static io.graphmdl.base.type.SmallIntType.SMALLINT;
+import static io.graphmdl.base.type.TinyIntType.TINYINT;
 import static io.graphmdl.testing.DataType.bigintDataType;
 import static io.graphmdl.testing.DataType.booleanDataType;
 import static io.graphmdl.testing.DataType.byteaDataType;

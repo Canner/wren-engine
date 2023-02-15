@@ -17,11 +17,11 @@ package io.graphmdl.main.wireprotocol;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
-import io.graphmdl.spi.ConnectorRecordIterator;
-import io.graphmdl.spi.GraphMDLException;
-import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.type.PGType;
-import io.graphmdl.spi.type.PGTypes;
+import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.Parameter;
+import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.PGTypes;
 
 import javax.annotation.Nullable;
 import javax.annotation.PreDestroy;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_SUPPORTED;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static java.lang.String.format;
 
 public class Portal

@@ -73,17 +73,17 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-base</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-main</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-server</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.graphmdl</groupId>
-            <artifactId>graphmdl-spi</artifactId>
         </dependency>
 
         <dependency>

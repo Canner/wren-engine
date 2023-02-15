@@ -14,12 +14,12 @@
 
 package io.graphmdl.main.pgcatalog.regtype;
 
-import io.graphmdl.spi.GraphMDLException;
+import io.graphmdl.base.GraphMDLException;
 
 import java.util.regex.Matcher;
 
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 
 public class RegProc

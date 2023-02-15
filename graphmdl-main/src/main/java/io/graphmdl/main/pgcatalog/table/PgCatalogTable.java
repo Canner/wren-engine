@@ -14,7 +14,7 @@
 
 package io.graphmdl.main.pgcatalog.table;
 
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
 
 import java.util.Map;
 

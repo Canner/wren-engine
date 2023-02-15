@@ -14,18 +14,18 @@
 
 package io.graphmdl.main.pgcatalog.builder;
 
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunction;
-import io.graphmdl.spi.GraphMDLException;
 
 import javax.inject.Inject;
 
 import java.util.Locale;
 
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.graphmdl.main.pgcatalog.builder.BigQueryUtils.toBqType;
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
 
 public class BigQueryPgFunctionBuilder

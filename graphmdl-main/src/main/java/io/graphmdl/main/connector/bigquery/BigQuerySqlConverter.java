@@ -14,10 +14,10 @@
 
 package io.graphmdl.main.connector.bigquery;
 
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlConverter;
-import io.graphmdl.spi.SessionContext;
 
 import javax.inject.Inject;
 

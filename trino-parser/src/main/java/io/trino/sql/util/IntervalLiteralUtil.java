@@ -25,9 +25,9 @@ public final class IntervalLiteralUtil
      * <p>
      * e.g.
      * when client sends a query like
-     *  select CAST((CAST(now() AS timestamp) + (INTERVAL '-30 day')) AS date);
+     * select CAST((CAST(now() AS timestamp) + (INTERVAL '-30 day')) AS date);
      * will get the same result as
-     *  select CAST((CAST(now() AS timestamp) + (INTERVAL - '30' day)) AS date);
+     * select CAST((CAST(now() AS timestamp) + (INTERVAL - '30' day)) AS date);
      */
     public static IntervalLiteral parse(NodeLocation location, String text)
     {

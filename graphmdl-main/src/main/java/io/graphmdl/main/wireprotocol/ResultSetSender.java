@@ -14,8 +14,8 @@
 
 package io.graphmdl.main.wireprotocol;
 
-import io.graphmdl.spi.ConnectorRecordIterator;
-import io.graphmdl.spi.type.PGType;
+import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.type.PGType;
 import io.netty.channel.Channel;
 
 import javax.annotation.Nonnull;

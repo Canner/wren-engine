@@ -15,22 +15,22 @@
 package io.graphmdl.main.pgcatalog.table;
 
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
 
 import java.util.Map;
 
+import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.CharType.CHAR;
+import static io.graphmdl.base.type.DoubleType.DOUBLE;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.PGArray.CHAR_ARRAY;
+import static io.graphmdl.base.type.PGArray.INT4_ARRAY;
+import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
+import static io.graphmdl.base.type.RegprocType.REGPROC;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.INTERNAL_LANGUAGE;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
-import static io.graphmdl.spi.type.CharType.CHAR;
-import static io.graphmdl.spi.type.DoubleType.DOUBLE;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.PGArray.CHAR_ARRAY;
-import static io.graphmdl.spi.type.PGArray.INT4_ARRAY;
-import static io.graphmdl.spi.type.PGArray.VARCHAR_ARRAY;
-import static io.graphmdl.spi.type.RegprocType.REGPROC;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
 
 /**
  * @see <a href="https://www.postgresql.org/docs/13/catalog-pg-proc.html">PostgreSQL pg_proc</a>

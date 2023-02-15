@@ -15,8 +15,8 @@
 package io.graphmdl.main.calcite;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.spi.GraphMDLException;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
@@ -123,10 +123,10 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
+import static io.graphmdl.base.type.StandardTypes.DATE;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.graphmdl.spi.type.StandardTypes.BOOLEAN;
-import static io.graphmdl.spi.type.StandardTypes.DATE;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;

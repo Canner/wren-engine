@@ -16,6 +16,7 @@ package io.graphmdl.main.pgcatalog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.graphmdl.base.metadata.TableMetadata;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.builder.PgCatalogTableBuilder;
 import io.graphmdl.main.pgcatalog.builder.PgFunctionBuilder;
@@ -42,7 +43,6 @@ import io.graphmdl.main.pgcatalog.table.PgTablespaceTable;
 import io.graphmdl.main.pgcatalog.table.PgTypeTable;
 import io.graphmdl.main.pgcatalog.table.ReferentialConstraints;
 import io.graphmdl.main.pgcatalog.table.TableConstraints;
-import io.graphmdl.spi.metadata.TableMetadata;
 
 import java.util.List;
 import java.util.Map;

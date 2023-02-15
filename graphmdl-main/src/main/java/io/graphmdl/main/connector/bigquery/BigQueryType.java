@@ -16,10 +16,10 @@ package io.graphmdl.main.connector.bigquery;
 
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.spi.GraphMDLException;
-import io.graphmdl.spi.type.DateType;
-import io.graphmdl.spi.type.PGType;
-import io.graphmdl.spi.type.TimestampType;
+import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.type.DateType;
+import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.TimestampType;
 
 import java.util.Map;
 import java.util.Optional;
@@ -31,16 +31,16 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
 import static com.google.cloud.bigquery.StandardSQLTypeName.TIMESTAMP;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_SUPPORTED;
-import static io.graphmdl.spi.type.BigIntType.BIGINT;
-import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
-import static io.graphmdl.spi.type.ByteaType.BYTEA;
-import static io.graphmdl.spi.type.DoubleType.DOUBLE;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.RealType.REAL;
-import static io.graphmdl.spi.type.SmallIntType.SMALLINT;
-import static io.graphmdl.spi.type.TinyIntType.TINYINT;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
+import static io.graphmdl.base.type.BigIntType.BIGINT;
+import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.ByteaType.BYTEA;
+import static io.graphmdl.base.type.DoubleType.DOUBLE;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.RealType.REAL;
+import static io.graphmdl.base.type.SmallIntType.SMALLINT;
+import static io.graphmdl.base.type.TinyIntType.TINYINT;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 
 public final class BigQueryType
 {

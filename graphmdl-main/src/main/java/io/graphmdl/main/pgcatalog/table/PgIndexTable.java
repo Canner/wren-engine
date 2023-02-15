@@ -14,13 +14,13 @@
 
 package io.graphmdl.main.pgcatalog.table;
 
-import io.graphmdl.spi.metadata.TableMetadata;
+import io.graphmdl.base.metadata.TableMetadata;
 
+import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.PGArray.INT4_ARRAY;
+import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.table;
-import static io.graphmdl.spi.type.BooleanType.BOOLEAN;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.PGArray.INT4_ARRAY;
-import static io.graphmdl.spi.type.PGArray.VARCHAR_ARRAY;
 
 /**
  * this table is unused in Cannerflow, so just an empty table

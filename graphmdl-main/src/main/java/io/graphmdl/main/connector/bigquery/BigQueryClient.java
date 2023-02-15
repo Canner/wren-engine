@@ -34,20 +34,20 @@ import com.google.cloud.http.BaseHttpServiceException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
-import io.graphmdl.spi.CatalogSchemaTableName;
-import io.graphmdl.spi.GraphMDLException;
-import io.graphmdl.spi.Parameter;
-import io.graphmdl.spi.metadata.SchemaTableName;
+import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.Parameter;
+import io.graphmdl.base.metadata.SchemaTableName;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.spi.metadata.StandardErrorCode.AMBIGUOUS_NAME;
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.graphmdl.spi.metadata.StandardErrorCode.GENERIC_USER_ERROR;
-import static io.graphmdl.spi.metadata.StandardErrorCode.NOT_FOUND;
+import static io.graphmdl.base.metadata.StandardErrorCode.AMBIGUOUS_NAME;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 
 public class BigQueryClient

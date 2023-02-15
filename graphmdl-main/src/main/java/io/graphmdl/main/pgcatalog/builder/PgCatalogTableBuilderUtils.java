@@ -15,8 +15,8 @@
 package io.graphmdl.main.pgcatalog.builder;
 
 import com.google.common.collect.Streams;
+import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.main.pgcatalog.table.PgCatalogTable;
-import io.graphmdl.spi.type.PGTypes;
 
 import java.util.List;
 

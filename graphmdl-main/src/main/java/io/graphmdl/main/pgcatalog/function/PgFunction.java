@@ -15,7 +15,7 @@
 package io.graphmdl.main.pgcatalog.function;
 
 import com.google.common.base.Joiner;
-import io.graphmdl.spi.type.PGType;
+import io.graphmdl.base.type.PGType;
 
 import java.util.List;
 import java.util.Optional;

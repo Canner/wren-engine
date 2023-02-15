@@ -14,12 +14,12 @@
 
 package io.graphmdl.main.wireprotocol;
 
-import io.graphmdl.spi.ErrorCode;
-import io.graphmdl.spi.ErrorCodeSupplier;
-import io.graphmdl.spi.ErrorType;
+import io.graphmdl.base.ErrorCode;
+import io.graphmdl.base.ErrorCodeSupplier;
+import io.graphmdl.base.ErrorType;
 
-import static io.graphmdl.spi.ErrorType.INTERNAL_ERROR;
-import static io.graphmdl.spi.ErrorType.USER_ERROR;
+import static io.graphmdl.base.ErrorType.INTERNAL_ERROR;
+import static io.graphmdl.base.ErrorType.USER_ERROR;
 
 public enum PostgresWireProtocolErrorCode
         implements ErrorCodeSupplier

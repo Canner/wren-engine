@@ -15,9 +15,9 @@
 package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.main.wireprotocol.PostgresWireProtocol;
-import io.graphmdl.spi.type.PGType;
-import io.graphmdl.spi.type.PGTypes;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
@@ -38,9 +38,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.spi.type.BigIntType.BIGINT;
-import static io.graphmdl.spi.type.IntegerType.INTEGER;
-import static io.graphmdl.spi.type.VarcharType.VARCHAR;
+import static io.graphmdl.base.type.BigIntType.BIGINT;
+import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.graphmdl.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.graphmdl.testing.TestingWireProtocolClient.Parameter.textParameter;
