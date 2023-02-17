@@ -110,7 +110,11 @@ public class QueryProcessor
 
     private TableMetadata toTableMetadata(QualifiedName tableName, SessionContext sessionContext)
     {
-        return metadata.getTableMetadata(createCatalogSchemaTableName(tableName, sessionContext.getCatalog(), sessionContext.getSchema()));
+        return metadata.getTableMetadata(
+                createCatalogSchemaTableName(
+                        tableName,
+                        sessionContext.getCatalog().orElseThrow(() -> new IllegalArgumentException("Catalog must be specified")),
+                        sessionContext.getSchema().orElseThrow(() -> new IllegalArgumentException("Schema must be specified"))));
     }
 
     private static RelOptCluster newCluster(RelDataTypeFactory factory)
