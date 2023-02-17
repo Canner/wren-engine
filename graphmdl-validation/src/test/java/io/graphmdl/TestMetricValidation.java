@@ -19,7 +19,6 @@ import io.graphmdl.base.GraphMDLTypes;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.JoinType;
-import io.graphmdl.base.dto.Manifest;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.connector.Client;
@@ -36,6 +35,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
@@ -50,20 +50,20 @@ public class TestMetricValidation
     public TestMetricValidation()
     {
         client = new DuckdbClient();
-        sample = GraphMDL.fromManifest(Manifest.manifest(
-                List.of(Model.model("Flight",
-                        format("SELECT * FROM '%s'", flightCsv),
-                        List.of(
-                                Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true),
-                                Column.column("UniqueCarrier", "Carrier", null, true),
-                                Column.column("OriginCityName", GraphMDLTypes.VARCHAR, null, true),
-                                Column.column("DestCityName", GraphMDLTypes.VARCHAR, null, false),
-                                Column.column("Status", "Status", null, false)))),
-                List.of(),
-                List.of(
+        sample = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model("Flight",
+                                format("SELECT * FROM '%s'", flightCsv),
+                                List.of(
+                                        Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true),
+                                        Column.column("UniqueCarrier", "Carrier", null, true),
+                                        Column.column("OriginCityName", GraphMDLTypes.VARCHAR, null, true),
+                                        Column.column("DestCityName", GraphMDLTypes.VARCHAR, null, false),
+                                        Column.column("Status", "Status", null, false)))))
+                .setEnumDefinitions(List.of(
                         EnumDefinition.enumDefinition("Carrier", List.of("AA", "UA")),
-                        EnumDefinition.enumDefinition("Status", List.of("OK", "NOT_OK"))),
-                List.of()));
+                        EnumDefinition.enumDefinition("Status", List.of("OK", "NOT_OK"))))
+                .build());
     }
 
     @Test
@@ -116,18 +116,17 @@ public class TestMetricValidation
     @Test
     public void testModelValidation()
     {
-        GraphMDL wrongManifest = GraphMDL.fromManifest(Manifest.manifest(
-                List.of(Model.model("Flight",
-                        format("SELECT * FROM '%s'", flightCsv),
-                        List.of(
-                                Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true),
-                                Column.column("illegal^name", GraphMDLTypes.VARCHAR, null, true),
-                                Column.column("123illegalname", GraphMDLTypes.VARCHAR, null, true),
-                                Column.column("notfound", GraphMDLTypes.VARCHAR, null, true),
-                                Column.column("A", GraphMDLTypes.INTEGER, null, false)))),
-                List.of(),
-                List.of(),
-                List.of()));
+        GraphMDL wrongManifest = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model("Flight",
+                                format("SELECT * FROM '%s'", flightCsv),
+                                List.of(
+                                        Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true),
+                                        Column.column("illegal^name", GraphMDLTypes.VARCHAR, null, true),
+                                        Column.column("123illegalname", GraphMDLTypes.VARCHAR, null, true),
+                                        Column.column("notfound", GraphMDLTypes.VARCHAR, null, true),
+                                        Column.column("A", GraphMDLTypes.INTEGER, null, false)))))
+                .build());
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, wrongManifest, List.of(ModelValidation.MODEL_VALIDATION));
         assertThat(validationResults.size()).isEqualTo(1);
@@ -167,8 +166,9 @@ public class TestMetricValidation
     @Test
     public void testInvalidModelNameValidation()
     {
-        GraphMDL invalidModels = GraphMDL.fromManifest(Manifest.manifest(
-                List.of(Model.model("123Flight",
+        GraphMDL invalidModels = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model("123Flight",
                                 format("SELECT * FROM '%s'", flightCsv),
                                 List.of(
                                         Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true))),
@@ -179,10 +179,8 @@ public class TestMetricValidation
                         Model.model("_Flight",
                                 format("SELECT * FROM '%s'", flightCsv),
                                 List.of(
-                                        Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true)))),
-                List.of(),
-                List.of(),
-                List.of()));
+                                        Column.column("FlightDate", GraphMDLTypes.TIMESTAMP, null, true)))))
+                .build());
         List<ValidationResult> validationResults = MetricValidation.validate(client, invalidModels, List.of(ModelNameValidation.MODEL_NAME_VALIDATION));
         assertThat(validationResults.size()).isEqualTo(1);
         ValidationResult first = validationResults.get(0);
@@ -198,8 +196,9 @@ public class TestMetricValidation
         String bookCsv = requireNonNull(getClass().getClassLoader().getResource("book.csv")).getPath();
         String userCsv = requireNonNull(getClass().getClassLoader().getResource("user.csv")).getPath();
 
-        GraphMDL graphMDL = GraphMDL.fromManifest(Manifest.manifest(
-                List.of(Model.model(
+        GraphMDL graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model(
                                 "Book",
                                 format("SELECT * FROM '%s'", bookCsv),
                                 List.of(
@@ -210,8 +209,8 @@ public class TestMetricValidation
                                 List.of(
                                         Column.column("id", GraphMDLTypes.INTEGER, null, false),
                                         Column.column("name", GraphMDLTypes.VARCHAR, null, false),
-                                        Column.column("email", GraphMDLTypes.VARCHAR, null, false)))),
-                List.of(
+                                        Column.column("email", GraphMDLTypes.VARCHAR, null, false)))))
+                .setRelationships(List.of(
                         Relationship.relationship("BookUserOneToOne", List.of("Book", "User"), JoinType.ONE_TO_ONE, "Book.authorId = User.id"),
                         Relationship.relationship("BookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.authorId = User.id"),
                         Relationship.relationship("BookUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.authorId = User.id"),
@@ -228,9 +227,8 @@ public class TestMetricValidation
                         Relationship.relationship("FakeBookUserManyToOne", List.of("Book", "User"), JoinType.MANY_TO_ONE, "Book.fakeId = User.fakeId"),
                         Relationship.relationship("FakeBookUserOneToMany", List.of("Book", "User"), JoinType.ONE_TO_MANY, "Book.fakeId = User.fakeId"),
                         Relationship.relationship("FakeBookUserManyToMany", List.of("Book", "User"), JoinType.MANY_TO_MANY, "Book.fakeId = User.fakeId"),
-                        Relationship.relationship("NotFoundModelInCondition", List.of("Book", "User"), JoinType.ONE_TO_ONE, "notfound.id = wrong.id")),
-                List.of(),
-                List.of()));
+                        Relationship.relationship("NotFoundModelInCondition", List.of("Book", "User"), JoinType.ONE_TO_ONE, "notfound.id = wrong.id")))
+                .build());
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, graphMDL, List.of(RelationshipValidation.RELATIONSHIP_VALIDATION));
         assertThat(validationResults.size()).isEqualTo(17);

@@ -30,7 +30,6 @@ import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Column.relationshipColumn;
-import static io.graphmdl.base.dto.Manifest.manifest;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.Relationship.relationship;
@@ -47,8 +46,9 @@ public class TestAllRulesRewrite
 
     public TestAllRulesRewrite()
     {
-        graphMDL = GraphMDL.fromManifest(manifest(
-                List.of(model("Album",
+        graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        model("Album",
                                 "select * from (values (1, 'Gusare', 1, 2560), " +
                                         "(2, 'HisoHiso Banashi', 1, 1500), " +
                                         "(3, 'Dakara boku wa ongaku o yameta', 2, 2553)) " +
@@ -64,15 +64,16 @@ public class TestAllRulesRewrite
                                         "Band(id, name)",
                                 List.of(
                                         column("id", INTEGER, null, true),
-                                        column("name", VARCHAR, null, true)))),
-                List.of(relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id")),
-                List.of(),
-                List.of(metric(
-                        "Collection",
-                        "Album",
-                        // TODO: if dimension is a relationship type
-                        List.of(column("band", VARCHAR, null, true, "Album.band.name")),
-                        List.of(column("price", INTEGER, null, true, "sum(Album.price)"))))));
+                                        column("name", VARCHAR, null, true)))))
+                .setRelationships(List.of(relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id")))
+                .setMetrics(List.of(
+                        metric(
+                                "Collection",
+                                "Album",
+                                // TODO: if dimension is a relationship type
+                                List.of(column("band", VARCHAR, null, true, "Album.band.name")),
+                                List.of(column("price", INTEGER, null, true, "sum(Album.price)")))))
+                .build());
     }
 
     @DataProvider

@@ -35,6 +35,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-base</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-core</artifactId>
         </dependency>

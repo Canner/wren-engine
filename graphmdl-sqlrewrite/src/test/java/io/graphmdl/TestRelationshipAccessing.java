@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 
 import static io.graphmdl.base.dto.Column.column;
-import static io.graphmdl.base.dto.Manifest.manifest;
 import static io.graphmdl.base.dto.Relationship.relationship;
 import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -125,8 +124,9 @@ public class TestRelationshipAccessing
 
     public TestRelationshipAccessing()
     {
-        graphMDL = GraphMDL.fromManifest(manifest(
-                List.of(Model.model("Book",
+        graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model("Book",
                                 "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 3)) Book(bookId, name, authorId)",
                                 List.of(
                                         column("bookId", GraphMDLTypes.INTEGER, null, true),
@@ -139,12 +139,10 @@ public class TestRelationshipAccessing
                                 List.of(
                                         column("userId", GraphMDLTypes.INTEGER, null, true),
                                         column("name", GraphMDLTypes.VARCHAR, null, true),
-
                                         column("book", "Book", "BookPeople", true)),
-                                "userId")),
-                List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId")),
-                List.of(),
-                List.of()));
+                                "userId")))
+                .setRelationships(List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId")))
+                .build());
     }
 
     @DataProvider

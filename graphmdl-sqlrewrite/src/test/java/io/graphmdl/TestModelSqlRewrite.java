@@ -27,7 +27,6 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.graphmdl.base.dto.Column.column;
-import static io.graphmdl.base.dto.Manifest.manifest;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -38,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestModelSqlRewrite
         extends AbstractTestFramework
 {
-    private static final GraphMDL GRAPH_ML = GraphMDL.fromManifest(manifest(
-            List.of(
+    private static final GraphMDL GRAPH_ML = GraphMDL.fromManifest(withDefaultCatalogSchema()
+            .setModels(List.of(
                     model(
                             "People",
                             "SELECT * FROM People",
@@ -52,10 +51,8 @@ public class TestModelSqlRewrite
                             List.of(
                                     column("authorId", "STRING", null, false),
                                     column("publish_date", "STRING", null, false),
-                                    column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)")))),
-            List.of(),
-            List.of(),
-            List.of()));
+                                    column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)")))))
+            .build());
 
     @Override
     protected void prepareData()

@@ -14,6 +14,8 @@
 
 package io.graphmdl.testing;
 
+import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.dto.Manifest;
 import org.intellij.lang.annotations.Language;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
@@ -26,7 +28,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractTestFramework
 {
+    public static final SessionContext DEFAULT_SESSION_CONTEXT =
+            SessionContext.builder().setCatalog("graphmdl").setSchema("test").build();
     private Handle handle;
+
+    public static Manifest.Builder withDefaultCatalogSchema()
+    {
+        return Manifest.builder()
+                .setCatalog(DEFAULT_SESSION_CONTEXT.getCatalog().orElseThrow())
+                .setSchema(DEFAULT_SESSION_CONTEXT.getSchema().orElseThrow());
+    }
 
     @BeforeClass
     public void init()

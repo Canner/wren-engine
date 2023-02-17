@@ -29,13 +29,7 @@ import static java.util.Objects.requireNonNull;
 
 public class GraphMDL
 {
-    public static final GraphMDL EMPTY_GRAPHMDL =
-            GraphMDL.fromManifest(
-                    Manifest.manifest(
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            List.of()));
+    public static final GraphMDL EMPTY_GRAPHMDL = GraphMDL.fromManifest(Manifest.builder().setCatalog("").setSchema("").build());
 
     private final Manifest manifest;
 
