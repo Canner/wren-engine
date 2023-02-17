@@ -21,7 +21,6 @@ import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.sqlrewrite.GraphMDLRule;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
-import io.graphmdl.sqlrewrite.RelationshipRewrite;
 import io.graphmdl.sqlrewrite.Utils;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
@@ -149,18 +148,27 @@ public class TestRelationshipAccessing
     public Object[][] relationshipAccessCases()
     {
         return new Object[][] {
-                // TODO: enable this test
-//                {"select c1.s1.Book.author.book.author.name,\n" +
-//                        "s1.Book.author.book.author.name,\n" +
-//                        "Book.author.book.author.name\n" +
-//                        "from c1.s1.Book",
-//                        EXPECTED_WITH_QUERIES +
-//                                "SELECT ${Book.author.book.author}.name, ${Book.author.book.author}.name, ${Book.author.book.author}.name\n" +
+                // TODO: fix relationship columns with table alias prefix (e.g. a.author.book.author.name)
+//                {"SELECT a.author.book.author.name\n" +
+//                        "FROM Book a",
+//                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+//                                "SELECT ${Book.author.book.author}.name\n" +
 //                                "FROM\n" +
-//                                "  c1.s1.Book\n" +
-//                                ", ${Book.author}\n" +
-//                                ", ${Book.author.book}\n" +
-//                                ", ${Book.author.book.author}\n"},
+//                                "  (Book\n" +
+//                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))",
+//                        true},
+                {"SELECT graphmdl.test.Book.author.book.author.name,\n" +
+                        "test.Book.author.book.author.name,\n" +
+                        "Book.author.book.author.name\n" +
+                        "FROM graphmdl.test.Book",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                "SELECT ${Book.author.book.author}.name,\n" +
+                                "${Book.author.book.author}.name,\n" +
+                                "${Book.author.book.author}.name\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))",
+                        true},
                 {"select author.book.author.name,\n" +
                         "author.book.name,\n" +
                         "author.name\n" +
@@ -274,7 +282,7 @@ public class TestRelationshipAccessing
     {
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
         RelationshipCteGenerator generator = new RelationshipCteGenerator(graphMDL);
-        Analysis analysis = StatementAnalyzer.analyze(statement, graphMDL, generator);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, graphMDL, generator);
 
         Map<String, String> replaceMap = new HashMap<>();
         replaceMap.put("Book.author", generator.getNameMapping().get("Book.author"));
@@ -285,8 +293,8 @@ public class TestRelationshipAccessing
         replaceMap.put("People.book.author.book", generator.getNameMapping().get("People.book.author.book"));
 
         Node rewrittenStatement = statement;
-        for (GraphMDLRule rule : List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, analysis, graphMDL);
+        for (GraphMDLRule rule : List.of(MODEL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, graphMDL);
         }
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
@@ -314,7 +322,7 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        String rewrittenSql = GraphMDLPlanner.rewrite(sql, graphMDL, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -328,7 +336,7 @@ public class TestRelationshipAccessing
         String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
                 Utils.getModelSql(graphMDL.getModel("Book").orElseThrow()));
 
-        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, graphMDL, List.of(MODEL_SQL_REWRITE, RelationshipRewrite.RELATIONSHIP_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }

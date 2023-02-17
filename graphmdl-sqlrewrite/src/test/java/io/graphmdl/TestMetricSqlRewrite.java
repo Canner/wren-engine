@@ -119,6 +119,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
     }
 }

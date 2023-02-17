@@ -60,7 +60,7 @@ import java.util.List;
 import java.util.Properties;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.main.metadata.MetadataUtil.createCatalogSchemaTableName;
+import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.util.Objects.requireNonNull;
 
@@ -110,11 +110,7 @@ public class QueryProcessor
 
     private TableMetadata toTableMetadata(QualifiedName tableName, SessionContext sessionContext)
     {
-        return metadata.getTableMetadata(
-                createCatalogSchemaTableName(
-                        tableName,
-                        sessionContext.getCatalog().orElseThrow(() -> new IllegalArgumentException("Catalog must be specified")),
-                        sessionContext.getSchema().orElseThrow(() -> new IllegalArgumentException("Schema must be specified"))));
+        return metadata.getTableMetadata(toCatalogSchemaTableName(sessionContext, tableName));
     }
 
     private static RelOptCluster newCluster(RelDataTypeFactory factory)

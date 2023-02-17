@@ -14,15 +14,20 @@
 
 package io.graphmdl.sqlrewrite;
 
+import com.google.common.collect.Lists;
+import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Statement;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -84,5 +89,23 @@ public final class Utils
     {
         String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
         return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
+    }
+
+    public static CatalogSchemaTableName toCatalogSchemaTableName(SessionContext sessionContext, QualifiedName name)
+    {
+        requireNonNull(sessionContext, "sessionContext is null");
+        requireNonNull(name, "name is null");
+        if (name.getParts().size() > 3) {
+            throw new IllegalArgumentException(format("Too many dots in table name: %s", name));
+        }
+
+        List<String> parts = Lists.reverse(name.getParts());
+        String objectName = parts.get(0);
+        String schemaName = (parts.size() > 1) ? parts.get(1) : sessionContext.getSchema().orElseThrow(() ->
+                new IllegalArgumentException("Schema must be specified when session schema is not set"));
+        String catalogName = (parts.size() > 2) ? parts.get(2) : sessionContext.getCatalog().orElseThrow(() ->
+                new IllegalArgumentException("Catalog must be specified when session catalog is not set"));
+
+        return new CatalogSchemaTableName(catalogName, schemaName, objectName);
     }
 }

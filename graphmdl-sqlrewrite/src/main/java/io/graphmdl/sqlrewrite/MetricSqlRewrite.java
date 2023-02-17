@@ -15,6 +15,7 @@
 package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.tree.Identifier;
@@ -37,10 +38,14 @@ public class MetricSqlRewrite
     public static final MetricSqlRewrite METRIC_SQL_REWRITE = new MetricSqlRewrite();
 
     @Override
-    public Node apply(Node root, Analysis analysis, GraphMDL graphMDL)
+    public Node apply(Node root, SessionContext context, Analysis analysis, GraphMDL graphMDL)
     {
         Map<String, Query> metricQueries = graphMDL.listMetrics().stream()
-                .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
+                .filter(metric ->
+                        analysis.getTables().stream()
+                                .filter(table -> table.getCatalogName().equals(graphMDL.getCatalog()))
+                                .filter(table -> table.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                                .anyMatch(table -> table.getSchemaTableName().getTableName().equals(metric.getName())))
                 .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
         return new MetricSqlRewrite.Rewriter(metricQueries, analysis).process(root);
     }

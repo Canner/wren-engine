@@ -104,6 +104,33 @@ public class TestAllRulesRewrite
                         ", price\n" +
                         "FROM\n" +
                         "  Album"},
+                {
+                        "SELECT name, price FROM graphmdl.test.Album",
+                        "WITH\n" +
+                                "  Album AS (\n" +
+                                "   SELECT\n" +
+                                "     id\n" +
+                                "   , name\n" +
+                                "   , 'relationship<AlbumBand>' band\n" +
+                                "   , price\n" +
+                                "   FROM\n" +
+                                "     (\n" +
+                                "      SELECT *\n" +
+                                "      FROM\n" +
+                                "        (\n" +
+                                " VALUES \n" +
+                                "           ROW (1, 'Gusare', 1, 2560)\n" +
+                                "         , ROW (2, 'HisoHiso Banashi', 1, 1500)\n" +
+                                "         , ROW (3, 'Dakara boku wa ongaku o yameta', 2, 2553)\n" +
+                                "      )  Album (id, name, bandId, price)\n" +
+                                "   ) \n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  name\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  Album"
+                }
                 // TODO: access the relationship column in the baseModel of metric
                 // {"select band, price from Collection", ""},
         };
@@ -126,7 +153,8 @@ public class TestAllRulesRewrite
         return new Object[][] {
                 {"select 1, 2, 3"},
                 {"select id, name from normalTable"},
-                {"with normalCte as (select id, name from normalTable) select id, name from normalCte"}
+                {"with normalCte as (select id, name from normalTable) select id, name from normalCte"},
+                {"SELECT graphmdl.test.Album.id FROM catalog.schema.Album"},
         };
     }
 
@@ -139,6 +167,6 @@ public class TestAllRulesRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, graphMDL);
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL);
     }
 }

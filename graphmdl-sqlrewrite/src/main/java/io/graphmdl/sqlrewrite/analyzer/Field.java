@@ -14,6 +14,7 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import io.graphmdl.base.CatalogSchemaTableName;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.Optional;
@@ -30,16 +31,23 @@ public class Field
     // TODO: go check if relationAlias should be optional
     // e.g. select table.col_1 from select * from table; => is this legal ? this is false
     private final Optional<QualifiedName> relationAlias;
-    private final String modelName;
+    private final CatalogSchemaTableName modelName;
     private final String columnName;
     private final Optional<String> name;
+    private final boolean isRelationship;
 
-    private Field(Optional<QualifiedName> relationAlias, String modelName, String columnName, Optional<String> name)
+    private Field(
+            Optional<QualifiedName> relationAlias,
+            CatalogSchemaTableName modelName,
+            String columnName,
+            Optional<String> name,
+            boolean isRelationship)
     {
         this.relationAlias = requireNonNull(relationAlias, "relationAlias is null");
         this.modelName = requireNonNull(modelName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = requireNonNull(name, "name is null");
+        this.isRelationship = isRelationship;
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -47,7 +55,7 @@ public class Field
         return relationAlias;
     }
 
-    public String getModelName()
+    public CatalogSchemaTableName getModelName()
     {
         return modelName;
     }
@@ -62,9 +70,45 @@ public class Field
         return name;
     }
 
+    public boolean isRelationship()
+    {
+        return isRelationship;
+    }
+
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
     {
         return prefix.isEmpty() || relationAlias.isPresent() && relationAlias.get().hasSuffix(prefix.get());
+    }
+
+    /*
+      Namespaces can have names such as "x", "x.y" or "" if there's no name
+      Name to resolve can have names like "a", "x.a", "x.y.a"
+
+      namespace  name     possible match
+       ""         "a"           y
+       "x"        "a"           y
+       "x.y"      "a"           y
+
+       ""         "x.a"         n
+       "x"        "x.a"         y
+       "x.y"      "x.a"         n
+
+       ""         "x.y.a"       n
+       "x"        "x.y.a"       n
+       "x.y"      "x.y.a"       n
+
+       ""         "y.a"         n
+       "x"        "y.a"         n
+       "x.y"      "y.a"         y
+     */
+    public boolean canResolve(QualifiedName name)
+    {
+        if (this.name.isEmpty()) {
+            return false;
+        }
+
+        // TODO: need to know whether the qualified name and the name of this field were quoted
+        return matchesPrefix(name.getPrefix()) && this.name.get().equalsIgnoreCase(name.getSuffix());
     }
 
     public static Builder builder()
@@ -75,9 +119,10 @@ public class Field
     public static class Builder
     {
         private Optional<QualifiedName> relationAlias = Optional.empty();
-        private String modelName;
+        private CatalogSchemaTableName modelName;
         private String columnName;
         private Optional<String> name = Optional.empty();
+        private boolean isRelationship;
 
         public Builder() {}
 
@@ -87,7 +132,7 @@ public class Field
             return this;
         }
 
-        public Builder modelName(String modelName)
+        public Builder modelName(CatalogSchemaTableName modelName)
         {
             this.modelName = modelName;
             return this;
@@ -105,9 +150,15 @@ public class Field
             return this;
         }
 
+        public Builder isRelationship(boolean isRelationship)
+        {
+            this.isRelationship = isRelationship;
+            return this;
+        }
+
         public Field build()
         {
-            return new Field(relationAlias, modelName, columnName, name);
+            return new Field(relationAlias, modelName, columnName, name, isRelationship);
         }
     }
 }

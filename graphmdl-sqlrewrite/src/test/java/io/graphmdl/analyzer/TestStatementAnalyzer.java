@@ -14,6 +14,7 @@
 
 package io.graphmdl.analyzer;
 
+import io.graphmdl.base.SessionContext;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import org.testng.annotations.Test;
@@ -29,7 +30,8 @@ public class TestStatementAnalyzer
     @Test
     public void testValues()
     {
-        analyze(sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL)), EMPTY_GRAPHMDL);
-        analyze(sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL)), EMPTY_GRAPHMDL);
+        SessionContext sessionContext = SessionContext.builder().build();
+        analyze(sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY_GRAPHMDL);
+        analyze(sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY_GRAPHMDL);
     }
 }

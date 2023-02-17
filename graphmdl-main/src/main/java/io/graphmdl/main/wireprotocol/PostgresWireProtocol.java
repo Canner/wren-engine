@@ -351,7 +351,7 @@ public class PostgresWireProtocol
             Messages.sendParseComplete(channel);
         }
         catch (Exception e) {
-            LOG.error(format("Parse query failed. Query: %s. Root cause is %s", query, e.getMessage()));
+            LOG.error(e, "Parse query failed. Query: %s", query);
             Messages.sendErrorResponse(channel, e);
         }
     }

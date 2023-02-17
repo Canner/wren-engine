@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestModelSqlRewrite
         extends AbstractTestFramework
 {
-    private static final GraphMDL GRAPH_ML = GraphMDL.fromManifest(withDefaultCatalogSchema()
+    private static final GraphMDL GRAPHMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
             .setModels(List.of(
                     model(
                             "People",
@@ -115,7 +115,7 @@ public class TestModelSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, GRAPH_ML, List.of(MODEL_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, GRAPHMDL, List.of(MODEL_SQL_REWRITE));
     }
 
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)

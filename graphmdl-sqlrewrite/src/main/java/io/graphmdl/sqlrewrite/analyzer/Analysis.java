@@ -14,12 +14,12 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.NodeRef;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.WithQuery;
@@ -34,9 +34,10 @@ import static java.util.Objects.requireNonNull;
 public class Analysis
 {
     private final Statement root;
-    private final Set<QualifiedName> tables = new HashSet<>();
+    private final Set<CatalogSchemaTableName> tables = new HashSet<>();
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
+    private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
     private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
@@ -52,12 +53,12 @@ public class Analysis
         return root;
     }
 
-    void addTable(QualifiedName tableName)
+    void addTable(CatalogSchemaTableName tableName)
     {
         tables.add(tableName);
     }
 
-    public Set<QualifiedName> getTables()
+    public Set<CatalogSchemaTableName> getTables()
     {
         return Set.copyOf(tables);
     }
@@ -87,7 +88,7 @@ public class Analysis
         return Map.copyOf(relationshipFields);
     }
 
-    void addReplaceTableWithCTEs(NodeRef<Table> tableNodeRef, Set<String> relationshipCTENames)
+    public void addReplaceTableWithCTEs(NodeRef<Table> tableNodeRef, Set<String> relationshipCTENames)
     {
         this.replaceTableWithCTEs.put(tableNodeRef, relationshipCTENames);
     }
@@ -115,5 +116,15 @@ public class Analysis
     public Set<Model> getModels()
     {
         return models;
+    }
+
+    void addModelNodeRef(NodeRef<Table> tableNodeRef)
+    {
+        this.modelNodeRefs.add(tableNodeRef);
+    }
+
+    public Set<NodeRef<Table>> getModelNodeRefs()
+    {
+        return modelNodeRefs;
     }
 }
