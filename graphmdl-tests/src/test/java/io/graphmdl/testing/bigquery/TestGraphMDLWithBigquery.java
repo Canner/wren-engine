@@ -99,7 +99,7 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
-    
+
     @Test
     void testQueryMetric()
             throws Exception
