@@ -23,23 +23,23 @@ public final class SessionContext
         return new Builder();
     }
 
-    private final Optional<String> catalog;
-    private final Optional<String> schema;
+    private final String catalog;
+    private final String schema;
 
     private SessionContext(String catalog, String schema)
     {
-        this.catalog = Optional.ofNullable(catalog);
-        this.schema = Optional.ofNullable(schema);
+        this.catalog = catalog;
+        this.schema = schema;
     }
 
     public Optional<String> getCatalog()
     {
-        return catalog;
+        return Optional.ofNullable(catalog);
     }
 
     public Optional<String> getSchema()
     {
-        return schema;
+        return Optional.ofNullable(schema);
     }
 
     public static class Builder
