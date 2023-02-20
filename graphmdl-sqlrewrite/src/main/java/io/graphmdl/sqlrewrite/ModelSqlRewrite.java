@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import static io.graphmdl.base.Utils.checkArgument;
 import static io.trino.sql.QueryUtil.table;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -146,17 +145,18 @@ public class ModelSqlRewrite
         @Override
         protected Node visitTable(Table node, Void context)
         {
-            Node result = node;
+            Table result = node;
             if (analysis.getModelNodeRefs().contains(NodeRef.of(node))) {
                 result = applyModelRule(result);
             }
 
             Set<String> relationshipCTENames = analysis.getReplaceTableWithCTEs().getOrDefault(NodeRef.of(node), Set.of());
+            Relation relation = result;
             if (relationshipCTENames.size() > 0) {
-                result = applyRelationshipRule(result, relationshipCTENames);
+                relation = applyRelationshipRule(result, relationshipCTENames);
             }
 
-            return result;
+            return relation;
         }
 
         @Override
@@ -166,17 +166,13 @@ public class ModelSqlRewrite
         }
 
         // the model is added in with query, and the catalog and schema should be removed
-        private Node applyModelRule(Node node)
+        private Table applyModelRule(Table table)
         {
-            checkArgument(node instanceof Table, "node must be a Table");
-            Table table = (Table) node;
             return new Table(QualifiedName.of(table.getName().getSuffix()));
         }
 
-        private Relation applyRelationshipRule(Node node, Set<String> relationshipCTENames)
+        private Relation applyRelationshipRule(Table table, Set<String> relationshipCTENames)
         {
-            checkArgument(node instanceof Table, "node must be a Table");
-            Table table = (Table) node;
             Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
             Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
                     .map(expression -> expression.getBase().toString())
