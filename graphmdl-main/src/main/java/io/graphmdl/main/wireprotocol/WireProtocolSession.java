@@ -188,7 +188,12 @@ public class WireProtocolSession
         }
         else {
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
-            String graphMDLRewritten = GraphMDLPlanner.rewrite(statementPreRewritten, graphMDLMetastore.getGraphMDL());
+            // TODO: support setting default catalog/schema in wire protocol, temporarily hardcoded here
+            SessionContext sessionContext = SessionContext.builder()
+                    .setCatalog("canner-cml")
+                    .setSchema("tpch_tiny")
+                    .build();
+            String graphMDLRewritten = GraphMDLPlanner.rewrite(statementPreRewritten, sessionContext, graphMDLMetastore.getGraphMDL());
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);

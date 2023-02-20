@@ -19,29 +19,47 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
+
 public class Manifest
 {
+    private final String catalog;
+    private final String schema;
     private final List<Model> models;
     private final List<Relationship> relationships;
     private final List<EnumDefinition> enumDefinitions;
     private final List<Metric> metrics;
 
-    public static Manifest manifest(List<Model> models, List<Relationship> relationships, List<EnumDefinition> enumDefinitions, List<Metric> metrics)
+    public static Builder builder()
     {
-        return new Manifest(models, relationships, enumDefinitions, metrics);
+        return new Builder();
     }
 
     @JsonCreator
     public Manifest(
+            @JsonProperty("catalog") String catalog,
+            @JsonProperty("schema") String schema,
             @JsonProperty("models") List<Model> models,
             @JsonProperty("relationships") List<Relationship> relationships,
             @JsonProperty("enums") List<EnumDefinition> enumDefinitions,
             @JsonProperty("metrics") List<Metric> metrics)
     {
+        this.catalog = requireNonNull(catalog, "catalog is null");
+        this.schema = requireNonNull(schema, "schema is null");
         this.models = models == null ? List.of() : models;
         this.relationships = relationships == null ? List.of() : relationships;
         this.enumDefinitions = enumDefinitions == null ? List.of() : enumDefinitions;
         this.metrics = metrics == null ? List.of() : metrics;
+    }
+
+    public String getCatalog()
+    {
+        return catalog;
+    }
+
+    public String getSchema()
+    {
+        return schema;
     }
 
     public List<Model> getModels()
@@ -62,5 +80,58 @@ public class Manifest
     public List<Metric> getMetrics()
     {
         return metrics;
+    }
+
+    public static class Builder
+    {
+        private String catalog;
+        private String schema;
+        private List<Model> models;
+        private List<Relationship> relationships;
+        private List<EnumDefinition> enumDefinitions;
+        private List<Metric> metrics;
+
+        private Builder() {}
+
+        public Builder setCatalog(String catalog)
+        {
+            this.catalog = catalog;
+            return this;
+        }
+
+        public Builder setSchema(String schema)
+        {
+            this.schema = schema;
+            return this;
+        }
+
+        public Builder setModels(List<Model> models)
+        {
+            this.models = models;
+            return this;
+        }
+
+        public Builder setRelationships(List<Relationship> relationships)
+        {
+            this.relationships = relationships;
+            return this;
+        }
+
+        public Builder setEnumDefinitions(List<EnumDefinition> enumDefinitions)
+        {
+            this.enumDefinitions = enumDefinitions;
+            return this;
+        }
+
+        public Builder setMetrics(List<Metric> metrics)
+        {
+            this.metrics = metrics;
+            return this;
+        }
+
+        public Manifest build()
+        {
+            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics);
+        }
     }
 }

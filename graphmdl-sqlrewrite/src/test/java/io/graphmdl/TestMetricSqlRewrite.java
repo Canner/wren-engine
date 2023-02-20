@@ -30,7 +30,6 @@ import java.util.List;
 import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
-import static io.graphmdl.base.dto.Manifest.manifest;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
@@ -47,24 +46,25 @@ public class TestMetricSqlRewrite
 
     public TestMetricSqlRewrite()
     {
-        graphMDL = GraphMDL.fromManifest(manifest(
-                List.of(model("Album",
-                        "select * from (values (1, 'Gusare', 'ZUTOMAYO', 2560), " +
-                                "(2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500), " +
-                                "(3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553)) " +
-                                "album(id, name, author, price)",
-                        List.of(
-                                column("id", INTEGER, null, true),
-                                column("name", VARCHAR, null, true),
-                                column("author", VARCHAR, null, true),
-                                column("price", INTEGER, null, true)))),
-                List.of(),
-                List.of(),
-                List.of(metric(
-                        "Collection",
-                        "Album",
-                        List.of(column("author", VARCHAR, null, true)),
-                        List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)"))))));
+        graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        model("Album",
+                                "select * from (values (1, 'Gusare', 'ZUTOMAYO', 2560), " +
+                                        "(2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500), " +
+                                        "(3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553)) " +
+                                        "album(id, name, author, price)",
+                                List.of(
+                                        column("id", INTEGER, null, true),
+                                        column("name", VARCHAR, null, true),
+                                        column("author", VARCHAR, null, true),
+                                        column("price", INTEGER, null, true)))))
+                .setMetrics(List.of(
+                        metric(
+                                "Collection",
+                                "Album",
+                                List.of(column("author", VARCHAR, null, true)),
+                                List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)")))))
+                .build());
     }
 
     @DataProvider
@@ -119,6 +119,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
     }
 }

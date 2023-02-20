@@ -16,9 +16,9 @@ package io.graphmdl.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.Utils;
 import io.graphmdl.base.dto.Column;
-import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AstVisitor;
@@ -49,33 +49,37 @@ public final class ExpressionAnalyzer
 
     public static ExpressionAnalysis analyze(
             Expression expression,
+            SessionContext sessionContext,
             GraphMDL graphMDL,
             RelationshipCteGenerator relationshipCteGenerator,
             Scope scope)
     {
         ExpressionAnalyzer expressionAnalyzer = new ExpressionAnalyzer();
-        return expressionAnalyzer.analyzeExpression(expression, graphMDL, relationshipCteGenerator, scope);
+        return expressionAnalyzer.analyzeExpression(expression, sessionContext, graphMDL, relationshipCteGenerator, scope);
     }
 
     private ExpressionAnalysis analyzeExpression(
             Expression expression,
+            SessionContext sessionContext,
             GraphMDL graphMDL,
             RelationshipCteGenerator relationshipCteGenerator,
             Scope scope)
     {
-        new Visitor(graphMDL, relationshipCteGenerator, scope).process(expression);
+        new Visitor(sessionContext, graphMDL, relationshipCteGenerator, scope).process(expression);
         return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames, relationships);
     }
 
     private class Visitor
             extends AstVisitor<Void, Void>
     {
+        private final SessionContext sessionContext;
         private final GraphMDL graphMDL;
         private final RelationshipCteGenerator relationshipCteGenerator;
         private final Scope scope;
 
-        public Visitor(GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator, Scope scope)
+        public Visitor(SessionContext sessionContext, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator, Scope scope)
         {
+            this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.graphMDL = requireNonNull(graphMDL, "graphMDL is null");
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
             this.scope = requireNonNull(scope, "scope is null");
@@ -110,26 +114,26 @@ public final class ExpressionAnalyzer
             List<Field> scopeFields = scope.getRelationType()
                     .orElseThrow(() -> new IllegalArgumentException("relation type is empty"))
                     .getFields();
-            String firstName = qualifiedName.getParts().get(0);
+
+            // TODO: we need to support alias here
+            // e.g. select a.relationship.column from table a
             int index = 0;
-            boolean isModelName = scopeFields.stream().anyMatch(scopeField -> scopeField.getModelName().equals(firstName));
-            if (isModelName) {
-                index++;
+            Optional<Field> optField = Optional.empty();
+            for (int i = 0; i < qualifiedName.getParts().size(); i++) {
+                QualifiedName partName = QualifiedName.of(qualifiedName.getParts().subList(0, i + 1));
+                optField = scopeFields.stream().filter(scopeField -> scopeField.canResolve(partName)).findAny();
+                if (optField.isPresent() && optField.get().isRelationship()) {
+                    index = partName.getParts().size() - 1;
+                    break;
+                }
             }
 
-            String name = qualifiedName.getParts().get(index);
-            Optional<Field> optField = scopeFields.stream()
-                    .filter(scopeField -> scopeField.getColumnName().equals(name))
-                    .findAny();
-            // field not found, maybe it's not part of model
+            // means there is no matched field
             if (optField.isEmpty()) {
                 return;
             }
-            Field field = optField.get();
 
-            Model model = graphMDL.getModel(field.getModelName()).orElseThrow(() -> new IllegalArgumentException(field.getModelName() + " model not found"));
-
-            String modelName = model.getName();
+            String modelName = optField.get().getModelName().getSchemaTableName().getTableName();
             List<String> relNameParts = new ArrayList<>();
             relNameParts.add(modelName);
             for (; index < qualifiedName.getParts().size(); index++) {

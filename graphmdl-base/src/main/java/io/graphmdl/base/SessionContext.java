@@ -14,6 +14,8 @@
 
 package io.graphmdl.base;
 
+import java.util.Optional;
+
 public final class SessionContext
 {
     public static Builder builder()
@@ -30,14 +32,14 @@ public final class SessionContext
         this.schema = schema;
     }
 
-    public String getCatalog()
+    public Optional<String> getCatalog()
     {
-        return catalog;
+        return Optional.ofNullable(catalog);
     }
 
-    public String getSchema()
+    public Optional<String> getSchema()
     {
-        return schema;
+        return Optional.ofNullable(schema);
     }
 
     public static class Builder

@@ -15,10 +15,11 @@
 package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.tree.Node;
 
 public interface GraphMDLRule
 {
-    Node apply(Node root, Analysis analysis, GraphMDL graphMDL);
+    Node apply(Node root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL);
 }

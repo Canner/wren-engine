@@ -15,6 +15,7 @@
 package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.SqlFormatter;
@@ -25,6 +26,7 @@ import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
+import static io.graphmdl.sqlrewrite.MetricSqlRewrite.METRIC_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 
@@ -34,23 +36,22 @@ public class GraphMDLPlanner
     private static final List<GraphMDLRule> ALL_RULES = List.of(
             // The ordering shouldn't be changed.
             MODEL_SQL_REWRITE,
-            MetricSqlRewrite.METRIC_SQL_REWRITE,
-            RelationshipRewrite.RELATIONSHIP_REWRITE);
+            METRIC_SQL_REWRITE);
 
     private GraphMDLPlanner() {}
 
-    public static String rewrite(String sql, GraphMDL graphMDL)
+    public static String rewrite(String sql, SessionContext sessionContext, GraphMDL graphMDL)
     {
-        return rewrite(sql, graphMDL, ALL_RULES);
+        return rewrite(sql, sessionContext, graphMDL, ALL_RULES);
     }
 
-    public static String rewrite(String sql, GraphMDL graphMDL, List<GraphMDLRule> rules)
+    public static String rewrite(String sql, SessionContext sessionContext, GraphMDL graphMDL, List<GraphMDLRule> rules)
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        Analysis analysis = StatementAnalyzer.analyze(statement, graphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, sessionContext, graphMDL);
         Node result = statement;
         for (GraphMDLRule rule : rules) {
-            result = rule.apply(result, analysis, graphMDL);
+            result = rule.apply(result, sessionContext, analysis, graphMDL);
         }
         return SqlFormatter.formatSql(result);
     }

@@ -1,4 +1,6 @@
 {
+  "catalog": "canner-cml",
+  "schema": "tpch_tiny",
   "models": [
     {
       "name": "Orders",

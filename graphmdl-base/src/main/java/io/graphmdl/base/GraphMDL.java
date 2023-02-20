@@ -29,14 +29,10 @@ import static java.util.Objects.requireNonNull;
 
 public class GraphMDL
 {
-    public static final GraphMDL EMPTY_GRAPHMDL =
-            GraphMDL.fromManifest(
-                    Manifest.manifest(
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            List.of()));
+    public static final GraphMDL EMPTY_GRAPHMDL = GraphMDL.fromManifest(Manifest.builder().setCatalog("").setSchema("").build());
 
+    private final String catalog;
+    private final String schema;
     private final Manifest manifest;
 
     public static GraphMDL fromJson(String manifest)
@@ -54,6 +50,18 @@ public class GraphMDL
     private GraphMDL(Manifest manifest)
     {
         this.manifest = requireNonNull(manifest, "graphMDL is null");
+        this.catalog = manifest.getCatalog();
+        this.schema = manifest.getSchema();
+    }
+
+    public String getCatalog()
+    {
+        return catalog;
+    }
+
+    public String getSchema()
+    {
+        return schema;
     }
 
     public List<Model> listModels()

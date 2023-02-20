@@ -14,7 +14,9 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
@@ -27,7 +29,6 @@ import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.SelectItem;
@@ -49,6 +50,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -61,20 +63,23 @@ public final class StatementAnalyzer
 {
     private StatementAnalyzer() {}
 
-    public static Analysis analyze(Statement statement, GraphMDL graphMDL)
+    public static Analysis analyze(Statement statement, SessionContext sessionContext, GraphMDL graphMDL)
     {
-        return analyze(statement, graphMDL, new RelationshipCteGenerator(graphMDL));
+        return analyze(statement, sessionContext, graphMDL, new RelationshipCteGenerator(graphMDL));
     }
 
-    public static Analysis analyze(Statement statement, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
+    public static Analysis analyze(Statement statement, SessionContext sessionContext, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
     {
         Analysis analysis = new Analysis(statement, relationshipCteGenerator);
-        new Visitor(analysis, graphMDL, relationshipCteGenerator).process(statement, Optional.empty());
+        new Visitor(sessionContext, analysis, graphMDL, relationshipCteGenerator).process(statement, Optional.empty());
 
         // add models directly used in sql query
         analysis.addModels(
                 graphMDL.listModels().stream()
-                        .filter(model -> analysis.getTables().stream().anyMatch(table -> model.getName().equals(table.toString())))
+                        .filter(model -> analysis.getTables().stream()
+                                .filter(table -> table.getCatalogName().equals(graphMDL.getCatalog()))
+                                .filter(table -> table.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                                .anyMatch(table -> table.getSchemaTableName().getTableName().equals(model.getName())))
                         .collect(toUnmodifiableSet()));
 
         // add models required for relationships
@@ -91,7 +96,10 @@ public final class StatementAnalyzer
         // add models required for metrics
         analysis.addModels(
                 graphMDL.listMetrics().stream()
-                        .filter(metric -> analysis.getTables().stream().anyMatch(table -> metric.getName().equals(table.toString())))
+                        .filter(metric -> analysis.getTables().stream()
+                                .filter(table -> table.getCatalogName().equals(graphMDL.getCatalog()))
+                                .filter(table -> table.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                                .anyMatch(table -> table.getSchemaTableName().getTableName().equals(metric.getName())))
                         .map(Metric::getBaseModel)
                         .distinct()
                         .map(model -> graphMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
@@ -103,12 +111,14 @@ public final class StatementAnalyzer
     private static class Visitor
             extends AstVisitor<Scope, Optional<Scope>>
     {
+        private final SessionContext sessionContext;
         private final Analysis analysis;
         private final GraphMDL graphMDL;
         private final RelationshipCteGenerator relationshipCteGenerator;
 
-        public Visitor(Analysis analysis, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
+        public Visitor(SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL, RelationshipCteGenerator relationshipCteGenerator)
         {
+            this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
             this.graphMDL = requireNonNull(graphMDL, "graphMDL is null");
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
@@ -123,21 +133,27 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTable(Table node, Optional<Scope> scope)
         {
-            analysis.addTable(node.getName());
+            // TODO: determine if the table is in with query, if so, it doesn't need catalog/schema in session context
+            CatalogSchemaTableName tableName = toCatalogSchemaTableName(sessionContext, node.getName());
+            analysis.addTable(tableName);
             // only record model fields here, others are ignored
-            String tableName = node.getName().toString();
-            List<Field> modelFields = graphMDL.getModel(tableName)
-                    .map(Model::getColumns)
-                    .orElseGet(List::of)
-                    .stream()
-                    .map(column ->
-                            Field.builder()
-                                    .relationAlias(Optional.of(QualifiedName.of(tableName)))
-                                    .modelName(tableName)
-                                    .columnName(column.getName())
-                                    .name(Optional.of(column.getName()))
-                                    .build())
-                    .collect(toImmutableList());
+            List<Field> modelFields = List.of();
+            if (tableName.getCatalogName().equals(graphMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema())) {
+                analysis.addModelNodeRef(NodeRef.of(node));
+                modelFields = graphMDL.getModel(tableName.getSchemaTableName().getTableName())
+                        .map(Model::getColumns)
+                        .orElseGet(List::of)
+                        .stream()
+                        .map(column ->
+                                Field.builder()
+                                        .relationAlias(Optional.of(node.getName()))
+                                        .modelName(tableName)
+                                        .columnName(column.getName())
+                                        .name(Optional.of(column.getName()))
+                                        .isRelationship(column.getRelationship().isPresent())
+                                        .build())
+                        .collect(toImmutableList());
+            }
             return Scope.builder()
                     .parent(scope)
                     .relationType(Optional.of(new RelationType(modelFields)))
@@ -279,7 +295,7 @@ public final class StatementAnalyzer
 
         private ExpressionAnalysis analyzeExpression(Expression expression, Scope scope)
         {
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, graphMDL, relationshipCteGenerator, scope);
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, sessionContext, graphMDL, relationshipCteGenerator, scope);
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
             analysis.addRelationships(expressionAnalysis.getRelationships());
             return expressionAnalysis;
