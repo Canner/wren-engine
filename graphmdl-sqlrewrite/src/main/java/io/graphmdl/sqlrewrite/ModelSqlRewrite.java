@@ -145,18 +145,17 @@ public class ModelSqlRewrite
         @Override
         protected Node visitTable(Table node, Void context)
         {
-            Table result = node;
+            Node result = node;
             if (analysis.getModelNodeRefs().contains(NodeRef.of(node))) {
-                result = applyModelRule(result);
+                result = applyModelRule(node);
             }
 
             Set<String> relationshipCTENames = analysis.getReplaceTableWithCTEs().getOrDefault(NodeRef.of(node), Set.of());
-            Relation relation = result;
             if (relationshipCTENames.size() > 0) {
-                relation = applyRelationshipRule(result, relationshipCTENames);
+                result = applyRelationshipRule((Table) result, relationshipCTENames);
             }
 
-            return relation;
+            return result;
         }
 
         @Override
@@ -166,7 +165,7 @@ public class ModelSqlRewrite
         }
 
         // the model is added in with query, and the catalog and schema should be removed
-        private Table applyModelRule(Table table)
+        private Node applyModelRule(Table table)
         {
             return new Table(QualifiedName.of(table.getName().getSuffix()));
         }
