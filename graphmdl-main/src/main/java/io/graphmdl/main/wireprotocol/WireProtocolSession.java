@@ -143,7 +143,7 @@ public class WireProtocolSession
         return properties.getProperty("user");
     }
 
-    public String getCurrentWorkspace()
+    public String getDefaultDatabase()
     {
         return properties.getProperty("database");
     }

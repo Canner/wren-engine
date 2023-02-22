@@ -217,12 +217,12 @@ public class PostgresWireProtocol
                         .addListener(f -> sendParamsAndRdyForQuery(channel));
             }
             else {
-                Messages.sendAuthenticationError(channel, format("Workspace %s not found or permission denied", wireProtocolSession.getCurrentWorkspace()));
+                Messages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
             }
         }
         catch (Exception e) {
             LOG.error(e);
-            Messages.sendAuthenticationError(channel, format("Workspace %s not found or permission denied", wireProtocolSession.getCurrentWorkspace()));
+            Messages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
         }
     }
 
