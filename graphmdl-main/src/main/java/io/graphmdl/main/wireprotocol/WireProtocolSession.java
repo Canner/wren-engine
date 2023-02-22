@@ -148,6 +148,11 @@ public class WireProtocolSession
         return properties.getProperty("database");
     }
 
+    public String getDefaultSchema()
+    {
+        return properties.getProperty("search_path");
+    }
+
     public List<String> getTrinoSessionProperties()
     {
         return sessionProperties;
@@ -167,8 +172,12 @@ public class WireProtocolSession
             return Optional.empty();
         }
 
-        String sql = sqlConverter.convert(portal.getPreparedStatement().getStatement(),
-                SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
+        String sql = sqlConverter.convert(
+                portal.getPreparedStatement().getStatement(),
+                SessionContext.builder()
+                        .setCatalog(getDefaultDatabase())
+                        .setSchema(getDefaultSchema())
+                        .build());
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
 
@@ -188,12 +197,13 @@ public class WireProtocolSession
         }
         else {
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
-            // TODO: support setting default catalog/schema in wire protocol, temporarily hardcoded here
-            SessionContext sessionContext = SessionContext.builder()
-                    .setCatalog("canner-cml")
-                    .setSchema("tpch_tiny")
-                    .build();
-            String graphMDLRewritten = GraphMDLPlanner.rewrite(statementPreRewritten, sessionContext, graphMDLMetastore.getGraphMDL());
+            String graphMDLRewritten = GraphMDLPlanner.rewrite(
+                    statementPreRewritten,
+                    SessionContext.builder()
+                            .setCatalog(getDefaultDatabase())
+                            .setSchema(getDefaultSchema())
+                            .build(),
+                    graphMDLMetastore.getGraphMDL());
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
@@ -238,7 +248,10 @@ public class WireProtocolSession
         String execStmt = portal.getPreparedStatement().getStatement();
         return CompletableFuture.supplyAsync(() -> {
             String sql = sqlConverter.convert(execStmt,
-                    SessionContext.builder().setCatalog(metadata.getDefaultCatalog()).build());
+                    SessionContext.builder()
+                            .setCatalog(getDefaultDatabase())
+                            .setSchema(getDefaultSchema())
+                            .build());
             return Optional.of(metadata.directQuery(sql, portal.getParameters()));
         });
     }

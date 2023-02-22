@@ -67,7 +67,7 @@ public abstract class AbstractWireProtocolTest
             throws SQLException
     {
         HostAndPort hostAndPort = server().getPgHostAndPort();
-        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
+        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "canner-cml");
         Properties props = getDefaultProperties();
         return DriverManager.getConnection(url, props);
     }
@@ -76,8 +76,9 @@ public abstract class AbstractWireProtocolTest
     {
         Properties props = new Properties();
         props.setProperty("password", MOCK_PASSWORD);
-        props.setProperty("user", "canner");
+        props.setProperty("user", "graphmdl");
         props.setProperty("ssl", "false");
+        props.setProperty("currentSchema", "tpch_tiny");
         return props;
     }
 }
