@@ -15,7 +15,6 @@
 package io.graphmdl.main.sql;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.metadata.SchemaTableName;
@@ -55,10 +54,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.INFORMATION_SCHEMA;
 import static io.graphmdl.main.sql.PgOidTypeTableInfo.REGCLASS;
 import static io.graphmdl.main.sql.PgOidTypeTableInfo.REGPROC;
 import static io.trino.sql.QueryUtil.functionCall;
+import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Locale.ROOT;
 
@@ -108,11 +110,13 @@ public class PostgreSqlRewrite
         @Override
         protected Node visitSimpleGroupBy(SimpleGroupBy node, RewriteContext context)
         {
-            Map<Identifier, Expression> aliasedToExpressionMap = context.getAliasedNameToExpressionMap();
+            List<FieldInfo> selectFieldInfos = context.getSelectFieldInfos();
             ImmutableList.Builder<Expression> builder = ImmutableList.builder();
             node.getExpressions().forEach(expression -> {
-                if (isColumnAlias(expression, aliasedToExpressionMap)) {
-                    builder.add(aliasedToExpressionMap.get(expression));
+                if (isColumnAlias(expression, selectFieldInfos)) {
+                    List<FieldInfo> selected = selectFieldInfos.stream().filter(fieldInfo -> fieldInfo.getAlias().equals(expression)).collect(toImmutableList());
+                    checkArgument(selected.size() == 1, format("GROUP BY \"%s\" is ambiguous", expression));
+                    builder.add(selected.get(0).getExpression());
                     return;
                 }
                 builder.add(expression);
@@ -123,9 +127,9 @@ public class PostgreSqlRewrite
                     new SimpleGroupBy(expressions);
         }
 
-        private boolean isColumnAlias(Expression expression, Map<Identifier, Expression> aliasedToExpressionMap)
+        private boolean isColumnAlias(Expression expression, List<FieldInfo> fieldInfos)
         {
-            return expression instanceof Identifier && aliasedToExpressionMap.containsKey(expression);
+            return expression instanceof Identifier && fieldInfos.stream().anyMatch(fieldInfo -> fieldInfo.getAlias().equals(expression));
         }
 
         @Override
@@ -161,14 +165,14 @@ public class PostgreSqlRewrite
 
         private RewriteContext analyzeSelectItem(Select select)
         {
-            ImmutableMap.Builder<Identifier, Expression> aliasedNameToExpressionMap = ImmutableMap.builder();
+            ImmutableList.Builder<FieldInfo> fieldInfoBuilder = ImmutableList.builder();
             for (SelectItem selectItem : select.getSelectItems()) {
                 if (selectItem instanceof SingleColumn) {
                     ((SingleColumn) selectItem).getAlias()
-                            .ifPresent(identifier -> aliasedNameToExpressionMap.put(identifier, ((SingleColumn) selectItem).getExpression()));
+                            .ifPresent(identifier -> fieldInfoBuilder.add(new FieldInfo(((SingleColumn) selectItem).getExpression(), identifier)));
                 }
             }
-            return new RewriteContext(aliasedNameToExpressionMap.build());
+            return new RewriteContext(fieldInfoBuilder.build());
         }
 
         @Override
@@ -426,16 +430,38 @@ public class PostgreSqlRewrite
 
         static class RewriteContext
         {
-            private final Map<Identifier, Expression> aliasedNameToExpressionMap;
+            private final List<FieldInfo> selectFieldInfos;
 
-            public RewriteContext(Map<Identifier, Expression> aliasedNameToExpressionMap)
+            public RewriteContext(List<FieldInfo> selectFieldInfos)
             {
-                this.aliasedNameToExpressionMap = aliasedNameToExpressionMap;
+                this.selectFieldInfos = selectFieldInfos;
             }
 
-            public Map<Identifier, Expression> getAliasedNameToExpressionMap()
+            public List<FieldInfo> getSelectFieldInfos()
             {
-                return aliasedNameToExpressionMap;
+                return selectFieldInfos;
+            }
+        }
+
+        static class FieldInfo
+        {
+            private final Expression expression;
+            private final Identifier alias;
+
+            public FieldInfo(Expression expression, Identifier alias)
+            {
+                this.expression = expression;
+                this.alias = alias;
+            }
+
+            public Expression getExpression()
+            {
+                return expression;
+            }
+
+            public Identifier getAlias()
+            {
+                return alias;
             }
         }
     }
