@@ -100,9 +100,7 @@ public class TestGraphMDLWithBigquery
         }
     }
 
-    // TODO: enable this test after solving
-    //      https://github.com/Canner/canner-metric-layer/issues/168
-    @Test(enabled = false)
+    @Test
     void testQueryMetric()
             throws Exception
     {
@@ -110,8 +108,8 @@ public class TestGraphMDLWithBigquery
             PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from Revenue limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("orderkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
             int count = 1;
 
             while (resultSet.next()) {

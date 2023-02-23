@@ -169,8 +169,83 @@ public class TestPostgreSqlRewrite
                 "select c1 as x, c2, sum(c2) as y from (values (1, 2, 3), (4, 5, 6)) as t1(c1, c2, c3) group by c1, c2");
         assertRewrite("select concat('x', c1) as \"x\", count(1) as y from (values (1, 2, 3), (4, 5, 6)) as t1(c1, c2, c3) group by \"x\"",
                 "select concat('x', c1) as \"x\", count(1) as y from (values (1, 2, 3), (4, 5, 6)) as t1(c1, c2, c3) group by concat('x', c1)");
+        assertRewrite("WITH\n" +
+                        "  Orders AS (\n" +
+                        "   SELECT\n" +
+                        "     o_orderkey orderkey\n" +
+                        "   , o_custkey custkey\n" +
+                        "   , o_totalprice totalprice\n" +
+                        "   FROM\n" +
+                        "     (\n" +
+                        "      VALUES (1, 1, 1), (2, 2, 1), (3, 3, 1)\n" +
+                        "   ) t(o_orderkey, o_custkey, o_totalprice)\n" +
+                        ") \n" +
+                        ", Revenue AS (\n" +
+                        "   SELECT\n" +
+                        "     custkey o_custkey\n" +
+                        "   , sum(totalprice) revenue\n" +
+                        "   FROM\n" +
+                        "     Orders\n" +
+                        "   GROUP BY o_custkey\n" +
+                        ") \n" +
+                        "SELECT\n" +
+                        "  o_custkey\n" +
+                        ", revenue\n" +
+                        "FROM\n" +
+                        "  Revenue",
+                "WITH\n" +
+                        "  Orders AS (\n" +
+                        "   SELECT\n" +
+                        "     o_orderkey orderkey\n" +
+                        "   , o_custkey custkey\n" +
+                        "   , o_totalprice totalprice\n" +
+                        "   FROM\n" +
+                        "     (\n" +
+                        " VALUES \n" +
+                        "        ROW (1, 1, 1)\n" +
+                        "      , ROW (2, 2, 1)\n" +
+                        "      , ROW (3, 3, 1)\n" +
+                        "   )  t (o_orderkey, o_custkey, o_totalprice)\n" +
+                        ") \n" +
+                        ", Revenue AS (\n" +
+                        "   SELECT\n" +
+                        "     custkey o_custkey\n" +
+                        "   , sum(totalprice) revenue\n" +
+                        "   FROM\n" +
+                        "     Orders\n" +
+                        "   GROUP BY custkey\n" +
+                        ") \n" +
+                        "SELECT\n" +
+                        "  o_custkey\n" +
+                        ", revenue\n" +
+                        "FROM\n" +
+                        "  Revenue");
 
         assertNoRewrite("select c1, sum(c2) as y from (values(1, 2), (3, 5)) as t1(c1,c2) group by c1");
+        assertNoRewrite("WITH\n" +
+                "  Orders AS (\n" +
+                "   SELECT\n" +
+                "     o_orderkey orderkey\n" +
+                "   , o_custkey custkey\n" +
+                "   , o_totalprice totalprice\n" +
+                "   FROM\n" +
+                "     (\n" +
+                "      VALUES (1, 1, 1), (2, 2, 1), (3, 3, 1)\n" +
+                "   ) t(o_orderkey, o_custkey, o_totalprice)\n" +
+                ") \n" +
+                ", Revenue AS (\n" +
+                "   SELECT\n" +
+                "     custkey\n" +
+                "   , sum(totalprice) revenue\n" +
+                "   FROM\n" +
+                "     Orders\n" +
+                "   GROUP BY custkey\n" +
+                ") \n" +
+                "SELECT\n" +
+                "  custkey\n" +
+                ", revenue\n" +
+                "FROM\n" +
+                "  Revenue");
     }
 
     @Test

@@ -27,6 +27,7 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GenericLiteral;
+import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
@@ -37,6 +38,7 @@ import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Select;
+import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
@@ -52,13 +54,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.INFORMATION_SCHEMA;
 import static io.graphmdl.main.sql.PgOidTypeTableInfo.REGCLASS;
 import static io.graphmdl.main.sql.PgOidTypeTableInfo.REGPROC;
 import static io.trino.sql.QueryUtil.functionCall;
+import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Locale.ROOT;
-import static java.util.stream.Collectors.toList;
 
 public class PostgreSqlRewrite
 {
@@ -75,7 +79,7 @@ public class PostgreSqlRewrite
     }
 
     private static class Visitor
-            extends BaseRewriteVisitor
+            extends BaseRewriteVisitor<Visitor.RewriteContext>
     {
         private final Map<Identifier, Expression> selectItemsMap = new HashMap<>();
 
@@ -90,7 +94,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitSelect(Select node, Void context)
+        protected Node visitSelect(Select node, RewriteContext context)
         {
             if (node.getLocation().isPresent()) {
                 return new Select(
@@ -104,12 +108,15 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitSimpleGroupBy(SimpleGroupBy node, Void context)
+        protected Node visitSimpleGroupBy(SimpleGroupBy node, RewriteContext context)
         {
+            List<FieldInfo> selectFieldInfos = context.getSelectFieldInfos();
             ImmutableList.Builder<Expression> builder = ImmutableList.builder();
             node.getExpressions().forEach(expression -> {
-                if (isColumnAlias(expression)) {
-                    builder.add(selectItemsMap.get((Identifier) expression));
+                if (isColumnAlias(expression, selectFieldInfos)) {
+                    List<FieldInfo> selected = selectFieldInfos.stream().filter(fieldInfo -> fieldInfo.getAlias().equals(expression)).collect(toImmutableList());
+                    checkArgument(selected.size() == 1, format("GROUP BY \"%s\" is ambiguous", expression));
+                    builder.add(selected.get(0).getExpression());
                     return;
                 }
                 builder.add(expression);
@@ -120,23 +127,24 @@ public class PostgreSqlRewrite
                     new SimpleGroupBy(expressions);
         }
 
-        private boolean isColumnAlias(Expression expression)
+        private boolean isColumnAlias(Expression expression, List<FieldInfo> fieldInfos)
         {
-            return expression instanceof Identifier && selectItemsMap.containsKey(expression);
+            return expression instanceof Identifier && fieldInfos.stream().anyMatch(fieldInfo -> fieldInfo.getAlias().equals(expression));
         }
 
         @Override
-        protected Node visitQuerySpecification(QuerySpecification node, Void context)
+        protected Node visitQuerySpecification(QuerySpecification node, RewriteContext context)
         {
             // Relations should be visited first for alias.
             Optional<Relation> from = node.getFrom().map(this::visitAndCast);
+            RewriteContext rewriteContext = analyzeSelectItem(node.getSelect());
             if (node.getLocation().isPresent()) {
                 return new QuerySpecification(
                         node.getLocation().get(),
                         visitAndCast(node.getSelect()),
                         from,
                         node.getWhere().map(this::visitAndCast),
-                        node.getGroupBy().map(this::visitAndCast),
+                        node.getGroupBy().map(groupBy -> (GroupBy) process(groupBy, rewriteContext)),
                         node.getHaving().map(this::visitAndCast),
                         visitNodes(node.getWindows()),
                         node.getOrderBy().map(this::visitAndCast),
@@ -155,8 +163,20 @@ public class PostgreSqlRewrite
                     node.getLimit());
         }
 
+        private RewriteContext analyzeSelectItem(Select select)
+        {
+            ImmutableList.Builder<FieldInfo> fieldInfoBuilder = ImmutableList.builder();
+            for (SelectItem selectItem : select.getSelectItems()) {
+                if (selectItem instanceof SingleColumn) {
+                    ((SingleColumn) selectItem).getAlias()
+                            .ifPresent(identifier -> fieldInfoBuilder.add(new FieldInfo(((SingleColumn) selectItem).getExpression(), identifier)));
+                }
+            }
+            return new RewriteContext(fieldInfoBuilder.build());
+        }
+
         @Override
-        protected Node visitSingleColumn(SingleColumn node, Void context)
+        protected Node visitSingleColumn(SingleColumn node, RewriteContext context)
         {
             Expression expression = node.getExpression();
             // Show regObject's name when it's in a single column.
@@ -183,7 +203,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitCast(Cast node, Void context)
+        protected Node visitCast(Cast node, RewriteContext context)
         {
             String type = node.getType().toString().toUpperCase(ROOT);
             if (type.equals(REGPROC.name()) || type.equals(REGCLASS.name())) {
@@ -194,7 +214,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitExpression(Expression expression, Void context)
+        protected Node visitExpression(Expression expression, RewriteContext context)
         {
             Optional<Object> result = regObjectInterpreter.evaluate(expression, false);
             return result.map(o -> (Node) o).orElse(expression);
@@ -213,7 +233,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitJoin(Join node, Void context)
+        protected Node visitJoin(Join node, RewriteContext context)
         {
             if (node.getLocation().isPresent()) {
                 return new Join(
@@ -231,7 +251,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitTable(Table node, Void context)
+        protected Node visitTable(Table node, RewriteContext context)
         {
             if (isBelongPgCatalog(node.getName().getParts())) {
                 if (node.getLocation().isPresent()) {
@@ -250,7 +270,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
+        protected Node visitDereferenceExpression(DereferenceExpression node, RewriteContext context)
         {
             QualifiedName name = getQualifiedName(node.getBase());
             Expression base;
@@ -275,7 +295,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitFunctionCall(FunctionCall node, Void context)
+        protected Node visitFunctionCall(FunctionCall node, RewriteContext context)
         {
             switch (node.getName().getSuffix()) {
                 case "version":
@@ -296,13 +316,13 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitCurrentUser(CurrentUser node, Void context)
+        protected Node visitCurrentUser(CurrentUser node, RewriteContext context)
         {
             return functionCall("$current_user");
         }
 
         @Override
-        protected Node visitIdentifier(Identifier node, Void context)
+        protected Node visitIdentifier(Identifier node, RewriteContext context)
         {
             if (List.of("session_user", "user").contains(node.getValue().toLowerCase(ROOT))) {
                 return functionCall("$current_user");
@@ -311,7 +331,7 @@ public class PostgreSqlRewrite
         }
 
         @Override
-        protected Node visitLikePredicate(LikePredicate node, Void context)
+        protected Node visitLikePredicate(LikePredicate node, RewriteContext context)
         {
             if (node.getEscape().isPresent()) {
                 return super.visitLikePredicate(node, context);
@@ -364,13 +384,6 @@ public class PostgreSqlRewrite
             return false;
         }
 
-        protected <T extends Node> List<T> visitNodes(List<T> nodes)
-        {
-            return nodes.stream()
-                    .map(node -> (T) process(node))
-                    .collect(toList());
-        }
-
         protected <T extends Node> T visitAndCast(T node)
         {
             return (T) process(node);
@@ -413,6 +426,43 @@ public class PostgreSqlRewrite
                 return new Identifier(name, true);
             }
             return new Identifier(name);
+        }
+
+        static class RewriteContext
+        {
+            private final List<FieldInfo> selectFieldInfos;
+
+            public RewriteContext(List<FieldInfo> selectFieldInfos)
+            {
+                this.selectFieldInfos = selectFieldInfos;
+            }
+
+            public List<FieldInfo> getSelectFieldInfos()
+            {
+                return selectFieldInfos;
+            }
+        }
+
+        static class FieldInfo
+        {
+            private final Expression expression;
+            private final Identifier alias;
+
+            public FieldInfo(Expression expression, Identifier alias)
+            {
+                this.expression = expression;
+                this.alias = alias;
+            }
+
+            public Expression getExpression()
+            {
+                return expression;
+            }
+
+            public Identifier getAlias()
+            {
+                return alias;
+            }
         }
     }
 }
