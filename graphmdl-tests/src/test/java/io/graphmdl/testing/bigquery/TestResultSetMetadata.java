@@ -120,7 +120,7 @@ public class TestResultSetMetadata
             throws Exception
     {
         HostAndPort hostAndPort = server().getPgHostAndPort();
-        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "test");
+        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "canner-cml");
         try (Connection connection = this.createConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
             assertEquals(metaData.getURL(), url);
@@ -146,7 +146,7 @@ public class TestResultSetMetadata
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getCatalogs();
-            assertThat(readRows(rs)).isEqualTo(List.of(List.of("test")));
+            assertThat(readRows(rs)).isEqualTo(List.of(List.of("canner-cml")));
             ResultSetMetaData metadata = rs.getMetaData();
             assertEquals(metadata.getColumnCount(), 1);
             assertEquals(metadata.getColumnLabel(1), "TABLE_CAT");
