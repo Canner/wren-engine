@@ -14,6 +14,10 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import io.trino.sql.tree.WithQuery;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -24,12 +28,14 @@ public class Scope
     private final Optional<Scope> parent;
     private final Optional<RelationType> relationType;
     private final boolean isTableScope;
+    private final Map<String, WithQuery> namedQueries;
 
-    private Scope(Optional<Scope> parent, Optional<RelationType> relationType, boolean isTableScope)
+    private Scope(Optional<Scope> parent, Optional<RelationType> relationType, boolean isTableScope, Map<String, WithQuery> namedQueries)
     {
         this.parent = requireNonNull(parent, "parent is null");
         this.relationType = requireNonNull(relationType, "relationType is null");
         this.isTableScope = isTableScope;
+        this.namedQueries = requireNonNull(namedQueries, "namedQueries is null");
     }
 
     public Optional<Scope> getParent()
@@ -47,6 +53,19 @@ public class Scope
         return isTableScope;
     }
 
+    public Optional<WithQuery> getNamedQuery(String name)
+    {
+        if (namedQueries.containsKey(name)) {
+            return Optional.of(namedQueries.get(name));
+        }
+
+        if (parent.isPresent()) {
+            return parent.get().getNamedQuery(name);
+        }
+
+        return Optional.empty();
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -57,6 +76,7 @@ public class Scope
         private Optional<Scope> parent = Optional.empty();
         private Optional<RelationType> relationType = Optional.empty();
         private boolean isTableScope;
+        private Map<String, WithQuery> namedQueries = new HashMap<>();
 
         public Builder relationType(Optional<RelationType> relationType)
         {
@@ -77,9 +97,21 @@ public class Scope
             return this;
         }
 
+        public Builder namedQuery(String name, WithQuery withQuery)
+        {
+            checkArgument(!containsNamedQuery(name), "Query '%s' is already added", name);
+            namedQueries.put(name, withQuery);
+            return this;
+        }
+
+        public boolean containsNamedQuery(String name)
+        {
+            return namedQueries.containsKey(name);
+        }
+
         public Scope build()
         {
-            return new Scope(parent, relationType, isTableScope);
+            return new Scope(parent, relationType, isTableScope, namedQueries);
         }
     }
 }
