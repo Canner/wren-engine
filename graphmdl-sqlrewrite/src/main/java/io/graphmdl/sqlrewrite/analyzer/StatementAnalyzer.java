@@ -133,7 +133,20 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTable(Table node, Optional<Scope> scope)
         {
-            // TODO: determine if the table is in with query, if so, it doesn't need catalog/schema in session context
+            if (node.getName().getPrefix().isEmpty() && scope.isPresent()) {
+                // is this a reference to a WITH query?
+                Optional<WithQuery> withQuery = scope.get().getNamedQuery(node.getName().getSuffix());
+                if (withQuery.isPresent()) {
+                    // currently we only care about the table that is actually a model instead of a alias table that use cte table
+                    // return empty scope here.
+                    return Scope.builder()
+                            .parent(scope)
+                            .relationType(Optional.of(new RelationType(List.of())))
+                            .isTableScope(true)
+                            .build();
+                }
+            }
+
             CatalogSchemaTableName tableName = toCatalogSchemaTableName(sessionContext, node.getName());
             analysis.addTable(tableName);
             // only record model fields here, others are ignored
@@ -247,7 +260,7 @@ public final class StatementAnalyzer
             return Scope.builder().parent(scope).build();
         }
 
-        // TODO: implement analyze with
+        // TODO: will recursive query mess up anything here?
         private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
         {
             if (node.getWith().isEmpty()) {
@@ -255,11 +268,18 @@ public final class StatementAnalyzer
             }
 
             With with = node.getWith().get();
+            Scope.Builder withScopeBuilder = Scope.builder().parent(scope);
+
             for (WithQuery withQuery : with.getQueries()) {
-                process(withQuery.getQuery(), scope);
+                String name = withQuery.getName().getValue();
+                if (withScopeBuilder.containsNamedQuery(name)) {
+                    throw new IllegalArgumentException(format("WITH query name '%s' specified more than once", name));
+                }
+                process(withQuery.getQuery(), withScopeBuilder.build());
+                withScopeBuilder.namedQuery(name, withQuery);
             }
-            // TODO: output scope here isn't right
-            return Optional.of(Scope.builder().parent(scope).build());
+
+            return Optional.of(withScopeBuilder.build());
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
@@ -299,6 +319,11 @@ public final class StatementAnalyzer
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
             analysis.addRelationships(expressionAnalysis.getRelationships());
             return expressionAnalysis;
+        }
+
+        private Scope process(Node node, Scope scope)
+        {
+            return process(node, Optional.of(scope));
         }
     }
 }

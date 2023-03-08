@@ -19,6 +19,7 @@ import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
@@ -26,9 +27,12 @@ import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Analysis
@@ -41,6 +45,7 @@ public class Analysis
     private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
+    private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -126,5 +131,30 @@ public class Analysis
     public Set<NodeRef<Table>> getModelNodeRefs()
     {
         return modelNodeRefs;
+    }
+
+    public Optional<RelationType> getOutputDescriptor(Node node)
+    {
+        return getScope(node).getRelationType();
+    }
+
+    public Scope getScope(Node node)
+    {
+        return tryGetScope(node).orElseThrow(() -> new IllegalArgumentException(format("Analysis does not contain information for node: %s", node)));
+    }
+
+    public Optional<Scope> tryGetScope(Node node)
+    {
+        NodeRef<Node> key = NodeRef.of(node);
+        if (scopes.containsKey(key)) {
+            return Optional.of(scopes.get(key));
+        }
+
+        return Optional.empty();
+    }
+
+    public void setScope(Node node, Scope scope)
+    {
+        scopes.put(NodeRef.of(node), scope);
     }
 }

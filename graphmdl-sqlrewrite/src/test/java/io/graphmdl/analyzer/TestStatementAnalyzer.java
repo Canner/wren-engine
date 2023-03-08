@@ -14,7 +14,9 @@
 
 package io.graphmdl.analyzer;
 
+import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import org.testng.annotations.Test;
@@ -22,6 +24,7 @@ import org.testng.annotations.Test;
 import static io.graphmdl.base.GraphMDL.EMPTY_GRAPHMDL;
 import static io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer.analyze;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestStatementAnalyzer
 {
@@ -33,5 +36,17 @@ public class TestStatementAnalyzer
         SessionContext sessionContext = SessionContext.builder().build();
         analyze(sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY_GRAPHMDL);
         analyze(sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY_GRAPHMDL);
+    }
+
+    @Test
+    public void testGetTableWithoutWithTable()
+    {
+        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
+        Analysis analysis = analyze(
+                sqlParser.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL)),
+                sessionContext,
+                EMPTY_GRAPHMDL);
+
+        assertThat(analysis.getTables()).containsExactly(new CatalogSchemaTableName("test", "test", "People"));
     }
 }
