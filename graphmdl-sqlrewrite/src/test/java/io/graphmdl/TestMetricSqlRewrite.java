@@ -17,11 +17,11 @@ package io.graphmdl;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
-import io.graphmdl.sqlrewrite.MetricSqlRewrite;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -42,6 +42,34 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 public class TestMetricSqlRewrite
         extends AbstractTestFramework
 {
+    @Language("sql")
+    private static final String COLLECTION_CTES =
+            "  Album AS (\n" +
+                    "   SELECT\n" +
+                    "     id\n" +
+                    "   , name\n" +
+                    "   , author\n" +
+                    "   , price\n" +
+                    "   FROM\n" +
+                    "     (\n" +
+                    "      SELECT *\n" +
+                    "      FROM\n" +
+                    "        (\n" +
+                    " VALUES \n" +
+                    "           ROW (1, 'Gusare', 'ZUTOMAYO', 2560)\n" +
+                    "         , ROW (2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500)\n" +
+                    "         , ROW (3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553)\n" +
+                    "      )  album (id, name, author, price)\n" +
+                    "   ) \n" +
+                    ") \n" +
+                    ", Collection AS (\n" +
+                    "   SELECT\n" +
+                    "     author\n" +
+                    "   , sum(Album.price) price\n" +
+                    "   FROM\n" +
+                    "     Album\n" +
+                    "   GROUP BY author\n" +
+                    ") \n";
     private final GraphMDL graphMDL;
 
     public TestMetricSqlRewrite()
@@ -73,37 +101,21 @@ public class TestMetricSqlRewrite
         return new Object[][] {
                 {"select author, price from Collection",
                         "WITH\n" +
-                                "  Album AS (\n" +
-                                "   SELECT\n" +
-                                "     id\n" +
-                                "   , name\n" +
-                                "   , author\n" +
-                                "   , price\n" +
-                                "   FROM\n" +
-                                "     (\n" +
-                                "      SELECT *\n" +
-                                "      FROM\n" +
-                                "        (\n" +
-                                " VALUES \n" +
-                                "           ROW (1, 'Gusare', 'ZUTOMAYO', 2560)\n" +
-                                "         , ROW (2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500)\n" +
-                                "         , ROW (3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553)\n" +
-                                "      )  album (id, name, author, price)\n" +
-                                "   ) \n" +
-                                ") \n" +
-                                ", Collection AS (\n" +
-                                "   SELECT\n" +
-                                "     author\n" +
-                                "   , sum(Album.price) price\n" +
-                                "   FROM\n" +
-                                "     Album\n" +
-                                "   GROUP BY author\n" +
-                                ") \n" +
+                                COLLECTION_CTES +
                                 "SELECT\n" +
                                 "  author\n" +
                                 ", price\n" +
                                 "FROM\n" +
-                                "  Collection"}};
+                                "  Collection"},
+                {
+                        "WITH c AS (SELECT * FROM Collection)\n" +
+                                "SELECT * from c",
+                        "WITH\n" +
+                                COLLECTION_CTES +
+                                ", c AS (SELECT * FROM Collection)\n" +
+                                "SELECT * from c"
+                }
+        };
     }
 
     @Test(dataProvider = "metricCases")
@@ -119,6 +131,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE, MetricSqlRewrite.METRIC_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
     }
 }

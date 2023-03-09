@@ -14,8 +14,10 @@
 
 package io.graphmdl.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.QueryUtil;
@@ -57,11 +59,15 @@ public class ModelSqlRewrite
                 analysis.getModels().stream()
                         .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
 
+        Map<String, Query> metricQueries =
+                analysis.getMetrics().stream()
+                        .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
+
         if (modelQueries.isEmpty()) {
             return root;
         }
 
-        Node rewriteWith = new WithRewriter(modelQueries, analysis).process(root);
+        Node rewriteWith = new WithRewriter(modelQueries, metricQueries, analysis).process(root);
         return new Rewriter(analysis).process(rewriteWith);
     }
 
@@ -94,11 +100,16 @@ public class ModelSqlRewrite
             extends BaseVisitor
     {
         private final Map<String, Query> modelQueries;
+        private final Map<String, Query> metricQueries;
         private final Analysis analysis;
 
-        public WithRewriter(Map<String, Query> modelQueries, Analysis analysis)
+        public WithRewriter(
+                Map<String, Query> modelQueries,
+                Map<String, Query> metricQueries,
+                Analysis analysis)
         {
             this.modelQueries = requireNonNull(modelQueries, "modelQueries is null");
+            this.metricQueries = requireNonNull(metricQueries, "metricQueries is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
@@ -112,9 +123,16 @@ public class ModelSqlRewrite
 
             Collection<WithQuery> relationshipCTEs = analysis.getRelationshipCTE().values();
 
-            List<WithQuery> withQueries =
-                    Stream.concat(modelWithQueries.stream(), relationshipCTEs.stream())
-                            .collect(toUnmodifiableList());
+            List<WithQuery> metricWithQueries = metricQueries.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
+                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
+                    .collect(toUnmodifiableList());
+
+            List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
+                    .addAll(modelWithQueries)
+                    .addAll(relationshipCTEs)
+                    .addAll(metricWithQueries)
+                    .build();
 
             return new Query(
                     node.getWith()
