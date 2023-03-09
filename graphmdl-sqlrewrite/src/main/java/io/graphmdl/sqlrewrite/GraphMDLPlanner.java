@@ -26,13 +26,13 @@ import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
-import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 
 public class GraphMDLPlanner
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
-    private static final List<GraphMDLRule> ALL_RULES = List.of(MODEL_SQL_REWRITE);
+    private static final List<GraphMDLRule> ALL_RULES = List.of(GRAPHMDL_SQL_REWRITE);
 
     private GraphMDLPlanner() {}
 

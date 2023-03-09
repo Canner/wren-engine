@@ -32,7 +32,7 @@ import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
-import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.Utils.SQL_PARSER;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
@@ -131,6 +131,6 @@ public class TestMetricSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
     }
 }

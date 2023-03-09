@@ -45,12 +45,12 @@ import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-public class ModelSqlRewrite
+public class GraphMDLSqlRewrite
         implements GraphMDLRule
 {
-    public static final ModelSqlRewrite MODEL_SQL_REWRITE = new ModelSqlRewrite();
+    public static final GraphMDLSqlRewrite GRAPHMDL_SQL_REWRITE = new GraphMDLSqlRewrite();
 
-    private ModelSqlRewrite() {}
+    private GraphMDLSqlRewrite() {}
 
     @Override
     public Node apply(Node root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL)

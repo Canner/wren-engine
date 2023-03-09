@@ -41,7 +41,7 @@ import java.util.Map;
 
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Relationship.relationship;
-import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -304,7 +304,7 @@ public class TestRelationshipAccessing
         replaceMap.put("People.book.author.book", generator.getNameMapping().get("People.book.author.book"));
 
         Node rewrittenStatement = statement;
-        for (GraphMDLRule rule : List.of(MODEL_SQL_REWRITE)) {
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
             rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, graphMDL);
         }
 
@@ -333,7 +333,7 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -347,7 +347,7 @@ public class TestRelationshipAccessing
         String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
                 Utils.getModelSql(graphMDL.getModel("Book").orElseThrow()));
 
-        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
