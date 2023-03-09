@@ -228,10 +228,21 @@ public class TestRelationshipAccessing
                                 "   ORDER BY ${Book.author.book.author}.name ASC\n" +
                                 ")  a",
                         false},
-                // TODO: enable this test and find a way to reorder queries in with-clause
-//                {"with a as (select b.* from (select name, author.book.author.name from Book order by author.book.author.name) b)\n" +
-//                        "select * from a", "" // TODO fill expected sql
-//                },
+                {"with a as (select b.* from (select name, author.book.author.name from Book) b)\n" +
+                        "select * from a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                ", a as (" +
+                                "SELECT b.* from (\n" +
+                                "   SELECT " +
+                                "      name,\n" +
+                                "      ${Book.author.book.author}.name\n" +
+                                "   FROM " +
+                                "      (Book " +
+                                "   LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
+                                ") b)\n" +
+                                "SELECT * FROM a",
+                        false
+                },
                 // test the reverse relationship accessing
                 {"select book.author.book.name, book.author.name, book.name from People", "" +
                         "WITH\n" + MODEL_CTE + ",\n" +
