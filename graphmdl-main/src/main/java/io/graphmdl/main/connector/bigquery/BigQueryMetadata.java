@@ -76,6 +76,7 @@ import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
+import static org.apache.calcite.sql.fun.SqlLibraryOperators.ARRAY_AGG;
 import static org.apache.calcite.sql.type.OperandTypes.NILADIC;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
@@ -151,6 +152,11 @@ public class BigQueryMetadata
                         SqlKind.OTHER_FUNCTION,
                         ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.BOOLEAN)),
                         null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("array_length", new SqlFunction("array_length",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.INTEGER)),
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+                .put("array_agg", ARRAY_AGG)
                 .build();
     }
 
