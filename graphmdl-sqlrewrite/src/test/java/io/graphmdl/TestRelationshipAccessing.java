@@ -41,7 +41,7 @@ import java.util.Map;
 
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Relationship.relationship;
-import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -228,10 +228,21 @@ public class TestRelationshipAccessing
                                 "   ORDER BY ${Book.author.book.author}.name ASC\n" +
                                 ")  a",
                         false},
-                // TODO: enable this test and find a way to reorder queries in with-clause
-//                {"with a as (select b.* from (select name, author.book.author.name from Book order by author.book.author.name) b)\n" +
-//                        "select * from a", "" // TODO fill expected sql
-//                },
+                {"with a as (select b.* from (select name, author.book.author.name from Book) b)\n" +
+                        "select * from a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                ", a as (" +
+                                "SELECT b.* from (\n" +
+                                "   SELECT " +
+                                "      name,\n" +
+                                "      ${Book.author.book.author}.name\n" +
+                                "   FROM " +
+                                "      (Book " +
+                                "   LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))\n" +
+                                ") b)\n" +
+                                "SELECT * FROM a",
+                        false
+                },
                 // test the reverse relationship accessing
                 {"select book.author.book.name, book.author.name, book.name from People", "" +
                         "WITH\n" + MODEL_CTE + ",\n" +
@@ -293,7 +304,7 @@ public class TestRelationshipAccessing
         replaceMap.put("People.book.author.book", generator.getNameMapping().get("People.book.author.book"));
 
         Node rewrittenStatement = statement;
-        for (GraphMDLRule rule : List.of(MODEL_SQL_REWRITE)) {
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
             rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, graphMDL);
         }
 
@@ -322,7 +333,7 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -336,7 +347,7 @@ public class TestRelationshipAccessing
         String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
                 Utils.getModelSql(graphMDL.getModel("Book").orElseThrow()));
 
-        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(MODEL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }

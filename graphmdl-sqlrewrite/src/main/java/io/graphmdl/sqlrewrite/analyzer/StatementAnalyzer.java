@@ -93,17 +93,23 @@ public final class StatementAnalyzer
                                         .orElseThrow(() -> new IllegalArgumentException(format("relationship model %s not exists", modelName))))
                         .collect(toUnmodifiableSet()));
 
-        // add models required for metrics
-        analysis.addModels(
+        Set<Metric> metrics =
                 graphMDL.listMetrics().stream()
                         .filter(metric -> analysis.getTables().stream()
                                 .filter(table -> table.getCatalogName().equals(graphMDL.getCatalog()))
                                 .filter(table -> table.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
                                 .anyMatch(table -> table.getSchemaTableName().getTableName().equals(metric.getName())))
+                        .collect(toUnmodifiableSet());
+
+        // add models required for metrics
+        analysis.addModels(
+                metrics.stream()
                         .map(Metric::getBaseModel)
                         .distinct()
                         .map(model -> graphMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
                         .collect(toUnmodifiableSet()));
+
+        analysis.addMetrics(metrics);
 
         return analysis;
     }

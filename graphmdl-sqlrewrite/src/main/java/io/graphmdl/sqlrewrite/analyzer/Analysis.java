@@ -15,6 +15,7 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
@@ -46,6 +47,7 @@ public class Analysis
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
+    private final Set<Metric> metrics = new HashSet<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -151,6 +153,16 @@ public class Analysis
         }
 
         return Optional.empty();
+    }
+
+    void addMetrics(Set<Metric> metrics)
+    {
+        this.metrics.addAll(metrics);
+    }
+
+    public Set<Metric> getMetrics()
+    {
+        return metrics;
     }
 
     public void setScope(Node node, Scope scope)

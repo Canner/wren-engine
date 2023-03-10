@@ -28,13 +28,13 @@ import java.util.List;
 
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Model.model;
-import static io.graphmdl.sqlrewrite.ModelSqlRewrite.MODEL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
-public class TestModelSqlRewrite
+public class TestGraphMDLSqlRewrite
         extends AbstractTestFramework
 {
     private static final GraphMDL GRAPHMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
@@ -115,7 +115,7 @@ public class TestModelSqlRewrite
 
     private String rewrite(String sql)
     {
-        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, GRAPHMDL, List.of(MODEL_SQL_REWRITE));
+        return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, GRAPHMDL, List.of(GRAPHMDL_SQL_REWRITE));
     }
 
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)
