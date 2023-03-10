@@ -21,19 +21,28 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Defines how to compose a Relationship Common Table Expression (CTE). A relationship defines how to map a source table to a target table.
+ * For example, if a relationship defines a connection between the User and Book tables,
+ * the User table is considered the source table and the Book table is considered the target table.
+ * <p>
+ * For a TO_ONE relationship, all columns in the CTE are target objects.
+ * <p>
+ * For a TO_MANY relationship, only the relationship field is target object.
+ **/
 public class RelationshipCTE
 {
     private final String name;
-    private final Relation left;
-    private final Relation right;
+    private final Relation source;
+    private final Relation target;
 
     private final Relationship relationship;
 
-    public RelationshipCTE(String name, Relation left, Relation right, Relationship relationship)
+    public RelationshipCTE(String name, Relation source, Relation target, Relationship relationship)
     {
         this.name = name;
-        this.left = left;
-        this.right = right;
+        this.source = source;
+        this.target = target;
         this.relationship = relationship;
     }
 
@@ -42,14 +51,14 @@ public class RelationshipCTE
         return name;
     }
 
-    public Relation getLeft()
+    public Relation getSource()
     {
-        return left;
+        return source;
     }
 
-    public Relation getRight()
+    public Relation getTarget()
     {
-        return right;
+        return target;
     }
 
     public Relationship getRelationship()
@@ -59,7 +68,7 @@ public class RelationshipCTE
 
     public List<String> getOutputColumn()
     {
-        return Stream.concat(right.getColumns().stream(), List.of(left.getJoinKey()).stream()).collect(toList());
+        return Stream.concat(target.getColumns().stream(), List.of(source.getJoinKey()).stream()).collect(toList());
     }
 
     public static class Relation
