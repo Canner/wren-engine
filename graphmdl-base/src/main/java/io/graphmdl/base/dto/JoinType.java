@@ -14,10 +14,25 @@
 
 package io.graphmdl.base.dto;
 
+import static java.lang.String.format;
+
 public enum JoinType
 {
     MANY_TO_MANY,
     ONE_TO_ONE,
     MANY_TO_ONE,
-    ONE_TO_MANY,
+    ONE_TO_MANY;
+
+    public static JoinType reverse(JoinType joinType)
+    {
+        switch (joinType) {
+            case ONE_TO_ONE:
+                return ONE_TO_ONE;
+            case ONE_TO_MANY:
+                return MANY_TO_ONE;
+            case MANY_TO_ONE:
+                return ONE_TO_MANY;
+        }
+        throw new IllegalArgumentException(format("Invalid join type %s", joinType));
+    }
 }

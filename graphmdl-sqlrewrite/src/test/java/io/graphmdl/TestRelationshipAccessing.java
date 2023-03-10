@@ -51,7 +51,7 @@ public class TestRelationshipAccessing
         extends AbstractTestFramework
 {
     @Language("SQL")
-    private static final String MODEL_CTE = "" +
+    private static final String ONE_TO_ONE_MODEL_CTE = "" +
             "  Book AS (\n" +
             "     SELECT\n" +
             "        bookId,\n" +
@@ -87,43 +87,81 @@ public class TestRelationshipAccessing
             "  )\n";
 
     @Language("SQL")
+    private static final String ONE_TO_MANY_MODEL_CTE = "" +
+            "  Book AS (\n" +
+            "     SELECT\n" +
+            "        bookId,\n" +
+            "        name,\n" +
+            "        'relationship<PeopleBook>' as author,\n" +
+            "        'relationship<BookPeople>' as author_reverse,\n" +
+            "        authorId\n" +
+            "     FROM (\n" +
+            "        SELECT *\n" +
+            "        FROM (\n" +
+            "           VALUES\n" +
+            "           (1, 'book1', 1),\n" +
+            "           (2, 'book2', 2),\n" +
+            "           (3, 'book3', 1)\n" +
+            "        ) Book(bookId, name, authorId)\n" +
+            "     )\n" +
+            "  ),\n" +
+            "  People AS (\n" +
+            "   SELECT\n" +
+            "     userId,\n" +
+            "     name,\n" +
+            // TODO: Remove this field. In ONE_TO_MANY relationship, user can access it directly.
+            "     'relationship<PeopleBook>' AS books\n" +
+            "   FROM\n" +
+            "     (\n" +
+            "      SELECT *\n" +
+            "      FROM\n" +
+            "        (\n" +
+            "           VALUES\n" +
+            "           (1, 'user1'),\n" +
+            "           (2, 'user2')\n" +
+            "        ) People (userId, name)\n" +
+            "     )\n" +
+            "  )\n";
+
+    @Language("SQL")
     private static final String EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES = "" +
-            "WITH\n" + MODEL_CTE + ",\n" +
+            "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
             "  ${Book.author} (userId, name, book) AS (\n" +
             "   SELECT\n" +
-            "     r.userId\n" +
-            "   , r.name\n" +
-            "   , r.book\n" +
+            "     t.userId\n" +
+            "   , t.name\n" +
+            "   , t.book\n" +
             "   FROM\n" +
-            "     (Book l\n" +
-            "   LEFT JOIN People r ON (l.authorId = r.userId))\n" +
+            "     (Book s\n" +
+            "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
             ") \n" +
             ", ${Book.author.book} (bookId, name, author, authorId) AS (\n" +
             "   SELECT\n" +
-            "     r.bookId\n" +
-            "   , r.name\n" +
-            "   , r.author\n" +
-            "   , r.authorId\n" +
+            "     t.bookId\n" +
+            "   , t.name\n" +
+            "   , t.author\n" +
+            "   , t.authorId\n" +
             "   FROM\n" +
-            "     (${Book.author} l\n" +
-            "   LEFT JOIN Book r ON (l.userId = r.authorId))\n" +
+            "     (${Book.author} s\n" +
+            "   LEFT JOIN Book t ON (s.userId = t.authorId))\n" +
             ") \n" +
             ", ${Book.author.book.author} (userId, name, book) AS (\n" +
             "   SELECT\n" +
-            "     r.userId\n" +
-            "   , r.name\n" +
-            "   , r.book\n" +
+            "     t.userId\n" +
+            "   , t.name\n" +
+            "   , t.book\n" +
             "   FROM\n" +
-            "     (${Book.author.book} l\n" +
-            "   LEFT JOIN People r ON (l.authorId = r.userId))\n" +
+            "     (${Book.author.book} s\n" +
+            "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
             ")";
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    private final GraphMDL graphMDL;
+    private final GraphMDL oneToOneGraphMDL;
+    private final GraphMDL oneToManyGraphMDL;
 
     public TestRelationshipAccessing()
     {
-        graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+        oneToOneGraphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Book",
                                 "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 3)) Book(bookId, name, authorId)",
@@ -142,10 +180,33 @@ public class TestRelationshipAccessing
                                 "userId")))
                 .setRelationships(List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId")))
                 .build());
+
+        oneToManyGraphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        Model.model("Book",
+                                "select * from (values (1, 'book1', 1), (2, 'book2', 2), (3, 'book3', 1)) Book(bookId, name, authorId)",
+                                List.of(
+                                        column("bookId", GraphMDLTypes.INTEGER, null, true),
+                                        column("name", GraphMDLTypes.VARCHAR, null, true),
+                                        column("author", "People", "PeopleBook", true),
+                                        column("author_reverse", "People", "BookPeople", true),
+                                        column("authorId", GraphMDLTypes.INTEGER, null, true)),
+                                "bookId"),
+                        Model.model("People",
+                                "select * from (values (1, 'user1'), (2, 'user2')) People(userId, name)",
+                                List.of(
+                                        column("userId", GraphMDLTypes.INTEGER, null, true),
+                                        column("name", GraphMDLTypes.VARCHAR, null, true),
+                                        column("books", "Book", "PeopleBook", true)),
+                                "userId")))
+                .setRelationships(List.of(
+                        relationship("PeopleBook", List.of("People", "Book"), JoinType.ONE_TO_MANY, "People.userId = Book.authorId"),
+                        relationship("BookPeople", List.of("Book", "People"), JoinType.MANY_TO_ONE, "Book.authorId = People.userId")))
+                .build());
     }
 
     @DataProvider
-    public Object[][] relationshipAccessCases()
+    public Object[][] oneToOneRelationshipAccessCases()
     {
         return new Object[][] {
                 // TODO: fix relationship columns with table alias prefix (e.g. a.author.book.author.name)
@@ -245,35 +306,35 @@ public class TestRelationshipAccessing
                 },
                 // test the reverse relationship accessing
                 {"select book.author.book.name, book.author.name, book.name from People", "" +
-                        "WITH\n" + MODEL_CTE + ",\n" +
+                        "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
                         "  ${People.book} (bookId, name, author, authorId) AS (\n" +
                         "   SELECT\n" +
-                        "     r.bookId\n" +
-                        "   , r.name\n" +
-                        "   , r.author\n" +
-                        "   , r.authorId\n" +
+                        "     t.bookId\n" +
+                        "   , t.name\n" +
+                        "   , t.author\n" +
+                        "   , t.authorId\n" +
                         "   FROM\n" +
-                        "     (People l\n" +
-                        "   LEFT JOIN Book r ON (l.userId = r.authorId))\n" +
+                        "     (People s\n" +
+                        "   LEFT JOIN Book t ON (s.userId = t.authorId))\n" +
                         ") \n" +
                         ", ${People.book.author} (userId, name, book) AS (\n" +
                         "   SELECT\n" +
-                        "     r.userId\n" +
-                        "   , r.name\n" +
-                        "   , r.book\n" +
+                        "     t.userId\n" +
+                        "   , t.name\n" +
+                        "   , t.book\n" +
                         "   FROM\n" +
-                        "     (${People.book} l\n" +
-                        "   LEFT JOIN People r ON (l.authorId = r.userId))\n" +
+                        "     (${People.book} s\n" +
+                        "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
                         ") \n" +
                         ", ${People.book.author.book} (bookId, name, author, authorId) AS (\n" +
                         "   SELECT\n" +
-                        "     r.bookId\n" +
-                        "   , r.name\n" +
-                        "   , r.author\n" +
-                        "   , r.authorId\n" +
+                        "     t.bookId\n" +
+                        "   , t.name\n" +
+                        "   , t.author\n" +
+                        "   , t.authorId\n" +
                         "   FROM\n" +
-                        "     (${People.book.author} l\n" +
-                        "   LEFT JOIN Book r ON (l.userId = r.authorId))\n" +
+                        "     (${People.book.author} s\n" +
+                        "   LEFT JOIN Book t ON (s.userId = t.authorId))\n" +
                         ") \n" +
                         "SELECT\n" +
                         "  ${People.book.author.book}.name\n" +
@@ -288,12 +349,12 @@ public class TestRelationshipAccessing
         };
     }
 
-    @Test(dataProvider = "relationshipAccessCases")
-    public void testRelationshipAccessingRewrite(String original, String expected, boolean enableH2Assertion)
+    @Test(dataProvider = "oneToOneRelationshipAccessCases")
+    public void testOneToOneRelationshipAccessingRewrite(String original, String expected, boolean enableH2Assertion)
     {
         Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
-        RelationshipCteGenerator generator = new RelationshipCteGenerator(graphMDL);
-        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, graphMDL, generator);
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToOneGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, generator);
 
         Map<String, String> replaceMap = new HashMap<>();
         replaceMap.put("Book.author", generator.getNameMapping().get("Book.author"));
@@ -305,8 +366,135 @@ public class TestRelationshipAccessing
 
         Node rewrittenStatement = statement;
         for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, graphMDL);
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
         }
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        // TODO: remove this flag, disabled h2 assertion due to ambiguous column name
+        if (enableH2Assertion) {
+            assertThatNoException()
+                    .describedAs(format("actual sql: %s is invalid", actualSql))
+                    .isThrownBy(() -> query(actualSql));
+        }
+    }
+
+    @DataProvider
+    public Object[][] oneToManyRelationshipAccessCase()
+    {
+        return new Object[][] {
+                // TODO: support index accessing mode
+                // {"SELECT books[1].name FROM People", "SELECT 1", false},
+                {"SELECT cardinality(books) FROM People",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , array_agg(many.bookId) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People\n" +
+                                "LEFT JOIN ${People.books} ON (People.userId = ${People.books}.userId))", false},
+                {"SELECT cardinality(People.books) FROM People",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , array_agg(many.bookId) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People\n" +
+                                "LEFT JOIN ${People.books} ON (People.userId = ${People.books}.userId))", false},
+                {"SELECT cardinality(author.books) FROM Book",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${Book.author} (userId, name, books) AS (\n" +
+                                "   SELECT DISTINCT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.books\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                ", ${Book.author.books} (userId, name, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , array_agg(many.bookId) books\n" +
+                                "   FROM\n" +
+                                "     (${Book.author} one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT cardinality(${Book.author.books}.books)\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author.books} ON (Book.authorId = ${Book.author.books}.userId))", false},
+                {"SELECT author_reverse.name FROM Book",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${Book.author_reverse} (userId, name, books) AS (\n" +
+                                "   SELECT DISTINCT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.books\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                "SELECT ${Book.author_reverse}.name\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author_reverse} ON (Book.authorId = ${Book.author_reverse}.userId))", false},
+                {"SELECT author.name FROM Book",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${Book.author} (userId, name, books) AS (\n" +
+                                "   SELECT DISTINCT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.books\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                "SELECT ${Book.author}.name\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author} ON (Book.authorId = ${Book.author}.userId))", false}
+                // TODO: support relation with alias
+                // {"SELECT array_length(books) FROM People p", "Select 1", false},
+        };
+    }
+
+    @Test(dataProvider = "oneToManyRelationshipAccessCase")
+    public void testOneToManyRelationshipAccessingRewrite(String original, String expected, boolean enableH2Assertion)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Node rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("Book.author", generator.getNameMapping().get("Book.author"));
+        replaceMap.put("Book.author.books", generator.getNameMapping().get("Book.author.books"));
+        replaceMap.put("Book.author_reverse", generator.getNameMapping().get("Book.author_reverse"));
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
@@ -333,7 +521,7 @@ public class TestRelationshipAccessing
     @Test(dataProvider = "notRewritten")
     public void testNotRewritten(String sql)
     {
-        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -345,9 +533,9 @@ public class TestRelationshipAccessing
         // hence this sql shouldn't be rewritten
         String actualSql = "SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a";
         String expectedSql = format("WITH Book AS (%s) SELECT a.name, a.author.book.author.name from (SELECT * FROM Book) a",
-                Utils.getModelSql(graphMDL.getModel("Book").orElseThrow()));
+                Utils.getModelSql(oneToOneGraphMDL.getModel("Book").orElseThrow()));
 
-        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(GRAPHMDL_SQL_REWRITE));
+        String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }

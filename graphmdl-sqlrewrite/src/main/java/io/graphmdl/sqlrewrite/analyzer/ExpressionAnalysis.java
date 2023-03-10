@@ -15,7 +15,7 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import io.graphmdl.base.dto.Relationship;
-import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.NodeRef;
 
 import java.util.Map;
@@ -25,12 +25,12 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalysis
 {
-    private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFieldRewrites;
+    private final Map<NodeRef<Expression>, Expression> relationshipFieldRewrites;
     private final Set<String> relationshipCTENames;
     private final Set<Relationship> relationships;
 
     public ExpressionAnalysis(
-            Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields,
+            Map<NodeRef<Expression>, Expression> relationshipFields,
             Set<String> relationshipCTENames,
             Set<Relationship> relationships)
     {
@@ -39,7 +39,7 @@ public class ExpressionAnalysis
         this.relationships = requireNonNull(relationships, "relationships is null");
     }
 
-    public Map<NodeRef<DereferenceExpression>, DereferenceExpression> getRelationshipFieldRewrites()
+    public Map<NodeRef<Expression>, Expression> getRelationshipFieldRewrites()
     {
         return relationshipFieldRewrites;
     }
