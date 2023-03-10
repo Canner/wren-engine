@@ -30,9 +30,16 @@ public class Relationship
     private final JoinType joinType;
     private final String condition;
 
+    private final boolean isReverse;
+
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition)
     {
-        return new Relationship(name, models, joinType, condition);
+        return new Relationship(name, models, joinType, condition, false);
+    }
+
+    public static Relationship reverse(Relationship relationship)
+    {
+        return new Relationship(relationship.name, relationship.getModels(), JoinType.reverse(relationship.joinType), relationship.getCondition(), true);
     }
 
     @JsonCreator
@@ -42,11 +49,22 @@ public class Relationship
             @JsonProperty("joinType") JoinType joinType,
             @JsonProperty("condition") String condition)
     {
+        this(name, models, joinType, condition, false);
+    }
+
+    public Relationship(
+            @JsonProperty("name") String name,
+            @JsonProperty("models") List<String> models,
+            @JsonProperty("joinType") JoinType joinType,
+            @JsonProperty("condition") String condition,
+            boolean isReverse)
+    {
         this.name = requireNonNull(name, "name is null");
         checkArgument(models != null && models.size() >= 2, "relationship should contain at least 2 models");
         this.models = models;
         this.joinType = requireNonNull(joinType, "joinType is null");
         this.condition = requireNonNull(condition, "condition is null");
+        this.isReverse = isReverse;
     }
 
     public String getName()
@@ -69,6 +87,11 @@ public class Relationship
         return condition;
     }
 
+    public boolean isReverse()
+    {
+        return isReverse;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -82,12 +105,13 @@ public class Relationship
         return Objects.equals(name, that.name)
                 && Objects.equals(models, that.models)
                 && joinType == that.joinType
-                && Objects.equals(condition, that.condition);
+                && Objects.equals(condition, that.condition)
+                && isReverse == that.isReverse;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, models, joinType, condition);
+        return Objects.hash(name, models, joinType, condition, isReverse);
     }
 }

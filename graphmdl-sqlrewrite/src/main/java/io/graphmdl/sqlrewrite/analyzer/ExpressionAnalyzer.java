@@ -17,7 +17,6 @@ package io.graphmdl.sqlrewrite.analyzer;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.Utils;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
@@ -25,6 +24,8 @@ import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.graphmdl.base.Utils.checkArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -43,7 +45,7 @@ public final class ExpressionAnalyzer
 {
     private ExpressionAnalyzer() {}
 
-    private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFieldsRewrite = new HashMap<>();
+    private final Map<NodeRef<Expression>, Expression> relationshipFieldsRewrite = new HashMap<>();
     private final Set<String> relationshipCTENames = new HashSet<>();
     private final Set<Relationship> relationships = new HashSet<>();
 
@@ -94,19 +96,38 @@ public final class ExpressionAnalyzer
         }
 
         @Override
-        protected Void visitDereferenceExpression(DereferenceExpression node, Void ignored)
+        protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
-            collectRelationshipFields(node);
+            if (isArrayFunction(node.getName())) {
+                for (Expression argument : node.getArguments()) {
+                    collectRelationshipFields(argument, true);
+                }
+            }
             return ignored;
         }
 
-        private void collectRelationshipFields(DereferenceExpression expression)
+        private boolean isArrayFunction(QualifiedName funcName)
+        {
+            // TODO: define what's array function
+            return true;
+        }
+
+        @Override
+        protected Void visitDereferenceExpression(DereferenceExpression node, Void ignored)
+        {
+            collectRelationshipFields(node, false);
+            return ignored;
+        }
+
+        private void collectRelationshipFields(Expression expression, boolean fromArrayFunctionCall)
         {
             // we only collect select items in table scope
             if (!scope.isTableScope()) {
                 return;
             }
-            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(expression);
+
+            QualifiedName qualifiedName = getQualifiedName(expression);
+
             if (qualifiedName == null) {
                 return;
             }
@@ -137,8 +158,9 @@ public final class ExpressionAnalyzer
             List<String> relNameParts = new ArrayList<>();
             relNameParts.add(modelName);
             for (; index < qualifiedName.getParts().size(); index++) {
-                Utils.checkArgument(graphMDL.getModel(modelName).isPresent(), modelName + " model not found");
+                checkArgument(graphMDL.getModel(modelName).isPresent(), modelName + " model not found");
                 String partName = qualifiedName.getParts().get(index);
+                // TODO: support colum name with relation prefix
                 Column column = graphMDL.getModel(modelName).get().getColumns().stream()
                         .filter(col -> col.getName().equals(partName))
                         .findAny()
@@ -148,7 +170,7 @@ public final class ExpressionAnalyzer
                     modelName = column.getType();
                     Relationship relationship = graphMDL.getRelationship(column.getRelationship().get())
                             .orElseThrow(() -> new IllegalArgumentException(column.getRelationship().get() + " relationship not found"));
-                    Utils.checkArgument(relationship.getModels().contains(modelName), format("relationship %s doesn't contain model %s", relationship.getName(), modelName));
+                    checkArgument(relationship.getModels().contains(modelName), format("relationship %s doesn't contain model %s", relationship.getName(), modelName));
                     relationships.add(relationship);
 
                     relNameParts.add(partName);
@@ -174,16 +196,32 @@ public final class ExpressionAnalyzer
                 }
             }
 
+            // An array function invoking is allowed to access a one-to-many relationship fields.
+            if (fromArrayFunctionCall) {
+                index = index - 1;
+            }
+
             List<String> remainingParts = qualifiedName.getParts().subList(index, qualifiedName.getParts().size());
             if (relNameParts.size() > 1) {
                 relationshipFieldsRewrite.put(
                         NodeRef.of(expression),
-                        (DereferenceExpression) DereferenceExpression.from(
+                        DereferenceExpression.from(
                                 QualifiedName.of(
                                         ImmutableList.<String>builder()
                                                 .add(relationshipCteGenerator.getNameMapping().get(String.join(".", relNameParts)))
                                                 .addAll(remainingParts).build())));
             }
+        }
+
+        protected QualifiedName getQualifiedName(Expression expression)
+        {
+            if (expression instanceof DereferenceExpression) {
+                return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+            }
+            if (expression instanceof Identifier) {
+                return QualifiedName.of(ImmutableList.of((Identifier) expression));
+            }
+            return null;
         }
     }
 }

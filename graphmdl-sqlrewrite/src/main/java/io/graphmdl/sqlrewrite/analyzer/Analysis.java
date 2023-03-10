@@ -19,7 +19,7 @@ import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
-import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Statement;
@@ -41,7 +41,7 @@ public class Analysis
     private final Statement root;
     private final Set<CatalogSchemaTableName> tables = new HashSet<>();
     private final RelationshipCteGenerator relationshipCteGenerator;
-    private final Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields = new HashMap<>();
+    private final Map<NodeRef<Expression>, Expression> relationshipFields = new HashMap<>();
     private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
     private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
@@ -85,12 +85,12 @@ public class Analysis
         return relationshipCteGenerator.getRelationshipInfoMapping();
     }
 
-    void addRelationshipFields(Map<NodeRef<DereferenceExpression>, DereferenceExpression> relationshipFields)
+    void addRelationshipFields(Map<NodeRef<Expression>, Expression> relationshipFields)
     {
         this.relationshipFields.putAll(relationshipFields);
     }
 
-    public Map<NodeRef<DereferenceExpression>, DereferenceExpression> getRelationshipFields()
+    public Map<NodeRef<Expression>, Expression> getRelationshipFields()
     {
         return Map.copyOf(relationshipFields);
     }

@@ -31,7 +31,8 @@
           "type": "Customer",
           "relationship": "OrdersCustomer"
         }
-      ]
+      ],
+      "primaryKey": "orderkey"
     },
     {
       "name": "Customer",
@@ -46,8 +47,14 @@
           "name": "name",
           "expression": "c_name",
           "type": "string"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersCustomer"
         }
-      ]
+      ],
+      "primaryKey": "custkey"
     }
   ],
   "relationships": [
@@ -57,7 +64,7 @@
         "Orders",
         "Customer"
       ],
-      "joinType": "ONE_TO_ONE",
+      "joinType": "MANY_TO_ONE",
       "condition": "Orders.custkey = Customer.custkey"
     }
   ],

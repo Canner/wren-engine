@@ -14,18 +14,27 @@
 
 package io.graphmdl.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Column;
+import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.JoinCriteria;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Select;
+import io.trino.sql.tree.SelectItem;
+import io.trino.sql.tree.SimpleGroupBy;
+import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
@@ -33,8 +42,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.Iterables.getLast;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.Utils.randomTableSuffix;
 import static io.trino.sql.QueryUtil.aliased;
@@ -44,9 +55,12 @@ import static io.trino.sql.QueryUtil.identifier;
 import static io.trino.sql.QueryUtil.joinOn;
 import static io.trino.sql.QueryUtil.leftJoin;
 import static io.trino.sql.QueryUtil.nameReference;
+import static io.trino.sql.QueryUtil.quotedIdentifier;
 import static io.trino.sql.QueryUtil.selectList;
+import static io.trino.sql.QueryUtil.selectListDistinct;
 import static io.trino.sql.QueryUtil.simpleQuery;
 import static io.trino.sql.QueryUtil.table;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -67,6 +81,12 @@ import static java.util.stream.Collectors.toList;
  */
 public class RelationshipCteGenerator
 {
+    private static final String ONE_REFERENCE = "one";
+    private static final String MANY_REFERENCE = "many";
+
+    private static final String SOURCE_REFERENCE = "s";
+
+    private static final String TARGET_REFERENCE = "t";
     private final GraphMDL graphMDL;
     private final Map<String, WithQuery> registeredCte = new LinkedHashMap<>();
     private final Map<String, String> nameMapping = new HashMap<>();
@@ -86,7 +106,7 @@ public class RelationshipCteGenerator
 
         RelationshipCTE relationshipCTE = createRelationshipCTE(rsItems);
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(relationshipCTE);
+        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE);
         registeredCte.put(name, withQuery);
         nameMapping.put(name, withQuery.getName().getValue());
         relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRelationshipCTEJoinInfo(withQuery.getName().getValue(), relationshipCTE, nameParts.get(0)));
@@ -104,17 +124,33 @@ public class RelationshipCteGenerator
      */
     private RelationshipCTEJoinInfo transferToRelationshipCTEJoinInfo(String rsName, RelationshipCTE relationshipCTE, String baseModel)
     {
-        if (baseModel.equals(relationshipCTE.getRight().getName())) {
-            // The base model is same as the right side of `relationshipCTE`.
+        // For one-to-many relationship, the source is always the one side.
+        if (relationshipCTE.getRelationship().getJoinType().equals(JoinType.ONE_TO_MANY)) {
+            if (baseModel.equals(relationshipCTE.getTarget().getName())) {
+                // The base model is the many side of `relationshipCTE`.
+                return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
+                        // Because one-to-many cte only output the many-side result in the relationship fields, the cte is the one-side object.
+                        // Use the many-side's join key to do 1-1 mapping with the relationship CTE (one-side object).
+                        buildCondition(baseModel, relationshipCTE.getTarget().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()));
+            }
+            else {
+                // The base model is the one side of `relationshipCTE`.
+                return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
+                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()));
+            }
+        }
+
+        if (baseModel.equals(relationshipCTE.getTarget().getName())) {
+            // The base model is same as the target side of `relationshipCTE`.
             return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                     // Use the primary key to do 1-1 mapping with the relationship CTE.
-                    buildCondition(baseModel, relationshipCTE.getRight().getPrimaryKey(), rsName, relationshipCTE.getRight().getPrimaryKey()));
+                    buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()));
         }
         else {
-            // The base model is same as the left side of `relationshipCTE`.
+            // The base model is same as the source side of `relationshipCTE`.
             return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                     // Use the join key to do 1-1 mapping with the relationship CTE.
-                    buildCondition(baseModel, relationshipCTE.getLeft().getJoinKey(), rsName, relationshipCTE.getRight().getJoinKey()));
+                    buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()));
         }
     }
 
@@ -123,31 +159,133 @@ public class RelationshipCteGenerator
         return joinOn(equal(nameReference(leftName, leftKey), nameReference(rightName, rightKey)));
     }
 
-    private WithQuery transferToCte(RelationshipCTE relationshipCTE)
+    private WithQuery transferToCte(String originalName, RelationshipCTE relationshipCTE)
+    {
+        switch (relationshipCTE.getRelationship().getJoinType()) {
+            case ONE_TO_ONE:
+                return oneToOneResultRelationship(relationshipCTE);
+            case MANY_TO_ONE:
+                return manyToOneResultRelationship(relationshipCTE);
+            case ONE_TO_MANY:
+                return oneToManyResultRelationship(originalName, relationshipCTE);
+        }
+        throw new UnsupportedOperationException(format("%s relationship accessing is unsupported", relationshipCTE.getRelationship().getJoinType()));
+    }
+
+    private WithQuery oneToOneResultRelationship(RelationshipCTE relationshipCTE)
     {
         List<Expression> selectItems =
                 ImmutableSet.<String>builder()
-                        .addAll(relationshipCTE.getRight().getColumns())
-                        .add(relationshipCTE.getRight().getJoinKey())
+                        // make sure the primary key come first.
+                        .add(relationshipCTE.getTarget().getPrimaryKey())
+                        .addAll(relationshipCTE.getTarget().getColumns())
+                        .add(relationshipCTE.getTarget().getJoinKey())
                         .build()
                         .stream()
-                        .map(column -> nameReference("r", column))
+                        .map(column -> nameReference(TARGET_REFERENCE, column))
                         .collect(toList());
         List<Identifier> outputSchema = selectItems.stream().map(this::getReferenceField).map(QueryUtil::identifier).collect(toList());
 
         return new WithQuery(identifier(relationshipCTE.getName()),
                 simpleQuery(
                         selectList(selectItems),
-                        leftJoin(aliased(table(QualifiedName.of(relationshipCTE.getLeft().getName())), "l"),
-                                aliased(table(QualifiedName.of(relationshipCTE.getRight().getName())), "r"),
-                                joinOn(equal(nameReference("l", relationshipCTE.getLeft().getJoinKey()), nameReference("r", relationshipCTE.getRight().getJoinKey()))))),
+                        leftJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), TARGET_REFERENCE),
+                                joinOn(equal(nameReference(SOURCE_REFERENCE, relationshipCTE.getSource().getJoinKey()), nameReference(TARGET_REFERENCE, relationshipCTE.getTarget().getJoinKey()))))),
                 Optional.of(outputSchema));
+    }
+
+    private WithQuery manyToOneResultRelationship(RelationshipCTE relationshipCTE)
+    {
+        List<Expression> selectItems =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key come first.
+                        .add(relationshipCTE.getTarget().getPrimaryKey())
+                        .addAll(relationshipCTE.getTarget().getColumns())
+                        .add(relationshipCTE.getTarget().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference(TARGET_REFERENCE, column))
+                        .collect(toList());
+        List<Identifier> outputSchema = selectItems.stream().map(this::getReferenceField).map(QueryUtil::identifier).collect(toList());
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        selectListDistinct(selectItems),
+                        leftJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), TARGET_REFERENCE),
+                                joinOn(equal(nameReference(SOURCE_REFERENCE, relationshipCTE.getSource().getJoinKey()), nameReference(TARGET_REFERENCE, relationshipCTE.getTarget().getJoinKey()))))),
+                Optional.of(outputSchema));
+    }
+
+    private WithQuery oneToManyResultRelationship(String originalName, RelationshipCTE relationshipCTE)
+    {
+        List<Expression> oneTableFields =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key be first.
+                        .add(relationshipCTE.getSource().getPrimaryKey())
+                        // remove duplicate relationship column name
+                        .addAll(relationshipCTE.getSource().getColumns().stream().filter(column -> !column.equals(originalName)).collect(toList()))
+                        .add(relationshipCTE.getSource().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference(ONE_REFERENCE, column))
+                        .collect(toList());
+        SingleColumn relationshipField = new SingleColumn(toArrayAgg(nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getPrimaryKey())), identifier(originalName));
+
+        List<SingleColumn> normalFields = oneTableFields
+                .stream()
+                .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
+                .collect(toList());
+
+        List<SelectItem> selectItems = ImmutableList.<SelectItem>builder().addAll(normalFields).add(relationshipField).build();
+
+        List<Identifier> outputSchema = selectItems.stream()
+                .map(selectItem -> (SingleColumn) selectItem)
+                .map(singleColumn ->
+                        singleColumn.getAlias()
+                                .orElse(quotedIdentifier(singleColumn.getExpression().toString())))
+                .collect(toList());
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        new Select(false, selectItems),
+                        leftJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), ONE_REFERENCE),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), MANY_REFERENCE),
+                                joinOn(equal(nameReference(ONE_REFERENCE, relationshipCTE.getSource().getJoinKey()), nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getJoinKey())))),
+                        Optional.empty(),
+                        Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
+                                .mapToObj(number -> new LongLiteral(String.valueOf(number)))
+                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral))).collect(toList()))),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()),
+                Optional.of(outputSchema));
+    }
+
+    private QualifiedName getQualifiedName(Expression expression)
+    {
+        if (expression instanceof DereferenceExpression) {
+            return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+        }
+        if (expression instanceof Identifier) {
+            return QualifiedName.of(ImmutableList.of((Identifier) expression));
+        }
+        return null;
+    }
+
+    private Expression toArrayAgg(Expression field)
+    {
+        // TODO: BigQuery doesn't allow array element is null.
+        //  We need to surround the array_agg with ifnull function or other null handling.
+        return new FunctionCall(QualifiedName.of("array_agg"), List.of(field));
     }
 
     private RelationshipCTE createRelationshipCTE(List<RsItem> rsItems)
     {
-        RelationshipCTE.Relation left;
-        RelationshipCTE.Relation right;
+        RelationshipCTE.Relation source;
+        RelationshipCTE.Relation target;
         Relationship relationship;
         // If the first item is CTE, the second one is RS or REVERSE_RS.
         if (rsItems.get(0).getType().equals(RsItem.Type.CTE)) {
@@ -156,28 +294,30 @@ public class RelationshipCteGenerator
             WithQuery leftQuery = registeredCte.get(rsItems.get(0).getName());
 
             if (rsItems.get(1).getType() == RS) {
-                left = new RelationshipCTE.Relation(
+                source = new RelationshipCTE.Relation(
                         leftQuery.getName().getValue(),
                         leftQuery.getColumnNames().get().stream().map(Identifier::getValue).collect(toList()),
-                        null,
+                        // TODO: we should make sure the first field is its primary key.
+                        leftQuery.getColumnNames().map(columns -> columns.get(0).getValue()).get(),
                         getReferenceField(comparisonExpression.getLeft()));
                 Model rightModel = getRightModel(relationship, graphMDL.listModels());
-                right = new RelationshipCTE.Relation(
+                target = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                         rightModel.getPrimaryKey(),
                         getReferenceField(comparisonExpression.getRight()));
             }
             else {
-                left = new RelationshipCTE.Relation(
+                source = new RelationshipCTE.Relation(
                         leftQuery.getName().getValue(),
                         leftQuery.getColumnNames().get().stream().map(Identifier::getValue).collect(toList()),
-                        null,
+                        // TODO: we should make sure the first field is its primary key.
+                        leftQuery.getColumnNames().map(columns -> columns.get(0).getValue()).get(),
                         // If it's a REVERSE relationship, the left and right side will be swapped.
                         getReferenceField(comparisonExpression.getRight()));
                 // If it's a REVERSE relationship, the left and right side will be swapped.
                 Model rightModel = getLeftModel(relationship, graphMDL.listModels());
-                right = new RelationshipCTE.Relation(
+                target = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                         rightModel.getPrimaryKey(),
@@ -190,13 +330,13 @@ public class RelationshipCteGenerator
                 relationship = graphMDL.listRelationships().stream().filter(r -> r.getName().equals(rsItems.get(0).getName())).findAny().get();
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
                 Model leftModel = getLeftModel(relationship, graphMDL.listModels());
-                left = new RelationshipCTE.Relation(
+                source = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
                         leftModel.getPrimaryKey(), getReferenceField(comparisonExpression.getLeft()));
 
                 Model rightModel = getRightModel(relationship, graphMDL.listModels());
-                right = new RelationshipCTE.Relation(
+                target = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                         rightModel.getPrimaryKey(), getReferenceField(comparisonExpression.getRight()));
@@ -206,7 +346,7 @@ public class RelationshipCteGenerator
                 ComparisonExpression comparisonExpression = getConditionNode(relationship.getCondition());
                 // If it's a REVERSE relationship, the left and right side will be swapped.
                 Model leftModel = getRightModel(relationship, graphMDL.listModels());
-                left = new RelationshipCTE.Relation(
+                source = new RelationshipCTE.Relation(
                         leftModel.getName(),
                         leftModel.getColumns().stream().map(Column::getName).collect(toList()),
                         // If it's a REVERSE relationship, the left and right side will be swapped.
@@ -214,26 +354,28 @@ public class RelationshipCteGenerator
 
                 // If it's a REVERSE relationship, the left and right side will be swapped.
                 Model rightModel = getLeftModel(relationship, graphMDL.listModels());
-                right = new RelationshipCTE.Relation(
+                target = new RelationshipCTE.Relation(
                         rightModel.getName(),
                         rightModel.getColumns().stream().map(Column::getName).collect(toList()),
                         // If it's a REVERSE relationship, the left and right side will be swapped.
                         rightModel.getPrimaryKey(), getReferenceField(comparisonExpression.getLeft()));
             }
         }
-        return new RelationshipCTE("rs_" + randomTableSuffix(), left, right, relationship);
+
+        return new RelationshipCTE("rs_" + randomTableSuffix(), source, target,
+                getLast(rsItems).getType().equals(RS) ? relationship : Relationship.reverse(relationship));
     }
 
     private static Model getLeftModel(Relationship relationship, List<Model> models)
     {
         return models.stream().filter(model -> model.getName().equals(relationship.getModels().get(0))).findAny()
-                .orElseThrow(() -> new IllegalArgumentException(String.format("Left model %s not found in the given models.", relationship.getModels().get(0))));
+                .orElseThrow(() -> new IllegalArgumentException(format("Left model %s not found in the given models.", relationship.getModels().get(0))));
     }
 
     private static Model getRightModel(Relationship relationship, List<Model> models)
     {
         return models.stream().filter(model -> model.getName().equals(relationship.getModels().get(1))).findAny()
-                .orElseThrow(() -> new IllegalArgumentException(String.format("Right model %s not found in the given models.", relationship.getModels().get(1))));
+                .orElseThrow(() -> new IllegalArgumentException(format("Right model %s not found in the given models.", relationship.getModels().get(1))));
     }
 
     private String getReferenceField(Expression expression)

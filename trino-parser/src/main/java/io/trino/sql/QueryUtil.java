@@ -102,6 +102,15 @@ public final class QueryUtil
         return new Select(false, items.build());
     }
 
+    public static Select selectListDistinct(List<Expression> expressions)
+    {
+        ImmutableList.Builder<SelectItem> items = ImmutableList.builder();
+        for (Expression expression : expressions) {
+            items.add(new SingleColumn(expression));
+        }
+        return new Select(true, items.build());
+    }
+
     public static Select selectList(List<Expression> expressions, List<String> aliases)
     {
         ImmutableList.Builder<SelectItem> items = ImmutableList.builder();

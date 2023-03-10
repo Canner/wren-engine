@@ -22,6 +22,7 @@ import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
@@ -182,6 +183,12 @@ public class GraphMDLSqlRewrite
             return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
         }
 
+        @Override
+        protected Node visitIdentifier(Identifier node, Void context)
+        {
+            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
+        }
+
         // the model is added in with query, and the catalog and schema should be removed
         private Node applyModelRule(Table table)
         {
@@ -192,7 +199,7 @@ public class GraphMDLSqlRewrite
         {
             Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
             Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
-                    .map(expression -> expression.getBase().toString())
+                    .map(this::getBaseName)
                     .collect(toSet());
 
             List<RelationshipCteGenerator.RelationshipCTEJoinInfo> cteTables =
@@ -206,6 +213,17 @@ public class GraphMDLSqlRewrite
                             .collect(toUnmodifiableList());
 
             return leftJoin(table, cteTables);
+        }
+
+        private String getBaseName(Expression expression)
+        {
+            if (expression instanceof DereferenceExpression) {
+                return ((DereferenceExpression) expression).getBase().toString();
+            }
+            else if (expression instanceof Identifier) {
+                return ((Identifier) expression).getValue();
+            }
+            throw new IllegalArgumentException("Unexpected expression: " + expression.getClass().getName());
         }
 
         private static Relation leftJoin(Relation left, List<RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipCTEJoinInfos)
