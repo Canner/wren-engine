@@ -66,7 +66,7 @@ public final class GraphMDLSchemaUtil
 
     public static SchemaPlus schemaPlus(List<TableMetadata> tableMetadatas, Metadata metadata)
     {
-        SchemaPlus rootSchema = createRootSchema(true, true, "").plus();
+        SchemaPlus rootSchema = createRootSchema(true).plus();
         tableMetadatas.stream()
                 .collect(groupingBy(tableMetadata -> metadata.getDefaultCatalog(),
                         groupingBy(tableMetadata -> tableMetadata.getTable().getSchemaName(),

@@ -475,7 +475,7 @@ public class PostgresWireProtocol
             portal.setRowCount(resultSetSender.sendResultSet());
         }
         catch (Exception e) {
-            LOG.error(format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
+            LOG.error(e, format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
             Messages.sendErrorResponse(channel, e);
         }
     }

@@ -35,8 +35,7 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
-import org.apache.calcite.prepare.CalciteCatalogReader;
-import org.apache.calcite.prepare.Prepare;
+import org.apache.calcite.prepare.Prepare.CatalogReader;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.rel2sql.RelToSqlConverter;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
@@ -55,7 +54,6 @@ import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.sql2rel.StandardConvertletTable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -134,15 +132,16 @@ public class QueryProcessor
                 .stream().map(name -> toTableMetadata(name, sessionContext))
                 .collect(toImmutableList());
 
-        Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
+        CatalogReader catalogReader = new GraphMDLCatalogReader(
                 CalciteSchema.from(GraphMDLSchemaUtil.schemaPlus(visitedTable, metadata)),
-                Collections.singletonList(""),
+                sessionContext,
                 typeFactory,
                 config);
 
         SqlOperatorTable chainedSqlOperatorTable = SqlOperatorTables.chain(SqlStdOperatorTable.instance(), metadata.getCalciteOperatorTable());
         SqlValidator validator = SqlValidatorUtil.newValidator(chainedSqlOperatorTable,
-                catalogReader, typeFactory,
+                catalogReader,
+                typeFactory,
                 SqlValidator.Config.DEFAULT.withConformance(dialect.getConformance()));
 
         // Validate the initial AST

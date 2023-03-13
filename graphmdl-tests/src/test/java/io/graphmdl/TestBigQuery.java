@@ -72,4 +72,47 @@ public class TestBigQuery
                 .isEqualTo("SELECT b\n" +
                         "FROM `canner-cml`.cml_temp.CANNER");
     }
+
+    @Test
+    public void testDefaultCatalogSchema()
+    {
+        String expectedSql = "SELECT COUNT(*) AS cnt\n" +
+                "FROM `canner-cml`.tpch_tiny.nation";
+
+        // test {catalog}.{schema}.{table} table name
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
+                        SessionContext.builder().build()))
+                .isEqualTo(expectedSql);
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
+                        SessionContext.builder().setCatalog("canner-cml").build()))
+                .isEqualTo(expectedSql);
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
+                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
+                .isEqualTo(expectedSql);
+
+        // test {schema}.{table} table name
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM tpch_tiny.nation",
+                        SessionContext.builder().setCatalog("canner-cml").build()))
+                .isEqualTo(expectedSql);
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM tpch_tiny.nation",
+                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
+                .isEqualTo(expectedSql);
+
+        // test {table} table name
+        assertThat(
+                bigQuerySqlConverter.convert(
+                        "SELECT COUNT(*) AS cnt FROM nation",
+                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
+                .isEqualTo(expectedSql);
+    }
 }
