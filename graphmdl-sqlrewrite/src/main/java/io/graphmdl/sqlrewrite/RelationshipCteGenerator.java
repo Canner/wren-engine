@@ -30,11 +30,13 @@ import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.LongLiteral;
+import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Select;
 import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
+import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
@@ -59,6 +61,7 @@ import static io.trino.sql.QueryUtil.quotedIdentifier;
 import static io.trino.sql.QueryUtil.selectList;
 import static io.trino.sql.QueryUtil.selectListDistinct;
 import static io.trino.sql.QueryUtil.simpleQuery;
+import static io.trino.sql.QueryUtil.subscriptExpression;
 import static io.trino.sql.QueryUtil.table;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -106,7 +109,9 @@ public class RelationshipCteGenerator
 
         RelationshipCTE relationshipCTE = createRelationshipCTE(rsItems);
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE);
+        WithQuery withQuery = transferToCte(
+                rsItems.get(0).getIndex().isEmpty() ? getLast(nameParts) : nameParts.get(nameParts.size() - 1),
+                relationshipCTE);
         registeredCte.put(name, withQuery);
         nameMapping.put(name, withQuery.getName().getValue());
         relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRelationshipCTEJoinInfo(withQuery.getName().getValue(), relationshipCTE, nameParts.get(0)));
@@ -124,6 +129,20 @@ public class RelationshipCteGenerator
      */
     private RelationshipCTEJoinInfo transferToRelationshipCTEJoinInfo(String rsName, RelationshipCTE relationshipCTE, String baseModel)
     {
+        if (relationshipCTE.getIndex().isPresent()) {
+            checkArgument(relationshipCTE.getRelationship().getJoinType() == JoinType.ONE_TO_MANY, "Only one-to-many relationship can have index");
+            if (baseModel.equals(relationshipCTE.getTarget().getName())) {
+                // The base model is same as the output side of `relationshipCTE`.
+                return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
+                        buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()));
+            }
+            else {
+                // The base model is same as the source side of `relationshipCTE`.
+                return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
+                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()));
+            }
+        }
+
         // For one-to-many relationship, the source is always the one side.
         if (relationshipCTE.getRelationship().getJoinType().equals(JoinType.ONE_TO_MANY)) {
             if (baseModel.equals(relationshipCTE.getTarget().getName())) {
@@ -167,7 +186,9 @@ public class RelationshipCteGenerator
             case MANY_TO_ONE:
                 return manyToOneResultRelationship(relationshipCTE);
             case ONE_TO_MANY:
-                return oneToManyResultRelationship(originalName, relationshipCTE);
+                return relationshipCTE.getIndex().isPresent() ?
+                        oneToManyRelationshipAccessByIndex(originalName, relationshipCTE) :
+                        oneToManyResultRelationship(originalName, relationshipCTE);
         }
         throw new UnsupportedOperationException(format("%s relationship accessing is unsupported", relationshipCTE.getRelationship().getJoinType()));
     }
@@ -231,7 +252,13 @@ public class RelationshipCteGenerator
                         .stream()
                         .map(column -> nameReference(ONE_REFERENCE, column))
                         .collect(toList());
-        SingleColumn relationshipField = new SingleColumn(toArrayAgg(nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getPrimaryKey())), identifier(originalName));
+        List<Relationship.SortKey> sortKeys = relationshipCTE.getRelationship().getManySideSortKeys().isEmpty() ?
+                List.of(new Relationship.SortKey(relationshipCTE.getManySide().getPrimaryKey(), false)) :
+                relationshipCTE.getRelationship().getManySideSortKeys();
+
+        SingleColumn relationshipField = new SingleColumn(
+                toArrayAgg(nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getPrimaryKey()), sortKeys),
+                identifier(originalName));
 
         List<SingleColumn> normalFields = oneTableFields
                 .stream()
@@ -264,6 +291,38 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
+    private WithQuery oneToManyRelationshipAccessByIndex(String originalName, RelationshipCTE relationshipCTE)
+    {
+        checkArgument(relationshipCTE.getIndex().isPresent(), "index is null");
+        List<SelectItem> selectItems =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key be first.
+                        .add(relationshipCTE.getTarget().getPrimaryKey())
+                        .addAll(relationshipCTE.getTarget().getColumns())
+                        .add(relationshipCTE.getTarget().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference("r", column))
+                        .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
+
+                        .collect(toList());
+
+        List<Identifier> outputSchema = selectItems.stream()
+                .map(selectItem -> (SingleColumn) selectItem)
+                .map(singleColumn ->
+                        singleColumn.getAlias()
+                                .orElse(quotedIdentifier(singleColumn.getExpression().toString())))
+                .collect(toList());
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        new Select(false, selectItems),
+                        leftJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), "l"),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), "r"),
+                                joinOn(equal(subscriptExpression(nameReference("l", originalName.split("\\[")[0]), relationshipCTE.getIndex().get()), nameReference("r", relationshipCTE.getTarget().getPrimaryKey()))))),
+                Optional.of(outputSchema));
+    }
+
     private QualifiedName getQualifiedName(Expression expression)
     {
         if (expression instanceof DereferenceExpression) {
@@ -275,11 +334,25 @@ public class RelationshipCteGenerator
         return null;
     }
 
-    private Expression toArrayAgg(Expression field)
+    private Expression toArrayAgg(Expression field, List<Relationship.SortKey> sortKeys)
     {
         // TODO: BigQuery doesn't allow array element is null.
         //  We need to surround the array_agg with ifnull function or other null handling.
-        return new FunctionCall(QualifiedName.of("array_agg"), List.of(field));
+
+        return new FunctionCall(
+                Optional.empty(),
+                QualifiedName.of("array_agg"),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(new OrderBy(sortKeys.stream()
+                        .map(sortKey ->
+                                new SortItem(nameReference(MANY_REFERENCE, sortKey.getName()), sortKey.isDescending() ? SortItem.Ordering.DESCENDING : SortItem.Ordering.ASCENDING,
+                                        SortItem.NullOrdering.UNDEFINED))
+                        .collect(toList()))),
+                false,
+                Optional.empty(),
+                Optional.empty(),
+                List.of(field));
     }
 
     private RelationshipCTE createRelationshipCTE(List<RsItem> rsItems)
@@ -363,7 +436,8 @@ public class RelationshipCteGenerator
         }
 
         return new RelationshipCTE("rs_" + randomTableSuffix(), source, target,
-                getLast(rsItems).getType().equals(RS) ? relationship : Relationship.reverse(relationship));
+                getLast(rsItems).getType().equals(RS) ? relationship : Relationship.reverse(relationship),
+                rsItems.get(0).getIndex().orElse(null));
     }
 
     private static Model getLeftModel(Relationship relationship, List<Model> models)
@@ -406,7 +480,12 @@ public class RelationshipCteGenerator
     {
         public static RsItem rsItem(String name, Type type)
         {
-            return new RsItem(name, type);
+            return rsItem(name, type, null);
+        }
+
+        public static RsItem rsItem(String name, Type type, String index)
+        {
+            return new RsItem(name, type, index);
         }
 
         public enum Type
@@ -419,10 +498,18 @@ public class RelationshipCteGenerator
         private final String name;
         private final Type type;
 
-        private RsItem(String name, Type type)
+        private final String index;
+
+        private RsItem(String name, Type type, String index)
         {
             this.name = name;
             this.type = type;
+            this.index = index;
+        }
+
+        public Optional<String> getIndex()
+        {
+            return Optional.ofNullable(index);
         }
 
         public String getName()

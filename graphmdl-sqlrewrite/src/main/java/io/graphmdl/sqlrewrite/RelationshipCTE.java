@@ -17,8 +17,10 @@ package io.graphmdl.sqlrewrite;
 import io.graphmdl.base.dto.Relationship;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -36,14 +38,16 @@ public class RelationshipCTE
     private final Relation source;
     private final Relation target;
 
+    private final String index;
     private final Relationship relationship;
 
-    public RelationshipCTE(String name, Relation source, Relation target, Relationship relationship)
+    public RelationshipCTE(String name, Relation source, Relation target, Relationship relationship, String index)
     {
         this.name = name;
         this.source = source;
         this.target = target;
         this.relationship = relationship;
+        this.index = index;
     }
 
     public String getName()
@@ -61,6 +65,17 @@ public class RelationshipCTE
         return target;
     }
 
+    public Relation getManySide()
+    {
+        switch (relationship.getJoinType()) {
+            case MANY_TO_ONE:
+                return source;
+            case ONE_TO_MANY:
+                return target;
+        }
+        throw new IllegalArgumentException(format("join type %s can't get many side", relationship.getJoinType()));
+    }
+
     public Relationship getRelationship()
     {
         return relationship;
@@ -69,6 +84,11 @@ public class RelationshipCTE
     public List<String> getOutputColumn()
     {
         return Stream.concat(target.getColumns().stream(), List.of(source.getJoinKey()).stream()).collect(toList());
+    }
+
+    public Optional<String> getIndex()
+    {
+        return Optional.ofNullable(index);
     }
 
     public static class Relation
