@@ -215,15 +215,14 @@ public class TestRelationshipAccessing
     public Object[][] oneToOneRelationshipAccessCases()
     {
         return new Object[][] {
-                // TODO: fix relationship columns with table alias prefix (e.g. a.author.book.author.name)
-//                {"SELECT a.author.book.author.name\n" +
-//                        "FROM Book a",
-//                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
-//                                "SELECT ${Book.author.book.author}.name\n" +
-//                                "FROM\n" +
-//                                "  (Book\n" +
-//                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))",
-//                        true},
+                {"SELECT a.author.book.author.name\n" +
+                        "FROM Book a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                "SELECT ${Book.author.book.author}.name\n" +
+                                "FROM\n" +
+                                "  (Book a\n" +
+                                "LEFT JOIN ${Book.author.book.author} ON (a.authorId = ${Book.author.book.author}.userId))",
+                        true},
                 {"SELECT graphmdl.test.Book.author.book.author.name,\n" +
                         "test.Book.author.book.author.name,\n" +
                         "Book.author.book.author.name\n" +
