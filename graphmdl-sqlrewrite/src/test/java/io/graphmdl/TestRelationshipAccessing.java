@@ -616,8 +616,40 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (People\n" +
                                 "LEFT JOIN ${People.sorted_books[1]} ON (People.userId = ${People.sorted_books[1]}.authorId))", false},
-                // TODO: support relation with alias
-                // {"SELECT array_length(books) FROM People p", "Select 1", false},
+                {"SELECT cardinality(books) FROM People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , array_agg(many.bookId) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${People.books} ON (p.userId = ${People.books}.userId))", false},
+                {"SELECT p.name, cardinality(books) FROM People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , array_agg(many.bookId) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${People.books} ON (p.userId = ${People.books}.userId))", false},
         };
     }
 
