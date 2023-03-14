@@ -29,6 +29,7 @@ import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.SelectItem;
@@ -50,6 +51,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.graphmdl.base.Utils.checkArgument;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -213,10 +215,7 @@ public final class StatementAnalyzer
                     orderBy.getSortItems().stream()
                             .map(SortItem::getSortKey)
                             .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
-            node.getFrom()
-                    .filter(from -> from instanceof Table)
-                    .map(from -> (Table) from)
-                    .ifPresent(table -> analysis.addReplaceTableWithCTEs(NodeRef.of(table), relationshipCTENames));
+            node.getFrom().ifPresent(table -> analysis.addReplaceTableWithCTEs(NodeRef.of(table), relationshipCTENames));
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
@@ -253,9 +252,23 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitAliasedRelation(AliasedRelation relation, Optional<Scope> scope)
         {
-            process(relation.getRelation(), scope);
-            // TODO: output scope here isn't right
-            return Scope.builder().parent(scope).build();
+            Scope relationScope = process(relation.getRelation(), scope);
+
+            if (!relationScope.isTableScope()) {
+                return relationScope;
+            }
+
+            checkArgument(relationScope.getRelationType().isPresent(), "relationType is missing");
+            List<Field> fieldsWithRelationAlias = relationScope.getRelationType().get().getFields().stream()
+                    .map(field -> Field.builder().like(field)
+                            .relationAlias(Optional.of(QualifiedName.of(relation.getAlias().getValue()))).build())
+                    .collect(toImmutableList());
+
+            return Scope.builder()
+                    .parent(scope)
+                    .relationType(Optional.of(new RelationType(fieldsWithRelationAlias)))
+                    .isTableScope(true)
+                    .build();
         }
 
         @Override

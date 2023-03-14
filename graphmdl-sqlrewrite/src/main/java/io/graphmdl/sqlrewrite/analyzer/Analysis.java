@@ -43,7 +43,7 @@ public class Analysis
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef<Expression>, Expression> relationshipFields = new HashMap<>();
     private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
-    private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
+    private final Map<NodeRef<Node>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
@@ -95,12 +95,12 @@ public class Analysis
         return Map.copyOf(relationshipFields);
     }
 
-    public void addReplaceTableWithCTEs(NodeRef<Table> tableNodeRef, Set<String> relationshipCTENames)
+    public void addReplaceTableWithCTEs(NodeRef<Node> tableNodeRef, Set<String> relationshipCTENames)
     {
         this.replaceTableWithCTEs.put(tableNodeRef, relationshipCTENames);
     }
 
-    public Map<NodeRef<Table>, Set<String>> getReplaceTableWithCTEs()
+    public Map<NodeRef<Node>, Set<String>> getReplaceTableWithCTEs()
     {
         return Map.copyOf(replaceTableWithCTEs);
     }
