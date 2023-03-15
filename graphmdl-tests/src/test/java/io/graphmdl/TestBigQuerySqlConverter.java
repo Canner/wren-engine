@@ -26,7 +26,7 @@ import org.testng.annotations.Test;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestBigQuery
+public class TestBigQuerySqlConverter
 {
     private BigQueryClient bigQueryClient;
     private BigQueryMetadata bigQueryMetadata;
