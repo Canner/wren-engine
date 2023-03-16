@@ -113,7 +113,6 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
 
-        // TODO: fix amibiguous column name
         try (Connection connection = createConnection()) {
             PreparedStatement stmt = connection.prepareStatement("select custkey, array_length(orders) as agg from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
