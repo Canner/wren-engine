@@ -109,4 +109,10 @@ public final class Utils
 
         return new CatalogSchemaTableName(catalogName, schemaName, objectName);
     }
+
+    public static QualifiedName toQualifiedName(CatalogSchemaTableName name)
+    {
+        requireNonNull(name, "name is null");
+        return QualifiedName.of(name.getCatalogName(), name.getSchemaTableName().getSchemaName(), name.getSchemaTableName().getTableName());
+    }
 }
