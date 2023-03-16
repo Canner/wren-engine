@@ -104,7 +104,7 @@ public class GraphMDLSqlRewrite
      * </pre>
      */
     private static class WithRewriter
-            extends BaseVisitor
+            extends BaseRewriter<Void>
     {
         private final Map<String, Query> modelQueries;
         private final Map<String, Query> metricQueries;
@@ -158,7 +158,7 @@ public class GraphMDLSqlRewrite
     }
 
     private static class Rewriter
-            extends BaseVisitor
+            extends BaseRewriter<Void>
     {
         private final Analysis analysis;
 
@@ -192,13 +192,13 @@ public class GraphMDLSqlRewrite
             if (node.getLocation().isPresent()) {
                 result = new AliasedRelation(
                         node.getLocation().get(),
-                        visitAndCast(node.getRelation()),
+                        visitAndCast(node.getRelation(), context),
                         node.getAlias(),
                         node.getColumnNames());
             }
             else {
                 result = new AliasedRelation(
-                        visitAndCast(node.getRelation()),
+                        visitAndCast(node.getRelation(), context),
                         node.getAlias(),
                         node.getColumnNames());
             }
