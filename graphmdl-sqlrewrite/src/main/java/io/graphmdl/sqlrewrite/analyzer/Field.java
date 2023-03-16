@@ -19,6 +19,7 @@ import io.trino.sql.tree.QualifiedName;
 
 import java.util.Optional;
 
+import static io.graphmdl.sqlrewrite.Utils.toQualifiedName;
 import static java.util.Objects.requireNonNull;
 
 // TODO: rename this to ModelField
@@ -77,7 +78,7 @@ public class Field
 
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
     {
-        return prefix.isEmpty() || relationAlias.isPresent() && relationAlias.get().hasSuffix(prefix.get());
+        return prefix.isEmpty() || relationAlias.orElse(toQualifiedName(modelName)).hasSuffix(prefix.get());
     }
 
     /*
