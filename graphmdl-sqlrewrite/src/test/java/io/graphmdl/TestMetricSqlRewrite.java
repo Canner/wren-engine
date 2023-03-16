@@ -106,8 +106,8 @@ public class TestMetricSqlRewrite
                         "WITH\n" +
                                 COLLECTION_CTES +
                                 "SELECT\n" +
-                                "  author\n" +
-                                ", price\n" +
+                                "  Collection.author\n" +
+                                ", Collection.price\n" +
                                 "FROM\n" +
                                 "  Collection"},
                 {
