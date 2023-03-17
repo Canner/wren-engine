@@ -100,8 +100,8 @@ public class TestAllRulesRewrite
                         "   ) \n" +
                         ") \n" +
                         "SELECT\n" +
-                        "  name\n" +
-                        ", price\n" +
+                        "  Album.name\n" +
+                        ", Album.price\n" +
                         "FROM\n" +
                         "  Album"},
                 {
@@ -126,8 +126,8 @@ public class TestAllRulesRewrite
                                 "   ) \n" +
                                 ") \n" +
                                 "SELECT\n" +
-                                "  name\n" +
-                                ", price\n" +
+                                "  Album.name\n" +
+                                ", Album.price\n" +
                                 "FROM\n" +
                                 "  Album"
                 }
