@@ -15,6 +15,8 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
@@ -26,20 +28,30 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.SubscriptExpression;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import static io.graphmdl.base.Utils.checkArgument;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
+import static io.graphmdl.sqlrewrite.analyzer.ExpressionAnalyzer.DereferenceName.dereferenceName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public final class ExpressionAnalyzer
 {
@@ -126,9 +138,8 @@ public final class ExpressionAnalyzer
                 return;
             }
 
-            QualifiedName qualifiedName = getQualifiedName(expression);
-
-            if (qualifiedName == null) {
+            List<DereferenceName> dereferenceNames = Lists.reverse(toDereferenceNames(expression));
+            if (dereferenceNames.isEmpty()) {
                 return;
             }
 
@@ -140,8 +151,8 @@ public final class ExpressionAnalyzer
             // e.g. select a.relationship.column from table a
             int index = 0;
             Optional<Field> optField = Optional.empty();
-            for (int i = 0; i < qualifiedName.getParts().size(); i++) {
-                QualifiedName partName = QualifiedName.of(qualifiedName.getParts().subList(0, i + 1));
+            for (int i = 0; i < dereferenceNames.size(); i++) {
+                QualifiedName partName = QualifiedName.of(dereferenceNames.subList(0, i + 1).stream().map(DereferenceName::getIdentifier).collect(toList()));
                 optField = scopeFields.stream().filter(scopeField -> scopeField.canResolve(partName)).findAny();
                 if (optField.isPresent() && optField.get().isRelationship()) {
                     index = partName.getParts().size() - 1;
@@ -155,11 +166,11 @@ public final class ExpressionAnalyzer
             }
 
             String modelName = optField.get().getModelName().getSchemaTableName().getTableName();
-            List<String> relNameParts = new ArrayList<>();
-            relNameParts.add(modelName);
-            for (; index < qualifiedName.getParts().size(); index++) {
+            List<DereferenceName> relNameParts = new ArrayList<>();
+            relNameParts.add(dereferenceName(modelName));
+            for (; index < dereferenceNames.size(); index++) {
                 checkArgument(graphMDL.getModel(modelName).isPresent(), modelName + " model not found");
-                String partName = qualifiedName.getParts().get(index);
+                String partName = dereferenceNames.get(index).getIdentifier().getValue();
                 // TODO: support colum name with relation prefix
                 Column column = graphMDL.getModel(modelName).get().getColumns().stream()
                         .filter(col -> col.getName().equals(partName))
@@ -173,21 +184,31 @@ public final class ExpressionAnalyzer
                     checkArgument(relationship.getModels().contains(modelName), format("relationship %s doesn't contain model %s", relationship.getName(), modelName));
                     relationships.add(relationship);
 
-                    relNameParts.add(partName);
-                    String relNameStr = String.join(".", relNameParts);
+                    relNameParts.add(dereferenceNames.get(index));
+                    String relNameStr = relNameParts.stream().map(DereferenceName::toString).collect(joining("."));
                     relationshipCTENames.add(relNameStr);
+
                     if (!relationshipCteGenerator.getNameMapping().containsKey(relNameStr)) {
                         if (relNameParts.size() == 2) {
                             relationshipCteGenerator.register(
-                                    relNameParts,
-                                    List.of(RelationshipCteGenerator.RsItem.rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RelationshipCteGenerator.RsItem.Type.REVERSE_RS : RelationshipCteGenerator.RsItem.Type.RS)));
+                                    getBaseParts(relNameParts),
+                                    List.of(rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
                         }
                         else {
                             relationshipCteGenerator.register(
-                                    relNameParts,
+                                    getBaseParts(relNameParts),
                                     List.of(
-                                            RelationshipCteGenerator.RsItem.rsItem(String.join(".", relNameParts.subList(0, relNameParts.size() - 1)), RelationshipCteGenerator.RsItem.Type.CTE),
-                                            RelationshipCteGenerator.RsItem.rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RelationshipCteGenerator.RsItem.Type.REVERSE_RS : RelationshipCteGenerator.RsItem.Type.RS)));
+                                            rsItem(String.join(".", relNameParts.stream().map(DereferenceName::toString).collect(toList()).subList(0, relNameParts.size() - 1)), CTE),
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
+                        }
+
+                        if (dereferenceNames.get(index).getIndex().isPresent()) {
+                            List<String> indexParts = ImmutableList.<String>builder().addAll(relNameParts.stream().map(DereferenceName::toString).collect(toList())).build();
+                            relationshipCteGenerator.register(
+                                    indexParts,
+                                    List.of(
+                                            rsItem(String.join(".", getBaseParts(relNameParts)), CTE, dereferenceNames.get(index).getIndex().get().toString()),
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
                         }
                     }
                 }
@@ -201,27 +222,150 @@ public final class ExpressionAnalyzer
                 index = index - 1;
             }
 
-            List<String> remainingParts = qualifiedName.getParts().subList(index, qualifiedName.getParts().size());
+            List<String> remainingParts = dereferenceNames.subList(index, dereferenceNames.size()).stream().map(DereferenceName::getIdentifier).map(Identifier::getValue).collect(toList());
             if (relNameParts.size() > 1) {
                 relationshipFieldsRewrite.put(
                         NodeRef.of(expression),
                         DereferenceExpression.from(
                                 QualifiedName.of(
                                         ImmutableList.<String>builder()
-                                                .add(relationshipCteGenerator.getNameMapping().get(String.join(".", relNameParts)))
+                                                .add(relationshipCteGenerator.getNameMapping().get(relNameParts.stream().map(DereferenceName::toString).collect(joining("."))))
                                                 .addAll(remainingParts).build())));
             }
         }
+    }
 
-        protected QualifiedName getQualifiedName(Expression expression)
-        {
+    private List<String> getBaseParts(List<DereferenceName> dereferenceNames)
+    {
+        ImmutableList.Builder<String> baseParts = ImmutableList.<String>builder()
+                .addAll(dereferenceNames
+                        .subList(0, dereferenceNames.size() - 1).stream()
+                        .map(DereferenceName::toString)
+                        .collect(toList()));
+        baseParts.add(Iterables.getLast(dereferenceNames).getIdentifier().getValue());
+        return baseParts.build();
+    }
+
+    static List<DereferenceName> toDereferenceNames(Expression expression)
+    {
+        ImmutableList.Builder<DereferenceName> builder = ImmutableList.builder();
+        while (expression instanceof DereferenceExpression || expression instanceof SubscriptExpression) {
+            builder.add(toDereferenceName(expression));
             if (expression instanceof DereferenceExpression) {
-                return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+                expression = ((DereferenceExpression) expression).getBase();
             }
-            if (expression instanceof Identifier) {
-                return QualifiedName.of(ImmutableList.of((Identifier) expression));
+            else {
+                SubscriptExpression subscriptExpression = (SubscriptExpression) expression;
+                expression = getNextPart(subscriptExpression);
+                if (expression.equals(subscriptExpression.getBase())) {
+                    // If the next part is same as its base, it means it's the last part.
+                    return builder.build();
+                }
             }
-            return null;
+        }
+
+        if (expression instanceof Identifier) {
+            builder.add(toDereferenceName(expression));
+        }
+
+        return builder.build();
+    }
+
+    private static Expression getNextPart(SubscriptExpression subscriptExpression)
+    {
+        Expression base = subscriptExpression.getBase();
+        if (base instanceof DereferenceExpression) {
+            return ((DereferenceExpression) base).getBase();
+        }
+        return base;
+    }
+
+    private static DereferenceName toDereferenceName(Expression expression)
+    {
+        if (expression instanceof DereferenceExpression || expression instanceof Identifier) {
+            return new DereferenceName(getField(expression));
+        }
+        else if (expression instanceof SubscriptExpression) {
+            SubscriptExpression subscriptExpression = (SubscriptExpression) expression;
+            return new DereferenceName(getField(subscriptExpression.getBase()), subscriptExpression.getIndex());
+        }
+        throw new IllegalArgumentException("Unsupported expression type: " + expression.getClass().getName());
+    }
+
+    private static Identifier getField(Expression expression)
+    {
+        if (expression instanceof DereferenceExpression) {
+            return ((DereferenceExpression) expression).getField();
+        }
+        else if (expression instanceof Identifier) {
+            return (Identifier) expression;
+        }
+        return null;
+    }
+
+    static class DereferenceName
+    {
+        public static DereferenceName dereferenceName(String name)
+        {
+            return new DereferenceName(new Identifier(name));
+        }
+
+        public static DereferenceName dereferenceName(String name, int index)
+        {
+            return new DereferenceName(new Identifier(name), new LongLiteral(String.valueOf(index)));
+        }
+
+        private final Identifier identifier;
+        private final Expression index;
+
+        private DereferenceName(Identifier identifier)
+        {
+            this(identifier, null);
+        }
+
+        private DereferenceName(Identifier identifier, Expression index)
+        {
+            this.identifier = identifier;
+            this.index = index;
+        }
+
+        public Identifier getIdentifier()
+        {
+            return identifier;
+        }
+
+        public Optional<Expression> getIndex()
+        {
+            return Optional.ofNullable(index);
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            DereferenceName that = (DereferenceName) obj;
+            return Objects.equals(identifier, that.identifier) &&
+                    Objects.equals(index, that.index);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(identifier, index);
+        }
+
+        @Override
+        public String toString()
+        {
+            if (index != null) {
+                return identifier + "[" + index + "]";
+            }
+            return identifier.toString();
         }
     }
 }

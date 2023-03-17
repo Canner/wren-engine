@@ -12,11 +12,10 @@
  * limitations under the License.
  */
 
-package io.graphmdl.analyzer;
+package io.graphmdl.sqlrewrite.analyzer;
 
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import org.testng.annotations.Test;

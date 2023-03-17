@@ -29,6 +29,7 @@ import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.LogicalBinaryExpression;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
@@ -44,6 +45,7 @@ import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.StringLiteral;
+import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.Values;
@@ -86,6 +88,11 @@ public final class QueryUtil
     public static SelectItem aliasedName(String name, String alias)
     {
         return new SingleColumn(identifier(name), identifier(alias));
+    }
+
+    public static SubscriptExpression subscriptExpression(Expression name, String index)
+    {
+        return new SubscriptExpression(name, new LongLiteral(index));
     }
 
     public static Select selectList(Expression... expressions)
