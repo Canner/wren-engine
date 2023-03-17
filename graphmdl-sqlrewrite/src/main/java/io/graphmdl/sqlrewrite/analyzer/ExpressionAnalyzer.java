@@ -43,6 +43,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.graphmdl.base.Utils.checkArgument;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
 import static io.graphmdl.sqlrewrite.analyzer.ExpressionAnalyzer.DereferenceName.dereferenceName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -181,21 +185,21 @@ public final class ExpressionAnalyzer
                     relationships.add(relationship);
 
                     relNameParts.add(dereferenceNames.get(index));
-                    String relNameStr = String.join(".", relNameParts.stream().map(DereferenceName::toString).collect(toList()));
+                    String relNameStr = relNameParts.stream().map(DereferenceName::toString).collect(joining("."));
                     relationshipCTENames.add(relNameStr);
 
                     if (!relationshipCteGenerator.getNameMapping().containsKey(relNameStr)) {
                         if (relNameParts.size() == 2) {
                             relationshipCteGenerator.register(
                                     getBaseParts(relNameParts),
-                                    List.of(RelationshipCteGenerator.RsItem.rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RelationshipCteGenerator.RsItem.Type.REVERSE_RS : RelationshipCteGenerator.RsItem.Type.RS)));
+                                    List.of(rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
                         }
                         else {
                             relationshipCteGenerator.register(
                                     getBaseParts(relNameParts),
                                     List.of(
-                                            RelationshipCteGenerator.RsItem.rsItem(String.join(".", relNameParts.stream().map(DereferenceName::toString).collect(toList()).subList(0, relNameParts.size() - 1)), RelationshipCteGenerator.RsItem.Type.CTE),
-                                            RelationshipCteGenerator.RsItem.rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RelationshipCteGenerator.RsItem.Type.REVERSE_RS : RelationshipCteGenerator.RsItem.Type.RS)));
+                                            rsItem(String.join(".", relNameParts.stream().map(DereferenceName::toString).collect(toList()).subList(0, relNameParts.size() - 1)), CTE),
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
                         }
 
                         if (dereferenceNames.get(index).getIndex().isPresent()) {
@@ -203,8 +207,8 @@ public final class ExpressionAnalyzer
                             relationshipCteGenerator.register(
                                     indexParts,
                                     List.of(
-                                            RelationshipCteGenerator.RsItem.rsItem(String.join(".", getBaseParts(relNameParts)), RelationshipCteGenerator.RsItem.Type.CTE, dereferenceNames.get(index).getIndex().get().toString()),
-                                            RelationshipCteGenerator.RsItem.rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RelationshipCteGenerator.RsItem.Type.REVERSE_RS : RelationshipCteGenerator.RsItem.Type.RS)));
+                                            rsItem(String.join(".", getBaseParts(relNameParts)), CTE, dereferenceNames.get(index).getIndex().get().toString()),
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
                         }
                     }
                 }
@@ -233,7 +237,11 @@ public final class ExpressionAnalyzer
 
     private List<String> getBaseParts(List<DereferenceName> dereferenceNames)
     {
-        ImmutableList.Builder<String> baseParts = ImmutableList.<String>builder().addAll(dereferenceNames.subList(0, dereferenceNames.size() - 1).stream().map(DereferenceName::toString).collect(toList()));
+        ImmutableList.Builder<String> baseParts = ImmutableList.<String>builder()
+                .addAll(dereferenceNames
+                        .subList(0, dereferenceNames.size() - 1).stream()
+                        .map(DereferenceName::toString)
+                        .collect(toList()));
         baseParts.add(Iterables.getLast(dereferenceNames).getIdentifier().getValue());
         return baseParts.build();
     }
@@ -241,22 +249,15 @@ public final class ExpressionAnalyzer
     static List<DereferenceName> toDereferenceNames(Expression expression)
     {
         ImmutableList.Builder<DereferenceName> builder = ImmutableList.builder();
-
-        if (expression instanceof Identifier) {
-            builder.add(toDereferenceName(expression));
-            return builder.build();
-        }
-
         while (expression instanceof DereferenceExpression || expression instanceof SubscriptExpression) {
-            DereferenceName dereferenceName = toDereferenceName(expression);
-            builder.add(dereferenceName);
+            builder.add(toDereferenceName(expression));
             if (expression instanceof DereferenceExpression) {
                 expression = ((DereferenceExpression) expression).getBase();
             }
             else {
-                Expression base = ((SubscriptExpression) expression).getBase();
-                expression = getNextPart((SubscriptExpression) expression);
-                if (expression.equals(base)) {
+                SubscriptExpression subscriptExpression = (SubscriptExpression) expression;
+                expression = getNextPart(subscriptExpression);
+                if (expression.equals(subscriptExpression.getBase())) {
                     // If the next part is same as its base, it means it's the last part.
                     return builder.build();
                 }
@@ -317,12 +318,12 @@ public final class ExpressionAnalyzer
         private final Identifier identifier;
         private final Expression index;
 
-        public DereferenceName(Identifier identifier)
+        private DereferenceName(Identifier identifier)
         {
             this(identifier, null);
         }
 
-        public DereferenceName(Identifier identifier, Expression index)
+        private DereferenceName(Identifier identifier, Expression index)
         {
             this.identifier = identifier;
             this.index = index;

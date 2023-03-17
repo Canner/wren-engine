@@ -30,6 +30,7 @@ public class Relationship
     private final JoinType joinType;
     private final String condition;
 
+    // for debugging internally
     private final boolean isReverse;
     private final List<SortKey> manySideSortKeys;
 
@@ -96,11 +97,6 @@ public class Relationship
         return condition;
     }
 
-    public boolean isReverse()
-    {
-        return isReverse;
-    }
-
     public List<SortKey> getManySideSortKeys()
     {
         return manySideSortKeys;
@@ -143,21 +139,16 @@ public class Relationship
 
         public static SortKey sortKey(String name, Ordering ordering)
         {
-            return new SortKey(name, ordering == Ordering.DESC);
+            return new SortKey(name, ordering);
         }
 
         @JsonCreator
         public SortKey(
                 @JsonProperty("name") String name,
-                @JsonProperty("ordering") String ordering)
+                @JsonProperty("ordering") Ordering ordering)
         {
-            this(name, Ordering.valueOf(ordering) == Ordering.DESC);
-        }
-
-        public SortKey(String name, boolean isDescending)
-        {
-            this.name = name;
-            this.isDescending = isDescending;
+            this.name = requireNonNull(name, "name is null");
+            this.isDescending = ordering == Ordering.DESC;
         }
 
         public String getName()

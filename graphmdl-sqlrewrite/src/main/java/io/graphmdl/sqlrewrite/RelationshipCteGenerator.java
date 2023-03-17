@@ -48,6 +48,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getLast;
+import static io.graphmdl.base.dto.Relationship.SortKey.Ordering.ASC;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.Utils.randomTableSuffix;
 import static io.trino.sql.QueryUtil.aliased;
@@ -109,9 +110,7 @@ public class RelationshipCteGenerator
 
         RelationshipCTE relationshipCTE = createRelationshipCTE(rsItems);
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(
-                rsItems.get(0).getIndex().isEmpty() ? getLast(nameParts) : nameParts.get(nameParts.size() - 1),
-                relationshipCTE);
+        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE);
         registeredCte.put(name, withQuery);
         nameMapping.put(name, withQuery.getName().getValue());
         relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRelationshipCTEJoinInfo(withQuery.getName().getValue(), relationshipCTE, nameParts.get(0)));
@@ -253,7 +252,7 @@ public class RelationshipCteGenerator
                         .map(column -> nameReference(ONE_REFERENCE, column))
                         .collect(toList());
         List<Relationship.SortKey> sortKeys = relationshipCTE.getRelationship().getManySideSortKeys().isEmpty() ?
-                List.of(new Relationship.SortKey(relationshipCTE.getManySide().getPrimaryKey(), false)) :
+                List.of(new Relationship.SortKey(relationshipCTE.getManySide().getPrimaryKey(), ASC)) :
                 relationshipCTE.getRelationship().getManySideSortKeys();
 
         SingleColumn relationshipField = new SingleColumn(
