@@ -223,6 +223,28 @@ public class TestRelationshipAccessing
                                 "  (Book a\n" +
                                 "LEFT JOIN ${Book.author.book.author} ON (a.authorId = ${Book.author.book.author}.userId))",
                         true},
+                {"SELECT a.author.book.author.name, a.author.book.name, a.author.name\n" +
+                        "FROM Book a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                "SELECT\n" +
+                                "  ${Book.author.book.author}.name\n" +
+                                ", ${Book.author.book}.name\n" +
+                                ", ${Book.author}.name\n" +
+                                "FROM\n" +
+                                "  (((Book a\n" +
+                                "LEFT JOIN ${Book.author} ON (a.authorId = ${Book.author}.userId))\n" +
+                                "LEFT JOIN ${Book.author.book} ON (a.bookId = ${Book.author.book}.bookId))\n" +
+                                "LEFT JOIN ${Book.author.book.author} ON (a.authorId = ${Book.author.book.author}.userId))",
+                        true},
+                // TODO: support join models
+                // {"SELECT author.book.author.name, book.name\n" +
+                //         "FROM Book JOIN People on Book.authorId = People.userId",
+                //         "SELECT 1",
+                //         true},
+                // {"SELECT a.author.book.author.name, b book.name\n" +
+                //         "FROM Book a JOIN People b on a.authorId = b.userId",
+                //         "SELECT 1",
+                //         true},
                 {"SELECT graphmdl.test.Book.author.book.author.name,\n" +
                         "test.Book.author.book.author.name,\n" +
                         "Book.author.book.author.name\n" +

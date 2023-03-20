@@ -215,7 +215,7 @@ public final class StatementAnalyzer
                     orderBy.getSortItems().stream()
                             .map(SortItem::getSortKey)
                             .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
-            node.getFrom().ifPresent(table -> analysis.addReplaceTableWithCTEs(NodeRef.of(table), relationshipCTENames));
+            node.getFrom().ifPresent(relation -> analysis.addReplaceTableWithCTEs(NodeRef.of(relation), relationshipCTENames));
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }

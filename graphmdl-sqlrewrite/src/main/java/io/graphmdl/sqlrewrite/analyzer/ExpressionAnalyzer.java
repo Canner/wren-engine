@@ -147,7 +147,6 @@ public final class ExpressionAnalyzer
                     .orElseThrow(() -> new IllegalArgumentException("relation type is empty"))
                     .getFields();
 
-            // e.g. select a.relationship.column from table a
             int index = 0;
             Optional<Field> optField = Optional.empty();
             for (int i = 0; i < dereferenceNames.size(); i++) {
