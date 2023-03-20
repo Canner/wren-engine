@@ -72,8 +72,7 @@ public class TestScopeRewrite
                                 List.of(
                                         column("itemId", GraphMDLTypes.INTEGER, null, true),
                                         column("price", GraphMDLTypes.INTEGER, null, true),
-                                        column("user", "People", "ItemPeople", true)
-                                ),
+                                        column("user", "People", "ItemPeople", true)),
                                 "orderId")))
                 .setRelationships(List.of(
                         relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId"),
