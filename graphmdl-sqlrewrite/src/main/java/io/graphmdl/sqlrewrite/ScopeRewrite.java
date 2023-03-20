@@ -14,6 +14,7 @@
 
 package io.graphmdl.sqlrewrite;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
@@ -25,18 +26,23 @@ import io.graphmdl.sqlrewrite.analyzer.Scope;
 import io.graphmdl.sqlrewrite.analyzer.ScopeAnalysis;
 import io.graphmdl.sqlrewrite.analyzer.ScopeAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.SubscriptExpression;
 
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.collect.Iterables.getLast;
+import static io.graphmdl.sqlrewrite.Utils.getNextPart;
 import static io.graphmdl.sqlrewrite.Utils.toQualifiedName;
 import static io.trino.sql.QueryUtil.identifier;
+import static java.lang.String.format;
 
 /**
  * Rewrite the AST to replace all identifiers or dereference expressions
@@ -95,7 +101,7 @@ public class ScopeRewrite
         protected Node visitDereferenceExpression(DereferenceExpression node, Scope context)
         {
             if (context.getRelationType().isPresent()) {
-                List<String> parts = DereferenceExpression.getQualifiedName(node).getParts();
+                List<String> parts = getParts(node);
                 for (int i = 0; i < parts.size(); i++) {
                     List<Field> field = context.getRelationType().get().resolveFields(QualifiedName.of(parts.subList(0, i + 1)));
                     if (field.size() == 1) {
@@ -103,12 +109,7 @@ public class ScopeRewrite
                             // The node is resolvable and has the relation prefix. No need to rewrite.
                             return node;
                         }
-                        List<String> newParts =
-                                ImmutableList.<String>builder()
-                                        .add(field.get(0).getRelationAlias().orElse(toQualifiedName(field.get(0).getModelName())).getSuffix())
-                                        .addAll(parts)
-                                        .build();
-                        return DereferenceExpression.from(QualifiedName.of(newParts));
+                        return insertHead(node, identifier(field.get(0).getRelationAlias().orElse(toQualifiedName(field.get(0).getModelName())).getSuffix()));
                     }
                     if (field.size() > 1) {
                         throw new IllegalArgumentException("Ambiguous column name: " + DereferenceExpression.getQualifiedName(node));
@@ -116,6 +117,32 @@ public class ScopeRewrite
                 }
             }
             return node;
+        }
+
+        private List<String> getParts(Expression expression)
+        {
+            if (expression instanceof Identifier) {
+                return ImmutableList.of(((Identifier) expression).getValue());
+            }
+            else if (expression instanceof DereferenceExpression) {
+                DereferenceExpression dereferenceExpression = (DereferenceExpression) expression;
+                List<String> baseQualifiedName = getParts(dereferenceExpression.getBase());
+                ImmutableList.Builder<String> builder = ImmutableList.builder();
+                builder.addAll(baseQualifiedName);
+                builder.add(dereferenceExpression.getField().getValue());
+                return builder.build();
+            }
+            else if (expression instanceof SubscriptExpression) {
+                SubscriptExpression subscriptExpression = (SubscriptExpression) expression;
+                List<String> baseQualifiedName = getParts(subscriptExpression.getBase());
+                if (baseQualifiedName != null) {
+                    ImmutableList.Builder<String> builder = ImmutableList.builder();
+                    builder.addAll(baseQualifiedName.subList(0, baseQualifiedName.size() - 1));
+                    builder.add(format("%s[%s]", getLast(baseQualifiedName), subscriptExpression.getIndex().toString()));
+                    return builder.build();
+                }
+            }
+            return ImmutableList.of();
         }
 
         private Scope analyzeFrom(Relation node, Scope context)
@@ -157,5 +184,47 @@ public class ScopeRewrite
                     .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
                     .build();
         }
+    }
+
+    @VisibleForTesting
+    public static Expression insertHead(Expression source, Identifier head)
+    {
+        ImmutableList.Builder<Expression> builder = ImmutableList.builder();
+
+        Expression node = source;
+        while (node instanceof DereferenceExpression || node instanceof SubscriptExpression) {
+            if (node instanceof DereferenceExpression) {
+                DereferenceExpression dereferenceExpression = (DereferenceExpression) node;
+                builder.add(dereferenceExpression.getField());
+                node = dereferenceExpression.getBase();
+            }
+            else {
+                SubscriptExpression subscriptExpression = (SubscriptExpression) node;
+                Identifier base;
+                if (subscriptExpression.getBase() instanceof Identifier) {
+                    base = (Identifier) subscriptExpression.getBase();
+                }
+                else {
+                    base = ((DereferenceExpression) subscriptExpression.getBase()).getField();
+                }
+                builder.add(new SubscriptExpression(base, subscriptExpression.getIndex()));
+                node = getNextPart(subscriptExpression);
+            }
+        }
+
+        if (node instanceof Identifier) {
+            builder.add(node);
+        }
+
+        return builder.add(head).build().reverse().stream().reduce((a, b) -> {
+            if (b instanceof SubscriptExpression) {
+                SubscriptExpression subscriptExpression = (SubscriptExpression) b;
+                return new SubscriptExpression(new DereferenceExpression(a, (Identifier) subscriptExpression.getBase()), ((SubscriptExpression) b).getIndex());
+            }
+            else if (b instanceof Identifier) {
+                return new DereferenceExpression(a, (Identifier) b);
+            }
+            throw new IllegalArgumentException(format("Unexpected expression: %s", b));
+        }).orElseThrow(() -> new IllegalArgumentException(format("Unexpected expression: %s", source)));
     }
 }

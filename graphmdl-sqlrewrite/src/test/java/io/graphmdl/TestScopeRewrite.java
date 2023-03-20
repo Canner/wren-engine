@@ -18,10 +18,16 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLTypes;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.sqlrewrite.ScopeRewrite;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.Query;
+import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
 import org.assertj.core.api.Assertions;
 import org.testng.annotations.DataProvider;
@@ -58,9 +64,20 @@ public class TestScopeRewrite
                                 List.of(
                                         column("userId", GraphMDLTypes.INTEGER, null, true),
                                         column("name", GraphMDLTypes.VARCHAR, null, true),
-                                        column("book", "Book", "BookPeople", true)),
-                                "userId")))
-                .setRelationships(List.of(relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId")))
+                                        column("book", "Book", "BookPeople", true),
+                                        column("items", "Item", "ItemPeople", true)),
+                                "userId"),
+                        Model.model("Item",
+                                "select * from (values (1, 'item1', 1), (2, 'item2', 2), (3, 'item3', 1), (4, 'item4', 3) Item(itemId, name, userId)",
+                                List.of(
+                                        column("itemId", GraphMDLTypes.INTEGER, null, true),
+                                        column("price", GraphMDLTypes.INTEGER, null, true),
+                                        column("user", "People", "ItemPeople", true)
+                                ),
+                                "orderId")))
+                .setRelationships(List.of(
+                        relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId"),
+                        relationship("ItemPeople", List.of("Item", "People"), JoinType.MANY_TO_ONE, "Item.userId  = People.userId")))
                 .build());
     }
 
@@ -76,6 +93,7 @@ public class TestScopeRewrite
                 {"SELECT author.book.name FROM Book b", "SELECT b.author.book.name FROM Book b"},
                 {"SELECT name, count(*) FROM Book b GROUP BY name", "SELECT b.name, count(*) FROM Book b GROUP BY b.name"},
                 {"SELECT b.name, p.name, book FROM Book b JOIN People p ON authorId = userId", "SELECT b.name, p.name, p.book FROM Book b JOIN People p ON b.authorId = p.userId"},
+                {"SELECT user.items[1].price FROM Item", "SELECT Item.user.items[1].price FROM Item"}
         };
     }
 
@@ -121,5 +139,28 @@ public class TestScopeRewrite
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         return SqlFormatter.formatSql(SCOPE_REWRITE.rewrite(statement, graphMDL));
+    }
+
+    @DataProvider
+    public Object[][] insertHead()
+    {
+        return new Object[][] {
+                {"author.book.name", "Book.author.book.name"},
+                {"author.books[1].name", "Book.author.books[1].name"},
+        };
+    }
+
+    @Test(dataProvider = "insertHead")
+    public void testInsertHead(String source, String expected)
+    {
+        Expression expression = getSelectItem(String.format("SELECT %s FROM Book", source));
+        Expression node = ScopeRewrite.insertHead(expression, new Identifier("Book"));
+        assertThat(node.toString()).isEqualTo(expected);
+    }
+
+    private Expression getSelectItem(String sql)
+    {
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        return ((SingleColumn) ((QuerySpecification) ((Query) statement).getQueryBody()).getSelect().getSelectItems().get(0)).getExpression();
     }
 }
