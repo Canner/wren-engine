@@ -47,6 +47,7 @@ import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestRelationshipAccessing
@@ -405,6 +406,48 @@ public class TestRelationshipAccessing
                     .describedAs(format("actual sql: %s is invalid", actualSql))
                     .isThrownBy(() -> query(actualSql));
         }
+    }
+
+    @Test
+    public void testNotFoundRelationAliased()
+    {
+        String original = "select b.book.author.book.name from Book a";
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToOneGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, generator);
+
+        Node rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
+        }
+
+        String expected = "WITH\n" +
+                "  Book AS (\n" +
+                "   SELECT\n" +
+                "     bookId\n" +
+                "   , name\n" +
+                "   , 'relationship<BookPeople>' author\n" +
+                "   , authorId\n" +
+                "   FROM\n" +
+                "     (\n" +
+                "      SELECT *\n" +
+                "      FROM\n" +
+                "        (\n" +
+                " VALUES \n" +
+                "           ROW (1, 'book1', 1)\n" +
+                "         , ROW (2, 'book2', 2)\n" +
+                "         , ROW (3, 'book3', 3)\n" +
+                "      )  Book (bookId, name, authorId)\n" +
+                "   ) \n" +
+                ") \n" +
+                "SELECT b.book.author.book.name\n" +
+                "FROM\n" +
+                "  Book a";
+        Statement expectedResult = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
+        @Language("SQL") String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        assertThatThrownBy(() -> query(actualSql))
+                .hasMessageContaining("Database \"B\" not found;");
     }
 
     @DataProvider
