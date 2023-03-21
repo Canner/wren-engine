@@ -22,6 +22,7 @@ import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
+import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.WithQuery;
@@ -43,7 +44,7 @@ public class Analysis
     private final RelationshipCteGenerator relationshipCteGenerator;
     private final Map<NodeRef<Expression>, Expression> relationshipFields = new HashMap<>();
     private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
-    private final Map<NodeRef<Table>, Set<String>> replaceTableWithCTEs = new HashMap<>();
+    private final Map<NodeRef<Relation>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
@@ -95,12 +96,12 @@ public class Analysis
         return Map.copyOf(relationshipFields);
     }
 
-    public void addReplaceTableWithCTEs(NodeRef<Table> tableNodeRef, Set<String> relationshipCTENames)
+    public void addReplaceTableWithCTEs(NodeRef<Relation> relationNodeRef, Set<String> relationshipCTENames)
     {
-        this.replaceTableWithCTEs.put(tableNodeRef, relationshipCTENames);
+        this.replaceTableWithCTEs.put(relationNodeRef, relationshipCTENames);
     }
 
-    public Map<NodeRef<Table>, Set<String>> getReplaceTableWithCTEs()
+    public Map<NodeRef<Relation>, Set<String>> getReplaceTableWithCTEs()
     {
         return Map.copyOf(replaceTableWithCTEs);
     }

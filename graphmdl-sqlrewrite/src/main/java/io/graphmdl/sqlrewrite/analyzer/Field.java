@@ -126,6 +126,16 @@ public class Field
 
         public Builder() {}
 
+        public Builder like(Field field)
+        {
+            this.relationAlias = field.relationAlias;
+            this.modelName = field.modelName;
+            this.columnName = field.columnName;
+            this.name = field.name;
+            this.isRelationship = field.isRelationship;
+            return this;
+        }
+
         public Builder relationAlias(Optional<QualifiedName> relationAlias)
         {
             this.relationAlias = relationAlias;

@@ -99,20 +99,19 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
 
-        // TODO: fix aliased relation scope
-        // try (Connection connection = createConnection()) {
-        //     PreparedStatement stmt = connection.prepareStatement("select c.custkey, array_length(orders) as agg from Customer c limit 100");
-        //     ResultSet resultSet = stmt.executeQuery();
-        //     resultSet.next();
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-        //     assertThatNoException().isThrownBy(() -> resultSet.getString("agg"));
-        //     int count = 1;
-        //
-        //     while (resultSet.next()) {
-        //         count++;
-        //     }
-        //     assertThat(count).isEqualTo(100);
-        // }
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select c.custkey, array_length(orders) as agg from Customer c limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("agg"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
 
         // TODO: fix amibiguous column name
         // try (Connection connection = createConnection()) {

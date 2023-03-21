@@ -147,8 +147,6 @@ public final class ExpressionAnalyzer
                     .orElseThrow(() -> new IllegalArgumentException("relation type is empty"))
                     .getFields();
 
-            // TODO: we need to support alias here
-            // e.g. select a.relationship.column from table a
             int index = 0;
             Optional<Field> optField = Optional.empty();
             for (int i = 0; i < dereferenceNames.size(); i++) {
@@ -171,11 +169,16 @@ public final class ExpressionAnalyzer
             for (; index < dereferenceNames.size(); index++) {
                 checkArgument(graphMDL.getModel(modelName).isPresent(), modelName + " model not found");
                 String partName = dereferenceNames.get(index).getIdentifier().getValue();
-                // TODO: support colum name with relation prefix
-                Column column = graphMDL.getModel(modelName).get().getColumns().stream()
+                Optional<Column> columnOptional = graphMDL.getModel(modelName).get().getColumns().stream()
                         .filter(col -> col.getName().equals(partName))
-                        .findAny()
-                        .orElseThrow(() -> new IllegalArgumentException(partName + " column not found"));
+                        .findAny();
+
+                if (columnOptional.isEmpty()) {
+                    continue;
+                }
+
+                Column column = columnOptional.get();
+
                 if (column.getRelationship().isPresent()) {
                     // if column is a relationship, it's type name is model name
                     modelName = column.getType();

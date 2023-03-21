@@ -47,6 +47,7 @@ import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestRelationshipAccessing
@@ -215,15 +216,36 @@ public class TestRelationshipAccessing
     public Object[][] oneToOneRelationshipAccessCases()
     {
         return new Object[][] {
-                // TODO: fix relationship columns with table alias prefix (e.g. a.author.book.author.name)
-//                {"SELECT a.author.book.author.name\n" +
-//                        "FROM Book a",
-//                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
-//                                "SELECT ${Book.author.book.author}.name\n" +
-//                                "FROM\n" +
-//                                "  (Book\n" +
-//                                "LEFT JOIN ${Book.author.book.author} ON (Book.authorId = ${Book.author.book.author}.userId))",
-//                        true},
+                {"SELECT a.author.book.author.name\n" +
+                        "FROM Book a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                "SELECT ${Book.author.book.author}.name\n" +
+                                "FROM\n" +
+                                "  (Book a\n" +
+                                "LEFT JOIN ${Book.author.book.author} ON (a.authorId = ${Book.author.book.author}.userId))",
+                        true},
+                {"SELECT a.author.book.author.name, a.author.book.name, a.author.name\n" +
+                        "FROM Book a",
+                        EXPECTED_AUTHOR_BOOK_AUTHOR_WITH_QUERIES +
+                                "SELECT\n" +
+                                "  ${Book.author.book.author}.name\n" +
+                                ", ${Book.author.book}.name\n" +
+                                ", ${Book.author}.name\n" +
+                                "FROM\n" +
+                                "  (((Book a\n" +
+                                "LEFT JOIN ${Book.author} ON (a.authorId = ${Book.author}.userId))\n" +
+                                "LEFT JOIN ${Book.author.book} ON (a.bookId = ${Book.author.book}.bookId))\n" +
+                                "LEFT JOIN ${Book.author.book.author} ON (a.authorId = ${Book.author.book.author}.userId))",
+                        true},
+                // TODO: support join models
+                // {"SELECT author.book.author.name, book.name\n" +
+                //         "FROM Book JOIN People on Book.authorId = People.userId",
+                //         "SELECT 1",
+                //         true},
+                // {"SELECT a.author.book.author.name, b book.name\n" +
+                //         "FROM Book a JOIN People b on a.authorId = b.userId",
+                //         "SELECT 1",
+                //         true},
                 {"SELECT graphmdl.test.Book.author.book.author.name,\n" +
                         "test.Book.author.book.author.name,\n" +
                         "Book.author.book.author.name\n" +
@@ -384,6 +406,48 @@ public class TestRelationshipAccessing
                     .describedAs(format("actual sql: %s is invalid", actualSql))
                     .isThrownBy(() -> query(actualSql));
         }
+    }
+
+    @Test
+    public void testNotFoundRelationAliased()
+    {
+        String original = "select b.book.author.book.name from Book a";
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToOneGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, generator);
+
+        Node rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
+        }
+
+        String expected = "WITH\n" +
+                "  Book AS (\n" +
+                "   SELECT\n" +
+                "     bookId\n" +
+                "   , name\n" +
+                "   , 'relationship<BookPeople>' author\n" +
+                "   , authorId\n" +
+                "   FROM\n" +
+                "     (\n" +
+                "      SELECT *\n" +
+                "      FROM\n" +
+                "        (\n" +
+                " VALUES \n" +
+                "           ROW (1, 'book1', 1)\n" +
+                "         , ROW (2, 'book2', 2)\n" +
+                "         , ROW (3, 'book3', 3)\n" +
+                "      )  Book (bookId, name, authorId)\n" +
+                "   ) \n" +
+                ") \n" +
+                "SELECT b.book.author.book.name\n" +
+                "FROM\n" +
+                "  Book a";
+        Statement expectedResult = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
+        @Language("SQL") String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        assertThatThrownBy(() -> query(actualSql))
+                .hasMessageContaining("Database \"B\" not found;");
     }
 
     @DataProvider
@@ -617,8 +681,42 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (People\n" +
                                 "LEFT JOIN ${People.sorted_books[1]} ON (People.userId = ${People.sorted_books[1]}.authorId))", false},
-                // TODO: support relation with alias
-                // {"SELECT array_length(books) FROM People p", "Select 1", false},
+                {"SELECT cardinality(books) FROM People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, sorted_books, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , one.sorted_books sorted_books\n" +
+                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                "SELECT cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${People.books} ON (p.userId = ${People.books}.userId))", false},
+                {"SELECT p.name, cardinality(books) FROM People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, sorted_books, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     one.userId userId\n" +
+                                "   , one.name name\n" +
+                                "   , one.sorted_books sorted_books\n" +
+                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "   FROM\n" +
+                                "     (People one\n" +
+                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", cardinality(${People.books}.books)\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${People.books} ON (p.userId = ${People.books}.userId))", false},
         };
     }
 

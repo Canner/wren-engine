@@ -133,12 +133,12 @@ public class RelationshipCteGenerator
             if (baseModel.equals(relationshipCTE.getTarget().getName())) {
                 // The base model is same as the output side of `relationshipCTE`.
                 return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
-                        buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()));
+                        buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()), baseModel);
             }
             else {
                 // The base model is same as the source side of `relationshipCTE`.
                 return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
-                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()));
+                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()), baseModel);
             }
         }
 
@@ -149,12 +149,12 @@ public class RelationshipCteGenerator
                 return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                         // Because one-to-many cte only output the many-side result in the relationship fields, the cte is the one-side object.
                         // Use the many-side's join key to do 1-1 mapping with the relationship CTE (one-side object).
-                        buildCondition(baseModel, relationshipCTE.getTarget().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()));
+                        buildCondition(baseModel, relationshipCTE.getTarget().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()), baseModel);
             }
             else {
                 // The base model is the one side of `relationshipCTE`.
                 return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
-                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()));
+                        buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getSource().getJoinKey()), baseModel);
             }
         }
 
@@ -162,13 +162,13 @@ public class RelationshipCteGenerator
             // The base model is same as the target side of `relationshipCTE`.
             return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                     // Use the primary key to do 1-1 mapping with the relationship CTE.
-                    buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()));
+                    buildCondition(baseModel, relationshipCTE.getTarget().getPrimaryKey(), rsName, relationshipCTE.getTarget().getPrimaryKey()), baseModel);
         }
         else {
             // The base model is same as the source side of `relationshipCTE`.
             return new RelationshipCTEJoinInfo(relationshipCTE.getName(),
                     // Use the join key to do 1-1 mapping with the relationship CTE.
-                    buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()));
+                    buildCondition(baseModel, relationshipCTE.getSource().getJoinKey(), rsName, relationshipCTE.getTarget().getJoinKey()), baseModel);
         }
     }
 
@@ -529,11 +529,13 @@ public class RelationshipCteGenerator
     {
         private final String cteName;
         private final JoinCriteria condition;
+        private final String baseModelName;
 
-        public RelationshipCTEJoinInfo(String cteName, JoinCriteria condition)
+        public RelationshipCTEJoinInfo(String cteName, JoinCriteria condition, String baseModelName)
         {
             this.cteName = cteName;
             this.condition = condition;
+            this.baseModelName = baseModelName;
         }
 
         public String getCteName()
@@ -544,6 +546,11 @@ public class RelationshipCteGenerator
         public JoinCriteria getCondition()
         {
             return condition;
+        }
+
+        public String getBaseModelName()
+        {
+            return baseModelName;
         }
     }
 }

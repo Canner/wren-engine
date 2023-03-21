@@ -21,9 +21,12 @@ import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.QueryUtil;
+import io.trino.sql.tree.AliasedRelation;
+import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -40,7 +43,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static io.trino.sql.QueryUtil.equal;
+import static io.trino.sql.QueryUtil.joinOn;
 import static io.trino.sql.QueryUtil.table;
+import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -178,6 +184,33 @@ public class GraphMDLSqlRewrite
         }
 
         @Override
+        protected Node visitAliasedRelation(AliasedRelation node, Void context)
+        {
+            Relation result;
+
+            // rewrite the fields in QueryBody
+            if (node.getLocation().isPresent()) {
+                result = new AliasedRelation(
+                        node.getLocation().get(),
+                        visitAndCast(node.getRelation()),
+                        node.getAlias(),
+                        node.getColumnNames());
+            }
+            else {
+                result = new AliasedRelation(
+                        visitAndCast(node.getRelation()),
+                        node.getAlias(),
+                        node.getColumnNames());
+            }
+
+            Set<String> relationshipCTENames = analysis.getReplaceTableWithCTEs().getOrDefault(NodeRef.of(node), Set.of());
+            if (relationshipCTENames.size() > 0) {
+                result = applyRelationshipRule(result, relationshipCTENames);
+            }
+            return result;
+        }
+
+        @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
             return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
@@ -195,7 +228,7 @@ public class GraphMDLSqlRewrite
             return new Table(QualifiedName.of(table.getName().getSuffix()));
         }
 
-        private Relation applyRelationshipRule(Table table, Set<String> relationshipCTENames)
+        private Relation applyRelationshipRule(Relation table, Set<String> relationshipCTENames)
         {
             Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipInfoMapping = analysis.getRelationshipInfoMapping();
             Set<String> requiredRsCteName = analysis.getRelationshipFields().values().stream()
@@ -228,10 +261,31 @@ public class GraphMDLSqlRewrite
 
         private static Relation leftJoin(Relation left, List<RelationshipCteGenerator.RelationshipCTEJoinInfo> relationshipCTEJoinInfos)
         {
+            Identifier aliasedName = null;
+            if (left instanceof AliasedRelation) {
+                aliasedName = ((AliasedRelation) left).getAlias();
+            }
+
             for (RelationshipCteGenerator.RelationshipCTEJoinInfo info : relationshipCTEJoinInfos) {
-                left = QueryUtil.leftJoin(left, table(QualifiedName.of(info.getCteName())), info.getCondition());
+                left = QueryUtil.leftJoin(left, table(QualifiedName.of(info.getCteName())), replaceIfAliased(info.getCondition(), info.getBaseModelName(), aliasedName));
             }
             return left;
+        }
+
+        private static JoinCriteria replaceIfAliased(JoinCriteria original, String baseModelName, Identifier aliasedName)
+        {
+            if (aliasedName == null) {
+                return original;
+            }
+
+            ComparisonExpression comparisonExpression = (ComparisonExpression) original.getNodes().get(0);
+            DereferenceExpression left = (DereferenceExpression) comparisonExpression.getLeft();
+            Optional<QualifiedName> originalTableName = requireNonNull(getQualifiedName(left)).getPrefix();
+
+            if (originalTableName.isPresent() && originalTableName.get().getSuffix().equals(baseModelName)) {
+                left = new DereferenceExpression(aliasedName, left.getField());
+            }
+            return joinOn(equal(left, comparisonExpression.getRight()));
         }
     }
 }
