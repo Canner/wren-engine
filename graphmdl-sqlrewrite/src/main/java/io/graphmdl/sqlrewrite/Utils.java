@@ -28,6 +28,7 @@ import io.trino.sql.tree.Statement;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -81,7 +82,7 @@ public final class Utils
         requireNonNull(metric, "metric is null");
         String selectItems = Stream.concat(metric.getDimension().stream(), metric.getMeasure().stream())
                 .map(Column::getSqlExpression).collect(joining(","));
-        String groupByItems = metric.getDimension().stream().map(Column::getName).collect(joining(","));
+        String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
         return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseModel(), groupByItems);
     }
 
