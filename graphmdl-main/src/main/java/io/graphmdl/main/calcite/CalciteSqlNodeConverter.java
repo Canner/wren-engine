@@ -126,9 +126,11 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
 import static io.graphmdl.base.type.StandardTypes.DATE;
+import static io.graphmdl.base.type.StandardTypes.REAL;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static java.util.stream.Collectors.toList;
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 import static org.apache.calcite.sql.SqlIdentifier.STAR;
@@ -326,7 +328,9 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitGenericLiteral(GenericLiteral node, ConvertContext context)
         {
-            switch (node.getType()) {
+            switch (node.getType().toLowerCase(ENGLISH)) {
+                case REAL:
+                    return SqlLiteral.createExactNumeric(node.getValue(), POS);
                 case DATE:
                     return SqlLiteral.createDate(new DateString(node.getValue()), POS);
                 case BOOLEAN:
@@ -380,7 +384,7 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitDoubleLiteral(DoubleLiteral node, ConvertContext context)
         {
-            return super.visitDoubleLiteral(node, context);
+            return SqlLiteral.createExactNumeric(String.valueOf(node.getValue()), toCalcitePos(node.getLocation()));
         }
 
         @Override
