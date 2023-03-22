@@ -65,10 +65,11 @@ public class TestMetricSqlRewrite
                     ", Collection AS (\n" +
                     "   SELECT\n" +
                     "     author\n" +
+                    "   , Album.name album_name\n" +
                     "   , sum(Album.price) price\n" +
                     "   FROM\n" +
                     "     Album\n" +
-                    "   GROUP BY author\n" +
+                    "   GROUP BY 1, 2\n" +
                     ") \n";
     private final GraphMDL graphMDL;
 
@@ -90,7 +91,9 @@ public class TestMetricSqlRewrite
                         metric(
                                 "Collection",
                                 "Album",
-                                List.of(column("author", VARCHAR, null, true)),
+                                List.of(
+                                        column("author", VARCHAR, null, true),
+                                        column("album_name", VARCHAR, null, true, "Album.name")),
                                 List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)")))))
                 .build());
     }

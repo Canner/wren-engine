@@ -42,7 +42,7 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        handle = Jdbi.open("jdbc:h2:mem:test" + System.nanoTime() + ThreadLocalRandom.current().nextLong());
+        handle = Jdbi.open("jdbc:h2:mem:test" + System.nanoTime() + ThreadLocalRandom.current().nextLong() + ";MODE=PostgreSQL");
         prepareData();
     }
 
