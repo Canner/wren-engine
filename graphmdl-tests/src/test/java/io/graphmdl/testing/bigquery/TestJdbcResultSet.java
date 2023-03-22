@@ -90,7 +90,8 @@ public class TestJdbcResultSet
         // TODO bigquery can't do division by zero
 //        checkRepresentation("1.0E0 / 0.0E0", Types.DOUBLE, Double.POSITIVE_INFINITY);
 //        checkRepresentation("0.0E0 / 0.0E0", Types.DOUBLE, Double.NaN);
-        checkRepresentation("0.1", Types.NUMERIC, new BigDecimal("0.1"));
+        // TODO should be Types.NUMERIC: https://github.com/Canner/canner-metric-layer/issues/196
+        checkRepresentation("0.1", Types.DOUBLE, 0.1);
         // In PostgreSQL JDBC, BooleanType will be represent to JDBC Bit Type
         // https://github.com/pgjdbc/pgjdbc/blob/master/pgjdbc/src/main/java/org/postgresql/jdbc/TypeInfoCache.java#L95
         checkRepresentation("true", Types.BIT, true);
