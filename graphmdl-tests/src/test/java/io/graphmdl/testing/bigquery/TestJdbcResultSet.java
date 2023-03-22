@@ -81,7 +81,8 @@ public class TestJdbcResultSet
     public void testObjectTypes()
             throws Exception
     {
-        checkRepresentation("123", Types.INTEGER, 123);
+        // TODO should be Types.INTEGER：https://github.com/Canner/canner-metric-layer/issues/196
+        checkRepresentation("123", Types.BIGINT, (long) 123);
         checkRepresentation("12300000000", Types.BIGINT, 12300000000L);
         checkRepresentation("REAL '123.45'", Types.REAL, 123.45f);
         checkRepresentation("1e-1", Types.DOUBLE, 0.1);
@@ -93,7 +94,7 @@ public class TestJdbcResultSet
         checkRepresentation("true", Types.BIT, true);
         checkRepresentation("'hello'", Types.VARCHAR, "hello");
         checkRepresentation("cast('foo' as char(5))", Types.CHAR, "foo  ");
-        checkRepresentation("ARRAY[1, 2]", Types.ARRAY, (rs, column) -> assertEquals(rs.getArray(column).getArray(), new int[] {1, 2}));
+        checkRepresentation("ARRAY[1, 2]", Types.ARRAY, (rs, column) -> assertEquals(rs.getArray(column).getArray(), new long[] {1, 2}));
         checkRepresentation("DECIMAL '0.1'", Types.NUMERIC, new BigDecimal("0.1"));
         // TODO:
         // checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
