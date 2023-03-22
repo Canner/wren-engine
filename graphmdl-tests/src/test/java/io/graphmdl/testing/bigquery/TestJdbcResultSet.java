@@ -77,8 +77,7 @@ public class TestJdbcResultSet
         }
     }
 
-    // TODO: check the type mapping
-    @Test(enabled = false)
+    @Test
     public void testObjectTypes()
             throws Exception
     {
