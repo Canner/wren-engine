@@ -73,7 +73,7 @@ public class Scope
 
     public static final class Builder
     {
-        private Optional<Scope> parent;
+        private Optional<Scope> parent = Optional.empty();
         private RelationType relationType;
         private boolean isTableScope;
         private final Map<String, WithQuery> namedQueries = new HashMap<>();
