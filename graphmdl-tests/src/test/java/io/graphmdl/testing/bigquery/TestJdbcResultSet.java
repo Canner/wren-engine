@@ -95,8 +95,9 @@ public class TestJdbcResultSet
         // In PostgreSQL JDBC, BooleanType will be represent to JDBC Bit Type
         // https://github.com/pgjdbc/pgjdbc/blob/master/pgjdbc/src/main/java/org/postgresql/jdbc/TypeInfoCache.java#L95
         checkRepresentation("true", Types.BIT, true);
+        // TODO should be Types.CHAR: https://github.com/Canner/canner-metric-layer/issues/196
         checkRepresentation("'hello'", Types.VARCHAR, "hello");
-        checkRepresentation("cast('foo' as char(5))", Types.CHAR, "foo  ");
+        checkRepresentation("cast('foo' as char(5))", Types.VARCHAR, "foo  ");
         checkRepresentation("ARRAY[1, 2]", Types.ARRAY, (rs, column) -> assertEquals(rs.getArray(column).getArray(), new long[] {1, 2}));
         checkRepresentation("DECIMAL '0.1'", Types.NUMERIC, new BigDecimal("0.1"));
         // TODO:

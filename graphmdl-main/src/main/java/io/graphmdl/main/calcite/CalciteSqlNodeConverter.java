@@ -692,7 +692,12 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitGenericDataType(GenericDataType node, ConvertContext context)
         {
             SqlTypeName typeName = toCalciteType(node.getName().toString());
-            if (typeName.equals(SqlTypeName.DECIMAL)) {
+            if (typeName.equals(SqlTypeName.CHAR)) {
+                return new SqlDataTypeSpec(
+                        new SqlBasicTypeNameSpec(typeName, handleNumericParameter(node.getArguments().get(0)), ZERO),
+                        toCalcitePos(node.getLocation()));
+            }
+            else if (typeName.equals(SqlTypeName.DECIMAL)) {
                 List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
                 checkArgument(params.size() == 2, format("decimal type should have 2 parameters but %s", params.size()));
                 return new SqlDataTypeSpec(
