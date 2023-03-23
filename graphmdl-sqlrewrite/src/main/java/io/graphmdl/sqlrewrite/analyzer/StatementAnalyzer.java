@@ -149,7 +149,7 @@ public final class StatementAnalyzer
                     // return empty scope here.
                     return Scope.builder()
                             .parent(scope)
-                            .relationType(Optional.of(new RelationType(List.of())))
+                            .relationType(new RelationType(List.of()))
                             .isTableScope(true)
                             .build();
                 }
@@ -167,17 +167,17 @@ public final class StatementAnalyzer
                         .stream()
                         .map(column ->
                                 Field.builder()
-                                        .relationAlias(Optional.of(node.getName()))
+                                        .relationAlias(node.getName())
                                         .modelName(tableName)
                                         .columnName(column.getName())
-                                        .name(Optional.of(column.getName()))
+                                        .name(column.getName())
                                         .isRelationship(column.getRelationship().isPresent())
                                         .build())
                         .collect(toImmutableList());
             }
             return Scope.builder()
                     .parent(scope)
-                    .relationType(Optional.of(new RelationType(modelFields)))
+                    .relationType(new RelationType(modelFields))
                     .isTableScope(true)
                     .build();
         }
@@ -190,7 +190,7 @@ public final class StatementAnalyzer
 
             Scope queryScope = Scope.builder()
                     .parent(withScope)
-                    .relationType(queryBodyScope.getRelationType())
+                    .relationType(queryBodyScope.getRelationType().orElse(null))
                     .build();
 
             return queryScope;
@@ -261,12 +261,12 @@ public final class StatementAnalyzer
             checkArgument(relationScope.getRelationType().isPresent(), "relationType is missing");
             List<Field> fieldsWithRelationAlias = relationScope.getRelationType().get().getFields().stream()
                     .map(field -> Field.builder().like(field)
-                            .relationAlias(Optional.of(QualifiedName.of(relation.getAlias().getValue()))).build())
+                            .relationAlias(QualifiedName.of(relation.getAlias().getValue())).build())
                     .collect(toImmutableList());
 
             return Scope.builder()
                     .parent(scope)
-                    .relationType(Optional.of(new RelationType(fieldsWithRelationAlias)))
+                    .relationType(new RelationType(fieldsWithRelationAlias))
                     .isTableScope(true)
                     .build();
         }

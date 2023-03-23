@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Column
@@ -29,8 +28,8 @@ public class Column
     private final String type;
 
     private final boolean notNull;
-    private final Optional<String> relationship;
-    private final Optional<String> expression;
+    private final String relationship;
+    private final String expression;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
@@ -57,9 +56,9 @@ public class Column
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
-        this.relationship = Optional.ofNullable(relationship);
+        this.relationship = relationship;
         this.notNull = notNull;
-        this.expression = Optional.ofNullable(expression);
+        this.expression = expression;
     }
 
     public String getName()
@@ -74,7 +73,7 @@ public class Column
 
     public Optional<String> getRelationship()
     {
-        return relationship;
+        return Optional.ofNullable(relationship);
     }
 
     public boolean isNotNull()
@@ -84,20 +83,20 @@ public class Column
 
     public Optional<String> getExpression()
     {
-        return expression;
+        return Optional.ofNullable(expression);
     }
 
     public String getSqlExpression()
     {
-        if (relationship.isPresent()) {
-            return format("'relationship<%s>' as %s", relationship.get(), name);
+        if (getRelationship().isPresent()) {
+            return String.format("'relationship<%s>' as %s", relationship, name);
         }
 
-        if (expression.isEmpty()) {
+        if (getExpression().isEmpty()) {
             return getName();
         }
 
-        return format("%s as %s", expression.get(), name);
+        return String.format("%s as %s", expression, name);
     }
 
     @Override
