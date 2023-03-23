@@ -37,16 +37,16 @@ public class Field
     private final boolean isRelationship;
 
     private Field(
-            Optional<QualifiedName> relationAlias,
+            QualifiedName relationAlias,
             CatalogSchemaTableName modelName,
             String columnName,
-            Optional<String> name,
+            String name,
             boolean isRelationship)
     {
-        this.relationAlias = requireNonNull(relationAlias, "relationAlias is null");
+        this.relationAlias = Optional.ofNullable(relationAlias);
         this.modelName = requireNonNull(modelName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
-        this.name = requireNonNull(name, "name is null");
+        this.name = Optional.ofNullable(name);
         this.isRelationship = isRelationship;
     }
 
@@ -118,25 +118,25 @@ public class Field
 
     public static class Builder
     {
-        private Optional<QualifiedName> relationAlias = Optional.empty();
+        private QualifiedName relationAlias;
         private CatalogSchemaTableName modelName;
         private String columnName;
-        private Optional<String> name = Optional.empty();
+        private String name;
         private boolean isRelationship;
 
         public Builder() {}
 
         public Builder like(Field field)
         {
-            this.relationAlias = field.relationAlias;
+            this.relationAlias = field.relationAlias.orElse(null);
             this.modelName = field.modelName;
             this.columnName = field.columnName;
-            this.name = field.name;
+            this.name = field.name.orElse(null);
             this.isRelationship = field.isRelationship;
             return this;
         }
 
-        public Builder relationAlias(Optional<QualifiedName> relationAlias)
+        public Builder relationAlias(QualifiedName relationAlias)
         {
             this.relationAlias = relationAlias;
             return this;
@@ -154,7 +154,7 @@ public class Field
             return this;
         }
 
-        public Builder name(Optional<String> name)
+        public Builder name(String name)
         {
             this.name = name;
             return this;

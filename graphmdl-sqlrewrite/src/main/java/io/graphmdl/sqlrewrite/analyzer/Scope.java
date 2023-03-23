@@ -30,10 +30,10 @@ public class Scope
     private final boolean isTableScope;
     private final Map<String, WithQuery> namedQueries;
 
-    private Scope(Optional<Scope> parent, Optional<RelationType> relationType, boolean isTableScope, Map<String, WithQuery> namedQueries)
+    private Scope(Scope parent, RelationType relationType, boolean isTableScope, Map<String, WithQuery> namedQueries)
     {
-        this.parent = requireNonNull(parent, "parent is null");
-        this.relationType = requireNonNull(relationType, "relationType is null");
+        this.parent = Optional.ofNullable(parent);
+        this.relationType = Optional.ofNullable(relationType);
         this.isTableScope = isTableScope;
         this.namedQueries = requireNonNull(namedQueries, "namedQueries is null");
     }
@@ -74,13 +74,13 @@ public class Scope
     public static final class Builder
     {
         private Optional<Scope> parent = Optional.empty();
-        private Optional<RelationType> relationType = Optional.empty();
+        private RelationType relationType;
         private boolean isTableScope;
-        private Map<String, WithQuery> namedQueries = new HashMap<>();
+        private final Map<String, WithQuery> namedQueries = new HashMap<>();
 
-        public Builder relationType(Optional<RelationType> relationType)
+        public Builder relationType(RelationType relationType)
         {
-            this.relationType = requireNonNull(relationType, "relationType is null");
+            this.relationType = relationType;
             return this;
         }
 
@@ -111,7 +111,7 @@ public class Scope
 
         public Scope build()
         {
-            return new Scope(parent, relationType, isTableScope, namedQueries);
+            return new Scope(parent.orElse(null), relationType, isTableScope, namedQueries);
         }
     }
 }
