@@ -127,6 +127,7 @@ import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
 import static io.graphmdl.base.type.StandardTypes.DATE;
 import static io.graphmdl.base.type.StandardTypes.REAL;
+import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
@@ -335,6 +336,8 @@ public class CalciteSqlNodeConverter
                     return SqlLiteral.createDate(new DateString(node.getValue()), POS);
                 case BOOLEAN:
                     return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
+                case UUID:
+                    return SqlLiteral.createCharString(node.getValue(), POS);
             }
             throw new IllegalArgumentException();
         }

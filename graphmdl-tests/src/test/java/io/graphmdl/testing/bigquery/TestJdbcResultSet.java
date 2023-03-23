@@ -19,7 +19,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -30,7 +29,6 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -103,7 +101,8 @@ public class TestJdbcResultSet
         checkRepresentation("DECIMAL '0.1'", Types.DOUBLE, 0.1);
         // TODO:
         // checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
-        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.OTHER, UUID.fromString("0397e63b-2b78-4b7b-9c87-e085fa225dd8"));
+        // TODO should be Types.OTHER：https://github.com/Canner/canner-metric-layer/issues/196
+        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
 
         checkRepresentation("DATE '2018-02-13'", Types.DATE, (rs, column) -> {
             assertEquals(rs.getObject(column), Date.valueOf(LocalDate.of(2018, 2, 13)));
