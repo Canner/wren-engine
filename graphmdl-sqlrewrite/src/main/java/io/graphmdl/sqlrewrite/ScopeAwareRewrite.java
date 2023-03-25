@@ -49,9 +49,9 @@ import static java.lang.String.format;
  * Rewrite the AST to replace all identifiers or dereference expressions
  * without a relation prefix with the relation prefix.
  */
-public class ScopeRewrite
+public class ScopeAwareRewrite
 {
-    public static final ScopeRewrite SCOPE_REWRITE = new ScopeRewrite();
+    public static final ScopeAwareRewrite SCOPE_AWARE_REWRITE = new ScopeAwareRewrite();
 
     public Statement rewrite(Node root, GraphMDL graphMDL, SessionContext sessionContext)
     {
@@ -112,7 +112,7 @@ public class ScopeRewrite
                             // The node is resolvable and has the relation prefix. No need to rewrite.
                             return node;
                         }
-                        return insertHead(node, identifier(field.get(0).getRelationAlias().orElse(toQualifiedName(field.get(0).getModelName())).getSuffix()));
+                        return addPrefix(node, identifier(field.get(0).getRelationAlias().orElse(toQualifiedName(field.get(0).getModelName())).getSuffix()));
                     }
                     if (field.size() > 1) {
                         throw new IllegalArgumentException("Ambiguous column name: " + DereferenceExpression.getQualifiedName(node));
@@ -190,7 +190,7 @@ public class ScopeRewrite
     }
 
     @VisibleForTesting
-    public static Expression insertHead(Expression source, Identifier head)
+    public static Expression addPrefix(Expression source, Identifier prefix)
     {
         ImmutableList.Builder<Expression> builder = ImmutableList.builder();
 
@@ -219,7 +219,7 @@ public class ScopeRewrite
             builder.add(node);
         }
 
-        return builder.add(head).build().reverse().stream().reduce((a, b) -> {
+        return builder.add(prefix).build().reverse().stream().reduce((a, b) -> {
             if (b instanceof SubscriptExpression) {
                 SubscriptExpression subscriptExpression = (SubscriptExpression) b;
                 return new SubscriptExpression(new DereferenceExpression(a, (Identifier) subscriptExpression.getBase()), ((SubscriptExpression) b).getIndex());

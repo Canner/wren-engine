@@ -19,7 +19,7 @@ import io.graphmdl.base.GraphMDLTypes;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
-import io.graphmdl.sqlrewrite.ScopeRewrite;
+import io.graphmdl.sqlrewrite.ScopeAwareRewrite;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -38,17 +38,17 @@ import java.util.List;
 
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Relationship.relationship;
-import static io.graphmdl.sqlrewrite.ScopeRewrite.SCOPE_REWRITE;
+import static io.graphmdl.sqlrewrite.ScopeAwareRewrite.SCOPE_AWARE_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-public class TestScopeRewrite
+public class TestScopeAwareRewrite
         extends AbstractTestFramework
 {
     private final GraphMDL graphMDL;
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    public TestScopeRewrite()
+    public TestScopeAwareRewrite()
     {
         graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
@@ -185,11 +185,11 @@ public class TestScopeRewrite
     private String rewrite(String sql, SessionContext sessionContext)
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        return SqlFormatter.formatSql(SCOPE_REWRITE.rewrite(statement, graphMDL, sessionContext));
+        return SqlFormatter.formatSql(SCOPE_AWARE_REWRITE.rewrite(statement, graphMDL, sessionContext));
     }
 
     @DataProvider
-    public Object[][] insertHead()
+    public Object[][] addPrefix()
     {
         return new Object[][] {
                 {"author.book.name", "Book.author.book.name"},
@@ -197,11 +197,11 @@ public class TestScopeRewrite
         };
     }
 
-    @Test(dataProvider = "insertHead")
-    public void testInsertHead(String source, String expected)
+    @Test(dataProvider = "addPrefix")
+    public void testAddPrefix(String source, String expected)
     {
         Expression expression = getSelectItem(String.format("SELECT %s FROM Book", source));
-        Expression node = ScopeRewrite.insertHead(expression, new Identifier("Book"));
+        Expression node = ScopeAwareRewrite.addPrefix(expression, new Identifier("Book"));
         assertThat(node.toString()).isEqualTo(expected);
     }
 
