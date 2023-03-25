@@ -151,18 +151,18 @@ public class ScopeRewrite
         private Scope analyzeFrom(Relation node, Scope context)
         {
             ScopeAnalysis analysis = ScopeAnalyzer.analyze(graphMDL, node, sessionContext);
-            List<ScopeAnalysis.Relation> usedModels = analysis.getUsedModels();
+            List<ScopeAnalysis.Relation> usedGraphMDLObjects = analysis.getUsedGraphMDLObjects();
             ImmutableList.Builder<Field> fields = ImmutableList.builder();
             graphMDL.listModels().stream()
-                    .filter(model -> usedModels.stream().anyMatch(relation -> relation.getName().equals(model.getName())))
+                    .filter(model -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(model.getName())))
                     .forEach(model ->
-                            model.getColumns().forEach(column -> fields.add(toField(model.getName(), column, usedModels))));
+                            model.getColumns().forEach(column -> fields.add(toField(model.getName(), column, usedGraphMDLObjects))));
 
             graphMDL.listMetrics().stream()
-                    .filter(metric -> usedModels.stream().anyMatch(relation -> relation.getName().equals(metric.getName())))
+                    .filter(metric -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(metric.getName())))
                     .forEach(metric -> {
-                        metric.getDimension().forEach(column -> fields.add(toField(metric.getName(), column, usedModels)));
-                        metric.getMeasure().forEach(column -> fields.add(toField(metric.getName(), column, usedModels)));
+                        metric.getDimension().forEach(column -> fields.add(toField(metric.getName(), column, usedGraphMDLObjects)));
+                        metric.getMeasure().forEach(column -> fields.add(toField(metric.getName(), column, usedGraphMDLObjects)));
                     });
 
             return Scope.builder()
@@ -172,9 +172,9 @@ public class ScopeRewrite
                     .build();
         }
 
-        private Field toField(String modelName, Column column, List<ScopeAnalysis.Relation> usedModels)
+        private Field toField(String modelName, Column column, List<ScopeAnalysis.Relation> usedGraphMDLObjects)
         {
-            ScopeAnalysis.Relation relation = usedModels.stream()
+            ScopeAnalysis.Relation relation = usedGraphMDLObjects.stream()
                     .filter(r -> r.getName().equals(modelName))
                     .findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelName));

@@ -28,17 +28,17 @@ import static java.util.Objects.requireNonNull;
 
 public class ScopeAnalysis
 {
-    private final List<Relation> usedModels = new ArrayList<>();
+    private final List<Relation> usedGraphMDLObjects = new ArrayList<>();
     private final Map<NodeRef<Node>, String> aliasedMap = new HashMap<>();
 
-    public void addUsedModel(Table model)
+    public void addUsedGraphMDLObject(Table model)
     {
-        usedModels.add(new Relation(model.getName().getSuffix(), aliasedMap.get(NodeRef.of(model))));
+        usedGraphMDLObjects.add(new Relation(model.getName().getSuffix(), aliasedMap.get(NodeRef.of(model))));
     }
 
-    public List<Relation> getUsedModels()
+    public List<Relation> getUsedGraphMDLObjects()
     {
-        return List.copyOf(usedModels);
+        return List.copyOf(usedGraphMDLObjects);
     }
 
     public void addAliasedNode(Node node, String alias)

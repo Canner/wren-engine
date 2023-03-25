@@ -54,7 +54,7 @@ public class ScopeAnalyzer
         protected Void visitTable(Table node, Void context)
         {
             if (isBelongToGraphMDL(node.getName())) {
-                analysis.addUsedModel(node);
+                analysis.addUsedGraphMDLObject(node);
             }
             return null;
         }
