@@ -23,6 +23,7 @@ import com.google.common.collect.Streams;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.PGTypes;
+import io.graphmdl.connector.bigquery.BigQueryType;
 
 import java.util.Iterator;
 import java.util.List;
