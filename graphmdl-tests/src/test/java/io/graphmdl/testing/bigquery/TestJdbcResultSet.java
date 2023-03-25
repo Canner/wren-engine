@@ -208,9 +208,7 @@ public class TestJdbcResultSet
     private void assertMaxRowsResult(long expectedCount)
             throws SQLException
     {
-        // TODO: support `VALUES` statement without `row()`
-        //  SELECT * FROM (VALUES (1), (2), (3), (4), (5), (6), (7))
-        try (ResultSet rs = statement.executeQuery("SELECT * FROM (VALUES ROW(1), ROW(2), ROW(3), ROW(4), ROW(5), ROW(6), ROW(7)) AS x (a)")) {
+        try (ResultSet rs = statement.executeQuery("SELECT * FROM (VALUES (1), (2), (3), (4), (5), (6), (7)) AS x (a)")) {
             assertEquals(countRows(rs), expectedCount);
         }
     }

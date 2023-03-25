@@ -270,7 +270,15 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitValues(Values node, ConvertContext context)
         {
-            return new SqlBasicCall(SqlStdOperatorTable.VALUES, visitNodes(node.getRows()), toCalcitePos(node.getLocation()));
+            List<Expression> expressions = node.getRows().stream()
+                    .map(row -> {
+                        if (row instanceof Row) {
+                            return row;
+                        }
+                        return new Row(ImmutableList.of(row));
+                    })
+                    .collect(toImmutableList());
+            return new SqlBasicCall(SqlStdOperatorTable.VALUES, visitNodes(expressions), toCalcitePos(node.getLocation()));
         }
 
         @Override
