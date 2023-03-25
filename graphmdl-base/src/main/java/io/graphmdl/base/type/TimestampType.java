@@ -18,6 +18,16 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Locale.ENGLISH;
+
 public class TimestampType
         extends BaseTimestampType
 {
@@ -25,6 +35,12 @@ public class TimestampType
 
     private static final int OID = 1114;
     private static final String NAME = "timestamp";
+
+    private static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .appendPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            .toFormatter(ENGLISH)
+            .withResolverStyle(ResolverStyle.STRICT);
 
     private TimestampType()
     {
@@ -40,7 +56,10 @@ public class TimestampType
     @Override
     public byte[] encodeAsUTF8Text(@Nonnull Object value)
     {
-        throw new UnsupportedOperationException();
+        long microSeconds = (long) value;
+        Instant instant = Instant.ofEpochMilli(microSeconds / 1000);
+        LocalDateTime dt = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+        return PG_TIMESTAMP.format(dt).getBytes(UTF_8);
     }
 
     @Override

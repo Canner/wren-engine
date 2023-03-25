@@ -115,6 +115,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimestampString;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -129,6 +130,7 @@ import static io.graphmdl.base.type.StandardTypes.DATE;
 import static io.graphmdl.base.type.StandardTypes.REAL;
 import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
+import static io.graphmdl.main.calcite.CalciteTypesUtil.extractTimestampPrecision;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
@@ -405,7 +407,14 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitTimestampLiteral(TimestampLiteral node, ConvertContext context)
         {
-            return super.visitTimestampLiteral(node, context);
+            try {
+                int precision = extractTimestampPrecision(node.getValue());
+                return SqlLiteral.createTimestamp(new TimestampString(node.getValue()), precision, toCalcitePos(node.getLocation()));
+            }
+            catch (IllegalArgumentException e) {
+                // TODO support timestamp with time zone
+                return super.visitTimestampLiteral(node, context);
+            }
         }
 
         @Override
