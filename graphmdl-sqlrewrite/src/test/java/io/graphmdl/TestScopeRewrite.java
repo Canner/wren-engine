@@ -16,6 +16,7 @@ package io.graphmdl;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLTypes;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.ScopeRewrite;
@@ -92,7 +93,9 @@ public class TestScopeRewrite
                 {"SELECT author.book.name FROM Book b", "SELECT b.author.book.name FROM Book b"},
                 {"SELECT name, count(*) FROM Book b GROUP BY name", "SELECT b.name, count(*) FROM Book b GROUP BY b.name"},
                 {"SELECT b.name, p.name, book FROM Book b JOIN People p ON authorId = userId", "SELECT b.name, p.name, p.book FROM Book b JOIN People p ON b.authorId = p.userId"},
-                {"SELECT user.items[1].price FROM Item", "SELECT Item.user.items[1].price FROM Item"}
+                {"SELECT user.items[1].price FROM Item", "SELECT Item.user.items[1].price FROM Item"},
+                {"SELECT name FROM graphmdl.test.Book", "SELECT Book.name FROM graphmdl.test.Book"},
+                {"SELECT name FROM test.Book", "SELECT Book.name FROM test.Book"},
         };
     }
 
@@ -101,6 +104,44 @@ public class TestScopeRewrite
     {
         Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
         String actualSql = rewrite(original);
+        Assertions.assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
+    }
+
+    @DataProvider
+    public Object[][] wrongSessionContextNoRewrite()
+    {
+        return new Object[][] {
+                {"SELECT name FROM Book"},
+                {"SELECT name FROM test.Book"},
+                {"SELECT name FROM fake1.test.Book"}
+        };
+    }
+
+    @Test(dataProvider = "wrongSessionContextNoRewrite")
+    public void testScopeRewriterWithWrongSessionContextNoRewrite(String original)
+    {
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog("wrongCatalog")
+                .setSchema("wrongSchema")
+                .build();
+
+        Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        String actualSql = rewrite(original, sessionContext);
+        Assertions.assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
+    }
+
+    @Test
+    public void testScopeRewriterWithWrongSessionContextRewrite()
+    {
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog("wrongCatalog")
+                .setSchema("wrongSchema")
+                .build();
+        String sql = "SELECT name FROM graphmdl.test.Book";
+        String expected = "SELECT Book.name FROM graphmdl.test.Book";
+
+        Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
+        String actualSql = rewrite(sql, sessionContext);
         Assertions.assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
     }
 
@@ -115,6 +156,8 @@ public class TestScopeRewrite
                 {"SELECT Book.author.book.name FROM Book"},
                 {"SELECT test.Book.author.book.name FROM Book"},
                 {"SELECT graphmdl.test.Book.author.book.name FROM Book"},
+                {"SELECT name FROM fake1.fake2.Book"},
+                {"SELECT name FROM fake2.Book"},
         };
     }
 
@@ -136,8 +179,13 @@ public class TestScopeRewrite
 
     private String rewrite(String sql)
     {
+        return rewrite(sql, DEFAULT_SESSION_CONTEXT);
+    }
+
+    private String rewrite(String sql, SessionContext sessionContext)
+    {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        return SqlFormatter.formatSql(SCOPE_REWRITE.rewrite(statement, graphMDL));
+        return SqlFormatter.formatSql(SCOPE_REWRITE.rewrite(statement, graphMDL, sessionContext));
     }
 
     @DataProvider

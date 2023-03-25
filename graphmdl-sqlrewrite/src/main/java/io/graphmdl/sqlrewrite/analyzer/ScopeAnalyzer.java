@@ -15,9 +15,11 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Table;
 
 public class ScopeAnalyzer
@@ -26,10 +28,10 @@ public class ScopeAnalyzer
     {
     }
 
-    public static ScopeAnalysis analyze(GraphMDL graphMDL, Node node)
+    public static ScopeAnalysis analyze(GraphMDL graphMDL, Node node, SessionContext sessionContext)
     {
         ScopeAnalysis analysis = new ScopeAnalysis();
-        Visitor visitor = new Visitor(graphMDL, analysis);
+        Visitor visitor = new Visitor(graphMDL, analysis, sessionContext);
         visitor.process(node, null);
         return analysis;
     }
@@ -39,17 +41,19 @@ public class ScopeAnalyzer
     {
         private final GraphMDL graphMDL;
         private final ScopeAnalysis analysis;
+        private final SessionContext sessionContext;
 
-        public Visitor(GraphMDL graphMDL, ScopeAnalysis analysis)
+        public Visitor(GraphMDL graphMDL, ScopeAnalysis analysis, SessionContext sessionContext)
         {
             this.graphMDL = graphMDL;
             this.analysis = analysis;
+            this.sessionContext = sessionContext;
         }
 
         @Override
         protected Void visitTable(Table node, Void context)
         {
-            if (isBelongToGraphMDL(node.getName().getSuffix())) {
+            if (isBelongToGraphMDL(node.getName())) {
                 analysis.addUsedModel(node);
             }
             return null;
@@ -62,10 +66,26 @@ public class ScopeAnalyzer
             return super.visitAliasedRelation(node, context);
         }
 
-        private boolean isBelongToGraphMDL(String tableName)
+        private boolean isBelongToGraphMDL(QualifiedName tableName)
         {
-            return graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName)) ||
-                    graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName));
+            if (tableName.getParts().size() == 3) {
+                return graphMDL.getCatalog().equals(tableName.getParts().get(0)) &&
+                        graphMDL.getSchema().equals(tableName.getParts().get(1)) &&
+                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
+                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
+            }
+            else if (tableName.getParts().size() == 2) {
+                return sessionContext.getCatalog().filter(catalog -> catalog.equals(graphMDL.getCatalog())).isPresent() &&
+                        graphMDL.getSchema().equals(tableName.getParts().get(0)) &&
+                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
+                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
+            }
+            else {
+                return sessionContext.getCatalog().filter(catalog -> catalog.equals(graphMDL.getCatalog())).isPresent() &&
+                        sessionContext.getSchema().filter(schema -> schema.equals(graphMDL.getSchema())).isPresent() &&
+                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
+                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
+            }
         }
     }
 }

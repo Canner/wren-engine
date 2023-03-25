@@ -18,6 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Field;
@@ -52,19 +53,21 @@ public class ScopeRewrite
 {
     public static final ScopeRewrite SCOPE_REWRITE = new ScopeRewrite();
 
-    public Statement rewrite(Node root, GraphMDL graphMDL)
+    public Statement rewrite(Node root, GraphMDL graphMDL, SessionContext sessionContext)
     {
-        return (Statement) new Rewriter(graphMDL).process(root);
+        return (Statement) new Rewriter(graphMDL, sessionContext).process(root);
     }
 
     private static class Rewriter
             extends BaseRewriter<Scope>
     {
         private final GraphMDL graphMDL;
+        private final SessionContext sessionContext;
 
-        public Rewriter(GraphMDL graphMDL)
+        public Rewriter(GraphMDL graphMDL, SessionContext sessionContext)
         {
             this.graphMDL = graphMDL;
+            this.sessionContext = sessionContext;
         }
 
         @Override
@@ -147,7 +150,7 @@ public class ScopeRewrite
 
         private Scope analyzeFrom(Relation node, Scope context)
         {
-            ScopeAnalysis analysis = ScopeAnalyzer.analyze(graphMDL, node);
+            ScopeAnalysis analysis = ScopeAnalyzer.analyze(graphMDL, node, sessionContext);
             List<ScopeAnalysis.Relation> usedModels = analysis.getUsedModels();
             ImmutableList.Builder<Field> fields = ImmutableList.builder();
             graphMDL.listModels().stream()
