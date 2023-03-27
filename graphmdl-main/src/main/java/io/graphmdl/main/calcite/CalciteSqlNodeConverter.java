@@ -124,10 +124,13 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.graphmdl.base.GraphMDLTypes.BIGINT;
+import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
 import static io.graphmdl.base.type.StandardTypes.DATE;
 import static io.graphmdl.base.type.StandardTypes.REAL;
+import static io.graphmdl.base.type.StandardTypes.SMALLINT;
 import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
 import static io.graphmdl.main.calcite.CalciteTypesUtil.extractTimestampPrecision;
@@ -340,6 +343,9 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitGenericLiteral(GenericLiteral node, ConvertContext context)
         {
             switch (node.getType().toLowerCase(ENGLISH)) {
+                case SMALLINT:
+                case INTEGER:
+                case BIGINT:
                 case REAL:
                     return SqlLiteral.createExactNumeric(node.getValue(), POS);
                 case DATE:
