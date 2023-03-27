@@ -96,6 +96,10 @@ public class TestScopeAwareRewrite
                 {"SELECT user.items[1].price FROM Item", "SELECT Item.user.items[1].price FROM Item"},
                 {"SELECT name FROM graphmdl.test.Book", "SELECT Book.name FROM graphmdl.test.Book"},
                 {"SELECT name FROM test.Book", "SELECT Book.name FROM test.Book"},
+                {"SELECT name FROM (SELECT * FROM Book) b", "SELECT name FROM (SELECT * FROM Book) b"},
+                {"SELECT name FROM (SELECT name FROM Book) b", "SELECT name FROM (SELECT Book.name FROM Book) b"},
+                {"WITH b AS (SELECT name, author FROM Book) SELECT author FROM b", "WITH b AS (SELECT Book.name, Book.author FROM Book) SELECT author FROM b"},
+                {"WITH b AS (SELECT o_clerk, author FROM Book) SELECT author FROM b", "WITH b AS (SELECT o_clerk, Book.author FROM Book) SELECT author FROM b"},
         };
     }
 
@@ -158,6 +162,8 @@ public class TestScopeAwareRewrite
                 {"SELECT graphmdl.test.Book.author.book.name FROM Book"},
                 {"SELECT name FROM fake1.fake2.Book"},
                 {"SELECT name FROM fake2.Book"},
+                {"WITH b AS (SELECT * FROM Book) SELECT author FROM b"},
+                {"SELECT notfound FROM b"}
         };
     }
 

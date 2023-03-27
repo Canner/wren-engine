@@ -21,6 +21,7 @@ import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Table;
+import io.trino.sql.tree.TableSubquery;
 
 public class ScopeAnalyzer
 {
@@ -56,6 +57,12 @@ public class ScopeAnalyzer
             if (isBelongToGraphMDL(node.getName())) {
                 analysis.addUsedGraphMDLObject(node);
             }
+            return null;
+        }
+
+        @Override
+        protected Void visitTableSubquery(TableSubquery node, Void context)
+        {
             return null;
         }
 
