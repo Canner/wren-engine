@@ -22,9 +22,12 @@ import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.SubscriptExpression;
 
 import java.security.SecureRandom;
 import java.util.List;
@@ -108,5 +111,20 @@ public final class Utils
                 new IllegalArgumentException("Catalog must be specified when session catalog is not set"));
 
         return new CatalogSchemaTableName(catalogName, schemaName, objectName);
+    }
+
+    public static QualifiedName toQualifiedName(CatalogSchemaTableName name)
+    {
+        requireNonNull(name, "name is null");
+        return QualifiedName.of(name.getCatalogName(), name.getSchemaTableName().getSchemaName(), name.getSchemaTableName().getTableName());
+    }
+
+    public static Expression getNextPart(SubscriptExpression subscriptExpression)
+    {
+        Expression base = subscriptExpression.getBase();
+        if (base instanceof DereferenceExpression) {
+            return ((DereferenceExpression) base).getBase();
+        }
+        return base;
     }
 }

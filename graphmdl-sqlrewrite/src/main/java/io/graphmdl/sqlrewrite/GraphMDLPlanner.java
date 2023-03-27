@@ -44,8 +44,9 @@ public class GraphMDLPlanner
     public static String rewrite(String sql, SessionContext sessionContext, GraphMDL graphMDL, List<GraphMDLRule> rules)
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        Analysis analysis = StatementAnalyzer.analyze(statement, sessionContext, graphMDL);
-        Node result = statement;
+        Statement scopedStatement = ScopeAwareRewrite.SCOPE_AWARE_REWRITE.rewrite(statement, graphMDL, sessionContext);
+        Analysis analysis = StatementAnalyzer.analyze(scopedStatement, sessionContext, graphMDL);
+        Node result = scopedStatement;
         for (GraphMDLRule rule : rules) {
             result = rule.apply(result, sessionContext, analysis, graphMDL);
         }

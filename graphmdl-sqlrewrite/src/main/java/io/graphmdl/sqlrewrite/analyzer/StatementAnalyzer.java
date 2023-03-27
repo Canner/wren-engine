@@ -167,7 +167,6 @@ public final class StatementAnalyzer
                         .stream()
                         .map(column ->
                                 Field.builder()
-                                        .relationAlias(node.getName())
                                         .modelName(tableName)
                                         .columnName(column.getName())
                                         .name(column.getName())

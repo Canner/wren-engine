@@ -47,6 +47,7 @@ import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
+import static io.graphmdl.sqlrewrite.Utils.getNextPart;
 import static io.graphmdl.sqlrewrite.analyzer.ExpressionAnalyzer.DereferenceName.dereferenceName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -272,15 +273,6 @@ public final class ExpressionAnalyzer
         }
 
         return builder.build();
-    }
-
-    private static Expression getNextPart(SubscriptExpression subscriptExpression)
-    {
-        Expression base = subscriptExpression.getBase();
-        if (base instanceof DereferenceExpression) {
-            return ((DereferenceExpression) base).getBase();
-        }
-        return base;
     }
 
     private static DereferenceName toDereferenceName(Expression expression)

@@ -15,8 +15,11 @@
 package io.graphmdl.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public class RelationType
 {
@@ -30,5 +33,15 @@ public class RelationType
     public List<Field> getFields()
     {
         return fields;
+    }
+
+    /**
+     * get the columns matching the specified name
+     */
+    public List<Field> resolveFields(QualifiedName name)
+    {
+        return fields.stream()
+                .filter(input -> input.canResolve(name))
+                .collect(toImmutableList());
     }
 }
