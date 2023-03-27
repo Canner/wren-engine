@@ -14,6 +14,7 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.trino.sql.tree.AliasedRelation;
@@ -22,6 +23,8 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
+
+import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 
 public class ScopeAnalyzer
 {
@@ -73,26 +76,14 @@ public class ScopeAnalyzer
             return super.visitAliasedRelation(node, context);
         }
 
-        private boolean isBelongToGraphMDL(QualifiedName tableName)
+        private boolean isBelongToGraphMDL(QualifiedName graphMDLObjectName)
         {
-            if (tableName.getParts().size() == 3) {
-                return graphMDL.getCatalog().equals(tableName.getParts().get(0)) &&
-                        graphMDL.getSchema().equals(tableName.getParts().get(1)) &&
-                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
-                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
-            }
-            else if (tableName.getParts().size() == 2) {
-                return sessionContext.getCatalog().filter(catalog -> catalog.equals(graphMDL.getCatalog())).isPresent() &&
-                        graphMDL.getSchema().equals(tableName.getParts().get(0)) &&
-                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
-                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
-            }
-            else {
-                return sessionContext.getCatalog().filter(catalog -> catalog.equals(graphMDL.getCatalog())).isPresent() &&
-                        sessionContext.getSchema().filter(schema -> schema.equals(graphMDL.getSchema())).isPresent() &&
-                        (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName.getSuffix())) ||
-                                graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName.getSuffix())));
-            }
+            CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, graphMDLObjectName);
+            String tableName = catalogSchemaTableName.getSchemaTableName().getTableName();
+            return catalogSchemaTableName.getCatalogName().equals(graphMDL.getCatalog())
+                    && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema())
+                    && (graphMDL.listModels().stream().anyMatch(model -> model.getName().equals(tableName))
+                    || graphMDL.listMetrics().stream().anyMatch(metric -> metric.getName().equals(tableName)));
         }
     }
 }
