@@ -167,7 +167,7 @@ public class ScopeAwareRewrite
 
             return Scope.builder()
                     .parent(Optional.ofNullable(context))
-                    .relationType(Optional.of(new RelationType(fields.build())))
+                    .relationType(new RelationType(fields.build()))
                     .isTableScope(true)
                     .build();
         }
@@ -182,8 +182,8 @@ public class ScopeAwareRewrite
             return Field.builder()
                     .modelName(new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), modelName))
                     .columnName(column.getName())
-                    .name(Optional.of(column.getName()))
-                    .relationAlias(relation.getAlias().map(QualifiedName::of))
+                    .name(column.getName())
+                    .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
                     .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
                     .build();
         }
