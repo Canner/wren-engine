@@ -115,6 +115,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimestampString;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -126,9 +127,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
 import static io.graphmdl.base.type.StandardTypes.DATE;
+import static io.graphmdl.base.type.StandardTypes.REAL;
+import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
+import static io.graphmdl.main.calcite.CalciteTypesUtil.extractTimestampPrecision;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static java.util.stream.Collectors.toList;
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
 import static org.apache.calcite.sql.SqlIdentifier.STAR;
@@ -265,7 +270,15 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitValues(Values node, ConvertContext context)
         {
-            return new SqlBasicCall(SqlStdOperatorTable.VALUES, visitNodes(node.getRows()), toCalcitePos(node.getLocation()));
+            List<Expression> expressions = node.getRows().stream()
+                    .map(row -> {
+                        if (row instanceof Row) {
+                            return row;
+                        }
+                        return new Row(ImmutableList.of(row));
+                    })
+                    .collect(toImmutableList());
+            return new SqlBasicCall(SqlStdOperatorTable.VALUES, visitNodes(expressions), toCalcitePos(node.getLocation()));
         }
 
         @Override
@@ -326,11 +339,15 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitGenericLiteral(GenericLiteral node, ConvertContext context)
         {
-            switch (node.getType()) {
+            switch (node.getType().toLowerCase(ENGLISH)) {
+                case REAL:
+                    return SqlLiteral.createExactNumeric(node.getValue(), POS);
                 case DATE:
                     return SqlLiteral.createDate(new DateString(node.getValue()), POS);
                 case BOOLEAN:
                     return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
+                case UUID:
+                    return SqlLiteral.createCharString(node.getValue(), POS);
             }
             throw new IllegalArgumentException();
         }
@@ -380,7 +397,7 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitDoubleLiteral(DoubleLiteral node, ConvertContext context)
         {
-            return super.visitDoubleLiteral(node, context);
+            return SqlLiteral.createExactNumeric(String.valueOf(node.getValue()), toCalcitePos(node.getLocation()));
         }
 
         @Override
@@ -398,7 +415,14 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitTimestampLiteral(TimestampLiteral node, ConvertContext context)
         {
-            return super.visitTimestampLiteral(node, context);
+            try {
+                int precision = extractTimestampPrecision(node.getValue());
+                return SqlLiteral.createTimestamp(new TimestampString(node.getValue()), precision, toCalcitePos(node.getLocation()));
+            }
+            catch (IllegalArgumentException e) {
+                // TODO support timestamp with time zone
+                return super.visitTimestampLiteral(node, context);
+            }
         }
 
         @Override
@@ -688,7 +712,12 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitGenericDataType(GenericDataType node, ConvertContext context)
         {
             SqlTypeName typeName = toCalciteType(node.getName().toString());
-            if (typeName.equals(SqlTypeName.DECIMAL)) {
+            if (typeName.equals(SqlTypeName.CHAR)) {
+                return new SqlDataTypeSpec(
+                        new SqlBasicTypeNameSpec(typeName, handleNumericParameter(node.getArguments().get(0)), ZERO),
+                        toCalcitePos(node.getLocation()));
+            }
+            else if (typeName.equals(SqlTypeName.DECIMAL)) {
                 List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
                 checkArgument(params.size() == 2, format("decimal type should have 2 parameters but %s", params.size()));
                 return new SqlDataTypeSpec(

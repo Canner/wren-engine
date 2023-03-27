@@ -111,6 +111,10 @@ public class BigQueryRecordIterator
                 return fieldValue.getStringValue();
             case BYTES:
                 return fieldValue.getBytesValue();
+            case DATE:
+                return fieldValue.getValue();
+            case TIMESTAMP:
+                return fieldValue.getTimestampValue();
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);
         }

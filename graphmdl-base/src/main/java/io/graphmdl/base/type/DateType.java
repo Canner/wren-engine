@@ -18,6 +18,14 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
+import java.util.Locale;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class DateType
         extends PGType
 {
@@ -27,6 +35,12 @@ public class DateType
     private static final String NAME = "date";
     private static final int TYPE_LEN = 4;
     private static final int TYPE_MOD = -1;
+
+    private static final DateTimeFormatter ISO_FORMATTER_AD = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .appendPattern("yyyy-MM-dd")
+            .toFormatter(Locale.ENGLISH)
+            .withResolverStyle(ResolverStyle.STRICT);
 
     private DateType()
     {
@@ -54,7 +68,8 @@ public class DateType
     @Override
     public byte[] encodeAsUTF8Text(@Nonnull Object value)
     {
-        throw new UnsupportedOperationException();
+        LocalDate date = LocalDate.parse((String) value);
+        return date.format(ISO_FORMATTER_AD).getBytes(UTF_8);
     }
 
     @Override
