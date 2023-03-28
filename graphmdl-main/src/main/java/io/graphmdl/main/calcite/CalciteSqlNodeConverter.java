@@ -124,18 +124,25 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.base.GraphMDLTypes.BIGINT;
-import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.graphmdl.base.type.StandardTypes.BIGINT;
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
+import static io.graphmdl.base.type.StandardTypes.BYTEA;
+import static io.graphmdl.base.type.StandardTypes.CHAR;
 import static io.graphmdl.base.type.StandardTypes.DATE;
+import static io.graphmdl.base.type.StandardTypes.DECIMAL;
+import static io.graphmdl.base.type.StandardTypes.DOUBLE;
+import static io.graphmdl.base.type.StandardTypes.INTEGER;
+import static io.graphmdl.base.type.StandardTypes.JSON;
 import static io.graphmdl.base.type.StandardTypes.REAL;
 import static io.graphmdl.base.type.StandardTypes.SMALLINT;
 import static io.graphmdl.base.type.StandardTypes.UUID;
+import static io.graphmdl.base.type.StandardTypes.VARCHAR;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
 import static io.graphmdl.main.calcite.CalciteTypesUtil.extractTimestampPrecision;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
 import static java.util.stream.Collectors.toList;
 import static org.apache.calcite.rel.rel2sql.SqlImplementor.POS;
@@ -343,16 +350,23 @@ public class CalciteSqlNodeConverter
         protected SqlNode visitGenericLiteral(GenericLiteral node, ConvertContext context)
         {
             switch (node.getType().toLowerCase(ENGLISH)) {
+                case BOOLEAN:
+                    return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
                 case SMALLINT:
                 case INTEGER:
                 case BIGINT:
                 case REAL:
+                case DOUBLE:
+                case DECIMAL:
                     return SqlLiteral.createExactNumeric(node.getValue(), POS);
+                case BYTEA:
+                    return SqlLiteral.createBinaryString(node.getValue().getBytes(UTF_8), POS);
                 case DATE:
                     return SqlLiteral.createDate(new DateString(node.getValue()), POS);
-                case BOOLEAN:
-                    return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
+                case CHAR:
+                case VARCHAR:
                 case UUID:
+                case JSON:
                     return SqlLiteral.createCharString(node.getValue(), POS);
             }
             throw new IllegalArgumentException();
@@ -453,7 +467,7 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitCharLiteral(CharLiteral node, ConvertContext context)
         {
-            return super.visitCharLiteral(node, context);
+            return SqlLiteral.createCharString(node.getValue(), toCalcitePos(node.getLocation()));
         }
 
         @Override
