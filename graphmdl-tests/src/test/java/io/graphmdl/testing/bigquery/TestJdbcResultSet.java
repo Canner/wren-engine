@@ -48,6 +48,7 @@ public class TestJdbcResultSet
             .put(Types.NUMERIC, Types.DOUBLE)
             .put(Types.DECIMAL, Types.DOUBLE)
             .put(Types.CHAR, Types.VARCHAR)
+            .put(Types.OTHER, Types.VARCHAR)
             .build();
     private Connection connection;
     private Statement statement;
@@ -146,6 +147,30 @@ public class TestJdbcResultSet
 //            assertEquals(rs.getObject(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //            assertEquals(rs.getTimestamp(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //        });
+    }
+
+    @Test
+    public void testSelectTypeValue()
+            throws Exception
+    {
+        checkRepresentation("BOOLEAN 'true'", Types.BIT, true);
+        checkRepresentation("SMALLINT '123'", Types.SMALLINT, (long) 123);
+        checkRepresentation("INTEGER '123'", Types.INTEGER, (long) 123);
+        checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);
+        checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
+        checkRepresentation("DOUBLE '123.45'", Types.DOUBLE, 123.45);
+        checkRepresentation("DECIMAL '123.45'", Types.DECIMAL, 123.45);
+//        checkRepresentation("DECIMAL(5,2) '123.45'", Types.DECIMAL, 123.45);
+        checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
+//        checkRepresentation("VARCHAR(3) 'foo'", Types.VARCHAR, "foo");
+        checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
+//        checkRepresentation("CHAR(3) 'foo'", Types.CHAR, "foo");
+//        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
+        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.OTHER, "{\"name\":\"alice\"}");
+        checkRepresentation("DATE '2018-02-13'", Types.DATE, Date.valueOf(LocalDate.of(2018, 2, 13)));
+        checkRepresentation("TIMESTAMP '2018-02-13 13:14:15.123'", Types.TIMESTAMP, Timestamp.valueOf(LocalDateTime.of(2018, 2, 13, 13, 14, 15, 123_000_000)));
+//        checkRepresentation("TIMESTAMP(3) '2018-02-13 13:14:15.123'", Types.TIMESTAMP, Timestamp.valueOf(LocalDateTime.of(2018, 2, 13, 13, 14, 15, 123_000_000)));
+//        checkRepresentation("INTERVAL '7 years 6 months 5 days 4 hours 3 minutes 21 second'", Types.OTHER, "7-06 05:04:03.021");
     }
 
     private void checkRepresentation(String expression, int expectedSqlType, Object expectedRepresentation)
