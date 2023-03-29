@@ -125,7 +125,7 @@ public class TestMetricValidation
                                         Column.column("illegal^name", GraphMDLTypes.VARCHAR, null, true),
                                         Column.column("123illegalname", GraphMDLTypes.VARCHAR, null, true),
                                         Column.column("notfound", GraphMDLTypes.VARCHAR, null, true),
-                                        Column.column("A", GraphMDLTypes.INTEGER, null, false)))))
+                                        Column.column("A", GraphMDLTypes.BIGINT, null, false)))))
                 .build());
 
         List<ValidationResult> validationResults = MetricValidation.validate(client, wrongManifest, List.of(ModelValidation.MODEL_VALIDATION));
