@@ -48,8 +48,8 @@ public class TestPreAggregation
                 .put("bigquery.location", "asia-east1")
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .put("bigquery.bucket-name", getenv("TEST_BIG_QUERY_BUCKET_NAME"))
-                .put("duckdb.storage.access-key", getenv("TEST_STORAGE_ACCESS_KEY"))
-                .put("duckdb.storage.secret-key", getenv("TEST_STORAGE_SECRET_KEY"));
+                .put("duckdb.storage.access-key", getenv("TEST_DUCKDB_STORAGE_ACCESS_KEY"))
+                .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"));
 
         if (getGraphMDLPath().isPresent()) {
             properties.put("graphmdl.file", getGraphMDLPath().get());
