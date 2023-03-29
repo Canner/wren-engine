@@ -38,14 +38,12 @@ public class TestPostgreSqlRewrite
     private static final String DEFAULT_CATALOG = "default";
     private static final String PGTYPE = "pg_type";
     private static final String PGCATALOG_PGTYPE = DEFAULT_CATALOG + ".pg_catalog.pg_type";
-    private PostgreSqlRewrite postgreSqlRewrite;
     private SqlParser sqlParser;
     private RegObjectFactory regObjectFactory;
 
     @BeforeClass
     public void init()
     {
-        postgreSqlRewrite = new PostgreSqlRewrite();
         sqlParser = new SqlParser();
         regObjectFactory = new RegObjectFactory(new TestingPgMetadata());
     }
@@ -301,7 +299,7 @@ public class TestPostgreSqlRewrite
             @Language("SQL") String expectSql)
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
-        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
+        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
         Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
         assertThat(getFormattedSql(result, sqlParser)).isEqualTo(getFormattedSql(expect, sqlParser));
         assertThat(result).isEqualTo(expect);
@@ -311,7 +309,7 @@ public class TestPostgreSqlRewrite
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
 
-        Statement result = postgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
+        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
 
         assertThat(result).describedAs("%n[actual]%n%s[expect]%n%s", getFormattedSql(result, sqlParser), getFormattedSql(statement, sqlParser)).isEqualTo(statement);
     }

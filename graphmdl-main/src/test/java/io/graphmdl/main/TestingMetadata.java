@@ -119,4 +119,16 @@ public class TestingMetadata
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }
+
+    @Override
+    public String createPreAggregation(String catalog, String schema, String name, String statement)
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+    }
+
+    @Override
+    public void cleanPreAggregation()
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+    }
 }

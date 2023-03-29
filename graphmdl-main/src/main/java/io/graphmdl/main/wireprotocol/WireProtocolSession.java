@@ -66,7 +66,7 @@ public class WireProtocolSession
 
     private static final List<Class<?>> SESSION_COMMAND = ImmutableList.of(Deallocate.class);
 
-    private static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
+    public static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
     private static final String ALL = "all";
 
     private Properties properties;
@@ -74,7 +74,6 @@ public class WireProtocolSession
     private final PortalMap portals = new PortalMap();
     private final List<String> sessionProperties = new ArrayList<>();
     private CompletableFuture<Optional<GenericTableRecordIterable>> runningQuery = CompletableFuture.completedFuture(null);
-    private final PostgreSqlRewrite postgreSqlRewrite;
     private final SqlParser sqlParser;
     private final RegObjectFactory regObjectFactory;
     private final Metadata metadata;
@@ -84,7 +83,6 @@ public class WireProtocolSession
 
     public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter, GraphMDLMetastore graphMDLMetastore)
     {
-        this.postgreSqlRewrite = new PostgreSqlRewrite();
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
@@ -206,7 +204,7 @@ public class WireProtocolSession
                     graphMDLMetastore.getGraphMDL());
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
-            Statement rewrittenStatement = postgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
+            Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,
                     new PreparedStatement(statementName, getFormattedSql(rewrittenStatement, sqlParser), rewrittenParamTypes, statementTrimmed, isSessionCommand(rewrittenStatement)));

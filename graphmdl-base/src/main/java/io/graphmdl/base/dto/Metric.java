@@ -31,10 +31,11 @@ public class Metric
     private final List<Column> dimension;
     private final List<Column> measure;
     private final List<TimeGrain> timeGrain;
+    private final boolean preAggregated;
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
-        return new Metric(name, baseModel, dimension, measure, timeGrain);
+        return new Metric(name, baseModel, dimension, measure, timeGrain, false);
     }
 
     @JsonCreator
@@ -43,12 +44,14 @@ public class Metric
             @JsonProperty("baseModel") String baseModel,
             @JsonProperty("dimension") List<Column> dimension,
             @JsonProperty("measure") List<Column> measure,
-            @JsonProperty("timeGrain") List<TimeGrain> timeGrain)
+            @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
+            @JsonProperty("preAggregated") boolean preAggregated)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseModel = requireNonNull(baseModel, "baseModel is null");
         this.dimension = requireNonNull(dimension, "dimension is null");
         this.measure = requireNonNull(measure, "measure is null");
+        this.preAggregated = preAggregated;
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
     }
@@ -85,6 +88,11 @@ public class Metric
                 .findFirst();
     }
 
+    public boolean isPreAggregated()
+    {
+        return preAggregated;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -95,7 +103,8 @@ public class Metric
             return false;
         }
         Metric that = (Metric) obj;
-        return Objects.equals(name, that.name)
+        return preAggregated == that.preAggregated
+                && Objects.equals(name, that.name)
                 && Objects.equals(baseModel, that.baseModel)
                 && Objects.equals(dimension, that.dimension)
                 && Objects.equals(measure, that.measure)
@@ -105,6 +114,6 @@ public class Metric
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseModel, dimension, measure, timeGrain);
+        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated);
     }
 }

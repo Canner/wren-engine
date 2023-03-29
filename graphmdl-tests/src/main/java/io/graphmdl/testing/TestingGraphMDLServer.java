@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
@@ -29,6 +30,7 @@ import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
 import io.graphmdl.main.GraphMDLModule;
+import io.graphmdl.main.biboost.BiBoostModule;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
@@ -74,7 +76,8 @@ public class TestingGraphMDLServer
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
-                new GraphMDLModule()));
+                new GraphMDLModule(),
+                new BiBoostModule()));
 
         injector = app
                 .doNotInitializeLogging()
@@ -94,6 +97,11 @@ public class TestingGraphMDLServer
     public URI getHttpServerBasedUrl()
     {
         return injector.getInstance(TestingHttpServer.class).getBaseUrl();
+    }
+
+    public <T> T getInstance(Key<T> key)
+    {
+        return injector.getInstance(key);
     }
 
     @Override

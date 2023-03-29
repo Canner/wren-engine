@@ -19,12 +19,14 @@ import com.google.api.gax.rpc.HeaderProvider;
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.storage.StorageOptions;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.graphmdl.main.connector.bigquery.BigQueryClient;
+import io.graphmdl.connector.bigquery.BigQueryClient;
+import io.graphmdl.connector.bigquery.GcsStorageClient;
 import io.graphmdl.main.connector.bigquery.BigQueryConfig;
 import io.graphmdl.main.connector.bigquery.BigQueryCredentialsSupplier;
 import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
@@ -97,5 +99,17 @@ public class BigQueryConnectorModule
     public static HeaderProvider createHeaderProvider()
     {
         return FixedHeaderProvider.create("user-agent", "graphmdl/1");
+    }
+
+    @Provides
+    @Singleton
+    public static GcsStorageClient provideGcsStorageClient(BigQueryConfig config, HeaderProvider headerProvider, BigQueryCredentialsSupplier bigQueryCredentialsSupplier)
+    {
+        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
+        StorageOptions.Builder options = StorageOptions.newBuilder()
+                .setHeaderProvider(headerProvider)
+                .setProjectId(billingProjectId);
+        bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
+        return new GcsStorageClient(options.build().getService());
     }
 }

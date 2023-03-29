@@ -55,6 +55,10 @@
             <artifactId>google-cloud-core-http</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
         </dependency>
@@ -67,6 +71,10 @@
             <artifactId>graphmdl-base</artifactId>
         </dependency>
         <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+        </dependency>
+        <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
         </dependency>
@@ -74,6 +82,5 @@
             <groupId>org.duckdb</groupId>
             <artifactId>duckdb_jdbc</artifactId>
         </dependency>
-
     </dependencies>
 </project>

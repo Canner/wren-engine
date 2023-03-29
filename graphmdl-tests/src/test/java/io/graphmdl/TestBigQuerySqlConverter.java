@@ -15,7 +15,8 @@
 package io.graphmdl;
 
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.main.connector.bigquery.BigQueryClient;
+import io.graphmdl.connector.bigquery.BigQueryClient;
+import io.graphmdl.connector.bigquery.GcsStorageClient;
 import io.graphmdl.main.connector.bigquery.BigQueryConfig;
 import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
 import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
@@ -45,8 +46,12 @@ public class TestBigQuerySqlConverter
                 config,
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
+        GcsStorageClient gcsStorageClient = BigQueryConnectorModule.provideGcsStorageClient(
+                config,
+                BigQueryConnectorModule.createHeaderProvider(),
+                BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
-        bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
+        bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config, gcsStorageClient);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
     }
 

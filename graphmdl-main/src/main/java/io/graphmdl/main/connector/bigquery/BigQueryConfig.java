@@ -29,6 +29,8 @@ public class BigQueryConfig
 
     private Optional<String> location = Optional.empty();
 
+    private Optional<String> bucketName = Optional.empty();
+
     public Optional<String> getCredentialsKey()
     {
         return credentialsKey;
@@ -92,6 +94,19 @@ public class BigQueryConfig
     public BigQueryConfig setLocation(String location)
     {
         this.location = Optional.of(location);
+        return this;
+    }
+
+    public Optional<String> getBucketName()
+    {
+        return bucketName;
+    }
+
+    @Config("bigquery.bucket-name")
+    @ConfigDescription("The Google Cloud storage bucket name to use for export")
+    public BigQueryConfig setBucketName(String bucketName)
+    {
+        this.bucketName = Optional.of(bucketName);
         return this;
     }
 }

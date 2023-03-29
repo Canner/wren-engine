@@ -15,6 +15,7 @@
 package io.graphmdl.testing;
 
 import com.google.common.io.Closer;
+import com.google.inject.Key;
 import org.testng.annotations.AfterClass;
 
 import java.io.IOException;
@@ -35,6 +36,11 @@ public abstract class RequireGraphMDLServer
     protected TestingGraphMDLServer server()
     {
         return graphMDLServer;
+    }
+
+    public <T> T getInstance(Key<T> key)
+    {
+        return graphMDLServer.getInstance(key);
     }
 
     @AfterClass(alwaysRun = true)
