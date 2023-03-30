@@ -25,6 +25,7 @@ import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.Node;
@@ -70,11 +71,15 @@ public class GraphMDLSqlRewrite
                 analysis.getMetrics().stream()
                         .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
 
+        Map<String, Query> metricRollupQueries =
+                analysis.getMetricRollups().values().stream()
+                        .collect(toUnmodifiableMap(rollup -> rollup.getMetric().getName(), Utils::parseMetricRollupSql));
+
         if (modelQueries.isEmpty()) {
             return root;
         }
 
-        Node rewriteWith = new WithRewriter(modelQueries, metricQueries, analysis).process(root);
+        Node rewriteWith = new WithRewriter(modelQueries, metricQueries, metricRollupQueries, analysis).process(root);
         return new Rewriter(analysis).process(rewriteWith);
     }
 
@@ -108,15 +113,18 @@ public class GraphMDLSqlRewrite
     {
         private final Map<String, Query> modelQueries;
         private final Map<String, Query> metricQueries;
+        private final Map<String, Query> metricRollupQueries;
         private final Analysis analysis;
 
         public WithRewriter(
                 Map<String, Query> modelQueries,
                 Map<String, Query> metricQueries,
+                Map<String, Query> metricRollupQueries,
                 Analysis analysis)
         {
             this.modelQueries = requireNonNull(modelQueries, "modelQueries is null");
             this.metricQueries = requireNonNull(metricQueries, "metricQueries is null");
+            this.metricRollupQueries = requireNonNull(metricRollupQueries, "metricRollupQueries is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
@@ -135,10 +143,16 @@ public class GraphMDLSqlRewrite
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
 
+            List<WithQuery> metricRollupWithQueries = metricRollupQueries.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
+                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
+                    .collect(toUnmodifiableList());
+
             List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
                     .addAll(modelWithQueries)
                     .addAll(relationshipCTEs)
                     .addAll(metricWithQueries)
+                    .addAll(metricRollupWithQueries)
                     .build();
 
             return new Query(
@@ -208,6 +222,16 @@ public class GraphMDLSqlRewrite
                 result = applyRelationshipRule(result, relationshipCTENames);
             }
             return result;
+        }
+
+        @Override
+        protected Node visitFunctionRelation(FunctionRelation node, Void context)
+        {
+            if (analysis.getMetricRollups().containsKey(NodeRef.of(node))) {
+                return new Table(QualifiedName.of(analysis.getMetricRollups().get(NodeRef.of(node)).getMetric().getName()));
+            }
+            // this should not happen, every MetricRollup node should be captured and syntax checked in StatementAnalyzer
+            throw new IllegalArgumentException("MetricRollup node is not replaced");
         }
 
         @Override

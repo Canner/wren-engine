@@ -72,7 +72,8 @@ public class TestAllRulesRewrite
                                 "Album",
                                 // TODO: if dimension is a relationship type
                                 List.of(column("band", VARCHAR, null, true, "Album.band.name")),
-                                List.of(column("price", INTEGER, null, true, "sum(Album.price)")))))
+                                List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
+                                List.of())))
                 .build());
     }
 

@@ -335,4 +335,15 @@ public final class QueryUtil
                 Optional.empty(),
                 Optional.empty());
     }
+
+    public static QualifiedName getQualifiedName(Expression expression)
+    {
+        if (expression instanceof DereferenceExpression) {
+            return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
+        }
+        if (expression instanceof Identifier) {
+            return QualifiedName.of(ImmutableList.of((Identifier) expression));
+        }
+        return null;
+    }
 }

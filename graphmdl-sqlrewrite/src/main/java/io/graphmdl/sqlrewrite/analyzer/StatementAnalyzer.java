@@ -25,7 +25,9 @@ import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.GroupingElement;
+import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
@@ -49,10 +51,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.Utils.checkArgument;
+import static io.graphmdl.base.dto.TimeGrain.TimeUnit.timeUnit;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
+import static io.trino.sql.QueryUtil.getQualifiedName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -95,17 +100,23 @@ public final class StatementAnalyzer
                                         .orElseThrow(() -> new IllegalArgumentException(format("relationship model %s not exists", modelName))))
                         .collect(toUnmodifiableSet()));
 
-        Set<Metric> metrics =
-                graphMDL.listMetrics().stream()
-                        .filter(metric -> analysis.getTables().stream()
-                                .filter(table -> table.getCatalogName().equals(graphMDL.getCatalog()))
-                                .filter(table -> table.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
-                                .anyMatch(table -> table.getSchemaTableName().getTableName().equals(metric.getName())))
-                        .collect(toUnmodifiableSet());
+        Set<Metric> metrics = analysis.getTables().stream()
+                .map(graphMDL::getMetric)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toUnmodifiableSet());
+
+        Set<Metric> metricInMetricRollups = analysis.getMetricRollups().values().stream()
+                .map(MetricRollupInfo::getMetric)
+                .collect(toUnmodifiableSet());
+
+        // TODO: remove this check
+        checkArgument(metrics.stream().noneMatch(metricInMetricRollups::contains), "duplicate metrics in metrics and metric rollups");
 
         // add models required for metrics
         analysis.addModels(
-                metrics.stream()
+                Stream.of(metrics, metricInMetricRollups)
+                        .flatMap(Collection::stream)
                         .map(Metric::getBaseModel)
                         .distinct()
                         .map(model -> graphMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
@@ -230,6 +241,34 @@ public final class StatementAnalyzer
         {
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
+        }
+
+        @Override
+        protected Scope visitFunctionRelation(FunctionRelation node, Optional<Scope> scope)
+        {
+            if (node.getName().toString().equalsIgnoreCase("roll_up")) {
+                List<Expression> arguments = node.getArguments();
+                checkArgument(arguments.size() == 3, "rollup function should have 3 arguments");
+
+                QualifiedName tableName = getQualifiedName(arguments.get(0));
+                checkArgument(tableName != null, format("'%s' cannot be resolved", arguments.get(0)));
+                checkArgument(arguments.get(1) instanceof Identifier, format("'%s' cannot be resolved", arguments.get(1)));
+                checkArgument(arguments.get(2) instanceof Identifier, format("'%s' cannot be resolved", arguments.get(2)));
+
+                CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, tableName);
+                Metric metric = graphMDL.getMetric(catalogSchemaTableName).orElseThrow(() -> new IllegalArgumentException("Metric not found: " + catalogSchemaTableName));
+                String timeColumn = ((Identifier) arguments.get(1)).getValue();
+
+                analysis.addMetricRollups(
+                        NodeRef.of(node),
+                        new MetricRollupInfo(
+                                metric,
+                                metric.getTimeGrain(timeColumn).orElseThrow(() -> new IllegalArgumentException("Time column not found in metric: " + timeColumn)),
+                                timeUnit(((Identifier) arguments.get(2)).getValue())));
+                // currently we don't care about metric rollup output scope
+                return Scope.builder().parent(scope).build();
+            }
+            throw new IllegalArgumentException("FunctionRelation not supported: " + node.getName());
         }
 
         @Override

@@ -85,6 +85,7 @@ import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionCall.NullTreatment;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Grant;
@@ -1636,6 +1637,12 @@ class AstBuilder
     public Node visitFunctionRelation(SqlBaseParser.FunctionRelationContext context)
     {
         QualifiedName name = getQualifiedName(context.functionExpression().qualifiedName());
+
+        // graphmdl function: metric roll_up
+        if (name.toString().equalsIgnoreCase("roll_up")) {
+            List<Expression> arguments = visit(context.functionExpression().expression(), Expression.class);
+            return new FunctionRelation(getLocation(context), name, arguments);
+        }
 
         for (PgSetReturnFunction pgSetReturnFunction : PgSetReturnFunction.values()) {
             if (name.toString().equals(pgSetReturnFunction.getPgFuncName())) {

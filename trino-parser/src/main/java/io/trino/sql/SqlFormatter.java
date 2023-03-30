@@ -50,6 +50,7 @@ import io.trino.sql.tree.ExplainOption;
 import io.trino.sql.tree.ExplainType;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FetchFirst;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Grant;
 import io.trino.sql.tree.GrantRoles;
 import io.trino.sql.tree.GrantorSpecification;
@@ -196,6 +197,18 @@ public final class SqlFormatter
         {
             checkArgument(indent == 0, "visitRowPattern should only be called at root");
             builder.append(formatPattern(node));
+            return null;
+        }
+
+        @Override
+        protected Void visitFunctionRelation(FunctionRelation node, Integer indent)
+        {
+            builder.append(formatName(node.getName()))
+                    .append("(")
+                    .append(node.getArguments().stream()
+                            .map(ExpressionFormatter::formatExpression)
+                            .collect(joining(", ")))
+                    .append(")");
             return null;
         }
 

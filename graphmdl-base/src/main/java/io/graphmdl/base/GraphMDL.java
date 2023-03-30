@@ -111,4 +111,12 @@ public class GraphMDL
                 .filter(metric -> metric.getName().equals(name))
                 .findAny();
     }
+
+    public Optional<Metric> getMetric(CatalogSchemaTableName name)
+    {
+        if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
+            return getMetric(name.getSchemaTableName().getTableName());
+        }
+        return Optional.empty();
+    }
 }

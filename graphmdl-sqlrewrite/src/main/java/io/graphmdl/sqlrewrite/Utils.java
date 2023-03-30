@@ -14,12 +14,14 @@
 
 package io.graphmdl.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.sqlrewrite.analyzer.MetricRollupInfo;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DereferenceExpression;
@@ -41,6 +43,7 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public final class Utils
 {
@@ -80,6 +83,16 @@ public final class Utils
         throw new IllegalArgumentException(format("metric %s is not a query, sql %s", metric.getName(), sql));
     }
 
+    public static Query parseMetricRollupSql(MetricRollupInfo metricRollupInfo)
+    {
+        String sql = getMetricRollupSql(metricRollupInfo);
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        if (statement instanceof Query) {
+            return (Query) statement;
+        }
+        throw new IllegalArgumentException(format("metric %s is not a query, sql %s", metricRollupInfo.getMetric().getName(), sql));
+    }
+
     private static String getMetricSql(Metric metric)
     {
         requireNonNull(metric, "metric is null");
@@ -87,6 +100,36 @@ public final class Utils
                 .map(Column::getSqlExpression).collect(joining(","));
         String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
         return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseModel(), groupByItems);
+    }
+
+    private static String getMetricRollupSql(MetricRollupInfo metricRollupInfo)
+    {
+        requireNonNull(metricRollupInfo, "metricRollupInfo is null");
+
+        Metric metric = metricRollupInfo.getMetric();
+        String timeGrain = format("DATE_TRUNC('%s', %s) %s",
+                metricRollupInfo.getDatePart(),
+                metricRollupInfo.getTimeGrain().getRefColumn(),
+                metricRollupInfo.getTimeGrain().getName());
+
+        List<String> selectItems =
+                ImmutableList.<String>builder()
+                        .add(timeGrain)
+                        .addAll(
+                                Stream.concat(metric.getDimension().stream(), metric.getMeasure().stream())
+                                        .map(Column::getSqlExpression)
+                                        .collect(toList()))
+                        .build();
+
+        String groupByColumnOrdinals =
+                IntStream.rangeClosed(1, selectItems.size() - metric.getMeasure().size())
+                        .mapToObj(String::valueOf)
+                        .collect(joining(","));
+
+        return format("SELECT %s FROM %s GROUP BY %s",
+                String.join(",", selectItems),
+                metric.getBaseModel(),
+                groupByColumnOrdinals);
     }
 
     public static String randomTableSuffix()

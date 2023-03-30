@@ -72,6 +72,7 @@ import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionCall.NullTreatment;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Grant;
 import io.trino.sql.tree.GrantOnType;
@@ -3527,6 +3528,27 @@ public class TestSqlParser
                                 new BooleanLiteral("false"),
                                 new StringLiteral("HIDDEN"),
                                 new BooleanLiteral("false"))));
+    }
+
+    @Test
+    public void testFunctionRelation()
+    {
+        assertStatement("SELECT * FROM ROLL_UP(graphmdl.test.metric, col, day)",
+                simpleQuery(
+                        new Select(
+                                false,
+                                ImmutableList.of(
+                                        new AllColumns(
+                                                Optional.empty(),
+                                                Optional.empty(),
+                                                ImmutableList.of()))),
+                        new FunctionRelation(
+                                null,
+                                QualifiedName.of("ROLL_UP"),
+                                ImmutableList.of(
+                                        DereferenceExpression.from(QualifiedName.of("graphmdl", "test", "metric")),
+                                        new Identifier("col"),
+                                        new Identifier("day")))));
     }
 
     private static QualifiedName makeQualifiedName(String tableName)
