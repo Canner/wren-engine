@@ -28,12 +28,19 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Verify.verify;
 import static io.graphmdl.base.type.SmallIntType.SMALLINT;
 import static io.graphmdl.base.type.TinyIntType.TINYINT;
 import static io.graphmdl.testing.DataType.bigintDataType;
@@ -41,6 +48,7 @@ import static io.graphmdl.testing.DataType.booleanDataType;
 import static io.graphmdl.testing.DataType.byteaDataType;
 import static io.graphmdl.testing.DataType.charDataType;
 import static io.graphmdl.testing.DataType.dataType;
+import static io.graphmdl.testing.DataType.dateDataType;
 import static io.graphmdl.testing.DataType.decimalDataType;
 import static io.graphmdl.testing.DataType.doubleDataType;
 import static io.graphmdl.testing.DataType.integerDataType;
@@ -200,6 +208,48 @@ public class TestWireProtocolType
                 // .addInput(arrayDataType(doubleDataType()), asList(123.45d))
                 // .addInput(arrayDataType(realDataType()), asList(123.45f))
                 .executeSuite();
+    }
+
+    @Test
+    public void testDate()
+    {
+        ZoneId jvmZone = ZoneId.systemDefault();
+        checkState(jvmZone.getId().equals("America/Bahia_Banderas"), "This test assumes certain JVM time zone");
+        LocalDate dateOfLocalTimeChangeForwardAtMidnightInJvmZone = LocalDate.of(1970, 1, 1);
+        checkIsGap(jvmZone, dateOfLocalTimeChangeForwardAtMidnightInJvmZone.atStartOfDay());
+
+        ZoneId someZone = ZoneId.of("Europe/Vilnius");
+        LocalDate dateOfLocalTimeChangeForwardAtMidnightInSomeZone = LocalDate.of(1983, 4, 1);
+        checkIsGap(someZone, dateOfLocalTimeChangeForwardAtMidnightInSomeZone.atStartOfDay());
+        LocalDate dateOfLocalTimeChangeBackwardAtMidnightInSomeZone = LocalDate.of(1983, 10, 1);
+        checkIsDoubled(someZone, dateOfLocalTimeChangeBackwardAtMidnightInSomeZone.atStartOfDay().minusMinutes(1));
+        Function<LocalDate, ?> toJdbcTimestamp = date -> Timestamp.valueOf(LocalDateTime.of(date, LocalTime.of(0, 0)));
+
+        WireProtocolTypeTest testCases = createTypeTest()
+                .addInput(dateDataType(), LocalDate.of(1952, 4, 3), toJdbcTimestamp) // before epoch
+                .addInput(dateDataType(), LocalDate.of(1970, 1, 1), toJdbcTimestamp)
+                .addInput(dateDataType(), LocalDate.of(1970, 2, 3), toJdbcTimestamp)
+                .addInput(dateDataType(), LocalDate.of(2017, 7, 1), toJdbcTimestamp) // summer on northern hemisphere (possible DST)
+                .addInput(dateDataType(), LocalDate.of(2017, 1, 1), toJdbcTimestamp) // winter on northern hemisphere (possible DST on southern hemisphere)
+                .addInput(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInJvmZone, toJdbcTimestamp)
+                .addInput(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInSomeZone, toJdbcTimestamp)
+                .addInput(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone, toJdbcTimestamp);
+        testCases.executeSuite();
+    }
+
+    private static void checkIsGap(ZoneId zone, LocalDateTime dateTime)
+    {
+        verify(isGap(zone, dateTime), "Expected %s to be a gap in %s", dateTime, zone);
+    }
+
+    private static boolean isGap(ZoneId zone, LocalDateTime dateTime)
+    {
+        return zone.getRules().getValidOffsets(dateTime).isEmpty();
+    }
+
+    private static void checkIsDoubled(ZoneId zone, LocalDateTime dateTime)
+    {
+        verify(zone.getRules().getValidOffsets(dateTime).size() == 2, "Expected %s to be doubled in %s", dateTime, zone);
     }
 
     private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType)
