@@ -138,6 +138,13 @@ public class DataType<T>
         return dataType(insertType, trinoResultType, DataType::formatStringLiteral);
     }
 
+    public static DataType<BigDecimal> decimalDataType()
+    {
+        return dataType(
+                "decimal",
+                NumericType.NUMERIC);
+    }
+
     public static DataType<BigDecimal> decimalDataType(int precision, int scale)
     {
         String databaseType = format("decimal(%s, %s)", precision, scale);

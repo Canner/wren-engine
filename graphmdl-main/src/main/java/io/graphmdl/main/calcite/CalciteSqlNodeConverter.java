@@ -741,7 +741,12 @@ public class CalciteSqlNodeConverter
             }
             else if (typeName.equals(SqlTypeName.DECIMAL)) {
                 List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
-                checkArgument(params.size() == 2, format("decimal type should have 2 parameters but %s", params.size()));
+                checkArgument(params.size() == 0 || params.size() == 2, format("decimal type should have 0 or 2 parameters but %s", params.size()));
+                if (params.size() == 0) {
+                    return new SqlDataTypeSpec(
+                            new SqlBasicTypeNameSpec(typeName, ZERO),
+                            toCalcitePos(node.getLocation()));
+                }
                 return new SqlDataTypeSpec(
                         new SqlBasicTypeNameSpec(typeName, params.get(0), params.get(1), ZERO),
                         toCalcitePos(node.getLocation()));

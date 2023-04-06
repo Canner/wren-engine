@@ -153,6 +153,7 @@ public class TestWireProtocolType
     private WireProtocolTypeTest decimalTests()
     {
         return createTypeTest()
+                .addInput(decimalDataType(), new BigDecimal("0.123"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("0"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("193"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("19"))
