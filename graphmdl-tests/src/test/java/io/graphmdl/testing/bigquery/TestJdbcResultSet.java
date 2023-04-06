@@ -42,6 +42,7 @@ public class TestJdbcResultSet
 {
     // TODO Force mapping type before we fix https://github.com/Canner/canner-metric-layer/issues/196
     private static final Map<Integer, Integer> TYPE_FORCE_MAPPING = ImmutableMap.<Integer, Integer>builder()
+            .put(Types.TINYINT, Types.BIGINT)
             .put(Types.SMALLINT, Types.BIGINT)
             .put(Types.INTEGER, Types.BIGINT)
             .put(Types.REAL, Types.DOUBLE)
@@ -111,6 +112,7 @@ public class TestJdbcResultSet
             throws Exception
     {
         checkRepresentation("BOOLEAN 'true'", Types.BIT, true);
+        checkRepresentation("TINYINT '123'", Types.TINYINT, (long) 123);
         checkRepresentation("SMALLINT '123'", Types.SMALLINT, (long) 123);
         checkRepresentation("INTEGER '123'", Types.INTEGER, (long) 123);
         checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);

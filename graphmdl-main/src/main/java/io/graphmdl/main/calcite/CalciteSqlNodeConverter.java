@@ -136,6 +136,7 @@ import static io.graphmdl.base.type.StandardTypes.INTEGER;
 import static io.graphmdl.base.type.StandardTypes.JSON;
 import static io.graphmdl.base.type.StandardTypes.REAL;
 import static io.graphmdl.base.type.StandardTypes.SMALLINT;
+import static io.graphmdl.base.type.StandardTypes.TINYINT;
 import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.base.type.StandardTypes.VARCHAR;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
@@ -352,6 +353,7 @@ public class CalciteSqlNodeConverter
             switch (node.getType().toLowerCase(ENGLISH)) {
                 case BOOLEAN:
                     return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
+                case TINYINT:
                 case SMALLINT:
                 case INTEGER:
                 case BIGINT:
