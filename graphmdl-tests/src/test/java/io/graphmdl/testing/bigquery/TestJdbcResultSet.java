@@ -88,12 +88,11 @@ public class TestJdbcResultSet
     }
 
     @Test
-    public void testObjectTypes()
+    public void testObjectTypesNonSpecific()
             throws Exception
     {
         checkRepresentation("123", Types.INTEGER, (long) 123);
         checkRepresentation("12300000000", Types.BIGINT, 12300000000L);
-        checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
         checkRepresentation("1e-1", Types.DOUBLE, 0.1);
         // TODO bigquery can't do division by zero
 //        checkRepresentation("1.0E0 / 0.0E0", Types.DOUBLE, Double.POSITIVE_INFINITY);
@@ -105,11 +104,27 @@ public class TestJdbcResultSet
         checkRepresentation("'hello'", Types.VARCHAR, "hello");
         checkRepresentation("cast('foo' as char(5))", Types.CHAR, "foo  ");
         checkRepresentation("ARRAY[1, 2]", Types.ARRAY, (rs, column) -> assertEquals(rs.getArray(column).getArray(), new long[] {1, 2}));
-        checkRepresentation("DECIMAL '0.1'", Types.DECIMAL, 0.1);
+    }
+
+    @Test
+    public void testObjectTypesSpecific()
+            throws Exception
+    {
+        checkRepresentation("BOOLEAN 'true'", Types.BIT, true);
+        checkRepresentation("SMALLINT '123'", Types.SMALLINT, (long) 123);
+        checkRepresentation("INTEGER '123'", Types.INTEGER, (long) 123);
+        checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);
+        checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
+        checkRepresentation("DOUBLE '123.45'", Types.DOUBLE, 123.45);
+        checkRepresentation("DECIMAL '123.45'", Types.DECIMAL, 123.45);
+        checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
+        checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
+        // TODO https://github.com/Canner/canner-metric-layer/issues/41
+//        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
         // TODO:
-        // checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
-        // TODO should be Types.OTHER：https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
+//        checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
+        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.OTHER, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
+        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.OTHER, "{\"name\":\"alice\"}");
 
         checkRepresentation("DATE '2018-02-13'", Types.DATE, (rs, column) -> {
             assertEquals(rs.getObject(column), Date.valueOf(LocalDate.of(2018, 2, 13)));
@@ -147,26 +162,7 @@ public class TestJdbcResultSet
 //            assertEquals(rs.getObject(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //            assertEquals(rs.getTimestamp(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //        });
-    }
 
-    @Test
-    public void testSelectTypeValue()
-            throws Exception
-    {
-        checkRepresentation("BOOLEAN 'true'", Types.BIT, true);
-        checkRepresentation("SMALLINT '123'", Types.SMALLINT, (long) 123);
-        checkRepresentation("INTEGER '123'", Types.INTEGER, (long) 123);
-        checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);
-        checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
-        checkRepresentation("DOUBLE '123.45'", Types.DOUBLE, 123.45);
-        checkRepresentation("DECIMAL '123.45'", Types.DECIMAL, 123.45);
-        checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
-        checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
-        // TODO https://github.com/Canner/canner-metric-layer/issues/41
-//        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
-        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.OTHER, "{\"name\":\"alice\"}");
-        checkRepresentation("DATE '2018-02-13'", Types.DATE, Date.valueOf(LocalDate.of(2018, 2, 13)));
-        checkRepresentation("TIMESTAMP '2018-02-13 13:14:15.123'", Types.TIMESTAMP, Timestamp.valueOf(LocalDateTime.of(2018, 2, 13, 13, 14, 15, 123_000_000)));
         // TODO: need to support type with parameters https://github.com/Canner/canner-metric-layer/issues/204
 //        checkRepresentation("DECIMAL(5,2) '123.45'", Types.DECIMAL, 123.45);
 //        checkRepresentation("VARCHAR(3) 'foo'", Types.VARCHAR, "foo");
