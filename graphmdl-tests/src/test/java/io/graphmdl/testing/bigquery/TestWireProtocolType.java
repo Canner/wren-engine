@@ -39,6 +39,7 @@ import static io.graphmdl.base.type.TinyIntType.TINYINT;
 import static io.graphmdl.testing.DataType.bigintDataType;
 import static io.graphmdl.testing.DataType.booleanDataType;
 import static io.graphmdl.testing.DataType.byteaDataType;
+import static io.graphmdl.testing.DataType.charDataType;
 import static io.graphmdl.testing.DataType.dataType;
 import static io.graphmdl.testing.DataType.decimalDataType;
 import static io.graphmdl.testing.DataType.doubleDataType;
@@ -76,6 +77,15 @@ public class TestWireProtocolType
                 .addInput(jdbcTinyintDataType(), 125)
                 .addInput(doubleDataType(), 123.45d)
                 .addInput(realDataType(), 123.45f)
+                .executeSuite();
+    }
+
+    @Test
+    public void testChar()
+    {
+        createTypeTest()
+                .addInput(charDataType(), "c")
+                .addInput(charDataType(9), "test char")
                 .executeSuite();
     }
 

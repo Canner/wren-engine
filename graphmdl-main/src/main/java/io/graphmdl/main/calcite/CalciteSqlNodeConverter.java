@@ -735,6 +735,13 @@ public class CalciteSqlNodeConverter
         {
             SqlTypeName typeName = toCalciteType(node.getName().toString());
             if (typeName.equals(SqlTypeName.CHAR)) {
+                List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
+                checkArgument(params.size() < 2, format("char type should have 0 or 1 parameter but %s", params.size()));
+                if (params.size() == 0) {
+                    return new SqlDataTypeSpec(
+                            new SqlBasicTypeNameSpec(typeName, ZERO),
+                            toCalcitePos(node.getLocation()));
+                }
                 return new SqlDataTypeSpec(
                         new SqlBasicTypeNameSpec(typeName, handleNumericParameter(node.getArguments().get(0)), ZERO),
                         toCalcitePos(node.getLocation()));
