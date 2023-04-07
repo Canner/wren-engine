@@ -14,6 +14,7 @@
 
 package io.graphmdl.testing.bigquery;
 
+import com.google.common.collect.ImmutableMap;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -29,6 +30,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -38,6 +40,16 @@ import static org.testng.Assert.assertTrue;
 public class TestJdbcResultSet
         extends AbstractWireProtocolTest
 {
+    // TODO Force mapping type before we fix https://github.com/Canner/canner-metric-layer/issues/196
+    private static final Map<Integer, Integer> TYPE_FORCE_MAPPING = ImmutableMap.<Integer, Integer>builder()
+            .put(Types.SMALLINT, Types.BIGINT)
+            .put(Types.INTEGER, Types.BIGINT)
+            .put(Types.REAL, Types.DOUBLE)
+            .put(Types.NUMERIC, Types.DOUBLE)
+            .put(Types.DECIMAL, Types.DOUBLE)
+            .put(Types.CHAR, Types.VARCHAR)
+            .put(Types.OTHER, Types.VARCHAR)
+            .build();
     private Connection connection;
     private Statement statement;
 
@@ -76,33 +88,43 @@ public class TestJdbcResultSet
     }
 
     @Test
-    public void testObjectTypes()
+    public void testObjectTypesNonSpecific()
             throws Exception
     {
-        // TODO should be Types.INTEGER：https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("123", Types.BIGINT, (long) 123);
+        checkRepresentation("123", Types.INTEGER, (long) 123);
         checkRepresentation("12300000000", Types.BIGINT, 12300000000L);
-        // TODO should be Types.REAL：https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("REAL '123.45'", Types.DOUBLE, 123.45);
         checkRepresentation("1e-1", Types.DOUBLE, 0.1);
         // TODO bigquery can't do division by zero
 //        checkRepresentation("1.0E0 / 0.0E0", Types.DOUBLE, Double.POSITIVE_INFINITY);
 //        checkRepresentation("0.0E0 / 0.0E0", Types.DOUBLE, Double.NaN);
-        // TODO should be Types.NUMERIC: https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("0.1", Types.DOUBLE, 0.1);
+        checkRepresentation("0.1", Types.NUMERIC, 0.1);
         // In PostgreSQL JDBC, BooleanType will be represent to JDBC Bit Type
         // https://github.com/pgjdbc/pgjdbc/blob/master/pgjdbc/src/main/java/org/postgresql/jdbc/TypeInfoCache.java#L95
         checkRepresentation("true", Types.BIT, true);
-        // TODO should be Types.CHAR: https://github.com/Canner/canner-metric-layer/issues/196
         checkRepresentation("'hello'", Types.VARCHAR, "hello");
-        checkRepresentation("cast('foo' as char(5))", Types.VARCHAR, "foo  ");
+        checkRepresentation("cast('foo' as char(5))", Types.CHAR, "foo  ");
         checkRepresentation("ARRAY[1, 2]", Types.ARRAY, (rs, column) -> assertEquals(rs.getArray(column).getArray(), new long[] {1, 2}));
-        // TODO should be Types.DECIMAL：https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("DECIMAL '0.1'", Types.DOUBLE, 0.1);
+    }
+
+    @Test
+    public void testObjectTypesSpecific()
+            throws Exception
+    {
+        checkRepresentation("BOOLEAN 'true'", Types.BIT, true);
+        checkRepresentation("SMALLINT '123'", Types.SMALLINT, (long) 123);
+        checkRepresentation("INTEGER '123'", Types.INTEGER, (long) 123);
+        checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);
+        checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
+        checkRepresentation("DOUBLE '123.45'", Types.DOUBLE, 123.45);
+        checkRepresentation("DECIMAL '123.45'", Types.DECIMAL, 123.45);
+        checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
+        checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
+        // TODO https://github.com/Canner/canner-metric-layer/issues/41
+//        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
         // TODO:
-        // checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
-        // TODO should be Types.OTHER：https://github.com/Canner/canner-metric-layer/issues/196
-        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
+//        checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
+        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.OTHER, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
+        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.OTHER, "{\"name\":\"alice\"}");
 
         checkRepresentation("DATE '2018-02-13'", Types.DATE, (rs, column) -> {
             assertEquals(rs.getObject(column), Date.valueOf(LocalDate.of(2018, 2, 13)));
@@ -140,12 +162,19 @@ public class TestJdbcResultSet
 //            assertEquals(rs.getObject(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //            assertEquals(rs.getTimestamp(column), Timestamp.valueOf(LocalDateTime.of(1969, 12, 31, 15, 14, 15, 227_000_000)));
 //        });
+
+        // TODO: need to support type with parameters https://github.com/Canner/canner-metric-layer/issues/204
+//        checkRepresentation("DECIMAL(5,2) '123.45'", Types.DECIMAL, 123.45);
+//        checkRepresentation("VARCHAR(3) 'foo'", Types.VARCHAR, "foo");
+//        checkRepresentation("CHAR(3) 'foo'", Types.CHAR, "foo");
+//        checkRepresentation("TIMESTAMP(3) '2018-02-13 13:14:15.123'", Types.TIMESTAMP, Timestamp.valueOf(LocalDateTime.of(2018, 2, 13, 13, 14, 15, 123_000_000)));
     }
 
     private void checkRepresentation(String expression, int expectedSqlType, Object expectedRepresentation)
             throws Exception
     {
-        checkRepresentation(expression, expectedSqlType, (rs, column) -> assertEquals(rs.getObject(column), expectedRepresentation));
+        int expectedForceMappingType = TYPE_FORCE_MAPPING.getOrDefault(expectedSqlType, expectedSqlType);
+        checkRepresentation(expression, expectedForceMappingType, (rs, column) -> assertEquals(rs.getObject(column), expectedRepresentation));
     }
 
     private void checkRepresentation(String expression, int expectedSqlType, ResultAssertion assertion)
