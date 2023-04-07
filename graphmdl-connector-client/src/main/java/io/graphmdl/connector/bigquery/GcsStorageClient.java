@@ -14,8 +14,6 @@
 
 package io.graphmdl.connector.bigquery;
 
-import com.google.api.gax.paging.Page;
-import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
@@ -41,10 +39,9 @@ public class GcsStorageClient
     {
         ImmutableList.Builder<StorageBatchResult<Boolean>> builder = ImmutableList.builder();
         StorageBatch storageBatch = storage.batch();
-        Page<Blob> blobs = storage.list(bucket, Storage.BlobListOption.prefix(prefix));
-        for (Blob blob : blobs.iterateAll()) {
-            builder.add(storageBatch.delete(blob.getBlobId()));
-        }
+        storage.list(bucket, Storage.BlobListOption.prefix(prefix))
+                .iterateAll()
+                .forEach(blob -> storageBatch.delete(blob.getBlobId()));
         List<StorageBatchResult<Boolean>> results = builder.build();
         if (results.size() > 0) {
             storageBatch.submit();

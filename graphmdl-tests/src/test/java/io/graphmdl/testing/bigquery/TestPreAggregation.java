@@ -84,7 +84,7 @@ public class TestPreAggregation
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
-        String errMsg = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "unqualified").getErrorMessages()
+        String errMsg = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
     }

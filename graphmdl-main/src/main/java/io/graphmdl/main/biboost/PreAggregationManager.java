@@ -114,12 +114,13 @@ public class PreAggregationManager
     private CompletableFuture<MetricTablePair> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
     {
         return supplyAsync(() -> {
+            SessionContext sessionContext = SessionContext.builder()
+                    .setCatalog(mdl.getCatalog())
+                    .setSchema(mdl.getSchema())
+                    .build();
             String graphMDLRewritten = GraphMDLPlanner.rewrite(
                     format("select * from %s", metric.getName()),
-                    SessionContext.builder()
-                            .setCatalog(mdl.getCatalog())
-                            .setSchema(mdl.getSchema())
-                            .build(),
+                    sessionContext,
                     mdl);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, connector.getDefaultCatalog(), parsedStatement);
@@ -127,10 +128,7 @@ public class PreAggregationManager
                     mdl.getCatalog(),
                     mdl.getSchema(),
                     metric.getName(),
-                    sqlConverter.convert(getFormattedSql(rewrittenStatement, sqlParser), SessionContext.builder()
-                            .setCatalog(mdl.getCatalog())
-                            .setSchema(mdl.getSchema())
-                            .build()));
+                    sqlConverter.convert(getFormattedSql(rewrittenStatement, sqlParser), sessionContext));
             String duckdbTableName = format("%s_%s", metric.getName(), randomUUID());
             importData(exportPath, duckdbTableName);
             return new MetricTablePair(metric, duckdbTableName);
@@ -158,18 +156,18 @@ public class PreAggregationManager
     {
         private final Metric metric;
         private final Optional<String> tableName;
-        private final Optional<String> errorMessages;
+        private final Optional<String> errorMessage;
 
         public MetricTablePair(Metric metric, String tableName)
         {
             this(metric, tableName, null);
         }
 
-        public MetricTablePair(Metric metric, String tableName, String errorMessages)
+        public MetricTablePair(Metric metric, String tableName, String errorMessage)
         {
             this.metric = metric;
             this.tableName = Optional.ofNullable(tableName);
-            this.errorMessages = Optional.ofNullable(errorMessages);
+            this.errorMessage = Optional.ofNullable(errorMessage);
         }
 
         public Metric getMetric()
@@ -182,9 +180,9 @@ public class PreAggregationManager
             return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name not exists"));
         }
 
-        public Optional<String> getErrorMessages()
+        public Optional<String> getErrorMessage()
         {
-            return errorMessages;
+            return errorMessage;
         }
     }
 
