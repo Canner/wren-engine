@@ -157,6 +157,12 @@ public class BigQueryMetadata
                         ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.INTEGER)),
                         null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
                 .put("array_agg", ARRAY_AGG)
+                // calcite 1.33.0 add date_trunc
+                // https://github.com/apache/calcite/commit/bdb4e1fb5df6fdca237dd0fa92209905c2f94d76
+                .put("date_trunc", new SqlFunction("date_trunc",
+                        SqlKind.OTHER_FUNCTION,
+                        ReturnTypes.DATE_NULLABLE,
+                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
                 .build();
     }
 
