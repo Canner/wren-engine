@@ -743,7 +743,7 @@ public class CalciteSqlNodeConverter
                             toCalcitePos(node.getLocation()));
                 }
                 return new SqlDataTypeSpec(
-                        new SqlBasicTypeNameSpec(typeName, handleNumericParameter(node.getArguments().get(0)), ZERO),
+                        new SqlBasicTypeNameSpec(typeName, params.get(0), ZERO),
                         toCalcitePos(node.getLocation()));
             }
             else if (typeName.equals(SqlTypeName.DECIMAL)) {
