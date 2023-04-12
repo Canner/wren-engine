@@ -35,6 +35,10 @@ public class LambdaExpressionRewrite
         return (Expression) new Visitor(baseField, argument).process(node, Optional.empty());
     }
 
+    private LambdaExpressionRewrite()
+    {
+    }
+
     static class Visitor
             extends AstVisitor<Node, Optional<Node>>
     {

@@ -33,7 +33,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 
 public class TestLambdaExpressionRewrite
 {
-    private final static SqlParser SQL_PARSER = new SqlParser();
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     @DataProvider
     public Object[][] lambdaExpression()
