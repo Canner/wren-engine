@@ -172,4 +172,23 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @Test
+    void testQueryMetricRollup()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from roll_up(Revenue, orderdate, YEAR) limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
 }

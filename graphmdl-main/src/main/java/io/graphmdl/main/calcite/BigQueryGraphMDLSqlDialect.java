@@ -19,7 +19,9 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -31,6 +33,11 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
+
+import java.util.List;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Locale.ENGLISH;
 
 public class BigQueryGraphMDLSqlDialect
         extends BigQuerySqlDialect
@@ -161,6 +168,21 @@ public class BigQueryGraphMDLSqlDialect
             call.operand(1).unparse(writer, leftPrec, rightPrec);
             writer.endFunCall(funcFrame);
             writer.endList(indexFrame);
+        }
+        else if (call.getOperator().getName().toUpperCase(ENGLISH).equals("DATE_TRUNC")) {
+            checkArgument(call.getOperandList().size() == 2, "date_trunc should have only 2 operands");
+            List<SqlNode> operandList = call.getOperandList();
+            checkArgument(operandList.get(0) instanceof SqlCharStringLiteral, "date_trunc first operand should be a literal");
+            String datePart = ((SqlCharStringLiteral) operandList.get(0)).toValue();
+            // bigquery DATE_TRUNC(date_expression, date_part) date_part should be an identifier while in pg it's a string literal
+            SqlIdentifier datePartIdentifier = new SqlIdentifier(datePart, SqlParserPos.ZERO);
+            final SqlWriter.Frame frame = writer.startFunCall("DATE_TRUNC");
+            writer.sep(",");
+            // bigquery DATE_TRUNC(date_expression, date_part) date_expression should be the first operand while in pg it's the second
+            call.operand(1).unparse(writer, leftPrec, rightPrec);
+            writer.sep(",");
+            datePartIdentifier.unparse(writer, leftPrec, rightPrec);
+            writer.endFunCall(frame);
         }
         else {
             super.unparseCall(writer, call, leftPrec, rightPrec);

@@ -71,6 +71,7 @@ import io.trino.sql.tree.FieldReference;
 import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionCall;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Grant;
@@ -781,6 +782,15 @@ public class BaseRewriter<T>
                     node.isWithOrdinality());
         }
         return new Unnest(visitNodes(node.getExpressions(), context), node.isWithOrdinality());
+    }
+
+    @Override
+    protected Node visitFunctionRelation(FunctionRelation node, T context)
+    {
+        return new FunctionRelation(
+                node.getLocation().orElse(null),
+                node.getName(),
+                node.getArguments());
     }
 
     @Override

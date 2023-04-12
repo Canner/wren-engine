@@ -20,6 +20,7 @@ import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Relation;
@@ -49,6 +50,7 @@ public class Analysis
     private final Set<Model> models = new HashSet<>();
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Set<Metric> metrics = new HashSet<>();
+    private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -169,5 +171,15 @@ public class Analysis
     public void setScope(Node node, Scope scope)
     {
         scopes.put(NodeRef.of(node), scope);
+    }
+
+    void addMetricRollups(NodeRef<FunctionRelation> metricRollupNodeRef, MetricRollupInfo metricRollupInfo)
+    {
+        metricRollups.put(metricRollupNodeRef, metricRollupInfo);
+    }
+
+    public Map<NodeRef<FunctionRelation>, MetricRollupInfo> getMetricRollups()
+    {
+        return metricRollups;
     }
 }

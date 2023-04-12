@@ -30,6 +30,11 @@
           "name": "customer",
           "type": "Customer",
           "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
         }
       ],
       "primaryKey": "orderkey"
@@ -83,6 +88,16 @@
           "name": "revenue",
           "type": "integer",
           "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
         }
       ]
     }
