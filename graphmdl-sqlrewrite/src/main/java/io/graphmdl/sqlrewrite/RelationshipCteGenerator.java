@@ -52,6 +52,7 @@ import static io.graphmdl.base.dto.Relationship.SortKey.Ordering.ASC;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.Utils.randomTableSuffix;
 import static io.trino.sql.QueryUtil.aliased;
+import static io.trino.sql.QueryUtil.crossJoin;
 import static io.trino.sql.QueryUtil.equal;
 import static io.trino.sql.QueryUtil.getConditionNode;
 import static io.trino.sql.QueryUtil.identifier;
@@ -64,6 +65,7 @@ import static io.trino.sql.QueryUtil.selectListDistinct;
 import static io.trino.sql.QueryUtil.simpleQuery;
 import static io.trino.sql.QueryUtil.subscriptExpression;
 import static io.trino.sql.QueryUtil.table;
+import static io.trino.sql.QueryUtil.unnest;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -85,12 +87,16 @@ import static java.util.stream.Collectors.toList;
  */
 public class RelationshipCteGenerator
 {
-    private static final String ONE_REFERENCE = "one";
-    private static final String MANY_REFERENCE = "many";
+    private static final String ONE_REFERENCE = "o";
+    private static final String MANY_REFERENCE = "m";
 
     private static final String SOURCE_REFERENCE = "s";
 
-    private static final String TARGET_REFERENCE = "t";
+    public static final String TARGET_REFERENCE = "t";
+
+    private static final String UNNEST_REFERENCE = "u";
+
+    private static final String UNNEST_COLUMN_REFERENCE = "uc";
     private final GraphMDL graphMDL;
     private final Map<String, WithQuery> registeredCte = new LinkedHashMap<>();
     private final Map<String, String> nameMapping = new HashMap<>();
@@ -101,19 +107,26 @@ public class RelationshipCteGenerator
         this.graphMDL = requireNonNull(graphMDL);
     }
 
-    public void register(List<String> nameParts, List<RsItem> rsItems)
+    public void register(List<String> nameParts, RelationshipOperation operation)
     {
         requireNonNull(nameParts, "nameParts is null");
-        requireNonNull(rsItems, "rsItems is null");
         checkArgument(!nameParts.isEmpty(), "nameParts is empty");
-        checkArgument(!rsItems.isEmpty() && rsItems.size() <= 2, "The size of rsItems should be 1 or 2");
+        register(nameParts, operation, nameParts.get(0));
+    }
 
-        RelationshipCTE relationshipCTE = createRelationshipCTE(rsItems);
+    public void register(List<String> nameParts, RelationshipOperation operation, String baseModel)
+    {
+        requireNonNull(nameParts, "nameParts is null");
+        requireNonNull(operation.getRsItems(), "rsItems is null");
+        checkArgument(!nameParts.isEmpty(), "nameParts is empty");
+        checkArgument(!operation.getRsItems().isEmpty() && operation.getRsItems().size() <= 2, "The size of rsItems should be 1 or 2");
+
+        RelationshipCTE relationshipCTE = createRelationshipCTE(operation.getRsItems());
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE);
+        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE, operation);
         registeredCte.put(name, withQuery);
         nameMapping.put(name, withQuery.getName().getValue());
-        relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRelationshipCTEJoinInfo(withQuery.getName().getValue(), relationshipCTE, nameParts.get(0)));
+        relationshipInfoMapping.put(withQuery.getName().getValue(), transferToRelationshipCTEJoinInfo(withQuery.getName().getValue(), relationshipCTE, baseModel));
     }
 
     /**
@@ -177,7 +190,21 @@ public class RelationshipCteGenerator
         return joinOn(equal(nameReference(leftName, leftKey), nameReference(rightName, rightKey)));
     }
 
-    private WithQuery transferToCte(String originalName, RelationshipCTE relationshipCTE)
+    private WithQuery transferToCte(String originalName, RelationshipCTE relationshipCTE, RelationshipOperation operation)
+    {
+        switch (operation.getOperatorType()) {
+            case ACCESS:
+                return transferToAccessCte(originalName, relationshipCTE);
+            case TRANSFORM:
+                checkArgument(operation.getLambdaExpression().isPresent(), "Lambda expression is missing");
+                return transferToTransformCte(originalName,
+                        operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
+                        operation.getLambdaExpression().get(), relationshipCTE);
+        }
+        throw new UnsupportedOperationException(format("%s relationship operation is unsupported", operation.getOperatorType()));
+    }
+
+    private WithQuery transferToAccessCte(String originalName, RelationshipCTE relationshipCTE)
     {
         switch (relationshipCTE.getRelationship().getJoinType()) {
             case ONE_TO_ONE:
@@ -256,7 +283,7 @@ public class RelationshipCteGenerator
                 relationshipCTE.getRelationship().getManySideSortKeys();
 
         SingleColumn relationshipField = new SingleColumn(
-                toArrayAgg(nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getPrimaryKey()), sortKeys),
+                toArrayAgg(nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getPrimaryKey()), MANY_REFERENCE, sortKeys),
                 identifier(originalName));
 
         List<SingleColumn> normalFields = oneTableFields
@@ -322,6 +349,60 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
+    private WithQuery transferToTransformCte(String originalName, String manyResultField, Expression lambdaExpression, RelationshipCTE relationshipCTE)
+    {
+        List<Expression> oneTableFields =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key be first.
+                        .add(relationshipCTE.getSource().getPrimaryKey())
+                        // remove duplicate relationship column name
+                        .addAll(relationshipCTE.getSource().getColumns().stream().filter(column -> !column.equals(manyResultField)).collect(toList()))
+                        .add(relationshipCTE.getSource().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference(SOURCE_REFERENCE, column))
+                        .collect(toList());
+        List<Relationship.SortKey> sortKeys = relationshipCTE.getRelationship().getManySideSortKeys().isEmpty() ?
+                List.of(new Relationship.SortKey(relationshipCTE.getManySide().getPrimaryKey(), ASC)) :
+                relationshipCTE.getRelationship().getManySideSortKeys();
+
+        SingleColumn relationshipField = new SingleColumn(
+                toArrayAgg(lambdaExpression, TARGET_REFERENCE, sortKeys),
+                identifier(originalName));
+
+        List<SingleColumn> normalFields = oneTableFields
+                .stream()
+                .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
+                .collect(toList());
+
+        List<SelectItem> selectItems = ImmutableList.<SelectItem>builder().addAll(normalFields).add(relationshipField).build();
+
+        List<Identifier> outputSchema = selectItems.stream()
+                .map(selectItem -> (SingleColumn) selectItem)
+                .map(singleColumn ->
+                        singleColumn.getAlias()
+                                .orElse(quotedIdentifier(singleColumn.getExpression().toString())))
+                .collect(toList());
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        new Select(false, selectItems),
+                        leftJoin(
+                                crossJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                                        aliased(unnest(nameReference(SOURCE_REFERENCE, manyResultField)), UNNEST_REFERENCE, List.of(UNNEST_COLUMN_REFERENCE))),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), TARGET_REFERENCE),
+                                joinOn(equal(nameReference(UNNEST_REFERENCE, UNNEST_COLUMN_REFERENCE), nameReference(TARGET_REFERENCE, relationshipCTE.getTarget().getPrimaryKey())))),
+                        Optional.empty(),
+                        Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
+                                .mapToObj(number -> new LongLiteral(String.valueOf(number)))
+                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral))).collect(toList()))),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()),
+                Optional.of(outputSchema));
+    }
+
     private QualifiedName getQualifiedName(Expression expression)
     {
         if (expression instanceof DereferenceExpression) {
@@ -333,7 +414,7 @@ public class RelationshipCteGenerator
         return null;
     }
 
-    private Expression toArrayAgg(Expression field, List<Relationship.SortKey> sortKeys)
+    private Expression toArrayAgg(Expression field, String sortKeyPrefix, List<Relationship.SortKey> sortKeys)
     {
         // TODO: BigQuery doesn't allow array element is null.
         //  We need to surround the array_agg with ifnull function or other null handling.
@@ -345,7 +426,7 @@ public class RelationshipCteGenerator
                 Optional.empty(),
                 Optional.of(new OrderBy(sortKeys.stream()
                         .map(sortKey ->
-                                new SortItem(nameReference(MANY_REFERENCE, sortKey.getName()), sortKey.isDescending() ? SortItem.Ordering.DESCENDING : SortItem.Ordering.ASCENDING,
+                                new SortItem(nameReference(sortKeyPrefix, sortKey.getName()), sortKey.isDescending() ? SortItem.Ordering.DESCENDING : SortItem.Ordering.ASCENDING,
                                         SortItem.NullOrdering.UNDEFINED))
                         .collect(toList()))),
                 false,
@@ -473,6 +554,65 @@ public class RelationshipCteGenerator
     public Map<String, RelationshipCTEJoinInfo> getRelationshipInfoMapping()
     {
         return relationshipInfoMapping;
+    }
+
+    public static class RelationshipOperation
+    {
+        enum OperatorType
+        {
+            ACCESS,
+            TRANSFORM,
+            FILTER,
+            FIND,
+            ANY_MATCH,
+        }
+
+        public static RelationshipOperation access(List<RsItem> rsItems)
+        {
+            return new RelationshipOperation(rsItems, OperatorType.ACCESS, null, null);
+        }
+
+        public static RelationshipOperation transform(List<RsItem> rsItems, Expression lambdaExpression, String manySideResultField)
+        {
+            return new RelationshipOperation(rsItems, OperatorType.TRANSFORM, lambdaExpression, manySideResultField);
+        }
+
+        private final List<RsItem> rsItems;
+        private final OperatorType operatorType;
+        private final Expression lambdaExpression;
+        private final String manySideResultField;
+
+        private RelationshipOperation(
+                List<RsItem> rsItems,
+                OperatorType operatorType,
+                Expression lambdaExpression,
+                String manySideResultField)
+        {
+            this.rsItems = rsItems;
+            this.operatorType = operatorType;
+            this.lambdaExpression = lambdaExpression;
+            this.manySideResultField = manySideResultField;
+        }
+
+        public List<RsItem> getRsItems()
+        {
+            return rsItems;
+        }
+
+        public OperatorType getOperatorType()
+        {
+            return operatorType;
+        }
+
+        public Optional<Expression> getLambdaExpression()
+        {
+            return Optional.ofNullable(lambdaExpression);
+        }
+
+        public Optional<String> getManySideResultField()
+        {
+            return Optional.ofNullable(manySideResultField);
+        }
     }
 
     public static class RsItem
