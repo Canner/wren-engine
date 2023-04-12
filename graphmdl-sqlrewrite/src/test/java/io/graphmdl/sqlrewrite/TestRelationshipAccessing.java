@@ -454,13 +454,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 ", ${People.books[1]} (bookId, name, author, author_reverse, authorId) AS (\n" +
@@ -482,13 +482,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 ", ${People.books[1]} (bookId, name, author, author_reverse, authorId) AS (\n" +
@@ -514,13 +514,13 @@ public class TestRelationshipAccessing
                                 ") \n" +
                                 ", ${People.books[1].author.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (${People.books[1].author} one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (${People.books[1].author} o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 ", ${People.books[1].author.books[1]} (bookId, name, author, author_reverse, authorId) AS (\n" +
@@ -538,18 +538,17 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (People\n" +
                                 "LEFT JOIN ${People.books[1].author.books[1]}  ON (People.userId = ${People.books[1].author.books[1]} .authorId))", false},
-
                 {"SELECT cardinality(books) FROM People",
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT cardinality(${People.books}.books)\n" +
@@ -560,13 +559,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT cardinality(${People.books}.books)\n" +
@@ -587,13 +586,13 @@ public class TestRelationshipAccessing
                                 ") \n" +
                                 ", ${Book.author.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (${Book.author} one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (${Book.author} o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT cardinality(${Book.author.books}.books)\n" +
@@ -636,13 +635,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.sorted_books} (userId, name, books, sorted_books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.books books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.name ASC, many.bookId DESC) sorted_books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.books books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) sorted_books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT cardinality(${People.sorted_books}.sorted_books)\n" +
@@ -653,13 +652,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.sorted_books} (userId, name, books, sorted_books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.books books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.name ASC, many.bookId DESC) sorted_books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.books books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) sorted_books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 ", ${People.sorted_books[1]} (bookId, name, author, author_reverse, authorId) AS (\n" +
@@ -681,13 +680,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT cardinality(${People.books}.books)\n" +
@@ -698,13 +697,13 @@ public class TestRelationshipAccessing
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 "${People.books} (userId, name, sorted_books, books) AS (\n" +
                                 "   SELECT\n" +
-                                "     one.userId userId\n" +
-                                "   , one.name name\n" +
-                                "   , one.sorted_books sorted_books\n" +
-                                "   , array_agg(many.bookId ORDER BY many.bookId ASC) books\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
                                 "   FROM\n" +
-                                "     (People one\n" +
-                                "   LEFT JOIN Book many ON (one.userId = many.authorId))\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ") \n" +
                                 "SELECT\n" +

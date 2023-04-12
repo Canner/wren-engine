@@ -250,7 +250,17 @@ public class GraphMDLSqlRewrite
         @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
-            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
+            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node),
+                    new FunctionCall(
+                            node.getLocation(),
+                            node.getName(),
+                            node.getWindow(),
+                            node.getFilter(),
+                            node.getOrderBy(),
+                            node.isDistinct(),
+                            node.getNullTreatment(),
+                            node.getProcessingMode(),
+                            visitNodes(node.getArguments(), context)));
         }
 
         // the model is added in with query, and the catalog and schema should be removed
