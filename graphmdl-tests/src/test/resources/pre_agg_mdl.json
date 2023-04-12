@@ -30,6 +30,11 @@
           "name": "customer",
           "type": "Customer",
           "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
         }
       ],
       "primaryKey": "orderkey"
@@ -85,6 +90,16 @@
           "type": "integer",
           "expression": "sum(totalprice)"
         }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
       ]
     },
     {
@@ -107,6 +122,16 @@
           "type": "integer",
           "expression": "sum(totalprice)"
         }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
       ]
     },
     {
@@ -123,6 +148,16 @@
           "name": "avg_revenue",
           "type": "double",
           "expression": "avg(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
         }
       ]
     }
