@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl;
+package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.JoinType;

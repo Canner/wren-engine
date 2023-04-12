@@ -12,17 +12,13 @@
  * limitations under the License.
  */
 
-package io.graphmdl;
+package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLTypes;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
-import io.graphmdl.sqlrewrite.GraphMDLPlanner;
-import io.graphmdl.sqlrewrite.GraphMDLRule;
-import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
-import io.graphmdl.sqlrewrite.Utils;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.graphmdl.testing.AbstractTestFramework;
@@ -747,6 +743,7 @@ public class TestRelationshipAccessing
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+        System.out.println(actualSql);
         // TODO: remove this flag, disabled h2 assertion due to ambiguous column name
         if (enableH2Assertion) {
             assertThatNoException()
@@ -786,5 +783,66 @@ public class TestRelationshipAccessing
         String rewrittenSql = GraphMDLPlanner.rewrite(actualSql, DEFAULT_SESSION_CONTEXT, oneToOneGraphMDL, List.of(GRAPHMDL_SQL_REWRITE));
         Statement expectedResult = SQL_PARSER.createStatement(expectedSql, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrittenSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
+
+    @DataProvider
+    public Object[][] transform()
+    {
+        return new Object[][] {
+                {"select p.name, transform(p.books, book -> book.name) as book_names from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, name, sorted_books, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                ", ${transform(p.books, (book) -> book.name)} (userId, name, sorted_books, \"transform(p.books, (book) -> book.name)\") AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.name name\n" +
+                                "   , s.sorted_books sorted_books\n" +
+                                "   , array_agg(t.name ORDER BY t.bookId ASC) \"transform(p.books, (book) -> book.name)\"\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", ${transform(p.books, (book) -> book.name)}.\"transform(p.books, (book) -> book.name)\" book_names\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${transform(p.books, (book) -> book.name)} ON (p.userId = ${transform(p.books, (book) -> book.name)}.userId))"},
+        };
+    }
+
+    @Test(dataProvider = "transform")
+    public void testTransform(String original, String expected)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Node rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("transform(p.books, (book) -> book.name)", generator.getNameMapping().get("transform(p.books, (book) -> book.name)"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
 }
