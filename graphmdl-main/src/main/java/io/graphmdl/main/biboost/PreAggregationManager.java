@@ -71,14 +71,14 @@ public class PreAggregationManager
             DuckdbClient duckdbClient,
             DuckdbStorageConfig duckdbStorageConfig)
     {
-        GraphMDLMetastore graphMDLManager = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
+        requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.connector = requireNonNull(connector, "connector is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
-        doPreAggregation(graphMDLManager.getGraphMDL())
+        doPreAggregation(graphMDLMetastore.getGraphMDL())
                 .thenRun(this::cleanPreAggregation).join();
     }
 
