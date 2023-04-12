@@ -136,6 +136,7 @@ import static io.graphmdl.base.type.StandardTypes.INTEGER;
 import static io.graphmdl.base.type.StandardTypes.JSON;
 import static io.graphmdl.base.type.StandardTypes.REAL;
 import static io.graphmdl.base.type.StandardTypes.SMALLINT;
+import static io.graphmdl.base.type.StandardTypes.TINYINT;
 import static io.graphmdl.base.type.StandardTypes.UUID;
 import static io.graphmdl.base.type.StandardTypes.VARCHAR;
 import static io.graphmdl.main.calcite.CalciteTypes.toCalciteType;
@@ -352,6 +353,7 @@ public class CalciteSqlNodeConverter
             switch (node.getType().toLowerCase(ENGLISH)) {
                 case BOOLEAN:
                     return SqlLiteral.createBoolean(parseBoolean(node.getValue()), POS);
+                case TINYINT:
                 case SMALLINT:
                 case INTEGER:
                 case BIGINT:
@@ -733,13 +735,25 @@ public class CalciteSqlNodeConverter
         {
             SqlTypeName typeName = toCalciteType(node.getName().toString());
             if (typeName.equals(SqlTypeName.CHAR)) {
+                List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
+                checkArgument(params.size() < 2, format("char type should have 0 or 1 parameter but %s", params.size()));
+                if (params.size() == 0) {
+                    return new SqlDataTypeSpec(
+                            new SqlBasicTypeNameSpec(typeName, ZERO),
+                            toCalcitePos(node.getLocation()));
+                }
                 return new SqlDataTypeSpec(
-                        new SqlBasicTypeNameSpec(typeName, handleNumericParameter(node.getArguments().get(0)), ZERO),
+                        new SqlBasicTypeNameSpec(typeName, params.get(0), ZERO),
                         toCalcitePos(node.getLocation()));
             }
             else if (typeName.equals(SqlTypeName.DECIMAL)) {
                 List<Integer> params = node.getArguments().stream().map(Visitor::handleNumericParameter).collect(toImmutableList());
-                checkArgument(params.size() == 2, format("decimal type should have 2 parameters but %s", params.size()));
+                checkArgument(params.size() == 0 || params.size() == 2, format("decimal type should have 0 or 2 parameters but %s", params.size()));
+                if (params.size() == 0) {
+                    return new SqlDataTypeSpec(
+                            new SqlBasicTypeNameSpec(typeName, ZERO),
+                            toCalcitePos(node.getLocation()));
+                }
                 return new SqlDataTypeSpec(
                         new SqlBasicTypeNameSpec(typeName, params.get(0), params.get(1), ZERO),
                         toCalcitePos(node.getLocation()));

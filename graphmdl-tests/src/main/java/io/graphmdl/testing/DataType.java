@@ -17,6 +17,7 @@ package io.graphmdl.testing;
 import io.graphmdl.base.type.BigIntType;
 import io.graphmdl.base.type.BooleanType;
 import io.graphmdl.base.type.ByteaType;
+import io.graphmdl.base.type.CharType;
 import io.graphmdl.base.type.DoubleType;
 import io.graphmdl.base.type.IntegerType;
 import io.graphmdl.base.type.NumericType;
@@ -101,6 +102,16 @@ public class DataType<T>
         return dataType("bytea", ByteaType.BYTEA, DataType::binaryLiteral);
     }
 
+    public static DataType<String> charDataType()
+    {
+        return dataType("char", CharType.CHAR, DataType::formatStringLiteral);
+    }
+
+    public static DataType<String> charDataType(int size)
+    {
+        return dataType(format("char(%s)", size), CharType.CHAR, DataType::formatStringLiteral);
+    }
+
     public static DataType<String> varcharDataType(int size)
     {
         return varcharDataType(size, "");
@@ -136,6 +147,13 @@ public class DataType<T>
     public static DataType<String> stringDataType(String insertType, PGType<?> trinoResultType)
     {
         return dataType(insertType, trinoResultType, DataType::formatStringLiteral);
+    }
+
+    public static DataType<BigDecimal> decimalDataType()
+    {
+        return dataType(
+                "decimal",
+                NumericType.NUMERIC);
     }
 
     public static DataType<BigDecimal> decimalDataType(int precision, int scale)
