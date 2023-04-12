@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main.connector.bigquery;
+package io.graphmdl.connector.bigquery;
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryException;

@@ -64,7 +64,7 @@ import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Locale.ROOT;
 
-public class PostgreSqlRewrite
+public final class PostgreSqlRewrite
 {
     private static final String PGCATALOG_TABLE_PREFIX = "pg_";
     private static final String PGCATALOG = "pg_catalog";
@@ -73,7 +73,9 @@ public class PostgreSqlRewrite
 
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
 
-    public Statement rewrite(RegObjectFactory regObjectFactory, String defaultCatalog, Statement statement)
+    private PostgreSqlRewrite() {}
+
+    public static Statement rewrite(RegObjectFactory regObjectFactory, String defaultCatalog, Statement statement)
     {
         return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory), defaultCatalog).process(statement);
     }

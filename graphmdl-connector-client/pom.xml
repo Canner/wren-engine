@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
-        <groupId>io.graphmdl</groupId>
         <artifactId>graphmdl-root</artifactId>
+        <groupId>io.graphmdl</groupId>
         <version>1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>graphmdl-server</artifactId>
-    <name>graphmdl-server</name>
+    <artifactId>graphmdl-connector-client</artifactId>
+    <name>graphmdl-connector-client</name>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -21,91 +22,65 @@
             <groupId>io.airlift</groupId>
             <artifactId>configuration</artifactId>
         </dependency>
-
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>event</artifactId>
+            <artifactId>http-client</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>http-server</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>jaxrs</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>json</artifactId>
         </dependency>
-
         <dependency>
             <groupId>io.airlift</groupId>
-            <artifactId>node</artifactId>
+            <artifactId>log</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.google.api</groupId>
             <artifactId>gax</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>com.google.auth</groupId>
-            <artifactId>google-auth-library-credentials</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.auth</groupId>
-            <artifactId>google-auth-library-oauth2-http</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-bigquery</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
-
         <dependency>
             <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-core</artifactId>
+            <artifactId>google-cloud-core-http</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>graphmdl-connector-client</artifactId>
+            <artifactId>graphmdl-base</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>io.graphmdl</groupId>
-            <artifactId>graphmdl-main</artifactId>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>io.graphmdl</groupId>
-            <artifactId>trino-parser</artifactId>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
         </dependency>
     </dependencies>
 </project>

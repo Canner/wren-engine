@@ -66,6 +66,7 @@
 
     <modules>
         <module>graphmdl-base</module>
+        <module>graphmdl-connector-client</module>
         <module>graphmdl-main</module>
         <module>graphmdl-server</module>
         <module>graphmdl-sqlrewrite</module>
@@ -246,6 +247,12 @@
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-connector-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphmdl-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -356,7 +363,7 @@
             <dependency>
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
-                <version>0.6.0</version>
+                <version>0.7.1</version>
             </dependency>
 
             <dependency>
