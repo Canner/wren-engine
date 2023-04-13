@@ -85,7 +85,7 @@
       ],
       "measure": [
         {
-          "name": "revenue",
+          "name": "totalprice",
           "type": "integer",
           "expression": "sum(totalprice)"
         }

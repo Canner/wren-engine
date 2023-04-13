@@ -159,11 +159,11 @@ public class TestGraphMDLWithBigquery
             throws Exception
     {
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from Revenue limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from Revenue limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
             int count = 1;
 
             while (resultSet.next()) {
@@ -178,11 +178,11 @@ public class TestGraphMDLWithBigquery
             throws Exception
     {
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from roll_up(Revenue, orderdate, YEAR) limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from roll_up(Revenue, orderdate, YEAR) limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
             int count = 1;
 
             while (resultSet.next()) {
