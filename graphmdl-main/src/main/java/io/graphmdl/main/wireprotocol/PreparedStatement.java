@@ -15,6 +15,7 @@
 package io.graphmdl.main.wireprotocol;
 
 import java.util.List;
+import java.util.Optional;
 
 public class PreparedStatement
 {
@@ -22,6 +23,7 @@ public class PreparedStatement
 
     private final String name;
     private final String statement;
+    private final Optional<String> preAggregationStatement;
     private final List<Integer> paramTypeOids;
     private final String originalStatement;
     private final boolean isSessionCommand;
@@ -33,8 +35,20 @@ public class PreparedStatement
             String originalStatement,
             boolean isSessionCommand)
     {
+        this(name, statement, Optional.empty(), paramTypeOids, originalStatement, isSessionCommand);
+    }
+
+    public PreparedStatement(
+            String name,
+            String statement,
+            Optional<String> preAggregationStatement,
+            List<Integer> paramTypeOids,
+            String originalStatement,
+            boolean isSessionCommand)
+    {
         this.name = name.isEmpty() ? CANNERFLOW_RESERVED_PREPARE_NAME : name;
         this.statement = statement;
+        this.preAggregationStatement = preAggregationStatement;
         this.paramTypeOids = paramTypeOids;
         this.originalStatement = originalStatement;
         this.isSessionCommand = isSessionCommand;
@@ -63,5 +77,10 @@ public class PreparedStatement
     public boolean isSessionCommand()
     {
         return isSessionCommand;
+    }
+
+    public Optional<String> getPreAggregationStatement()
+    {
+        return preAggregationStatement;
     }
 }

@@ -17,8 +17,10 @@ package io.graphmdl.main.biboost;
 import com.google.common.annotations.VisibleForTesting;
 import io.airlift.log.Logger;
 import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.connector.duckdb.DuckdbClient;
@@ -28,12 +30,14 @@ import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
+import io.graphmdl.sqlrewrite.PreAggregationRewrite;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -111,6 +115,17 @@ public class PreAggregationManager
         });
     }
 
+    public Optional<String> convertToAggregationTable(CatalogSchemaTableName catalogSchemaTableName)
+    {
+        return metricTableMapping.get().get(catalogSchemaTableName).getTableName();
+    }
+
+    public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
+            throws SQLException
+    {
+        return DuckdbRecordIterator.of(duckdbClient.prepareStatement(sql, parameters));
+    }
+
     private CompletableFuture<MetricTablePair> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
     {
         return supplyAsync(() -> {
@@ -180,9 +195,26 @@ public class PreAggregationManager
             return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name not exists"));
         }
 
+        public Optional<String> getTableName()
+        {
+            return tableName;
+        }
+
         public Optional<String> getErrorMessage()
         {
             return errorMessage;
+        }
+    }
+
+    public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql)
+    {
+        try {
+            Statement statement = PreAggregationRewrite.rewrite(sessionContext, sqlParser, sql, this::convertToAggregationTable);
+            return Optional.of(getFormattedSql(statement, sqlParser));
+        }
+        catch (Exception e) {
+            LOG.error("Failed to rewrite pre-aggregation for statement: %s", sql, e);
+            return Optional.empty();
         }
     }
 
