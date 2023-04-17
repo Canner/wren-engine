@@ -18,14 +18,19 @@ import io.airlift.log.Logger;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlAlienSystemTypeNameSpec;
 import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlBasicTypeNameSpec;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
+import org.apache.calcite.sql.SqlCollectionTypeNameSpec;
 import org.apache.calcite.sql.SqlDataTypeSpec;
 import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlTypeNameSpec;
+import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.SqlWriter;
 import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
 import org.apache.calcite.sql.fun.SqlCase;
@@ -37,6 +42,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 
 public class BigQueryGraphMDLSqlDialect
@@ -184,8 +190,86 @@ public class BigQueryGraphMDLSqlDialect
             datePartIdentifier.unparse(writer, leftPrec, rightPrec);
             writer.endFunCall(frame);
         }
+        else if (call.getKind() == SqlKind.WITH_ITEM) {
+            final SqlWithItem withItem = (SqlWithItem) call;
+            withItem.name.unparse(writer, withItem.getOperator().getLeftPrec(), withItem.getOperator().getRightPrec());
+            writer.keyword("AS");
+            // calcite SqlWithItem#unparse use 10, if query is union or other that left/right prec > 10,
+            // writer won't add parenthesis
+            withItem.query.unparse(writer, 100, 100);
+        }
+        else if (call.getKind() == SqlKind.CAST) {
+            checkArgument(call.getOperandList().size() == 2, "CAST should have only 2 operands");
+            final SqlWriter.Frame frame = writer.startFunCall(call.getOperator().getName());
+            call.operand(0).unparse(writer, 0, 0);
+            writer.sep("AS");
+            if (call.operand(1) instanceof SqlIntervalQualifier) {
+                writer.sep("INTERVAL");
+            }
+            checkArgument(call.operand(1) instanceof SqlDataTypeSpec, "cast target must be a SqlDataTypeSpec");
+            SqlDataTypeSpec sqlDataTypeSpec = call.operand(1);
+            writer.sep(toBigQueryTypeLiteral(sqlDataTypeSpec.getTypeNameSpec()));
+            writer.endFunCall(frame);
+        }
         else {
             super.unparseCall(writer, call, leftPrec, rightPrec);
+        }
+    }
+
+    private String toBigQueryTypeLiteral(SqlTypeNameSpec sqlTypeNameSpec)
+    {
+        if (sqlTypeNameSpec instanceof SqlCollectionTypeNameSpec) {
+            return toBigQueryCollectionTypeLiteral((SqlCollectionTypeNameSpec) sqlTypeNameSpec);
+        }
+        if (sqlTypeNameSpec instanceof SqlBasicTypeNameSpec) {
+            return toBigQueryBasicTypeLiteral((SqlBasicTypeNameSpec) sqlTypeNameSpec);
+        }
+        throw new UnsupportedOperationException("Unsupported type: " + sqlTypeNameSpec.getTypeName());
+    }
+
+    private String toBigQueryCollectionTypeLiteral(SqlCollectionTypeNameSpec sqlCollectionTypeNameSpec)
+    {
+        return format("%s<%s>",
+                sqlCollectionTypeNameSpec.getTypeName(),
+                toBigQueryTypeLiteral(sqlCollectionTypeNameSpec.getElementTypeName()));
+    }
+
+    private String toBigQueryBasicTypeLiteral(SqlBasicTypeNameSpec sqlBasicTypeNameSpec)
+    {
+        SqlTypeName typeName = SqlTypeName.get(sqlBasicTypeNameSpec.getTypeName().getSimple());
+        switch (typeName) {
+            // BigQuery only supports INT64 for integer types.
+            case TINYINT:
+            case SMALLINT:
+            case INTEGER:
+            case BIGINT:
+                return "INT64";
+            // BigQuery only supports FLOAT64(aka. Double) for floating point types.
+            case REAL:
+            case FLOAT:
+            case DOUBLE:
+                return "FLOAT64";
+            case DECIMAL:
+                if (sqlBasicTypeNameSpec.getPrecision() <= 38) {
+                    return "NUMERIC";
+                }
+                return "BIGNUMERIC";
+            case BOOLEAN:
+                return "BOOL";
+            case CHAR:
+            case VARCHAR:
+                return "STRING";
+            case BINARY:
+            case VARBINARY:
+                return "BYTES";
+            case DATE:
+                return "DATE";
+            case TIME:
+                return "TIME";
+            case TIMESTAMP:
+                return "TIMESTAMP";
+            default:
+                throw new UnsupportedOperationException("Unsupported type: " + typeName);
         }
     }
 }

@@ -26,6 +26,7 @@ import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Statement;
@@ -47,12 +48,17 @@ import static java.util.stream.Collectors.toList;
 
 public final class Utils
 {
+    public static final SqlParser SQL_PARSER = new SqlParser();
+    private static final ParsingOptions PARSING_OPTIONS = new ParsingOptions(AS_DECIMAL);
     private static final SecureRandom random = new SecureRandom();
     private static final int RANDOM_SUFFIX_LENGTH = 10;
 
-    public static final SqlParser SQL_PARSER = new SqlParser();
-
     private Utils() {}
+
+    public static Node parseSql(String sql)
+    {
+        return SQL_PARSER.createStatement(sql, PARSING_OPTIONS);
+    }
 
     public static Query parseModelSql(Model model)
     {

@@ -13,15 +13,12 @@
  */
 package io.graphmdl.main.metadata;
 
-import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.TableMetadata;
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.sql.SqlOperatorTable;
 
 import java.util.List;
 
@@ -38,12 +35,6 @@ public interface Metadata
     List<String> listFunctionNames(String schemaName);
 
     String resolveFunction(String functionName, int numArgument);
-
-    SqlOperatorTable getCalciteOperatorTable();
-
-    RelDataTypeFactory getTypeFactory();
-
-    TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName);
 
     GraphMDLSchemaUtil.Dialect getDialect();
 

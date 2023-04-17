@@ -14,16 +14,13 @@
 
 package io.graphmdl.main;
 
-import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.TableMetadata;
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.metadata.Metadata;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.sql.SqlOperatorTable;
 
 import java.util.List;
 
@@ -67,12 +64,6 @@ public class TestingMetadata
     }
 
     @Override
-    public TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName)
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
     public GraphMDLSchemaUtil.Dialect getDialect()
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
@@ -104,18 +95,6 @@ public class TestingMetadata
 
     @Override
     public List<Column> describeQuery(String sql, List<Parameter> parameters)
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public SqlOperatorTable getCalciteOperatorTable()
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public RelDataTypeFactory getTypeFactory()
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }

@@ -116,6 +116,8 @@ public class BigQueryRecordIterator
                 return fieldValue.getValue();
             case TIMESTAMP:
                 return fieldValue.getTimestampValue();
+            case NUMERIC:
+                return fieldValue.getNumericValue();
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);
         }

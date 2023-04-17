@@ -26,40 +26,30 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import io.airlift.log.Logger;
-import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.Parameter;
-import io.graphmdl.base.metadata.ColumnMetadata;
 import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.base.metadata.TableMetadata;
-import io.graphmdl.base.type.PGArray;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.connector.bigquery.BigQueryType;
 import io.graphmdl.connector.bigquery.GcsStorageClient;
-import io.graphmdl.main.calcite.CalciteTypes;
 import io.graphmdl.main.calcite.CustomCharsetJavaTypeFactoryImpl;
 import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.main.pgcatalog.function.PgFunction;
 import io.graphmdl.main.pgcatalog.function.PgFunctionRegistry;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.SqlOperatorTables;
 
 import javax.inject.Inject;
 
@@ -67,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
@@ -81,7 +70,6 @@ import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
 import static org.apache.calcite.sql.fun.SqlLibraryOperators.ARRAY_AGG;
-import static org.apache.calcite.sql.type.OperandTypes.NILADIC;
 import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
 public class BigQueryMetadata
@@ -114,8 +102,6 @@ public class BigQueryMetadata
 
     private final Map<String, SqlFunction> pgNameToBqFunction;
 
-    private final SqlOperatorTable calciteOperatorTable;
-
     private final String location;
 
     private final GcsStorageClient gcsStorageClient;
@@ -129,7 +115,6 @@ public class BigQueryMetadata
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, getRelDataTypeSystem());
         this.pgNameToBqFunction = initPgNameToBqFunctions();
-        this.calciteOperatorTable = initCalciteOperators();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Location must be set"));
         this.gcsStorageClient = requireNonNull(gcsStorageClient, "gcsStorageClient is null");
@@ -177,49 +162,9 @@ public class BigQueryMetadata
                 .build();
     }
 
-    private SqlOperatorTable initCalciteOperators()
-    {
-        ImmutableList.Builder<SqlFunction> builder = ImmutableList.builder();
-        for (PgFunction pgFunction : pgFunctionRegistry.getPgFunctions()) {
-            builder.add(toCalciteSqlFunction(pgFunction));
-        }
-        pgNameToBqFunction.values().forEach(builder::add);
-        return SqlOperatorTables.of(builder.build());
-    }
-
-    private SqlFunction toCalciteSqlFunction(PgFunction pgFunction)
-    {
-        return new SqlFunction(new SqlIdentifier(withPgCatalogPrefix(pgFunction.getRemoteName()), SqlParserPos.ZERO),
-                pgFunction.getReturnType().map(type -> ReturnTypes.explicit(toCalciteType(pgFunction.getReturnType().get()))).orElse(null),
-                null,
-                pgFunction.getArguments().map(ignored -> ONE_OR_MORE).orElse(NILADIC),
-                pgFunction.getArguments().map(arguments -> pgFunction.getArguments().get().stream().map(argument -> toCalciteType(argument.getType())).collect(Collectors.toList())).orElse(List.of()),
-                SqlFunctionCategory.USER_DEFINED_FUNCTION);
-    }
-
     private String withPgCatalogPrefix(String identifier)
     {
         return PG_CATALOG_NAME + "." + identifier;
-    }
-
-    private RelDataType toCalciteType(PGType<?> pgType)
-    {
-        if (pgType instanceof PGArray) {
-            return typeFactory.createArrayType(toCalciteType(((PGArray) pgType).getInnerType()), -1);
-        }
-        return typeFactory.createSqlType(CalciteTypes.toCalciteType(pgType));
-    }
-
-    @Override
-    public SqlOperatorTable getCalciteOperatorTable()
-    {
-        return calciteOperatorTable;
-    }
-
-    @Override
-    public RelDataTypeFactory getTypeFactory()
-    {
-        return typeFactory;
     }
 
     @Override
@@ -302,21 +247,6 @@ public class BigQueryMetadata
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
         return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
-    }
-
-    @Override
-    public TableMetadata getTableMetadata(CatalogSchemaTableName catalogSchemaTableName)
-    {
-        Table table = requireNonNull(bigQueryClient.getTable(catalogSchemaTableName), format("%s table not found", catalogSchemaTableName));
-        return new TableMetadata(
-                catalogSchemaTableName.getSchemaTableName(),
-                table.getDefinition().getSchema().getFields().stream()
-                        .map(field ->
-                                ColumnMetadata.builder()
-                                        .setName(field.getName())
-                                        .setType(BigQueryType.toPGType(field.getType().getStandardType()))
-                                        .build())
-                        .collect(toImmutableList()));
     }
 
     @Override
