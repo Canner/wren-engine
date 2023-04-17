@@ -118,7 +118,6 @@ import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimestampString;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -156,6 +155,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BETWEEN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DESC;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DOT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXISTS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
@@ -530,17 +530,12 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitDereferenceExpression(DereferenceExpression node, ConvertContext context)
         {
-            // split catalog.schema.table
-            List<String> expressions = Arrays.stream(node.toString().split("\\.")).map(Visitor::deQuoted).collect(toImmutableList());
-            return new SqlIdentifier(expressions, POS);
-        }
-
-        private static String deQuoted(String value)
-        {
-            if (value.startsWith("\"") && value.endsWith("\"")) {
-                return value.substring(1, value.length() - 1);
-            }
-            return value;
+            return new SqlBasicCall(
+                    DOT,
+                    ImmutableList.<SqlNode>builder()
+                            .add(process(node.getBase()))
+                            .add(process(node.getField())).build(),
+                    POS);
         }
 
         @Override

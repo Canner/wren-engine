@@ -79,6 +79,15 @@ public class TestBigQuerySqlConverter
     }
 
     @Test
+    public void testDereferenceExpression()
+    {
+        String sql = "SELECT t.\"transform(Customer.orders, (orderItem) -> orderItem.orderstatus)\" from t";
+        assertThat(bigQuerySqlConverter.convert(sql, SessionContext.builder().build()))
+                .isEqualTo("SELECT t.`transform(Customer.orders, (orderItem) -> orderItem.orderstatus)`\n" +
+                        "FROM t");
+    }
+
+    @Test
     public void testDefaultCatalogSchema()
     {
         String expectedSql = "SELECT COUNT(*) AS cnt\n" +
