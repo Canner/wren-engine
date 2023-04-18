@@ -29,8 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQuerySqlConverter
 {
-    private BigQueryClient bigQueryClient;
-    private BigQueryMetadata bigQueryMetadata;
     private BigQuerySqlConverter bigQuerySqlConverter;
 
     @BeforeClass
@@ -42,7 +40,7 @@ public class TestBigQuerySqlConverter
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .setLocation("asia-east1");
 
-        bigQueryClient = BigQueryConnectorModule.provideBigQuery(
+        BigQueryClient bigQueryClient = BigQueryConnectorModule.provideBigQuery(
                 config,
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
@@ -51,7 +49,7 @@ public class TestBigQuerySqlConverter
                 BigQueryConnectorModule.createHeaderProvider(),
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
-        bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config, gcsStorageClient);
+        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config, gcsStorageClient);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
     }
 
@@ -64,7 +62,7 @@ public class TestBigQuerySqlConverter
                         "GROUP BY 1", SessionContext.builder().build()))
                 .isEqualTo("SELECT o_custkey, COUNT(*) AS cnt\n" +
                         "FROM `canner-cml`.tpch_tiny.orders\n" +
-                        "GROUP BY o_custkey");
+                        "GROUP BY 1");
     }
 
     @Test
@@ -79,45 +77,142 @@ public class TestBigQuerySqlConverter
     }
 
     @Test
-    public void testDefaultCatalogSchema()
+    public void testDereferenceExpression()
     {
-        String expectedSql = "SELECT COUNT(*) AS cnt\n" +
-                "FROM `canner-cml`.tpch_tiny.nation";
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT t.\"transform(Customer.orders, (orderItem) -> orderItem.orderstatus)\" from t", SessionContext.builder().build()))
+                .isEqualTo("SELECT t.`transform(Customer.orders, (orderItem) -> orderItem.orderstatus)`\n" +
+                        "FROM t");
+    }
 
-        // test {catalog}.{schema}.{table} table name
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
-                        SessionContext.builder().build()))
-                .isEqualTo(expectedSql);
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
-                        SessionContext.builder().setCatalog("canner-cml").build()))
-                .isEqualTo(expectedSql);
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM \"canner-cml\".tpch_tiny.nation",
-                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
-                .isEqualTo(expectedSql);
+    @Test
+    public void testRemoveColumnAliasInAliasRelation()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT c_1, c_2\n" +
+                        "FROM (SELECT c1, c2, c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
+                .isEqualTo("SELECT c_1, c_2\n" +
+                        "FROM (SELECT c1 AS c_1, c2 AS c_2, c3 AS c_3\n" +
+                        "        FROM `graph-mdl`.test.table) AS t");
 
-        // test {schema}.{table} table name
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM tpch_tiny.nation",
-                        SessionContext.builder().setCatalog("canner-cml").build()))
-                .isEqualTo(expectedSql);
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM tpch_tiny.nation",
-                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
-                .isEqualTo(expectedSql);
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT t.c_1, t.c_2\n" +
+                        "FROM (SELECT c1, c2, c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
+                .isEqualTo("SELECT t.c_1, t.c_2\n" +
+                        "FROM (SELECT c1 AS c_1, c2 AS c_2, c3 AS c_3\n" +
+                        "        FROM `graph-mdl`.test.table) AS t");
 
-        // test {table} table name
-        assertThat(
-                bigQuerySqlConverter.convert(
-                        "SELECT COUNT(*) AS cnt FROM nation",
-                        SessionContext.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()))
-                .isEqualTo(expectedSql);
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT c_1, c_2\n" +
+                        "FROM (SELECT canner.c1, canner.c2, canner.c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
+                .isEqualTo("SELECT c_1, c_2\n" +
+                        "FROM (SELECT canner.c1 AS c_1, canner.c2 AS c_2, canner.c3 AS c_3\n" +
+                        "        FROM `graph-mdl`.test.table) AS t");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "WITH b(n) AS (SELECT name FROM Book) SELECT n FROM b", SessionContext.builder().build()))
+                .isEqualTo("WITH b AS (SELECT name AS n\n" +
+                        "        FROM Book) (SELECT n\n" +
+                        "        FROM b)");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT * FROM (\n" +
+                        "    VALUES\n" +
+                        "        (1, 'a'),\n" +
+                        "        (2, 'b'),\n" +
+                        "        (3, 'c')\n" +
+                        ") AS t (id, name)", SessionContext.builder().build()))
+                .isEqualTo("SELECT *\n" +
+                        "FROM (SELECT 1 AS id, 'a' AS name\n" +
+                        "            UNION ALL\n" +
+                        "            SELECT 2 AS id, 'b' AS name\n" +
+                        "            UNION ALL\n" +
+                        "            SELECT 3 AS id, 'c' AS name) AS t");
+    }
+
+    @Test
+    public void testReplaceColumnAliasInUnnest()
+    {
+        assertThat(bigQuerySqlConverter.convert("SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)", SessionContext.builder().build()))
+                .isEqualTo("SELECT id\n" +
+                        "FROM UNNEST(ARRAY[1]) AS id");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT a.id FROM (SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)) a", SessionContext.builder().build()))
+                .isEqualTo("SELECT a.id\n" +
+                        "FROM (SELECT id\n" +
+                        "        FROM UNNEST(ARRAY[1]) AS id) AS a");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "WITH Sequences(id, some_numbers) AS\n" +
+                        "    (VALUES\n" +
+                        "        (1, ARRAY[0, 1, 1, 2, 3, 5]),\n" +
+                        "        (2, ARRAY[2, 4, 8, 16, 32]),\n" +
+                        "        (3, ARRAY[5, 10])\n" +
+                        "    )\n" +
+                        "SELECT u.uc\n" +
+                        "FROM Sequences\n" +
+                        "CROSS JOIN UNNEST(Sequences.some_numbers) AS u (uc) LEFT JOIN Sequences t on (u.uc = t.id)", SessionContext.builder().build()))
+                .isEqualTo("WITH Sequences AS (SELECT 1 AS id, ARRAY[0, 1, 1, 2, 3, 5] AS some_numbers\n" +
+                        "            UNION ALL\n" +
+                        "            SELECT 2 AS id, ARRAY[2, 4, 8, 16, 32] AS some_numbers\n" +
+                        "            UNION ALL\n" +
+                        "            SELECT 3 AS id, ARRAY[5, 10] AS some_numbers) (SELECT uc\n" +
+                        "        FROM Sequences\n" +
+                        "            CROSS JOIN UNNEST(Sequences.some_numbers) AS uc\n" +
+                        "            LEFT JOIN Sequences AS t ON uc = t.id)");
+    }
+
+    @Test
+    public void testTransformCorrelatedJoinToJoin()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT t.typname, t.oid\n" +
+                        "FROM pg_type AS t\n" +
+                        "  INNER JOIN pg_namespace AS n ON t.typnamespace = n.oid\n" +
+                        "WHERE n.nspname <> 'pg_toast'\n" +
+                        "  AND (t.typrelid = 0\n" +
+                        "  OR (SELECT c.relkind = 'c'\n" +
+                        "      FROM pg_class AS c\n" +
+                        "      WHERE c.oid = t.typrelid))", SessionContext.builder().build()))
+                .isEqualTo("SELECT t.typname, t.oid\n" +
+                        "FROM pg_type AS t\n" +
+                        "    INNER JOIN pg_namespace AS n ON t.typnamespace = n.oid\n" +
+                        "    LEFT JOIN pg_class AS c ON c.oid = t.typrelid\n" +
+                        "WHERE n.nspname <> 'pg_toast' AND (t.typrelid = 0 OR c.relkind = 'c')");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT n.nationkey, n.name\n" +
+                        "FROM nation n\n" +
+                        "WHERE \n" +
+                        "  (SELECT (r.regionkey = 1)\n" +
+                        "    FROM region r\n" +
+                        "    WHERE (r.regionkey = n.regionkey))", SessionContext.builder().build()))
+                .isEqualTo("SELECT n.nationkey, n.name\n" +
+                        "FROM nation AS n\n" +
+                        "    LEFT JOIN region AS r ON r.regionkey = n.regionkey\n" +
+                        "WHERE r.regionkey = 1");
+    }
+
+    @Test
+    public void testRemoveCatalogSchemaColumnPrefix()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT \"graphmdl\".test.t1.c1, test.\"t1\".c2, t1.c3\n" +
+                        "FROM graphmdl.test.t1\n" +
+                        "WHERE \"graphmdl\".test.t1.c1 = 1\n" +
+                        "ORDER BY test.t1.c2", SessionContext.builder().build()))
+                .isEqualTo("SELECT t1.c1, t1.c2, t1.c3\n" +
+                        "FROM graphmdl.test.t1\n" +
+                        "WHERE t1.c1 = 1\n" +
+                        "ORDER BY t1.c2");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT graphmdl.test.t1.c1, test2.t2.c1\n" +
+                        "FROM graphmdl.test.t1\n" +
+                        "LEFT JOIN graphmdl.test2.t2 on test.t1.c1 = test2.t2.c1", SessionContext.builder().build()))
+                .isEqualTo("SELECT t1.c1, t2.c1\n" +
+                        "FROM graphmdl.test.t1\n" +
+                        "    LEFT JOIN graphmdl.test2.t2 ON t1.c1 = t2.c1");
     }
 }

@@ -14,13 +14,25 @@
 
 package io.graphmdl.main.connector.bigquery;
 
+import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlConverter;
+import io.graphmdl.main.sql.SqlRewrite;
+import io.graphmdl.main.sql.bigquery.RemoveCatalogSchemaColumnPrefix;
+import io.graphmdl.main.sql.bigquery.RemoveColumnAliasInAliasRelation;
+import io.graphmdl.main.sql.bigquery.ReplaceColumnAliasInUnnest;
+import io.graphmdl.main.sql.bigquery.TransformCorrelatedJoinToJoin;
+import io.trino.sql.tree.Node;
+import org.intellij.lang.annotations.Language;
 
 import javax.inject.Inject;
 
+import java.util.List;
+
+import static io.graphmdl.sqlrewrite.Utils.parseSql;
+import static io.trino.sql.SqlFormatter.formatSql;
 import static java.util.Objects.requireNonNull;
 
 public class BigQuerySqlConverter
@@ -35,9 +47,25 @@ public class BigQuerySqlConverter
     }
 
     @Override
-    public String convert(String sql, SessionContext sessionContext)
+    public String convert(@Language("sql") String sql, SessionContext sessionContext)
     {
         QueryProcessor processor = QueryProcessor.of(metadata);
-        return processor.convert(sql, sessionContext);
+        Node rewrittenNode = parseSql(sql);
+
+        List<SqlRewrite> sqlRewrites = ImmutableList.of(
+                // bigquery doesn't support column name with catalog.schema.table prefix or schema.table prefix
+                RemoveCatalogSchemaColumnPrefix.INSTANCE,
+                // bigquery doesn't support column alias in alias relation
+                RemoveColumnAliasInAliasRelation.INSTANCE,
+                // bigquery doesn't support column alias in unnest alias relation
+                ReplaceColumnAliasInUnnest.INSTANCE,
+                // bigquery doesn't support correlated join in where clause
+                TransformCorrelatedJoinToJoin.INSTANCE);
+
+        for (SqlRewrite rewrite : sqlRewrites) {
+            rewrittenNode = rewrite.rewrite(rewrittenNode);
+        }
+
+        return processor.convert(formatSql(rewrittenNode));
     }
 }

@@ -15,7 +15,6 @@
 package io.graphmdl.main.calcite;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.main.metadata.Metadata;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
@@ -61,7 +60,6 @@ import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PatternRecognitionRelation;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Row;
@@ -118,13 +116,11 @@ import org.apache.calcite.util.DateString;
 import org.apache.calcite.util.TimestampString;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.graphmdl.base.type.StandardTypes.BIGINT;
 import static io.graphmdl.base.type.StandardTypes.BOOLEAN;
 import static io.graphmdl.base.type.StandardTypes.BYTEA;
@@ -156,6 +152,7 @@ import static org.apache.calcite.sql.fun.SqlStdOperatorTable.BETWEEN;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.CAST;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DESC;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DIVIDE;
+import static org.apache.calcite.sql.fun.SqlStdOperatorTable.DOT;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EQUALS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXISTS;
 import static org.apache.calcite.sql.fun.SqlStdOperatorTable.EXTRACT;
@@ -188,23 +185,21 @@ public class CalciteSqlNodeConverter
 {
     private CalciteSqlNodeConverter() {}
 
-    public static SqlNode convert(Node statement, Analysis analysis, Metadata metadata)
+    public static SqlNode convert(Node statement, Metadata metadata)
     {
-        Visitor visitor = new Visitor(analysis, metadata);
+        Visitor visitor = new Visitor(metadata);
         return visitor.process(statement);
     }
 
     private static class Visitor
             extends AstVisitor<SqlNode, ConvertContext>
     {
-        private final Analysis analysis;
         private int paramCount;
 
         private Metadata metadata;
 
-        public Visitor(Analysis analysis, Metadata metadata)
+        public Visitor(Metadata metadata)
         {
-            this.analysis = analysis;
             this.metadata = metadata;
         }
 
@@ -217,11 +212,6 @@ public class CalciteSqlNodeConverter
                 queryBody = process(node.getQueryBody(), context);
             }
             else {
-                node.getWith().get().getQueries().stream()
-                        .map(WithQuery::getName)
-                        .map(identifier -> QualifiedName.of(List.of(identifier)))
-                        .forEach(analysis::addVisitedWithQuery);
-
                 queryBody = new SqlWith(
                         toCalcitePos(node.getLocation()),
                         SqlNodeList.of(POS, visitNodes(node.getWith().get().getQueries())),
@@ -311,9 +301,6 @@ public class CalciteSqlNodeConverter
         @Override
         public SqlNode visitTable(Table node, ConvertContext context)
         {
-            if (!analysis.getVisitedWithQueries().contains(node.getName())) {
-                analysis.addVisitedTable(node.getName());
-            }
             List<String> tableName = node.getName().getParts();
 
             SqlIdentifier sqlIdentifier = new SqlIdentifier(tableName, ZERO);
@@ -530,17 +517,12 @@ public class CalciteSqlNodeConverter
         @Override
         protected SqlNode visitDereferenceExpression(DereferenceExpression node, ConvertContext context)
         {
-            // split catalog.schema.table
-            List<String> expressions = Arrays.stream(node.toString().split("\\.")).map(Visitor::deQuoted).collect(toImmutableList());
-            return new SqlIdentifier(expressions, POS);
-        }
-
-        private static String deQuoted(String value)
-        {
-            if (value.startsWith("\"") && value.endsWith("\"")) {
-                return value.substring(1, value.length() - 1);
-            }
-            return value;
+            return new SqlBasicCall(
+                    DOT,
+                    ImmutableList.<SqlNode>builder()
+                            .add(process(node.getBase()))
+                            .add(process(node.getField())).build(),
+                    POS);
         }
 
         @Override
@@ -599,7 +581,7 @@ public class CalciteSqlNodeConverter
                         null);
             }
 
-            JoinCriteria joinCriteria = node.getCriteria().orElseThrow(() -> new GraphMDLException(GENERIC_INTERNAL_ERROR, "join criteria is empty"));
+            JoinCriteria joinCriteria = node.getCriteria().orElse(null);
 
             if (node.getCriteria().isPresent() && node.getCriteria().get() instanceof NaturalJoin) {
                 return new SqlJoin(
@@ -630,8 +612,7 @@ public class CalciteSqlNodeConverter
             else if (joinCriteria instanceof JoinUsing) {
                 return SqlNodeList.of(POS, visitNodes(((JoinUsing) joinCriteria).getColumns()));
             }
-
-            throw new IllegalArgumentException();
+            return null;
         }
 
         @Override
@@ -930,7 +911,7 @@ public class CalciteSqlNodeConverter
         else if (joinCriteria instanceof JoinUsing) {
             return JoinConditionType.USING.symbol(POS);
         }
-        throw new IllegalArgumentException();
+        return JoinConditionType.NONE.symbol(POS);
     }
 
     private static SqlOperator toCalciteSqlOperator(ComparisonExpression.Operator operator)

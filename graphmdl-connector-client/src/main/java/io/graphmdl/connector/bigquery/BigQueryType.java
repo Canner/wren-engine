@@ -18,6 +18,7 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.type.DateType;
+import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
 
@@ -29,6 +30,7 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
 import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
+import static com.google.cloud.bigquery.StandardSQLTypeName.NUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
 import static com.google.cloud.bigquery.StandardSQLTypeName.TIMESTAMP;
 import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
@@ -58,6 +60,7 @@ public final class BigQueryType
                 .put(DATE, DateType.DATE)
                 .put(BYTES, BYTEA)
                 .put(TIMESTAMP, TimestampType.TIMESTAMP)
+                .put(NUMERIC, NumericType.NUMERIC)
                 .build();
 
         pgTypeToBqTypeMap = ImmutableMap.<PGType<?>, StandardSQLTypeName>builder()
