@@ -160,7 +160,6 @@ public class TestWireProtocolType
                 .addInput(dataTypeFactory.apply(1), sampleFourByteUnicodeCharacter);
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/43
     @Test
     public void testCreatedDecimal()
     {
@@ -187,11 +186,11 @@ public class TestWireProtocolType
                 .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"))
                 .addInput(decimalDataType(30, 5), new BigDecimal("3141592653589793238462643.38327"))
                 .addInput(decimalDataType(30, 5), new BigDecimal("-3141592653589793238462643.38327"))
-                .addInput(decimalDataType(30, 0), new BigDecimal("9223372036854775807"));
-
-        // TODO: support big decimal which value great than Long.MAX_VALUE
-        // https://github.com/Canner/canner-metric-layer/issues/43#issuecomment-1181395240
-        // .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"));
+                .addInput(decimalDataType(30, 0), new BigDecimal("9223372036854775807"))
+                .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"))
+                .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
+                .addInput(decimalDataType(39, 9), new BigDecimal("271828182845904523536028747130.526624977"))
+                .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"));
     }
 
     @Test
@@ -345,18 +344,6 @@ public class TestWireProtocolType
                         }
                         else if (TYPE_FORCED_TO_DOUBLE.contains(expectedTypeName.get(i))) {
                             assertThat(Double.valueOf((double) actual).floatValue()).isEqualTo(expectedResults.get(i));
-                        }
-                        // TODO: support big decimal which value great than Long.MAX_VALUE
-                        // https://github.com/Canner/canner-metric-layer/issues/43#issuecomment-1181395240
-                        else if (expectedTypeName.get(i).startsWith("decimal")) {
-                            // Because calcite does code generating to simplify cast statement
-                            // jdbc won't know the original type is decimal. That's why we only check real value here.
-                            if (actual instanceof Double) {
-                                assertThat(actual).isEqualTo(((BigDecimal) expectedResults.get(i)).doubleValue());
-                            }
-                            else if (actual instanceof Long) {
-                                assertThat(actual).isEqualTo(((BigDecimal) expectedResults.get(i)).longValue());
-                            }
                         }
                         else {
                             assertThat(actual).isEqualTo(expectedResults.get(i));
