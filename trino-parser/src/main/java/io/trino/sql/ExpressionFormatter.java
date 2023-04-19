@@ -16,6 +16,7 @@ package io.trino.sql;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.SqlFormatter.Dialect;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AllRows;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
@@ -111,9 +112,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.sql.RowPatternFormatter.formatPattern;
+import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
+import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
 import static io.trino.sql.SqlFormatter.formatName;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -124,19 +128,32 @@ public final class ExpressionFormatter
 
     private ExpressionFormatter() {}
 
-    public static String formatExpression(Expression expression)
+    public static String formatExpression(Expression expression, Dialect dialect)
     {
-        return new Formatter().process(expression, null);
+        return new Formatter(dialect).process(expression, null);
     }
 
-    private static String formatIdentifier(String s)
+    private static String formatIdentifier(String s, Dialect dialect)
     {
-        return '"' + s.replace("\"", "\"\"") + '"';
+        if (dialect == DEFAULT) {
+            return '"' + s.replace("\"", "\"\"") + '"';
+        }
+        else if (dialect == BIGQUERY) {
+            return '`' + s + '`';
+        }
+        throw new IllegalArgumentException("Unsupported identifier quote: " + dialect);
     }
 
     public static class Formatter
             extends AstVisitor<String, Void>
     {
+        private final Dialect dialect;
+
+        private Formatter(Dialect dialect)
+        {
+            this.dialect = requireNonNull(dialect, "dialect is null");
+        }
+
         @Override
         protected String visitNode(Node node, Void context)
         {
@@ -227,13 +244,13 @@ public final class ExpressionFormatter
         @Override
         protected String visitStringLiteral(StringLiteral node, Void context)
         {
-            return formatStringLiteral(node.getValue());
+            return formatStringLiteral(node.getValue(), dialect);
         }
 
         @Override
         protected String visitCharLiteral(CharLiteral node, Void context)
         {
-            return "CHAR " + formatStringLiteral(node.getValue());
+            return "CHAR " + formatStringLiteral(node.getValue(), dialect);
         }
 
         @Override
@@ -259,7 +276,7 @@ public final class ExpressionFormatter
         {
             ImmutableList.Builder<String> valueStrings = ImmutableList.builder();
             for (Expression value : node.getValues()) {
-                valueStrings.add(formatSql(value));
+                valueStrings.add(formatSql(value, dialect));
             }
             return "ARRAY[" + Joiner.on(",").join(valueStrings.build()) + "]";
         }
@@ -267,7 +284,21 @@ public final class ExpressionFormatter
         @Override
         protected String visitSubscriptExpression(SubscriptExpression node, Void context)
         {
-            return formatSql(node.getBase()) + "[" + formatSql(node.getIndex()) + "]";
+            String subscript;
+            if (dialect == DEFAULT) {
+                subscript = formatSql(node.getIndex(), dialect);
+            }
+            else if (dialect == BIGQUERY) {
+                // BigQuery doesn't support the normal way to access array element like `ARRAY[1,2,3][1]`.
+                // It should use `ORDINAL` or `OFFSET` operator to handle index value.
+                // Since pg is 1-based array index, that's why we use `ORDINAL` here.
+                // https://cloud.google.com/bigquery/docs/reference/standard-sql/arrays#accessing_array_elements
+                subscript = "ORDINAL(" + formatSql(node.getIndex(), dialect) + ")";
+            }
+            else {
+                throw new IllegalArgumentException("Unsupported dialect: " + dialect);
+            }
+            return formatSql(node.getBase(), dialect) + "[" + subscript + "]";
         }
 
         @Override
@@ -292,7 +323,7 @@ public final class ExpressionFormatter
         @Override
         protected String visitGenericLiteral(GenericLiteral node, Void context)
         {
-            return node.getType() + " " + formatStringLiteral(node.getValue());
+            return node.getType() + " " + formatStringLiteral(node.getValue(), dialect);
         }
 
         @Override
@@ -332,13 +363,13 @@ public final class ExpressionFormatter
         @Override
         protected String visitSubqueryExpression(SubqueryExpression node, Void context)
         {
-            return "(" + formatSql(node.getQuery()) + ")";
+            return "(" + formatSql(node.getQuery(), dialect) + ")";
         }
 
         @Override
         protected String visitExists(ExistsPredicate node, Void context)
         {
-            return "(EXISTS " + formatSql(node.getSubquery()) + ")";
+            return "(EXISTS " + formatSql(node.getSubquery(), dialect) + ")";
         }
 
         @Override
@@ -348,20 +379,20 @@ public final class ExpressionFormatter
                 return node.getValue();
             }
             else {
-                return '"' + node.getValue().replace("\"", "\"\"") + '"';
+                return formatIdentifier(node.getValue(), dialect);
             }
         }
 
         @Override
         protected String visitLambdaArgumentDeclaration(LambdaArgumentDeclaration node, Void context)
         {
-            return formatExpression(node.getName());
+            return formatExpression(node.getName(), dialect);
         }
 
         @Override
         protected String visitSymbolReference(SymbolReference node, Void context)
         {
-            return formatIdentifier(node.getName());
+            return formatIdentifier(node.getName(), dialect);
         }
 
         @Override
@@ -400,11 +431,11 @@ public final class ExpressionFormatter
                 arguments = "DISTINCT " + arguments;
             }
 
-            builder.append(formatName(node.getName()))
+            builder.append(formatName(node.getName(), dialect))
                     .append('(').append(arguments);
 
             if (node.getOrderBy().isPresent()) {
-                builder.append(' ').append(formatOrderBy(node.getOrderBy().get()));
+                builder.append(' ').append(formatOrderBy(node.getOrderBy().get(), dialect));
             }
 
             builder.append(')');
@@ -425,7 +456,7 @@ public final class ExpressionFormatter
             }
 
             if (node.getWindow().isPresent()) {
-                builder.append(" OVER ").append(formatWindow(node.getWindow().get()));
+                builder.append(" OVER ").append(formatWindow(node.getWindow().get(), dialect));
             }
 
             return builder.toString();
@@ -434,7 +465,7 @@ public final class ExpressionFormatter
         @Override
         protected String visitWindowOperation(WindowOperation node, Void context)
         {
-            return process(node.getName(), context) + " OVER " + formatWindow(node.getWindow());
+            return process(node.getName(), context) + " OVER " + formatWindow(node.getWindow(), dialect);
         }
 
         @Override
@@ -560,8 +591,10 @@ public final class ExpressionFormatter
                     .append(" LIKE ")
                     .append(process(node.getPattern(), context));
 
-            node.getEscape().ifPresent(escape -> builder.append(" ESCAPE ")
-                    .append(process(escape, context)));
+            if (dialect == DEFAULT) {
+                node.getEscape().ifPresent(escape -> builder.append(" ESCAPE ")
+                        .append(process(escape, context)));
+            }
 
             builder.append(')');
 
@@ -716,6 +749,14 @@ public final class ExpressionFormatter
             StringBuilder result = new StringBuilder();
             result.append(node.getName());
 
+            if (node.getName().getCanonicalValue().equals("ARRAY")
+                    && dialect == BIGQUERY) {
+                result.append("<");
+                result.append(process(node.getArguments().get(0), context));
+                result.append(">");
+                return result.toString();
+            }
+
             if (!node.getArguments().isEmpty()) {
                 result.append(node.getArguments().stream()
                         .map(this::process)
@@ -778,7 +819,7 @@ public final class ExpressionFormatter
             // LabelDereference, like SymbolReference, is an IR-type expression. It is never a result of the parser.
             // After being formatted this way for serialization, it will be parsed as functionCall
             // and swapped back for LabelDereference.
-            return "LABEL_DEREFERENCE(" + formatIdentifier(node.getLabel()) + ", " + process(node.getReference()) + ")";
+            return "LABEL_DEREFERENCE(" + formatIdentifier(node.getLabel(), dialect) + ", " + process(node.getReference()) + ")";
         }
 
         private String formatBinaryExpression(String operator, Expression left, Expression right)
@@ -842,7 +883,7 @@ public final class ExpressionFormatter
             if (node.getOrderBy().isPresent()) {
                 builder.append(" WITHIN GROUP ")
                         .append('(')
-                        .append(formatOrderBy(node.getOrderBy().get()))
+                        .append(formatOrderBy(node.getOrderBy().get(), dialect))
                         .append(')');
             }
 
@@ -850,7 +891,7 @@ public final class ExpressionFormatter
         }
     }
 
-    static String formatStringLiteral(String s)
+    static String formatStringLiteral(String s, Dialect dialect)
     {
         s = s.replace("'", "''");
         if (CharMatcher.inRange((char) 0x20, (char) 0x7E).matchesAllOf(s)) {
@@ -858,7 +899,10 @@ public final class ExpressionFormatter
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.append("U&'");
+        if (dialect == DEFAULT) {
+            builder.append("U&");
+        }
+        builder.append("'");
         PrimitiveIterator.OfInt iterator = s.codePoints().iterator();
         while (iterator.hasNext()) {
             int codePoint = iterator.nextInt();
@@ -870,70 +914,86 @@ public final class ExpressionFormatter
                 }
                 builder.append(ch);
             }
-            else if (codePoint <= 0xFFFF) {
-                builder.append('\\');
-                builder.append(format("%04X", codePoint));
-            }
             else {
-                builder.append("\\+");
-                builder.append(format("%06X", codePoint));
+                if (dialect == DEFAULT) {
+                    if (codePoint <= 0xFFFF) {
+                        builder.append('\\');
+                        builder.append(format("%04X", codePoint));
+                    }
+                    else {
+                        builder.append("\\+");
+                        builder.append(format("%06X", codePoint));
+                    }
+                }
+                else if (dialect == BIGQUERY) {
+                    if (codePoint <= 0xFFFF) {
+                        builder.append('\\');
+                        builder.append('u');
+                        builder.append(format("%04X", codePoint));
+                    }
+                    else {
+                        builder.append("\\");
+                        builder.append('U');
+                        builder.append(format("%08X", codePoint));
+                    }
+                }
             }
         }
         builder.append("'");
         return builder.toString();
     }
 
-    public static String formatOrderBy(OrderBy orderBy)
+    public static String formatOrderBy(OrderBy orderBy, Dialect dialect)
     {
-        return "ORDER BY " + formatSortItems(orderBy.getSortItems());
+        return "ORDER BY " + formatSortItems(orderBy.getSortItems(), dialect);
     }
 
-    private static String formatSortItems(List<SortItem> sortItems)
+    private static String formatSortItems(List<SortItem> sortItems, Dialect dialect)
     {
         return Joiner.on(", ").join(sortItems.stream()
-                .map(sortItemFormatterFunction())
+                .map(sortItemFormatterFunction(dialect))
                 .iterator());
     }
 
-    private static String formatWindow(Window window)
+    private static String formatWindow(Window window, Dialect dialect)
     {
         if (window instanceof WindowReference) {
-            return formatExpression(((WindowReference) window).getName());
+            return formatExpression(((WindowReference) window).getName(), dialect);
         }
 
-        return formatWindowSpecification((WindowSpecification) window);
+        return formatWindowSpecification((WindowSpecification) window, dialect);
     }
 
-    static String formatWindowSpecification(WindowSpecification windowSpecification)
+    static String formatWindowSpecification(WindowSpecification windowSpecification, Dialect dialect)
     {
         List<String> parts = new ArrayList<>();
 
         if (windowSpecification.getExistingWindowName().isPresent()) {
-            parts.add(formatExpression(windowSpecification.getExistingWindowName().get()));
+            parts.add(formatExpression(windowSpecification.getExistingWindowName().get(), dialect));
         }
         if (!windowSpecification.getPartitionBy().isEmpty()) {
             parts.add("PARTITION BY " + windowSpecification.getPartitionBy().stream()
-                    .map(ExpressionFormatter::formatExpression)
+                    .map(expression -> formatExpression(expression, dialect))
                     .collect(joining(", ")));
         }
         if (windowSpecification.getOrderBy().isPresent()) {
-            parts.add(formatOrderBy(windowSpecification.getOrderBy().get()));
+            parts.add(formatOrderBy(windowSpecification.getOrderBy().get(), dialect));
         }
         if (windowSpecification.getFrame().isPresent()) {
-            parts.add(formatFrame(windowSpecification.getFrame().get()));
+            parts.add(formatFrame(windowSpecification.getFrame().get(), dialect));
         }
 
         return '(' + Joiner.on(' ').join(parts) + ')';
     }
 
-    private static String formatFrame(WindowFrame windowFrame)
+    private static String formatFrame(WindowFrame windowFrame, Dialect dialect)
     {
         StringBuilder builder = new StringBuilder();
 
         if (!windowFrame.getMeasures().isEmpty()) {
             builder.append("MEASURES ")
                     .append(windowFrame.getMeasures().stream()
-                            .map(measure -> formatExpression(measure.getExpression()) + " AS " + formatExpression(measure.getName()))
+                            .map(measure -> formatExpression(measure.getExpression(), dialect) + " AS " + formatExpression(measure.getName(), dialect))
                             .collect(joining(", ")))
                     .append(" ");
         }
@@ -943,59 +1003,59 @@ public final class ExpressionFormatter
 
         if (windowFrame.getEnd().isPresent()) {
             builder.append("BETWEEN ")
-                    .append(formatFrameBound(windowFrame.getStart()))
+                    .append(formatFrameBound(windowFrame.getStart(), dialect))
                     .append(" AND ")
-                    .append(formatFrameBound(windowFrame.getEnd().get()));
+                    .append(formatFrameBound(windowFrame.getEnd().get(), dialect));
         }
         else {
-            builder.append(formatFrameBound(windowFrame.getStart()));
+            builder.append(formatFrameBound(windowFrame.getStart(), dialect));
         }
 
         windowFrame.getAfterMatchSkipTo().ifPresent(skipTo ->
                 builder.append(" ")
-                        .append(formatSkipTo(skipTo)));
+                        .append(formatSkipTo(skipTo, dialect)));
         windowFrame.getPatternSearchMode().ifPresent(searchMode ->
                 builder.append(" ")
                         .append(searchMode.getMode().name()));
         windowFrame.getPattern().ifPresent(pattern ->
                 builder.append(" PATTERN(")
-                        .append(formatPattern(pattern))
+                        .append(formatPattern(pattern, dialect))
                         .append(")"));
         if (!windowFrame.getSubsets().isEmpty()) {
             builder.append(" SUBSET ");
             builder.append(windowFrame.getSubsets().stream()
-                    .map(subset -> formatExpression(subset.getName()) + " = " + subset.getIdentifiers().stream()
-                            .map(ExpressionFormatter::formatExpression).collect(joining(", ", "(", ")")))
+                    .map(subset -> formatExpression(subset.getName(), dialect) + " = " + subset.getIdentifiers().stream()
+                            .map(expression -> formatExpression(expression, dialect)).collect(joining(", ", "(", ")")))
                     .collect(joining(", ")));
         }
         if (!windowFrame.getVariableDefinitions().isEmpty()) {
             builder.append(" DEFINE ");
             builder.append(windowFrame.getVariableDefinitions().stream()
-                    .map(variable -> formatExpression(variable.getName()) + " AS " + formatExpression(variable.getExpression()))
+                    .map(variable -> formatExpression(variable.getName(), dialect) + " AS " + formatExpression(variable.getExpression(), dialect))
                     .collect(joining(", ")));
         }
 
         return builder.toString();
     }
 
-    private static String formatFrameBound(FrameBound frameBound)
+    private static String formatFrameBound(FrameBound frameBound, Dialect dialect)
     {
         switch (frameBound.getType()) {
             case UNBOUNDED_PRECEDING:
                 return "UNBOUNDED PRECEDING";
             case PRECEDING:
-                return formatExpression(frameBound.getValue().get()) + " PRECEDING";
+                return formatExpression(frameBound.getValue().get(), dialect) + " PRECEDING";
             case CURRENT_ROW:
                 return "CURRENT ROW";
             case FOLLOWING:
-                return formatExpression(frameBound.getValue().get()) + " FOLLOWING";
+                return formatExpression(frameBound.getValue().get(), dialect) + " FOLLOWING";
             case UNBOUNDED_FOLLOWING:
                 return "UNBOUNDED FOLLOWING";
         }
         throw new IllegalArgumentException("unhandled type: " + frameBound.getType());
     }
 
-    public static String formatSkipTo(SkipTo skipTo)
+    public static String formatSkipTo(SkipTo skipTo, Dialect dialect)
     {
         switch (skipTo.getPosition()) {
             case PAST_LAST:
@@ -1004,16 +1064,16 @@ public final class ExpressionFormatter
                 return "AFTER MATCH SKIP TO NEXT ROW";
             case LAST:
                 checkState(skipTo.getIdentifier().isPresent(), "missing identifier in AFTER MATCH SKIP TO LAST");
-                return "AFTER MATCH SKIP TO LAST " + formatExpression(skipTo.getIdentifier().get());
+                return "AFTER MATCH SKIP TO LAST " + formatExpression(skipTo.getIdentifier().get(), dialect);
             case FIRST:
                 checkState(skipTo.getIdentifier().isPresent(), "missing identifier in AFTER MATCH SKIP TO FIRST");
-                return "AFTER MATCH SKIP TO FIRST " + formatExpression(skipTo.getIdentifier().get());
+                return "AFTER MATCH SKIP TO FIRST " + formatExpression(skipTo.getIdentifier().get(), dialect);
             default:
                 throw new IllegalStateException("unexpected skipTo: " + skipTo);
         }
     }
 
-    static String formatGroupBy(List<GroupingElement> groupingElements)
+    static String formatGroupBy(List<GroupingElement> groupingElements, Dialect dialect)
     {
         ImmutableList.Builder<String> resultStrings = ImmutableList.builder();
 
@@ -1022,23 +1082,23 @@ public final class ExpressionFormatter
             if (groupingElement instanceof SimpleGroupBy) {
                 List<Expression> columns = groupingElement.getExpressions();
                 if (columns.size() == 1) {
-                    result = formatExpression(getOnlyElement(columns));
+                    result = formatExpression(getOnlyElement(columns), dialect);
                 }
                 else {
-                    result = formatGroupingSet(columns);
+                    result = formatGroupingSet(columns, dialect);
                 }
             }
             else if (groupingElement instanceof GroupingSets) {
                 result = format("GROUPING SETS (%s)", Joiner.on(", ").join(
                         ((GroupingSets) groupingElement).getSets().stream()
-                                .map(ExpressionFormatter::formatGroupingSet)
+                                .map(expression -> formatGroupingSet(expression, dialect))
                                 .iterator()));
             }
             else if (groupingElement instanceof Cube) {
-                result = format("CUBE %s", formatGroupingSet(groupingElement.getExpressions()));
+                result = format("CUBE %s", formatGroupingSet(groupingElement.getExpressions(), dialect));
             }
             else if (groupingElement instanceof Rollup) {
-                result = format("ROLLUP %s", formatGroupingSet(groupingElement.getExpressions()));
+                result = format("ROLLUP %s", formatGroupingSet(groupingElement.getExpressions(), dialect));
             }
             resultStrings.add(result);
         }
@@ -1050,19 +1110,19 @@ public final class ExpressionFormatter
         return codePoint >= 0x20 && codePoint < 0x7F;
     }
 
-    private static String formatGroupingSet(List<Expression> groupingSet)
+    private static String formatGroupingSet(List<Expression> groupingSet, Dialect dialect)
     {
         return format("(%s)", Joiner.on(", ").join(groupingSet.stream()
-                .map(ExpressionFormatter::formatExpression)
+                .map(expression -> formatExpression(expression, dialect))
                 .iterator()));
     }
 
-    private static Function<SortItem, String> sortItemFormatterFunction()
+    private static Function<SortItem, String> sortItemFormatterFunction(Dialect dialect)
     {
         return input -> {
             StringBuilder builder = new StringBuilder();
 
-            builder.append(formatExpression(input.getSortKey()));
+            builder.append(formatExpression(input.getSortKey(), dialect));
 
             switch (input.getOrdering()) {
                 case ASCENDING:

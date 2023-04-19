@@ -18,9 +18,8 @@ import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.TableMetadata;
-import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.metadata.Metadata;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
+import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
 
@@ -58,21 +57,9 @@ public class TestingMetadata
     }
 
     @Override
-    public String resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, int numArgument)
     {
-        return functionName;
-    }
-
-    @Override
-    public GraphMDLSchemaUtil.Dialect getDialect()
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
-    }
-
-    @Override
-    public RelDataTypeSystem getRelDataTypeSystem()
-    {
-        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+        return QualifiedName.of(functionName);
     }
 
     @Override

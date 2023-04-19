@@ -15,14 +15,17 @@
 package io.graphmdl.main.connector.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.airlift.log.Logger;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.main.calcite.QueryProcessor;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.main.sql.bigquery.RemoveCatalogSchemaColumnPrefix;
 import io.graphmdl.main.sql.bigquery.RemoveColumnAliasInAliasRelation;
+import io.graphmdl.main.sql.bigquery.RemoveParameterInTypesInCast;
 import io.graphmdl.main.sql.bigquery.ReplaceColumnAliasInUnnest;
+import io.graphmdl.main.sql.bigquery.RewriteToBigQueryFunction;
+import io.graphmdl.main.sql.bigquery.RewriteToBigQueryType;
 import io.graphmdl.main.sql.bigquery.TransformCorrelatedJoinToJoin;
 import io.trino.sql.tree.Node;
 import org.intellij.lang.annotations.Language;
@@ -32,12 +35,14 @@ import javax.inject.Inject;
 import java.util.List;
 
 import static io.graphmdl.sqlrewrite.Utils.parseSql;
+import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static java.util.Objects.requireNonNull;
 
 public class BigQuerySqlConverter
         implements SqlConverter
 {
+    private static final Logger LOG = Logger.get(BigQuerySqlConverter.class);
     private final Metadata metadata;
 
     @Inject
@@ -49,7 +54,6 @@ public class BigQuerySqlConverter
     @Override
     public String convert(@Language("sql") String sql, SessionContext sessionContext)
     {
-        QueryProcessor processor = QueryProcessor.of(metadata);
         Node rewrittenNode = parseSql(sql);
 
         List<SqlRewrite> sqlRewrites = ImmutableList.of(
@@ -60,12 +64,24 @@ public class BigQuerySqlConverter
                 // bigquery doesn't support column alias in unnest alias relation
                 ReplaceColumnAliasInUnnest.INSTANCE,
                 // bigquery doesn't support correlated join in where clause
-                TransformCorrelatedJoinToJoin.INSTANCE);
+                TransformCorrelatedJoinToJoin.INSTANCE,
+                RewriteToBigQueryFunction.INSTANCE,
+                RewriteToBigQueryType.INSTANCE,
+                // bigquery doesn't support parameter in types in cast
+                // this should happen after RewriteToBigQueryType since RewriteToBigQueryType will replace
+                // GenericLiteral with Cast and types in Cast could contain parameter.
+                RemoveParameterInTypesInCast.INSTANCE);
+
+        LOG.info("[Input sql]: %s", sql);
 
         for (SqlRewrite rewrite : sqlRewrites) {
-            rewrittenNode = rewrite.rewrite(rewrittenNode);
+            LOG.debug("Before %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            rewrittenNode = rewrite.rewrite(rewrittenNode, metadata);
+            LOG.debug("After %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
         }
 
-        return processor.convert(formatSql(rewrittenNode));
+        String dialectSql = formatSql(rewrittenNode, BIGQUERY);
+        LOG.info("[Dialect sql]: %s", dialectSql);
+        return dialectSql;
     }
 }

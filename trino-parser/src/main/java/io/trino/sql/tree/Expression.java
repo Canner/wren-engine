@@ -17,6 +17,8 @@ import io.trino.sql.ExpressionFormatter;
 
 import java.util.Optional;
 
+import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
+
 public abstract class Expression
         extends Node
 {
@@ -37,6 +39,6 @@ public abstract class Expression
     @Override
     public final String toString()
     {
-        return ExpressionFormatter.formatExpression(this);
+        return ExpressionFormatter.formatExpression(this, DEFAULT);
     }
 }

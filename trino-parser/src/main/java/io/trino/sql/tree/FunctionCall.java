@@ -179,4 +179,92 @@ public class FunctionCall
                 nullTreatment.equals(otherFunction.nullTreatment) &&
                 processingMode.equals(otherFunction.processingMode);
     }
+
+    public static Builder builder(FunctionCall functionCall)
+    {
+        return new Builder()
+                .location(functionCall.getLocation())
+                .name(functionCall.getName())
+                .window(functionCall.getWindow())
+                .filter(functionCall.getFilter())
+                .orderBy(functionCall.getOrderBy())
+                .distinct(functionCall.isDistinct())
+                .nullTreatment(functionCall.getNullTreatment())
+                .processingMode(functionCall.getProcessingMode())
+                .arguments(functionCall.getArguments());
+    }
+
+    public static class Builder
+    {
+        private Optional<NodeLocation> location = Optional.empty();
+        private QualifiedName name;
+        private Optional<Window> window = Optional.empty();
+        private Optional<Expression> filter = Optional.empty();
+        private Optional<OrderBy> orderBy = Optional.empty();
+        private boolean distinct;
+        private Optional<NullTreatment> nullTreatment = Optional.empty();
+        private Optional<ProcessingMode> processingMode = Optional.empty();
+        private List<Expression> arguments = ImmutableList.of();
+
+        private Builder() {}
+
+        public Builder location(Optional<NodeLocation> location)
+        {
+            this.location = location;
+            return this;
+        }
+
+        public Builder name(QualifiedName name)
+        {
+            this.name = name;
+            return this;
+        }
+
+        public Builder window(Optional<Window> window)
+        {
+            this.window = window;
+            return this;
+        }
+
+        public Builder filter(Optional<Expression> filter)
+        {
+            this.filter = filter;
+            return this;
+        }
+
+        public Builder orderBy(Optional<OrderBy> orderBy)
+        {
+            this.orderBy = orderBy;
+            return this;
+        }
+
+        public Builder distinct(boolean distinct)
+        {
+            this.distinct = distinct;
+            return this;
+        }
+
+        public Builder nullTreatment(Optional<NullTreatment> nullTreatment)
+        {
+            this.nullTreatment = nullTreatment;
+            return this;
+        }
+
+        public Builder processingMode(Optional<ProcessingMode> processingMode)
+        {
+            this.processingMode = processingMode;
+            return this;
+        }
+
+        public Builder arguments(List<Expression> arguments)
+        {
+            this.arguments = arguments;
+            return this;
+        }
+
+        public FunctionCall build()
+        {
+            return new FunctionCall(location, name, window, filter, orderBy, distinct, nullTreatment, processingMode, arguments);
+        }
+    }
 }

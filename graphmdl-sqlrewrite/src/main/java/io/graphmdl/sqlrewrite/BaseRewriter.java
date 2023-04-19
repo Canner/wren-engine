@@ -860,13 +860,13 @@ public class BaseRewriter<T>
             return new Cast(
                     node.getLocation().get(),
                     visitAndCast(node.getExpression(), context),
-                    node.getType(),
+                    visitAndCast(node.getType(), context),
                     node.isSafe(),
                     node.isTypeOnly());
         }
         return new Cast(
                 visitAndCast(node.getExpression(), context),
-                node.getType(),
+                visitAndCast(node.getType(), context),
                 node.isSafe(),
                 node.isTypeOnly());
     }

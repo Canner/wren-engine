@@ -14,9 +14,10 @@
 
 package io.graphmdl.main.sql;
 
+import io.graphmdl.main.metadata.Metadata;
 import io.trino.sql.tree.Node;
 
 public interface SqlRewrite
 {
-    Node rewrite(Node node);
+    Node rewrite(Node node, Metadata metadata);
 }

@@ -14,6 +14,7 @@
 
 package io.graphmdl.main.sql.bigquery;
 
+import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.AliasedRelation;
@@ -50,7 +51,7 @@ public class ReplaceColumnAliasInUnnest
     private ReplaceColumnAliasInUnnest() {}
 
     @Override
-    public Node rewrite(Node node)
+    public Node rewrite(Node node, Metadata metadata)
     {
         return new ReplaceColumnAliasInUnnestRewriter().process(node, null);
     }
