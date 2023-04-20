@@ -390,7 +390,7 @@ public class TestRelationshipAccessing
 
         Node rewrittenStatement = statement;
         for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
+            rewrittenStatement = rule.apply((Statement) rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
         }
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
@@ -414,7 +414,7 @@ public class TestRelationshipAccessing
 
         Node rewrittenStatement = statement;
         for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
+            rewrittenStatement = rule.apply((Statement) rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToOneGraphMDL);
         }
 
         String expected = "WITH\n" +
@@ -704,7 +704,7 @@ public class TestRelationshipAccessing
 
         Node rewrittenStatement = statement;
         for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
-            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+            rewrittenStatement = rule.apply((Statement) rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
         }
 
         Map<String, String> replaceMap = new HashMap<>();
