@@ -17,9 +17,11 @@ package io.graphmdl.sqlrewrite;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
-import io.trino.sql.tree.Node;
+import io.trino.sql.tree.Statement;
 
 public interface GraphMDLRule
 {
-    Node apply(Node root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL);
+    Statement apply(Statement root, SessionContext sessionContext, GraphMDL graphMDL);
+
+    Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL);
 }
