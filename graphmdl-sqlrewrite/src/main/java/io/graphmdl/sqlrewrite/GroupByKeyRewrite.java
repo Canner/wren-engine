@@ -38,6 +38,17 @@ import java.util.Optional;
 import static io.graphmdl.sqlrewrite.analyzer.Analysis.GroupByAnalysis;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 
+/**
+ * If the grouping element is a relationship field,
+ * rewrite it to the corresponding model's primary key.
+ * <p>
+ * SELECT count(*) FROM Book GROUP BY author -> SELECT count(*) FROM Book GROUP BY author.userId
+ * <p>
+ * If the grouping element is a ordinal field and the corresponding SelectItem is a relationship field,
+ * rewrite it to the corresponding model's primary key.
+ * <p>
+ * SELECT author, count(*) FROM Book GROUP BY 1 -> SELECT author, count(*) FROM Book GROUP BY author.userId
+ */
 public class GroupByKeyRewrite
         implements GraphMDLRule
 {
