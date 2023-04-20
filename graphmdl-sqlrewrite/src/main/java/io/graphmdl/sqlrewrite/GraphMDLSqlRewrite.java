@@ -17,7 +17,6 @@ package io.graphmdl.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;

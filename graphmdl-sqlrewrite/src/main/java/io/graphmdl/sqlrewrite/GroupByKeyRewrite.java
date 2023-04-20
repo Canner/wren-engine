@@ -37,6 +37,7 @@ import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.analyzer.Analysis.GroupByAnalysis;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static java.lang.Math.toIntExact;
 
 /**
  * If the grouping element is a relationship field,
@@ -107,7 +108,7 @@ public class GroupByKeyRewrite
         private Optional<DereferenceExpression> rewriteGroupByKeyIfNeeded(Scope scope, Expression key, GroupByAnalysis groupByAnalysis)
         {
             if (key instanceof LongLiteral) {
-                Expression expression = groupByAnalysis.getOriginalExpressions().get(Math.toIntExact(((LongLiteral) key).getValue()) - 1);
+                Expression expression = groupByAnalysis.getOriginalExpressions().get(toIntExact(((LongLiteral) key).getValue()) - 1);
                 Optional<Field> field = scope.getRelationType().map(relationType -> relationType.resolveFields(getQualifiedName(expression)))
                         // If it can't be resolved, it means it could be a field of a relationship or ambiguous.
                         .map(fields -> fields.size() == 1 ? fields.get(0) : null);

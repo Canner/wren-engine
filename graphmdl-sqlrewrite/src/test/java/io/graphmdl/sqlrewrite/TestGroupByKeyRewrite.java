@@ -36,7 +36,7 @@ public class TestGroupByKeyRewrite
         extends AbstractTestFramework
 {
     private final GraphMDL oneToManyGraphMDL;
-    private final SqlParser SQL_PARSER = new SqlParser();
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     public TestGroupByKeyRewrite()
     {
