@@ -169,21 +169,24 @@ public class TestWireProtocolType
 
     private WireProtocolTypeTest decimalTests()
     {
+        // BigQuery will remove trailing zeros from values.
+        Function<BigDecimal, BigDecimal> removeTrailingZeros = value -> new BigDecimal(value.stripTrailingZeros().toPlainString());
+
         return createTypeTest()
                 .addInput(decimalDataType(), new BigDecimal("0.123"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("0"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("193"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("19"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("-193"))
-                .addInput(decimalDataType(3, 1), new BigDecimal("10.0"))
+                .addInput(decimalDataType(3, 1), new BigDecimal("10.0"), removeTrailingZeros)
                 .addInput(decimalDataType(3, 1), new BigDecimal("10.1"))
                 .addInput(decimalDataType(3, 1), new BigDecimal("-10.1"))
-                .addInput(decimalDataType(4, 2), new BigDecimal("2.00"))
-                .addInput(decimalDataType(4, 2), new BigDecimal("2.30"))
-                .addInput(decimalDataType(24, 2), new BigDecimal("2.00"))
-                .addInput(decimalDataType(24, 2), new BigDecimal("2.30"))
-                .addInput(decimalDataType(24, 2), new BigDecimal("123456789.30"))
-                .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"))
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.00"), removeTrailingZeros)
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.30"), removeTrailingZeros)
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.00"), removeTrailingZeros)
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.30"), removeTrailingZeros)
+                .addInput(decimalDataType(24, 2), new BigDecimal("123456789.30"), removeTrailingZeros)
+                .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"), removeTrailingZeros)
                 .addInput(decimalDataType(30, 5), new BigDecimal("3141592653589793238462643.38327"))
                 .addInput(decimalDataType(30, 5), new BigDecimal("-3141592653589793238462643.38327"))
                 .addInput(decimalDataType(30, 0), new BigDecimal("9223372036854775807"))
