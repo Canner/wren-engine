@@ -30,6 +30,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestLambdaExpressionRewrite
 {
@@ -40,17 +41,17 @@ public class TestLambdaExpressionRewrite
     {
         // TODO: support FunctionCall, ComparisonExpression ...
         return new Object[][] {
-                {"book.f1.f2.f3"},
-                {"book"},
-                {"book.f1.a1[1].f2"}
+                {"book.f1.f2.f3", "t.f1.f2.f3"},
+                {"book", "'Relationship<Book>'"},
+                {"book.f1.a1[1].f2", "t.f1.a1[1].f2"}
         };
     }
 
     @Test(dataProvider = "lambdaExpression")
-    public void testLambdaExpressionRewrite(String sql)
+    public void testLambdaExpressionRewrite(String actual, String expected)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName("graphmdl", "test", "Book");
-        Node node = LambdaExpressionRewrite.rewrite(getSelectItem(String.format("select %s", sql)),
+        Node node = LambdaExpressionRewrite.rewrite(getSelectItem(String.format("select %s", actual)),
                 Field.builder()
                         .isRelationship(true)
                         .modelName(catalogSchemaTableName)
@@ -58,7 +59,7 @@ public class TestLambdaExpressionRewrite
                         .name("books")
                         .relationAlias(QualifiedName.of("t"))
                         .build(), new Identifier("book"));
-        System.out.println(node);
+        assertThat(node.toString()).isEqualTo(expected);
     }
 
     private Expression getSelectItem(String sql)
