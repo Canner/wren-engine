@@ -76,6 +76,7 @@ public final class BigQueryType
                 .put(VARCHAR, STRING)
                 .put(DOUBLE, FLOAT64)
                 .put(REAL, FLOAT64)
+                .put(NumericType.NUMERIC, BIGNUMERIC)
                 .put(DateType.DATE, DATE)
                 .put(TimestampType.TIMESTAMP, TIMESTAMP)
                 .put(BYTEA, BYTES)
@@ -92,5 +93,14 @@ public final class BigQueryType
     {
         return Optional.ofNullable(pgTypeToBqTypeMap.get(pgType))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + pgType.typName()));
+    }
+
+    public static Object toBqValue(PGType<?> pgType, Object value)
+    {
+        // BigQuery parameter only support Integer and Long value as type INT64
+        if (pgType.equals(SMALLINT) && value instanceof Short) {
+            return ((Short) value).intValue();
+        }
+        return value;
     }
 }
