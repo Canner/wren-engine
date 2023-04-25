@@ -25,11 +25,13 @@ import io.graphmdl.base.type.TimestampType;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.google.cloud.bigquery.StandardSQLTypeName.BIGNUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BOOL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
 import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
+import static com.google.cloud.bigquery.StandardSQLTypeName.JSON;
 import static com.google.cloud.bigquery.StandardSQLTypeName.NUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
 import static com.google.cloud.bigquery.StandardSQLTypeName.TIMESTAMP;
@@ -61,6 +63,8 @@ public final class BigQueryType
                 .put(BYTES, BYTEA)
                 .put(TIMESTAMP, TimestampType.TIMESTAMP)
                 .put(NUMERIC, NumericType.NUMERIC)
+                .put(BIGNUMERIC, NumericType.NUMERIC)
+                .put(JSON, VARCHAR)
                 .build();
 
         pgTypeToBqTypeMap = ImmutableMap.<PGType<?>, StandardSQLTypeName>builder()

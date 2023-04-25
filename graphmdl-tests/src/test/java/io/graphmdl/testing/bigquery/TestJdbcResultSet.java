@@ -20,6 +20,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
@@ -46,10 +47,8 @@ public class TestJdbcResultSet
             .put(Types.SMALLINT, Types.BIGINT)
             .put(Types.INTEGER, Types.BIGINT)
             .put(Types.REAL, Types.DOUBLE)
-            .put(Types.NUMERIC, Types.DOUBLE)
             .put(Types.DECIMAL, Types.DOUBLE)
             .put(Types.CHAR, Types.VARCHAR)
-            .put(Types.OTHER, Types.VARCHAR)
             .build();
     private Connection connection;
     private Statement statement;
@@ -100,7 +99,7 @@ public class TestJdbcResultSet
         // TODO bigquery can't do division by zero
 //        checkRepresentation("1.0E0 / 0.0E0", Types.DOUBLE, Double.POSITIVE_INFINITY);
 //        checkRepresentation("0.0E0 / 0.0E0", Types.DOUBLE, Double.NaN);
-        checkRepresentation("0.1", Types.NUMERIC, 0.1);
+        checkRepresentation("0.1", Types.NUMERIC, new BigDecimal("0.1"));
         // In PostgreSQL JDBC, BooleanType will be represent to JDBC Bit Type
         // https://github.com/pgjdbc/pgjdbc/blob/master/pgjdbc/src/main/java/org/postgresql/jdbc/TypeInfoCache.java#L95
         checkRepresentation("true", Types.BIT, true);
@@ -121,15 +120,15 @@ public class TestJdbcResultSet
         checkRepresentation("BIGINT '123'", Types.BIGINT, (long) 123);
         checkRepresentation("REAL '123.45'", Types.REAL, 123.45);
         checkRepresentation("DOUBLE '123.45'", Types.DOUBLE, 123.45);
-        checkRepresentation("DECIMAL '123.45'", Types.DECIMAL, 123.45);
+        checkRepresentation("DECIMAL '123.45'", Types.NUMERIC, new BigDecimal("123.45"));
         checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
         checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
         // TODO https://github.com/Canner/canner-metric-layer/issues/41
 //        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
         // TODO:
 //        checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
-        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.OTHER, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
-        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.OTHER, "{\"name\":\"alice\"}");
+        checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
+        checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.VARCHAR, "{\"name\":\"alice\"}");
 
         checkRepresentation("DATE '2018-02-13'", Types.DATE, (rs, column) -> {
             assertEquals(rs.getObject(column), Date.valueOf(LocalDate.of(2018, 2, 13)));

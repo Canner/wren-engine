@@ -15,6 +15,7 @@
 package io.graphmdl.main.sql.bigquery;
 
 import com.google.common.collect.ImmutableMap;
+import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.DefaultTraversalVisitor;
@@ -48,7 +49,7 @@ public class TransformCorrelatedJoinToJoin
     private TransformCorrelatedJoinToJoin() {}
 
     @Override
-    public Node rewrite(Node node)
+    public Node rewrite(Node node, Metadata metadata)
     {
         return new TransformCorrelatedJoinToJoinRewriter().process(node, null);
     }

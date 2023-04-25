@@ -24,6 +24,7 @@ import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.MetricRollupInfo;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.DataType;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Node;
@@ -58,6 +59,16 @@ public final class Utils
     public static Node parseSql(String sql)
     {
         return SQL_PARSER.createStatement(sql, PARSING_OPTIONS);
+    }
+
+    public static Expression parseExpression(String expression)
+    {
+        return SQL_PARSER.createExpression(expression, PARSING_OPTIONS);
+    }
+
+    public static DataType parseType(String type)
+    {
+        return SQL_PARSER.createType(type);
     }
 
     public static Query parseModelSql(Model model)

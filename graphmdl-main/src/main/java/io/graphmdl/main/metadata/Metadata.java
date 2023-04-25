@@ -17,8 +17,7 @@ import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.TableMetadata;
-import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
+import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
 
@@ -34,11 +33,7 @@ public interface Metadata
 
     List<String> listFunctionNames(String schemaName);
 
-    String resolveFunction(String functionName, int numArgument);
-
-    GraphMDLSchemaUtil.Dialect getDialect();
-
-    RelDataTypeSystem getRelDataTypeSystem();
+    QualifiedName resolveFunction(String functionName, int numArgument);
 
     String getDefaultCatalog();
 

@@ -41,7 +41,6 @@
 
         <dep.antlr.version>4.9.2</dep.antlr.version>
         <dep.airlift.version>203</dep.airlift.version>
-        <dep.calcite.version>1.31.0</dep.calcite.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.14</dep.drift.version>
         <dep.errorprone.version>2.13.0</dep.errorprone.version>
@@ -315,36 +314,6 @@
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
                 <version>${dep.antlr.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-core</artifactId>
-                <version>${dep.calcite.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>commons-logging</groupId>
-                        <artifactId>commons-logging</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.apache.commons</groupId>
-                        <artifactId>commons-lang3</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.yaml</groupId>
-                        <artifactId>snakeyaml</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.calcite</groupId>
-                <artifactId>calcite-linq4j</artifactId>
-                <version>${dep.calcite.version}</version>
             </dependency>
 
             <!-- TODO: move this to Airbase -->

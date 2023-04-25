@@ -15,6 +15,7 @@
 package io.graphmdl.main.sql.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.AliasedRelation;
@@ -63,7 +64,7 @@ public class RemoveColumnAliasInAliasRelation
     private RemoveColumnAliasInAliasRelation() {}
 
     @Override
-    public Node rewrite(Node node)
+    public Node rewrite(Node node, Metadata metadata)
     {
         return new RemoveColumnAliasInAliasRelationRewriter().process(node, null);
     }

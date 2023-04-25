@@ -13,6 +13,7 @@
  */
 package io.trino.sql;
 
+import io.trino.sql.SqlFormatter.Dialect;
 import io.trino.sql.tree.AnchorPattern;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.EmptyPattern;
@@ -29,6 +30,7 @@ import io.trino.sql.tree.RowPattern;
 import io.trino.sql.tree.ZeroOrMoreQuantifier;
 import io.trino.sql.tree.ZeroOrOneQuantifier;
 
+import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -36,14 +38,21 @@ public final class RowPatternFormatter
 {
     private RowPatternFormatter() {}
 
-    public static String formatPattern(RowPattern pattern)
+    public static String formatPattern(RowPattern pattern, Dialect dialect)
     {
-        return new Formatter().process(pattern, null);
+        return new Formatter(dialect).process(pattern, null);
     }
 
     public static class Formatter
             extends AstVisitor<String, Void>
     {
+        private final Dialect dialect;
+
+        public Formatter(Dialect dialect)
+        {
+            this.dialect = dialect;
+        }
+
         @Override
         protected String visitNode(Node node, Void context)
         {
@@ -81,7 +90,7 @@ public final class RowPatternFormatter
         @Override
         protected String visitPatternVariable(PatternVariable node, Void context)
         {
-            return ExpressionFormatter.formatExpression(node.getName());
+            return formatExpression(node.getName(), dialect);
         }
 
         @Override
@@ -142,8 +151,8 @@ public final class RowPatternFormatter
         protected String visitRangeQuantifier(RangeQuantifier node, Void context)
         {
             String greedy = node.isGreedy() ? "" : "?";
-            String atLeast = node.getAtLeast().map(ExpressionFormatter::formatExpression).orElse("");
-            String atMost = node.getAtMost().map(ExpressionFormatter::formatExpression).orElse("");
+            String atLeast = node.getAtLeast().map(expression -> formatExpression(expression, dialect)).orElse("");
+            String atMost = node.getAtMost().map(expression -> formatExpression(expression, dialect)).orElse("");
             return "{" + atLeast + "," + atMost + "}" + greedy;
         }
     }

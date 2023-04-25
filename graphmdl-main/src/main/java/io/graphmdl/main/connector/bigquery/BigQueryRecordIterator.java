@@ -109,6 +109,7 @@ public class BigQueryRecordIterator
             case FLOAT64:
                 return fieldValue.getDoubleValue();
             case STRING:
+            case JSON:
                 return fieldValue.getStringValue();
             case BYTES:
                 return fieldValue.getBytesValue();
@@ -117,6 +118,7 @@ public class BigQueryRecordIterator
             case TIMESTAMP:
                 return fieldValue.getTimestampValue();
             case NUMERIC:
+            case BIGNUMERIC:
                 return fieldValue.getNumericValue();
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);

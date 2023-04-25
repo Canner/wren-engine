@@ -60,9 +60,12 @@ public class TestBigQuerySqlConverter
                 "SELECT o_custkey, COUNT(*) AS cnt\n" +
                         "FROM \"canner-cml\".\"tpch_tiny\".\"orders\"\n" +
                         "GROUP BY 1", SessionContext.builder().build()))
-                .isEqualTo("SELECT o_custkey, COUNT(*) AS cnt\n" +
-                        "FROM `canner-cml`.tpch_tiny.orders\n" +
-                        "GROUP BY 1");
+                .isEqualTo("SELECT\n" +
+                        "  o_custkey\n" +
+                        ", COUNT(*) cnt\n" +
+                        "FROM\n" +
+                        "  `canner-cml`.`tpch_tiny`.`orders`\n" +
+                        "GROUP BY 1\n");
     }
 
     @Test
@@ -70,10 +73,12 @@ public class TestBigQuerySqlConverter
     {
         assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"canner-cml\".\"cml_temp\".\"canner\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT a\n" +
-                        "FROM `canner-cml`.cml_temp.canner");
+                        "FROM\n" +
+                        "  `canner-cml`.`cml_temp`.`canner`\n");
         assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\"", SessionContext.builder().build()))
                 .isEqualTo("SELECT b\n" +
-                        "FROM `canner-cml`.cml_temp.CANNER");
+                        "FROM\n" +
+                        "  `canner-cml`.`cml_temp`.`CANNER`\n");
     }
 
     @Test
@@ -82,7 +87,8 @@ public class TestBigQuerySqlConverter
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT t.\"transform(Customer.orders, (orderItem) -> orderItem.orderstatus)\" from t", SessionContext.builder().build()))
                 .isEqualTo("SELECT t.`transform(Customer.orders, (orderItem) -> orderItem.orderstatus)`\n" +
-                        "FROM t");
+                        "FROM\n" +
+                        "  t\n");
     }
 
     @Test
@@ -91,29 +97,62 @@ public class TestBigQuerySqlConverter
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT c_1, c_2\n" +
                         "FROM (SELECT c1, c2, c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
-                .isEqualTo("SELECT c_1, c_2\n" +
-                        "FROM (SELECT c1 AS c_1, c2 AS c_2, c3 AS c_3\n" +
-                        "        FROM `graph-mdl`.test.table) AS t");
+                .isEqualTo("SELECT\n" +
+                        "  c_1\n" +
+                        ", c_2\n" +
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT\n" +
+                        "     c1 c_1\n" +
+                        "   , c2 c_2\n" +
+                        "   , c3 c_3\n" +
+                        "   FROM\n" +
+                        "     `graph-mdl`.`test`.`table`\n" +
+                        ")  t\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT t.c_1, t.c_2\n" +
                         "FROM (SELECT c1, c2, c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
-                .isEqualTo("SELECT t.c_1, t.c_2\n" +
-                        "FROM (SELECT c1 AS c_1, c2 AS c_2, c3 AS c_3\n" +
-                        "        FROM `graph-mdl`.test.table) AS t");
+                .isEqualTo("SELECT\n" +
+                        "  t.c_1\n" +
+                        ", t.c_2\n" +
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT\n" +
+                        "     c1 c_1\n" +
+                        "   , c2 c_2\n" +
+                        "   , c3 c_3\n" +
+                        "   FROM\n" +
+                        "     `graph-mdl`.`test`.`table`\n" +
+                        ")  t\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT c_1, c_2\n" +
                         "FROM (SELECT canner.c1, canner.c2, canner.c3 FROM \"graph-mdl\".\"test\".\"table\") AS t(c_1, c_2, c_3)", SessionContext.builder().build()))
-                .isEqualTo("SELECT c_1, c_2\n" +
-                        "FROM (SELECT canner.c1 AS c_1, canner.c2 AS c_2, canner.c3 AS c_3\n" +
-                        "        FROM `graph-mdl`.test.table) AS t");
+                .isEqualTo("SELECT\n" +
+                        "  c_1\n" +
+                        ", c_2\n" +
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT\n" +
+                        "     canner.c1 c_1\n" +
+                        "   , canner.c2 c_2\n" +
+                        "   , canner.c3 c_3\n" +
+                        "   FROM\n" +
+                        "     `graph-mdl`.`test`.`table`\n" +
+                        ")  t\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "WITH b(n) AS (SELECT name FROM Book) SELECT n FROM b", SessionContext.builder().build()))
-                .isEqualTo("WITH b AS (SELECT name AS n\n" +
-                        "        FROM Book) (SELECT n\n" +
-                        "        FROM b)");
+                .isEqualTo("WITH\n" +
+                        "  b AS (\n" +
+                        "   SELECT name n\n" +
+                        "   FROM\n" +
+                        "     Book\n" +
+                        ") \n" +
+                        "SELECT n\n" +
+                        "FROM\n" +
+                        "  b\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT * FROM (\n" +
@@ -123,11 +162,21 @@ public class TestBigQuerySqlConverter
                         "        (3, 'c')\n" +
                         ") AS t (id, name)", SessionContext.builder().build()))
                 .isEqualTo("SELECT *\n" +
-                        "FROM (SELECT 1 AS id, 'a' AS name\n" +
-                        "            UNION ALL\n" +
-                        "            SELECT 2 AS id, 'b' AS name\n" +
-                        "            UNION ALL\n" +
-                        "            SELECT 3 AS id, 'c' AS name) AS t");
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT\n" +
+                        "     1 id\n" +
+                        "   , 'a' name\n" +
+                        "\n" +
+                        "UNION ALL    SELECT\n" +
+                        "     2 id\n" +
+                        "   , 'b' name\n" +
+                        "\n" +
+                        "UNION ALL    SELECT\n" +
+                        "     3 id\n" +
+                        "   , 'c' name\n" +
+                        "\n" +
+                        ")  t\n");
     }
 
     @Test
@@ -135,13 +184,18 @@ public class TestBigQuerySqlConverter
     {
         assertThat(bigQuerySqlConverter.convert("SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)", SessionContext.builder().build()))
                 .isEqualTo("SELECT id\n" +
-                        "FROM UNNEST(ARRAY[1]) AS id");
+                        "FROM\n" +
+                        "  UNNEST(ARRAY[1]) id\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT a.id FROM (SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)) a", SessionContext.builder().build()))
                 .isEqualTo("SELECT a.id\n" +
-                        "FROM (SELECT id\n" +
-                        "        FROM UNNEST(ARRAY[1]) AS id) AS a");
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT id\n" +
+                        "   FROM\n" +
+                        "     UNNEST(ARRAY[1]) id\n" +
+                        ")  a\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "WITH Sequences(id, some_numbers) AS\n" +
@@ -153,14 +207,26 @@ public class TestBigQuerySqlConverter
                         "SELECT u.uc\n" +
                         "FROM Sequences\n" +
                         "CROSS JOIN UNNEST(Sequences.some_numbers) AS u (uc) LEFT JOIN Sequences t on (u.uc = t.id)", SessionContext.builder().build()))
-                .isEqualTo("WITH Sequences AS (SELECT 1 AS id, ARRAY[0, 1, 1, 2, 3, 5] AS some_numbers\n" +
-                        "            UNION ALL\n" +
-                        "            SELECT 2 AS id, ARRAY[2, 4, 8, 16, 32] AS some_numbers\n" +
-                        "            UNION ALL\n" +
-                        "            SELECT 3 AS id, ARRAY[5, 10] AS some_numbers) (SELECT uc\n" +
-                        "        FROM Sequences\n" +
-                        "            CROSS JOIN UNNEST(Sequences.some_numbers) AS uc\n" +
-                        "            LEFT JOIN Sequences AS t ON uc = t.id)");
+                .isEqualTo("WITH\n" +
+                        "  Sequences AS (\n" +
+                        "   SELECT\n" +
+                        "     1 id\n" +
+                        "   , ARRAY[0,1,1,2,3,5] some_numbers\n" +
+                        "\n" +
+                        "UNION ALL    SELECT\n" +
+                        "     2 id\n" +
+                        "   , ARRAY[2,4,8,16,32] some_numbers\n" +
+                        "\n" +
+                        "UNION ALL    SELECT\n" +
+                        "     3 id\n" +
+                        "   , ARRAY[5,10] some_numbers\n" +
+                        "\n" +
+                        ") \n" +
+                        "SELECT uc\n" +
+                        "FROM\n" +
+                        "  ((Sequences\n" +
+                        "CROSS JOIN UNNEST(Sequences.some_numbers) uc)\n" +
+                        "LEFT JOIN Sequences t ON (uc = t.id))\n");
     }
 
     @Test
@@ -175,11 +241,14 @@ public class TestBigQuerySqlConverter
                         "  OR (SELECT c.relkind = 'c'\n" +
                         "      FROM pg_class AS c\n" +
                         "      WHERE c.oid = t.typrelid))", SessionContext.builder().build()))
-                .isEqualTo("SELECT t.typname, t.oid\n" +
-                        "FROM pg_type AS t\n" +
-                        "    INNER JOIN pg_namespace AS n ON t.typnamespace = n.oid\n" +
-                        "    LEFT JOIN pg_class AS c ON c.oid = t.typrelid\n" +
-                        "WHERE n.nspname <> 'pg_toast' AND (t.typrelid = 0 OR c.relkind = 'c')");
+                .isEqualTo("SELECT\n" +
+                        "  t.typname\n" +
+                        ", t.oid\n" +
+                        "FROM\n" +
+                        "  ((pg_type t\n" +
+                        "INNER JOIN pg_namespace n ON (t.typnamespace = n.oid))\n" +
+                        "LEFT JOIN pg_class c ON (c.oid = t.typrelid))\n" +
+                        "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (c.relkind = 'c')))\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT n.nationkey, n.name\n" +
@@ -188,10 +257,13 @@ public class TestBigQuerySqlConverter
                         "  (SELECT (r.regionkey = 1)\n" +
                         "    FROM region r\n" +
                         "    WHERE (r.regionkey = n.regionkey))", SessionContext.builder().build()))
-                .isEqualTo("SELECT n.nationkey, n.name\n" +
-                        "FROM nation AS n\n" +
-                        "    LEFT JOIN region AS r ON r.regionkey = n.regionkey\n" +
-                        "WHERE r.regionkey = 1");
+                .isEqualTo("SELECT\n" +
+                        "  n.nationkey\n" +
+                        ", n.name\n" +
+                        "FROM\n" +
+                        "  (nation n\n" +
+                        "LEFT JOIN region r ON (r.regionkey = n.regionkey))\n" +
+                        "WHERE (r.regionkey = 1)\n");
     }
 
     @Test
@@ -202,17 +274,24 @@ public class TestBigQuerySqlConverter
                         "FROM graphmdl.test.t1\n" +
                         "WHERE \"graphmdl\".test.t1.c1 = 1\n" +
                         "ORDER BY test.t1.c2", SessionContext.builder().build()))
-                .isEqualTo("SELECT t1.c1, t1.c2, t1.c3\n" +
-                        "FROM graphmdl.test.t1\n" +
-                        "WHERE t1.c1 = 1\n" +
-                        "ORDER BY t1.c2");
+                .isEqualTo("SELECT\n" +
+                        "  t1.c1\n" +
+                        ", t1.c2\n" +
+                        ", t1.c3\n" +
+                        "FROM\n" +
+                        "  graphmdl.test.t1\n" +
+                        "WHERE (t1.c1 = 1)\n" +
+                        "ORDER BY t1.c2 ASC\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT graphmdl.test.t1.c1, test2.t2.c1\n" +
                         "FROM graphmdl.test.t1\n" +
                         "LEFT JOIN graphmdl.test2.t2 on test.t1.c1 = test2.t2.c1", SessionContext.builder().build()))
-                .isEqualTo("SELECT t1.c1, t2.c1\n" +
-                        "FROM graphmdl.test.t1\n" +
-                        "    LEFT JOIN graphmdl.test2.t2 ON t1.c1 = t2.c1");
+                .isEqualTo("SELECT\n" +
+                        "  t1.c1\n" +
+                        ", t2.c1\n" +
+                        "FROM\n" +
+                        "  (graphmdl.test.t1\n" +
+                        "LEFT JOIN graphmdl.test2.t2 ON (t1.c1 = t2.c1))\n");
     }
 }

@@ -37,19 +37,9 @@ import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.connector.bigquery.BigQueryType;
 import io.graphmdl.connector.bigquery.GcsStorageClient;
-import io.graphmdl.main.calcite.CustomCharsetJavaTypeFactoryImpl;
-import io.graphmdl.main.calcite.GraphMDLSchemaUtil;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunctionRegistry;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
+import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
 
@@ -65,42 +55,20 @@ import static io.graphmdl.base.metadata.TableMetadata.Builder.builder;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
-import static org.apache.calcite.sql.fun.SqlLibraryOperators.ARRAY_AGG;
-import static org.apache.calcite.sql.type.OperandTypes.ONE_OR_MORE;
 
 public class BigQueryMetadata
         implements Metadata
 {
-    private static final RelDataTypeSystem BIGQUERY_TYPE_SYSTEM =
-            new RelDataTypeSystemImpl()
-            {
-                @Override
-                public int getMaxNumericPrecision()
-                {
-                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
-                    return 76;
-                }
-
-                @Override
-                public int getMaxNumericScale()
-                {
-                    // https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#decimal_types
-                    return 38;
-                }
-            };
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private static final String PRE_AGGREGATION_FOLDER = format("pre-agg-%s", randomUUID());
     private final BigQueryClient bigQueryClient;
 
     private final PgFunctionRegistry pgFunctionRegistry = new PgFunctionRegistry();
 
-    private final RelDataTypeFactory typeFactory;
-
-    private final Map<String, SqlFunction> pgNameToBqFunction;
+    private final Map<String, String> pgToBqFunctionNameMappings;
 
     private final String location;
 
@@ -113,8 +81,7 @@ public class BigQueryMetadata
     {
         this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
-        this.typeFactory = new CustomCharsetJavaTypeFactoryImpl(UTF_8, getRelDataTypeSystem());
-        this.pgNameToBqFunction = initPgNameToBqFunctions();
+        this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Location must be set"));
         this.gcsStorageClient = requireNonNull(gcsStorageClient, "gcsStorageClient is null");
@@ -124,47 +91,12 @@ public class BigQueryMetadata
     /**
      * @return mapping table for pg function which can be replaced by bq function.
      */
-    private Map<String, SqlFunction> initPgNameToBqFunctions()
+    private Map<String, String> initPgNameToBqFunctions()
     {
         // bq native function is not case-sensitive, so it is ok to this kind of SqlFunction ctor here.
-        return ImmutableMap.<String, SqlFunction>builder()
-                .put("trunc", new SqlFunction("trunc",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.DECIMAL)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("generate_array", new SqlFunction("generate_array",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.INTEGER), -1)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("substr", new SqlFunction("substr",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("concat", new SqlFunction("concat",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("regexp_like", new SqlFunction("regexp_contains",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.BOOLEAN)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("array_length", new SqlFunction("array_length",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.explicit(typeFactory.createSqlType(SqlTypeName.INTEGER)),
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
-                .put("array_agg", ARRAY_AGG)
-                // calcite 1.33.0 add date_trunc
-                // https://github.com/apache/calcite/commit/bdb4e1fb5df6fdca237dd0fa92209905c2f94d76
-                .put("date_trunc", new SqlFunction("date_trunc",
-                        SqlKind.OTHER_FUNCTION,
-                        ReturnTypes.DATE_NULLABLE,
-                        null, ONE_OR_MORE, SqlFunctionCategory.USER_DEFINED_FUNCTION))
+        return ImmutableMap.<String, String>builder()
+                .put("regexp_like", "regexp_contains")
                 .build();
-    }
-
-    private String withPgCatalogPrefix(String identifier)
-    {
-        return PG_CATALOG_NAME + "." + identifier;
     }
 
     @Override
@@ -233,32 +165,20 @@ public class BigQueryMetadata
     }
 
     @Override
-    public String resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, int numArgument)
     {
         String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
-        // lookup calcite operator table
-        if (SqlStdOperatorTable.instance().getOperatorList().stream().anyMatch(sqlOperator -> sqlOperator.getName().equalsIgnoreCase(functionName))) {
-            return functionName;
-        }
 
-        if (pgNameToBqFunction.containsKey(funcNameLowerCase)) {
-            return pgNameToBqFunction.get(funcNameLowerCase).getName();
+        if (pgToBqFunctionNameMappings.containsKey(funcNameLowerCase)) {
+            return QualifiedName.of(pgToBqFunctionNameMappings.get(funcNameLowerCase));
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        return withPgCatalogPrefix(pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).getRemoteName());
-    }
+        if (pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).isPresent()) {
+            return QualifiedName.of(PG_CATALOG_NAME, pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).get().getRemoteName());
+        }
 
-    @Override
-    public GraphMDLSchemaUtil.Dialect getDialect()
-    {
-        return GraphMDLSchemaUtil.Dialect.BIGQUERY;
-    }
-
-    @Override
-    public RelDataTypeSystem getRelDataTypeSystem()
-    {
-        return BIGQUERY_TYPE_SYSTEM;
+        return QualifiedName.of(functionName);
     }
 
     @Override

@@ -45,7 +45,9 @@ public class TestFunctions
                 // {"select current_database()", "", false}
                 {"select pg_get_expr('test', 1)", "", false},
                 {"select pg_get_expr('test', 1, true)", "", false},
-                {"select trunc(1.1)", "1.0", false},
+                // TODO: Which expected value should be ? 1.0 or 1
+                // We use PARSE_AS_DECIMAL in WireProtocolSession#parse as default, all decimal literal will be parsed as Decimal type
+                {"select trunc(1.1)", "1", false},
                 {"select format_type(null, 1)", null, false},
                 {"select format_type(1000, 1)", "_bool", false},
                 {"select format_type(0, 1)", "???", false},
