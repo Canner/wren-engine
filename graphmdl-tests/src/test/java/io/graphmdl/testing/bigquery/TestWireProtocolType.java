@@ -55,6 +55,7 @@ import static io.graphmdl.testing.DataType.integerDataType;
 import static io.graphmdl.testing.DataType.nameDataType;
 import static io.graphmdl.testing.DataType.realDataType;
 import static io.graphmdl.testing.DataType.textDataType;
+import static io.graphmdl.testing.DataType.timestampDataType;
 import static io.graphmdl.testing.DataType.varcharDataType;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
@@ -72,6 +73,17 @@ public class TestWireProtocolType
     // BigQuery has only INT64 type. We should cast other int to int32 after got them.
     private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint", "array(integer)", "array(smallint)", "array(tinyint)");
     private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real", "array(real)");
+
+    private final LocalDateTime beforeEpoch = LocalDateTime.of(1958, 1, 1, 13, 18, 3, 123_000_000);
+    private final LocalDateTime epoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0);
+    private final LocalDateTime afterEpoch = LocalDateTime.of(2019, 3, 18, 10, 1, 17, 987_000_000);
+
+    private final LocalDateTime timeDoubledInJvmZone = LocalDateTime.of(2018, 10, 28, 1, 33, 17, 456_000_000);
+    private final LocalDateTime timeDoubledInVilnius = LocalDateTime.of(2018, 10, 28, 3, 33, 33, 333_000_000);
+    private final LocalDateTime timeGapInJvmZone1 = LocalDateTime.of(1970, 1, 1, 0, 13, 42);
+    private final LocalDateTime timeGapInJvmZone2 = LocalDateTime.of(2018, 4, 1, 2, 13, 55, 123_000_000);
+    private final LocalDateTime timeGapInVilnius = LocalDateTime.of(2018, 3, 25, 3, 17, 17);
+    private final LocalDateTime timeGapInKathmandu = LocalDateTime.of(1986, 1, 1, 0, 13, 7);
 
     @Test
     public void testBasicTypes()
@@ -237,6 +249,23 @@ public class TestWireProtocolType
                 .addInput(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInSomeZone, toJdbcTimestamp)
                 .addInput(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone, toJdbcTimestamp);
         testCases.executeSuite();
+    }
+
+    @Test
+    public void testTimestamp()
+    {
+        createTypeTest()
+                .addInput(timestampDataType(3), beforeEpoch, Timestamp::valueOf)
+                .addInput(timestampDataType(3), afterEpoch, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeDoubledInJvmZone, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeDoubledInVilnius, Timestamp::valueOf)
+                .addInput(timestampDataType(3), epoch, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeGapInJvmZone1, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeGapInJvmZone2, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeGapInVilnius, Timestamp::valueOf)
+                .addInput(timestampDataType(3), timeGapInKathmandu, Timestamp::valueOf)
+                .addInput(timestampDataType(6), LocalDateTime.of(2023, 4, 24, 17, 43, 3, 123_456_000), Timestamp::valueOf)
+                .executeSuite();
     }
 
     private static void checkIsGap(ZoneId zone, LocalDateTime dateTime)

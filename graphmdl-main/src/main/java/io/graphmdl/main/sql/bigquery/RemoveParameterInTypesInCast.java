@@ -20,6 +20,7 @@ import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DataType;
+import io.trino.sql.tree.DateTimeDataType;
 import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.Node;
 
@@ -48,6 +49,10 @@ public class RemoveParameterInTypesInCast
                     && !((GenericDataType) node.getType()).getName().getCanonicalValue().equals("ARRAY")) {
                 GenericDataType genericDataType = (GenericDataType) node.getType();
                 dataType = new GenericDataType(Optional.empty(), genericDataType.getName(), ImmutableList.of());
+            }
+            else if (node.getType() instanceof DateTimeDataType) {
+                DateTimeDataType dateTimeDataType = (DateTimeDataType) node.getType();
+                dataType = new DateTimeDataType(dateTimeDataType.getLocation(), dateTimeDataType.getType(), dateTimeDataType.isWithTimeZone(), Optional.empty());
             }
             return new Cast(node.getExpression(), dataType);
         }

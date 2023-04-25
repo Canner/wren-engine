@@ -77,6 +77,7 @@ public final class BigQueryType
                 .put(DOUBLE, FLOAT64)
                 .put(REAL, FLOAT64)
                 .put(DateType.DATE, DATE)
+                .put(TimestampType.TIMESTAMP, TIMESTAMP)
                 .put(BYTEA, BYTES)
                 .build();
     }
