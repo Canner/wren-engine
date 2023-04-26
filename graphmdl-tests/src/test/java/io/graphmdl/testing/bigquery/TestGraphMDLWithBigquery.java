@@ -192,9 +192,7 @@ public class TestGraphMDLWithBigquery
         }
     }
 
-    // TODO:
-    //  handle the correlate query issue in BigQuery
-    @Test(enabled = false)
+    @Test
     public void testTransform()
             throws Exception
     {

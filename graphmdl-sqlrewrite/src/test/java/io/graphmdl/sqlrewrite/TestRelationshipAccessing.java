@@ -457,7 +457,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -485,7 +485,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -517,7 +517,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (${People.books[1].author} o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -545,7 +545,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -562,7 +562,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -589,7 +589,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (${Book.author} o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -638,7 +638,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.books books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) filter(WHERE m.bookId IS NOT NULL) sorted_books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -655,7 +655,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.books books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.name ASC, m.bookId DESC) filter(WHERE m.bookId IS NOT NULL) sorted_books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -683,7 +683,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -700,7 +700,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -795,7 +795,7 @@ public class TestRelationshipAccessing
                                 "     o.userId userId\n" +
                                 "   , o.name name\n" +
                                 "   , o.sorted_books sorted_books\n" +
-                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
                                 "   FROM\n" +
                                 "     (People o\n" +
                                 "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
@@ -806,7 +806,7 @@ public class TestRelationshipAccessing
                                 "     s.userId userId\n" +
                                 "   , s.name name\n" +
                                 "   , s.sorted_books sorted_books\n" +
-                                "   , array_agg(t.name ORDER BY t.bookId ASC) \"transform(p.books, (book) -> book.name)\"\n" +
+                                "   , array_agg(t.name ORDER BY t.bookId ASC) filter(WHERE t.name IS NOT NULL) \"transform(p.books, (book) -> book.name)\"\n" +
                                 "   FROM\n" +
                                 "     ((${People.books} s\n" +
                                 "   CROSS JOIN UNNEST(s.books) u (uc))\n" +

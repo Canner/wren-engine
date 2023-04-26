@@ -28,6 +28,7 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.IsNotNullPredicate;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.OrderBy;
@@ -416,14 +417,11 @@ public class RelationshipCteGenerator
 
     private Expression toArrayAgg(Expression field, String sortKeyPrefix, List<Relationship.SortKey> sortKeys)
     {
-        // TODO: BigQuery doesn't allow array element is null.
-        //  We need to surround the array_agg with ifnull function or other null handling.
-
         return new FunctionCall(
                 Optional.empty(),
                 QualifiedName.of("array_agg"),
                 Optional.empty(),
-                Optional.empty(),
+                Optional.of(new IsNotNullPredicate(field)),
                 Optional.of(new OrderBy(sortKeys.stream()
                         .map(sortKey ->
                                 new SortItem(nameReference(sortKeyPrefix, sortKey.getName()), sortKey.isDescending() ? SortItem.Ordering.DESCENDING : SortItem.Ordering.ASCENDING,
