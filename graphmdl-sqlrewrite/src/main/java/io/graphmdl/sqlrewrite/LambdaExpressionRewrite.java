@@ -16,17 +16,25 @@ package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.SubscriptExpression;
+import io.trino.sql.tree.Window;
+import io.trino.sql.tree.WindowReference;
+import io.trino.sql.tree.WindowSpecification;
 
+import java.util.List;
 import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.TARGET_REFERENCE;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class LambdaExpressionRewrite
 {
@@ -55,20 +63,20 @@ public class LambdaExpressionRewrite
         protected Node visitDereferenceExpression(DereferenceExpression node, Optional<Node> context)
         {
             if (node.getBase() instanceof Identifier) {
-                return process(node.getBase(), Optional.ofNullable(node.getField()));
+                return visitAndCast(node.getBase(), Optional.ofNullable(node.getField()));
             }
-            return new DereferenceExpression((Expression) process(node.getBase(), Optional.ofNullable(node.getField())), node.getField());
+            return new DereferenceExpression(visitAndCast(node.getBase(), Optional.ofNullable(node.getField())), node.getField());
         }
 
         @Override
         protected Node visitSubscriptExpression(SubscriptExpression node, Optional<Node> context)
         {
             if (node.getBase() instanceof DereferenceExpression) {
-                return new SubscriptExpression((Expression) process(node.getBase(),
+                return new SubscriptExpression(visitAndCast(node.getBase(),
                         Optional.ofNullable((((DereferenceExpression) node.getBase()).getBase()))),
                         node.getIndex());
             }
-            return new SubscriptExpression((Expression) process(node.getBase(), Optional.empty()), node.getIndex());
+            return new SubscriptExpression(visitAndCast(node.getBase(), Optional.empty()), node.getIndex());
         }
 
         @Override
@@ -81,6 +89,66 @@ public class LambdaExpressionRewrite
                 return new DereferenceExpression(new Identifier(TARGET_REFERENCE), (Identifier) context.get());
             }
             return node;
+        }
+
+        @Override
+        protected Node visitFunctionCall(FunctionCall node, Optional<Node> context)
+        {
+            return new FunctionCall(
+                    node.getLocation(),
+                    node.getName(),
+                    node.getWindow().map(window -> visitAndCast(window, context)),
+                    node.getFilter().map(filter -> visitAndCast(filter, context)),
+                    node.getOrderBy().map(orderBy -> visitAndCast(orderBy, context)), node.isDistinct(),
+                    node.getNullTreatment(), node.getProcessingMode(),
+                    visitNodes(node.getArguments(), context));
+        }
+
+        @Override
+        protected Node visitComparisonExpression(ComparisonExpression node, Optional<Node> context)
+        {
+            if (node.getLocation().isPresent()) {
+                return new ComparisonExpression(
+                        node.getLocation().get(),
+                        node.getOperator(),
+                        visitAndCast(node.getLeft(), context),
+                        visitAndCast(node.getRight(), context));
+            }
+            return new ComparisonExpression(
+                    node.getOperator(),
+                    visitAndCast(node.getLeft(), context),
+                    visitAndCast(node.getRight(), context));
+        }
+
+        @Override
+        protected Node visitLiteral(Literal node, Optional<Node> context)
+        {
+            return node;
+        }
+
+        protected <S extends Node> S visitAndCast(S node, Optional<Node> context)
+        {
+            return (S) process(node, context);
+        }
+
+        protected <S extends Window> S visitAndCast(S window, Optional<Node> context)
+        {
+            Node node = null;
+            if (window instanceof WindowSpecification) {
+                node = (WindowSpecification) window;
+            }
+            else if (window instanceof WindowReference) {
+                node = (WindowReference) window;
+            }
+            return (S) process(node, context);
+        }
+
+        @SuppressWarnings("unchecked")
+        protected <S extends Node> List<S> visitNodes(List<S> nodes, Optional<Node> context)
+        {
+            return nodes.stream()
+                    .map(node -> (S) process(node, context))
+                    .collect(toList());
         }
     }
 }

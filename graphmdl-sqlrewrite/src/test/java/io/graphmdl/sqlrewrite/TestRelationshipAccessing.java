@@ -819,6 +819,37 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (People p\n" +
                                 "LEFT JOIN ${transform(p.books, (book) -> book.name)} ON (p.userId = ${transform(p.books, (book) -> book.name)}.userId))"},
+                {"select p.name, transform(p.books, book -> concat(book.name, '_1')) as book_names from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                "${People.books} (userId, name, sorted_books, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.name name\n" +
+                                "   , o.sorted_books sorted_books\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                ", ${transform(p.books, (book) -> concat(book.name, '_1'))} (userId, name, sorted_books, \"transform(p.books, (book) -> concat(book.name, '_1'))\") AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.name name\n" +
+                                "   , s.sorted_books sorted_books\n" +
+                                "   , array_agg(concat(t.name, '_1') ORDER BY t.bookId ASC) FILTER (WHERE (concat(t.name, '_1') IS NOT NULL)) \"transform(p.books, (book) -> concat(book.name, '_1'))\"\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2, 3\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", ${transform(p.books, (book) -> concat(book.name, '_1'))}.\"transform(p.books, (book) -> concat(book.name, '_1'))\" book_names\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${transform(p.books, (book) -> concat(book.name, '_1'))} ON (p.userId = ${transform(p.books, (book) -> concat(book.name, '_1'))}.userId))"},
         };
     }
 
@@ -837,6 +868,7 @@ public class TestRelationshipAccessing
         Map<String, String> replaceMap = new HashMap<>();
         replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
         replaceMap.put("transform(p.books, (book) -> book.name)", generator.getNameMapping().get("transform(p.books, (book) -> book.name)"));
+        replaceMap.put("transform(p.books, (book) -> concat(book.name, '_1'))", generator.getNameMapping().get("transform(p.books, (book) -> concat(book.name, '_1'))"));
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
 

@@ -22,10 +22,6 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
-import io.trino.sql.tree.Query;
-import io.trino.sql.tree.QuerySpecification;
-import io.trino.sql.tree.SingleColumn;
-import io.trino.sql.tree.Statement;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -39,11 +35,13 @@ public class TestLambdaExpressionRewrite
     @DataProvider
     public Object[][] lambdaExpression()
     {
-        // TODO: support FunctionCall, ComparisonExpression ...
         return new Object[][] {
                 {"book.f1.f2.f3", "t.f1.f2.f3"},
                 {"book", "'Relationship<Book>'"},
-                {"book.f1.a1[1].f2", "t.f1.a1[1].f2"}
+                {"book.f1.a1[1].f2", "t.f1.a1[1].f2"},
+                {"concat(book.name, '_1')", "concat(t.name, '_1')"},
+                {"book.name = 'Lord of the Rings'", "t.name = 'Lord of the Rings'"},
+
         };
     }
 
@@ -51,7 +49,7 @@ public class TestLambdaExpressionRewrite
     public void testLambdaExpressionRewrite(String actual, String expected)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName("graphmdl", "test", "Book");
-        Node node = LambdaExpressionRewrite.rewrite(getSelectItem(String.format("select %s", actual)),
+        Node node = LambdaExpressionRewrite.rewrite(parse(actual),
                 Field.builder()
                         .isRelationship(true)
                         .modelName(catalogSchemaTableName)
@@ -59,12 +57,11 @@ public class TestLambdaExpressionRewrite
                         .name("books")
                         .relationAlias(QualifiedName.of("t"))
                         .build(), new Identifier("book"));
-        assertThat(node.toString()).isEqualTo(expected);
+        assertThat(node.toString()).isEqualTo(parse(expected).toString());
     }
 
-    private Expression getSelectItem(String sql)
+    private Expression parse(String sql)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        return ((SingleColumn) ((QuerySpecification) ((Query) statement).getQueryBody()).getSelect().getSelectItems().get(0)).getExpression();
+        return SQL_PARSER.createExpression(sql, new ParsingOptions(AS_DECIMAL));
     }
 }
