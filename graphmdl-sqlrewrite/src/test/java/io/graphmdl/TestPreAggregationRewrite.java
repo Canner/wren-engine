@@ -249,7 +249,7 @@ public class TestPreAggregationRewrite
         return new Object[][] {
                 {"SELECT Collection.author author FROM {0} Collection"},
                 {"SELECT Collection.column AS author FROM {0} Collection"},
-                {"SELECT Collection.column AS author FROM {0} AS lineitem"},
+                {"SELECT Collection.column AS author FROM {0} AS Collection"},
                 {"SELECT \"Collection\".\"author\" AS \"author\" FROM {0} AS \"Collection\""},
         };
     }
@@ -291,6 +291,22 @@ public class TestPreAggregationRewrite
     public void testFunction(OneTableTestData testData)
     {
         assertOneTable("SELECT author, count(*) FROM {0} GROUP BY author", testData);
+    }
+
+    @Test
+    public void testTableAliasScope()
+    {
+        assertRewrite(
+                "with test_a as (SELECT * FROM Collection Collection) select * from Collection",
+                "graphmdl",
+                "test",
+                "with test_a as (SELECT * FROM table_Collection Collection) select * from table_Collection");
+
+        assertRewrite(
+                "with test_a as (with AvgCollection as (select * from Collection) select * from AvgCollection) select * from AvgCollection",
+                "graphmdl",
+                "test",
+                "with test_a as (with AvgCollection as (select * from table_Collection) select * from AvgCollection) select * from table_AvgCollection");
     }
 
     @DataProvider(name = "unexpectedStatementProvider")
