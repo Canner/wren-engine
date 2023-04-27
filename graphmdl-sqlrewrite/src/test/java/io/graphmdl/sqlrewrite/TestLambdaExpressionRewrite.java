@@ -41,7 +41,6 @@ public class TestLambdaExpressionRewrite
                 {"book.f1.a1[1].f2", "t.f1.a1[1].f2"},
                 {"concat(book.name, '_1')", "concat(t.name, '_1')"},
                 {"book.name = 'Lord of the Rings'", "t.name = 'Lord of the Rings'"},
-
         };
     }
 
