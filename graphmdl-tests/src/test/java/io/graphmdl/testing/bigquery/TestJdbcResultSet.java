@@ -47,7 +47,6 @@ public class TestJdbcResultSet
             .put(Types.SMALLINT, Types.BIGINT)
             .put(Types.INTEGER, Types.BIGINT)
             .put(Types.REAL, Types.DOUBLE)
-            .put(Types.DECIMAL, Types.DOUBLE)
             .put(Types.CHAR, Types.VARCHAR)
             .build();
     private Connection connection;

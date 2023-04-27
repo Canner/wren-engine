@@ -115,7 +115,8 @@ public class RewriteToBigQueryType
                     if (genericDataType.getArguments().size() == 2
                             && genericDataType.getArguments().get(0) instanceof NumericParameter) {
                         NumericParameter precision = (NumericParameter) genericDataType.getArguments().get(0);
-                        if (parseInt(precision.getValue()) <= 38) {
+                        NumericParameter scale = (NumericParameter) genericDataType.getArguments().get(1);
+                        if (parseInt(precision.getValue()) - parseInt(scale.getValue()) <= 29 && parseInt(scale.getValue()) <= 9) {
                             return new GenericDataType(nodeLocation, new Identifier("NUMERIC"), parameters);
                         }
                     }
