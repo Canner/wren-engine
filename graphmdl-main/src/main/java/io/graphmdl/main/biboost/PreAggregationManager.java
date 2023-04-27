@@ -31,6 +31,7 @@ import io.graphmdl.main.sql.PostgreSqlRewrite;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.sqlrewrite.PreAggregationRewrite;
+import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 
@@ -49,6 +50,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.graphmdl.main.wireprotocol.WireProtocolSession.PARSE_AS_DECIMAL;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
@@ -64,6 +66,7 @@ public class PreAggregationManager
     private final DuckdbClient duckdbClient;
     private final DuckdbStorageConfig duckdbStorageConfig;
     private final AtomicReference<Map<CatalogSchemaTableName, MetricTablePair>> metricTableMapping = new AtomicReference<>(Map.of());
+    private final GraphMDL graphMDL;
 
     @Inject
     public PreAggregationManager(
@@ -82,7 +85,8 @@ public class PreAggregationManager
         this.connector = requireNonNull(connector, "connector is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
-        doPreAggregation(graphMDLMetastore.getGraphMDL())
+        this.graphMDL = requireNonNull(graphMDLMetastore.getGraphMDL(), "graphMDL is null");
+        doPreAggregation(graphMDL)
                 .thenRun(this::cleanPreAggregation).join();
     }
 
@@ -209,13 +213,16 @@ public class PreAggregationManager
     public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql)
     {
         try {
-            Statement statement = PreAggregationRewrite.rewrite(sessionContext, sqlParser, sql, this::convertToAggregationTable);
-            return Optional.of(getFormattedSql(statement, sqlParser));
+            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Optional<Statement> rewrittenStatement = PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL);
+            if (rewrittenStatement.isPresent()) {
+                return Optional.of(getFormattedSql(rewrittenStatement.get(), sqlParser));
+            }
         }
         catch (Exception e) {
             LOG.error("Failed to rewrite pre-aggregation for statement: %s", sql, e);
-            return Optional.empty();
         }
+        return Optional.empty();
     }
 
     @PreDestroy

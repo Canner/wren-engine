@@ -15,7 +15,9 @@ package io.graphmdl;
 
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.dto.Column;
 import io.graphmdl.sqlrewrite.PreAggregationRewrite;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -25,11 +27,22 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.graphmdl.base.GraphMDLTypes.DATE;
+import static io.graphmdl.base.GraphMDLTypes.INTEGER;
+import static io.graphmdl.base.GraphMDLTypes.TIMESTAMP;
+import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
+import static io.graphmdl.base.dto.Column.column;
+import static io.graphmdl.base.dto.Metric.metric;
+import static io.graphmdl.base.dto.Model.model;
+import static io.graphmdl.base.dto.TimeGrain.TimeUnit.YEAR;
+import static io.graphmdl.base.dto.TimeGrain.timeGrain;
+import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
@@ -38,11 +51,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestPreAggregationRewrite
 {
     private SqlParser sqlParser;
+    private GraphMDL graphMDL;
 
     private static final Map<CatalogSchemaTableName, String> PRE_AGG =
             ImmutableMap.<CatalogSchemaTableName, String>builder()
-                    .put(new CatalogSchemaTableName("graphmdl", "w1", "t1"), "table_t1")
-                    .put(new CatalogSchemaTableName("graphmdl", "w1", "t2"), "table_t2")
+                    .put(new CatalogSchemaTableName("graphmdl", "test", "Collection"), "table_Collection")
+                    .put(new CatalogSchemaTableName("graphmdl", "test", "AvgCollection"), "table_AvgCollection")
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "lineitem"), "table_lineitem")
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "part"), "table_part")
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "supplier"), "table_supplier")
@@ -51,30 +65,75 @@ public class TestPreAggregationRewrite
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "region"), "table_region")
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "customer"), "table_customer")
                     .put(new CatalogSchemaTableName("graphmdl", "tpch", "orders"), "table_orders")
-                    .put(new CatalogSchemaTableName("graphmdl", "escape", "t-1"), "table_t-1")
+                    .put(new CatalogSchemaTableName("graphmdl", "test", "t-1"), "table_t-1")
                     .build();
 
     @BeforeClass
     public void init()
     {
         sqlParser = new SqlParser();
+        graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(
+                        model("Album",
+                                "select * from (values (1, 'Gusare', 'ZUTOMAYO', 2560, DATE '2023-03-29', TIMESTAMP '2023-04-27 06:06:06'), " +
+                                        "(2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500, DATE '2023-04-29', TIMESTAMP '2023-05-27 07:07:07'), " +
+                                        "(3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553, DATE '2023-05-29', TIMESTAMP '2023-06-27 08:08:08')) " +
+                                        "album(id, name, author, price, publish_date, release_date)",
+                                List.of(
+                                        column("id", INTEGER, null, true),
+                                        column("name", VARCHAR, null, true),
+                                        column("author", VARCHAR, null, true),
+                                        column("price", INTEGER, null, true),
+                                        column("publish_date", DATE, null, true),
+                                        column("release_date", TIMESTAMP, null, true)))))
+                .setMetrics(List.of(
+                        metric(
+                                "Collection",
+                                "Album",
+                                List.of(
+                                        column("author", VARCHAR, null, true),
+                                        column("album_name", VARCHAR, null, true, "Album.name")),
+                                List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)")),
+                                List.of(
+                                        timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
+                                        timeGrain("r_date", "Album.release_date", List.of(YEAR))),
+                                true),
+                        metric(
+                                "AvgCollection",
+                                "Album",
+                                List.of(
+                                        column("author", VARCHAR, null, true),
+                                        column("album_name", VARCHAR, null, true, "Album.name")),
+                                List.of(Column.column("price", INTEGER, null, true, "avg(Album.price)")),
+                                List.of(
+                                        timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
+                                        timeGrain("r_date", "Album.release_date", List.of(YEAR))),
+                                true),
+                        metric(
+                                "t-1",
+                                "Album",
+                                List.of(
+                                        column("author", VARCHAR, null, true),
+                                        column("album_name", VARCHAR, null, true, "Album.name")),
+                                List.of(Column.column("price", INTEGER, null, true, "avg(Album.price)")),
+                                List.of(
+                                        timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
+                                        timeGrain("r_date", "Album.release_date", List.of(YEAR))),
+                                true)))
+                .build());
     }
 
     @DataProvider(name = "oneTableProvider")
     public Object[][] oneTableProvider()
     {
         return new Object[][] {
-                {OneTableTestData.create(null, null, "graphmdl.w1.t1")},
-                {OneTableTestData.create("graphmdl", null, "graphmdl.w1.t1")},
-                {OneTableTestData.create("graphmdl", null, "w1.t1")},
-                {OneTableTestData.create("other", null, "graphmdl.w1.t1")},
-                {OneTableTestData.create("graphmdl", "w1", "graphmdl.w1.t1")},
-                {OneTableTestData.create("graphmdl", "w1", "w1.t1")},
-                {OneTableTestData.create("graphmdl", "w1", "t1")},
-                {OneTableTestData.create("graphmdl", "w2", "graphmdl.w1.t1")},
-                {OneTableTestData.create("graphmdl", "w2", "w1.t1")},
-                {OneTableTestData.create("other", "w1", "graphmdl.w1.t1")},
-                {OneTableTestData.create("other", "w2", "graphmdl.w1.t1")},
+                {OneTableTestData.create("graphmdl", "test", "graphmdl.test.Collection")},
+                {OneTableTestData.create("graphmdl", "test", "test.Collection")},
+                {OneTableTestData.create("graphmdl", "test", "Collection")},
+                {OneTableTestData.create("graphmdl", "w2", "graphmdl.test.Collection")},
+                {OneTableTestData.create("graphmdl", "w2", "test.Collection")},
+                {OneTableTestData.create("other", "test", "graphmdl.test.Collection")},
+                {OneTableTestData.create("other", "w2", "graphmdl.test.Collection")},
         };
     }
 
@@ -82,14 +141,10 @@ public class TestPreAggregationRewrite
     public Object[][] twoTableProvider()
     {
         return new Object[][] {
-                {TwoTableTestData.create(null, null, "graphmdl.w1.t1", "graphmdl.w1.t2")},
-                {TwoTableTestData.create("graphmdl", null, "graphmdl.w1.t1", "graphmdl.w1.t2")},
-                {TwoTableTestData.create("graphmdl", null, "graphmdl.w1.t1", "w1.t2")},
-                {TwoTableTestData.create("graphmdl", null, "w1.t1", "w1.t2")},
-                {TwoTableTestData.create("graphmdl", "w1", "graphmdl.w1.t1", "graphmdl.w1.t2")},
-                {TwoTableTestData.create("graphmdl", "w1", "graphmdl.w1.t1", "w1.t2")},
-                {TwoTableTestData.create("graphmdl", "w1", "w1.t1", "w1.t2")},
-                {TwoTableTestData.create("graphmdl", "w1", "t1", "t2")},
+                {TwoTableTestData.create("graphmdl", "test", "graphmdl.test.Collection", "graphmdl.test.AvgCollection")},
+                {TwoTableTestData.create("graphmdl", "test", "graphmdl.test.Collection", "test.AvgCollection")},
+                {TwoTableTestData.create("graphmdl", "test", "test.Collection", "test.AvgCollection")},
+                {TwoTableTestData.create("graphmdl", "test", "Collection", "AvgCollection")},
         };
     }
 
@@ -102,31 +157,31 @@ public class TestPreAggregationRewrite
     @Test(dataProvider = "twoTableProvider")
     public void testJoin(TwoTableTestData testData)
     {
-        assertTwoTables("SELECT * FROM {0} a LEFT JOIN {1} b ON a.key = b.key", testData);
+        assertTwoTables("SELECT * FROM {0} a LEFT JOIN {1} b ON a.author = b.author", testData);
     }
 
     @Test
     public void testJoinWithoutAlias()
     {
         String expectSql = "" +
-                "SELECT * FROM table_t1 _alias_t1 " +
-                "JOIN table_t2 _alias_t2 " +
-                "ON _alias_t1.key = _alias_t2.key";
+                "SELECT * FROM table_Collection " +
+                "JOIN table_AvgCollection " +
+                "ON table_Collection.author = table_AvgCollection.author";
 
         assertRewrite(
-                "SELECT * FROM graphmdl.w1.t1 JOIN graphmdl.w1.t2 ON t1.key = t2.key",
-                null,
-                null,
+                "SELECT * FROM graphmdl.test.Collection JOIN graphmdl.test.AvgCollection ON Collection.author = AvgCollection.author",
+                "graphmdl",
+                "test",
                 expectSql);
         assertRewrite(
-                "SELECT * FROM w1.t1 JOIN w1.t2 ON t1.key = t2.key",
+                "SELECT * FROM test.Collection JOIN test.AvgCollection ON Collection.author = AvgCollection.author",
                 "graphmdl",
-                null,
+                "test",
                 expectSql);
         assertRewrite(
-                "SELECT * FROM t1 JOIN t2 ON t1.key = t2.key",
+                "SELECT * FROM Collection JOIN AvgCollection ON Collection.author = AvgCollection.author",
                 "graphmdl",
-                "w1",
+                "test",
                 expectSql);
     }
 
@@ -148,7 +203,7 @@ public class TestPreAggregationRewrite
         assertTwoTables("WITH " +
                 "table_alias1 AS (SELECT * FROM {0})," +
                 "table_alias2 AS (SELECT * FROM {1}) " +
-                "SELECT * FROM table_alias1 JOIN table_alias2 ON table_alias1.key = table_alias2.key", testData);
+                "SELECT * FROM table_alias1 JOIN table_alias2 ON table_alias1.author = table_alias2.author", testData);
     }
 
     @Test(dataProvider = "oneTableProvider")
@@ -166,7 +221,7 @@ public class TestPreAggregationRewrite
     @Test(dataProvider = "oneTableProvider")
     public void testRewriteColumns(OneTableTestData testData)
     {
-        assertOneTable("SELECT {0}.column FROM {0}", testData);
+        assertOneTable("SELECT {0}.author FROM {0}", testData);
     }
 
     @Test(dataProvider = "oneTableProvider")
@@ -174,363 +229,8 @@ public class TestPreAggregationRewrite
     {
         String sql = "SELECT count(*) AS \"count\" " +
                 "FROM {0} " +
-                "WHERE date_trunc('day', {0}.column) BETWEEN date_trunc('day', date_add('day', -30, now())) AND date_trunc('day', date_add('day', -1, now()))";
+                "WHERE date_trunc('day', {0}.author) BETWEEN date_trunc('day', date_add('day', -30, now())) AND date_trunc('day', date_add('day', -1, now()))";
         assertOneTable(sql, testData);
-    }
-
-    @Test
-    public void testTpchSql1()
-    {
-        String sql = "SELECT " +
-                "returnflag, " +
-                "linestatus, " +
-                "SUM(quantity) AS sum_qty, " +
-                "SUM(extendedprice) AS sum_base_price, " +
-                "SUM(extendedprice * (1 - discount)) AS sum_disc_price, " +
-                "SUM(extendedprice * (1 - discount) * (1 + tax)) AS sum_charge, " +
-                "AVG(quantity) AS avg_qty, " +
-                "AVG(extendedprice) AS avg_price, " +
-                "AVG(discount) AS avg_disc, " +
-                "COUNT(*) AS count_order " +
-                "FROM " +
-                "{0} " +
-                "WHERE " +
-                "shipdate <= DATE ''1998-12-01'' - interval ''1'' day " +
-                "GROUP BY " +
-                "returnflag, " +
-                "linestatus " +
-                "ORDER BY " +
-                "returnflag, " +
-                "linestatus";
-
-        assertRewrite(MessageFormat.format(sql, "lineitem"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql, "table_lineitem"));
-    }
-
-    @Test
-    public void testTpchSql2()
-    {
-        String sql = "SELECT " +
-                "s.acctbal, " +
-                "s.name, " +
-                "n.name, " +
-                "p.partkey, " +
-                "p.mfgr, " +
-                "s.address, " +
-                "s.phone, " +
-                "s.comment " +
-                "FROM " +
-                "{0} p, " +
-                "{1} s, " +
-                "{2} ps, " +
-                "{3} n, " +
-                "{4} r " +
-                "WHERE " +
-                "p.partkey = ps.partkey " +
-                "AND s.suppkey = ps.suppkey " +
-                "AND p.size = 1 " +
-                "AND p.type LIKE ''%'' " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.regionkey = r.regionkey " +
-                "AND r.name = ''Asia'' " +
-                "AND ps.supplycost = ( " +
-                "SELECT " +
-                "min(ps.supplycost) AS min_cost " +
-                "FROM " +
-                "{0} p, " +
-                "{1} s, " +
-                "{3} n, " +
-                "{4} r " +
-                "WHERE " +
-                "p.partkey = ps.partkey " +
-                "AND s.suppkey = ps.suppkey " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.regionkey = r.regionkey " +
-                "AND r.name = ''Asia'' " +
-                ") " +
-                "ORDER BY " +
-                "s.acctbal DESC, " +
-                "n.name, " +
-                "s.name, " +
-                "p.partkey";
-
-        assertRewrite(MessageFormat.format(sql, "part", "supplier", "partsupp", "nation", "region"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_part",
-                        "table_supplier",
-                        "table_partsupp",
-                        "table_nation",
-                        "table_region"));
-    }
-
-    @Test
-    public void testTpchSql3()
-    {
-        String sql = "SELECT " +
-                "l.orderkey, " +
-                "SUM(l.extendedprice * (1 - l.discount)) AS revenue, " +
-                "o.orderdate, " +
-                "o.shippriority " +
-                "FROM " +
-                "{0} c, " +
-                "{1} o, " +
-                "{2} l " +
-                "WHERE " +
-                "c.mktsegment = '''' " +
-                "AND c.custkey = o.custkey " +
-                "AND l.orderkey = o.orderkey " +
-                "AND o.orderdate < DATE ''2000-01-01'' " +
-                "AND l.shipdate > DATE ''2000-01-01'' " +
-                "GROUP BY " +
-                "l.orderkey, " +
-                "o.orderdate, " +
-                "o.shippriority " +
-                "ORDER BY " +
-                "revenue DESC, " +
-                "o.orderdate";
-
-        assertRewrite(MessageFormat.format(sql, "customer", "orders", "lineitem"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_customer",
-                        "table_orders",
-                        "table_lineitem"));
-    }
-
-    @Test
-    public void testTpchSql7()
-    {
-        String sql = "SELECT " +
-                "supp_nation, " +
-                "cust_nation, " +
-                "l_year, " +
-                "SUM(volume) AS revenue " +
-                "FROM " +
-                "( " +
-                "SELECT " +
-                "n1.n_name AS supp_nation, " +
-                "n2.n_name AS cust_nation, " +
-                "EXTRACT(YEAR FROM l_shipdate) AS l_year, " +
-                "l_extendedprice * (1 - l_discount) AS volume " +
-                "FROM " +
-                "{0}, " +
-                "{1}, " +
-                "{2}, " +
-                "{3}, " +
-                "{4} n1, " +
-                "{4} n2 " +
-                "WHERE " +
-                "s_suppkey = l_suppkey " +
-                "AND o_orderkey = l_orderkey " +
-                "AND c_custkey = o_custkey " +
-                "AND s_nationkey = n1.n_nationkey " +
-                "AND c_nationkey = n2.n_nationkey " +
-                "AND ( " +
-                "(n1.n_name = '''' AND n2.n_name = '''') " +
-                "OR (n1.n_name = '''' AND n2.n_name = '''') " +
-                ") " +
-                "AND l_shipdate BETWEEN DATE ''1995-01-01'' AND DATE ''1996-12-31'' " +
-                ") as shipping " +
-                "GROUP BY " +
-                "supp_nation, " +
-                "cust_nation, " +
-                "l_year " +
-                "ORDER BY " +
-                "supp_nation, " +
-                "cust_nation, " +
-                "l_year";
-
-        assertRewrite(MessageFormat.format(sql, "supplier", "lineitem", "orders", "customer", "nation"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_supplier _alias_supplier",
-                        "table_lineitem _alias_lineitem",
-                        "table_orders _alias_orders",
-                        "table_customer _alias_customer",
-                        "table_nation"));
-    }
-
-    @Test
-    public void testTpchSql11()
-    {
-        String sql = "SELECT " +
-                "ps.partkey, " +
-                "SUM(ps.supplycost * ps.availqty) AS value " +
-                "FROM " +
-                "{0} ps, " +
-                "{1} s, " +
-                "{2} n " +
-                "WHERE " +
-                "ps.suppkey = s.suppkey " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.name = ''UNITED STATES'' " +
-                "GROUP BY " +
-                "ps.partkey HAVING " +
-                "SUM(ps.supplycost * ps.availqty) > ( " +
-                "SELECT " +
-                "(SUM(ps.supplycost * ps.availqty) * 1) supplycoseqty " +
-                "FROM " +
-                "{0} ps, " +
-                "{1} s, " +
-                "{2} n " +
-                "WHERE " +
-                "ps.suppkey = s.suppkey " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.name = ''UNITED STATES'' " +
-                ") " +
-                "ORDER BY " +
-                "value DESC";
-
-        assertRewrite(MessageFormat.format(sql, "partsupp", "supplier", "nation"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_partsupp",
-                        "table_supplier",
-                        "table_nation"));
-    }
-
-    @Test
-    public void testTpchSql17()
-    {
-        String sql = "SELECT " +
-                "SUM(l_extendedprice) / 7.0 AS avg_yearly " +
-                "FROM " +
-                "{0}, " +
-                "{1} " +
-                "WHERE " +
-                "p_partkey = l_partkey " +
-                "AND p_brand = '''' " +
-                "AND p_container = '''' " +
-                "AND l_quantity < ( " +
-                "SELECT " +
-                "(0.2 * AVG(l_quantity)) avgqty " +
-                "FROM " +
-                "{2} " +
-                "WHERE " +
-                "l_partkey = p_partkey " +
-                ")";
-
-        assertRewrite(MessageFormat.format(sql, "lineitem", "part", "lineitem"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_lineitem _alias_lineitem",
-                        "table_part _alias_part",
-                        "table_lineitem"));
-    }
-
-    @Test
-    public void testTpchSql20()
-    {
-        String sql = "SELECT " +
-                "s.name, " +
-                "s.address " +
-                "FROM " +
-                "{0} s, " +
-                "{1} n " +
-                "WHERE " +
-                "s.suppkey IN ( " +
-                "SELECT " +
-                "ps.suppkey " +
-                "FROM " +
-                "{2} ps " +
-                "WHERE " +
-                "ps.partkey IN ( " +
-                "SELECT " +
-                "p.partkey " +
-                "FROM " +
-                "{3} p " +
-                "WHERE " +
-                "p.name LIKE ''%'' " +
-                ") " +
-                "AND ps.availqty > ( " +
-                "SELECT " +
-                "(0.5 * SUM(l.quantity)) sumqty " +
-                "FROM " +
-                "{4} l " +
-                "WHERE " +
-                "l.partkey = ps.partkey " +
-                "AND l.suppkey = ps.suppkey " +
-                "AND l.shipdate >= DATE ''1995-01-01'' " +
-                "AND l.shipdate < DATE ''1995-01-01'' + interval ''1'' year " +
-                ") " +
-                ") " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.name = ''CANADA'' " +
-                "ORDER BY " +
-                "s.name";
-
-        assertRewrite(MessageFormat.format(sql, "supplier", "nation", "partsupp", "part", "lineitem"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_supplier",
-                        "table_nation",
-                        "table_partsupp",
-                        "table_part",
-                        "table_lineitem"));
-    }
-
-    @Test
-    public void testTpchSql21()
-    {
-        String sql = "SELECT " +
-                "s.name, " +
-                "COUNT(*) AS numwait " +
-                "FROM " +
-                "{0} s, " +
-                "{1} l1, " +
-                "{2} o, " +
-                "{3} n " +
-                "WHERE " +
-                "s.suppkey = l1.suppkey " +
-                "AND o.orderkey = l1.orderkey " +
-                "AND o.orderstatus = ''F'' " +
-                "AND l1.receiptdate > l1.commitdate " +
-                "AND EXISTS ( " +
-                "SELECT " +
-                "* " +
-                "FROM " +
-                "{1} l2 " +
-                "WHERE " +
-                "l2.orderkey = l1.orderkey " +
-                "and l2.suppkey <> l1.suppkey " +
-                ") " +
-                "AND NOT EXISTS ( " +
-                "SELECT " +
-                "* " +
-                "FROM " +
-                "{1} l3 " +
-                "WHERE " +
-                "l3.orderkey = l1.orderkey " +
-                "AND l3.suppkey <> l1.suppkey " +
-                "AND l3.receiptdate > l3.commitdate " +
-                ") " +
-                "AND s.nationkey = n.nationkey " +
-                "AND n.name = ''CANADA'' " +
-                "GROUP BY " +
-                "s.name " +
-                "ORDER BY " +
-                "numwait DESC, " +
-                "s.name";
-
-        assertRewrite(MessageFormat.format(sql, "supplier", "lineitem", "orders", "nation"),
-                "graphmdl",
-                "tpch",
-                MessageFormat.format(sql,
-                        "table_supplier",
-                        "table_lineitem",
-                        "table_orders",
-                        "table_nation",
-                        "table_lineitem",
-                        "table_lineitem"));
     }
 
     @Test
@@ -539,7 +239,7 @@ public class TestPreAggregationRewrite
         assertRewrite(
                 "SELECT * FROM \"t-1\"",
                 "graphmdl",
-                "escape",
+                "test",
                 "SELECT * FROM \"table_t-1\"");
     }
 
@@ -547,33 +247,33 @@ public class TestPreAggregationRewrite
     public Object[][] aliasSameNameProvider()
     {
         return new Object[][] {
-                {"SELECT lineitem.column column FROM {0} lineitem"},
-                {"SELECT lineitem.column AS column FROM {0} lineitem"},
-                {"SELECT lineitem.column AS column FROM {0} AS lineitem"},
-                {"SELECT \"lineitem\".\"column\" AS \"column\" FROM {0} AS \"lineitem\""},
+                {"SELECT Collection.author author FROM {0} Collection"},
+                {"SELECT Collection.column AS author FROM {0} Collection"},
+                {"SELECT Collection.column AS author FROM {0} AS lineitem"},
+                {"SELECT \"Collection\".\"author\" AS \"author\" FROM {0} AS \"Collection\""},
         };
     }
 
     @Test(dataProvider = "aliasSameNameProvider")
     public void testAliasSameName(String sql)
     {
-        assertRewrite(MessageFormat.format(sql, "tpch.lineitem"),
+        assertRewrite(MessageFormat.format(sql, "test.Collection"),
                 "graphmdl",
-                "tpch",
+                "test",
                 MessageFormat.format(sql,
-                        "table_lineitem"));
+                        "table_Collection"));
     }
 
     @DataProvider(name = "columnDereferenceProvider")
     public Object[][] columnDereferenceProvider()
     {
         return new Object[][] {
-                {"SELECT lineitem.orderkey FROM lineitem"},
-                {"SELECT lineitem.orderkey FROM tpch.lineitem"},
-                {"SELECT tpch.lineitem.orderkey FROM tpch.lineitem"},
-                {"SELECT lineitem.orderkey FROM graphmdl.tpch.lineitem"},
-                {"SELECT tpch.lineitem.orderkey FROM graphmdl.tpch.lineitem"},
-                {"SELECT graphmdl.tpch.lineitem.orderkey FROM graphmdl.tpch.lineitem"},
+                {"SELECT Collection.author FROM Collection"},
+                {"SELECT Collection.author FROM test.Collection"},
+                {"SELECT test.Collection.author FROM test.Collection"},
+                {"SELECT Collection.author FROM graphmdl.test.Collection"},
+                {"SELECT test.Collection.author FROM graphmdl.test.Collection"},
+                {"SELECT graphmdl.test.Collection.author FROM graphmdl.test.Collection"},
         };
     }
 
@@ -583,14 +283,63 @@ public class TestPreAggregationRewrite
         assertRewrite(
                 sql,
                 "graphmdl",
-                "tpch",
-                MessageFormat.format("SELECT {0}.orderkey FROM {0}", "table_lineitem"));
+                "test",
+                MessageFormat.format("SELECT {0}.author FROM {0}", "table_Collection"));
     }
 
-    @Test
-    public void testUnexpectedStatement()
+    @Test(dataProvider = "oneTableProvider")
+    public void testFunction(OneTableTestData testData)
     {
-        // todo: should throw an exception; only accept select and with statement?
+        assertOneTable("SELECT author, count(*) FROM {0} GROUP BY author", testData);
+    }
+
+    @DataProvider(name = "unexpectedStatementProvider")
+    public Object[][] unexpectedStatementProvider()
+    {
+        return new Object[][] {
+                {"explain analyze select * from Collection"},
+                {"prepare aa from select * from Collection"},
+                // TODO pgsql should be prepare aa as..., not from
+                // {"prepare aa as select * from Collection"},
+                {"execute aa"},
+                {"deallocate prepare aa"},
+                {"describe output aa"},
+                {"describe input aa"},
+                {"explain select * from Collection"},
+                {"show tables from test"},
+                {"show schemas from graphmdl"},
+                {"show catalogs"},
+                {"show columns from Collection"},
+                {"show stats for Collection"},
+                {"show create table Collection"},
+                {"show functions"},
+                {"show session"},
+                {"use graphmdl.test"},
+                {"use graphmdl.test"},
+                {"set session catalog.name = graphmdl"},
+                {"reset session optimize_hash_generation"},
+                {"create view test_view as select * from Collection"},
+                {"drop view if exists test_view"},
+                {"insert into cities values (1, 'San Francisco')"},
+                {"call test(name => 'apple', id => 123)"},
+                {"delete from lineitem where shipmode = 'AIR'"},
+                {"start transaction"},
+                {"create role admin"},
+                {"drop role admin"},
+                {"grant bar to user foo"},
+                {"revoke insert, select on orders from alice"},
+                {"show grants"},
+                {"show role grants from graphmdl"},
+                {"commit"},
+                {"rollback"},
+                {"select 1"},
+        };
+    }
+
+    @Test(dataProvider = "unexpectedStatementProvider")
+    public void testUnexpectedStatement(String sql)
+    {
+        assertThat(rewritePreAgg(sql)).isEmpty();
     }
 
     private void assertOneTable(String sqlFormat, OneTableTestData testData)
@@ -598,7 +347,7 @@ public class TestPreAggregationRewrite
         assertRewrite(MessageFormat.format(sqlFormat, testData.table),
                 testData.defaultCatalog,
                 testData.defaultSchema,
-                MessageFormat.format(sqlFormat, "table_t1"));
+                MessageFormat.format(sqlFormat, "table_Collection"));
     }
 
     private void assertTwoTables(String sqlFormat, TwoTableTestData testData)
@@ -606,12 +355,12 @@ public class TestPreAggregationRewrite
         assertRewrite(MessageFormat.format(sqlFormat, testData.table1, testData.table2),
                 testData.defaultCatalog,
                 testData.defaultSchema,
-                MessageFormat.format(sqlFormat, "table_t1", "table_t2"));
+                MessageFormat.format(sqlFormat, "table_Collection", "table_AvgCollection"));
 
         assertRewrite(MessageFormat.format(sqlFormat, testData.table2, testData.table1),
                 testData.defaultCatalog,
                 testData.defaultSchema,
-                MessageFormat.format(sqlFormat, "table_t2", "table_t1"));
+                MessageFormat.format(sqlFormat, "table_AvgCollection", "table_Collection"));
     }
 
     private void assertRewrite(
@@ -635,20 +384,42 @@ public class TestPreAggregationRewrite
             String expectSql,
             Function<CatalogSchemaTableName, Optional<String>> tableConverter)
     {
-        SessionContext sessionContext = SessionContext.builder()
-                .setCatalog(defaultCatalog)
-                .setSchema(defaultSchema)
-                .build();
-
-        Statement result = PreAggregationRewrite.rewrite(
-                sessionContext,
-                sqlParser,
+        Statement result = rewritePreAgg(
                 sql,
-                tableConverter);
+                defaultCatalog,
+                defaultSchema,
+                tableConverter).orElseThrow(() -> new AssertionError("No rewrite result"));
 
         Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DECIMAL));
         assertThat(formatSql(result)).isEqualTo(formatSql(expect));
         assertThat(result).isEqualTo(expect);
+    }
+
+    private Optional<Statement> rewritePreAgg(String sql)
+    {
+        return rewritePreAgg(
+                sql,
+                "graphmdl",
+                "test",
+                this::toPreAggregationTable);
+    }
+
+    private Optional<Statement> rewritePreAgg(
+            String sql,
+            String defaultCatalog,
+            String defaultSchema,
+            Function<CatalogSchemaTableName, Optional<String>> tableConverter)
+    {
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog(defaultCatalog)
+                .setSchema(defaultSchema)
+                .build();
+        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        return PreAggregationRewrite.rewrite(
+                sessionContext,
+                statement,
+                tableConverter,
+                graphMDL);
     }
 
     private static class OneTableTestData

@@ -16,23 +16,16 @@ package io.graphmdl.sqlrewrite;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Column;
-import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Field;
-import io.graphmdl.sqlrewrite.analyzer.RelationType;
 import io.graphmdl.sqlrewrite.analyzer.Scope;
-import io.graphmdl.sqlrewrite.analyzer.ScopeAnalysis;
-import io.graphmdl.sqlrewrite.analyzer.ScopeAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
-import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.SubscriptExpression;
 
@@ -40,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.collect.Iterables.getLast;
+import static io.graphmdl.sqlrewrite.Utils.analyzeFrom;
 import static io.graphmdl.sqlrewrite.Utils.getNextPart;
 import static io.graphmdl.sqlrewrite.Utils.toQualifiedName;
 import static io.trino.sql.QueryUtil.identifier;
@@ -75,7 +69,7 @@ public class ScopeAwareRewrite
         {
             Scope relationScope;
             if (node.getFrom().isPresent()) {
-                relationScope = analyzeFrom(node.getFrom().get(), context);
+                relationScope = analyzeFrom(graphMDL, sessionContext, node.getFrom().get(), Optional.ofNullable(context));
             }
             else {
                 relationScope = context;
@@ -146,46 +140,6 @@ public class ScopeAwareRewrite
                 }
             }
             return ImmutableList.of();
-        }
-
-        private Scope analyzeFrom(Relation node, Scope context)
-        {
-            ScopeAnalysis analysis = ScopeAnalyzer.analyze(graphMDL, node, sessionContext);
-            List<ScopeAnalysis.Relation> usedGraphMDLObjects = analysis.getUsedGraphMDLObjects();
-            ImmutableList.Builder<Field> fields = ImmutableList.builder();
-            graphMDL.listModels().stream()
-                    .filter(model -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(model.getName())))
-                    .forEach(model ->
-                            model.getColumns().forEach(column -> fields.add(toField(model.getName(), column, usedGraphMDLObjects))));
-
-            graphMDL.listMetrics().stream()
-                    .filter(metric -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(metric.getName())))
-                    .forEach(metric -> {
-                        metric.getDimension().forEach(column -> fields.add(toField(metric.getName(), column, usedGraphMDLObjects)));
-                        metric.getMeasure().forEach(column -> fields.add(toField(metric.getName(), column, usedGraphMDLObjects)));
-                    });
-
-            return Scope.builder()
-                    .parent(Optional.ofNullable(context))
-                    .relationType(new RelationType(fields.build()))
-                    .isTableScope(true)
-                    .build();
-        }
-
-        private Field toField(String modelName, Column column, List<ScopeAnalysis.Relation> usedGraphMDLObjects)
-        {
-            ScopeAnalysis.Relation relation = usedGraphMDLObjects.stream()
-                    .filter(r -> r.getName().equals(modelName))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelName));
-
-            return Field.builder()
-                    .modelName(new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), modelName))
-                    .columnName(column.getName())
-                    .name(column.getName())
-                    .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
-                    .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
-                    .build();
         }
     }
 

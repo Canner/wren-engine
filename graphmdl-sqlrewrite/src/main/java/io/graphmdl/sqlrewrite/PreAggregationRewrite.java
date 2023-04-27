@@ -16,148 +16,128 @@ package io.graphmdl.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.graphmdl.base.CatalogSchemaTableName;
-import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.trino.sql.parser.ParsingOptions;
+import io.graphmdl.base.dto.Metric;
+import io.graphmdl.sqlrewrite.analyzer.Field;
+import io.graphmdl.sqlrewrite.analyzer.PreAggregationAnalysis;
+import io.graphmdl.sqlrewrite.analyzer.Scope;
 import io.trino.sql.parser.SqlBaseLexer;
-import io.trino.sql.parser.SqlParser;
-import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
-import io.trino.sql.tree.Relation;
+import io.trino.sql.tree.Query;
+import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
+import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.graphmdl.sqlrewrite.Utils.analyzeFrom;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.QueryUtil.getQualifiedName;
+import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
-public final class PreAggregationRewrite
+public class PreAggregationRewrite
 {
-    private static final String UNNAMED_ALIAS_PREFIX = "_alias_";
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
 
     private PreAggregationRewrite() {}
 
-    public static Statement rewrite(
+    public static Optional<Statement> rewrite(
             SessionContext sessionContext,
-            SqlParser sqlParser,
-            String sql,
-            Function<CatalogSchemaTableName, Optional<String>> converter)
+            Statement statement,
+            Function<CatalogSchemaTableName, Optional<String>> converter,
+            GraphMDL graphMDL)
     {
-        return (Statement) new Rewriter(sessionContext, converter).process(sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL)));
+        PreAggregationAnalysis aggregationAnalysis = new PreAggregationAnalysis();
+        Statement rewritten = (Statement) new Rewriter(sessionContext, converter, graphMDL, aggregationAnalysis).process(statement, Optional.empty());
+        if (aggregationAnalysis.onlyPreAggregationTables()) {
+            return Optional.of(rewritten);
+        }
+        return Optional.empty();
     }
 
     private static class Rewriter
-            extends BaseRewriter<Void>
+            extends QueryOnlyBaseRewriter<Optional<Scope>>
     {
         private final SessionContext sessionContext;
         private final Function<CatalogSchemaTableName, Optional<String>> converter;
-        private final Set<Identifier> visitedAlias = new HashSet<>();
-        private final Map<Expression, Identifier> joinTableAliasMapping = new HashMap<>();
         private final Map<QualifiedName, String> visitedAggregationTables = new HashMap<>();
+        private final GraphMDL graphMDL;
+        private final PreAggregationAnalysis aggregationAnalysis;
 
         public Rewriter(
                 SessionContext sessionContext,
-                Function<CatalogSchemaTableName, Optional<String>> converter)
+                Function<CatalogSchemaTableName, Optional<String>> converter,
+                GraphMDL graphMDL,
+                PreAggregationAnalysis aggregationAnalysis)
         {
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.converter = requireNonNull(converter, "converter is null");
+            this.graphMDL = requireNonNull(graphMDL, "graphMDL is null");
+            this.aggregationAnalysis = requireNonNull(aggregationAnalysis, "aggregationAnalysis is null");
         }
 
         @Override
-        protected Node visitJoin(Join node, Void context)
+        protected Node visitQuery(Query node, Optional<Scope> scope)
         {
-            List<Relation> joinRelations = ImmutableList.of(node.getLeft(), node.getRight()).stream()
-                    .map(relation -> {
-                        if (relation instanceof Table) {
-                            Table table = (Table) relation;
-                            Optional<CatalogSchemaTableName> preAggregationTableKey = getPreAggregationKey(table.getName());
-                            if (preAggregationTableKey.isPresent()) {
-                                CatalogSchemaTableName catalogSchemaTableName = preAggregationTableKey.get();
-                                String tableName = catalogSchemaTableName.getSchemaTableName().getTableName();
-                                String schemaName = catalogSchemaTableName.getSchemaTableName().getSchemaName();
-                                Identifier aliasName = new Identifier(UNNAMED_ALIAS_PREFIX + tableName);
-                                joinTableAliasMapping.put(
-                                        DereferenceExpression.from(QualifiedName.of(tableName)),
-                                        aliasName);
-                                joinTableAliasMapping.put(
-                                        DereferenceExpression.from(QualifiedName.of(schemaName, tableName)),
-                                        aliasName);
-                                joinTableAliasMapping.put(
-                                        DereferenceExpression.from(QualifiedName.of(catalogSchemaTableName.getCatalogName(), schemaName, tableName)),
-                                        aliasName);
-                                if (table.getLocation().isPresent()) {
-                                    new AliasedRelation(table.getLocation().get(), table, aliasName, null);
-                                }
-                                return new AliasedRelation(table, aliasName, null);
-                            }
-                        }
-                        return relation;
-                    })
-                    .collect(toImmutableList());
-
-            if (node.getLocation().isPresent()) {
-                return new Join(
-                        node.getLocation().get(),
-                        node.getType(),
-                        visitAndCast(joinRelations.get(0), context),
-                        visitAndCast(joinRelations.get(1), context),
-                        node.getCriteria().map(criteria -> visitJoinCriteria(criteria, context)));
-            }
-            return new Join(
-                    node.getType(),
-                    visitAndCast(joinRelations.get(0), context),
-                    visitAndCast(joinRelations.get(1), context),
-                    node.getCriteria().map(criteria -> visitJoinCriteria(criteria, context)));
+            Optional<Scope> withScope = analyzeWith(node, scope);
+            return super.visitQuery(node, withScope);
         }
 
         @Override
-        protected Node visitAliasedRelation(AliasedRelation node, Void context)
+        protected Node visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
-            visitedAlias.add(node.getAlias());
-            return super.visitAliasedRelation(node, context);
-        }
-
-        @Override
-        protected Node visitWithQuery(WithQuery node, Void context)
-        {
-            visitedAlias.add(new Identifier(node.getName().getValue().toLowerCase(ENGLISH)));
-            return super.visitWithQuery(node, context);
-        }
-
-        @Override
-        protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
-        {
-            QualifiedName qualifiedName = getQualifiedName(node.getBase());
-            Expression base;
-            if (qualifiedName != null && !visitedAlias.contains(node.getBase()) && visitedAggregationTables.containsKey(qualifiedName)) {
-                String cachedTable = visitedAggregationTables.get(qualifiedName);
-                QualifiedName dereferenceName = joinTableAliasMapping.containsKey(node.getBase()) ?
-                        QualifiedName.of(joinTableAliasMapping.get(node.getBase()).getValue()) :
-                        QualifiedName.of(cachedTable);
-                base = DereferenceExpression.from(dereferenceName);
+            Optional<Scope> relationScope;
+            if (node.getFrom().isPresent()) {
+                relationScope = Optional.of(analyzeFrom(graphMDL, sessionContext, node.getFrom().get(), scope));
             }
             else {
-                base = visitAndCast(node.getBase(), context);
+                relationScope = scope;
             }
+            return super.visitQuerySpecification(node, relationScope);
+        }
 
+        @Override
+        protected Node visitJoin(Join node, Optional<Scope> scope)
+        {
+            return new Join(
+                    node.getType(),
+                    visitAndCast(node.getLeft(), scope),
+                    visitAndCast(node.getRight(), scope),
+                    node.getCriteria().map(criteria -> visitJoinCriteria(criteria, scope)));
+        }
+
+        @Override
+        protected Node visitDereferenceExpression(DereferenceExpression node, Optional<Scope> scope)
+        {
+            Expression base = node.getBase();
+            if (scope.isPresent()) {
+                List<Field> field = scope.get().getRelationType().get().resolveFields(getQualifiedName(node));
+                if (field.size() == 1) {
+                    QualifiedName qualifiedName = getQualifiedName(base);
+                    if (field.get(0).getRelationAlias().isEmpty()
+                            && visitedAggregationTables.containsKey(qualifiedName)) {
+                        return new DereferenceExpression(
+                                node.getLocation(),
+                                DereferenceExpression.from(QualifiedName.of(visitedAggregationTables.get(qualifiedName))),
+                                node.getField());
+                    }
+                }
+            }
             return new DereferenceExpression(
                     node.getLocation(),
                     base,
@@ -165,56 +145,61 @@ public final class PreAggregationRewrite
         }
 
         @Override
-        protected Node visitTable(Table node, Void context)
+        protected Node visitTable(Table node, Optional<Scope> scope)
         {
-            Optional<CatalogSchemaTableName> preAggregationTableKeyOpt = getPreAggregationKey(node.getName());
-
-            if (preAggregationTableKeyOpt.isPresent()) {
-                CatalogSchemaTableName preAggregationTableKey = preAggregationTableKeyOpt.get();
-                String schemaName = preAggregationTableKey.getSchemaTableName().getSchemaName();
-                String tableName = preAggregationTableKey.getSchemaTableName().getTableName();
-                String preAggregationTable = convertTable(preAggregationTableKey);
-
-                visitedAggregationTables.put(QualifiedName.of(tableName), preAggregationTable);
-                visitedAggregationTables.put(QualifiedName.of(schemaName, tableName), preAggregationTable);
-                visitedAggregationTables.put(QualifiedName.of(preAggregationTableKey.getCatalogName(), schemaName, tableName), preAggregationTable);
-                return new Table(
-                        node.getLocation().get(),
-                        QualifiedName.of(preAggregationTable),
-                        qualifiedName(preAggregationTableKey));
+            if (scope.isPresent()) {
+                Optional<WithQuery> withQuery = scope.get().getNamedQuery(node.getName().getSuffix());
+                if (withQuery.isPresent()) {
+                    return node;
+                }
             }
 
+            CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, node.getName());
+            aggregationAnalysis.addTable(catalogSchemaTableName);
+            if (graphMDL.getMetric(catalogSchemaTableName).filter(Metric::isPreAggregated).isPresent()) {
+                Optional<String> preAggregationTableOpt = convertTable(catalogSchemaTableName);
+                if (preAggregationTableOpt.isPresent()) {
+                    aggregationAnalysis.addPreAggregationTables(catalogSchemaTableName);
+                    String preAggregationTable = preAggregationTableOpt.get();
+                    String schemaName = catalogSchemaTableName.getSchemaTableName().getSchemaName();
+                    String tableName = catalogSchemaTableName.getSchemaTableName().getTableName();
+                    visitedAggregationTables.put(QualifiedName.of(tableName), preAggregationTable);
+                    visitedAggregationTables.put(QualifiedName.of(schemaName, tableName), preAggregationTable);
+                    visitedAggregationTables.put(QualifiedName.of(catalogSchemaTableName.getCatalogName(), schemaName, tableName), preAggregationTable);
+                    return new Table(
+                            node.getLocation().get(),
+                            QualifiedName.of(preAggregationTable),
+                            qualifiedName(catalogSchemaTableName));
+                }
+            }
             return node;
         }
 
-        private Optional<CatalogSchemaTableName> getPreAggregationKey(QualifiedName tableName)
+        private Optional<String> convertTable(CatalogSchemaTableName preAggregationTable)
         {
-            try {
-                if (tableName.getParts().size() == 1 && visitedAlias.contains(new Identifier(tableName.getParts().get(0)))) {
-                    return Optional.empty();
-                }
-                return Optional.of(toCatalogSchemaTableName(sessionContext, tableName));
-            }
-            catch (IllegalArgumentException e) {
+            return converter.apply(preAggregationTable);
+        }
+
+        // TODO: from StatementAnalyzer.analyzeWith will recursive query mess up anything here?
+        private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
+        {
+            if (node.getWith().isEmpty()) {
                 return Optional.empty();
             }
-        }
 
-        protected QualifiedName getQualifiedName(Expression expression)
-        {
-            if (expression instanceof DereferenceExpression) {
-                return DereferenceExpression.getQualifiedName((DereferenceExpression) expression);
-            }
-            if (expression instanceof Identifier) {
-                return QualifiedName.of(ImmutableList.of((Identifier) expression));
-            }
-            return null;
-        }
+            With with = node.getWith().get();
+            Scope.Builder withScopeBuilder = Scope.builder().parent(scope);
 
-        private String convertTable(CatalogSchemaTableName preAggregationTable)
-        {
-            return converter.apply(preAggregationTable)
-                    .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Table " + preAggregationTable + " is not found"));
+            for (WithQuery withQuery : with.getQueries()) {
+                String name = withQuery.getName().getValue();
+                if (withScopeBuilder.containsNamedQuery(name)) {
+                    throw new IllegalArgumentException(format("WITH query name '%s' specified more than once", name));
+                }
+                visitAndCast(withQuery.getQuery(), Optional.of(withScopeBuilder.build()));
+                withScopeBuilder.namedQuery(name, withQuery);
+            }
+
+            return Optional.of(withScopeBuilder.build());
         }
     }
 
