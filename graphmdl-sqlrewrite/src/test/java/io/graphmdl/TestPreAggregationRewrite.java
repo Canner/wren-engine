@@ -57,14 +57,6 @@ public class TestPreAggregationRewrite
             ImmutableMap.<CatalogSchemaTableName, String>builder()
                     .put(new CatalogSchemaTableName("graphmdl", "test", "Collection"), "table_Collection")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "AvgCollection"), "table_AvgCollection")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "lineitem"), "table_lineitem")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "part"), "table_part")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "supplier"), "table_supplier")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "partsupp"), "table_partsupp")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "nation"), "table_nation")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "region"), "table_region")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "customer"), "table_customer")
-                    .put(new CatalogSchemaTableName("graphmdl", "tpch", "orders"), "table_orders")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "t-1"), "table_t-1")
                     .build();
 
@@ -315,8 +307,6 @@ public class TestPreAggregationRewrite
         return new Object[][] {
                 {"explain analyze select * from Collection"},
                 {"prepare aa from select * from Collection"},
-                // TODO pgsql should be prepare aa as..., not from
-                // {"prepare aa as select * from Collection"},
                 {"execute aa"},
                 {"deallocate prepare aa"},
                 {"describe output aa"},
