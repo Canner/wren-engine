@@ -21,7 +21,7 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Relationship;
-import io.graphmdl.sqlrewrite.LambdaExpressionRewrite;
+import io.graphmdl.sqlrewrite.LambdaExpressionBodyRewrite;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
@@ -261,7 +261,7 @@ public final class ExpressionAnalyzer
         {
             checkArgument(baseField.isRelationship(), "base field must be a relationship");
             checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
-            Expression expression = LambdaExpressionRewrite.rewrite(lambdaExpression.getBody(), baseField, lambdaExpression.getArguments().get(0).getName());
+            Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), baseField, lambdaExpression.getArguments().get(0).getName());
             String modelName = baseField.getModelName().getSchemaTableName().getTableName();
             QualifiedName baseName = QualifiedName.of(modelName, baseField.getName().get());
             Column column = graphMDL.getModel(modelName)
@@ -272,12 +272,10 @@ public final class ExpressionAnalyzer
             String relationshipName = column.getRelationship().orElseThrow(() -> new IllegalArgumentException(baseName + " relationship not found"));
             Relationship relationship = graphMDL.getRelationship(relationshipName)
                     .orElseThrow(() -> new IllegalArgumentException(relationshipName + " relationship not found"));
-            String targetModel = relationship.getModels().stream().filter(model -> !model.equals(modelName))
-                    .findFirst().orElseThrow(() -> new IllegalArgumentException(relationshipName + " miss target model"));
 
             RelationshipCteGenerator.RelationshipOperation operation = transform(
                     List.of(rsItem(baseName.toString(), CTE),
-                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(targetModel) ? REVERSE_RS : RS)), expression, baseField.getColumnName());
+                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)), expression, baseField.getColumnName());
             relationshipCteGenerator.register(List.of(originalExpression.toString()), operation, modelName);
             relationshipCTENames.add(originalExpression.toString());
             relationshipFieldsRewrite.put(

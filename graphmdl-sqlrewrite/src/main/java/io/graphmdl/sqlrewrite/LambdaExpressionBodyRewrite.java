@@ -36,16 +36,14 @@ import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.TARGET_REFERENCE;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-public class LambdaExpressionRewrite
+public class LambdaExpressionBodyRewrite
 {
     public static Expression rewrite(Node node, Field baseField, Identifier argument)
     {
         return (Expression) new Visitor(baseField, argument).process(node, Optional.empty());
     }
 
-    private LambdaExpressionRewrite()
-    {
-    }
+    private LambdaExpressionBodyRewrite() {}
 
     static class Visitor
             extends AstVisitor<Node, Optional<Node>>

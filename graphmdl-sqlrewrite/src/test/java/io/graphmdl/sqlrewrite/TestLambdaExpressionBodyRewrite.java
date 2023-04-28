@@ -28,7 +28,7 @@ import org.testng.annotations.Test;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-public class TestLambdaExpressionRewrite
+public class TestLambdaExpressionBodyRewrite
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
 
@@ -48,7 +48,7 @@ public class TestLambdaExpressionRewrite
     public void testLambdaExpressionRewrite(String actual, String expected)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName("graphmdl", "test", "Book");
-        Node node = LambdaExpressionRewrite.rewrite(parse(actual),
+        Node node = LambdaExpressionBodyRewrite.rewrite(parse(actual),
                 Field.builder()
                         .isRelationship(true)
                         .modelName(catalogSchemaTableName)

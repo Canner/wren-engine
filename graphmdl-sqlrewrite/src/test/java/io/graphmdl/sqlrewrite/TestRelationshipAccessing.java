@@ -742,7 +742,6 @@ public class TestRelationshipAccessing
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
-        System.out.println(actualSql);
         // TODO: remove this flag, disabled h2 assertion due to ambiguous column name
         if (enableH2Assertion) {
             assertThatNoException()

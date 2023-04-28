@@ -272,8 +272,6 @@ public class RelationshipCteGenerator
                 ImmutableSet.<String>builder()
                         // make sure the primary key be first.
                         .add(relationshipCTE.getSource().getPrimaryKey())
-                        // remove duplicate relationship column name
-                        .addAll(relationshipCTE.getSource().getColumns().stream().filter(column -> !column.equals(originalName)).collect(toList()))
                         .add(relationshipCTE.getSource().getJoinKey())
                         .build()
                         .stream()
@@ -350,7 +348,7 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
-    private WithQuery transferToTransformCte(String originalName, String manyResultField, Expression lambdaExpression, RelationshipCTE relationshipCTE)
+    private WithQuery transferToTransformCte(String originalName, String manyResultField, Expression lambdaExpressionBody, RelationshipCTE relationshipCTE)
     {
         List<Expression> oneTableFields =
                 ImmutableSet.<String>builder()
@@ -367,8 +365,8 @@ public class RelationshipCteGenerator
                 List.of(new Relationship.SortKey(relationshipCTE.getManySide().getPrimaryKey(), ASC)) :
                 relationshipCTE.getRelationship().getManySideSortKeys();
 
-        SingleColumn relationshipField = new SingleColumn(
-                toArrayAgg(lambdaExpression, TARGET_REFERENCE, sortKeys),
+        SingleColumn arrayAggField = new SingleColumn(
+                toArrayAgg(lambdaExpressionBody, TARGET_REFERENCE, sortKeys),
                 identifier(originalName));
 
         List<SingleColumn> normalFields = oneTableFields
@@ -376,7 +374,7 @@ public class RelationshipCteGenerator
                 .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
                 .collect(toList());
 
-        List<SelectItem> selectItems = ImmutableList.<SelectItem>builder().addAll(normalFields).add(relationshipField).build();
+        List<SelectItem> selectItems = ImmutableList.<SelectItem>builder().addAll(normalFields).add(arrayAggField).build();
 
         List<Identifier> outputSchema = selectItems.stream()
                 .map(selectItem -> (SingleColumn) selectItem)
@@ -586,8 +584,8 @@ public class RelationshipCteGenerator
                 Expression lambdaExpression,
                 String manySideResultField)
         {
-            this.rsItems = rsItems;
-            this.operatorType = operatorType;
+            this.rsItems = requireNonNull(rsItems);
+            this.operatorType = requireNonNull(operatorType);
             this.lambdaExpression = lambdaExpression;
             this.manySideResultField = manySideResultField;
         }
