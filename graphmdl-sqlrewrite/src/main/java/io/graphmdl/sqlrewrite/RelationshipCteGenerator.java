@@ -94,6 +94,7 @@ public class RelationshipCteGenerator
     private static final String SOURCE_REFERENCE = "s";
 
     public static final String TARGET_REFERENCE = "t";
+    public static final String TRANSFORM_RESULT_NAME = "f1";
 
     private static final String UNNEST_REFERENCE = "u";
 
@@ -198,7 +199,7 @@ public class RelationshipCteGenerator
                 return transferToAccessCte(originalName, relationshipCTE);
             case TRANSFORM:
                 checkArgument(operation.getLambdaExpression().isPresent(), "Lambda expression is missing");
-                return transferToTransformCte(originalName,
+                return transferToTransformCte(
                         operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
                         operation.getLambdaExpression().get(), relationshipCTE);
         }
@@ -348,7 +349,7 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
-    private WithQuery transferToTransformCte(String originalName, String manyResultField, Expression lambdaExpressionBody, RelationshipCTE relationshipCTE)
+    private WithQuery transferToTransformCte(String manyResultField, Expression lambdaExpressionBody, RelationshipCTE relationshipCTE)
     {
         List<Expression> oneTableFields =
                 ImmutableSet.<String>builder()
@@ -367,7 +368,7 @@ public class RelationshipCteGenerator
 
         SingleColumn arrayAggField = new SingleColumn(
                 toArrayAgg(lambdaExpressionBody, TARGET_REFERENCE, sortKeys),
-                identifier(originalName));
+                identifier(TRANSFORM_RESULT_NAME));
 
         List<SingleColumn> normalFields = oneTableFields
                 .stream()
