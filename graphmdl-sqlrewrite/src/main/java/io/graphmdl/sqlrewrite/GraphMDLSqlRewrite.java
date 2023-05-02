@@ -25,6 +25,7 @@ import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.JoinCriteria;
@@ -244,6 +245,22 @@ public class GraphMDLSqlRewrite
         protected Node visitIdentifier(Identifier node, Void context)
         {
             return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
+        }
+
+        @Override
+        protected Node visitFunctionCall(FunctionCall node, Void context)
+        {
+            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node),
+                    new FunctionCall(
+                            node.getLocation(),
+                            node.getName(),
+                            node.getWindow(),
+                            node.getFilter(),
+                            node.getOrderBy(),
+                            node.isDistinct(),
+                            node.getNullTreatment(),
+                            node.getProcessingMode(),
+                            visitNodes(node.getArguments(), context)));
         }
 
         // the model is added in with query, and the catalog and schema should be removed

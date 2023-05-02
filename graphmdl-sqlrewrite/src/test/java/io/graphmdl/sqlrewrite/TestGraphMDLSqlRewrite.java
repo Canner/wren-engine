@@ -12,10 +12,9 @@
  * limitations under the License.
  */
 
-package io.graphmdl;
+package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
-import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;

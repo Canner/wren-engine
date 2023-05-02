@@ -155,7 +155,7 @@ public class TestGraphMDLWithBigquery
     }
 
     @Test
-    void testQueryMetric()
+    public void testQueryMetric()
             throws Exception
     {
         try (Connection connection = createConnection()) {
@@ -183,6 +183,24 @@ public class TestGraphMDLWithBigquery
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
             assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @Test
+    public void testTransform()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select transform(Customer.orders, orderItem -> orderItem.orderstatus) as orderstatuses from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatuses"));
             int count = 1;
 
             while (resultSet.next()) {

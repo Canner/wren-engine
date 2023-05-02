@@ -48,6 +48,7 @@ import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
+import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.WhenClause;
 import io.trino.sql.tree.WindowDefinition;
@@ -142,9 +143,19 @@ public final class QueryUtil
         return new Table(name);
     }
 
+    public static Unnest unnest(Expression... expressions)
+    {
+        return new Unnest(asList(expressions), false);
+    }
+
     public static Join leftJoin(Relation left, Relation right, JoinCriteria joinCriteria)
     {
         return new Join(Join.Type.LEFT, left, right, Optional.ofNullable(joinCriteria));
+    }
+
+    public static Join crossJoin(Relation left, Relation right)
+    {
+        return new Join(Join.Type.CROSS, left, right, Optional.empty());
     }
 
     public static Join implicitJoin(Relation left, Relation right)

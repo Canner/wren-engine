@@ -434,6 +434,13 @@ public final class ExpressionFormatter
             builder.append(formatName(node.getName(), dialect))
                     .append('(').append(arguments);
 
+            if (dialect.equals(BIGQUERY) &&
+                    node.getFilter().isPresent() &&
+                    node.getFilter().get() instanceof IsNotNullPredicate &&
+                    ((IsNotNullPredicate) node.getFilter().get()).getValue().toString().equals(node.getArguments().get(0).toString())) {
+                builder.append(" IGNORE NULLS");
+            }
+
             if (node.getOrderBy().isPresent()) {
                 builder.append(' ').append(formatOrderBy(node.getOrderBy().get(), dialect));
             }
@@ -451,7 +458,7 @@ public final class ExpressionFormatter
                 }
             });
 
-            if (node.getFilter().isPresent()) {
+            if (!dialect.equals(BIGQUERY) && node.getFilter().isPresent()) {
                 builder.append(" FILTER ").append(visitFilter(node.getFilter().get(), context));
             }
 

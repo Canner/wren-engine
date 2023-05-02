@@ -21,6 +21,7 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Relationship;
+import io.graphmdl.sqlrewrite.LambdaExpressionBodyRewrite;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
@@ -28,6 +29,7 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.LambdaExpression;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -43,10 +45,13 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.graphmdl.base.Utils.checkArgument;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.TRANSFORM_RESULT_NAME;
 import static io.graphmdl.sqlrewrite.Utils.getNextPart;
 import static io.graphmdl.sqlrewrite.analyzer.ExpressionAnalyzer.DereferenceName.dereferenceName;
 import static java.lang.String.format;
@@ -111,9 +116,14 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
-            if (isArrayFunction(node.getName())) {
+            if (isLambdaFunction(node.getName())) {
+                checkArgument(node.getArguments().size() == 2, "Lambda function should have 2 arguments");
+                Optional<Field> field = collectRelationshipFields(node.getArguments().get(0), true, true);
+                field.ifPresent(value -> collectRelationshipLambdaExpression(node, (LambdaExpression) node.getArguments().get(1), value));
+            }
+            else if (isArrayFunction(node.getName())) {
                 for (Expression argument : node.getArguments()) {
-                    collectRelationshipFields(argument, true);
+                    collectRelationshipFields(argument, true, false);
                 }
             }
             return ignored;
@@ -125,23 +135,28 @@ public final class ExpressionAnalyzer
             return true;
         }
 
+        private boolean isLambdaFunction(QualifiedName funcName)
+        {
+            return List.of("transform", "find").contains(funcName.getSuffix());
+        }
+
         @Override
         protected Void visitDereferenceExpression(DereferenceExpression node, Void ignored)
         {
-            collectRelationshipFields(node, false);
+            collectRelationshipFields(node, false, false);
             return ignored;
         }
 
-        private void collectRelationshipFields(Expression expression, boolean fromArrayFunctionCall)
+        private Optional<Field> collectRelationshipFields(Expression expression, boolean fromArrayFunctionCall, boolean fromLambdaFunctionCall)
         {
             // we only collect select items in table scope
             if (!scope.isTableScope()) {
-                return;
+                return Optional.empty();
             }
 
             List<DereferenceName> dereferenceNames = Lists.reverse(toDereferenceNames(expression));
             if (dereferenceNames.isEmpty()) {
-                return;
+                return Optional.empty();
             }
 
             List<Field> scopeFields = scope.getRelationType()
@@ -161,7 +176,7 @@ public final class ExpressionAnalyzer
 
             // means there is no matched field
             if (optField.isEmpty()) {
-                return;
+                return Optional.empty();
             }
 
             String modelName = optField.get().getModelName().getSchemaTableName().getTableName();
@@ -190,29 +205,33 @@ public final class ExpressionAnalyzer
 
                     relNameParts.add(dereferenceNames.get(index));
                     String relNameStr = relNameParts.stream().map(DereferenceName::toString).collect(joining("."));
-                    relationshipCTENames.add(relNameStr);
+                    // If a collection is called from lambda function, it means this relationship is used in a lambda function CTE.
+                    // We don't need to join it in the main query.
+                    if (!fromLambdaFunctionCall) {
+                        relationshipCTENames.add(relNameStr);
+                    }
 
                     if (!relationshipCteGenerator.getNameMapping().containsKey(relNameStr)) {
                         if (relNameParts.size() == 2) {
                             relationshipCteGenerator.register(
                                     getBaseParts(relNameParts),
-                                    List.of(rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
+                                    access(List.of(rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS))));
                         }
                         else {
                             relationshipCteGenerator.register(
                                     getBaseParts(relNameParts),
-                                    List.of(
+                                    access(List.of(
                                             rsItem(String.join(".", relNameParts.stream().map(DereferenceName::toString).collect(toList()).subList(0, relNameParts.size() - 1)), CTE),
-                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS))));
                         }
 
                         if (dereferenceNames.get(index).getIndex().isPresent()) {
                             List<String> indexParts = ImmutableList.<String>builder().addAll(relNameParts.stream().map(DereferenceName::toString).collect(toList())).build();
                             relationshipCteGenerator.register(
                                     indexParts,
-                                    List.of(
+                                    access(List.of(
                                             rsItem(String.join(".", getBaseParts(relNameParts)), CTE, dereferenceNames.get(index).getIndex().get().toString()),
-                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS)));
+                                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? REVERSE_RS : RS))));
                         }
                     }
                 }
@@ -236,6 +255,37 @@ public final class ExpressionAnalyzer
                                                 .add(relationshipCteGenerator.getNameMapping().get(relNameParts.stream().map(DereferenceName::toString).collect(joining("."))))
                                                 .addAll(remainingParts).build())));
             }
+            return optField;
+        }
+
+        private void collectRelationshipLambdaExpression(Expression originalExpression, LambdaExpression lambdaExpression, Field baseField)
+        {
+            checkArgument(baseField.isRelationship(), "base field must be a relationship");
+            checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
+            Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), baseField, lambdaExpression.getArguments().get(0).getName());
+            String modelName = baseField.getModelName().getSchemaTableName().getTableName();
+            QualifiedName baseName = QualifiedName.of(modelName, baseField.getName().get());
+            Column column = graphMDL.getModel(modelName)
+                    .orElseThrow(() -> new IllegalArgumentException(modelName + " model not found"))
+                    .getColumns().stream().filter(col -> col.getName().equals(baseName.getSuffix()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException(baseName + " column not found"));
+            String relationshipName = column.getRelationship().orElseThrow(() -> new IllegalArgumentException(baseName + " relationship not found"));
+            Relationship relationship = graphMDL.getRelationship(relationshipName)
+                    .orElseThrow(() -> new IllegalArgumentException(relationshipName + " relationship not found"));
+
+            RelationshipCteGenerator.RelationshipOperation operation = transform(
+                    List.of(rsItem(baseName.toString(), CTE),
+                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)), expression, baseField.getColumnName());
+            relationshipCteGenerator.register(List.of(originalExpression.toString()), operation, modelName);
+            relationshipCTENames.add(originalExpression.toString());
+            relationshipFieldsRewrite.put(
+                    NodeRef.of(originalExpression),
+                    DereferenceExpression.from(
+                            QualifiedName.of(
+                                    ImmutableList.<String>builder()
+                                            .add(relationshipCteGenerator.getNameMapping().get(originalExpression.toString()))
+                                            .add(TRANSFORM_RESULT_NAME).build())));
         }
     }
 
