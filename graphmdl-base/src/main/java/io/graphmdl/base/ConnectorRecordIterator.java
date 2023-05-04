@@ -16,12 +16,11 @@ package io.graphmdl.base;
 
 import io.graphmdl.base.type.PGType;
 
-import java.io.Closeable;
 import java.util.Iterator;
 import java.util.List;
 
 public interface ConnectorRecordIterator
-        extends Iterator<Object[]>, Closeable
+        extends Iterator<Object[]>, AutoCloseable
 {
     List<PGType> getTypes();
 }
