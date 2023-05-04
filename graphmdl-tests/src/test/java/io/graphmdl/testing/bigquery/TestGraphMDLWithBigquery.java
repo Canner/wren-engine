@@ -152,6 +152,18 @@ public class TestGraphMDLWithBigquery
             }
             assertThat(count).isEqualTo(100);
         }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer from Orders limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     @Test
@@ -209,6 +221,7 @@ public class TestGraphMDLWithBigquery
         }
     }
 
+    @Test
     public void testGroupByRelationship()
             throws Exception
     {

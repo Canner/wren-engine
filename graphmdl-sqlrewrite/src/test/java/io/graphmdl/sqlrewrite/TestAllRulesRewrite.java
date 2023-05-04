@@ -93,7 +93,7 @@ public class TestAllRulesRewrite
                 {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
                 {"select band, price from Collection order by price", "values ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
                 {"select band, price from CollectionA order by price", "values ('relationship<AlbumBand>', cast(2553 as long)), ('relationship<AlbumBand>', cast(4060 as long))"},
-        };
+                {"select band from Album", "values ('relationship<AlbumBand>'), ('relationship<AlbumBand>'), ('relationship<AlbumBand>')"}};
     }
 
     @Test(dataProvider = "graphMDLUsedCases")

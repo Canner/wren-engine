@@ -370,6 +370,22 @@ public class TestRelationshipAccessing
                         "LEFT JOIN ${People.book.author.book} ON (People.userId = ${People.book.author.book}.authorId))\n" +
                         "LEFT JOIN ${People.book} ON (People.userId = ${People.book}.authorId))",
                         true},
+                {"SELECT a.author\n" +
+                        "FROM Book a",
+                        "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
+                                // TODO: better to remove this unused CTE
+                                "  ${Book.author} (userId, name, book) AS (\n" +
+                                "   SELECT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.book\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                "SELECT a.author\n" +
+                                "FROM Book a",
+                        true},
         };
     }
 
@@ -831,7 +847,7 @@ public class TestRelationshipAccessing
         RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
         Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
 
-        Node rewrittenStatement = statement;
+        Statement rewrittenStatement = statement;
         for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
             rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
         }

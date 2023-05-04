@@ -25,14 +25,15 @@ import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.GroupBy;
+import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.Statement;
 
+import java.util.List;
 import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.analyzer.Analysis.GroupByAnalysis;
@@ -84,28 +85,35 @@ public class GroupByKeyRewrite
         protected Node visitGroupBy(GroupBy node, GroupByAnalysis context)
         {
             GroupByAnalysis groupByAnalysis = analysis.getGroupByAnalysis().get(NodeRef.of(node));
-            return super.visitGroupBy(node, groupByAnalysis);
-        }
-
-        @Override
-        protected Node visitSimpleGroupBy(SimpleGroupBy node, GroupByAnalysis context)
-        {
-            ImmutableList.Builder<Expression> builder = ImmutableList.builder();
-            for (Expression expression : node.getExpressions()) {
-                Optional<DereferenceExpression> rewritten = analysis.tryGetScope(expression)
-                        .map(scope -> rewriteGroupByKeyIfNeeded(scope, expression, context))
-                        .orElseThrow(() -> new IllegalStateException("No scope found for " + expression));
-                if (rewritten.isPresent()) {
-                    builder.add(rewritten.get());
+            ImmutableList.Builder<GroupingElement> builder = ImmutableList.builder();
+            node.getGroupingElements().forEach(groupingElement -> {
+                if (groupingElement instanceof SimpleGroupBy) {
+                    rewriteSimpleGroupBy((SimpleGroupBy) groupingElement, groupByAnalysis, builder);
                 }
                 else {
-                    builder.add(expression);
+                    builder.add(groupingElement);
                 }
+            });
+            if (node.getLocation().isPresent()) {
+                return new GroupBy(
+                        node.getLocation().get(),
+                        node.isDistinct(),
+                        builder.build());
             }
-            return new SimpleGroupBy(builder.build());
+            return new GroupBy(
+                    node.isDistinct(),
+                    builder.build());
         }
 
-        private Optional<DereferenceExpression> rewriteGroupByKeyIfNeeded(Scope scope, Expression key, GroupByAnalysis groupByAnalysis)
+        protected void rewriteSimpleGroupBy(SimpleGroupBy node, GroupByAnalysis context, ImmutableList.Builder<GroupingElement> groupingElementBuilder)
+        {
+            for (Expression expression : node.getExpressions()) {
+                analysis.tryGetScope(expression)
+                        .ifPresent(scope -> rewriteGroupByKeyIfNeeded(scope, expression, context, groupingElementBuilder));
+            }
+        }
+
+        private void rewriteGroupByKeyIfNeeded(Scope scope, Expression key, GroupByAnalysis groupByAnalysis, ImmutableList.Builder<GroupingElement> builder)
         {
             if (key instanceof LongLiteral) {
                 Expression expression = groupByAnalysis.getOriginalExpressions().get(toIntExact(((LongLiteral) key).getValue()) - 1);
@@ -113,21 +121,22 @@ public class GroupByKeyRewrite
                         // If it can't be resolved, it means it could be a field of a relationship or ambiguous.
                         .map(fields -> fields.size() == 1 ? fields.get(0) : null);
                 if (field.isPresent() && field.get().isRelationship()) {
-                    return graphMDL.getModel(field.get().getType()).map(Model::getPrimaryKey)
-                            .map(primaryKey -> new DereferenceExpression(
-                                    field.get().getName().map(QualifiedName::of)
-                                            .map(DereferenceExpression::from)
-                                            .orElseThrow(() -> new IllegalStateException("No field name found for" + key)),
-                                    new Identifier(primaryKey)));
+                    graphMDL.getModel(field.get().getType()).map(Model::getPrimaryKey)
+                            .map(primaryKey -> new DereferenceExpression(expression, new Identifier(primaryKey)))
+                            .map(exp -> new SimpleGroupBy(List.of(exp)))
+                            .ifPresent(builder::add);
                 }
-                return Optional.empty();
+                builder.add(new SimpleGroupBy(List.of(key)));
             }
-
-            return scope.getRelationType().map(relationType -> relationType.resolveFields(getQualifiedName(key)).get(0))
-                    .filter(Field::isRelationship)
-                    .map(field -> graphMDL.getModel(field.getType()).map(Model::getPrimaryKey)
-                            .map(primaryKey -> new DereferenceExpression(key, new Identifier(primaryKey)))
-                            .orElseThrow(() -> new IllegalStateException("No model found for " + field.getType())));
+            else {
+                scope.getRelationType().map(relationType -> relationType.resolveFields(getQualifiedName(key)).get(0))
+                        .filter(Field::isRelationship)
+                        .map(field -> graphMDL.getModel(field.getType()).map(Model::getPrimaryKey)
+                                .map(primaryKey -> new DereferenceExpression(key, new Identifier(primaryKey)))
+                                .orElseThrow(() -> new IllegalStateException("No model found for " + field.getType())))
+                        .map(exp -> new SimpleGroupBy(List.of(exp)))
+                        .ifPresent(builder::add);
+            }
         }
     }
 }
