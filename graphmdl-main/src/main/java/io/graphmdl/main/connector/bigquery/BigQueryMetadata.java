@@ -217,7 +217,7 @@ public class BigQueryMetadata
     public List<Column> describeQuery(String sql, List<Parameter> parameters)
     {
         JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql, parameters);
-        return Streams.stream(queryStatistics.getSchema().getFields().iterator())
+        return queryStatistics.getSchema().getFields().stream()
                 .map(field -> {
                     PGType<?> type = BigQueryType.toPGType(field.getType().getStandardType());
                     if (field.getMode().equals(Field.Mode.REPEATED)) {

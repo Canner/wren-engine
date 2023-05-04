@@ -95,7 +95,7 @@ public class TransformCorrelatedJoinToJoin
     private static class FindSubQueryExpression
             extends DefaultTraversalVisitor<Void>
     {
-        private Map<NodeRef<SubqueryExpression>, CorrelationInfo> replaceSubqueryWithExpression = new HashMap<>();
+        private final Map<NodeRef<SubqueryExpression>, CorrelationInfo> replaceSubqueryWithExpression = new HashMap<>();
 
         private static Map<NodeRef<SubqueryExpression>, CorrelationInfo> find(Expression node)
         {

@@ -57,7 +57,6 @@ public class Netty4OpenChannelsHandler
     {
         @Override
         public void operationComplete(ChannelFuture future)
-                throws Exception
         {
             boolean removed = openChannels.remove(future.channel());
             if (removed) {

@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import javax.annotation.PreDestroy;
 import javax.validation.constraints.NotNull;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -147,7 +146,7 @@ public class Portal
             try {
                 connectorRecordIterator.close();
             }
-            catch (IOException ex) {
+            catch (Exception ex) {
                 LOG.error(ex, "ConnectorRecordIterable close failed");
             }
             LOG.info("ConnectorRecordIterable is closed.");

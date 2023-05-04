@@ -19,7 +19,6 @@ import io.graphmdl.base.type.PGType;
 import io.graphmdl.connector.AutoCloseableIterator;
 import io.graphmdl.connector.jdbc.JdbcRecordIterator;
 
-import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -63,14 +62,9 @@ public class DuckdbRecordIterator
 
     @Override
     public void close()
-            throws IOException
+            throws Exception
     {
-        try {
-            recordIterator.close();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        recordIterator.close();
     }
 
     @Override

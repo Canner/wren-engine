@@ -33,9 +33,7 @@ public class GenericTableRecordIterable
     }
 
     @Override
-    public void close()
-    {
-    }
+    public void close() {}
 
     @Override
     public Iterator<List<Optional<Object>>> iterator()

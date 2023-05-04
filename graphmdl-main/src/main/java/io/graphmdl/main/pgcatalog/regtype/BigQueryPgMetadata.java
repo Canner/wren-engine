@@ -31,7 +31,7 @@ import static java.util.Objects.requireNonNull;
 public class BigQueryPgMetadata
         extends PgMetadata
 {
-    Metadata metadata;
+    private final Metadata metadata;
 
     @Inject
     public BigQueryPgMetadata(Metadata metadata)

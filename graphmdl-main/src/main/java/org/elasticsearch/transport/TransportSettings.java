@@ -137,9 +137,7 @@ public final class TransportSettings
                     Arrays.asList("internal:coordination/fault_detection/*"),
                     Function.identity(), Setting.Property.Dynamic, Setting.Property.NodeScope);
 
-    private TransportSettings()
-    {
-    }
+    private TransportSettings() {}
 
     private static <T> Setting<T> fallback(String key, Setting.AffixSetting<T> affixSetting, String regex, String replacement)
     {
