@@ -14,6 +14,7 @@
 
 package io.graphmdl.connector.duckdb;
 
+import io.graphmdl.base.Parameter;
 import io.graphmdl.connector.AutoCloseableIterator;
 import io.graphmdl.connector.Client;
 import io.graphmdl.connector.ColumnDescription;
@@ -23,6 +24,7 @@ import org.duckdb.DuckDBConnection;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.JDBCType;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -73,6 +75,30 @@ public final class DuckdbClient
             return new ColumnMetadataIterator(resultSet);
         }
         catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
+    }
+
+    public ResultSet executeQuery(String sql, List<Parameter> parameters)
+    {
+        PreparedStatement statement = null;
+        try (Connection connection = createConnection()) {
+            statement = connection.prepareStatement(sql);
+            for (int i = 0; i < parameters.size(); i++) {
+                statement.setObject(i + 1, parameters.get(i).getValue());
+            }
+
+            return statement.executeQuery();
+        }
+        catch (SQLException se) {
+            try {
+                if (statement != null) {
+                    statement.close();
+                }
+            }
+            catch (SQLException e) {
+                se.addSuppressed(e);
+            }
             throw new RuntimeException(se);
         }
     }

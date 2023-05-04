@@ -38,6 +38,11 @@ public class Metric
         return new Metric(name, baseModel, dimension, measure, timeGrain, false);
     }
 
+    public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
+    {
+        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated);
+    }
+
     @JsonCreator
     public Metric(
             @JsonProperty("name") String name,

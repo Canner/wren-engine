@@ -17,11 +17,17 @@ package io.graphmdl.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.MetricRollupInfo;
+import io.graphmdl.sqlrewrite.analyzer.RelationType;
+import io.graphmdl.sqlrewrite.analyzer.Scope;
+import io.graphmdl.sqlrewrite.analyzer.ScopeAnalysis;
+import io.graphmdl.sqlrewrite.analyzer.ScopeAnalyzer;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DataType;
@@ -30,11 +36,13 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
+import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.SubscriptExpression;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -186,5 +194,45 @@ public final class Utils
             return ((DereferenceExpression) base).getBase();
         }
         return base;
+    }
+
+    public static Scope analyzeFrom(GraphMDL graphMDL, SessionContext sessionContext, Relation node, Optional<Scope> context)
+    {
+        ScopeAnalysis analysis = ScopeAnalyzer.analyze(graphMDL, node, sessionContext);
+        List<ScopeAnalysis.Relation> usedGraphMDLObjects = analysis.getUsedGraphMDLObjects();
+        ImmutableList.Builder<Field> fields = ImmutableList.builder();
+        graphMDL.listModels().stream()
+                .filter(model -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(model.getName())))
+                .forEach(model ->
+                        model.getColumns().forEach(column -> fields.add(toField(graphMDL, model.getName(), column, usedGraphMDLObjects))));
+
+        graphMDL.listMetrics().stream()
+                .filter(metric -> usedGraphMDLObjects.stream().anyMatch(relation -> relation.getName().equals(metric.getName())))
+                .forEach(metric -> {
+                    metric.getDimension().forEach(column -> fields.add(toField(graphMDL, metric.getName(), column, usedGraphMDLObjects)));
+                    metric.getMeasure().forEach(column -> fields.add(toField(graphMDL, metric.getName(), column, usedGraphMDLObjects)));
+                });
+
+        return Scope.builder()
+                .parent(context)
+                .relationType(new RelationType(fields.build()))
+                .isTableScope(true)
+                .build();
+    }
+
+    private static Field toField(GraphMDL graphMDL, String modelName, Column column, List<ScopeAnalysis.Relation> usedGraphMDLObjects)
+    {
+        ScopeAnalysis.Relation relation = usedGraphMDLObjects.stream()
+                .filter(r -> r.getName().equals(modelName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelName));
+
+        return Field.builder()
+                .modelName(new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), modelName))
+                .columnName(column.getName())
+                .name(column.getName())
+                .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
+                .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
+                .build();
     }
 }

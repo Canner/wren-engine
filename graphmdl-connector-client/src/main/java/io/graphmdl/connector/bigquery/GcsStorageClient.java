@@ -41,7 +41,7 @@ public class GcsStorageClient
         StorageBatch storageBatch = storage.batch();
         storage.list(bucket, Storage.BlobListOption.prefix(prefix))
                 .iterateAll()
-                .forEach(blob -> storageBatch.delete(blob.getBlobId()));
+                .forEach(blob -> builder.add(storageBatch.delete(blob.getBlobId())));
         List<StorageBatchResult<Boolean>> results = builder.build();
         if (results.size() > 0) {
             storageBatch.submit();

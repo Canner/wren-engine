@@ -21,6 +21,7 @@ import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.GraphMDLMetastore;
+import io.graphmdl.main.biboost.PreAggregationManager;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
@@ -34,6 +35,7 @@ import io.trino.sql.tree.Statement;
 
 import javax.annotation.Nullable;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -80,14 +82,21 @@ public class WireProtocolSession
 
     private final SqlConverter sqlConverter;
     private final GraphMDLMetastore graphMDLMetastore;
+    private final PreAggregationManager preAggregationManager;
 
-    public WireProtocolSession(RegObjectFactory regObjectFactory, Metadata metadata, SqlConverter sqlConverter, GraphMDLMetastore graphMDLMetastore)
+    public WireProtocolSession(
+            RegObjectFactory regObjectFactory,
+            Metadata metadata,
+            SqlConverter sqlConverter,
+            GraphMDLMetastore graphMDLMetastore,
+            PreAggregationManager preAggregationManager)
     {
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
+        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -194,20 +203,27 @@ public class WireProtocolSession
             preparedStatements.put(statementName, new PreparedStatement(statementName, "", paramTypes, statementTrimmed, false));
         }
         else {
+            SessionContext sessionContext = SessionContext.builder()
+                    .setCatalog(getDefaultDatabase())
+                    .setSchema(getDefaultSchema())
+                    .build();
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
             String graphMDLRewritten = GraphMDLPlanner.rewrite(
                     statementPreRewritten,
-                    SessionContext.builder()
-                            .setCatalog(getDefaultDatabase())
-                            .setSchema(getDefaultSchema())
-                            .build(),
+                    sessionContext,
                     graphMDLMetastore.getGraphMDL());
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,
-                    new PreparedStatement(statementName, getFormattedSql(rewrittenStatement, sqlParser), rewrittenParamTypes, statementTrimmed, isSessionCommand(rewrittenStatement)));
+                    new PreparedStatement(
+                            statementName,
+                            getFormattedSql(rewrittenStatement, sqlParser),
+                            preAggregationManager.rewritePreAggregation(sessionContext, statementPreRewritten),
+                            rewrittenParamTypes,
+                            statementTrimmed,
+                            isSessionCommand(rewrittenStatement)));
             LOG.info("Create preparedStatement %s", statementName);
         }
     }
@@ -244,13 +260,26 @@ public class WireProtocolSession
     private CompletableFuture<Optional<ConnectorRecordIterator>> execute(Portal portal)
     {
         String execStmt = portal.getPreparedStatement().getStatement();
-        return CompletableFuture.supplyAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> executePreAggregation(portal).or(() -> {
             String sql = sqlConverter.convert(execStmt,
                     SessionContext.builder()
                             .setCatalog(getDefaultDatabase())
                             .setSchema(getDefaultSchema())
                             .build());
             return Optional.of(metadata.directQuery(sql, portal.getParameters()));
+        }));
+    }
+
+    private Optional<ConnectorRecordIterator> executePreAggregation(Portal portal)
+    {
+        return portal.getPreparedStatement().getPreAggregationStatement().map(statement -> {
+            try {
+                return preAggregationManager.query(statement, portal.getParameters());
+            }
+            catch (SQLException e) {
+                LOG.warn(e, "Failed to execute pre-aggregation query: %s", statement);
+                return null;
+            }
         });
     }
 

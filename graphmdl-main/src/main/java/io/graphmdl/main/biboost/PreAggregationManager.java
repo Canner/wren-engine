@@ -17,8 +17,10 @@ package io.graphmdl.main.biboost;
 import com.google.common.annotations.VisibleForTesting;
 import io.airlift.log.Logger;
 import io.graphmdl.base.CatalogSchemaTableName;
+import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.connector.duckdb.DuckdbClient;
@@ -28,12 +30,15 @@ import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
+import io.graphmdl.sqlrewrite.PreAggregationRewrite;
+import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +50,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.graphmdl.main.wireprotocol.WireProtocolSession.PARSE_AS_DECIMAL;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
@@ -60,6 +66,7 @@ public class PreAggregationManager
     private final DuckdbClient duckdbClient;
     private final DuckdbStorageConfig duckdbStorageConfig;
     private final AtomicReference<Map<CatalogSchemaTableName, MetricTablePair>> metricTableMapping = new AtomicReference<>(Map.of());
+    private final GraphMDL graphMDL;
 
     @Inject
     public PreAggregationManager(
@@ -78,7 +85,8 @@ public class PreAggregationManager
         this.connector = requireNonNull(connector, "connector is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
-        doPreAggregation(graphMDLMetastore.getGraphMDL())
+        this.graphMDL = requireNonNull(graphMDLMetastore.getGraphMDL(), "graphMDL is null");
+        doPreAggregation(graphMDL)
                 .thenRun(this::cleanPreAggregation).join();
     }
 
@@ -109,6 +117,17 @@ public class PreAggregationManager
                 metricTableMapping.set(mapping);
             }
         });
+    }
+
+    public Optional<String> convertToAggregationTable(CatalogSchemaTableName catalogSchemaTableName)
+    {
+        return metricTableMapping.get().get(catalogSchemaTableName).getTableName();
+    }
+
+    public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
+            throws SQLException
+    {
+        return DuckdbRecordIterator.of(duckdbClient.executeQuery(sql, parameters));
     }
 
     private CompletableFuture<MetricTablePair> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
@@ -180,10 +199,28 @@ public class PreAggregationManager
             return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name not exists"));
         }
 
+        public Optional<String> getTableName()
+        {
+            return tableName;
+        }
+
         public Optional<String> getErrorMessage()
         {
             return errorMessage;
         }
+    }
+
+    public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql)
+    {
+        try {
+            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            return PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL)
+                    .map(rewrittenStatement -> getFormattedSql(rewrittenStatement, sqlParser));
+        }
+        catch (Exception e) {
+            LOG.error(e, "Failed to rewrite pre-aggregation for statement: %s", sql);
+        }
+        return Optional.empty();
     }
 
     @PreDestroy

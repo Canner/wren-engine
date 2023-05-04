@@ -37,7 +37,7 @@ public class DereferenceExpression
         this(Optional.of(location), base, field);
     }
 
-    private DereferenceExpression(Optional<NodeLocation> location, Expression base, Identifier field)
+    public DereferenceExpression(Optional<NodeLocation> location, Expression base, Identifier field)
     {
         super(location);
         checkArgument(base != null, "base is null");

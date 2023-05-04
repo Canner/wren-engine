@@ -15,6 +15,7 @@
 package io.graphmdl.main;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.main.biboost.PreAggregationManager;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.SqlConverter;
@@ -37,6 +38,7 @@ public class PostgresNettyProvider
     private final Metadata connector;
     private final SqlConverter sqlConverter;
     private final GraphMDLMetastore graphMDLMetastore;
+    private final PreAggregationManager preAggregationManager;
 
     @Inject
     public PostgresNettyProvider(
@@ -45,7 +47,8 @@ public class PostgresNettyProvider
             RegObjectFactory regObjectFactory,
             Metadata connector,
             SqlConverter sqlConverter,
-            GraphMDLMetastore graphMDLMetastore)
+            GraphMDLMetastore graphMDLMetastore,
+            PreAggregationManager preAggregationManager)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
@@ -53,6 +56,7 @@ public class PostgresNettyProvider
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
+        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
     }
 
     @Override
@@ -66,7 +70,8 @@ public class PostgresNettyProvider
                 regObjectFactory,
                 connector,
                 sqlConverter,
-                graphMDLMetastore);
+                graphMDLMetastore,
+                preAggregationManager);
         postgresNetty.start();
         return postgresNetty;
     }
