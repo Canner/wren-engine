@@ -248,7 +248,7 @@ public final class ExpressionAnalyzer
             }
 
             List<String> remainingParts = dereferenceNames.subList(index, dereferenceNames.size()).stream().map(DereferenceName::getIdentifier).map(Identifier::getValue).collect(toList());
-            if (relNameParts.size() > 1) {
+            if (relNameParts.size() > 1 && remainingParts.size() > 0) {
                 relationshipFieldsRewrite.put(
                         NodeRef.of(expression),
                         DereferenceExpression.from(
