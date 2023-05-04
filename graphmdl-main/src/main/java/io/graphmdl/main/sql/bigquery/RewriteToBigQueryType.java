@@ -30,12 +30,15 @@ import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 
 import java.util.List;
 import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.Utils.parseType;
 import static java.lang.Integer.parseInt;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class RewriteToBigQueryType
         implements SqlRewrite
@@ -74,8 +77,21 @@ public class RewriteToBigQueryType
                         new GenericDataType(Optional.empty(), new Identifier("JSON"), List.of()));
             }
             return new Cast(
-                    new StringLiteral(node.getValue()),
+                    visitAndCast(new StringLiteral(node.getValue()), context),
                     visitAndCast(parseType(node.getType()), context));
+        }
+
+        @Override
+        protected Node visitStringLiteral(StringLiteral node, Void context)
+        {
+            // PostgreSQL uses the following format to represent binary data: \x[hexadecimal string], but BigQuery don't support this format.
+            // To overcome this limitation, we convert the query to CAST([literal] AS BYTES).
+            if (node.getValue().startsWith("\\x")) {
+                return new Cast(
+                        new StringLiteral(decodeHexString(node.getValue())),
+                        new GenericDataType(Optional.empty(), new Identifier("BYTES"), List.of()));
+            }
+            return super.visitStringLiteral(node, context);
         }
 
         @Override
@@ -141,6 +157,16 @@ public class RewriteToBigQueryType
                     return new GenericDataType(nodeLocation, new Identifier("DATE"), parameters);
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + typeName);
+            }
+        }
+
+        private String decodeHexString(String hexString)
+        {
+            try {
+                return new String(Hex.decodeHex(hexString.substring(2)), UTF_8);
+            }
+            catch (DecoderException e) {
+                throw new UnsupportedOperationException("Unsupported hex value: " + hexString);
             }
         }
     }

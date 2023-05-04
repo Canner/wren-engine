@@ -35,7 +35,6 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static com.google.common.io.BaseEncoding.base16;
 import static io.graphmdl.base.type.DateType.DATE;
 import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
 import static java.lang.String.format;
@@ -101,9 +100,12 @@ public class DataType<T>
                 });
     }
 
-    public static DataType<byte[]> byteaDataType()
+    public static DataType<String> byteaDataType()
     {
-        return dataType("bytea", ByteaType.BYTEA, DataType::binaryLiteral);
+        return dataType(
+                "bytea",
+                ByteaType.BYTEA,
+                DataType::formatStringLiteral);
     }
 
     public static DataType<String> charDataType()
@@ -195,14 +197,6 @@ public class DataType<T>
     public static String formatStringLiteral(String value)
     {
         return "'" + value.replace("'", "''") + "'";
-    }
-
-    /**
-     * Formats bytes using SQL standard format for binary string literal
-     */
-    public static String binaryLiteral(byte[] value)
-    {
-        return "X'" + base16().encode(value) + "'";
     }
 
     private static <T> DataType<T> dataType(String insertType, PGType<?> graphMDLResultType)
