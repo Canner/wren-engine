@@ -73,6 +73,7 @@
         <module>graphmdl-tests</module>
         <module>graphmdl-validation</module>
         <module>trino-parser</module>
+        <module>graphmdl-pre-aggregation</module>
     </modules>
 
     <repositories>
