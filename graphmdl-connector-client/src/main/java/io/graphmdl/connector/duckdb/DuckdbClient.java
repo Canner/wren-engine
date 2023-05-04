@@ -97,7 +97,7 @@ public final class DuckdbClient
                 }
             }
             catch (SQLException e) {
-                // ignore
+                se.addSuppressed(e);
             }
             throw new RuntimeException(se);
         }
