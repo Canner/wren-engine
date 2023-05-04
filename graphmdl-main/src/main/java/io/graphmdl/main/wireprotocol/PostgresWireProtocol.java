@@ -713,7 +713,6 @@ public class PostgresWireProtocol
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
-                throws Exception
         {
             LOG.debug("decoded!");
             ByteBuf decode = decode(in, ctx.pipeline());
