@@ -127,8 +127,10 @@ public class BigQueryClient
                             .newBuilder(sql);
 
             for (Parameter parameter : parameters) {
-                Object value = BigQueryType.toBqValue(parameter.getType(), parameter.getValue());
-                queryConfigBuilder.addPositionalParameter(QueryParameterValue.of(value, BigQueryType.toBqType(parameter.getType())));
+                queryConfigBuilder.addPositionalParameter(
+                        QueryParameterValue.of(
+                                BigQueryType.toBqValue(parameter.getType(), parameter.getValue()),
+                                BigQueryType.toBqType(parameter.getType())));
             }
 
             return bigQuery.query(queryConfigBuilder.build());
@@ -151,8 +153,10 @@ public class BigQueryClient
             datasetIdOptional.ifPresent(queryConfigBuilder::setDefaultDataset);
 
             for (Parameter parameter : parameters) {
-                Object value = BigQueryType.toBqValue(parameter.getType(), parameter.getValue());
-                queryConfigBuilder.addPositionalParameter(QueryParameterValue.of(value, BigQueryType.toBqType(parameter.getType())));
+                queryConfigBuilder.addPositionalParameter(
+                        QueryParameterValue.of(
+                                BigQueryType.toBqValue(parameter.getType(), parameter.getValue()),
+                                BigQueryType.toBqType(parameter.getType())));
             }
 
             Job job = bigQuery.create(JobInfo.of(queryConfigBuilder.build()));

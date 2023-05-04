@@ -97,7 +97,8 @@ public final class BigQueryType
 
     public static Object toBqValue(PGType<?> pgType, Object value)
     {
-        // BigQuery parameter only support Integer and Long value as type INT64
+        // Cast a short type value to an integer to fit the BigQuery type INT64, because there is the limitation of BigQuery API in QueryParameterValue.
+        // https://github.com/googleapis/java-bigquery/blob/909a574e6857332dfc71c746c4500b601de57dcf/google-cloud-bigquery/src/main/java/com/google/cloud/bigquery/QueryParameterValue.java#L409
         if (pgType.equals(SMALLINT) && value instanceof Short) {
             return ((Short) value).intValue();
         }
