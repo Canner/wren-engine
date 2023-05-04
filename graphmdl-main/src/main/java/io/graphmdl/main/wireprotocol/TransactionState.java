@@ -22,7 +22,7 @@ public enum TransactionState
 
     private final char code;
 
-    private TransactionState(char code)
+    TransactionState(char code)
     {
         this.code = code;
     }
