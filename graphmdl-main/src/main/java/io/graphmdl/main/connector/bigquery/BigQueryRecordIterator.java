@@ -19,7 +19,6 @@ import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
-import com.google.common.collect.Streams;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.PGTypes;
@@ -50,7 +49,7 @@ public class BigQueryRecordIterator
         requireNonNull(tableResult, "tableResult is null");
         this.resultIterator = tableResult.iterateAll().iterator();
 
-        this.types = Streams.stream(tableResult.getSchema().getFields().iterator())
+        this.types = tableResult.getSchema().getFields().stream()
                 .map(field -> {
                     PGType<?> fieldType = BigQueryType.toPGType(field.getType().getStandardType());
                     if (field.getMode().equals(Field.Mode.REPEATED)) {
