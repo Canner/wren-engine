@@ -27,7 +27,7 @@ public class FunctionRelation
         extends QueryBody
 {
     private final QualifiedName name;
-    private List<Expression> arguments;
+    private final List<Expression> arguments;
 
     public FunctionRelation(NodeLocation location, QualifiedName name, List<Expression> arguments)
     {

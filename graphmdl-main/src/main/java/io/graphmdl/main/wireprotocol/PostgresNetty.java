@@ -86,7 +86,7 @@ public class PostgresNetty
 
     private final SqlConverter sqlConverter;
     private BoundTransportAddress boundAddress;
-    private GraphMDLMetastore graphMDLMetastore;
+    private final GraphMDLMetastore graphMDLMetastore;
     private final PreAggregationManager preAggregationManager;
 
     public PostgresNetty(

@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 public abstract class BaseResultSender
 {
-    private CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     public abstract void sendRow(Object[] row);
 
