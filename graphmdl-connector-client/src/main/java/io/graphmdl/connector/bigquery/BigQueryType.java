@@ -76,7 +76,9 @@ public final class BigQueryType
                 .put(VARCHAR, STRING)
                 .put(DOUBLE, FLOAT64)
                 .put(REAL, FLOAT64)
+                .put(NumericType.NUMERIC, BIGNUMERIC)
                 .put(DateType.DATE, DATE)
+                .put(TimestampType.TIMESTAMP, TIMESTAMP)
                 .put(BYTEA, BYTES)
                 .build();
     }
@@ -91,5 +93,15 @@ public final class BigQueryType
     {
         return Optional.ofNullable(pgTypeToBqTypeMap.get(pgType))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + pgType.typName()));
+    }
+
+    public static Object toBqValue(PGType<?> pgType, Object value)
+    {
+        // Cast a short type value to an integer to fit the BigQuery type INT64, because there is the limitation of BigQuery API in QueryParameterValue.
+        // https://github.com/googleapis/java-bigquery/blob/909a574e6857332dfc71c746c4500b601de57dcf/google-cloud-bigquery/src/main/java/com/google/cloud/bigquery/QueryParameterValue.java#L409
+        if (pgType.equals(SMALLINT) && value instanceof Short) {
+            return ((Short) value).intValue();
+        }
+        return value;
     }
 }

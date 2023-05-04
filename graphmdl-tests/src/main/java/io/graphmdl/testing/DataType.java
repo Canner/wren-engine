@@ -29,13 +29,17 @@ import io.graphmdl.base.type.VarcharType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Optional;
 import java.util.function.Function;
 
 import static com.google.common.io.BaseEncoding.base16;
 import static io.graphmdl.base.type.DateType.DATE;
+import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
 import static java.lang.String.format;
+import static java.time.temporal.ChronoField.NANO_OF_SECOND;
 
 public class DataType<T>
 {
@@ -170,6 +174,22 @@ public class DataType<T>
                 "date",
                 DATE,
                 DateTimeFormatter.ofPattern("'DATE '''uuuu-MM-dd''")::format);
+    }
+
+    public static DataType<LocalDateTime> timestampDataType(int precision)
+    {
+        DateTimeFormatterBuilder format = new DateTimeFormatterBuilder()
+                .appendPattern("'TIMESTAMP '''")
+                .appendPattern("uuuu-MM-dd HH:mm:ss");
+        if (precision != 0) {
+            format.appendFraction(NANO_OF_SECOND, precision, precision, true);
+        }
+        format.appendPattern("''");
+
+        return dataType(
+                format("timestamp(%s)", precision),
+                TIMESTAMP,
+                format.toFormatter()::format);
     }
 
     public static String formatStringLiteral(String value)

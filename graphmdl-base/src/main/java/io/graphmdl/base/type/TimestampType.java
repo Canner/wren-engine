@@ -24,8 +24,11 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
+import java.util.Locale;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_TIME;
 import static java.util.Locale.ENGLISH;
 
 public class TimestampType
@@ -36,11 +39,26 @@ public class TimestampType
     private static final int OID = 1114;
     private static final String NAME = "timestamp";
 
+    // TODO support timestamp with precision dynamically
+    // BigQuery support precision with 6
     private static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
-            .appendPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            .appendPattern("yyyy-MM-dd HH:mm:ss.SSSSSS")
             .toFormatter(ENGLISH)
             .withResolverStyle(ResolverStyle.STRICT);
+
+    private static final DateTimeFormatter PARSER_WITH_OPTIONAL_ERA = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .append(ISO_LOCAL_DATE)
+            .optionalStart()
+            .appendLiteral(' ')
+            .append(ISO_LOCAL_TIME)
+            .optionalStart()
+            .appendPattern("[VV][x][xx][xxx]")
+            .optionalStart()
+            .appendLiteral(' ')
+            .appendPattern("G")
+            .toFormatter(Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT);
 
     private TimestampType()
     {
@@ -57,7 +75,7 @@ public class TimestampType
     public byte[] encodeAsUTF8Text(@Nonnull Object value)
     {
         long microSeconds = (long) value;
-        Instant instant = Instant.ofEpochMilli(microSeconds / 1000);
+        Instant instant = Instant.ofEpochSecond(microSeconds / 1000000, microSeconds % 1000000 * 1000);
         LocalDateTime dt = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
         return PG_TIMESTAMP.format(dt).getBytes(UTF_8);
     }
@@ -65,7 +83,9 @@ public class TimestampType
     @Override
     public Object decodeUTF8Text(byte[] bytes)
     {
-        throw new UnsupportedOperationException();
+        String s = new String(bytes, UTF_8);
+        LocalDateTime dt = LocalDateTime.parse(s, PARSER_WITH_OPTIONAL_ERA);
+        return PG_TIMESTAMP.format(dt);
     }
 
     @Override
