@@ -39,6 +39,7 @@ public class TimestampType
     private static final int OID = 1114;
     private static final String NAME = "timestamp";
 
+    // TODO support timestamp with precision dynamically
     // BigQuery support precision with 6
     private static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
