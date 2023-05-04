@@ -16,9 +16,7 @@ package io.graphmdl.base.metadata;
 
 public final class SchemaUtil
 {
-    private SchemaUtil()
-    {
-    }
+    private SchemaUtil() {}
 
     public static String checkNotEmpty(String value, String name)
     {

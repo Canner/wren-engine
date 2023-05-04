@@ -258,8 +258,6 @@ public final class CannerClient
         }
 
         @Override
-        public void close()
-        {
-        }
+        public void close() {}
     }
 }

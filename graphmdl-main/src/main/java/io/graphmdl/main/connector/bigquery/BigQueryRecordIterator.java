@@ -63,9 +63,7 @@ public class BigQueryRecordIterator
     }
 
     @Override
-    public void close()
-    {
-    }
+    public void close() {}
 
     @Override
     public boolean hasNext()

@@ -28,9 +28,7 @@ import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 
 public class ScopeAnalyzer
 {
-    private ScopeAnalyzer()
-    {
-    }
+    private ScopeAnalyzer() {}
 
     public static ScopeAnalysis analyze(GraphMDL graphMDL, Node node, SessionContext sessionContext)
     {
