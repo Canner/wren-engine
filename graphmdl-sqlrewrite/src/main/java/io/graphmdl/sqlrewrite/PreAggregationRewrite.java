@@ -13,7 +13,6 @@
  */
 package io.graphmdl.sqlrewrite;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
@@ -64,14 +63,15 @@ public class PreAggregationRewrite
     {
         PreAggregationAnalysis aggregationAnalysis = new PreAggregationAnalysis();
         Statement rewritten = (Statement) new Rewriter(sessionContext, converter, graphMDL, aggregationAnalysis).process(statement, Optional.empty());
-        if (aggregationAnalysis.onlyPreAggregationTables()) {
+        if (rewritten instanceof Query
+                && aggregationAnalysis.onlyPreAggregationTables()) {
             return Optional.of(rewritten);
         }
         return Optional.empty();
     }
 
     private static class Rewriter
-            extends QueryOnlyBaseRewriter<Optional<Scope>>
+            extends BaseRewriter<Optional<Scope>>
     {
         private final SessionContext sessionContext;
         private final Function<CatalogSchemaTableName, Optional<String>> converter;
@@ -166,10 +166,12 @@ public class PreAggregationRewrite
                     visitedAggregationTables.put(QualifiedName.of(tableName), preAggregationTable);
                     visitedAggregationTables.put(QualifiedName.of(schemaName, tableName), preAggregationTable);
                     visitedAggregationTables.put(QualifiedName.of(catalogSchemaTableName.getCatalogName(), schemaName, tableName), preAggregationTable);
-                    return new Table(
-                            node.getLocation().get(),
-                            QualifiedName.of(preAggregationTable),
-                            qualifiedName(catalogSchemaTableName));
+                    if (node.getLocation().isPresent()) {
+                        return new Table(
+                                node.getLocation().get(),
+                                QualifiedName.of(preAggregationTable));
+                    }
+                    return new Table(QualifiedName.of(preAggregationTable));
                 }
             }
             return node;
@@ -201,14 +203,6 @@ public class PreAggregationRewrite
 
             return Optional.of(withScopeBuilder.build());
         }
-    }
-
-    protected static QualifiedName qualifiedName(CatalogSchemaTableName table)
-    {
-        return QualifiedName.of(ImmutableList.of(
-                new Identifier(table.getCatalogName()),
-                identifier(table.getSchemaTableName().getSchemaName()),
-                identifier(table.getSchemaTableName().getTableName())));
     }
 
     protected static Identifier identifier(String name)

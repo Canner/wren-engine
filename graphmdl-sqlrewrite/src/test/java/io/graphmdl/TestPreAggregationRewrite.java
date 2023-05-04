@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Column;
 import io.graphmdl.sqlrewrite.PreAggregationRewrite;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -53,7 +52,7 @@ public class TestPreAggregationRewrite
     private SqlParser sqlParser;
     private GraphMDL graphMDL;
 
-    private static final Map<CatalogSchemaTableName, String> PRE_AGG =
+    private static final Map<CatalogSchemaTableName, String> METRIC_PREAGG_NAME_MAPPING =
             ImmutableMap.<CatalogSchemaTableName, String>builder()
                     .put(new CatalogSchemaTableName("graphmdl", "test", "Collection"), "table_Collection")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "AvgCollection"), "table_AvgCollection")
@@ -85,7 +84,7 @@ public class TestPreAggregationRewrite
                                 List.of(
                                         column("author", VARCHAR, null, true),
                                         column("album_name", VARCHAR, null, true, "Album.name")),
-                                List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)")),
+                                List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))),
@@ -96,7 +95,7 @@ public class TestPreAggregationRewrite
                                 List.of(
                                         column("author", VARCHAR, null, true),
                                         column("album_name", VARCHAR, null, true, "Album.name")),
-                                List.of(Column.column("price", INTEGER, null, true, "avg(Album.price)")),
+                                List.of(column("price", INTEGER, null, true, "avg(Album.price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))),
@@ -107,7 +106,7 @@ public class TestPreAggregationRewrite
                                 List.of(
                                         column("author", VARCHAR, null, true),
                                         column("album_name", VARCHAR, null, true, "Album.name")),
-                                List.of(Column.column("price", INTEGER, null, true, "avg(Album.price)")),
+                                List.of(column("price", INTEGER, null, true, "avg(Album.price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))),
@@ -487,6 +486,6 @@ public class TestPreAggregationRewrite
 
     private Optional<String> toPreAggregationTable(CatalogSchemaTableName tableName)
     {
-        return Optional.ofNullable(PRE_AGG.get(tableName));
+        return Optional.ofNullable(METRIC_PREAGG_NAME_MAPPING.get(tableName));
     }
 }

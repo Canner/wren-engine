@@ -115,15 +115,16 @@ public class TestPreAggregation
             assertThat(count).isEqualTo(100);
         }
 
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from Revenue where custkey = ?");
+        try (Connection connection = createConnection();
+                PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from Revenue where custkey = ?")) {
             stmt.setObject(1, 1202);
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getLong("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
-            assertThat(resultSet.getLong("custkey")).isEqualTo(1202L);
-            assertThat(resultSet.next()).isFalse();
+            try (ResultSet resultSet = stmt.executeQuery()) {
+                resultSet.next();
+                assertThatNoException().isThrownBy(() -> resultSet.getLong("custkey"));
+                assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
+                assertThat(resultSet.getLong("custkey")).isEqualTo(1202L);
+                assertThat(resultSet.next()).isFalse();
+            }
         }
     }
 

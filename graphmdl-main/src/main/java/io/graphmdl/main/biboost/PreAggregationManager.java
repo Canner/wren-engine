@@ -127,7 +127,7 @@ public class PreAggregationManager
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
             throws SQLException
     {
-        return DuckdbRecordIterator.of(duckdbClient.prepareStatement(sql, parameters));
+        return DuckdbRecordIterator.of(duckdbClient.executeQuery(sql, parameters));
     }
 
     private CompletableFuture<MetricTablePair> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
@@ -214,13 +214,11 @@ public class PreAggregationManager
     {
         try {
             Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-            Optional<Statement> rewrittenStatement = PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL);
-            if (rewrittenStatement.isPresent()) {
-                return Optional.of(getFormattedSql(rewrittenStatement.get(), sqlParser));
-            }
+            return PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL)
+                    .map(rewrittenStatement -> getFormattedSql(rewrittenStatement, sqlParser));
         }
         catch (Exception e) {
-            LOG.error("Failed to rewrite pre-aggregation for statement: %s", sql, e);
+            LOG.error(e, "Failed to rewrite pre-aggregation for statement: %s", sql);
         }
         return Optional.empty();
     }

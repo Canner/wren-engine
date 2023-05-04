@@ -37,27 +37,24 @@ import static io.graphmdl.base.type.VarcharType.VARCHAR;
 
 public final class DuckdbType
 {
-    private static final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap;
+    public static final DuckdbType DUCKDB_TYPE = new DuckdbType();
+    // other types LIST, ENUM, HUGEINT, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP, BLOB
+    private final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()
+            .put(Types.BOOLEAN, BOOLEAN)
+            .put(Types.TINYINT, TINYINT)
+            .put(Types.SMALLINT, SMALLINT)
+            .put(Types.INTEGER, INTEGER)
+            .put(Types.BIGINT, BIGINT)
+            .put(Types.FLOAT, REAL)
+            .put(Types.DOUBLE, DOUBLE)
+            .put(Types.DECIMAL, NUMERIC)
+            .put(Types.VARCHAR, VARCHAR)
+            .put(Types.DATE, DATE)
+            .put(Types.TIMESTAMP, TIMESTAMP)
+            .put(Types.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE)
+            .build();
 
-    static {
-        // other types LIST, ENUM, HUGEINT, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP, BLOB
-        duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()
-                .put(Types.BOOLEAN, BOOLEAN)
-                .put(Types.TINYINT, TINYINT)
-                .put(Types.SMALLINT, SMALLINT)
-                .put(Types.INTEGER, INTEGER)
-                .put(Types.BIGINT, BIGINT)
-                .put(Types.FLOAT, REAL)
-                .put(Types.DOUBLE, DOUBLE)
-                .put(Types.DECIMAL, NUMERIC)
-                .put(Types.VARCHAR, VARCHAR)
-                .put(Types.DATE, DATE)
-                .put(Types.TIMESTAMP, TIMESTAMP)
-                .put(Types.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE)
-                .build();
-    }
-
-    public static PGType<?> toPGType(int type)
+    public PGType<?> toPGType(int type)
     {
         return Optional.ofNullable(duckdbTypeToPgTypeMap.get(type))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + type));

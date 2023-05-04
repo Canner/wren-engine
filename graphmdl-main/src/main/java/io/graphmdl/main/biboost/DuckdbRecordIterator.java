@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.duckdb.DuckdbType;
 import io.graphmdl.connector.jdbc.JdbcRecordIterator;
 
 import java.io.IOException;
@@ -26,6 +25,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 
+import static io.graphmdl.connector.duckdb.DuckdbType.DUCKDB_TYPE;
 import static java.util.Objects.requireNonNull;
 
 public class DuckdbRecordIterator
@@ -48,7 +48,7 @@ public class DuckdbRecordIterator
         ImmutableList.Builder<PGType> typeBuilder = ImmutableList.builder();
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             int columnType = resultSetMetaData.getColumnType(i);
-            PGType<?> pgType = DuckdbType.toPGType(columnType);
+            PGType<?> pgType = DUCKDB_TYPE.toPGType(columnType);
             typeBuilder.add(pgType);
         }
         this.types = typeBuilder.build();

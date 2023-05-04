@@ -79,10 +79,11 @@ public final class DuckdbClient
         }
     }
 
-    public ResultSet prepareStatement(String sql, List<Parameter> parameters)
+    public ResultSet executeQuery(String sql, List<Parameter> parameters)
     {
+        PreparedStatement statement = null;
         try (Connection connection = createConnection()) {
-            PreparedStatement statement = connection.prepareStatement(sql);
+            statement = connection.prepareStatement(sql);
             for (int i = 0; i < parameters.size(); i++) {
                 statement.setObject(i + 1, parameters.get(i).getValue());
             }
@@ -90,6 +91,14 @@ public final class DuckdbClient
             return statement.executeQuery();
         }
         catch (SQLException se) {
+            try {
+                if (statement != null) {
+                    statement.close();
+                }
+            }
+            catch (SQLException e) {
+                // ignore
+            }
             throw new RuntimeException(se);
         }
     }
