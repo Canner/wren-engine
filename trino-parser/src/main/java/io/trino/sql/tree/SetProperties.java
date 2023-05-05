@@ -22,59 +22,67 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public final class CallArgument
-        extends Node
+public final class SetProperties
+        extends Statement
 {
-    private final Optional<Identifier> name;
-    private final Expression value;
-
-    public CallArgument(Expression value)
+    public enum Type
     {
-        this(Optional.empty(), Optional.empty(), value);
+        TABLE, MATERIALIZED_VIEW
     }
 
-    public CallArgument(NodeLocation location, Expression value)
+    private final Type type;
+    private final QualifiedName name;
+    private final List<Property> properties;
+
+    public SetProperties(Type type, QualifiedName name, List<Property> properties)
     {
-        this(Optional.of(location), Optional.empty(), value);
+        this(Optional.empty(), type, name, properties);
     }
 
-    public CallArgument(Identifier name, Expression value)
+    public SetProperties(NodeLocation location, Type type, QualifiedName name, List<Property> properties)
     {
-        this(Optional.empty(), Optional.of(name), value);
+        this(Optional.of(location), type, name, properties);
     }
 
-    public CallArgument(NodeLocation location, Identifier name, Expression value)
-    {
-        this(Optional.of(location), Optional.of(name), value);
-    }
-
-    public CallArgument(Optional<NodeLocation> location, Optional<Identifier> name, Expression value)
+    private SetProperties(Optional<NodeLocation> location, Type type, QualifiedName name, List<Property> properties)
     {
         super(location);
+        this.type = requireNonNull(type, "type is null");
         this.name = requireNonNull(name, "name is null");
-        this.value = requireNonNull(value, "value is null");
+        this.properties = ImmutableList.copyOf(requireNonNull(properties, "properties is null"));
     }
 
-    public Optional<Identifier> getName()
+    public Type getType()
+    {
+        return type;
+    }
+
+    public QualifiedName getName()
     {
         return name;
     }
 
-    public Expression getValue()
+    public List<Property> getProperties()
     {
-        return value;
+        return properties;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitCallArgument(this, context);
+        return visitor.visitSetProperties(this, context);
     }
 
     @Override
     public List<Node> getChildren()
     {
-        return ImmutableList.of(value);
+        return ImmutableList.of();
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(type, name, properties);
     }
 
     @Override
@@ -86,24 +94,19 @@ public final class CallArgument
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        CallArgument o = (CallArgument) obj;
-        return Objects.equals(name, o.name) &&
-                Objects.equals(value, o.value);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(name, value);
+        SetProperties o = (SetProperties) obj;
+        return type == o.type &&
+                Objects.equals(name, o.name) &&
+                Objects.equals(properties, o.properties);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("name", name.orElse(null))
-                .add("value", value)
-                .omitNullValues()
+                .add("type", type)
+                .add("name", name)
+                .add("properties", properties)
                 .toString();
     }
 }

@@ -48,7 +48,8 @@ public class Extract
         MINUTE,
         SECOND,
         TIMEZONE_MINUTE,
-        TIMEZONE_HOUR
+        TIMEZONE_HOUR,
+        EPOCH // for pg extraction function
     }
 
     public Extract(Expression expression, Field field)

@@ -28,9 +28,10 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
-import io.trino.sql.tree.LogicalBinaryExpression;
+import io.trino.sql.tree.LogicalExpression;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.QualifiedName;
@@ -188,7 +189,7 @@ public final class QueryUtil
 
     public static Expression logicalAnd(Expression left, Expression right)
     {
-        return new LogicalBinaryExpression(LogicalBinaryExpression.Operator.AND, left, right);
+        return LogicalExpression.and(left, right);
     }
 
     public static Expression equal(Expression left, Expression right)
@@ -335,6 +336,25 @@ public final class QueryUtil
         return simpleQuery(
                 selectList(new AllColumns()),
                 aliased(values, "t", ImmutableList.of(columnName)));
+    }
+
+    // TODO pass column types
+    public static Query emptyQuery(List<String> columns)
+    {
+        Select select = selectList(columns.stream()
+                .map(column -> new SingleColumn(new NullLiteral(), QueryUtil.identifier(column)))
+                .toArray(SelectItem[]::new));
+        Optional<Expression> where = Optional.of(FALSE_LITERAL);
+        return query(new QuerySpecification(
+                select,
+                Optional.empty(),
+                where,
+                Optional.empty(),
+                Optional.empty(),
+                ImmutableList.of(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty()));
     }
 
     public static Query query(QueryBody body)

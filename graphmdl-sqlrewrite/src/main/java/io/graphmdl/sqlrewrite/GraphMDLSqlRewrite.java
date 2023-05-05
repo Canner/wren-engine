@@ -324,7 +324,7 @@ public class GraphMDLSqlRewrite
             Optional<QualifiedName> originalTableName = requireNonNull(getQualifiedName(left)).getPrefix();
 
             if (originalTableName.isPresent() && originalTableName.get().getSuffix().equals(baseModelName)) {
-                left = new DereferenceExpression(aliasedName, left.getField());
+                left = new DereferenceExpression(aliasedName, left.getField().orElseThrow());
             }
             return joinOn(equal(left, comparisonExpression.getRight()));
         }

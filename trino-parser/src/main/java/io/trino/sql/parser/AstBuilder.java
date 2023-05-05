@@ -57,7 +57,9 @@ import io.trino.sql.tree.DataTypeParameter;
 import io.trino.sql.tree.DateTimeDataType;
 import io.trino.sql.tree.Deallocate;
 import io.trino.sql.tree.DecimalLiteral;
+import io.trino.sql.tree.Declare;
 import io.trino.sql.tree.Delete;
+import io.trino.sql.tree.Deny;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.DescribeInput;
 import io.trino.sql.tree.DescribeOutput;
@@ -80,6 +82,7 @@ import io.trino.sql.tree.ExplainOption;
 import io.trino.sql.tree.ExplainType;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Extract;
+import io.trino.sql.tree.FetchCursor;
 import io.trino.sql.tree.FetchFirst;
 import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
@@ -98,6 +101,7 @@ import io.trino.sql.tree.GroupingOperation;
 import io.trino.sql.tree.GroupingSets;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.IfExpression;
+import io.trino.sql.tree.ImpersonateUser;
 import io.trino.sql.tree.InListExpression;
 import io.trino.sql.tree.InPredicate;
 import io.trino.sql.tree.Insert;
@@ -117,7 +121,7 @@ import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.LikeClause;
 import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Limit;
-import io.trino.sql.tree.LogicalBinaryExpression;
+import io.trino.sql.tree.LogicalExpression;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.MeasureDefinition;
 import io.trino.sql.tree.Merge;
@@ -155,11 +159,13 @@ import io.trino.sql.tree.QuantifiedComparisonExpression;
 import io.trino.sql.tree.QuantifiedPattern;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QueryBody;
+import io.trino.sql.tree.QueryPeriod;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.RangeQuantifier;
 import io.trino.sql.tree.RefreshMaterializedView;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.RenameColumn;
+import io.trino.sql.tree.RenameMaterializedView;
 import io.trino.sql.tree.RenameSchema;
 import io.trino.sql.tree.RenameTable;
 import io.trino.sql.tree.RenameView;
@@ -176,6 +182,7 @@ import io.trino.sql.tree.SearchedCaseExpression;
 import io.trino.sql.tree.Select;
 import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SetPath;
+import io.trino.sql.tree.SetProperties;
 import io.trino.sql.tree.SetRole;
 import io.trino.sql.tree.SetSchemaAuthorization;
 import io.trino.sql.tree.SetSession;
@@ -206,11 +213,13 @@ import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.SubsetDefinition;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableElement;
+import io.trino.sql.tree.TableExecute;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
 import io.trino.sql.tree.TransactionAccessMode;
 import io.trino.sql.tree.TransactionMode;
+import io.trino.sql.tree.TruncateTable;
 import io.trino.sql.tree.TryExpression;
 import io.trino.sql.tree.TypeParameter;
 import io.trino.sql.tree.Union;
@@ -237,9 +246,13 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
@@ -332,7 +345,7 @@ class AstBuilder
 
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
 
         return new CreateSchema(
@@ -386,7 +399,7 @@ class AstBuilder
 
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
 
         return new CreateTableAsSelect(
@@ -409,7 +422,7 @@ class AstBuilder
         }
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
         return new CreateTable(
                 getLocation(context),
@@ -430,7 +443,7 @@ class AstBuilder
 
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
 
         return new CreateMaterializedView(
@@ -446,8 +459,9 @@ class AstBuilder
     @Override
     public Node visitRefreshMaterializedView(SqlBaseParser.RefreshMaterializedViewContext context)
     {
-        return new RefreshMaterializedView(Optional.of(getLocation(context)),
-                getQualifiedName(context.qualifiedName()));
+        return new RefreshMaterializedView(
+                Optional.of(getLocation(context)),
+                new Table(getQualifiedName(context.qualifiedName())));
     }
 
     @Override
@@ -484,7 +498,7 @@ class AstBuilder
         }
 
         return new Insert(
-                getQualifiedName(context.qualifiedName()),
+                new Table(getQualifiedName(context.qualifiedName())),
                 columnAliases,
                 (Query) visit(context.query()));
     }
@@ -512,6 +526,12 @@ class AstBuilder
     public Node visitUpdateAssignment(SqlBaseParser.UpdateAssignmentContext context)
     {
         return new UpdateAssignment((Identifier) visit(context.identifier()), (Expression) visit(context.expression()));
+    }
+
+    @Override
+    public Node visitTruncateTable(SqlBaseParser.TruncateTableContext context)
+    {
+        return new TruncateTable(getLocation(context), getQualifiedName(context.qualifiedName()));
     }
 
     @Override
@@ -569,6 +589,17 @@ class AstBuilder
     }
 
     @Override
+    public Node visitSetTableProperties(SqlBaseParser.SetTablePropertiesContext context)
+    {
+        List<Property> properties = ImmutableList.of();
+        if (context.propertyAssignments() != null) {
+            properties = visit(context.propertyAssignments().property(), Property.class);
+        }
+
+        return new SetProperties(getLocation(context), SetProperties.Type.TABLE, getQualifiedName(context.qualifiedName()), properties);
+    }
+
+    @Override
     public Node visitCommentTable(SqlBaseParser.CommentTableContext context)
     {
         Optional<String> comment = Optional.empty();
@@ -609,7 +640,7 @@ class AstBuilder
     {
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
         return new Analyze(
                 getLocation(context),
@@ -647,6 +678,21 @@ class AstBuilder
     }
 
     @Override
+    public Node visitTableExecute(SqlBaseParser.TableExecuteContext context)
+    {
+        List<CallArgument> arguments = ImmutableList.of();
+        if (context.callArgument() != null) {
+            arguments = this.visit(context.callArgument(), CallArgument.class);
+        }
+
+        return new TableExecute(
+                new Table(getLocation(context), getQualifiedName(context.tableName)),
+                (Identifier) visit(context.procedureName),
+                arguments,
+                visitIfPresent(context.booleanExpression(), Expression.class));
+    }
+
+    @Override
     public Node visitCreateView(SqlBaseParser.CreateViewContext context)
     {
         Optional<String> comment = Optional.empty();
@@ -678,12 +724,28 @@ class AstBuilder
     }
 
     @Override
+    public Node visitRenameMaterializedView(SqlBaseParser.RenameMaterializedViewContext context)
+    {
+        return new RenameMaterializedView(getLocation(context), getQualifiedName(context.from), getQualifiedName(context.to), context.EXISTS() != null);
+    }
+
+    @Override
     public Node visitSetViewAuthorization(SqlBaseParser.SetViewAuthorizationContext context)
     {
         return new SetViewAuthorization(
                 getLocation(context),
                 getQualifiedName(context.qualifiedName()),
                 getPrincipalSpecification(context.principal()));
+    }
+
+    @Override
+    public Node visitSetMaterializedViewProperties(SqlBaseParser.SetMaterializedViewPropertiesContext context)
+    {
+        return new SetProperties(
+                getLocation(context),
+                SetProperties.Type.MATERIALIZED_VIEW,
+                getQualifiedName(context.qualifiedName()),
+                visit(context.propertyAssignments().property(), Property.class));
     }
 
     @Override
@@ -794,7 +856,41 @@ class AstBuilder
     @Override
     public Node visitProperty(SqlBaseParser.PropertyContext context)
     {
-        return new Property(getLocation(context), (Identifier) visit(context.identifier()), (Expression) visit(context.expression()));
+        NodeLocation location = getLocation(context);
+        Identifier name = (Identifier) visit(context.identifier());
+        SqlBaseParser.PropertyValueContext valueContext = context.propertyValue();
+        if (valueContext instanceof SqlBaseParser.DefaultPropertyValueContext) {
+            return new Property(location, name);
+        }
+        Expression value = (Expression) visit(((SqlBaseParser.NonDefaultPropertyValueContext) valueContext).expression());
+        return new Property(location, name, value);
+    }
+
+    // pg syntax
+    @Override
+    public Node visitDeclareCursor(SqlBaseParser.DeclareCursorContext ctx)
+    {
+        NodeLocation location = getLocation(ctx);
+        Identifier name = (Identifier) visit(ctx.name);
+        Query body = (Query) visit(ctx.body);
+        return new Declare(location, name, body);
+    }
+
+    // pg syntax
+    @Override
+    public Node visitFetchCursor(SqlBaseParser.FetchCursorContext ctx)
+    {
+        NodeLocation location = getLocation(ctx);
+        Integer rowCount = Integer.parseInt(ctx.row.getText());
+        Identifier cursor = (Identifier) visit(ctx.cursor);
+        return new FetchCursor(location, rowCount, cursor);
+    }
+
+    // added by canner
+    @Override
+    public Node visitImpersonateUser(SqlBaseParser.ImpersonateUserContext ctx)
+    {
+        return new ImpersonateUser(getLocation(ctx), (Expression) visit(ctx.expression()));
     }
 
     // ********************** query expressions ********************
@@ -878,6 +974,11 @@ class AstBuilder
             Expression rowCount;
             if (context.limit.ALL() != null) {
                 rowCount = new AllRows(getLocation(context.limit.ALL()));
+            }
+            else if (context.limit.string() != null) {
+                // for pg style limit clause
+                StringLiteral literal = (StringLiteral) visit(context.limit.string());
+                rowCount = new LongLiteral(literal.getLocation().get(), literal.getValue());
             }
             else if (context.limit.rowCount().INTEGER_VALUE() != null) {
                 rowCount = new LongLiteral(getLocation(context.limit.rowCount().INTEGER_VALUE()), context.limit.getText());
@@ -1325,6 +1426,38 @@ class AstBuilder
     }
 
     @Override
+    public Node visitDeny(SqlBaseParser.DenyContext context)
+    {
+        Optional<List<String>> privileges;
+        if (context.ALL() != null) {
+            privileges = Optional.empty();
+        }
+        else {
+            privileges = Optional.of(context.privilege().stream()
+                    .map(SqlBaseParser.PrivilegeContext::getText)
+                    .collect(toList()));
+        }
+
+        Optional<GrantOnType> type;
+        if (context.SCHEMA() != null) {
+            type = Optional.of(GrantOnType.SCHEMA);
+        }
+        else if (context.TABLE() != null) {
+            type = Optional.of(GrantOnType.TABLE);
+        }
+        else {
+            type = Optional.empty();
+        }
+
+        return new Deny(
+                getLocation(context),
+                privileges,
+                type,
+                getQualifiedName(context.qualifiedName()),
+                getPrincipalSpecification(context.grantee));
+    }
+
+    @Override
     public Node visitRevoke(SqlBaseParser.RevokeContext context)
     {
         Optional<List<String>> privileges;
@@ -1414,13 +1547,56 @@ class AstBuilder
     }
 
     @Override
-    public Node visitLogicalBinary(SqlBaseParser.LogicalBinaryContext context)
+    public Node visitOr(SqlBaseParser.OrContext context)
     {
-        return new LogicalBinaryExpression(
-                getLocation(context.operator),
-                getLogicalBinaryOperator(context.operator),
-                (Expression) visit(context.left),
-                (Expression) visit(context.right));
+        List<ParserRuleContext> terms = flatten(context, element -> {
+            if (element instanceof SqlBaseParser.OrContext) {
+                SqlBaseParser.OrContext or = (SqlBaseParser.OrContext) element;
+                return Optional.of(or.booleanExpression());
+            }
+
+            return Optional.empty();
+        });
+
+        return new LogicalExpression(getLocation(context), LogicalExpression.Operator.OR, visit(terms, Expression.class));
+    }
+
+    @Override
+    public Node visitAnd(SqlBaseParser.AndContext context)
+    {
+        List<ParserRuleContext> terms = flatten(context, element -> {
+            if (element instanceof SqlBaseParser.AndContext) {
+                SqlBaseParser.AndContext and = (SqlBaseParser.AndContext) element;
+                return Optional.of(and.booleanExpression());
+            }
+
+            return Optional.empty();
+        });
+
+        return new LogicalExpression(getLocation(context), LogicalExpression.Operator.AND, visit(terms, Expression.class));
+    }
+
+    private static List<ParserRuleContext> flatten(ParserRuleContext root, Function<ParserRuleContext, Optional<List<? extends ParserRuleContext>>> extractChildren)
+    {
+        List<ParserRuleContext> result = new ArrayList<>();
+        Deque<ParserRuleContext> pending = new ArrayDeque<>();
+        pending.push(root);
+
+        while (!pending.isEmpty()) {
+            ParserRuleContext next = pending.pop();
+
+            Optional<List<? extends ParserRuleContext>> children = extractChildren.apply(next);
+            if (!children.isPresent()) {
+                result.add(next);
+            }
+            else {
+                for (int i = children.get().size() - 1; i >= 0; i--) {
+                    pending.push(children.get().get(i));
+                }
+            }
+        }
+
+        return result;
     }
 
     // *************** from clause *****************
@@ -1615,6 +1791,9 @@ class AstBuilder
     @Override
     public Node visitTableName(SqlBaseParser.TableNameContext context)
     {
+        if (context.queryPeriod() != null) {
+            return new Table(getLocation(context), getQualifiedName(context.qualifiedName()), (QueryPeriod) visit(context.queryPeriod()));
+        }
         return new Table(getLocation(context), getQualifiedName(context.qualifiedName()));
     }
 
@@ -1627,6 +1806,8 @@ class AstBuilder
     @Override
     public Node visitUnnest(SqlBaseParser.UnnestContext context)
     {
+        checkPgSchema(context.IDENTIFIER()); // pg syntax
+
         return new Unnest(getLocation(context), visit(context.expression(), Expression.class), context.ORDINALITY() != null);
     }
 
@@ -2239,6 +2420,11 @@ class AstBuilder
             }
         }
 
+        List<Expression> arguments = visit(context.expression(), Expression.class);
+        if (context.label != null) {
+            arguments = ImmutableList.of(new DereferenceExpression(getLocation(context.label), (Identifier) visit(context.label)));
+        }
+
         return new FunctionCall(
                 Optional.of(getLocation(context)),
                 name,
@@ -2248,7 +2434,7 @@ class AstBuilder
                 distinct,
                 nulls,
                 mode,
-                visit(context.expression(), Expression.class));
+                arguments);
     }
 
     @Override
@@ -2295,7 +2481,7 @@ class AstBuilder
 
         List<Property> properties = ImmutableList.of();
         if (context.properties() != null) {
-            properties = visit(context.properties().property(), Property.class);
+            properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
 
         boolean nullable = context.NOT() == null;
@@ -2573,6 +2759,10 @@ class AstBuilder
         if (type.equalsIgnoreCase("interval")) {
             return IntervalLiteralUtil.parse(getLocation(context), value);
         }
+        // for PostgreSQL wire protocol, handle bytea binary pattern
+        if (type.equalsIgnoreCase("bytea") && value.startsWith("\\x")) {
+            return new BinaryLiteral(getLocation(context), value.substring(2));
+        }
 
         return new GenericLiteral(getLocation(context), type, value);
     }
@@ -2628,7 +2818,7 @@ class AstBuilder
     @Override
     public Node visitParameter(SqlBaseParser.ParameterContext context)
     {
-        Parameter parameter = new Parameter(getLocation(context), parameterPosition);
+        io.trino.sql.tree.Parameter parameter = new io.trino.sql.tree.Parameter(getLocation(context), parameterPosition);
         parameterPosition++;
         return parameter;
     }
@@ -2644,7 +2834,7 @@ class AstBuilder
     @Override
     public Node visitNamedArgument(SqlBaseParser.NamedArgumentContext context)
     {
-        return new CallArgument(getLocation(context), context.identifier().getText(), (Expression) visit(context.expression()));
+        return new CallArgument(getLocation(context), (Identifier) visit(context.identifier()), (Expression) visit(context.expression()));
     }
 
     @Override
@@ -2781,6 +2971,25 @@ class AstBuilder
                 getLocation(context),
                 new Identifier(getLocation(context.ARRAY()), context.ARRAY().getText(), false),
                 ImmutableList.of(new TypeParameter((DataType) visit(context.type()))));
+    }
+
+    @Override
+    public Node visitQueryPeriod(SqlBaseParser.QueryPeriodContext context)
+    {
+        QueryPeriod.RangeType type = getRangeType((Token) context.rangeType().getChild(0).getPayload());
+        Expression marker = (Expression) visit(context.valueExpression());
+        return new QueryPeriod(getLocation(context), type, marker);
+    }
+
+    @Override
+    public Node visitValueExpressionDefault(SqlBaseParser.ValueExpressionDefaultContext context)
+    {
+        // This is for pg wire protocol.
+        // We don't really support collate clause, so we just let it pass and do nothing.
+        if (context.children.size() == 2 && context.children.get(1) instanceof SqlBaseParser.CollateClauseContext) {
+            context.children.remove(1);
+        }
+        return super.visitValueExpressionDefault(context);
     }
 
     // ***************** helpers *****************
@@ -3122,18 +3331,6 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported sampling method: " + token.getText());
     }
 
-    private static LogicalBinaryExpression.Operator getLogicalBinaryOperator(Token token)
-    {
-        switch (token.getType()) {
-            case SqlBaseLexer.AND:
-                return LogicalBinaryExpression.Operator.AND;
-            case SqlBaseLexer.OR:
-                return LogicalBinaryExpression.Operator.OR;
-        }
-
-        throw new IllegalArgumentException("Unsupported operator: " + token.getText());
-    }
-
     private static SortItem.NullOrdering getNullOrderingType(Token token)
     {
         switch (token.getType()) {
@@ -3247,6 +3444,17 @@ class AstBuilder
     private static ParsingException parseError(String message, ParserRuleContext context)
     {
         return new ParsingException(message, null, context.getStart().getLine(), context.getStart().getCharPositionInLine() + 1);
+    }
+
+    private static QueryPeriod.RangeType getRangeType(Token token)
+    {
+        switch (token.getType()) {
+            case SqlBaseLexer.TIMESTAMP:
+                return QueryPeriod.RangeType.TIMESTAMP;
+            case SqlBaseLexer.VERSION:
+                return QueryPeriod.RangeType.VERSION;
+        }
+        throw new IllegalArgumentException("Unsupported query period range type: " + token.getText());
     }
 
     /**

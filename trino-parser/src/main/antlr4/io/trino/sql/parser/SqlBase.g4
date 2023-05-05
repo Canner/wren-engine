@@ -59,6 +59,7 @@ statement
     | DROP TABLE (IF EXISTS)? qualifiedName                            #dropTable
     | INSERT INTO qualifiedName columnAliases? query                   #insertInto
     | DELETE FROM qualifiedName (WHERE booleanExpression)?             #delete
+    | TRUNCATE TABLE qualifiedName                                     #truncateTable
     | COMMENT ON TABLE qualifiedName IS (string | NULL)                #commentTable
     | COMMENT ON COLUMN qualifiedName IS (string | NULL)               #commentColumn
     | ALTER TABLE (IF EXISTS)? from=qualifiedName
@@ -70,6 +71,12 @@ statement
     | ALTER TABLE (IF EXISTS)? tableName=qualifiedName
         DROP COLUMN (IF EXISTS)? column=qualifiedName                  #dropColumn
     | ALTER TABLE tableName=qualifiedName SET AUTHORIZATION principal  #setTableAuthorization
+    | ALTER TABLE tableName=qualifiedName
+        SET PROPERTIES propertyAssignments                             #setTableProperties
+    | ALTER TABLE tableName=qualifiedName
+        EXECUTE procedureName=identifier
+        ('(' (callArgument (',' callArgument)*)? ')')?
+        (WHERE where=booleanExpression)?                               #tableExecute
     | ANALYZE qualifiedName (WITH properties)?                         #analyze
     | CREATE (OR REPLACE)? MATERIALIZED VIEW
         (IF NOT EXISTS)? qualifiedName
@@ -80,6 +87,10 @@ statement
         (SECURITY (DEFINER | INVOKER))? AS query                       #createView
     | REFRESH MATERIALIZED VIEW qualifiedName                          #refreshMaterializedView
     | DROP MATERIALIZED VIEW (IF EXISTS)? qualifiedName                #dropMaterializedView
+    | ALTER MATERIALIZED VIEW (IF EXISTS)? from=qualifiedName
+        RENAME TO to=qualifiedName                                     #renameMaterializedView
+    | ALTER MATERIALIZED VIEW qualifiedName
+        SET PROPERTIES propertyAssignments                             #setMaterializedViewProperties
     | DROP VIEW (IF EXISTS)? qualifiedName                             #dropView
     | ALTER VIEW from=qualifiedName RENAME TO to=qualifiedName         #renameView
     | ALTER VIEW from=qualifiedName SET AUTHORIZATION principal        #setViewAuthorization
@@ -107,6 +118,10 @@ statement
         ON (SCHEMA | TABLE)? qualifiedName
         TO grantee=principal
         (WITH GRANT OPTION)?                                           #grant
+    | DENY
+        (privilege (',' privilege)* | ALL PRIVILEGES)
+        ON (SCHEMA | TABLE)? qualifiedName
+        TO grantee=principal                                           #deny
     | REVOKE
         (GRANT OPTION FOR)?
         (privilege (',' privilege)* | ALL PRIVILEGES)
@@ -154,6 +169,11 @@ statement
         (WHERE where=booleanExpression)?                               #update
     | MERGE INTO qualifiedName (AS? identifier)?
         USING relation ON expression mergeCase+                        #merge
+    | DECLARE name=identifier
+        ('BINARY')? ('ASENSITIVE' | 'INSENSITIVE')? (('NO')? 'SCROLL')?
+        CURSOR ((WITH | WITHOUT) 'HOLD')? FOR body=query               #declareCursor // pg syntax
+    | FETCH row=INTEGER_VALUE (FROM | IN) cursor=identifier            #fetchCursor // pg syntax
+    | IMPERSONATE expression                                           #impersonateUser // added by canner
     ;
 
 query
@@ -178,25 +198,45 @@ likeClause
     ;
 
 properties
-    : '(' property (',' property)* ')'
+    : '(' propertyAssignments ')'
+    ;
+
+propertyAssignments
+    : property (',' property)*
     ;
 
 property
-    : identifier EQ expression
+    : identifier EQ propertyValue
+    ;
+
+propertyValue
+    : DEFAULT       #defaultPropertyValue
+    | expression    #nonDefaultPropertyValue
     ;
 
 queryNoWith
     : queryTerm
       (ORDER BY sortItem (',' sortItem)*)?
-      (OFFSET offset=rowCount (ROW | ROWS)?)?
-      ( (LIMIT limit=limitRowCount)
+      (((OFFSET offset=rowCount (ROW | ROWS)?)?
+      ( (LIMIT limit=limitRowCount pgCast?)
       | (FETCH (FIRST | NEXT) (fetchFirst=rowCount)? (ROW | ROWS) (ONLY | WITH TIES))
-      )?
+      )?)
+      |
+      // for wire protocol to support limit xx offset xx
+      (LIMIT limit=limitRowCount pgCast?)?
+      (OFFSET offset=rowCount (ROW | ROWS)?)?
+      )
+    ;
+
+// for wire protocol to support the syntax (limit xx::pgtype)
+pgCast
+    : (PG_CAST (IDENTIFIER '.')? identifier)
     ;
 
 limitRowCount
     : ALL
     | rowCount
+    | string // for pg syntax
     ;
 
 rowCount
@@ -371,9 +411,10 @@ columnAliases
     ;
 
 relationPrimary
-    : qualifiedName                                                   #tableName
+    : qualifiedName queryPeriod?                                      #tableName
     | '(' query ')'                                                   #subqueryRelation
     | UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest
+    | (IDENTIFIER '.')? UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest // pg syntax
     | functionExpression                                              #functionRelation  // pg syntax
     | LATERAL '(' query ')'                                           #lateral
     | '(' relation ')'                                                #parenthesizedRelation
@@ -384,10 +425,10 @@ expression
     ;
 
 booleanExpression
-    : valueExpression predicate[$valueExpression.ctx]?             #predicated
-    | NOT booleanExpression                                        #logicalNot
-    | left=booleanExpression operator=AND right=booleanExpression  #logicalBinary
-    | left=booleanExpression operator=OR right=booleanExpression   #logicalBinary
+    : valueExpression predicate[$valueExpression.ctx]?  #predicated
+    | NOT booleanExpression                             #logicalNot
+    | booleanExpression AND booleanExpression           #and
+    | booleanExpression OR booleanExpression            #or
     ;
 
 // workaround for https://github.com/antlr/antlr4/issues/780
@@ -412,7 +453,8 @@ functionExpression
     ;
 
 valueExpression
-    : primaryExpression                                                                 #valueExpressionDefault
+    : primaryExpression (collateClause)?                                                #valueExpressionDefault // pg syntax
+    | primaryExpression                                                                 #valueExpressionDefault
     | valueExpression AT timeZoneSpecifier                                              #atTimeZone
     | operator=(MINUS | PLUS) valueExpression                                           #arithmeticUnary
     | left=valueExpression operator=(ASTERISK | SLASH | PERCENT) right=valueExpression  #arithmeticBinary
@@ -439,7 +481,8 @@ primaryExpression
     | name=LISTAGG '(' setQuantifier? expression (',' string)?
         (ON OVERFLOW listAggOverflowBehavior)? ')'
         (WITHIN GROUP '(' ORDER BY sortItem (',' sortItem)* ')')                          #listagg
-    | qualifiedName '(' ASTERISK ')' filter? over?                                        #functionCall
+    | processingMode? qualifiedName '(' (label=identifier '.')? ASTERISK ')'
+        filter? over?                                                                     #functionCall
     | processingMode? qualifiedName '(' (setQuantifier? expression (',' expression)*)?
         (ORDER BY sortItem (',' sortItem)*)? ')' filter? (nullTreatment? over)?           #functionCall
     | identifier over                                                                     #measure
@@ -467,7 +510,7 @@ primaryExpression
     | name=CURRENT_USER                                                                   #currentUser
     | name=CURRENT_CATALOG                                                                #currentCatalog
     // To support pg-style current_schema()
-    | name=CURRENT_SCHEMA ('(' ')')?                                                      #currentSchema
+    | (identifier '.')? name=CURRENT_SCHEMA ('(' ')')?                                    #currentSchema
     | name=CURRENT_PATH                                                                   #currentPath
     | SUBSTRING '(' valueExpression FROM valueExpression (FOR valueExpression)? ')'       #substring
     | NORMALIZE '(' valueExpression (',' normalForm)? ')'                                 #normalize
@@ -651,11 +694,20 @@ pathSpecification
     ;
 
 privilege
-    : SELECT | DELETE | INSERT | UPDATE
+    : CREATE | SELECT | DELETE | INSERT | UPDATE
     ;
 
 qualifiedName
     : identifier ('.' identifier)*
+    ;
+
+queryPeriod
+    : FOR rangeType AS OF end=valueExpression
+    ;
+
+rangeType
+    : TIMESTAMP
+    | VERSION
     ;
 
 grantor
@@ -692,29 +744,34 @@ quotedRegexMatch
     : OPERATOR '(' (IDENTIFIER '.')? REGEX_MATCH ')'
     ;
 
+collateClause
+    // pg syntax
+    : COLLATE ((IDENTIFIER | QUOTED_IDENTIFIER) '.')? (IDENTIFIER | QUOTED_IDENTIFIER | DEFAULT)
+    ;
+
 nonReserved
     // IMPORTANT: this rule must only contain tokens. Nested rules are not supported. See SqlParser.exitNonReserved
     : ADD | ADMIN | AFTER | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
     | BERNOULLI
-    | CALL | CASCADE | CATALOGS | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | COUNT | CURRENT
-    | DATA | DATE | DAY | DEFINE | DEFINER | DESC | DISTRIBUTED | DOUBLE
-    | EMPTY | ERROR | EXCLUDING | EXPLAIN
+    | CALL | CASCADE | CATALOGS | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | COUNT | CURRENT | COLLATE | CURSOR
+    | DATA | DATE | DAY | DEFAULT | DEFINE | DEFINER | DESC | DISTRIBUTED | DOUBLE | DECLARE
+    | EMPTY | ERROR | EXCLUDING | EXPLAIN | EPOCH
     | FETCH | FILTER | FINAL | FIRST | FOLLOWING | FORMAT | FUNCTIONS
-    | GRANT | GRANTED | GRANTS | GRAPHVIZ | GROUPS
+    | GRANT | DENY | GRANTED | GRANTS | GRAPHVIZ | GROUPS
     | HOUR
-    | IF | IGNORE | INCLUDING | INITIAL | INPUT | INTERVAL | INVOKER | IO | ISOLATION
+    | IF | IGNORE | INCLUDING | INITIAL | INPUT | INTERVAL | INVOKER | IO | ISOLATION | IMPERSONATE
     | JSON
     | LAST | LATERAL | LEVEL | LIMIT | LOCAL | LOGICAL
     | MAP | MATCH | MATCHED | MATCHES | MATCH_RECOGNIZE | MATERIALIZED | MEASURES | MERGE | MINUTE | MONTH
     | NEXT | NFC | NFD | NFKC | NFKD | NO | NONE | NULLIF | NULLS
-    | OFFSET | OMIT | ONE | ONLY | OPTION | ORDINALITY | OUTPUT | OVER | OVERFLOW | OPERATOR
+    | OF | OFFSET | OMIT | ONE | ONLY | OPTION | ORDINALITY | OUTPUT | OVER | OVERFLOW | OPERATOR
     | PARTITION | PARTITIONS | PAST | PATH | PATTERN | PER | PERMUTE | POSITION | PRECEDING | PRECISION | PRIVILEGES | PROPERTIES
     | RANGE | READ | REFRESH | RENAME | REPEATABLE | REPLACE | RESET | RESPECT | RESTRICT | REVOKE | ROLE | ROLES | ROLLBACK | ROW | ROWS | RUNNING
     | SCHEMA | SCHEMAS | SECOND | SECURITY | SEEK | SERIALIZABLE | SESSION | SET | SETS
     | SHOW | SOME | START | STATS | SUBSET | SUBSTRING | SYSTEM
     | TABLES | TABLESAMPLE | TEXT | TIES | TIME | TIMESTAMP | TO | TRANSACTION | TRUNCATE | TRY_CAST | TYPE
-    | UNBOUNDED | UNCOMMITTED | UNMATCHED| UPDATE | USE | USER | SESSION_USER
-    | VALIDATE | VERBOSE | VIEW
+    | UNBOUNDED | UNCOMMITTED | UNMATCHED | UPDATE | USE | USER | SESSION_USER
+    | VALIDATE | VERBOSE | VERSION | VIEW
     | WINDOW | WITHIN | WITHOUT | WORK | WRITE
     | YEAR
     | ZONE
@@ -741,6 +798,7 @@ CASCADE: 'CASCADE';
 CASE: 'CASE';
 CAST: 'CAST';
 CATALOGS: 'CATALOGS';
+COLLATE: 'COLLATE'; // pg syntax
 COLUMN: 'COLUMN';
 COLUMNS: 'COLUMNS';
 COMMENT: 'COMMENT';
@@ -760,12 +818,16 @@ CURRENT_SCHEMA: 'CURRENT_SCHEMA';
 CURRENT_TIME: 'CURRENT_TIME';
 CURRENT_TIMESTAMP: 'CURRENT_TIMESTAMP';
 CURRENT_USER: 'CURRENT_USER';
+CURSOR: 'CURSOR'; // pg syntax
 DATA: 'DATA';
 DATE: 'DATE';
 DAY: 'DAY';
 DEALLOCATE: 'DEALLOCATE';
+DECLARE: 'DECLARE'; // pg syntax
+DEFAULT: 'DEFAULT';
 DEFINER: 'DEFINER';
 DELETE: 'DELETE';
+DENY: 'DENY';
 DESC: 'DESC';
 DESCRIBE: 'DESCRIBE';
 DEFINE: 'DEFINE';
@@ -776,6 +838,7 @@ DROP: 'DROP';
 ELSE: 'ELSE';
 EMPTY: 'EMPTY';
 END: 'END';
+EPOCH: 'EPOCH'; // pg syntax
 ERROR: 'ERROR';
 ESCAPE: 'ESCAPE';
 EXCEPT: 'EXCEPT';
@@ -806,6 +869,7 @@ HAVING: 'HAVING';
 HOUR: 'HOUR';
 IF: 'IF';
 IGNORE: 'IGNORE';
+IMPERSONATE: 'IMPERSONATE'; // added by canner
 IN: 'IN';
 INCLUDING: 'INCLUDING';
 INITIAL: 'INITIAL';
@@ -857,6 +921,7 @@ NULLIF: 'NULLIF';
 NULLS: 'NULLS';
 OFFSET: 'OFFSET';
 OMIT: 'OMIT';
+OF: 'OF';
 ON: 'ON';
 ONE: 'ONE';
 ONLY: 'ONLY';
@@ -946,6 +1011,7 @@ USING: 'USING';
 VALIDATE: 'VALIDATE';
 VALUES: 'VALUES';
 VERBOSE: 'VERBOSE';
+VERSION: 'VERSION';
 VIEW: 'VIEW';
 WHEN: 'WHEN';
 WHERE: 'WHERE';

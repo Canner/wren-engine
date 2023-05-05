@@ -126,7 +126,7 @@ public class ScopeAwareRewrite
                 List<String> baseQualifiedName = getParts(dereferenceExpression.getBase());
                 ImmutableList.Builder<String> builder = ImmutableList.builder();
                 builder.addAll(baseQualifiedName);
-                builder.add(dereferenceExpression.getField().getValue());
+                builder.add(dereferenceExpression.getField().orElseThrow().getValue());
                 return builder.build();
             }
             else if (expression instanceof SubscriptExpression) {
@@ -152,7 +152,7 @@ public class ScopeAwareRewrite
         while (node instanceof DereferenceExpression || node instanceof SubscriptExpression) {
             if (node instanceof DereferenceExpression) {
                 DereferenceExpression dereferenceExpression = (DereferenceExpression) node;
-                builder.add(dereferenceExpression.getField());
+                builder.add(dereferenceExpression.getField().orElseThrow());
                 node = dereferenceExpression.getBase();
             }
             else {
@@ -162,7 +162,7 @@ public class ScopeAwareRewrite
                     base = (Identifier) subscriptExpression.getBase();
                 }
                 else {
-                    base = ((DereferenceExpression) subscriptExpression.getBase()).getField();
+                    base = ((DereferenceExpression) subscriptExpression.getBase()).getField().orElseThrow();
                 }
                 builder.add(new SubscriptExpression(base, subscriptExpression.getIndex()));
                 node = getNextPart(subscriptExpression);

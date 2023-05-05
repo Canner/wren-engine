@@ -285,13 +285,8 @@ public final class PostgreSqlRewrite
             else {
                 base = DereferenceExpression.from(name);
             }
-            if (node.getLocation().isPresent()) {
-                return new DereferenceExpression(
-                        node.getLocation().get(),
-                        base,
-                        node.getField());
-            }
             return new DereferenceExpression(
+                    node.getLocation(),
                     base,
                     node.getField());
         }

@@ -452,10 +452,11 @@ public abstract class DefaultTraversalVisitor<C>
     }
 
     @Override
-    protected Void visitLogicalBinaryExpression(LogicalBinaryExpression node, C context)
+    protected Void visitLogicalExpression(LogicalExpression node, C context)
     {
-        process(node.getLeft(), context);
-        process(node.getRight(), context);
+        for (Node child : node.getTerms()) {
+            process(child, context);
+        }
 
         return null;
     }
@@ -718,8 +719,9 @@ public abstract class DefaultTraversalVisitor<C>
     protected Void visitProperty(Property node, C context)
     {
         process(node.getName(), context);
-        process(node.getValue(), context);
-
+        if (!node.isSetToDefault()) {
+            process(node.getNonDefaultValue(), context);
+        }
         return null;
     }
 
@@ -752,6 +754,16 @@ public abstract class DefaultTraversalVisitor<C>
     protected Void visitAddColumn(AddColumn node, C context)
     {
         process(node.getColumn(), context);
+
+        return null;
+    }
+
+    @Override
+    protected Void visitCreateSchema(CreateSchema node, C context)
+    {
+        for (Property property : node.getProperties()) {
+            process(property, context);
+        }
 
         return null;
     }
@@ -895,7 +907,7 @@ public abstract class DefaultTraversalVisitor<C>
     @Override
     protected Void visitLabelDereference(LabelDereference node, C context)
     {
-        process(node.getReference(), context);
+        node.getReference().ifPresent(reference -> process(reference, context));
 
         return null;
     }
