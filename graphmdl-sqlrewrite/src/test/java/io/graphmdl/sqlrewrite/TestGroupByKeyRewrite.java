@@ -79,7 +79,7 @@ public class TestGroupByKeyRewrite
     public void testGroupByIndex()
     {
         String sql = "select author, count(*) from Book group by 1";
-        String expected = "select author, count(*) from Book group by author.userId";
+        String expected = "select author, count(*) from Book group by author.userId, 1";
         assertThat(rewrite(sql)).isEqualTo(parse(expected));
     }
 
