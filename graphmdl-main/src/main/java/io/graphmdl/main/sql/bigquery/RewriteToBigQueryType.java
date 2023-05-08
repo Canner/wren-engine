@@ -70,10 +70,12 @@ public class RewriteToBigQueryType
             // To overcome this limitation, we convert the query to CAST([literal] AS [type]).
             // When working with JSON data, it is necessary to first use SAFE.PARSE_JSON to parse StringLiteral.
             if (node.getType().equalsIgnoreCase("JSON")) {
+                // If there is the '\"' character in the JSON string, BigQuery will try to find another '\"' in the following string, so we need to escape it.
+                String value = node.getValue().replace("\"", "\\\"");
                 return new Cast(
                         new FunctionCall(
                                 QualifiedName.of("SAFE", "PARSE_JSON"),
-                                List.of(new StringLiteral(node.getValue()))),
+                                List.of(new StringLiteral(value))),
                         new GenericDataType(Optional.empty(), new Identifier("JSON"), List.of()));
             }
             return new Cast(

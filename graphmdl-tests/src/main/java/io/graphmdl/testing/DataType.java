@@ -20,6 +20,7 @@ import io.graphmdl.base.type.ByteaType;
 import io.graphmdl.base.type.CharType;
 import io.graphmdl.base.type.DoubleType;
 import io.graphmdl.base.type.IntegerType;
+import io.graphmdl.base.type.JsonType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.RealType;
@@ -106,6 +107,14 @@ public class DataType<T>
                 "bytea",
                 ByteaType.BYTEA,
                 DataType::formatStringLiteral);
+    }
+
+    public static DataType<String> jsonDataType()
+    {
+        return dataType(
+                "json",
+                JsonType.JSON,
+                value -> "JSON " + formatStringLiteral(value));
     }
 
     public static DataType<String> charDataType()

@@ -900,7 +900,12 @@ public final class ExpressionFormatter
 
     static String formatStringLiteral(String s, Dialect dialect)
     {
-        s = s.replace("'", "''");
+        if (dialect == BIGQUERY) {
+            s = s.replace("'", "\\'");
+        }
+        else {
+            s = s.replace("'", "''");
+        }
         if (CharMatcher.inRange((char) 0x20, (char) 0x7E).matchesAllOf(s)) {
             return "'" + s + "'";
         }
