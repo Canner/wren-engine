@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.graphmdl.connector.duckdb;
+package io.graphmdl.base.client.duckdb;
 
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDLException;

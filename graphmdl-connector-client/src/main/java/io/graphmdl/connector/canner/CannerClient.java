@@ -22,10 +22,10 @@ import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.Client;
-import io.graphmdl.connector.ColumnDescription;
-import io.graphmdl.connector.jdbc.JdbcRecordIterator;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
+import io.graphmdl.base.client.ColumnDescription;
+import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;

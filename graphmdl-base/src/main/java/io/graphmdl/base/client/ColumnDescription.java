@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector;
+package io.graphmdl.base.client;
 
 import static java.util.Objects.requireNonNull;
 

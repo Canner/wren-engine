@@ -12,26 +12,11 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector.jdbc;
+package io.graphmdl.base.client;
 
-import io.graphmdl.base.GraphMDLTypes;
+import java.util.Iterator;
 
-import java.sql.JDBCType;
-
-public final class JdbcTypeMapping
+public interface AutoCloseableIterator<E>
+        extends Iterator<E>, AutoCloseable
 {
-    private JdbcTypeMapping() {}
-
-    public static String toGraphMDLType(JDBCType jdbcType)
-    {
-        switch (jdbcType) {
-            case BIGINT:
-                return GraphMDLTypes.BIGINT;
-            case INTEGER:
-                return GraphMDLTypes.INTEGER;
-            case VARCHAR:
-            default:
-                return GraphMDLTypes.VARCHAR;
-        }
-    }
 }

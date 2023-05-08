@@ -12,11 +12,17 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main.sql;
+package io.graphmdl.base.client;
 
-import io.graphmdl.base.SessionContext;
+import java.util.List;
 
-public interface SqlConverter
+public interface Client
 {
-    String convert(String sql, SessionContext sessionContext);
+    AutoCloseableIterator<Object[]> query(String sql);
+
+    void executeDDL(String sql);
+
+    AutoCloseableIterator<ColumnDescription> describe(String sql);
+
+    List<String> listTables();
 }

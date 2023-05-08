@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.main.sql.SqlConverter;
+import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.main.sql.bigquery.FlattenGroupingElements;
 import io.graphmdl.main.sql.bigquery.RemoveCatalogSchemaColumnPrefix;

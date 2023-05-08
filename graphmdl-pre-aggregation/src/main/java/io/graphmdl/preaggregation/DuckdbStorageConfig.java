@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main.biboost;
+package io.graphmdl.preaggregation;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;

@@ -16,8 +16,8 @@ package io.graphmdl.validation;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.dto.Column;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.Client;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
