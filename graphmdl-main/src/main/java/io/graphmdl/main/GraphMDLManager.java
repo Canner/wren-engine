@@ -17,6 +17,7 @@ package io.graphmdl.main;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.airlift.log.Logger;
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.preaggregation.PreAggregationManager;
 
 import javax.inject.Inject;
 
@@ -34,12 +35,14 @@ public class GraphMDLManager
     private static final Logger LOG = Logger.get(GraphMDLManager.class);
     private final AtomicReference<GraphMDL> graphMDL = new AtomicReference<>(EMPTY_GRAPHMDL);
     private final File graphMDLFile;
+    private final PreAggregationManager preAggregationManager;
 
     @Inject
-    public GraphMDLManager(GraphMDLConfig graphMDLConfig)
+    public GraphMDLManager(GraphMDLConfig graphMDLConfig, PreAggregationManager preAggregationManager)
             throws IOException
     {
         this.graphMDLFile = requireNonNull(graphMDLConfig.getGraphMDLFile(), "graphMDLFile is null");
+        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
         if (graphMDLFile.exists()) {
             loadGraphMDLFromFile();
         }
@@ -52,6 +55,7 @@ public class GraphMDLManager
             throws IOException
     {
         loadGraphMDL(Files.readString(graphMDLFile.toPath()));
+        preAggregationManager.doPreAggregation(getGraphMDL()).join();
     }
 
     private void loadGraphMDL(String json)

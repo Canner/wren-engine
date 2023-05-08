@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main.biboost;
+package io.graphmdl.preaggregation;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airlift.log.Logger;
@@ -22,15 +22,12 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.base.dto.Metric;
-import io.graphmdl.connector.duckdb.DuckdbClient;
-import io.graphmdl.main.GraphMDLMetastore;
-import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
-import io.graphmdl.main.sql.PostgreSqlRewrite;
-import io.graphmdl.main.sql.SqlConverter;
+import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.sqlrewrite.PreAggregationRewrite;
+import io.trino.execution.sql.SqlFormatterUtil;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
@@ -48,8 +45,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
-import static io.graphmdl.main.wireprotocol.WireProtocolSession.PARSE_AS_DECIMAL;
-import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -59,35 +54,30 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 public class PreAggregationManager
 {
     private static final Logger LOG = Logger.get(PreAggregationManager.class);
-    private final Metadata connector;
+    private static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
+    private final ExtraRewriter extraRewriter;
+    private final PreAggregationService preAggregationService;
     private final SqlParser sqlParser;
-    private final RegObjectFactory regObjectFactory;
     private final SqlConverter sqlConverter;
     private final DuckdbClient duckdbClient;
     private final DuckdbStorageConfig duckdbStorageConfig;
     private final AtomicReference<Map<CatalogSchemaTableName, MetricTablePair>> metricTableMapping = new AtomicReference<>(Map.of());
-    private final GraphMDL graphMDL;
 
     @Inject
     public PreAggregationManager(
-            GraphMDLMetastore graphMDLMetastore,
             SqlParser sqlParser,
-            RegObjectFactory regObjectFactory,
             SqlConverter sqlConverter,
-            Metadata connector,
+            PreAggregationService preAggregationService,
+            ExtraRewriter extraRewriter,
             DuckdbClient duckdbClient,
             DuckdbStorageConfig duckdbStorageConfig)
     {
-        requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
-        this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
-        this.connector = requireNonNull(connector, "connector is null");
+        this.preAggregationService = requireNonNull(preAggregationService, "preAggregationService is null");
+        this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
-        this.graphMDL = requireNonNull(graphMDLMetastore.getGraphMDL(), "graphMDL is null");
-        doPreAggregation(graphMDL)
-                .thenRun(this::cleanPreAggregation).join();
     }
 
     @VisibleForTesting
@@ -142,12 +132,12 @@ public class PreAggregationManager
                     sessionContext,
                     mdl);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
-            Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, connector.getDefaultCatalog(), parsedStatement);
-            String exportPath = connector.createPreAggregation(
+            Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
+            String exportPath = preAggregationService.createPreAggregation(
                     mdl.getCatalog(),
                     mdl.getSchema(),
                     metric.getName(),
-                    sqlConverter.convert(getFormattedSql(rewrittenStatement, sqlParser), sessionContext));
+                    sqlConverter.convert(SqlFormatterUtil.getFormattedSql(rewrittenStatement, sqlParser), sessionContext));
             String duckdbTableName = format("%s_%s", metric.getName(), randomUUID());
             importData(exportPath, duckdbTableName);
             return new MetricTablePair(metric, duckdbTableName);
@@ -210,12 +200,12 @@ public class PreAggregationManager
         }
     }
 
-    public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql)
+    public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql, GraphMDL graphMDL)
     {
         try {
             Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
             return PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL)
-                    .map(rewrittenStatement -> getFormattedSql(rewrittenStatement, sqlParser));
+                    .map(rewrittenStatement -> SqlFormatterUtil.getFormattedSql(rewrittenStatement, sqlParser));
         }
         catch (Exception e) {
             LOG.error(e, "Failed to rewrite pre-aggregation for statement: %s", sql);
@@ -226,6 +216,6 @@ public class PreAggregationManager
     @PreDestroy
     public void cleanPreAggregation()
     {
-        connector.cleanPreAggregation();
+        preAggregationService.cleanPreAggregation();
     }
 }

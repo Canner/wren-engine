@@ -23,11 +23,11 @@ import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
 import io.graphmdl.main.GraphMDLModule;
-import io.graphmdl.main.biboost.BiBoostModule;
 import io.graphmdl.main.pgcatalog.PgCatalogManager;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
 import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
+import io.graphmdl.preaggregation.PreAggregationModule;
 
 public class GraphMDLServer
         extends Server
@@ -56,6 +56,6 @@ public class GraphMDLServer
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
                 new GraphMDLModule(),
-                new BiBoostModule());
+                new PreAggregationModule());
     }
 }
