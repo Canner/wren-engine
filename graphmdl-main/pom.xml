@@ -105,6 +105,11 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-pre-aggregation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-sqlrewrite</artifactId>
         </dependency>
 

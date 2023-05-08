@@ -105,12 +105,22 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-base</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-connector-client</artifactId>
         </dependency>
 
         <dependency>
             <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-main</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-pre-aggregation</artifactId>
         </dependency>
 
         <dependency>

@@ -67,13 +67,13 @@
         <module>graphmdl-base</module>
         <module>graphmdl-connector-client</module>
         <module>graphmdl-main</module>
+        <module>graphmdl-pre-aggregation</module>
         <module>graphmdl-server</module>
         <module>graphmdl-sqlrewrite</module>
         <module>graphmdl-testing</module>
         <module>graphmdl-tests</module>
         <module>graphmdl-validation</module>
         <module>trino-parser</module>
-        <module>graphmdl-pre-aggregation</module>
     </modules>
 
     <repositories>
@@ -254,6 +254,12 @@
             <dependency>
                 <groupId>io.graphmdl</groupId>
                 <artifactId>graphmdl-main</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-pre-aggregation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -25,7 +25,7 @@
     </parent>
 
     <artifactId>graphmdl-tests</artifactId>
-    <name>graphmdl-testing</name>
+    <name>graphmdl-tests</name>
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
     </properties>
@@ -84,6 +84,11 @@
         <dependency>
             <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-main</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.graphmdl</groupId>
+            <artifactId>graphmdl-pre-aggregation</artifactId>
         </dependency>
 
         <dependency>

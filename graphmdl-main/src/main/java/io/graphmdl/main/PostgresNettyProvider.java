@@ -15,12 +15,12 @@
 package io.graphmdl.main;
 
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.main.biboost.PreAggregationManager;
+import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
-import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
 import io.graphmdl.main.wireprotocol.ssl.SslContextProvider;
+import io.graphmdl.preaggregation.PreAggregationManager;
 import org.elasticsearch.common.network.NetworkService;
 
 import javax.inject.Inject;
