@@ -52,13 +52,13 @@ import static io.graphmdl.testing.DataType.dateDataType;
 import static io.graphmdl.testing.DataType.decimalDataType;
 import static io.graphmdl.testing.DataType.doubleDataType;
 import static io.graphmdl.testing.DataType.integerDataType;
+import static io.graphmdl.testing.DataType.jsonDataType;
 import static io.graphmdl.testing.DataType.nameDataType;
 import static io.graphmdl.testing.DataType.realDataType;
 import static io.graphmdl.testing.DataType.textDataType;
 import static io.graphmdl.testing.DataType.timestampDataType;
 import static io.graphmdl.testing.DataType.varcharDataType;
 import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Collections.nCopies;
@@ -109,23 +109,35 @@ public class TestWireProtocolType
                 .executeSuite();
     }
 
-    // TODO: https://github.com/Canner/canner-metric-layer/issues/41
-    @Test(enabled = false)
+    @Test
     public void testBytea()
     {
-        byteaTestCases(byteaDataType())
+        createTypeTest()
+                .addInput(byteaDataType(), "hello", value -> value.getBytes(UTF_8))
+                .addInput(byteaDataType(), "\\x68656c6c6f", ignored -> "hello".getBytes(UTF_8))
                 .executeSuite();
     }
 
-    private WireProtocolTypeTest byteaTestCases(DataType<byte[]> byteaDataType)
+    @Test
+    public void testJson()
+    {
+        jsonTestCases(jsonDataType())
+                .executeSuite();
+    }
+
+    private WireProtocolTypeTest jsonTestCases(DataType<String> jsonDataType)
     {
         return createTypeTest()
-                .addInput(byteaDataType, "hello".getBytes(UTF_8))
-                .addInput(byteaDataType, "Piękna łąka w 東京都".getBytes(UTF_8))
-                .addInput(byteaDataType, "Bag full of 💰".getBytes(UTF_16LE))
-                .addInput(byteaDataType, null)
-                .addInput(byteaDataType, new byte[] {})
-                .addInput(byteaDataType, new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 13, -7, 54, 122, -89, 0, 0, 0});
+                .addInput(jsonDataType, "{}")
+                .addInput(jsonDataType, null)
+                .addInput(jsonDataType, "null")
+                .addInput(jsonDataType, "123.4")
+                .addInput(jsonDataType, "\"abc\"")
+                .addInput(jsonDataType, "\"text with \\\" quotations and ' apostrophes\"")
+                .addInput(jsonDataType, "\"\"")
+                .addInput(jsonDataType, "{\"a\":1,\"b\":2}")
+                .addInput(jsonDataType, "{\"a\":[1,2,3],\"b\":{\"aa\":11,\"bb\":[{\"a\":1,\"b\":2},{\"a\":0}]}}")
+                .addInput(jsonDataType, "[]");
     }
 
     @Test

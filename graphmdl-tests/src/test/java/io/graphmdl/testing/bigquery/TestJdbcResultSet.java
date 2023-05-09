@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -48,6 +49,7 @@ public class TestJdbcResultSet
             .put(Types.INTEGER, Types.BIGINT)
             .put(Types.REAL, Types.DOUBLE)
             .put(Types.CHAR, Types.VARCHAR)
+            .put(Types.VARBINARY, Types.BINARY)
             .build();
     private Connection connection;
     private Statement statement;
@@ -122,8 +124,8 @@ public class TestJdbcResultSet
         checkRepresentation("DECIMAL '123.45'", Types.NUMERIC, new BigDecimal("123.45"));
         checkRepresentation("VARCHAR 'foo'", Types.VARCHAR, "foo");
         checkRepresentation("CHAR 'foo'", Types.CHAR, "foo");
-        // TODO https://github.com/Canner/canner-metric-layer/issues/41
-//        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
+        checkRepresentation("BYTEA 'hello'", Types.VARBINARY, "hello".getBytes(UTF_8));
+        checkRepresentation("BYTEA '\\x68656c6c6f'", Types.VARBINARY, "hello".getBytes(UTF_8));
         // TODO:
 //        checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
         checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
