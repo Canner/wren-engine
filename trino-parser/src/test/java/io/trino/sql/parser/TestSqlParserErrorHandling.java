@@ -43,10 +43,10 @@ public class TestSqlParserErrorHandling
     {
         return Stream.of(
                 Arguments.of("",
-                        "line 1:1: mismatched input '<EOF>'. Expecting: 'ALTER', 'ANALYZE', 'CALL', 'COMMENT', 'COMMIT', 'CREATE', 'DEALLOCATE', 'DELETE', 'DENY', 'DESC', 'DESCRIBE', 'DROP', 'EXECUTE', 'EXPLAIN', 'GRANT', " +
+                        "line 1:1: mismatched input '<EOF>'. Expecting: 'ALTER', 'ANALYZE', 'CALL', 'COMMENT', 'COMMIT', 'CREATE', 'DEALLOCATE', 'DECLARE', 'DELETE', 'DENY', 'DESC', 'DESCRIBE', 'DROP', 'EXECUTE', 'EXPLAIN', 'FETCH', 'GRANT', 'IMPERSONATE', " +
                                 "'INSERT', 'MERGE', 'PREPARE', 'REFRESH', 'RESET', 'REVOKE', 'ROLLBACK', 'SET', 'SHOW', 'START', 'TRUNCATE', 'UPDATE', 'USE', <query>"),
                 Arguments.of("@select",
-                        "line 1:1: mismatched input '@'. Expecting: 'ALTER', 'ANALYZE', 'CALL', 'COMMENT', 'COMMIT', 'CREATE', 'DEALLOCATE', 'DELETE', 'DENY', 'DESC', 'DESCRIBE', 'DROP', 'EXECUTE', 'EXPLAIN', 'GRANT', " +
+                        "line 1:1: mismatched input '@'. Expecting: 'ALTER', 'ANALYZE', 'CALL', 'COMMENT', 'COMMIT', 'CREATE', 'DEALLOCATE', 'DECLARE', 'DELETE', 'DENY', 'DESC', 'DESCRIBE', 'DROP', 'EXECUTE', 'EXPLAIN', 'FETCH', 'GRANT', 'IMPERSONATE', " +
                                 "'INSERT', 'MERGE', 'PREPARE', 'REFRESH', 'RESET', 'REVOKE', 'ROLLBACK', 'SET', 'SHOW', 'START', 'TRUNCATE', 'UPDATE', 'USE', <query>"),
                 Arguments.of("select * from foo where @what",
                         "line 1:25: mismatched input '@'. Expecting: <expression>"),
@@ -76,7 +76,7 @@ public class TestSqlParserErrorHandling
                 Arguments.of("select fuu from dual order by fuu order by fuu",
                         "line 1:35: mismatched input 'order'. Expecting: '%', '*', '+', ',', '-', '.', '/', '::', 'AND', 'ASC', 'AT', 'COLLATE', 'DESC', 'FETCH', 'LIMIT', 'NULLS', 'OFFSET', 'OPERATOR', 'OR', '[', '||', <EOF>, <predicate>"),
                 Arguments.of("select fuu from dual limit 10 order by fuu",
-                        "line 1:31: mismatched input 'order'. Expecting: <EOF>"),
+                        "line 1:31: mismatched input 'order'. Expecting: '::', <EOF>"),
                 Arguments.of("select CAST(12223222232535343423232435343 AS BIGINT)",
                         "line 1:1: Invalid numeric literal: 12223222232535343423232435343"),
                 Arguments.of("select CAST(-12223222232535343423232435343 AS BIGINT)",
@@ -194,7 +194,6 @@ public class TestSqlParserErrorHandling
                 "line 1:375: mismatched input '<EOF>'. Expecting: '%', '*', '+', '-', '/', 'AT', 'OPERATOR', 'THEN', '||'");
     }
 
-    // TODO: enable this test
     @Test
     public void testPossibleExponentialBacktracking2()
     {
