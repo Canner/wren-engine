@@ -93,11 +93,6 @@
         </dependency>
 
         <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>io.graphmdl</groupId>
             <artifactId>graphmdl-base</artifactId>
         </dependency>

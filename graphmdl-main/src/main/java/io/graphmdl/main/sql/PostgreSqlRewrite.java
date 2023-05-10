@@ -21,6 +21,7 @@ import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.wireprotocol.BaseRewriteVisitor;
 import io.trino.sql.parser.SqlBaseLexer;
+import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CurrentUser;
 import io.trino.sql.tree.DereferenceExpression;
@@ -212,6 +213,15 @@ public final class PostgreSqlRewrite
                 Optional<Object> result = regObjectInterpreter.evaluate(node, false);
                 return result.map(obj -> (Expression) obj).orElse(node);
             }
+
+            // handle bytea type with binary value
+            if (type.equals("BYTEA") && node.getExpression() instanceof StringLiteral) {
+                String strValue = ((StringLiteral) node.getExpression()).getValue();
+                if (strValue.startsWith("\\x")) {
+                    node = new Cast(new BinaryLiteral(strValue.substring(2)), node.getType(), node.isSafe(), node.isTypeOnly());
+                }
+            }
+
             return node;
         }
 
