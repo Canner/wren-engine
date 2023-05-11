@@ -19,9 +19,11 @@ import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
+import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
@@ -131,6 +133,14 @@ public final class StatementAnalyzer
 
         analysis.addMetrics(metrics);
 
+        Set<View> views = analysis.getTables().stream()
+                .map(graphMDL::getView)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toUnmodifiableSet());
+
+        analysis.addViews(views);
+
         return analysis;
     }
 
@@ -197,6 +207,17 @@ public final class StatementAnalyzer
                     .parent(scope)
                     .relationType(new RelationType(modelFields))
                     .isTableScope(true)
+                    .build();
+        }
+
+        private static Field toField(CatalogSchemaTableName tableName, Column column)
+        {
+            return Field.builder()
+                    .modelName(tableName)
+                    .columnName(column.getName())
+                    .name(column.getName())
+                    .isRelationship(column.getRelationship().isPresent())
+                    .type(column.getType())
                     .build();
         }
 

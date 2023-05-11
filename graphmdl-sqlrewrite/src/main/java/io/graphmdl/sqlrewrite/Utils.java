@@ -22,6 +22,7 @@ import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.MetricRollupInfo;
 import io.graphmdl.sqlrewrite.analyzer.RelationType;
@@ -46,6 +47,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static io.graphmdl.base.Utils.checkArgument;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.Character.MAX_RADIX;
 import static java.lang.Math.abs;
@@ -67,6 +69,14 @@ public final class Utils
     public static Node parseSql(String sql)
     {
         return SQL_PARSER.createStatement(sql, PARSING_OPTIONS);
+    }
+
+    public static Query parseView(String sql)
+    {
+        Query query = (Query) parseSql(sql);
+        // TODO: we don't support view have WITH clause yet
+        checkArgument(query.getWith().isEmpty(), "view cannot have WITH clause");
+        return query;
     }
 
     public static Expression parseExpression(String expression)
@@ -155,6 +165,15 @@ public final class Utils
                 String.join(",", selectItems),
                 metric.getBaseModel(),
                 groupByColumnOrdinals);
+    }
+
+    public static Query getViewStatement(View view)
+    {
+        Statement statement = SQL_PARSER.createStatement(view.getStatement(), new ParsingOptions(AS_DECIMAL));
+        if (statement instanceof Query) {
+            return (Query) statement;
+        }
+        throw new IllegalArgumentException(format("view %s is not a query, sql %s", view.getName(), view.getStatement()));
     }
 
     public static String randomTableSuffix()

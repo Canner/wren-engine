@@ -15,6 +15,7 @@
 package io.graphmdl.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
@@ -27,19 +28,24 @@ import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static io.graphmdl.sqlrewrite.ScopeAwareRewrite.SCOPE_AWARE_REWRITE;
+import static io.graphmdl.sqlrewrite.Utils.getViewStatement;
+import static io.graphmdl.sqlrewrite.Utils.parseView;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static java.util.stream.Collectors.toUnmodifiableMap;
 
-public class MetricSqlRewrite
+public class MetricViewSqlRewrite
         implements GraphMDLRule
 {
-    public static final MetricSqlRewrite METRIC_SQL_REWRITE = new MetricSqlRewrite();
+    public static final MetricViewSqlRewrite METRIC_VIEW_SQL_REWRITE = new MetricViewSqlRewrite();
 
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, GraphMDL graphMDL)
@@ -50,14 +56,27 @@ public class MetricSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL)
     {
+        // analyze if the metric used by a view.
+        List<Analysis> viewAnalysis = analysis.getViews().stream().filter(view -> graphMDL.getView(view.getName()).isPresent())
+                .map(view -> StatementAnalyzer.analyze(parseView(view.getStatement()), sessionContext, graphMDL))
+                .collect(Collectors.toList());
+
+        List<Analysis> allAnalysis = ImmutableList.<Analysis>builder().addAll(viewAnalysis).add(analysis).build();
+
         Map<String, Query> metricQueries =
-                analysis.getMetrics().stream()
+                allAnalysis.stream().flatMap(a -> a.getMetrics().stream())
                         .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
 
         Map<String, Query> metricRollupQueries =
-                analysis.getMetricRollups().values().stream()
+                allAnalysis.stream().flatMap(a -> a.getMetricRollups().values().stream())
                         .collect(toUnmodifiableMap(rollup -> rollup.getMetric().getName(), Utils::parseMetricRollupSql));
-        return (Statement) new WithRewriter(metricQueries, metricRollupQueries).process(root);
+
+        // The generation of views has a sequential order, with later views being able to reference earlier views.
+        Map<String, Query> viewQueries = new LinkedHashMap<>();
+        analysis.getViews()
+                .forEach(view -> viewQueries.put(view.getName(), (Query) SCOPE_AWARE_REWRITE.rewrite(getViewStatement(view), graphMDL, sessionContext)));
+
+        return (Statement) new WithRewriter(metricQueries, metricRollupQueries, ImmutableMap.copyOf(viewQueries)).process(root);
     }
 
     private static class WithRewriter
@@ -66,12 +85,16 @@ public class MetricSqlRewrite
         private final Map<String, Query> metricQueries;
         private final Map<String, Query> metricRollupQueries;
 
+        private final Map<String, Query> viewQueries;
+
         public WithRewriter(
                 Map<String, Query> metricQueries,
-                Map<String, Query> metricRollupQueries)
+                Map<String, Query> metricRollupQueries,
+                Map<String, Query> viewQueries)
         {
             this.metricQueries = requireNonNull(metricQueries, "metricQueries is null");
             this.metricRollupQueries = requireNonNull(metricRollupQueries, "metricRollupQueries is null");
+            this.viewQueries = requireNonNull(viewQueries, "viewQueries is null");
         }
 
         @Override
@@ -87,9 +110,15 @@ public class MetricSqlRewrite
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
 
+            List<WithQuery> viewWithQueries = viewQueries.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
+                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
+                    .collect(toUnmodifiableList());
+
             List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
                     .addAll(metricWithQueries)
                     .addAll(metricRollupWithQueries)
+                    .addAll(viewWithQueries)
                     .build();
 
             return new Query(
