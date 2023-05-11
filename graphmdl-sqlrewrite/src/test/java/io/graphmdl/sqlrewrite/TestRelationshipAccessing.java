@@ -386,6 +386,8 @@ public class TestRelationshipAccessing
                                 "SELECT a.author\n" +
                                 "FROM Book a",
                         true},
+                {"WITH A as (SELECT b.author.name FROM Book b) SELECT A.name FROM A",
+                        "SELECT 1", true},
         };
     }
 

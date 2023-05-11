@@ -34,6 +34,7 @@ import static io.graphmdl.base.dto.EnumValue.enumValue;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.Relationship.relationship;
+import static io.graphmdl.base.dto.View.view;
 import static io.graphmdl.sqlrewrite.Utils.SQL_PARSER;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -80,12 +81,18 @@ public class TestAllRulesRewrite
                         metric(
                                 "CollectionA",
                                 "Album",
+                                // TODO: we don't support to output a relationship column in a metric.
+                                //  It just can be a group by key but can't be accessed with other relationship operation. e.g. `band.name`.
                                 List.of(column("band", VARCHAR, null, true, null)),
                                 List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
                                 List.of())))
                 .setEnumDefinitions(List.of(
                         enumDefinition("Inventory", List.of(enumValue("IN_STOCK", "I"), enumValue("OUT_OF_STOCK", "O"))),
                         enumDefinition("InventoryA", List.of(enumValue("IN_STOCK"), enumValue("OUT_OF_STOCK")))))
+                .setViews(List.of(
+                        view("UseModel", "select * from Album"),
+                        view("useRelationship", "select name, band.name as band_name from Album"),
+                        view("useMetric", "select band, price from Collection")))
                 .build());
     }
 
@@ -98,12 +105,15 @@ public class TestAllRulesRewrite
                 {"SELECT name, price FROM graphmdl.test.Album",
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
                 {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
-                {"select band, price from Collection order by price", "values ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
                 {"select band, price from CollectionA order by price", "values ('relationship<AlbumBand>', cast(2553 as long)), ('relationship<AlbumBand>', cast(4060 as long))"},
                 {"select band from Album", "values ('relationship<AlbumBand>'), ('relationship<AlbumBand>'), ('relationship<AlbumBand>')"},
                 {"select Inventory.IN_STOCK, InventoryA.IN_STOCK", "values ('I', 'IN_STOCK')"},
                 {"select band.name as band_name, name from Album where status = Inventory.IN_STOCK",
-                        "values ('ZUTOMAYO', 'Gusare'), ('Yorushika', 'Dakara boku wa ongaku o yameta')"}};
+                        "values ('ZUTOMAYO', 'Gusare'), ('Yorushika', 'Dakara boku wa ongaku o yameta')"},
+                {"select name, band_name from useRelationship",
+                        "values ('Gusare', 'ZUTOMAYO'), ('HisoHiso Banashi', 'ZUTOMAYO'), ('Dakara boku wa ongaku o yameta', 'Yorushika')"},
+                {"WITH A as (SELECT b.band.name FROM Album b) SELECT A.name FROM A", "values ('ZUTOMAYO'), ('ZUTOMAYO'), ('Yorushika')"},
+                {"select band, price from useMetric", "values  ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"}};
     }
 
     @Test(dataProvider = "graphMDLUsedCases")

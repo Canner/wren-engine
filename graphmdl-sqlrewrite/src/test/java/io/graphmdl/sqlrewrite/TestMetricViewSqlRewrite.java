@@ -35,6 +35,7 @@ import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.TimeGrain.TimeUnit.YEAR;
 import static io.graphmdl.base.dto.TimeGrain.timeGrain;
+import static io.graphmdl.base.dto.View.view;
 import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.MetricViewSqlRewrite.METRIC_VIEW_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.Utils.SQL_PARSER;
@@ -42,8 +43,9 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-public class TestMetricSqlRewrite
+public class TestMetricViewSqlRewrite
         extends AbstractTestFramework
 {
     @Language("sql")
@@ -83,8 +85,9 @@ public class TestMetricSqlRewrite
                     ") \n";
 
     private final GraphMDL graphMDL;
+    private final GraphMDL invalidGraphMDL;
 
-    public TestMetricSqlRewrite()
+    public TestMetricViewSqlRewrite()
     {
         graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
@@ -111,6 +114,14 @@ public class TestMetricSqlRewrite
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))))))
+                .setViews(List.of(
+                        view("UseModel", "select * from Album"),
+                        view("useMetric", "select * from Collection")))
+                .build());
+
+        invalidGraphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
+                .setViews(List.of(
+                        view("withView", "with a as (select 1,2,3) select * from a")))
                 .build());
     }
 
@@ -174,6 +185,43 @@ public class TestMetricSqlRewrite
                                 "FROM\n" +
                                 "  Collection"
                 },
+                {
+                        "SELECT author, price FROM UseModel",
+                        "WITH\n" + MODEL_CTES +
+                                ", UseModel AS (\n" +
+                                "   SELECT *\n" +
+                                "   FROM\n" +
+                                "     Album\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  author\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  UseModel"
+                },
+                {
+                        "SELECT album_name, price FROM useMetric",
+                        "WITH\n" + MODEL_CTES +
+                                ", Collection AS (\n" +
+                                "   SELECT\n" +
+                                "     author\n" +
+                                "   , Album.name album_name\n" +
+                                "   , sum(Album.price) price\n" +
+                                "   FROM\n" +
+                                "     Album\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", useMetric AS (\n" +
+                                "   SELECT *\n" +
+                                "   FROM\n" +
+                                "     Collection\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  album_name\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  useMetric"
+                }
         };
     }
 
@@ -188,7 +236,21 @@ public class TestMetricSqlRewrite
                 .isThrownBy(() -> query(actualSql));
     }
 
+    @Test
+    public void testInvalidGraphMDL()
+    {
+        String sql = "select * from withView";
+        assertThatThrownBy(() -> rewrite(sql, invalidGraphMDL))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("view cannot have WITH clause");
+    }
+
     private String rewrite(String sql)
+    {
+        return rewrite(sql, graphMDL);
+    }
+
+    private String rewrite(String sql, GraphMDL graphMDL)
     {
         return GraphMDLPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, graphMDL, List.of(METRIC_VIEW_SQL_REWRITE, GRAPHMDL_SQL_REWRITE));
     }
