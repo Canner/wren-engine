@@ -155,7 +155,7 @@ public class RelationshipValidation
     {
         Model model = models.stream().filter(m -> m.getName().equals(expression.getBase().toString()))
                 .findFirst().orElseThrow(() -> new NotFoundException(expression.getBase().toString() + " model is not found"));
-        return format("SELECT count(*) = count(distinct %s) AS result FROM (%s)", expression.getField(), model.getRefSql());
+        return format("SELECT count(*) = count(distinct %s) AS result FROM (%s)", expression.getField().orElseThrow(), model.getRefSql());
     }
 
     private ComparisonExpression getConditionNode(String condition)

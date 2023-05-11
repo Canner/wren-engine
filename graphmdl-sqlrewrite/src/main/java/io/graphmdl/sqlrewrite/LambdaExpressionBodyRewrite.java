@@ -61,9 +61,9 @@ public class LambdaExpressionBodyRewrite
         protected Node visitDereferenceExpression(DereferenceExpression node, Optional<Node> context)
         {
             if (node.getBase() instanceof Identifier) {
-                return visitAndCast(node.getBase(), Optional.ofNullable(node.getField()));
+                return visitAndCast(node.getBase(), Optional.ofNullable(node.getField().orElse(null)));
             }
-            return new DereferenceExpression(visitAndCast(node.getBase(), Optional.ofNullable(node.getField())), node.getField());
+            return new DereferenceExpression(visitAndCast(node.getBase(), Optional.ofNullable(node.getField().orElse(null))), node.getField().orElseThrow());
         }
 
         @Override

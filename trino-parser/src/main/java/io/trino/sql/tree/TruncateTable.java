@@ -16,19 +16,41 @@ package io.trino.sql.tree;
 import com.google.common.collect.ImmutableList;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
-public class CurrentPath
-        extends Expression
+import static com.google.common.base.MoreObjects.toStringHelper;
+
+public class TruncateTable
+        extends Statement
 {
-    public CurrentPath(NodeLocation location)
+    private final QualifiedName tableName;
+
+    public TruncateTable(QualifiedName tableName)
     {
-        this(Optional.of(location));
+        this(Optional.empty(), tableName);
     }
 
-    private CurrentPath(Optional<NodeLocation> location)
+    public TruncateTable(NodeLocation location, QualifiedName tableName)
+    {
+        this(Optional.of(location), tableName);
+    }
+
+    private TruncateTable(Optional<NodeLocation> location, QualifiedName tableName)
     {
         super(location);
+        this.tableName = tableName;
+    }
+
+    public QualifiedName getTableName()
+    {
+        return tableName;
+    }
+
+    @Override
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitTruncateTable(this, context);
     }
 
     @Override
@@ -38,15 +60,9 @@ public class CurrentPath
     }
 
     @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitCurrentPath(this, context);
-    }
-
-    @Override
     public int hashCode()
     {
-        return getClass().hashCode();
+        return Objects.hash(tableName);
     }
 
     @Override
@@ -58,12 +74,15 @@ public class CurrentPath
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        return true;
+        TruncateTable o = (TruncateTable) obj;
+        return Objects.equals(tableName, o.tableName);
     }
 
     @Override
-    public boolean shallowEquals(Node other)
+    public String toString()
     {
-        return sameClass(this, other);
+        return toStringHelper(this)
+                .add("tableName", tableName)
+                .toString();
     }
 }

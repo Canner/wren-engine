@@ -66,7 +66,7 @@ import io.trino.sql.tree.LabelDereference;
 import io.trino.sql.tree.LambdaArgumentDeclaration;
 import io.trino.sql.tree.LambdaExpression;
 import io.trino.sql.tree.LikePredicate;
-import io.trino.sql.tree.LogicalBinaryExpression;
+import io.trino.sql.tree.LogicalExpression;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NotExpression;
@@ -107,6 +107,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.PrimitiveIterator;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -164,7 +165,7 @@ public final class ExpressionFormatter
         protected String visitRow(Row node, Void context)
         {
             return "ROW (" + Joiner.on(", ").join(node.getItems().stream()
-                    .map((child) -> process(child, context))
+                    .map(child -> process(child, context))
                     .collect(toList())) + ")";
         }
 
@@ -399,7 +400,7 @@ public final class ExpressionFormatter
         protected String visitDereferenceExpression(DereferenceExpression node, Void context)
         {
             String baseString = process(node.getBase(), context);
-            return baseString + "." + process(node.getField());
+            return baseString + "." + node.getField().map(this::process).orElse("*");
         }
 
         @Override
@@ -503,9 +504,13 @@ public final class ExpressionFormatter
         }
 
         @Override
-        protected String visitLogicalBinaryExpression(LogicalBinaryExpression node, Void context)
+        protected String visitLogicalExpression(LogicalExpression node, Void context)
         {
-            return formatBinaryExpression(node.getOperator().toString(), node.getLeft(), node.getRight());
+            return "(" +
+                    node.getTerms().stream()
+                            .map(term -> process(term, context))
+                            .collect(Collectors.joining(" " + node.getOperator().toString() + " ")) +
+                    ")";
         }
 
         @Override
@@ -648,7 +653,7 @@ public final class ExpressionFormatter
             }
 
             node.getDefaultValue()
-                    .ifPresent((value) -> parts.add("ELSE").add(process(value, context)));
+                    .ifPresent(value -> parts.add("ELSE").add(process(value, context)));
 
             parts.add("END");
 
@@ -668,7 +673,7 @@ public final class ExpressionFormatter
             }
 
             node.getDefaultValue()
-                    .ifPresent((value) -> parts.add("ELSE").add(process(value, context)));
+                    .ifPresent(value -> parts.add("ELSE").add(process(value, context)));
 
             parts.add("END");
 
@@ -826,7 +831,7 @@ public final class ExpressionFormatter
             // LabelDereference, like SymbolReference, is an IR-type expression. It is never a result of the parser.
             // After being formatted this way for serialization, it will be parsed as functionCall
             // and swapped back for LabelDereference.
-            return "LABEL_DEREFERENCE(" + formatIdentifier(node.getLabel(), dialect) + ", " + process(node.getReference()) + ")";
+            return "LABEL_DEREFERENCE(" + formatIdentifier(node.getLabel(), dialect) + ", " + node.getReference().map(this::process).orElse("*") + ")";
         }
 
         private String formatBinaryExpression(String operator, Expression left, Expression right)

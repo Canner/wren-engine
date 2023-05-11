@@ -340,7 +340,7 @@ public final class ExpressionAnalyzer
     private static Identifier getField(Expression expression)
     {
         if (expression instanceof DereferenceExpression) {
-            return ((DereferenceExpression) expression).getField();
+            return ((DereferenceExpression) expression).getField().orElseThrow();
         }
         else if (expression instanceof Identifier) {
             return (Identifier) expression;

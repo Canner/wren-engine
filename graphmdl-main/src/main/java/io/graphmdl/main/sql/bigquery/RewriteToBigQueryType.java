@@ -17,6 +17,7 @@ package io.graphmdl.main.sql.bigquery;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
+import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CharLiteral;
 import io.trino.sql.tree.DataTypeParameter;
@@ -30,15 +31,12 @@ import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
 
 import java.util.List;
 import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.Utils.parseType;
 import static java.lang.Integer.parseInt;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class RewriteToBigQueryType
         implements SqlRewrite
@@ -84,16 +82,13 @@ public class RewriteToBigQueryType
         }
 
         @Override
-        protected Node visitStringLiteral(StringLiteral node, Void context)
+        protected Node visitBinaryLiteral(BinaryLiteral node, Void context)
         {
             // PostgreSQL uses the following format to represent binary data: \x[hexadecimal string], but BigQuery don't support this format.
-            // To overcome this limitation, we convert the query to CAST([literal] AS BYTES).
-            if (node.getValue().startsWith("\\x")) {
-                return new Cast(
-                        new StringLiteral(decodeHexString(node.getValue())),
-                        new GenericDataType(Optional.empty(), new Identifier("BYTES"), List.of()));
-            }
-            return super.visitStringLiteral(node, context);
+            // To overcome this limitation, we convert the query to CAST(FROM_HEX(hex string) AS BYTES).
+            return new Cast(
+                    new FunctionCall(QualifiedName.of("FROM_HEX"), List.of(new StringLiteral(node.toHexString()))),
+                    new GenericDataType(Optional.empty(), new Identifier("BYTES"), List.of()));
         }
 
         @Override
@@ -159,16 +154,6 @@ public class RewriteToBigQueryType
                     return new GenericDataType(nodeLocation, new Identifier("DATE"), parameters);
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + typeName);
-            }
-        }
-
-        private String decodeHexString(String hexString)
-        {
-            try {
-                return new String(Hex.decodeHex(hexString.substring(2)), UTF_8);
-            }
-            catch (DecoderException e) {
-                throw new UnsupportedOperationException("Unsupported hex value: " + hexString);
             }
         }
     }

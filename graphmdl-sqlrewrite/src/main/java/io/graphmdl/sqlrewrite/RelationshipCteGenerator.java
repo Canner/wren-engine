@@ -532,7 +532,7 @@ public class RelationshipCteGenerator
     private String getReferenceField(Expression expression)
     {
         if (expression instanceof DereferenceExpression) {
-            return ((DereferenceExpression) expression).getField().getValue();
+            return ((DereferenceExpression) expression).getField().orElseThrow().getValue();
         }
 
         return expression.toString();

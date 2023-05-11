@@ -100,7 +100,7 @@ import io.trino.sql.tree.LikeClause;
 import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Limit;
 import io.trino.sql.tree.Literal;
-import io.trino.sql.tree.LogicalBinaryExpression;
+import io.trino.sql.tree.LogicalExpression;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NotExpression;
@@ -748,6 +748,20 @@ public class BaseRewriteVisitor<C>
     }
 
     @Override
+    protected Node visitLogicalExpression(LogicalExpression node, C context)
+    {
+        if (node.getLocation().isPresent()) {
+            return new LogicalExpression(
+                    node.getLocation().get(),
+                    node.getOperator(),
+                    visitNodes(node.getTerms(), context));
+        }
+        return new LogicalExpression(
+                node.getOperator(),
+                visitNodes(node.getTerms(), context));
+    }
+
+    @Override
     protected Node visitSubscriptExpression(SubscriptExpression node, C context)
     {
         if (node.getLocation().isPresent()) {
@@ -1350,22 +1364,6 @@ public class BaseRewriteVisitor<C>
     }
 
     @Override
-    protected Node visitLogicalBinaryExpression(LogicalBinaryExpression node, C context)
-    {
-        if (node.getLocation().isPresent()) {
-            return new LogicalBinaryExpression(
-                    node.getLocation().get(),
-                    node.getOperator(),
-                    visitAndCast(node.getLeft()),
-                    visitAndCast(node.getRight()));
-        }
-        return new LogicalBinaryExpression(
-                node.getOperator(),
-                visitAndCast(node.getLeft()),
-                visitAndCast(node.getRight()));
-    }
-
-    @Override
     protected Node visitComparisonExpression(ComparisonExpression node, C context)
     {
         if (node.getLocation().isPresent()) {
@@ -1724,13 +1722,8 @@ public class BaseRewriteVisitor<C>
     @Override
     protected Node visitDereferenceExpression(DereferenceExpression node, C context)
     {
-        if (node.getLocation().isPresent()) {
-            return new DereferenceExpression(
-                    node.getLocation().get(),
-                    node.getBase(),
-                    node.getField());
-        }
         return new DereferenceExpression(
+                node.getLocation(),
                 node.getBase(),
                 node.getField());
     }

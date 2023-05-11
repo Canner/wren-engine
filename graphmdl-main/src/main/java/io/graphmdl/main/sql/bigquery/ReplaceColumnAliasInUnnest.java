@@ -98,7 +98,7 @@ public class ReplaceColumnAliasInUnnest
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, DereferenceExpression context)
         {
-            return node.equals(context) ? context.getField() : node;
+            return node.equals(context) ? context.getField().orElseThrow() : node;
         }
     }
 

@@ -22,62 +22,62 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public final class Insert
+public final class RenameMaterializedView
         extends Statement
 {
-    private final Table table;
-    private final Query query;
-    private final Optional<List<Identifier>> columns;
+    private final QualifiedName source;
+    private final QualifiedName target;
+    private final boolean exists;
 
-    public Insert(Table table, Optional<List<Identifier>> columns, Query query)
+    public RenameMaterializedView(QualifiedName source, QualifiedName target, boolean exists)
     {
-        this(Optional.empty(), table, columns, query);
+        this(Optional.empty(), source, target, exists);
     }
 
-    private Insert(Optional<NodeLocation> location, Table table, Optional<List<Identifier>> columns, Query query)
+    public RenameMaterializedView(NodeLocation location, QualifiedName source, QualifiedName target, boolean exists)
+    {
+        this(Optional.of(location), source, target, exists);
+    }
+
+    private RenameMaterializedView(Optional<NodeLocation> location, QualifiedName source, QualifiedName target, boolean exists)
     {
         super(location);
-        this.table = requireNonNull(table, "target is null");
-        this.columns = requireNonNull(columns, "columns is null");
-        this.query = requireNonNull(query, "query is null");
+        this.source = requireNonNull(source, "source name is null");
+        this.target = requireNonNull(target, "target name is null");
+        this.exists = exists;
     }
 
-    public Table getTable()
+    public QualifiedName getSource()
     {
-        return table;
+        return source;
     }
 
     public QualifiedName getTarget()
     {
-        return table.getName();
+        return target;
     }
 
-    public Optional<List<Identifier>> getColumns()
+    public boolean isExists()
     {
-        return columns;
-    }
-
-    public Query getQuery()
-    {
-        return query;
+        return exists;
     }
 
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
-        return visitor.visitInsert(this, context);
+        return visitor.visitRenameMaterializedView(this, context);
     }
 
     @Override
     public List<Node> getChildren()
     {
-        return ImmutableList.of(query);
+        return ImmutableList.of();
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(table, columns, query);
+        return Objects.hash(source, target, exists);
     }
 
     @Override
@@ -89,19 +89,19 @@ public final class Insert
         if ((obj == null) || (getClass() != obj.getClass())) {
             return false;
         }
-        Insert o = (Insert) obj;
-        return Objects.equals(table, o.table) &&
-                Objects.equals(columns, o.columns) &&
-                Objects.equals(query, o.query);
+        RenameMaterializedView o = (RenameMaterializedView) obj;
+        return Objects.equals(source, o.source) &&
+                Objects.equals(target, o.target) &&
+                Objects.equals(exists, o.exists);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("table", table)
-                .add("columns", columns)
-                .add("query", query)
+                .add("source", source)
+                .add("target", target)
+                .add("exists", exists)
                 .toString();
     }
 }

@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestPostgreSqlRewrite
 {
-    private static final String DEFAULT_CATALOG = "default";
+    private static final String DEFAULT_CATALOG = "default_pg";
     private static final String PGTYPE = "pg_type";
     private static final String PGCATALOG_PGTYPE = DEFAULT_CATALOG + ".pg_catalog.pg_type";
     private SqlParser sqlParser;
