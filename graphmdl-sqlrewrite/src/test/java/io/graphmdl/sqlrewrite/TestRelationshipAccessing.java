@@ -387,7 +387,25 @@ public class TestRelationshipAccessing
                                 "FROM Book a",
                         true},
                 {"WITH A as (SELECT b.author.name FROM Book b) SELECT A.name FROM A",
-                        "SELECT 1", true},
+                        "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
+                                " ${Book.author} (userId, name, book) AS (\n" +
+                                "   SELECT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.book\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                ", A AS (\n" +
+                                "   SELECT ${Book.author}.name\n" +
+                                "   FROM\n" +
+                                "     (Book b\n" +
+                                "   LEFT JOIN ${Book.author} ON (b.authorId = ${Book.author}.userId))\n" +
+                                ") \n" +
+                                "SELECT A.name\n" +
+                                "FROM\n" +
+                                "  A", true},
         };
     }
 
