@@ -204,5 +204,27 @@
         }
       ]
     }
+  ],
+  "views": [
+    {
+      "name": "useModel",
+      "statement": "select * from Orders"
+    },
+    {
+      "name": "useRelationship",
+      "statement": "select orderkey, customer.name from Orders"
+    },
+    {
+      "name": "useRelationshipCustomer",
+      "statement": "select name, array_length(orders) as length from Customer"
+    },
+    {
+      "name": "useMetric",
+      "statement": "select * from Revenue"
+    },
+    {
+      "name": "useMetricRollUp",
+      "statement": "select * from roll_up(Revenue, orderdate, YEAR)"
+    }
   ]
 }
