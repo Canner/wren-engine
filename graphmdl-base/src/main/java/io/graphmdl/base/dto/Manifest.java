@@ -33,6 +33,8 @@ public class Manifest
     private final List<EnumDefinition> enumDefinitions;
     private final List<Metric> metrics;
 
+    private final List<View> views;
+
     public static Builder builder()
     {
         return new Builder();
@@ -45,7 +47,8 @@ public class Manifest
             @JsonProperty("models") List<Model> models,
             @JsonProperty("relationships") List<Relationship> relationships,
             @JsonProperty("enumDefinitions") List<EnumDefinition> enumDefinitions,
-            @JsonProperty("metrics") List<Metric> metrics)
+            @JsonProperty("metrics") List<Metric> metrics,
+            @JsonProperty("views") List<View> views)
     {
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.schema = requireNonNull(schema, "schema is null");
@@ -53,6 +56,7 @@ public class Manifest
         this.relationships = relationships == null ? List.of() : relationships;
         this.enumDefinitions = enumDefinitions == null ? List.of() : enumDefinitions;
         this.metrics = metrics == null ? List.of() : metrics;
+        this.views = views == null ? List.of() : views;
     }
 
     @JsonProperty
@@ -91,6 +95,11 @@ public class Manifest
         return metrics;
     }
 
+    public List<View> getViews()
+    {
+        return views;
+    }
+
     @JsonPOJOBuilder(buildMethodName = "build", withPrefix = "set")
     public static class Builder
     {
@@ -100,6 +109,8 @@ public class Manifest
         private List<Relationship> relationships;
         private List<EnumDefinition> enumDefinitions;
         private List<Metric> metrics;
+
+        private List<View> views;
 
         private Builder() {}
 
@@ -139,9 +150,15 @@ public class Manifest
             return this;
         }
 
+        public Builder setViews(List<View> views)
+        {
+            this.views = views;
+            return this;
+        }
+
         public Manifest build()
         {
-            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics);
+            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics, views);
         }
     }
 }

@@ -21,6 +21,7 @@ import io.graphmdl.base.dto.Manifest;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
+import io.graphmdl.base.dto.View;
 
 import java.util.List;
 import java.util.Optional;
@@ -116,6 +117,21 @@ public class GraphMDL
     {
         if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
             return getMetric(name.getSchemaTableName().getTableName());
+        }
+        return Optional.empty();
+    }
+
+    public Optional<View> getView(String name)
+    {
+        return manifest.getViews().stream()
+                .filter(view -> view.getName().equals(name))
+                .findAny();
+    }
+
+    public Optional<View> getView(CatalogSchemaTableName name)
+    {
+        if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
+            return getView(name.getSchemaTableName().getTableName());
         }
         return Optional.empty();
     }
