@@ -33,10 +33,13 @@ import org.testng.annotations.Test;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
@@ -49,6 +52,11 @@ public class TestPreAggregation
 {
     private final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
     private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
+    private final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
+    private final SessionContext defaultSessionContext = SessionContext.builder()
+            .setCatalog("canner-cml")
+            .setSchema("tpch_tiny")
+            .build();
 
     @Override
     protected TestingGraphMDLServer createGraphMDLServer()
@@ -79,11 +87,12 @@ public class TestPreAggregation
     @Test
     public void testPreAggregation()
     {
-        String mappingName = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "Revenue").getRequiredTableName();
+        String mappingName = getDefaultMetricTablePair("Revenue").getRequiredTableName();
+        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
         List<Object[]> tables = queryDuckdb("show tables");
 
-        assertThat(tables.size()).isOne();
-        assertThat(tables.get(0)[0]).isEqualTo(mappingName);
+        Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
+        assertThat(tableNames).contains(mappingName);
 
         List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
         List<Object[]> bqResult = queryBigQuery(format("SELECT\n" +
@@ -95,7 +104,7 @@ public class TestPreAggregation
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
-        String errMsg = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "unqualified").getErrorMessage()
+        String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
     }
@@ -135,12 +144,8 @@ public class TestPreAggregation
     public void testExecuteRewrittenQuery()
             throws Exception
     {
-        SessionContext sessionContext = SessionContext.builder()
-                .setCatalog("canner-cml")
-                .setSchema("tpch_tiny")
-                .build();
         String rewritten =
-                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
+                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
             int count = 0;
@@ -152,7 +157,7 @@ public class TestPreAggregation
         }
 
         String withParam =
-                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
+                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
@@ -162,10 +167,45 @@ public class TestPreAggregation
         }
     }
 
+    @Test
+    public void testQueryMetricWithDroppedPreAggTable()
+            throws SQLException
+    {
+        String tableName = getDefaultMetricTablePair("ForDropTable").getRequiredTableName();
+        List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
+        assertThat(origin.size()).isGreaterThan(0);
+        duckdbClient.executeDDL(format("drop table %s", tableName));
+
+        try (Connection connection = createConnection();
+                PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");
+                ResultSet resultSet = stmt.executeQuery()) {
+            int count = 0;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @Test
+    public void testRefreshPreAggregation()
+            throws InterruptedException
+    {
+        String query = "select table_name from information_schema.tables where table_name = '%s'";
+        String tableName = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
+        duckdbClient.executeDDL(format("DROP TABLE IF EXISTS %s", tableName));
+        Thread.sleep(5000);
+        assertThat(queryDuckdb(format(query, tableName)).size()).isOne();
+    }
+
+    private PreAggregationManager.MetricTablePair getDefaultMetricTablePair(String metric)
+    {
+        return preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", metric);
+    }
+
     private List<Object[]> queryDuckdb(String statement)
     {
-        DuckdbClient client = getInstance(Key.get(DuckdbClient.class));
-        try (AutoCloseableIterator<Object[]> iterator = client.query(statement)) {
+        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(statement)) {
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
                 builder.add(iterator.next());

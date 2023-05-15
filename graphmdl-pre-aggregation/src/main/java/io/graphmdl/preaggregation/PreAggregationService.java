@@ -13,9 +13,11 @@
  */
 package io.graphmdl.preaggregation;
 
+import java.util.Optional;
+
 public interface PreAggregationService
 {
-    String createPreAggregation(String catalog, String schema, String name, String statement);
+    Optional<PathInfo> createPreAggregation(String catalog, String schema, String name, String statement);
 
-    void cleanPreAggregation();
+    void deleteTarget(PathInfo pathInfo);
 }

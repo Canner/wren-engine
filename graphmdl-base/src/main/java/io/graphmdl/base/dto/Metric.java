@@ -16,6 +16,7 @@ package io.graphmdl.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.airlift.units.Duration;
 
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 import static io.graphmdl.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class Metric
 {
@@ -32,15 +34,16 @@ public class Metric
     private final List<Column> measure;
     private final List<TimeGrain> timeGrain;
     private final boolean preAggregated;
+    private final Duration refreshByTime;
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
-        return new Metric(name, baseModel, dimension, measure, timeGrain, false);
+        return metric(name, baseModel, dimension, measure, timeGrain, false);
     }
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
     {
-        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated);
+        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null);
     }
 
     @JsonCreator
@@ -50,7 +53,8 @@ public class Metric
             @JsonProperty("dimension") List<Column> dimension,
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
-            @JsonProperty("preAggregated") boolean preAggregated)
+            @JsonProperty("preAggregated") boolean preAggregated,
+            @JsonProperty("refreshByTime") Duration refreshByTime)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseModel = requireNonNull(baseModel, "baseModel is null");
@@ -59,6 +63,7 @@ public class Metric
         this.preAggregated = preAggregated;
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
+        this.refreshByTime = refreshByTime == null ? new Duration(30, MINUTES) : refreshByTime;
     }
 
     public String getName()
@@ -98,6 +103,11 @@ public class Metric
         return preAggregated;
     }
 
+    public Duration getRefreshByTime()
+    {
+        return refreshByTime;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -113,12 +123,13 @@ public class Metric
                 && Objects.equals(baseModel, that.baseModel)
                 && Objects.equals(dimension, that.dimension)
                 && Objects.equals(measure, that.measure)
-                && Objects.equals(timeGrain, that.timeGrain);
+                && Objects.equals(timeGrain, that.timeGrain)
+                && Objects.equals(refreshByTime, that.refreshByTime);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated);
+        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated, refreshByTime);
     }
 }
