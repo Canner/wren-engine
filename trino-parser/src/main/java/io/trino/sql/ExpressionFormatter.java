@@ -117,6 +117,8 @@ import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
 import static io.trino.sql.SqlFormatter.formatName;
 import static io.trino.sql.SqlFormatter.formatSql;
+import static io.trino.sql.tree.ComparisonExpression.Operator.EQUAL;
+import static io.trino.sql.tree.QuantifiedComparisonExpression.Quantifier.ANY;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -720,6 +722,17 @@ public final class ExpressionFormatter
         @Override
         protected String visitQuantifiedComparisonExpression(QuantifiedComparisonExpression node, Void context)
         {
+            if (dialect.equals(BIGQUERY)) {
+                // Convert PostgreSQL `= ANY` to BigQuery `IN`
+                if (node.getQuantifier().equals(ANY) && node.getOperator().equals(EQUAL)) {
+                    return "(" +
+                            process(node.getValue(), context) +
+                            " IN " +
+                            process(node.getSubquery(), context) +
+                            ")";
+                }
+            }
+
             return new StringBuilder()
                     .append("(")
                     .append(process(node.getValue(), context))
