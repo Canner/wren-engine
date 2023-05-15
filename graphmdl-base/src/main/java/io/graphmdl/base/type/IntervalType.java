@@ -60,6 +60,21 @@ public class IntervalType
             .appendSecondsWithOptionalMillis()
             .toFormatter();
 
+    private static final PeriodFormatter PG_INTERVAL_FORMATTER = new PeriodFormatterBuilder()
+            .appendYears()
+            .appendSuffix(" years ")
+            .appendMonths()
+            .appendSuffix(" mons ")
+            .appendDays()
+            .appendSuffix(" days ")
+            .appendHours()
+            .appendSuffix(" hours ")
+            .appendMinutes()
+            .appendSuffix(" mins ")
+            .appendSecondsWithOptionalMillis()
+            .appendSuffix(" secs")
+            .toFormatter();
+
     private IntervalType()
     {
         super(OID, TYPE_LEN, TYPE_MOD, "interval");
@@ -154,7 +169,6 @@ public class IntervalType
     @Override
     public Period decodeUTF8Text(byte[] bytes)
     {
-        // return IntervalType.PERIOD_FORMATTER.parsePeriod(new String(bytes, StandardCharsets.UTF_8));
-        return new Period(new String(bytes, StandardCharsets.UTF_8));
+        return PG_INTERVAL_FORMATTER.parsePeriod(new String(bytes, StandardCharsets.UTF_8));
     }
 }

@@ -22,6 +22,7 @@ import io.graphmdl.base.type.IntervalType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
+import org.joda.time.Period;
 
 import java.util.Map;
 import java.util.Optional;
@@ -105,6 +106,9 @@ public final class BigQueryType
         // https://github.com/googleapis/java-bigquery/blob/909a574e6857332dfc71c746c4500b601de57dcf/google-cloud-bigquery/src/main/java/com/google/cloud/bigquery/QueryParameterValue.java#L409
         if (pgType.equals(SMALLINT) && value instanceof Short) {
             return ((Short) value).intValue();
+        }
+        if (pgType.equals(IntervalType.INTERVAL) && value instanceof Period) {
+            return value.toString();
         }
         return value;
     }
