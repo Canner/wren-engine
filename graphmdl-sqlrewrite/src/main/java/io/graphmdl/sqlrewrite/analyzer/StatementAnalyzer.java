@@ -392,9 +392,6 @@ public final class StatementAnalyzer
                             }
                             column = outputExpressions.get(toIntExact(ordinal - 1));
                         }
-                        else {
-                            analyzeExpression(column, scope);
-                        }
                         groupingExpressions.add(column);
                     }
                 }
