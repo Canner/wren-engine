@@ -35,7 +35,6 @@ import io.trino.sql.tree.Statement;
 
 import javax.annotation.Nullable;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -291,8 +290,8 @@ public class WireProtocolSession
             try {
                 return preAggregationManager.query(statement, portal.getParameters());
             }
-            catch (SQLException e) {
-                LOG.warn(e, "Failed to execute pre-aggregation query: %s", statement);
+            catch (Exception e) {
+                LOG.warn("Failed to execute pre-aggregation query: %s", statement, e);
                 return null;
             }
         });

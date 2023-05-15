@@ -55,13 +55,14 @@ public class GraphMDLManager
             throws IOException
     {
         loadGraphMDL(Files.readString(graphMDLFile.toPath()));
-        preAggregationManager.doPreAggregation(getGraphMDL()).join();
     }
 
     private void loadGraphMDL(String json)
             throws JsonProcessingException
     {
         graphMDL.set(GraphMDL.fromJson(json));
+        preAggregationManager.doPreAggregation(getGraphMDL()).join();
+        preAggregationManager.scheduleGraphMDL(getGraphMDL());
     }
 
     @Override

@@ -100,7 +100,8 @@
             "MONTH"
           ]
         }
-      ]
+      ],
+      "refreshByTime": "2m"
     },
     {
       "preAggregated": "true",
@@ -160,6 +161,63 @@
           ]
         }
       ]
+    },
+    {
+      "preAggregated": "true",
+      "name": "ForDropTable",
+      "baseModel": "Orders",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "integer"
+        }
+      ],
+      "measure": [
+        {
+          "name": "revenue",
+          "type": "integer",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "preAggregated": "true",
+      "name": "ForRefresh",
+      "baseModel": "Orders",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "integer"
+        }
+      ],
+      "measure": [
+        {
+          "name": "revenue",
+          "type": "integer",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ],
+      "refreshByTime": "5s"
     }
   ]
 }
