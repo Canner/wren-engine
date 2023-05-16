@@ -348,12 +348,19 @@ public final class ExpressionFormatter
         @Override
         protected String visitIntervalLiteral(IntervalLiteral node, Void context)
         {
-            String sign = (node.getSign() == IntervalLiteral.Sign.NEGATIVE) ? "- " : "";
-            StringBuilder builder = new StringBuilder()
-                    .append("INTERVAL ")
-                    .append(sign)
-                    .append(" '").append(node.getValue()).append("' ")
-                    .append(node.getStartField());
+            String sign = (node.getSign() == IntervalLiteral.Sign.NEGATIVE) ? "-" : "";
+            StringBuilder builder = new StringBuilder();
+            if (dialect.equals(BIGQUERY)) {
+                builder.append("INTERVAL ")
+                        .append("'").append(sign).append(node.getValue()).append("' ")
+                        .append(node.getStartField());
+            }
+            else {
+                builder.append("INTERVAL ")
+                        .append(sign)
+                        .append(" '").append(node.getValue()).append("' ")
+                        .append(node.getStartField());
+            }
 
             if (node.getEndField().isPresent()) {
                 builder.append(" TO ").append(node.getEndField().get());
