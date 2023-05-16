@@ -23,6 +23,7 @@ import io.graphmdl.testing.AbstractTestFramework;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -30,6 +31,7 @@ import java.util.List;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Relationship.SortKey.sortKey;
 import static io.graphmdl.base.dto.Relationship.relationship;
+import static io.graphmdl.sqlrewrite.GroupByKeyRewrite.GROUP_BY_KEY_REWRITE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestGroupByKeyRewrite
@@ -67,25 +69,32 @@ public class TestGroupByKeyRewrite
                 .build());
     }
 
-    @Test
-    public void testBasic()
+    @DataProvider
+    public Object[][] testCase()
     {
-        String sql = "select count(*) from Book group by author";
-        String expected = "select count(*) from Book group by author.userId";
-        assertThat(rewrite(sql)).isEqualTo(parse(expected));
+        return new Object[][] {
+                // TODO: remove unnecessary group by key `author` in the expected answer
+                {"select count(*) from Book group by author", "select count(*) from Book group by (author.userId, author)"},
+                // TODO: remove unnecessary group by key `author` in the expected answer
+                {"select count(*) from Book group by author, name", "select count(*) from Book group by (author.userId, author), name"},
+                {"select author, count(*) from Book group by author", "select author, count(*) from Book group by (author.userId, author)"},
+                {"select author, count(*) from Book group by author, name", "select author, count(*) from Book group by (author.userId, author), name"},
+                {"select author, count(*) from Book group by 1", "select author, count(*) from Book group by (author.userId, 1)"},
+                {"select author, name, count(*) from Book group by 1, 2", "select author, name, count(*) from Book group by (author.userId, 1), 2"},
+                {"select author, name, count(*) from Book group by 1, 2", "select author, name, count(*) from Book group by (author.userId, 1), 2"},
+                {"select author, name, count(*) from Book group by (author, name)", "select author, name, count(*) from Book group by (author.userId, author, name)"},
+        };
     }
 
-    @Test
-    public void testGroupByIndex()
+    @Test(dataProvider = "testCase")
+    public void testBasic(String actual, String expected)
     {
-        String sql = "select author, count(*) from Book group by 1";
-        String expected = "select author, count(*) from Book group by author.userId, 1";
-        assertThat(rewrite(sql)).isEqualTo(parse(expected));
+        assertThat(rewrite(actual)).isEqualTo(parse(expected));
     }
 
     private Statement rewrite(String sql)
     {
-        return GroupByKeyRewrite.GROUP_BY_KEY_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL);
+        return GROUP_BY_KEY_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL);
     }
 
     private Statement parse(String sql)

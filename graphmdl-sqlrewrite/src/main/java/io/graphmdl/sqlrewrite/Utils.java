@@ -233,6 +233,7 @@ public final class Utils
                 .name(column.getName())
                 .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
                 .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
+                .type(column.getType())
                 .build();
     }
 }

@@ -226,7 +226,7 @@ public class TestGraphMDLWithBigquery
             throws Exception
     {
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select count(*) as totalcount from Orders group by customer");
+            PreparedStatement stmt = connection.prepareStatement("select customer, count(*) as totalcount from Orders group by customer");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("totalcount"));

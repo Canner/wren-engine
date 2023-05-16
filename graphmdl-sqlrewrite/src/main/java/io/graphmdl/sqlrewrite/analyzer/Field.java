@@ -51,7 +51,7 @@ public class Field
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
         this.isRelationship = isRelationship;
-        this.type = type;
+        this.type = requireNonNull(type);
     }
 
     public Optional<QualifiedName> getRelationAlias()

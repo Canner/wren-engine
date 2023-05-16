@@ -33,7 +33,6 @@ import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.Statement;
 
-import java.util.List;
 import java.util.Optional;
 
 import static io.graphmdl.sqlrewrite.analyzer.Analysis.GroupByAnalysis;
@@ -70,7 +69,7 @@ public class GroupByKeyRewrite
     }
 
     static class Rewriter
-            extends BaseRewriter<GroupByAnalysis>
+            extends BaseRewriter<Void>
     {
         private final GraphMDL graphMDL;
         private final Analysis analysis;
@@ -82,7 +81,7 @@ public class GroupByKeyRewrite
         }
 
         @Override
-        protected Node visitGroupBy(GroupBy node, GroupByAnalysis context)
+        protected Node visitGroupBy(GroupBy node, Void context)
         {
             GroupByAnalysis groupByAnalysis = analysis.getGroupByAnalysis().get(NodeRef.of(node));
             ImmutableList.Builder<GroupingElement> builder = ImmutableList.builder();
@@ -107,13 +106,15 @@ public class GroupByKeyRewrite
 
         protected void rewriteSimpleGroupBy(SimpleGroupBy node, GroupByAnalysis context, ImmutableList.Builder<GroupingElement> groupingElementBuilder)
         {
+            ImmutableList.Builder<Expression> simpleGroupByBuilder = ImmutableList.builder();
             for (Expression expression : node.getExpressions()) {
                 analysis.tryGetScope(expression)
-                        .ifPresent(scope -> rewriteGroupByKeyIfNeeded(scope, expression, context, groupingElementBuilder));
+                        .ifPresent(scope -> rewriteGroupByKeyIfNeeded(scope, expression, context, simpleGroupByBuilder));
             }
+            groupingElementBuilder.add(new SimpleGroupBy(simpleGroupByBuilder.build()));
         }
 
-        private void rewriteGroupByKeyIfNeeded(Scope scope, Expression key, GroupByAnalysis groupByAnalysis, ImmutableList.Builder<GroupingElement> builder)
+        private void rewriteGroupByKeyIfNeeded(Scope scope, Expression key, GroupByAnalysis groupByAnalysis, ImmutableList.Builder<Expression> builder)
         {
             if (key instanceof LongLiteral) {
                 Expression expression = groupByAnalysis.getOriginalExpressions().get(toIntExact(((LongLiteral) key).getValue()) - 1);
@@ -123,10 +124,9 @@ public class GroupByKeyRewrite
                 if (field.isPresent() && field.get().isRelationship()) {
                     graphMDL.getModel(field.get().getType()).map(Model::getPrimaryKey)
                             .map(primaryKey -> new DereferenceExpression(expression, new Identifier(primaryKey)))
-                            .map(exp -> new SimpleGroupBy(List.of(exp)))
                             .ifPresent(builder::add);
                 }
-                builder.add(new SimpleGroupBy(List.of(key)));
+                builder.add(key);
             }
             else {
                 scope.getRelationType().map(relationType -> relationType.resolveFields(getQualifiedName(key)).get(0))
@@ -134,8 +134,8 @@ public class GroupByKeyRewrite
                         .map(field -> graphMDL.getModel(field.getType()).map(Model::getPrimaryKey)
                                 .map(primaryKey -> new DereferenceExpression(key, new Identifier(primaryKey)))
                                 .orElseThrow(() -> new IllegalStateException("No model found for " + field.getType())))
-                        .map(exp -> new SimpleGroupBy(List.of(exp)))
                         .ifPresent(builder::add);
+                builder.add(key);
             }
         }
     }
