@@ -55,9 +55,9 @@ public class PGArray
     public static final PGArray EMPTY_RECORD_ARRAY = new PGArray(2287, RecordType.EMPTY_RECORD);
     public static final PGArray HSTORE_ARRAY = new PGArray(57645, HstoreType.HSTORE);
     public static final PGArray REGPROC_ARRAY = new PGArray(1008, RegprocType.REGPROC);
+    public static final PGArray INTERVAL_ARRAY = new PGArray(1187, IntervalType.INTERVAL);
 
     // TODO:
-    // public static final PGArray INTERVAL_ARRAY = new PGArray(1187, IntervalType.INSTANCE);
     // public static final PGArray TIMETZ_ARRAY = new PGArray(1270, TimeTZType.INSTANCE);
     // public static final PGArray POINT_ARRAY = new PGArray(1017, PointType.INSTANCE);
     // public static final PGArray ANY_ARRAY = new PGArray(
