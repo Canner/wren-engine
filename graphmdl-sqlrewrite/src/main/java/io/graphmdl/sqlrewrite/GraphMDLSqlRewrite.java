@@ -17,6 +17,8 @@ package io.graphmdl.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.dto.EnumDefinition;
+import io.graphmdl.base.dto.EnumValue;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
@@ -35,6 +37,7 @@ import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
@@ -50,6 +53,7 @@ import static io.trino.sql.QueryUtil.equal;
 import static io.trino.sql.QueryUtil.joinOn;
 import static io.trino.sql.QueryUtil.table;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -69,12 +73,8 @@ public class GraphMDLSqlRewrite
                 analysis.getModels().stream()
                         .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
 
-        if (modelQueries.isEmpty()) {
-            return root;
-        }
-
         Node rewriteWith = new WithRewriter(modelQueries, analysis).process(root);
-        return (Statement) new Rewriter(analysis).process(rewriteWith);
+        return (Statement) new Rewriter(analysis, graphMDL).process(rewriteWith);
     }
 
     @Override
@@ -146,7 +146,7 @@ public class GraphMDLSqlRewrite
                                     // and tables in with query should all be in order.
                                     Stream.concat(withQueries.stream(), with.getQueries().stream())
                                             .collect(toUnmodifiableList())))
-                            .or(() -> Optional.of(new With(false, withQueries))),
+                            .or(() -> withQueries.isEmpty() ? Optional.empty() : Optional.of(new With(false, withQueries))),
                     node.getQueryBody(),
                     node.getOrderBy(),
                     node.getOffset(),
@@ -158,10 +158,12 @@ public class GraphMDLSqlRewrite
             extends BaseRewriter<Void>
     {
         private final Analysis analysis;
+        private final GraphMDL graphMDL;
 
-        Rewriter(Analysis analysis)
+        Rewriter(Analysis analysis, GraphMDL graphMDL)
         {
             this.analysis = analysis;
+            this.graphMDL = graphMDL;
         }
 
         @Override
@@ -220,7 +222,26 @@ public class GraphMDLSqlRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
-            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
+            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), rewriteEnumIfNeed(node));
+        }
+
+        private Expression rewriteEnumIfNeed(DereferenceExpression node)
+        {
+            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(node);
+            if (qualifiedName == null || qualifiedName.getOriginalParts().size() != 2) {
+                return node;
+            }
+
+            String enumName = qualifiedName.getOriginalParts().get(0).getValue();
+            Optional<EnumDefinition> enumDefinitionOptional = graphMDL.getEnum(enumName);
+            if (enumDefinitionOptional.isEmpty()) {
+                return node;
+            }
+
+            return enumDefinitionOptional.get().valueOf(qualifiedName.getOriginalParts().get(1).getValue())
+                    .map(EnumValue::getValue)
+                    .map(StringLiteral::new)
+                    .orElseThrow(() -> new IllegalArgumentException(format("Enum value '%s' not found in enum '%s'", qualifiedName.getParts().get(1), qualifiedName.getParts().get(0))));
         }
 
         @Override

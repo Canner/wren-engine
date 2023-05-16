@@ -97,7 +97,7 @@ public class ScopeAwareRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Scope context)
         {
-            if (context.getRelationType().isPresent()) {
+            if (context != null && context.getRelationType().isPresent()) {
                 List<String> parts = getParts(node);
                 for (int i = 0; i < parts.size(); i++) {
                     List<Field> field = context.getRelationType().get().resolveFields(QualifiedName.of(parts.subList(0, i + 1)));
