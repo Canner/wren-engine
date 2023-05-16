@@ -301,4 +301,23 @@ public class TestGraphMDLWithBigquery
         //     assertThat(count).isEqualTo(100);
         // }
     }
+
+    @Test
+    public void testEnum()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select Status.F as f1");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThat(resultSet.getString("f1")).isEqualTo("F");
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select count(*) as totalcount from Orders where orderstatus = Status.O");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThat(resultSet.getInt("totalcount")).isEqualTo(7333);
+        }
+    }
 }
