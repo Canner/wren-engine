@@ -294,4 +294,26 @@ public class TestBigQuerySqlConverter
                         "  (graphmdl.test.t1\n" +
                         "LEFT JOIN graphmdl.test2.t2 ON (t1.c1 = t2.c1))\n");
     }
+
+    @Test
+    public void testFlattenGroupingElements()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT count(*)" +
+                        "FROM graphmdl.test.t1\n" +
+                        "GROUP BY (c1, c2, c3)", SessionContext.builder().build()))
+                .isEqualTo("SELECT count(*)\n" +
+                        "FROM\n" +
+                        "  graphmdl.test.t1\n" +
+                        "GROUP BY c1, c2, c3\n");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT count(*)" +
+                        "FROM graphmdl.test.t1\n" +
+                        "GROUP BY (c1, c2), c3", SessionContext.builder().build()))
+                .isEqualTo("SELECT count(*)\n" +
+                        "FROM\n" +
+                        "  graphmdl.test.t1\n" +
+                        "GROUP BY c1, c2, c3\n");
+    }
 }

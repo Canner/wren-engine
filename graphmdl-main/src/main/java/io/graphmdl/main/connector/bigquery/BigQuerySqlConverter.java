@@ -20,6 +20,7 @@ import io.graphmdl.base.SessionContext;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.main.sql.SqlRewrite;
+import io.graphmdl.main.sql.bigquery.FlattenGroupingElements;
 import io.graphmdl.main.sql.bigquery.RemoveCatalogSchemaColumnPrefix;
 import io.graphmdl.main.sql.bigquery.RemoveColumnAliasInAliasRelation;
 import io.graphmdl.main.sql.bigquery.RemoveParameterInTypesInCast;
@@ -70,7 +71,8 @@ public class BigQuerySqlConverter
                 // bigquery doesn't support parameter in types in cast
                 // this should happen after RewriteToBigQueryType since RewriteToBigQueryType will replace
                 // GenericLiteral with Cast and types in Cast could contain parameter.
-                RemoveParameterInTypesInCast.INSTANCE);
+                RemoveParameterInTypesInCast.INSTANCE,
+                FlattenGroupingElements.INSTANCE);
 
         LOG.info("[Input sql]: %s", sql);
 
