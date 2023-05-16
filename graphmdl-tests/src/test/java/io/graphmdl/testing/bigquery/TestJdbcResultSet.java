@@ -16,6 +16,7 @@ package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.testing.AbstractWireProtocolTest;
+import org.postgresql.util.PGInterval;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -130,6 +131,11 @@ public class TestJdbcResultSet
 //        checkRepresentation("IPADDRESS '1.2.3.4'", Types.JAVA_OBJECT, "1.2.3.4");
         checkRepresentation("UUID '0397e63b-2b78-4b7b-9c87-e085fa225dd8'", Types.VARCHAR, "0397e63b-2b78-4b7b-9c87-e085fa225dd8");
         checkRepresentation("JSON '{\"name\":\"alice\"}'", Types.VARCHAR, "{\"name\":\"alice\"}");
+
+        PGInterval intervalObj = new PGInterval();
+        intervalObj.setType("interval");
+        intervalObj.setValue("1 year");
+        checkRepresentation("INTERVAL '1' year", Types.OTHER, intervalObj);
 
         checkRepresentation("DATE '2018-02-13'", Types.DATE, (rs, column) -> {
             assertEquals(rs.getObject(column), Date.valueOf(LocalDate.of(2018, 2, 13)));

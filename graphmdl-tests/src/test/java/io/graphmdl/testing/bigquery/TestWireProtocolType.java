@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.DataType;
+import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.Test;
 
@@ -52,6 +53,7 @@ import static io.graphmdl.testing.DataType.dateDataType;
 import static io.graphmdl.testing.DataType.decimalDataType;
 import static io.graphmdl.testing.DataType.doubleDataType;
 import static io.graphmdl.testing.DataType.integerDataType;
+import static io.graphmdl.testing.DataType.intervalType;
 import static io.graphmdl.testing.DataType.jsonDataType;
 import static io.graphmdl.testing.DataType.nameDataType;
 import static io.graphmdl.testing.DataType.realDataType;
@@ -280,6 +282,33 @@ public class TestWireProtocolType
                 .executeSuite();
     }
 
+    @Test
+    public void testInterval()
+    {
+        createTypeTest()
+                .addInput(intervalType(), "'1' year", value -> toPGInterval("1 year"))
+                .addInput(intervalType(), "'-5' DAY", value -> toPGInterval("-5 days"))
+                .addInput(intervalType(), "'-1' SECOND", value -> toPGInterval("-00:00:01"))
+                .addInput(intervalType(), "'-25' MONTH", value -> toPGInterval("-2 years -1 mons"))
+                .addInput(intervalType(), "'10:20:30.52' HOUR TO SECOND", value -> toPGInterval("10:20:30.520"))
+                .addInput(intervalType(), "'1-2' YEAR TO MONTH", value -> toPGInterval("1 year 2 mons"))
+                .addInput(intervalType(), "'1 5:30' DAY TO MINUTE", value -> toPGInterval("1 day 05:30:00"))
+                .executeSuite();
+    }
+
+    private static PGobject toPGInterval(String value)
+    {
+        try {
+            PGInterval pgInterval = new PGInterval();
+            pgInterval.setType("interval");
+            pgInterval.setValue(value);
+            return pgInterval;
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static void checkIsGap(ZoneId zone, LocalDateTime dateTime)
     {
         verify(isGap(zone, dateTime), "Expected %s to be a gap in %s", dateTime, zone);
@@ -376,12 +405,6 @@ public class TestWireProtocolType
                         Object actual = result.getObject(i + 1);
                         if (actual instanceof Array) {
                             assertArrayEquals((Array) actual, (List<?>) expectedResults.get(i), expectedTypeName.get(i));
-                        }
-                        else if (expectedResults.get(i) instanceof PGobject) {
-                            PGobject expected = (PGobject) expectedResults.get(i);
-                            if ("inet".equals(expected.getType())) {
-                                assertThat(actual).isEqualTo(expected.getValue());
-                            }
                         }
                         else if (TYPE_FORCED_TO_LONG.contains(expectedTypeName.get(i))) {
                             assertThat(Long.valueOf((long) actual).intValue()).isEqualTo(expectedResults.get(i));
