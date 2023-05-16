@@ -55,6 +55,7 @@ public class TestLambdaExpressionBodyRewrite
                         .columnName("books")
                         .name("books")
                         .relationAlias(QualifiedName.of("t"))
+                        .type("Book")
                         .build(), new Identifier("book"));
         assertThat(node.toString()).isEqualTo(parse(expected).toString());
     }
