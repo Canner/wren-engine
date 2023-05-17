@@ -21,12 +21,8 @@ import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.main.GraphMDLMetastore;
-import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.preaggregation.PreAggregationManager;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 import org.testng.annotations.Test;
 
@@ -47,10 +43,11 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 
+@Test(singleThreaded = true)
 public class TestPreAggregation
-        extends AbstractWireProtocolTest
+        extends AbstractPreAggregationTest
 {
-    private final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
+    private final String dropTableStatement = "BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;";
     private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
     private final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
@@ -78,12 +75,6 @@ public class TestPreAggregation
                 .build();
     }
 
-    @Override
-    protected Optional<String> getGraphMDLPath()
-    {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg_mdl.json")).getPath());
-    }
-
     @Test
     public void testPreAggregation()
     {
@@ -107,6 +98,12 @@ public class TestPreAggregation
         String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
+    }
+
+    @Override
+    protected Optional<String> getGraphMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg/pre_agg_mdl.json")).getPath());
     }
 
     @Test
@@ -174,7 +171,7 @@ public class TestPreAggregation
         String tableName = getDefaultMetricTablePair("ForDropTable").getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
-        duckdbClient.executeDDL(format("drop table %s", tableName));
+        duckdbClient.executeDDL(format(dropTableStatement, tableName));
 
         try (Connection connection = createConnection();
                 PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");
@@ -193,42 +190,8 @@ public class TestPreAggregation
     {
         String query = "select table_name from information_schema.tables where table_name = '%s'";
         String tableName = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
-        duckdbClient.executeDDL(format("DROP TABLE IF EXISTS %s", tableName));
+        duckdbClient.executeDDL(format(dropTableStatement, tableName));
         Thread.sleep(5000);
         assertThat(queryDuckdb(format(query, tableName)).size()).isOne();
-    }
-
-    private PreAggregationManager.MetricTablePair getDefaultMetricTablePair(String metric)
-    {
-        return preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", metric);
-    }
-
-    private List<Object[]> queryDuckdb(String statement)
-    {
-        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(statement)) {
-            ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add(iterator.next());
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private List<Object[]> queryBigQuery(String statement)
-    {
-        Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
-        try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
-            ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add(iterator.next());
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }

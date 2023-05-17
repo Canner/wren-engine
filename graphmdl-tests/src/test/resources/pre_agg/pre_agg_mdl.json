@@ -217,7 +217,7 @@
           ]
         }
       ],
-      "refreshByTime": "5s"
+      "refreshByTime": "3s"
     }
   ]
 }

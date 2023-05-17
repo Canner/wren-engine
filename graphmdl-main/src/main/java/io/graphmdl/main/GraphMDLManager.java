@@ -61,8 +61,7 @@ public class GraphMDLManager
             throws JsonProcessingException
     {
         graphMDL.set(GraphMDL.fromJson(json));
-        preAggregationManager.doPreAggregation(getGraphMDL()).join();
-        preAggregationManager.scheduleGraphMDL(getGraphMDL());
+        preAggregationManager.importPreAggregation(getGraphMDL());
     }
 
     @Override
