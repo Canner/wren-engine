@@ -24,4 +24,4 @@ jobs:
       - name: deploy
         run: |
           ./mvnw clean install -B -DskipTests
-          ./mvnw deploy -B -DskipTests -pl :graphmdl-main
+          ./mvnw deploy -B -DskipTests -pl :graphmdl-shaded
