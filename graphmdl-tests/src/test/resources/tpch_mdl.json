@@ -60,6 +60,75 @@
         }
       ],
       "primaryKey": "custkey"
+    },
+    {
+      "name": "Lineitem",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.lineitem",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "l_orderkey",
+          "type": "integer"
+        },
+        {
+          "name": "partkey",
+          "expression": "l_partkey",
+          "type": "integer"
+        },
+        {
+          "name": "linenumber",
+          "expression": "l_linenumber",
+          "type": "integer"
+        },
+        {
+          "name": "extendedprice",
+          "expression": "l_extendedprice",
+          "type": "double"
+        },
+        {
+          "name": "discount",
+          "expression": "l_discount",
+          "type": "double"
+        },
+        {
+          "name": "shipdate",
+          "expression": "l_shipdate",
+          "type": "date"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersLineitem"
+        },
+        {
+          "name": "part",
+          "type": "Part",
+          "relationship": "LineitemPart"
+        },
+        {
+          "name": "orderkey_linenumber",
+          "type": "string",
+          "expression": "concat(l_orderkey, l_linenumber)"
+        }
+      ],
+      "primaryKey": "orderkey_linenumber"
+    },
+    {
+      "name": "Part",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.part",
+      "columns": [
+        {
+          "name": "partkey",
+          "expression": "p_partkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "p_name",
+          "type": "string"
+        }
+      ],
+      "primaryKey": "partkey"
     }
   ],
   "relationships": [
@@ -71,6 +140,24 @@
       ],
       "joinType": "MANY_TO_ONE",
       "condition": "Orders.custkey = Customer.custkey"
+    },
+    {
+      "name": "OrdersLineitem",
+      "models": [
+        "Orders",
+        "Lineitem"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "Orders.orderkey = Lineitem.orderkey"
+    },
+    {
+      "name": "LineitemPart",
+      "models": [
+        "Lineitem",
+        "Part"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Lineitem.partkey = Part.partkey"
     }
   ],
   "metrics": [

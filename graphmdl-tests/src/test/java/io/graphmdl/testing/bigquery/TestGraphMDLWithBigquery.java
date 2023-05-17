@@ -250,4 +250,55 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(1000);
         }
     }
+
+    @Test
+    public void testAccessMultiRelationship()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.orderstatus from Lineitem limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatus"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.orderstatus, part.name from Lineitem limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatus"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        // TODO: https://github.com/Canner/canner-metric-layer/issues/229
+        // try (Connection connection = createConnection()) {
+        //     PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.customer.name from Lineitem limit 100");
+        //     ResultSet resultSet = stmt.executeQuery();
+        //     resultSet.next();
+        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
+        //     assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+        //
+        //     int count = 1;
+        //
+        //     while (resultSet.next()) {
+        //         count++;
+        //     }
+        //     assertThat(count).isEqualTo(100);
+        // }
+    }
 }
