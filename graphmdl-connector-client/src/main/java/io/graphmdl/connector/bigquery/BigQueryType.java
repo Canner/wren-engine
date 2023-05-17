@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.IntervalType;
+import io.graphmdl.base.type.JsonType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
@@ -42,6 +43,7 @@ import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.BooleanType.BOOLEAN;
 import static io.graphmdl.base.type.ByteaType.BYTEA;
+import static io.graphmdl.base.type.CharType.CHAR;
 import static io.graphmdl.base.type.DoubleType.DOUBLE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static io.graphmdl.base.type.RealType.REAL;
@@ -77,6 +79,7 @@ public final class BigQueryType
                 .put(INTEGER, INT64)
                 .put(SMALLINT, INT64)
                 .put(TINYINT, INT64)
+                .put(CHAR, STRING)
                 .put(VARCHAR, STRING)
                 .put(DOUBLE, FLOAT64)
                 .put(REAL, FLOAT64)
@@ -85,6 +88,7 @@ public final class BigQueryType
                 .put(TimestampType.TIMESTAMP, TIMESTAMP)
                 .put(BYTEA, BYTES)
                 .put(IntervalType.INTERVAL, INTERVAL)
+                .put(JsonType.JSON, JSON)
                 .build();
     }
 

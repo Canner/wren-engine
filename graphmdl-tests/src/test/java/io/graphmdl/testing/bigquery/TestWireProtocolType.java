@@ -16,7 +16,7 @@ package io.graphmdl.testing.bigquery;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.graphmdl.base.type.PGTypes;
+import io.graphmdl.base.type.PGArray;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.DataType;
 import org.postgresql.util.PGInterval;
@@ -26,6 +26,7 @@ import org.testng.annotations.Test;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -42,6 +43,19 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
+import static io.graphmdl.base.type.PGArray.BOOL_ARRAY;
+import static io.graphmdl.base.type.PGArray.BYTEA_ARRAY;
+import static io.graphmdl.base.type.PGArray.CHAR_ARRAY;
+import static io.graphmdl.base.type.PGArray.DATE_ARRAY;
+import static io.graphmdl.base.type.PGArray.FLOAT4_ARRAY;
+import static io.graphmdl.base.type.PGArray.FLOAT8_ARRAY;
+import static io.graphmdl.base.type.PGArray.INT2_ARRAY;
+import static io.graphmdl.base.type.PGArray.INT4_ARRAY;
+import static io.graphmdl.base.type.PGArray.INT8_ARRAY;
+import static io.graphmdl.base.type.PGArray.JSON_ARRAY;
+import static io.graphmdl.base.type.PGArray.NUMERIC_ARRAY;
+import static io.graphmdl.base.type.PGArray.TIMESTAMP_ARRAY;
+import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
 import static io.graphmdl.base.type.SmallIntType.SMALLINT;
 import static io.graphmdl.base.type.TinyIntType.TINYINT;
 import static io.graphmdl.testing.DataType.bigintDataType;
@@ -57,6 +71,7 @@ import static io.graphmdl.testing.DataType.intervalType;
 import static io.graphmdl.testing.DataType.jsonDataType;
 import static io.graphmdl.testing.DataType.nameDataType;
 import static io.graphmdl.testing.DataType.realDataType;
+import static io.graphmdl.testing.DataType.smallintDataType;
 import static io.graphmdl.testing.DataType.textDataType;
 import static io.graphmdl.testing.DataType.timestampDataType;
 import static io.graphmdl.testing.DataType.varcharDataType;
@@ -227,14 +242,24 @@ public class TestWireProtocolType
     {
         // basic types
         createTypeTest()
-                .addInput(arrayDataType(booleanDataType()), asList(true, false))
-                .addInput(arrayDataType(bigintDataType()), asList(123_456_789_012L))
-                .addInput(arrayDataType(integerDataType()), asList(1, 2, 1_234_567_890))
-                // TODO: handle calcite array syntax
-                //  https://github.com/Canner/canner-metric-layer/issues/69
-                // .addInput(arrayDataType(smallintDataType()), asList((short) 32_456))
-                // .addInput(arrayDataType(doubleDataType()), asList(123.45d))
-                // .addInput(arrayDataType(realDataType()), asList(123.45f))
+                .addInput(arrayDataType(booleanDataType(), BOOL_ARRAY), asList(true, false))
+                .addInput(arrayDataType(smallintDataType(), INT2_ARRAY), asList((short) 1, (short) 2), value -> asList(1L, 2L))
+                .addInput(arrayDataType(integerDataType(), INT4_ARRAY), asList(1, 2, 1_234_567_890), value -> asList(1L, 2L, 1_234_567_890L))
+                .addInput(arrayDataType(bigintDataType(), INT8_ARRAY), asList(123_456_789_012L, 1_234_567_890L))
+                .addInput(arrayDataType(realDataType(), FLOAT4_ARRAY), asList(123.45f, 1.2345f), value -> asList(123.45, 1.2345))
+                .addInput(arrayDataType(doubleDataType(), FLOAT8_ARRAY), asList(123.45d, 1.2345d))
+                .addInput(arrayDataType(decimalDataType(3, 1), NUMERIC_ARRAY), asList(new BigDecimal("1"), new BigDecimal("1.1")))
+                .addInput(arrayDataType(varcharDataType(), VARCHAR_ARRAY), asList("hello", "world"))
+                .addInput(arrayDataType(charDataType(), CHAR_ARRAY), asList("h", "w"))
+                .addInput(arrayDataType(byteaDataType(), BYTEA_ARRAY), asList("hello", "world"), value -> asList("\\x68656c6c6f", "\\x776f726c64"))
+                .addInput(arrayDataType(jsonDataType(), JSON_ARRAY), asList("{\"a\": \"apple\"}", "{\"b\": \"banana\"}"), value -> asList("{a:apple}", "{b:banana}"))
+                .addInput(arrayDataType(timestampDataType(3), TIMESTAMP_ARRAY),
+                        asList(LocalDateTime.of(2019, 1, 1, 1, 1, 1, 1_000_000),
+                                LocalDateTime.of(2019, 1, 1, 1, 1, 1, 2_000_000)),
+                        value -> value.stream().map(Timestamp::valueOf).collect(toList()))
+                .addInput(arrayDataType(dateDataType(), DATE_ARRAY), asList(LocalDate.of(2019, 1, 1), LocalDate.of(2019, 1, 2)),
+                        value -> value.stream().map(Date::valueOf).collect(toList()))
+                // TODO support interval
                 .executeSuite();
     }
 
@@ -324,16 +349,11 @@ public class TestWireProtocolType
         verify(zone.getRules().getValidOffsets(dateTime).size() == 2, "Expected %s to be doubled in %s", dateTime, zone);
     }
 
-    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType)
-    {
-        return arrayDataType(elementType, format("array(%s)", elementType.getInsertType()));
-    }
-
-    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, String insertType)
+    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, PGArray insertType)
     {
         return dataType(
+                insertType.typName(),
                 insertType,
-                PGTypes.getArrayType(elementType.getPgResultType().oid()),
                 valuesList -> "array" + valuesList.stream().map(elementType::toLiteral).collect(toList()));
     }
 

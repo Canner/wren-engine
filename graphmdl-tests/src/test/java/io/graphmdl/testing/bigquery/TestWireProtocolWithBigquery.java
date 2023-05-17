@@ -889,7 +889,8 @@ public class TestWireProtocolWithBigquery
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
                 {"bytea", "test1".getBytes(UTF_8)},
-                {"interval", new PGInterval(1, 5, -3, 7, 55, 20)}
+                {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
+                {"array", "[true, false]"}
 
                 // TODO: type support
                 // {"any", new Object[] {1, "test", new BigDecimal(10)}}

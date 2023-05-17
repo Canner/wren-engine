@@ -14,14 +14,18 @@
 
 package io.graphmdl.main.sql.bigquery;
 
+import com.google.common.collect.ImmutableList;
+import io.graphmdl.base.type.PGArray;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
 import io.graphmdl.sqlrewrite.BaseRewriter;
+import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CharLiteral;
 import io.trino.sql.tree.DataTypeParameter;
 import io.trino.sql.tree.DecimalLiteral;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.GenericLiteral;
@@ -31,10 +35,14 @@ import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
+import io.trino.sql.tree.TypeParameter;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import static io.graphmdl.base.type.PGArray.allArray;
+import static io.graphmdl.connector.bigquery.BigQueryType.toBqType;
 import static io.graphmdl.sqlrewrite.Utils.parseType;
 import static java.lang.Integer.parseInt;
 
@@ -82,6 +90,31 @@ public class RewriteToBigQueryType
         }
 
         @Override
+        protected Node visitCast(Cast node, Void context)
+        {
+            // Cast the value of the array first, because BigQuery is strict, for example we can't cast array<decimal> to array<float64>.
+            // So we do the thing like, CAST(ARRAY[true, false] AS _BOOL) -> CAST(ARRAY[CAST(true AS BOOLEAN, CAST(false AS BOOLEAN)] AS ARRAY<BOOLEAN>)
+            if (node.getExpression() instanceof ArrayConstructor) {
+                ArrayConstructor arrayConstructor = (ArrayConstructor) node.getExpression();
+                PGArray pgArray = getPgArrayType(node.getType().toString());
+                List<Expression> values = arrayConstructor.getValues().stream()
+                        .map(value -> new Cast(
+                                visitAndCast(value, context),
+                                visitAndCast(parseType(pgArray.getInnerType().typName()), context)))
+                        .collect(Collectors.toList());
+                if (arrayConstructor.getLocation().isPresent()) {
+                    return new Cast(
+                            new ArrayConstructor(arrayConstructor.getLocation().get(), values),
+                            visitAndCast(node.getType(), context));
+                }
+                return new Cast(
+                        new ArrayConstructor(values),
+                        visitAndCast(node.getType(), context));
+            }
+            return super.visitCast(node, context);
+        }
+
+        @Override
         protected Node visitBinaryLiteral(BinaryLiteral node, Void context)
         {
             // PostgreSQL uses the following format to represent binary data: \x[hexadecimal string], but BigQuery don't support this format.
@@ -116,15 +149,21 @@ public class RewriteToBigQueryType
                 // BigQuery only supports INT64 for integer types.
                 case "TINYINT":
                 case "SMALLINT":
+                case "INT2":
                 case "INTEGER":
+                case "INT4":
                 case "BIGINT":
+                case "INT8":
                     return new GenericDataType(nodeLocation, new Identifier("INT64"), parameters);
                 // BigQuery only supports FLOAT64(aka. Double) for floating point types.
-                case "REAL":
                 case "FLOAT":
+                case "REAL":
+                case "FLOAT4":
                 case "DOUBLE":
+                case "FLOAT8":
                     return new GenericDataType(nodeLocation, new Identifier("FLOAT64"), parameters);
                 case "DECIMAL":
+                case "NUMERIC":
                     if (genericDataType.getArguments().size() == 2
                             && genericDataType.getArguments().get(0) instanceof NumericParameter) {
                         NumericParameter precision = (NumericParameter) genericDataType.getArguments().get(0);
@@ -135,6 +174,7 @@ public class RewriteToBigQueryType
                     }
                     return new GenericDataType(nodeLocation, new Identifier("BIGNUMERIC"), parameters);
                 case "BOOLEAN":
+                case "BOOL":
                     return new GenericDataType(nodeLocation, new Identifier("BOOL"), parameters);
                 case "UUID":
                 case "NAME":
@@ -155,8 +195,24 @@ public class RewriteToBigQueryType
                 case "INTERVAL":
                     return new GenericDataType(nodeLocation, new Identifier("INTERVAL"), parameters);
                 default:
+                    if (typeName.startsWith("_")) {
+                        PGArray pgArray = getPgArrayType(typeName);
+                        return new GenericDataType(nodeLocation, new Identifier("ARRAY"),
+                                ImmutableList.of(
+                                        new TypeParameter(new GenericDataType(nodeLocation, new Identifier(toBqType(pgArray.getInnerType()).name()), ImmutableList.of()))));
+                    }
                     throw new UnsupportedOperationException("Unsupported type: " + typeName);
             }
+        }
+
+        private static PGArray getPgArrayType(String arrayTypeName)
+        {
+            for (PGArray pgArray : allArray()) {
+                if (arrayTypeName.equalsIgnoreCase(pgArray.typName())) {
+                    return pgArray;
+                }
+            }
+            throw new UnsupportedOperationException("Unsupported array type: " + arrayTypeName);
         }
     }
 }
