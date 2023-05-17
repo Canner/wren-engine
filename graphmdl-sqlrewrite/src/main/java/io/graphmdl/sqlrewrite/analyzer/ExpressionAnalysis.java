@@ -25,18 +25,26 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalysis
 {
+    private final Expression expression;
     private final Map<NodeRef<Expression>, Expression> relationshipFieldRewrites;
     private final Set<String> relationshipCTENames;
     private final Set<Relationship> relationships;
 
     public ExpressionAnalysis(
+            Expression expression,
             Map<NodeRef<Expression>, Expression> relationshipFields,
             Set<String> relationshipCTENames,
             Set<Relationship> relationships)
     {
+        this.expression = requireNonNull(expression, "expression is null");
         this.relationshipFieldRewrites = requireNonNull(relationshipFields, "relationshipFields is null");
         this.relationshipCTENames = requireNonNull(relationshipCTENames, "relationshipCTENames is null");
         this.relationships = requireNonNull(relationships, "relationships is null");
+    }
+
+    public Expression getExpression()
+    {
+        return expression;
     }
 
     public Map<NodeRef<Expression>, Expression> getRelationshipFieldRewrites()

@@ -34,9 +34,7 @@ import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.Relationship.relationship;
 import static io.graphmdl.sqlrewrite.Utils.SQL_PARSER;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestAllRulesRewrite
         extends AbstractTestFramework
@@ -56,21 +54,29 @@ public class TestAllRulesRewrite
                                         column("id", INTEGER, null, true),
                                         column("name", VARCHAR, null, true),
                                         relationshipColumn("band", "Band", "AlbumBand"),
-                                        column("price", INTEGER, null, true))),
+                                        column("price", INTEGER, null, true),
+                                        column("bandId", INTEGER, null, true)),
+                                "id"),
                         model("Band",
                                 "select * from (values (1, 'ZUTOMAYO'), " +
                                         "(2, 'Yorushika')) " +
                                         "Band(id, name)",
                                 List.of(
                                         column("id", INTEGER, null, true),
-                                        column("name", VARCHAR, null, true)))))
+                                        column("name", VARCHAR, null, true)),
+                                "id")))
                 .setRelationships(List.of(relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id")))
                 .setMetrics(List.of(
                         metric(
                                 "Collection",
                                 "Album",
-                                // TODO: if dimension is a relationship type
                                 List.of(column("band", VARCHAR, null, true, "Album.band.name")),
+                                List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
+                                List.of()),
+                        metric(
+                                "CollectionA",
+                                "Album",
+                                List.of(column("band", VARCHAR, null, true, null)),
                                 List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
                                 List.of())))
                 .build());
@@ -80,71 +86,26 @@ public class TestAllRulesRewrite
     public Object[][] graphMDLUsedCases()
     {
         return new Object[][] {
-                {"select name, price from Album", "WITH\n" +
-                        "  Album AS (\n" +
-                        "   SELECT\n" +
-                        "     id\n" +
-                        "   , name\n" +
-                        "   , 'relationship<AlbumBand>' band\n" +
-                        "   , price\n" +
-                        "   FROM\n" +
-                        "     (\n" +
-                        "      SELECT *\n" +
-                        "      FROM\n" +
-                        "        (\n" +
-                        " VALUES \n" +
-                        "           ROW (1, 'Gusare', 1, 2560)\n" +
-                        "         , ROW (2, 'HisoHiso Banashi', 1, 1500)\n" +
-                        "         , ROW (3, 'Dakara boku wa ongaku o yameta', 2, 2553)\n" +
-                        "      )  Album (id, name, bandId, price)\n" +
-                        "   ) \n" +
-                        ") \n" +
-                        "SELECT\n" +
-                        "  Album.name\n" +
-                        ", Album.price\n" +
-                        "FROM\n" +
-                        "  Album"},
-                {
-                        "SELECT name, price FROM graphmdl.test.Album",
-                        "WITH\n" +
-                                "  Album AS (\n" +
-                                "   SELECT\n" +
-                                "     id\n" +
-                                "   , name\n" +
-                                "   , 'relationship<AlbumBand>' band\n" +
-                                "   , price\n" +
-                                "   FROM\n" +
-                                "     (\n" +
-                                "      SELECT *\n" +
-                                "      FROM\n" +
-                                "        (\n" +
-                                " VALUES \n" +
-                                "           ROW (1, 'Gusare', 1, 2560)\n" +
-                                "         , ROW (2, 'HisoHiso Banashi', 1, 1500)\n" +
-                                "         , ROW (3, 'Dakara boku wa ongaku o yameta', 2, 2553)\n" +
-                                "      )  Album (id, name, bandId, price)\n" +
-                                "   ) \n" +
-                                ") \n" +
-                                "SELECT\n" +
-                                "  Album.name\n" +
-                                ", Album.price\n" +
-                                "FROM\n" +
-                                "  Album"
-                }
-                // TODO: access the relationship column in the baseModel of metric
-                // {"select band, price from Collection", ""},
-        };
+                {"select name, price from Album",
+                        "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
+                {"SELECT name, price FROM graphmdl.test.Album",
+                        "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
+                {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
+                {"select band, price from Collection order by price", "values ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
+                {"select band, price from CollectionA order by price", "values ('relationship<AlbumBand>', cast(2553 as long)), ('relationship<AlbumBand>', cast(4060 as long))"},
+                {"select band from Album", "values ('relationship<AlbumBand>'), ('relationship<AlbumBand>'), ('relationship<AlbumBand>')"}};
     }
 
     @Test(dataProvider = "graphMDLUsedCases")
     public void testGraphMDLRewrite(String original, String expected)
     {
-        Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
         String actualSql = rewrite(original);
-        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
-        assertThatNoException()
-                .describedAs(format("actual sql: %s is invalid", actualSql))
-                .isThrownBy(() -> query(actualSql));
+        assertQuery(actualSql, expected);
+    }
+
+    private void assertQuery(String acutal, String expected)
+    {
+        assertThat(query(acutal)).isEqualTo(query(expected));
     }
 
     @DataProvider

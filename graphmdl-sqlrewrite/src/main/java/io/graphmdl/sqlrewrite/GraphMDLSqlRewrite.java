@@ -17,9 +17,9 @@ package io.graphmdl.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
+import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.ComparisonExpression;
@@ -34,6 +34,7 @@ import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Relation;
+import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
@@ -62,26 +63,25 @@ public class GraphMDLSqlRewrite
     private GraphMDLSqlRewrite() {}
 
     @Override
-    public Node apply(Node root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL)
     {
         Map<String, Query> modelQueries =
                 analysis.getModels().stream()
                         .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
 
-        Map<String, Query> metricQueries =
-                analysis.getMetrics().stream()
-                        .collect(toUnmodifiableMap(Metric::getName, Utils::parseMetricSql));
-
-        Map<String, Query> metricRollupQueries =
-                analysis.getMetricRollups().values().stream()
-                        .collect(toUnmodifiableMap(rollup -> rollup.getMetric().getName(), Utils::parseMetricRollupSql));
-
         if (modelQueries.isEmpty()) {
             return root;
         }
 
-        Node rewriteWith = new WithRewriter(modelQueries, metricQueries, metricRollupQueries, analysis).process(root);
-        return new Rewriter(analysis).process(rewriteWith);
+        Node rewriteWith = new WithRewriter(modelQueries, analysis).process(root);
+        return (Statement) new Rewriter(analysis).process(rewriteWith);
+    }
+
+    @Override
+    public Statement apply(Statement root, SessionContext sessionContext, GraphMDL graphMDL)
+    {
+        Analysis analysis = StatementAnalyzer.analyze(root, sessionContext, graphMDL);
+        return apply(root, sessionContext, analysis, graphMDL);
     }
 
     /**
@@ -113,19 +113,13 @@ public class GraphMDLSqlRewrite
             extends BaseRewriter<Void>
     {
         private final Map<String, Query> modelQueries;
-        private final Map<String, Query> metricQueries;
-        private final Map<String, Query> metricRollupQueries;
         private final Analysis analysis;
 
         public WithRewriter(
                 Map<String, Query> modelQueries,
-                Map<String, Query> metricQueries,
-                Map<String, Query> metricRollupQueries,
                 Analysis analysis)
         {
             this.modelQueries = requireNonNull(modelQueries, "modelQueries is null");
-            this.metricQueries = requireNonNull(metricQueries, "metricQueries is null");
-            this.metricRollupQueries = requireNonNull(metricRollupQueries, "metricRollupQueries is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
@@ -139,21 +133,9 @@ public class GraphMDLSqlRewrite
 
             Collection<WithQuery> relationshipCTEs = analysis.getRelationshipCTE().values();
 
-            List<WithQuery> metricWithQueries = metricQueries.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
-                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
-                    .collect(toUnmodifiableList());
-
-            List<WithQuery> metricRollupWithQueries = metricRollupQueries.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
-                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
-                    .collect(toUnmodifiableList());
-
             List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
                     .addAll(modelWithQueries)
                     .addAll(relationshipCTEs)
-                    .addAll(metricWithQueries)
-                    .addAll(metricRollupWithQueries)
                     .build();
 
             return new Query(

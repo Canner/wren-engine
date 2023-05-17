@@ -21,6 +21,7 @@ import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
+import io.trino.sql.tree.GroupBy;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Relation;
@@ -31,6 +32,7 @@ import io.trino.sql.tree.WithQuery;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +53,7 @@ public class Analysis
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Set<Metric> metrics = new HashSet<>();
     private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
+    private final Map<NodeRef<GroupBy>, GroupByAnalysis> groupByAnalysis = new HashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
     {
@@ -181,5 +184,30 @@ public class Analysis
     public Map<NodeRef<FunctionRelation>, MetricRollupInfo> getMetricRollups()
     {
         return metricRollups;
+    }
+
+    void addGroupAnalysis(GroupBy groupByNode, GroupByAnalysis groupByAnalysis)
+    {
+        this.groupByAnalysis.put(NodeRef.of(groupByNode), groupByAnalysis);
+    }
+
+    public Map<NodeRef<GroupBy>, GroupByAnalysis> getGroupByAnalysis()
+    {
+        return groupByAnalysis;
+    }
+
+    public static class GroupByAnalysis
+    {
+        private final List<Expression> originalExpressions;
+
+        public GroupByAnalysis(List<Expression> originalExpressions)
+        {
+            this.originalExpressions = originalExpressions;
+        }
+
+        public List<Expression> getOriginalExpressions()
+        {
+            return originalExpressions;
+        }
     }
 }

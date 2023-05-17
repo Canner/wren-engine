@@ -86,7 +86,7 @@ public final class ExpressionAnalyzer
             Scope scope)
     {
         new Visitor(sessionContext, graphMDL, relationshipCteGenerator, scope).process(expression);
-        return new ExpressionAnalysis(relationshipFieldsRewrite, relationshipCTENames, relationships);
+        return new ExpressionAnalysis(expression, relationshipFieldsRewrite, relationshipCTENames, relationships);
     }
 
     private class Visitor
@@ -132,7 +132,9 @@ public final class ExpressionAnalyzer
         private boolean isArrayFunction(QualifiedName funcName)
         {
             // TODO: define what's array function
-            return true;
+            //  Refer to trino array function temporarily
+            // TODO: bigquery array function mapping
+            return List.of("cardinality", "array_max", "array_min", "array_length").contains(funcName.toString());
         }
 
         private boolean isLambdaFunction(QualifiedName funcName)
@@ -246,7 +248,7 @@ public final class ExpressionAnalyzer
             }
 
             List<String> remainingParts = dereferenceNames.subList(index, dereferenceNames.size()).stream().map(DereferenceName::getIdentifier).map(Identifier::getValue).collect(toList());
-            if (relNameParts.size() > 1) {
+            if (relNameParts.size() > 1 && remainingParts.size() > 0) {
                 relationshipFieldsRewrite.put(
                         NodeRef.of(expression),
                         DereferenceExpression.from(

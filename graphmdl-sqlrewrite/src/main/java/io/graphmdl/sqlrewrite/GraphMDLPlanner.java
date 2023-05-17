@@ -16,23 +16,25 @@ package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.sqlrewrite.analyzer.Analysis;
-import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
-import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
 import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
+import static io.graphmdl.sqlrewrite.GroupByKeyRewrite.GROUP_BY_KEY_REWRITE;
+import static io.graphmdl.sqlrewrite.MetricSqlRewrite.METRIC_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 
 public class GraphMDLPlanner
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
-    private static final List<GraphMDLRule> ALL_RULES = List.of(GRAPHMDL_SQL_REWRITE);
+    private static final List<GraphMDLRule> ALL_RULES = List.of(
+            METRIC_SQL_REWRITE,
+            GROUP_BY_KEY_REWRITE,
+            GRAPHMDL_SQL_REWRITE);
 
     private GraphMDLPlanner() {}
 
@@ -45,10 +47,9 @@ public class GraphMDLPlanner
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         Statement scopedStatement = ScopeAwareRewrite.SCOPE_AWARE_REWRITE.rewrite(statement, graphMDL, sessionContext);
-        Analysis analysis = StatementAnalyzer.analyze(scopedStatement, sessionContext, graphMDL);
-        Node result = scopedStatement;
+        Statement result = scopedStatement;
         for (GraphMDLRule rule : rules) {
-            result = rule.apply(result, sessionContext, analysis, graphMDL);
+            result = rule.apply(result, sessionContext, graphMDL);
         }
         return SqlFormatter.formatSql(result);
     }

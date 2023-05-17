@@ -152,6 +152,18 @@ public class TestGraphMDLWithBigquery
             }
             assertThat(count).isEqualTo(100);
         }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer from Orders limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     @Test
@@ -202,11 +214,40 @@ public class TestGraphMDLWithBigquery
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatuses"));
             int count = 1;
-
             while (resultSet.next()) {
                 count++;
             }
             assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @Test
+    public void testGroupByRelationship()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer, count(*) as totalcount from Orders group by customer");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalcount"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(1000);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer, count(*) as totalcount from Orders group by 1");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalcount"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(1000);
         }
     }
 }

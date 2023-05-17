@@ -14,8 +14,10 @@
 
 package io.graphmdl.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
@@ -29,12 +31,14 @@ import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.SelectItem;
+import io.trino.sql.tree.SimpleGroupBy;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
@@ -56,10 +60,13 @@ import java.util.stream.Stream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.Utils.checkArgument;
 import static io.graphmdl.base.dto.TimeGrain.TimeUnit.timeUnit;
+import static io.graphmdl.base.metadata.StandardErrorCode.INVALID_COLUMN_REFERENCE;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
@@ -182,6 +189,7 @@ public final class StatementAnalyzer
                                         .columnName(column.getName())
                                         .name(column.getName())
                                         .isRelationship(column.getRelationship().isPresent())
+                                        .type(column.getType())
                                         .build())
                         .collect(toImmutableList());
             }
@@ -210,16 +218,19 @@ public final class StatementAnalyzer
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
             Scope sourceScope = analyzeFrom(node, scope);
-            Set<String> relationshipCTENames = analyzeSelect(node, sourceScope).stream()
+            List<ExpressionAnalysis> expressionAnalysisList = analyzeSelect(node, sourceScope);
+            Set<String> relationshipCTENames = expressionAnalysisList.stream()
                     .map(ExpressionAnalysis::getRelationshipCTENames)
                     .flatMap(Set::stream)
                     .collect(toSet());
             node.getWhere().ifPresent(where -> relationshipCTENames.addAll(analyzeExpression(where, sourceScope).getRelationshipCTENames()));
-            node.getGroupBy().ifPresent(groupBy ->
-                    groupBy.getGroupingElements().stream()
-                            .map(GroupingElement::getExpressions)
-                            .flatMap(Collection::stream)
-                            .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
+            node.getGroupBy().ifPresent(groupBy -> {
+                analyzeGroupBy(node, sourceScope, expressionAnalysisList.stream().map(ExpressionAnalysis::getExpression).collect(toList()));
+                groupBy.getGroupingElements().stream()
+                        .map(GroupingElement::getExpressions)
+                        .flatMap(Collection::stream)
+                        .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames()));
+            });
             node.getHaving().ifPresent(having -> relationshipCTENames.addAll(analyzeExpression(having, sourceScope).getRelationshipCTENames()));
             node.getOrderBy().ifPresent(orderBy ->
                     orderBy.getSortItems().stream()
@@ -364,6 +375,31 @@ public final class StatementAnalyzer
             return List.copyOf(selectExpressionAnalyses);
         }
 
+        public void analyzeGroupBy(QuerySpecification node, Scope scope, List<Expression> outputExpressions)
+        {
+            if (node.getGroupBy().isEmpty()) {
+                return;
+            }
+            ImmutableList.Builder<Expression> groupingExpressions = ImmutableList.builder();
+            for (GroupingElement groupingElement : node.getGroupBy().get().getGroupingElements()) {
+                if (groupingElement instanceof SimpleGroupBy) {
+                    for (Expression column : groupingElement.getExpressions()) {
+                        // simple GROUP BY expressions allow ordinals or arbitrary expressions
+                        if (column instanceof LongLiteral) {
+                            long ordinal = ((LongLiteral) column).getValue();
+                            if (ordinal < 1 || ordinal > outputExpressions.size()) {
+                                throw new GraphMDLException(INVALID_COLUMN_REFERENCE, format("GROUP BY position %s is not in select list", ordinal));
+                            }
+                            column = outputExpressions.get(toIntExact(ordinal - 1));
+                        }
+                        groupingExpressions.add(column);
+                    }
+                }
+                // TODO: support other grouping elements
+            }
+            analysis.addGroupAnalysis(node.getGroupBy().get(), new Analysis.GroupByAnalysis(groupingExpressions.build()));
+        }
+
         private ExpressionAnalysis analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
         {
             Expression expression = singleColumn.getExpression();
@@ -375,6 +411,7 @@ public final class StatementAnalyzer
             ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, sessionContext, graphMDL, relationshipCteGenerator, scope);
             analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
             analysis.addRelationships(expressionAnalysis.getRelationships());
+            analysis.setScope(expression, scope);
             return expressionAnalysis;
         }
 

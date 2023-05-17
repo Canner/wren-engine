@@ -36,19 +36,22 @@ public class Field
     private final String columnName;
     private final Optional<String> name;
     private final boolean isRelationship;
+    private final String type;
 
     private Field(
             QualifiedName relationAlias,
             CatalogSchemaTableName modelName,
             String columnName,
             String name,
-            boolean isRelationship)
+            boolean isRelationship,
+            String type)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.modelName = requireNonNull(modelName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
         this.isRelationship = isRelationship;
+        this.type = requireNonNull(type);
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -74,6 +77,11 @@ public class Field
     public boolean isRelationship()
     {
         return isRelationship;
+    }
+
+    public String getType()
+    {
+        return type;
     }
 
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
@@ -104,7 +112,7 @@ public class Field
      */
     public boolean canResolve(QualifiedName name)
     {
-        if (this.name.isEmpty()) {
+        if (name == null || this.name.isEmpty()) {
             return false;
         }
 
@@ -124,6 +132,7 @@ public class Field
         private String columnName;
         private String name;
         private boolean isRelationship;
+        private String type;
 
         public Builder() {}
 
@@ -134,6 +143,7 @@ public class Field
             this.columnName = field.columnName;
             this.name = field.name.orElse(null);
             this.isRelationship = field.isRelationship;
+            this.type = field.getType();
             return this;
         }
 
@@ -167,9 +177,15 @@ public class Field
             return this;
         }
 
+        public Builder type(String type)
+        {
+            this.type = type;
+            return this;
+        }
+
         public Field build()
         {
-            return new Field(relationAlias, modelName, columnName, name, isRelationship);
+            return new Field(relationAlias, modelName, columnName, name, isRelationship, type);
         }
     }
 }
