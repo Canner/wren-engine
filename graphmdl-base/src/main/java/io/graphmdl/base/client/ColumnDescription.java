@@ -12,15 +12,28 @@
  * limitations under the License.
  */
 
-package io.graphmdl.validation;
+package io.graphmdl.base.client;
 
-import io.graphmdl.base.GraphMDL;
-import io.graphmdl.base.client.Client;
+import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-public abstract class ValidationRule
+public class ColumnDescription
 {
-    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL);
+    private final String name;
+    private final String type;
+
+    public ColumnDescription(String name, String type)
+    {
+        this.name = requireNonNull(name);
+        this.type = requireNonNull(type);
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+    public String getType()
+    {
+        return type;
+    }
 }

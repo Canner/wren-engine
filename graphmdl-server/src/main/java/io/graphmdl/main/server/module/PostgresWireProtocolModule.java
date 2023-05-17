@@ -21,9 +21,11 @@ import io.graphmdl.main.PostgresNettyProvider;
 import io.graphmdl.main.PostgresWireProtocolConfig;
 import io.graphmdl.main.pgcatalog.PgCatalogManager;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
+import io.graphmdl.main.wireprotocol.PgWireProtocolExtraRewriter;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
 import io.graphmdl.main.wireprotocol.ssl.SslContextProvider;
 import io.graphmdl.main.wireprotocol.ssl.TlsDataProvider;
+import io.graphmdl.preaggregation.ExtraRewriter;
 import io.trino.sql.parser.SqlParser;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -48,5 +50,8 @@ public class PostgresWireProtocolModule
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
         binder.bind(RegObjectFactory.class).in((Scopes.SINGLETON));
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
+
+        // for pre-aggregation extra rewrite
+        binder.bind(ExtraRewriter.class).to(PgWireProtocolExtraRewriter.class).in(Scopes.SINGLETON);
     }
 }

@@ -15,11 +15,11 @@
 package io.graphmdl.validation;
 
 import io.graphmdl.base.GraphMDL;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.Client;
 import io.graphmdl.validation.exception.NotFoundException;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;

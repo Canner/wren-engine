@@ -12,16 +12,16 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main.biboost;
+package io.graphmdl.preaggregation;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.graphmdl.connector.duckdb.DuckdbClient;
+import io.graphmdl.base.client.duckdb.DuckdbClient;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
-public class BiBoostModule
+public class PreAggregationModule
         extends AbstractConfigurationAwareModule
 {
     @Override

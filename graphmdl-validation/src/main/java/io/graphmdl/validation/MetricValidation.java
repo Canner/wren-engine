@@ -15,7 +15,7 @@
 package io.graphmdl.validation;
 
 import io.graphmdl.base.GraphMDL;
-import io.graphmdl.connector.Client;
+import io.graphmdl.base.client.Client;
 
 import java.time.Duration;
 import java.util.ArrayList;

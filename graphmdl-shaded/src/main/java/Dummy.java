@@ -12,11 +12,4 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector;
-
-import java.util.Iterator;
-
-public interface AutoCloseableIterator<E>
-        extends Iterator<E>, AutoCloseable
-{
-}
+public class Dummy {}

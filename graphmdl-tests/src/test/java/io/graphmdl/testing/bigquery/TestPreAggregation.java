@@ -18,12 +18,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.duckdb.DuckdbClient;
-import io.graphmdl.main.biboost.PreAggregationManager;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.duckdb.DuckdbClient;
+import io.graphmdl.main.GraphMDLMetastore;
 import io.graphmdl.main.metadata.Metadata;
+import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 import org.testng.annotations.Test;
@@ -46,6 +48,7 @@ public class TestPreAggregation
         extends AbstractWireProtocolTest
 {
     private final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
+    private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
 
     @Override
     protected TestingGraphMDLServer createGraphMDLServer()
@@ -136,7 +139,9 @@ public class TestPreAggregation
                 .setCatalog("canner-cml")
                 .setSchema("tpch_tiny")
                 .build();
-        String rewritten = preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue limit 100").orElseThrow(AssertionError::new);
+        String rewritten =
+                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
+                        .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
             int count = 0;
             while (connectorRecordIterator.hasNext()) {
@@ -146,7 +151,9 @@ public class TestPreAggregation
             assertThat(count).isEqualTo(100);
         }
 
-        String withParam = preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue where custkey = ?").orElseThrow(AssertionError::new);
+        String withParam =
+                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
+                        .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
             assertThat(result.length).isEqualTo(2);

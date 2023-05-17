@@ -36,7 +36,6 @@ import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.connector.bigquery.BigQueryType;
-import io.graphmdl.connector.bigquery.GcsStorageClient;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.function.PgFunctionRegistry;
 import io.trino.sql.tree.QualifiedName;
@@ -57,13 +56,11 @@ import static io.graphmdl.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
-import static java.util.UUID.randomUUID;
 
 public class BigQueryMetadata
         implements Metadata
 {
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
-    private static final String PRE_AGGREGATION_FOLDER = format("pre-agg-%s", randomUUID());
     private final BigQueryClient bigQueryClient;
 
     private final PgFunctionRegistry pgFunctionRegistry = new PgFunctionRegistry();
@@ -72,20 +69,14 @@ public class BigQueryMetadata
 
     private final String location;
 
-    private final GcsStorageClient gcsStorageClient;
-
-    private final Optional<String> bucketName;
-
     @Inject
-    public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig, GcsStorageClient gcsStorageClient)
+    public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig)
     {
         this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Location must be set"));
-        this.gcsStorageClient = requireNonNull(gcsStorageClient, "gcsStorageClient is null");
-        this.bucketName = bigQueryConfig.getBucketName();
     }
 
     /**
@@ -232,40 +223,5 @@ public class BigQueryMetadata
     public String getDefaultCatalog()
     {
         return bigQueryClient.getProjectId();
-    }
-
-    public String getRequiredBucketName()
-    {
-        return bucketName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Bucket name must be set"));
-    }
-
-    @Override
-    public String createPreAggregation(String catalog, String schema, String name, String statement)
-    {
-        String path = format("%s/%s/%s/%s/%s/%s/*.parquet",
-                getRequiredBucketName(),
-                PRE_AGGREGATION_FOLDER,
-                catalog,
-                schema,
-                name,
-                randomUUID());
-        String exportStatement = format("EXPORT DATA OPTIONS(\n" +
-                        "  uri='gs://%s',\n" +
-                        "  format='PARQUET',\n" +
-                        "  overwrite=true) AS %s",
-                path,
-                statement);
-        directDDL(exportStatement);
-        return path;
-    }
-
-    @Override
-    public void cleanPreAggregation()
-    {
-        bucketName.ifPresent(bucket -> {
-            if (!gcsStorageClient.cleanFolders(bucket, PRE_AGGREGATION_FOLDER)) {
-                LOG.error("Failed to clean pre-aggregation folder. Please check the bucket %s", getRequiredBucketName());
-            }
-        });
     }
 }

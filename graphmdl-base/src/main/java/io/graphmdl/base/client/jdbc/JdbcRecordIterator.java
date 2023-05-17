@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector.jdbc;
+package io.graphmdl.base.client.jdbc;
 
-import io.graphmdl.connector.AutoCloseableIterator;
+import io.graphmdl.base.client.AutoCloseableIterator;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

@@ -11,18 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.graphmdl.preaggregation;
 
-package io.graphmdl.connector;
+import io.trino.sql.tree.Statement;
 
-import java.util.List;
-
-public interface Client
+public interface ExtraRewriter
 {
-    AutoCloseableIterator<Object[]> query(String sql);
-
-    void executeDDL(String sql);
-
-    AutoCloseableIterator<ColumnDescription> describe(String sql);
-
-    List<String> listTables();
+    default Statement rewrite(Statement statement)
+    {
+        return statement;
+    }
 }

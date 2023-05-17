@@ -25,11 +25,13 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.connector.bigquery.GcsStorageClient;
 import io.graphmdl.main.connector.bigquery.BigQueryConfig;
 import io.graphmdl.main.connector.bigquery.BigQueryCredentialsSupplier;
 import io.graphmdl.main.connector.bigquery.BigQueryMetadata;
+import io.graphmdl.main.connector.bigquery.BigQueryPreAggregationService;
 import io.graphmdl.main.connector.bigquery.BigQuerySqlConverter;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
@@ -38,7 +40,7 @@ import io.graphmdl.main.pgcatalog.builder.PgCatalogTableBuilder;
 import io.graphmdl.main.pgcatalog.builder.PgFunctionBuilder;
 import io.graphmdl.main.pgcatalog.regtype.BigQueryPgMetadata;
 import io.graphmdl.main.pgcatalog.regtype.PgMetadata;
-import io.graphmdl.main.sql.SqlConverter;
+import io.graphmdl.preaggregation.PreAggregationService;
 
 import java.util.Optional;
 
@@ -56,6 +58,8 @@ public class BigQueryConnectorModule
         binder.bind(PgMetadata.class).to(BigQueryPgMetadata.class).in(Scopes.SINGLETON);
         binder.bind(SqlConverter.class).to(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
+
+        binder.bind(PreAggregationService.class).to(BigQueryPreAggregationService.class).in(Scopes.SINGLETON);
     }
 
     @Provides

@@ -27,4 +27,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           ./mvnw clean install -B -DskipTests
-          ./mvnw deploy -B -DskipTests -pl :graphmdl-main
+          ./mvnw deploy -B -DskipTests -pl :graphmdl-shaded
