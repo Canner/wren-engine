@@ -10,7 +10,7 @@
 
     <groupId>io.graphmdl</groupId>
     <artifactId>graphmdl-root</artifactId>
-    <version>1</version>
+    <version>1-SNAPSHOT</version>
 
     <name>graphmdl</name>
     <description>Graph Metric Definition Language</description>
@@ -93,6 +93,19 @@
             </snapshots>
         </repository>
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>maven-repo.cannerdata.com</id>
+            <name>Canner Repository</name>
+            <url>s3://maven-repo.cannerdata.com/release</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven-repo.cannerdata.com</id>
+            <name>Canner Repository</name>
+            <url>s3://maven-repo.cannerdata.com/snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <dependencyManagement>
         <dependencies>
@@ -372,7 +385,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.2.4</version>
+                    <version>3.4.1</version>
                 </plugin>
 
                 <plugin>
@@ -534,6 +547,14 @@
                 </configuration>
             </plugin>
         </plugins>
+
+        <extensions>
+            <extension>
+                <groupId>org.kuali.maven.wagons</groupId>
+                <artifactId>maven-s3-wagon</artifactId>
+                <version>1.2.1</version>
+            </extension>
+        </extensions>
     </build>
 
     <profiles>

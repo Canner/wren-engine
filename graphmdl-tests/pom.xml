@@ -20,7 +20,7 @@
     <parent>
         <artifactId>graphmdl-root</artifactId>
         <groupId>io.graphmdl</groupId>
-        <version>1</version>
+        <version>1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
