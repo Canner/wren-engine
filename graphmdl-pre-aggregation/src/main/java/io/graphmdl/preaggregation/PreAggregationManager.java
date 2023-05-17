@@ -66,7 +66,7 @@ public class PreAggregationManager
     private final SqlParser sqlParser;
     private final SqlConverter sqlConverter;
     private final DuckdbClient duckdbClient;
-    private final DuckdbStorageConfig duckdbStorageConfig;
+    private final PreAggregationStorageConfig preAggregationStorageConfig;
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<CatalogSchemaTableName, MetricTablePair> metricTableMapping = new ConcurrentHashMap<>();
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> metricScheduledFutures = new ConcurrentHashMap<>();
@@ -74,19 +74,18 @@ public class PreAggregationManager
 
     @Inject
     public PreAggregationManager(
-            SqlParser sqlParser,
             SqlConverter sqlConverter,
             PreAggregationService preAggregationService,
             ExtraRewriter extraRewriter,
             DuckdbClient duckdbClient,
-            DuckdbStorageConfig duckdbStorageConfig)
+            PreAggregationStorageConfig preAggregationStorageConfig)
     {
-        this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
+        this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.preAggregationService = requireNonNull(preAggregationService, "preAggregationService is null");
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
-        this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
+        this.preAggregationStorageConfig = requireNonNull(preAggregationStorageConfig, "preAggregationStorageConfig is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
@@ -203,17 +202,7 @@ public class PreAggregationManager
 
     private void refreshPreAggInDuckDB(String path, String tableName)
     {
-        // ref: https://github.com/duckdb/duckdb/issues/1403
-        StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
-                "LOAD httpfs;\n");
-        sb.append(format("SET s3_endpoint='%s';\n", duckdbStorageConfig.getEndpoint()));
-        duckdbStorageConfig.getAccessKey().ifPresent(accessKey -> sb.append(format("SET s3_access_key_id='%s';\n", accessKey)));
-        duckdbStorageConfig.getSecretKey().ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
-        sb.append(format("SET s3_url_style='%s';\n", duckdbStorageConfig.getUrlStyle()));
-        sb.append("BEGIN TRANSACTION;\n");
-        sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
-        sb.append("COMMIT;\n");
-        duckdbClient.executeDDL(sb.toString());
+        duckdbClient.executeDDL(preAggregationStorageConfig.generateDuckdbParquetStatement(path, tableName));
     }
 
     private void dropTable(String tableName)
