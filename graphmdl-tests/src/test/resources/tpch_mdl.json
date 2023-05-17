@@ -104,9 +104,14 @@
           "name": "part",
           "type": "Part",
           "relationship": "LineitemPart"
+        },
+        {
+          "name": "orderkey_linenumber",
+          "type": "string",
+          "expression": "concat(l_orderkey, l_linenumber)"
         }
       ],
-      "primaryKey": "linenumber"
+      "primaryKey": "orderkey_linenumber"
     },
     {
       "name": "Part",
