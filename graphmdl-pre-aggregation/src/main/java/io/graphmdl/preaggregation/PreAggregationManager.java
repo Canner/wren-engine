@@ -42,7 +42,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
@@ -53,7 +54,6 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.runAsync;
-import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class PreAggregationManager
@@ -68,8 +68,9 @@ public class PreAggregationManager
     private final DuckdbStorageConfig duckdbStorageConfig;
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<CatalogSchemaTableName, MetricTablePair> metricTableMapping = new ConcurrentHashMap<>();
+    private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> metricScheduledFutures = new ConcurrentHashMap<>();
 
-    private final ScheduledExecutorService refreshExecutor = newScheduledThreadPool(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
+    private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
 
     @Inject
     public PreAggregationManager(
@@ -86,17 +87,20 @@ public class PreAggregationManager
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
+        refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    public void scheduleGraphMDL(GraphMDL graphMDL)
+    private void scheduleGraphMDL(GraphMDL graphMDL)
     {
         graphMDL.listPreAggregatedMetrics()
                 .forEach(metric ->
-                        refreshExecutor.scheduleWithFixedDelay(
-                                () -> doSingleMetricPreAggregation(graphMDL, metric).join(),
-                                metric.getRefreshByTime().toMillis(),
-                                metric.getRefreshByTime().toMillis(),
-                                MILLISECONDS));
+                        metricScheduledFutures.put(
+                                new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), metric.getName()),
+                                refreshExecutor.scheduleWithFixedDelay(
+                                        () -> doSingleMetricPreAggregation(graphMDL, metric).join(),
+                                        metric.getRefreshByTime().toMillis(),
+                                        metric.getRefreshByTime().toMillis(),
+                                        MILLISECONDS)));
     }
 
     @VisibleForTesting
@@ -105,7 +109,14 @@ public class PreAggregationManager
         return metricTableMapping.get(new CatalogSchemaTableName(catalog, schema, table));
     }
 
-    public CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
+    public synchronized void importPreAggregation(GraphMDL mdl)
+    {
+        removePreAggregation(mdl);
+        doPreAggregation(mdl).join();
+        scheduleGraphMDL(mdl);
+    }
+
+    private CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
     {
         List<CompletableFuture<Void>> futures = mdl.listPreAggregatedMetrics()
                 .stream()
@@ -203,7 +214,7 @@ public class PreAggregationManager
 
     private void dropTable(String tableName)
     {
-        duckdbClient.executeDDL(format("DROP TABLE IF EXISTS %s", tableName));
+        duckdbClient.executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName));
     }
 
     public static class MetricTablePair
@@ -212,12 +223,12 @@ public class PreAggregationManager
         private final Optional<String> tableName;
         private final Optional<String> errorMessage;
 
-        public MetricTablePair(Metric metric, String tableName)
+        private MetricTablePair(Metric metric, String tableName)
         {
             this(metric, Optional.of(tableName), Optional.empty());
         }
 
-        public MetricTablePair(Metric metric, Optional<String> tableName, Optional<String> errorMessage)
+        private MetricTablePair(Metric metric, Optional<String> tableName, Optional<String> errorMessage)
         {
             this.metric = requireNonNull(metric, "metric is null");
             this.tableName = requireNonNull(tableName, "tableName is null");
@@ -258,9 +269,34 @@ public class PreAggregationManager
         return Optional.empty();
     }
 
-    @PreDestroy
-    public void cleanPreAggregation()
+    public void removePreAggregation(GraphMDL graphMDL)
     {
+        metricScheduledFutures.keySet().stream()
+                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(graphMDL.getCatalog())
+                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                .forEach(catalogSchemaTableName -> {
+                    metricScheduledFutures.get(catalogSchemaTableName).cancel(true);
+                    metricScheduledFutures.remove(catalogSchemaTableName);
+                });
+
+        metricTableMapping.entrySet().stream()
+                .filter(entry -> entry.getKey().getCatalogName().equals(graphMDL.getCatalog())
+                        && entry.getKey().getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                .forEach(entry -> {
+                    entry.getValue().getTableName().ifPresent(this::dropTable);
+                    metricTableMapping.remove(entry.getKey());
+                });
+    }
+
+    public boolean metricScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
+    {
+        return metricScheduledFutures.containsKey(catalogSchemaTableName);
+    }
+
+    @PreDestroy
+    public void stop()
+    {
+        refreshExecutor.shutdown();
         cleanTempFiles();
     }
 
@@ -268,9 +304,7 @@ public class PreAggregationManager
     {
         try {
             List<PathInfo> locations = ImmutableList.copyOf(tempFileLocations);
-            locations.forEach(location -> {
-                removeTempFile(location);
-            });
+            locations.forEach(this::removeTempFile);
         }
         catch (Exception e) {
             LOG.error(e, "Failed to clean temp file");
