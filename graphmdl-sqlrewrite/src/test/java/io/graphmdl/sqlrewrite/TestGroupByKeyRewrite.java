@@ -81,7 +81,6 @@ public class TestGroupByKeyRewrite
                 {"select author, count(*) from Book group by author, name", "select author, count(*) from Book group by (author.userId, author), name"},
                 {"select author, count(*) from Book group by 1", "select author, count(*) from Book group by (author.userId, 1)"},
                 {"select author, name, count(*) from Book group by 1, 2", "select author, name, count(*) from Book group by (author.userId, 1), 2"},
-                {"select author, name, count(*) from Book group by 1, 2", "select author, name, count(*) from Book group by (author.userId, 1), 2"},
                 {"select author, name, count(*) from Book group by (author, name)", "select author, name, count(*) from Book group by (author.userId, author, name)"},
         };
     }

@@ -67,7 +67,7 @@ public class FlattenGroupingElements
                     builder.build());
         }
 
-        protected void rewriteSimpleGroupBy(SimpleGroupBy node, ImmutableList.Builder<GroupingElement> groupingElementBuilder)
+        private static void rewriteSimpleGroupBy(SimpleGroupBy node, ImmutableList.Builder<GroupingElement> groupingElementBuilder)
         {
             for (Expression expression : node.getExpressions()) {
                 groupingElementBuilder.add(new SimpleGroupBy(List.of(expression)));
