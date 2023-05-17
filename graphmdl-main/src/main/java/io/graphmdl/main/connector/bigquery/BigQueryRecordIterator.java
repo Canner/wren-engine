@@ -26,6 +26,7 @@ import io.graphmdl.connector.bigquery.BigQueryType;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
+import java.time.LocalDateTime;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -118,6 +120,8 @@ public class BigQueryRecordIterator
                 return fieldValue.getBytesValue();
             case DATE:
                 return fieldValue.getValue();
+            case DATETIME:
+                return convertToMicroseconds(LocalDateTime.parse(fieldValue.getStringValue()));
             case TIMESTAMP:
                 return fieldValue.getTimestampValue();
             case NUMERIC:
@@ -156,5 +160,10 @@ public class BigQueryRecordIterator
         }
         String micro = StringUtils.rightPad(matcher.group("F"), 6, '0');
         return new Period(year, mon, 0, day, hour, min, sec, Integer.parseInt(micro) / 1000);
+    }
+
+    private static long convertToMicroseconds(LocalDateTime localDateTime)
+    {
+        return (localDateTime.toInstant(UTC).getEpochSecond() * 1000000) + (localDateTime.getNano() / 1000);
     }
 }

@@ -35,6 +35,7 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.BIGNUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BOOL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
 import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
+import static com.google.cloud.bigquery.StandardSQLTypeName.DATETIME;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INTERVAL;
@@ -69,6 +70,7 @@ public final class BigQueryType
                 .put(FLOAT64, DOUBLE)
                 .put(DATE, DateType.DATE)
                 .put(BYTES, BYTEA)
+                .put(DATETIME, TimestampType.TIMESTAMP)
                 .put(TIMESTAMP, TimestampType.TIMESTAMP)
                 .put(NUMERIC, NumericType.NUMERIC)
                 .put(BIGNUMERIC, NumericType.NUMERIC)

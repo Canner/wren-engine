@@ -98,7 +98,7 @@ public class TestBigQueryType
         typeCaseMap.put(DataType.DATE, new TypeCase("date", "\"2020-01-01\"", Date.valueOf("2020-01-01")));
         typeCaseMap.put(DataType.TIME, new TypeCase("time", "\"15:10:55\"", Time.valueOf("15:10:55")));
         typeCaseMap.put(DataType.TIMESTAMP, new TypeCase("timestamp", "\"2020-01-01 15:10:55\"", Timestamp.valueOf("2020-01-01 15:10:55")));
-        typeCaseMap.put(DataType.DATETIME, new TypeCase("datetime", "\"2020-01-01 15:10:55\"", Timestamp.valueOf("2020-01-01 15:10:55")));
+        typeCaseMap.put(DataType.DATETIME, new TypeCase("datetime", "\"2020-01-01 15:10:55.123456\"", Timestamp.valueOf("2020-01-01 15:10:55.123456")));
         typeCaseMap.put(DataType.JSON, new TypeCase("json", "PARSE_JSON(\"{\\\"a\\\": 1}\")", "{\"a\":1}"));
         typeCaseMap.put(DataType.INTERVAL, new TypeCase("interval", "INTERVAL '1' day", new PGInterval(0, 0, 1, 0, 0, 0)));
         typeCaseMap.put(DataType.GEOGRAPHY, new TypeCase("geography", "ST_GEOGPOINT(30, 50)", "POINT(30 50)"));
@@ -117,7 +117,7 @@ public class TestBigQueryType
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_time", "array<time>", "[time \"15:10:55\", time \"15:10:56\"]", new Time[]{Time.valueOf("15:10:55"), Time.valueOf("15:10:56")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_timestamp", "array<timestamp>", "[timestamp \"2020-01-01 15:10:55\", timestamp \"2020-01-01 15:10:56\"]", new Timestamp[] {
                 Timestamp.valueOf("2020-01-01 15:10:55"), Timestamp.valueOf("2020-01-01 15:10:56")}));
-//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_datetime", "array<datetime>", "[datetime \"2020-01-01 15:10:55\", datetime \"2020-01-01 15:10:56\"]", new Timestamp[]{Timestamp.valueOf("2020-01-01 15:10:55"), Timestamp.valueOf("2020-01-01 15:10:56")}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_datetime", "array<datetime>", "[datetime \"2020-01-01 15:10:55.123456\", datetime \"2020-01-01 15:10:56.123456\"]", new Timestamp[]{Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_json", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
                 "{a:2}"}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_interval", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
@@ -235,8 +235,7 @@ public class TestBigQueryType
         }
     }
 
-    // TODO
-    @Test(enabled = false)
+    @Test
     public void testDateTime()
             throws SQLException
     {
