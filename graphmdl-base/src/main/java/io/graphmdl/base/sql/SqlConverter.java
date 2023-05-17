@@ -12,26 +12,11 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector.jdbc;
+package io.graphmdl.base.sql;
 
-import io.graphmdl.base.GraphMDLTypes;
+import io.graphmdl.base.SessionContext;
 
-import java.sql.JDBCType;
-
-public final class JdbcTypeMapping
+public interface SqlConverter
 {
-    private JdbcTypeMapping() {}
-
-    public static String toGraphMDLType(JDBCType jdbcType)
-    {
-        switch (jdbcType) {
-            case BIGINT:
-                return GraphMDLTypes.BIGINT;
-            case INTEGER:
-                return GraphMDLTypes.INTEGER;
-            case VARCHAR:
-            default:
-                return GraphMDLTypes.VARCHAR;
-        }
-    }
+    String convert(String sql, SessionContext sessionContext);
 }

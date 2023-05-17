@@ -67,7 +67,9 @@
         <module>graphmdl-base</module>
         <module>graphmdl-connector-client</module>
         <module>graphmdl-main</module>
+        <module>graphmdl-pre-aggregation</module>
         <module>graphmdl-server</module>
+        <module>graphmdl-shaded</module>
         <module>graphmdl-sqlrewrite</module>
         <module>graphmdl-testing</module>
         <module>graphmdl-tests</module>
@@ -258,7 +260,19 @@
 
             <dependency>
                 <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-pre-aggregation</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.graphmdl</groupId>
                 <artifactId>graphmdl-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.graphmdl</groupId>
+                <artifactId>graphmdl-shaded</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

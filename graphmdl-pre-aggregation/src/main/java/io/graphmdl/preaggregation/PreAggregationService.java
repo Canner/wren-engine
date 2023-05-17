@@ -11,12 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.graphmdl.preaggregation;
 
-package io.graphmdl.main.sql;
-
-import io.graphmdl.base.SessionContext;
-
-public interface SqlConverter
+public interface PreAggregationService
 {
-    String convert(String sql, SessionContext sessionContext);
+    String createPreAggregation(String catalog, String schema, String name, String statement);
+
+    void cleanPreAggregation();
 }

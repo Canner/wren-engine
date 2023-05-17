@@ -16,13 +16,13 @@ package io.graphmdl;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLTypes;
+import io.graphmdl.base.client.Client;
+import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.JoinType;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
-import io.graphmdl.connector.Client;
-import io.graphmdl.connector.duckdb.DuckdbClient;
 import io.graphmdl.validation.DuplicateModelNameValidation;
 import io.graphmdl.validation.EnumValueValidation;
 import io.graphmdl.validation.MetricValidation;

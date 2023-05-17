@@ -11,16 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.graphmdl.preaggregation;
 
-package io.graphmdl.validation;
-
-import io.graphmdl.base.GraphMDL;
-import io.graphmdl.base.client.Client;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-public abstract class ValidationRule
-{
-    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL);
-}
+public class NoOpExtraRewriter
+        implements ExtraRewriter
+{}

@@ -11,20 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.graphmdl.main.biboost;
+package io.graphmdl.preaggregation;
 
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
 import io.graphmdl.base.type.PGType;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.jdbc.JdbcRecordIterator;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 
-import static io.graphmdl.connector.duckdb.DuckdbType.DUCKDB_TYPE;
+import static io.graphmdl.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
 import static java.util.Objects.requireNonNull;
 
 public class DuckdbRecordIterator

@@ -31,11 +31,6 @@
 
         <dependency>
             <groupId>io.graphmdl</groupId>
-            <artifactId>graphmdl-connector-client</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.graphmdl</groupId>
             <artifactId>trino-parser</artifactId>
         </dependency>
 

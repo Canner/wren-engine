@@ -12,28 +12,26 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector;
+package io.graphmdl.base.client.jdbc;
 
-import static java.util.Objects.requireNonNull;
+import io.graphmdl.base.GraphMDLTypes;
 
-public class ColumnDescription
+import java.sql.JDBCType;
+
+public final class JdbcTypeMapping
 {
-    private final String name;
-    private final String type;
+    private JdbcTypeMapping() {}
 
-    public ColumnDescription(String name, String type)
+    public static String toGraphMDLType(JDBCType jdbcType)
     {
-        this.name = requireNonNull(name);
-        this.type = requireNonNull(type);
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    public String getType()
-    {
-        return type;
+        switch (jdbcType) {
+            case BIGINT:
+                return GraphMDLTypes.BIGINT;
+            case INTEGER:
+                return GraphMDLTypes.INTEGER;
+            case VARCHAR:
+            default:
+                return GraphMDLTypes.VARCHAR;
+        }
     }
 }

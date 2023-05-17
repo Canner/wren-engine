@@ -12,13 +12,13 @@
  * limitations under the License.
  */
 
-package io.graphmdl.connector.duckdb;
+package io.graphmdl.base.client.duckdb;
 
 import io.graphmdl.base.Parameter;
-import io.graphmdl.connector.AutoCloseableIterator;
-import io.graphmdl.connector.Client;
-import io.graphmdl.connector.ColumnDescription;
-import io.graphmdl.connector.jdbc.JdbcRecordIterator;
+import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
+import io.graphmdl.base.client.ColumnDescription;
+import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
 import org.duckdb.DuckDBConnection;
 
 import java.sql.Connection;
@@ -31,7 +31,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.graphmdl.connector.jdbc.JdbcTypeMapping.toGraphMDLType;
+import static io.graphmdl.base.client.jdbc.JdbcTypeMapping.toGraphMDLType;
 
 public final class DuckdbClient
         implements Client

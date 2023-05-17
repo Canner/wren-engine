@@ -12,15 +12,17 @@
  * limitations under the License.
  */
 
-package io.graphmdl.validation;
-
-import io.graphmdl.base.GraphMDL;
-import io.graphmdl.base.client.Client;
+package io.graphmdl.base.client;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
-public abstract class ValidationRule
+public interface Client
 {
-    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, GraphMDL graphMDL);
+    AutoCloseableIterator<Object[]> query(String sql);
+
+    void executeDDL(String sql);
+
+    AutoCloseableIterator<ColumnDescription> describe(String sql);
+
+    List<String> listTables();
 }

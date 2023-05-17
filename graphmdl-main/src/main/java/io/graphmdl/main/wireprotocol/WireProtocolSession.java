@@ -20,13 +20,13 @@ import io.graphmdl.base.Column;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.SessionContext;
+import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.main.GraphMDLMetastore;
-import io.graphmdl.main.biboost.PreAggregationManager;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
-import io.graphmdl.main.sql.SqlConverter;
 import io.graphmdl.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
+import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -220,7 +220,7 @@ public class WireProtocolSession
                     new PreparedStatement(
                             statementName,
                             getFormattedSql(rewrittenStatement, sqlParser),
-                            preAggregationManager.rewritePreAggregation(sessionContext, statementPreRewritten),
+                            preAggregationManager.rewritePreAggregation(sessionContext, statementPreRewritten, graphMDLMetastore.getGraphMDL()),
                             rewrittenParamTypes,
                             statementTrimmed,
                             isSessionCommand(rewrittenStatement)));
