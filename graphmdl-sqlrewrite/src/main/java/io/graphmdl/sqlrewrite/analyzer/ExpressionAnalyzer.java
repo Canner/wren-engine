@@ -260,7 +260,7 @@ public final class ExpressionAnalyzer
             return optField;
         }
 
-        private void collectRelationshipLambdaExpression(Expression originalExpression, LambdaExpression lambdaExpression, Field baseField)
+        private void collectRelationshipLambdaExpression(FunctionCall functionCall, LambdaExpression lambdaExpression, Field baseField)
         {
             checkArgument(baseField.isRelationship(), "base field must be a relationship");
             checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
@@ -279,14 +279,14 @@ public final class ExpressionAnalyzer
             RelationshipCteGenerator.RelationshipOperation operation = transform(
                     List.of(rsItem(baseName.toString(), CTE),
                             rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)), expression, baseField.getColumnName());
-            relationshipCteGenerator.register(List.of(originalExpression.toString()), operation, modelName);
-            relationshipCTENames.add(originalExpression.toString());
+            relationshipCteGenerator.register(List.of(functionCall.toString()), operation, modelName);
+            relationshipCTENames.add(functionCall.toString());
             relationshipFieldsRewrite.put(
-                    NodeRef.of(originalExpression),
+                    NodeRef.of(functionCall),
                     DereferenceExpression.from(
                             QualifiedName.of(
                                     ImmutableList.<String>builder()
-                                            .add(relationshipCteGenerator.getNameMapping().get(originalExpression.toString()))
+                                            .add(relationshipCteGenerator.getNameMapping().get(functionCall.toString()))
                                             .add(TRANSFORM_RESULT_NAME).build())));
         }
     }
