@@ -188,10 +188,9 @@ public class TestPreAggregation
     public void testRefreshPreAggregation()
             throws InterruptedException
     {
-        String query = "select table_name from information_schema.tables where table_name = '%s'";
-        String tableName = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
-        duckdbClient.executeDDL(format(dropTableStatement, tableName));
-        Thread.sleep(5000);
-        assertThat(queryDuckdb(format(query, tableName)).size()).isOne();
+        String before = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
+        Thread.sleep(6000);
+        String after = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
+        assertThat(before).isNotEqualTo(after);
     }
 }

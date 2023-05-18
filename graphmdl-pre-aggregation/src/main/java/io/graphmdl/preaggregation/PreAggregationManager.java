@@ -144,6 +144,8 @@ public class PreAggregationManager
     private CompletableFuture<Void> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName());
+        final Optional<String> oldDuckdbTableName =
+                metricTableMapping.containsKey(catalogSchemaTableName) ? metricTableMapping.get(catalogSchemaTableName).getTableName() : Optional.empty();
         return runAsync(() -> {
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
@@ -156,16 +158,14 @@ public class PreAggregationManager
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
             String duckdbTableName = format("%s_%s", metric.getName(), randomUUID().toString().replace("-", ""));
-            if (metricTableMapping.containsKey(catalogSchemaTableName)) {
-                duckdbTableName = metricTableMapping.get(catalogSchemaTableName).getTableName().orElse(duckdbTableName);
-            }
 
-            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName);
+            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName, oldDuckdbTableName);
             metricTableMapping.put(catalogSchemaTableName, new MetricTablePair(metric, duckdbTableName));
         }).exceptionally(e -> {
             if (metricTableMapping.containsKey(catalogSchemaTableName)) {
                 metricTableMapping.get(catalogSchemaTableName).getTableName().ifPresent(this::dropTable);
             }
+            oldDuckdbTableName.ifPresent(this::dropTable);
             String errMsg = format("Failed to do pre-aggregation for metric %s; caused by %s", metric.getName(), e.getMessage());
             LOG.error(e, errMsg);
             metricTableMapping.put(catalogSchemaTableName, new MetricTablePair(metric, Optional.empty(), Optional.of(errMsg)));
@@ -178,7 +178,8 @@ public class PreAggregationManager
             Metric metric,
             SessionContext sessionContext,
             Statement rewrittenStatement,
-            String duckdbTableName)
+            String duckdbTableName,
+            Optional<String> oldDuckdbTableName)
     {
         preAggregationService.createPreAggregation(
                         mdl.getCatalog(),
@@ -188,7 +189,7 @@ public class PreAggregationManager
                 .ifPresent(pathInfo -> {
                     try {
                         tempFileLocations.add(pathInfo);
-                        importData(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName);
+                        importData(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName, oldDuckdbTableName);
                     }
                     finally {
                         removeTempFile(pathInfo);
@@ -196,7 +197,7 @@ public class PreAggregationManager
                 });
     }
 
-    private void importData(String path, String tableName)
+    private void importData(String path, String tableName, Optional<String> oldDuckdbTableName)
     {
         // ref: https://github.com/duckdb/duckdb/issues/1403
         StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
@@ -206,7 +207,7 @@ public class PreAggregationManager
         duckdbStorageConfig.getSecretKey().ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
         sb.append(format("SET s3_url_style='%s';\n", duckdbStorageConfig.getUrlStyle()));
         sb.append("BEGIN TRANSACTION;\n");
-        sb.append(format("DROP TABLE IF EXISTS %s;\n", tableName));
+        oldDuckdbTableName.ifPresent(old -> sb.append(format("DROP TABLE IF EXISTS %s;\n", old)));
         sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
         sb.append("COMMIT;\n");
         duckdbClient.executeDDL(sb.toString());
@@ -247,7 +248,7 @@ public class PreAggregationManager
 
         public String getRequiredTableName()
         {
-            return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name not exists"));
+            return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name is refreshing or not exists"));
         }
 
         public Optional<String> getTableName()
