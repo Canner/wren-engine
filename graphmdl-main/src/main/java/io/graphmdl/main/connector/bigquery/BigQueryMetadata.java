@@ -129,7 +129,7 @@ public class BigQueryMetadata
                     Table fullTable = bigQueryClient.getTable(table.getTableId());
                     // TODO: type mapping
                     fullTable.getDefinition().getSchema().getFields()
-                            .forEach(field -> builder.column(field.getName(), BigQueryType.toPGType(field.getType().getStandardType())));
+                            .forEach(field -> builder.column(field.getName(), BigQueryType.toPGType(field)));
                     return builder.build();
                 })
                 .collect(toImmutableList());
@@ -210,7 +210,7 @@ public class BigQueryMetadata
         JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql, parameters);
         return queryStatistics.getSchema().getFields().stream()
                 .map(field -> {
-                    PGType<?> type = BigQueryType.toPGType(field.getType().getStandardType());
+                    PGType<?> type = BigQueryType.toPGType(field);
                     if (field.getMode().equals(Field.Mode.REPEATED)) {
                         type = PGTypes.getArrayType(type.oid());
                     }

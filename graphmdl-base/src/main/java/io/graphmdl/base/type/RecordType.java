@@ -32,7 +32,7 @@ public class RecordType
 
     private final List<PGType<?>> fieldTypes;
 
-    RecordType(List<PGType<?>> fieldTypes)
+    public RecordType(List<PGType<?>> fieldTypes)
     {
         super(OID, -1, -1, NAME);
         this.fieldTypes = fieldTypes;

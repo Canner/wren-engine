@@ -27,8 +27,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,7 +61,7 @@ public class BigQueryRecordIterator
 
         this.types = tableResult.getSchema().getFields().stream()
                 .map(field -> {
-                    PGType<?> fieldType = BigQueryType.toPGType(field.getType().getStandardType());
+                    PGType<?> fieldType = BigQueryType.toPGType(field);
                     if (field.getMode().equals(Field.Mode.REPEATED)) {
                         return PGTypes.getArrayType(fieldType.oid());
                     }
@@ -98,13 +100,13 @@ public class BigQueryRecordIterator
         StandardSQLTypeName typeName = bqFields.get(index).getType().getStandardType();
         if (bqFields.get(index).getMode().equals(Field.Mode.REPEATED)) {
             return fieldValue.getRepeatedValue().stream()
-                    .map(innerField -> getFieldValue(typeName, innerField))
+                    .map(innerField -> getFieldValue(bqFields.get(index), typeName, innerField))
                     .collect(toImmutableList());
         }
-        return getFieldValue(typeName, fieldValue);
+        return getFieldValue(bqFields.get(index), typeName, fieldValue);
     }
 
-    private Object getFieldValue(StandardSQLTypeName typeName, FieldValue fieldValue)
+    private Object getFieldValue(Field field, StandardSQLTypeName typeName, FieldValue fieldValue)
     {
         switch (typeName) {
             case BOOL:
@@ -129,6 +131,14 @@ public class BigQueryRecordIterator
                 return fieldValue.getNumericValue();
             case INTERVAL:
                 return convertBigQueryIntervalToPeriod(fieldValue.getStringValue());
+            case STRUCT:
+                List<Field> subFields = field.getSubFields();
+                List<FieldValue> subFieldValues = fieldValue.getRecordValue();
+                Map<String, Object> struct = new HashMap<>();
+                for (int i = 0; i < subFields.size(); i++) {
+                    struct.put(subFields.get(i).getName(), getFieldValue(subFields.get(i), subFields.get(i).getType().getStandardType(), subFieldValues.get(i)));
+                }
+                return struct;
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);
         }

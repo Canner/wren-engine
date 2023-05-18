@@ -24,6 +24,7 @@ import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.postgresql.util.PGInterval;
+import org.postgresql.util.PGobject;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -73,6 +74,7 @@ public class TestBigQueryType
 
     @BeforeClass
     public void init()
+            throws SQLException
     {
         bigQueryClient = getInstance(Key.get(BigQueryClient.class));
         testCases = initTestcases();
@@ -86,6 +88,7 @@ public class TestBigQueryType
     }
 
     private Multimap<DataType, TypeCase> initTestcases()
+            throws SQLException
     {
         Multimap<DataType, TypeCase> typeCaseMap = HashMultimap.create();
         typeCaseMap.put(DataType.BOOL, new TypeCase("bool", "true", true));
@@ -117,14 +120,22 @@ public class TestBigQueryType
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_time", "array<time>", "[time \"15:10:55\", time \"15:10:56\"]", new Time[]{Time.valueOf("15:10:55"), Time.valueOf("15:10:56")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_timestamp", "array<timestamp>", "[timestamp \"2020-01-01 15:10:55\", timestamp \"2020-01-01 15:10:56\"]", new Timestamp[] {
                 Timestamp.valueOf("2020-01-01 15:10:55"), Timestamp.valueOf("2020-01-01 15:10:56")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_datetime", "array<datetime>", "[datetime \"2020-01-01 15:10:55.123456\", datetime \"2020-01-01 15:10:56.123456\"]", new Timestamp[]{Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_datetime", "array<datetime>", "[datetime \"2020-01-01 15:10:55.123456\", datetime \"2020-01-01 15:10:56.123456\"]", new Timestamp[] {
+                Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_json", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
                 "{a:2}"}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_interval", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
 //                new PGInterval(0, 0, 1, 0, 0, 0), new PGInterval(0, 0, 2, 0, 0, 0)}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_geography", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
 
-        typeCaseMap.put(DataType.STRUCT, new TypeCase("c_struct", "struct<s1 int64, s2 string>", "(1, \"hello\")", new String[] {"1", "hello"}));
+        PGobject structObject = new PGobject();
+        structObject.setType("record");
+        structObject.setValue("(1,hello)");
+        typeCaseMap.put(DataType.STRUCT, new TypeCase("c_struct", "struct<s1 int64, s2 string>", "(1, \"hello\")", structObject));
+        PGobject structObject2 = new PGobject();
+        structObject2.setType("record");
+        structObject2.setValue("(1,\"(2,hello)\")");
+        typeCaseMap.put(DataType.STRUCT, new TypeCase("c_multi_struct", "struct<s1 int64, s2 struct<s2_1 int64, s2_2 string>>", "(1, struct(2, \"hello\"))", structObject2));
         return typeCaseMap;
     }
 
@@ -281,8 +292,7 @@ public class TestBigQueryType
         }
     }
 
-    // TODO
-    @Test(enabled = false)
+    @Test
     public void testStruct()
             throws SQLException
     {
