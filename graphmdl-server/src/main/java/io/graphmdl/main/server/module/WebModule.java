@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-package io.graphmdl.main;
+package io.graphmdl.main.server.module;
 
 import com.google.inject.Binder;
-import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.graphmdl.main.web.GraphMDLExceptionMapper;
+import io.graphmdl.main.web.ReloadResource;
 
-import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
 
-public class GraphMDLModule
+public class WebModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(GraphMDLConfig.class);
-        binder.bind(GraphMDLManager.class).in(Scopes.SINGLETON);
-        binder.bind(GraphMDLMetastore.class).to(GraphMDLManager.class);
+        jaxrsBinder(binder).bind(ReloadResource.class);
+        jaxrsBinder(binder).bindInstance(new GraphMDLExceptionMapper());
     }
 }

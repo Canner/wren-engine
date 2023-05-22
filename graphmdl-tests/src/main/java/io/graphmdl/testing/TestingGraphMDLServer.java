@@ -32,6 +32,7 @@ import io.airlift.node.NodeModule;
 import io.graphmdl.main.GraphMDLModule;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
+import io.graphmdl.main.server.module.WebModule;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
 import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.graphmdl.preaggregation.PreAggregationModule;
@@ -77,7 +78,8 @@ public class TestingGraphMDLServer
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
                 new GraphMDLModule(),
-                new PreAggregationModule()));
+                new PreAggregationModule(),
+                new WebModule()));
 
         injector = app
                 .doNotInitializeLogging()
