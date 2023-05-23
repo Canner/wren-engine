@@ -16,6 +16,8 @@ package io.graphmdl.base.type;
 
 import io.netty.buffer.ByteBuf;
 import org.joda.time.Period;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -30,6 +32,48 @@ public class IntervalType
     private static final int TYPE_LEN = 16;
     private static final int TYPE_MOD = -1;
     public static final IntervalType INTERVAL = new IntervalType();
+    private static final PeriodFormatter DAY_FORMATTER = new PeriodFormatterBuilder()
+            .appendYears()
+            .appendSuffix(" year", " years")
+            .appendSeparator(" ")
+            .appendMonths()
+            .appendSuffix(" mon", " mons")
+            .appendSeparator(" ")
+            .appendWeeks()
+            .appendSuffix(" weeks")
+            .appendSeparator(" ")
+            .appendDays()
+            .appendSuffix(" day", " days")
+            .toFormatter();
+
+    private static final PeriodFormatter TIME_FORMATTER = new PeriodFormatterBuilder()
+            .printZeroAlways()
+            .minimumPrintedDigits(2)
+            .appendHours()
+            .appendSeparator(":")
+            .minimumPrintedDigits(2)
+            .printZeroAlways()
+            .appendMinutes()
+            .appendSeparator(":")
+            .minimumPrintedDigits(2)
+            .printZeroAlways()
+            .appendSecondsWithOptionalMillis()
+            .toFormatter();
+
+    private static final PeriodFormatter PG_INTERVAL_FORMATTER = new PeriodFormatterBuilder()
+            .appendYears()
+            .appendSuffix(" years ")
+            .appendMonths()
+            .appendSuffix(" mons ")
+            .appendDays()
+            .appendSuffix(" days ")
+            .appendHours()
+            .appendSuffix(" hours ")
+            .appendMinutes()
+            .appendSuffix(" mins ")
+            .appendSecondsWithOptionalMillis()
+            .appendSuffix(" secs")
+            .toFormatter();
 
     private IntervalType()
     {
@@ -39,9 +83,7 @@ public class IntervalType
     @Override
     public int typArray()
     {
-        // TODO support interval
-        // return PGArray.INTERVAL_ARRAY.oid();
-        throw new UnsupportedOperationException("no implementation");
+        return PGArray.INTERVAL_ARRAY.oid();
     }
 
     @Override
@@ -107,15 +149,26 @@ public class IntervalType
     @Override
     public byte[] encodeAsUTF8Text(@Nonnull Period value)
     {
-        // StringBuilder sb = new StringBuilder();
-        // IntervalType.PERIOD_FORMATTER.printTo(sb, (ReadablePeriod) value);
-        return value.toString().getBytes(StandardCharsets.UTF_8);
+        StringBuilder sb = new StringBuilder();
+        sb.append(DAY_FORMATTER.print(value));
+        sb.append(" ");
+        // the negative sign need to be placed before the time, like -00:00:01
+        if (value.getHours() < 0 || value.getMinutes() < 0 || value.getSeconds() < 0 || value.getMillis() < 0) {
+            sb.append("-");
+        }
+        Period absValue = new Period(
+                Math.abs(value.getHours()),
+                Math.abs(value.getMinutes()),
+                Math.abs(value.getSeconds()),
+                Math.abs(value.getMillis()));
+        sb.append(TIME_FORMATTER.print(absValue));
+
+        return sb.toString().replace("00:00:00", "").trim().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
     public Period decodeUTF8Text(byte[] bytes)
     {
-        // return IntervalType.PERIOD_FORMATTER.parsePeriod(new String(bytes, StandardCharsets.UTF_8));
-        return new Period(new String(bytes, StandardCharsets.UTF_8));
+        return PG_INTERVAL_FORMATTER.parsePeriod(new String(bytes, StandardCharsets.UTF_8));
     }
 }

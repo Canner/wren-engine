@@ -18,9 +18,11 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.type.DateType;
+import io.graphmdl.base.type.IntervalType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
+import org.joda.time.Period;
 
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +33,7 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
 import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
+import static com.google.cloud.bigquery.StandardSQLTypeName.INTERVAL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.JSON;
 import static com.google.cloud.bigquery.StandardSQLTypeName.NUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
@@ -65,6 +68,7 @@ public final class BigQueryType
                 .put(NUMERIC, NumericType.NUMERIC)
                 .put(BIGNUMERIC, NumericType.NUMERIC)
                 .put(JSON, VARCHAR)
+                .put(INTERVAL, IntervalType.INTERVAL)
                 .build();
 
         pgTypeToBqTypeMap = ImmutableMap.<PGType<?>, StandardSQLTypeName>builder()
@@ -80,6 +84,7 @@ public final class BigQueryType
                 .put(DateType.DATE, DATE)
                 .put(TimestampType.TIMESTAMP, TIMESTAMP)
                 .put(BYTEA, BYTES)
+                .put(IntervalType.INTERVAL, INTERVAL)
                 .build();
     }
 
@@ -101,6 +106,9 @@ public final class BigQueryType
         // https://github.com/googleapis/java-bigquery/blob/909a574e6857332dfc71c746c4500b601de57dcf/google-cloud-bigquery/src/main/java/com/google/cloud/bigquery/QueryParameterValue.java#L409
         if (pgType.equals(SMALLINT) && value instanceof Short) {
             return ((Short) value).intValue();
+        }
+        if (pgType.equals(IntervalType.INTERVAL) && value instanceof Period) {
+            return value.toString();
         }
         return value;
     }

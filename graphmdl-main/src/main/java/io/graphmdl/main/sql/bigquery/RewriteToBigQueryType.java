@@ -152,6 +152,8 @@ public class RewriteToBigQueryType
                     return new GenericDataType(nodeLocation, new Identifier("ARRAY"), parameters);
                 case "DATE":
                     return new GenericDataType(nodeLocation, new Identifier("DATE"), parameters);
+                case "INTERVAL":
+                    return new GenericDataType(nodeLocation, new Identifier("INTERVAL"), parameters);
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + typeName);
             }

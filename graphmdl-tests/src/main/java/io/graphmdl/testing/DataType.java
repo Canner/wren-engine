@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static io.graphmdl.base.type.DateType.DATE;
+import static io.graphmdl.base.type.IntervalType.INTERVAL;
 import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
 import static java.lang.String.format;
 import static java.time.temporal.ChronoField.NANO_OF_SECOND;
@@ -201,6 +202,14 @@ public class DataType<T>
                 format("timestamp(%s)", precision),
                 TIMESTAMP,
                 format.toFormatter()::format);
+    }
+
+    public static DataType<String> intervalType()
+    {
+        return dataType(
+                "interval",
+                INTERVAL,
+                value -> format("INTERVAL %s", value));
     }
 
     public static String formatStringLiteral(String value)

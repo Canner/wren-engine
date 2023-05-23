@@ -27,6 +27,7 @@ import static io.graphmdl.base.type.CharType.CHAR;
 import static io.graphmdl.base.type.DateType.DATE;
 import static io.graphmdl.base.type.HstoreType.HSTORE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.IntervalType.INTERVAL;
 import static io.graphmdl.base.type.RealType.REAL;
 import static io.graphmdl.base.type.SmallIntType.SMALLINT;
 import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
@@ -69,6 +70,7 @@ public final class PGTypes
         // Just need a fake instance to do type mapping. We never use the field.
         TYPE_TABLE.put(HSTORE.oid(), HSTORE);
         TYPE_TABLE.put(UuidType.UUID.oid(), UuidType.UUID);
+        TYPE_TABLE.put(INTERVAL.oid(), INTERVAL);
 
         ImmutableMap.Builder<Integer, PGArray> innerToPgTypeBuilder = ImmutableMap.builder();
         // initial collection types

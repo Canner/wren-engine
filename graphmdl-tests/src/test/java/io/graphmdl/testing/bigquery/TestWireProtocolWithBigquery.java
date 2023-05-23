@@ -22,6 +22,7 @@ import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
+import org.postgresql.util.PGInterval;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -887,7 +888,8 @@ public class TestWireProtocolWithBigquery
                 // TODO support timestamptz
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
-                {"bytea", "test1".getBytes(UTF_8)}
+                {"bytea", "test1".getBytes(UTF_8)},
+                {"interval", new PGInterval(1, 5, -3, 7, 55, 20)}
 
                 // TODO: type support
                 // {"any", new Object[] {1, "test", new BigDecimal(10)}}
