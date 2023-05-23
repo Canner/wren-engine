@@ -157,12 +157,27 @@ public class WireProtocolSession
 
     public String getDefaultSchema()
     {
-        return properties.getProperty("search_path");
+        return Optional.ofNullable(properties.getProperty("search_path"))
+                // we only support the first search path to be the default schema
+                .orElse(extraFirstSearchPath(properties.getProperty("options")));
     }
 
-    public List<String> getTrinoSessionProperties()
+    private String extraFirstSearchPath(String options)
     {
-        return sessionProperties;
+        if (options == null) {
+            return null;
+        }
+        String searchPath = null;
+        for (String option : options.split(" ")) {
+            String[] kv = option.split("=");
+            if (kv.length != 2) {
+                continue;
+            }
+            if (kv[0].equalsIgnoreCase("--search_path")) {
+                searchPath = kv[1].split(",")[0];
+            }
+        }
+        return searchPath;
     }
 
     public boolean doAuthentication(String password)
