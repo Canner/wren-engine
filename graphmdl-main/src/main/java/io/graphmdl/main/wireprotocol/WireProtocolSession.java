@@ -157,11 +157,12 @@ public class WireProtocolSession
 
     public String getDefaultSchema()
     {
-        // we only support the first search path to be the default schema
-        return extraSearchPath(properties.getProperty("options").split(",")[0]);
+        return Optional.ofNullable(properties.getProperty("search_path"))
+                // we only support the first search path to be the default schema
+                .orElse(extraFirstSearchPath(properties.getProperty("options")));
     }
 
-    private String extraSearchPath(String options)
+    private String extraFirstSearchPath(String options)
     {
         if (options == null) {
             return null;
@@ -173,7 +174,7 @@ public class WireProtocolSession
                 continue;
             }
             if (kv[0].equalsIgnoreCase("--search_path")) {
-                searchPath = kv[1];
+                searchPath = kv[1].split(",")[0];
             }
         }
         return searchPath;
