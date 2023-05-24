@@ -90,12 +90,12 @@ public class GraphMDL
 
     public List<EnumDefinition> listEnums()
     {
-        return manifest.getEnumFields();
+        return manifest.getEnumDefinitions();
     }
 
     public Optional<EnumDefinition> getEnum(String name)
     {
-        return manifest.getEnumFields().stream()
+        return manifest.getEnumDefinitions().stream()
                 .filter(enumField -> enumField.getName().equals(name))
                 .findAny();
     }

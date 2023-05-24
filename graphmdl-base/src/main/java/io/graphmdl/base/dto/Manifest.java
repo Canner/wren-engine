@@ -16,11 +16,14 @@ package io.graphmdl.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
+@JsonDeserialize(builder = Manifest.Builder.class)
 public class Manifest
 {
     private final String catalog;
@@ -41,7 +44,7 @@ public class Manifest
             @JsonProperty("schema") String schema,
             @JsonProperty("models") List<Model> models,
             @JsonProperty("relationships") List<Relationship> relationships,
-            @JsonProperty("enums") List<EnumDefinition> enumDefinitions,
+            @JsonProperty("enumDefinitions") List<EnumDefinition> enumDefinitions,
             @JsonProperty("metrics") List<Metric> metrics)
     {
         this.catalog = requireNonNull(catalog, "catalog is null");
@@ -52,36 +55,43 @@ public class Manifest
         this.metrics = metrics == null ? List.of() : metrics;
     }
 
+    @JsonProperty
     public String getCatalog()
     {
         return catalog;
     }
 
+    @JsonProperty
     public String getSchema()
     {
         return schema;
     }
 
+    @JsonProperty
     public List<Model> getModels()
     {
         return models;
     }
 
+    @JsonProperty
     public List<Relationship> getRelationships()
     {
         return relationships;
     }
 
-    public List<EnumDefinition> getEnumFields()
+    @JsonProperty
+    public List<EnumDefinition> getEnumDefinitions()
     {
         return enumDefinitions;
     }
 
+    @JsonProperty
     public List<Metric> getMetrics()
     {
         return metrics;
     }
 
+    @JsonPOJOBuilder(buildMethodName = "build", withPrefix = "set")
     public static class Builder
     {
         private String catalog;

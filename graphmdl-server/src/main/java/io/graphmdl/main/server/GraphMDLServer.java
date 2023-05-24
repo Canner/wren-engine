@@ -26,6 +26,7 @@ import io.graphmdl.main.GraphMDLModule;
 import io.graphmdl.main.pgcatalog.PgCatalogManager;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
+import io.graphmdl.main.server.module.WebModule;
 import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.graphmdl.preaggregation.PreAggregationModule;
 
@@ -56,6 +57,7 @@ public class GraphMDLServer
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
                 new GraphMDLModule(),
-                new PreAggregationModule());
+                new PreAggregationModule(),
+                new WebModule());
     }
 }
