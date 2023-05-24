@@ -36,7 +36,13 @@ public class BigQueryPreAggregationService
     private static final String PRE_AGGREGATION_FOLDER = format("pre-agg-%s", randomUUID());
     // Pattern: bucket/PRE_AGGREGATION_FOLDER/catalog/schema/name/uuid
     private static final Pattern PATH_PATTERN = Pattern.compile(
-            ".+/(pre-agg-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([-_a-z0-9]+)/([-_a-z0-9]+)/([-_a-zA-Z0-9]+)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+            ".+/(?<preAggFolder>pre-agg-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/(?<catalog>[-_a-z0-9]+)/(?<schema>[-_a-z0-9]+)/(?<metricName>[-_a-zA-Z0-9]+)/(?<randomTail>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+    private static final String PRE_AGGREGATION_FOLDER_GROUP = "preAggFolder";
+    private static final String CATALOG_GROUP = "catalog";
+    private static final String SCHEMA_GROUP = "schema";
+    private static final String METRIC_NAME_GROUP = "metricName";
+    private static final String RANDOM_TAIL_GROUP = "randomTail";
+
     private final Optional<String> bucketName;
     private final Metadata metadata;
     private final GcsStorageClient gcsStorageClient;
@@ -87,11 +93,11 @@ public class BigQueryPreAggregationService
         Matcher matcher = PATH_PATTERN.matcher(path);
         if (matcher.matches()) {
             return Optional.of(format("%s/%s/%s/%s/%s",
-                    matcher.group(1),
-                    matcher.group(2),
-                    matcher.group(3),
-                    matcher.group(4),
-                    matcher.group(5)));
+                    matcher.group(PRE_AGGREGATION_FOLDER_GROUP),
+                    matcher.group(CATALOG_GROUP),
+                    matcher.group(SCHEMA_GROUP),
+                    matcher.group(METRIC_NAME_GROUP),
+                    matcher.group(RANDOM_TAIL_GROUP)));
         }
         return Optional.empty();
     }

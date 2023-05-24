@@ -291,7 +291,7 @@ public class WireProtocolSession
                 return preAggregationManager.query(statement, portal.getParameters());
             }
             catch (Exception e) {
-                LOG.warn("Failed to execute pre-aggregation query: %s", statement, e);
+                LOG.warn(e, "Failed to execute pre-aggregation query: %s", statement);
                 return null;
             }
         });

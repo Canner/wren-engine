@@ -15,7 +15,6 @@
 package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDL;
@@ -23,7 +22,6 @@ import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.main.GraphMDLMetastore;
-import io.graphmdl.testing.TestingGraphMDLServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -38,7 +36,6 @@ import java.util.Set;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
-import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
@@ -54,26 +51,6 @@ public class TestPreAggregation
             .setCatalog("canner-cml")
             .setSchema("tpch_tiny")
             .build();
-
-    @Override
-    protected TestingGraphMDLServer createGraphMDLServer()
-    {
-        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .put("bigquery.location", "asia-east1")
-                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .put("bigquery.bucket-name", getenv("TEST_BIG_QUERY_BUCKET_NAME"))
-                .put("duckdb.storage.access-key", getenv("TEST_DUCKDB_STORAGE_ACCESS_KEY"))
-                .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"));
-
-        if (getGraphMDLPath().isPresent()) {
-            properties.put("graphmdl.file", getGraphMDLPath().get());
-        }
-
-        return TestingGraphMDLServer.builder()
-                .setRequiredConfigs(properties.build())
-                .build();
-    }
 
     @Test
     public void testPreAggregation()
