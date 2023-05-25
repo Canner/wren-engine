@@ -35,7 +35,7 @@ public class Field
     private final CatalogSchemaTableName modelName;
     private final String columnName;
     private final Optional<String> name;
-    private final boolean isRelationship;
+    private final Optional<String> relationship;
     private final String type;
 
     private Field(
@@ -43,14 +43,14 @@ public class Field
             CatalogSchemaTableName modelName,
             String columnName,
             String name,
-            boolean isRelationship,
+            Optional<String> relationship,
             String type)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.modelName = requireNonNull(modelName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
-        this.isRelationship = isRelationship;
+        this.relationship = requireNonNull(relationship, "relationship is null");
         this.type = requireNonNull(type);
     }
 
@@ -76,7 +76,12 @@ public class Field
 
     public boolean isRelationship()
     {
-        return isRelationship;
+        return relationship.isPresent();
+    }
+
+    public Optional<String> getRelationship()
+    {
+        return relationship;
     }
 
     public String getType()
@@ -131,7 +136,7 @@ public class Field
         private CatalogSchemaTableName modelName;
         private String columnName;
         private String name;
-        private boolean isRelationship;
+        private Optional<String> relationship;
         private String type;
 
         public Builder() {}
@@ -142,7 +147,7 @@ public class Field
             this.modelName = field.modelName;
             this.columnName = field.columnName;
             this.name = field.name.orElse(null);
-            this.isRelationship = field.isRelationship;
+            this.relationship = field.relationship;
             this.type = field.getType();
             return this;
         }
@@ -171,9 +176,9 @@ public class Field
             return this;
         }
 
-        public Builder isRelationship(boolean isRelationship)
+        public Builder relationship(Optional<String> relationship)
         {
-            this.isRelationship = isRelationship;
+            this.relationship = relationship;
             return this;
         }
 
@@ -185,7 +190,7 @@ public class Field
 
         public Field build()
         {
-            return new Field(relationAlias, modelName, columnName, name, isRelationship, type);
+            return new Field(relationAlias, modelName, columnName, name, relationship, type);
         }
     }
 }

@@ -232,7 +232,7 @@ public final class Utils
                 .columnName(column.getName())
                 .name(column.getName())
                 .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
-                .isRelationship(graphMDL.listModels().stream().map(Model::getName).anyMatch(name -> name.equals(column.getType())))
+                .relationship(graphMDL.listModels().stream().map(Model::getName).filter(name -> name.equals(column.getType())).findFirst())
                 .type(column.getType())
                 .build();
     }

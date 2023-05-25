@@ -25,6 +25,8 @@ import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.util.Optional;
+
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -50,7 +52,7 @@ public class TestLambdaExpressionBodyRewrite
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName("graphmdl", "test", "Book");
         Node node = LambdaExpressionBodyRewrite.rewrite(parse(actual),
                 Field.builder()
-                        .isRelationship(true)
+                        .relationship(Optional.of("UserBooks"))
                         .modelName(catalogSchemaTableName)
                         .columnName("books")
                         .name("books")

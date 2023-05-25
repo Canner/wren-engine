@@ -188,7 +188,7 @@ public final class StatementAnalyzer
                                         .modelName(tableName)
                                         .columnName(column.getName())
                                         .name(column.getName())
-                                        .isRelationship(column.getRelationship().isPresent())
+                                        .relationship(column.getRelationship())
                                         .type(column.getType())
                                         .build())
                         .collect(toImmutableList());
