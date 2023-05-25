@@ -16,9 +16,11 @@ package io.graphmdl.base.client.jdbc;
 
 import io.graphmdl.base.client.AutoCloseableIterator;
 
+import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,7 +83,14 @@ public class JdbcRecordIterator
     {
         List<Object> builder = new ArrayList<>(columnCount);
         for (int i = 1; i <= columnCount; i++) {
-            builder.add(resultSet.getObject(i));
+            if (resultSet.getMetaData().getColumnType(i) == Types.BLOB) {
+                Blob blob = resultSet.getBlob(i);
+                byte[] bytes = blob.getBytes(0, (int) blob.length());
+                builder.add(bytes);
+            }
+            else {
+                builder.add(resultSet.getObject(i));
+            }
         }
         return builder.toArray();
     }

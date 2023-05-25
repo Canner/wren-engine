@@ -24,6 +24,7 @@ import java.util.Optional;
 import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.BooleanType.BOOLEAN;
+import static io.graphmdl.base.type.ByteaType.BYTEA;
 import static io.graphmdl.base.type.DateType.DATE;
 import static io.graphmdl.base.type.DoubleType.DOUBLE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
@@ -38,9 +39,10 @@ import static io.graphmdl.base.type.VarcharType.VARCHAR;
 public final class DuckdbType
 {
     public static final DuckdbType DUCKDB_TYPE = new DuckdbType();
-    // other types LIST, ENUM, HUGEINT, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP, BLOB
+    // other types LIST, ENUM, HUGEINT, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP
     private final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()
             .put(Types.BOOLEAN, BOOLEAN)
+            .put(Types.BLOB, BYTEA)
             .put(Types.TINYINT, TINYINT)
             .put(Types.SMALLINT, SMALLINT)
             .put(Types.INTEGER, INTEGER)

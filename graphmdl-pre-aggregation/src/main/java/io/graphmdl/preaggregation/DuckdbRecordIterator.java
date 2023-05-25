@@ -91,13 +91,18 @@ public class DuckdbRecordIterator
 
     private Object convertValue(PGType<?> pgType, Object value)
     {
-        if (pgType instanceof TimestampType) {
-            return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
+        try {
+            if (pgType instanceof TimestampType) {
+                return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
+            }
+            if (pgType instanceof DateType) {
+                return value.toString();
+            }
+            return value;
         }
-        if (pgType instanceof DateType) {
-            return value.toString();
+        catch (Exception e) {
+            throw new IllegalArgumentException("Unsupported value: " + value, e);
         }
-        return value;
     }
 
     private static long convertToMicroseconds(LocalDateTime localDateTime)

@@ -86,6 +86,11 @@
           "type": "string"
         },
         {
+          "name": "c_bytes",
+          "expression": "c_bytes",
+          "type": "bytea"
+        },
+        {
           "name": "c_integer",
           "expression": "c_integer",
           "type": "integer"

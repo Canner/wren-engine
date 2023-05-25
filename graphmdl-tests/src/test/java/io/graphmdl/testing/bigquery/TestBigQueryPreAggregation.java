@@ -29,6 +29,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
@@ -87,7 +88,7 @@ public class TestBigQueryPreAggregation
                 ResultSet resultSet = stmt.executeQuery()) {
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getString("c_string"));
-//                assertThatNoException().isThrownBy(() -> resultSet.getString("c_bytes"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("c_bytes"));
             assertThatNoException().isThrownBy(() -> resultSet.getLong("c_integer"));
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("c_float"));
             assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_numeric"));
@@ -105,7 +106,7 @@ public class TestBigQueryPreAggregation
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_array_string"));
 
             assertThat(resultSet.getString("c_string")).isEqualTo("hello");
-//                assertThat(resultSet.getBytes("c_bytes")).isEqualTo("hello".getBytes(UTF_8));
+            assertThat(resultSet.getBytes("c_bytes")).isEqualTo("hello".getBytes(UTF_8));
             assertThat(resultSet.getLong("c_integer")).isEqualTo(12345L);
             assertThat(resultSet.getDouble("c_float")).isEqualTo(1.2345);
             // TODO DuckDB use NUMERIC(38, 9) to store NUMERIC
