@@ -189,7 +189,7 @@
       ]
     }
   ],
-  "enums": [
+  "enumDefinitions": [
     {
       "name": "Status",
       "values": [
