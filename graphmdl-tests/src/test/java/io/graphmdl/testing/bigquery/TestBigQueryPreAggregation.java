@@ -99,8 +99,8 @@ public class TestBigQueryPreAggregation
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_datetime"));
             // Grouping by expressions of type JSON is not allowed in BigQuery
 //            assertThatNoException().isThrownBy(() -> resultSet.getString("c_json"));
-
-//                assertThatNoException().isThrownBy(() -> resultSet.getString("c_interval"));
+            // BigQuery Type INTERVAL is not currently supported for parquet exports
+//            assertThatNoException().isThrownBy(() -> resultSet.getString("c_interval"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_struct"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_array_string"));
 
