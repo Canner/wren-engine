@@ -149,6 +149,7 @@ public final class ExpressionAnalyzer
             return ignored;
         }
 
+        // This function only retrieve relationship fields in first layer of expression, and won't recursive traverse inside the expression.
         private Optional<Field> collectRelationshipFields(Expression expression, boolean fromArrayFunctionCall, boolean fromLambdaFunctionCall)
         {
             // we only collect select items in table scope
