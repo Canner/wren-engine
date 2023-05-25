@@ -95,7 +95,9 @@ public class TestBigQueryPreAggregation
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_timestamp"));
             assertThatNoException().isThrownBy(() -> resultSet.getDate("c_date"));
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_datetime"));
-//                assertThatNoException().isThrownBy(() -> resultSet.getString("c_json"));
+            // Grouping by expressions of type JSON is not allowed in BigQuery
+//            assertThatNoException().isThrownBy(() -> resultSet.getString("c_json"));
+
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_interval"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_struct"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_array_string"));
@@ -110,7 +112,9 @@ public class TestBigQueryPreAggregation
             assertThat(resultSet.getTimestamp("c_timestamp")).isEqualTo(Timestamp.valueOf("2020-01-01 15:10:55"));
             assertThat(resultSet.getDate("c_date")).isEqualTo(Date.valueOf("2020-01-01"));
             assertThat(resultSet.getTimestamp("c_datetime")).isEqualTo(Timestamp.valueOf("2020-01-01 15:10:55.123456"));
-//                assertThat(resultSet.getString("c_json")).isEqualTo("{\"a\":1}");
+            // Grouping by expressions of type JSON is not allowed in BigQuery
+//            assertThat(resultSet.getString("c_json")).isEqualTo("{\"a\":1}");
+
 //            assertThat(resultSet.getObject("c_interval")).isEqualTo(new PGInterval(0, 0, 1, 0, 0, 0));
 //                assertThat(resultSet.getObject("c_struct")).isEqualTo(ImmutableList.of(1L, "hello"));
 //                assertThat(resultSet.getObject("c_array_string")).isEqualTo(ImmutableList.of("hello", "world"));
