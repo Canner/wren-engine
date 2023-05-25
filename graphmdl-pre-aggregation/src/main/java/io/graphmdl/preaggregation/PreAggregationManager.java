@@ -111,7 +111,7 @@ public class PreAggregationManager
 
     public synchronized void importPreAggregation(GraphMDL mdl)
     {
-        removePreAggregation(mdl);
+        removePreAggregation(mdl.getCatalog(), mdl.getSchema());
         doPreAggregation(mdl).join();
         scheduleGraphMDL(mdl);
     }
@@ -275,19 +275,22 @@ public class PreAggregationManager
         return Optional.empty();
     }
 
-    public void removePreAggregation(GraphMDL graphMDL)
+    public void removePreAggregation(String catalogName, String schemaName)
     {
+        requireNonNull(catalogName, "catalogName is null");
+        requireNonNull(schemaName, "schemaName is null");
+
         metricScheduledFutures.keySet().stream()
-                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(graphMDL.getCatalog())
-                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(catalogName)
+                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(schemaName))
                 .forEach(catalogSchemaTableName -> {
                     metricScheduledFutures.get(catalogSchemaTableName).cancel(true);
                     metricScheduledFutures.remove(catalogSchemaTableName);
                 });
 
         metricTableMapping.entrySet().stream()
-                .filter(entry -> entry.getKey().getCatalogName().equals(graphMDL.getCatalog())
-                        && entry.getKey().getSchemaTableName().getSchemaName().equals(graphMDL.getSchema()))
+                .filter(entry -> entry.getKey().getCatalogName().equals(catalogName)
+                        && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
                 .forEach(entry -> {
                     entry.getValue().getTableName().ifPresent(this::dropTable);
                     metricTableMapping.remove(entry.getKey());

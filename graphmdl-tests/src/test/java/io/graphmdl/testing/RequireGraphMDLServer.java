@@ -16,18 +16,30 @@ package io.graphmdl.testing;
 
 import com.google.common.io.Closer;
 import com.google.inject.Key;
+import io.airlift.http.client.HttpClient;
+import io.airlift.http.client.HttpClientConfig;
+import io.airlift.http.client.Request;
+import io.airlift.http.client.StringResponseHandler;
+import io.airlift.http.client.jetty.JettyHttpClient;
+import io.airlift.units.Duration;
 import org.testng.annotations.AfterClass;
 
 import java.io.IOException;
+
+import static io.airlift.http.client.Request.Builder.preparePut;
+import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class RequireGraphMDLServer
 {
     private final TestingGraphMDLServer graphMDLServer;
     protected final Closer closer = Closer.create();
+    protected final HttpClient client;
 
     public RequireGraphMDLServer()
     {
         this.graphMDLServer = createGraphMDLServer();
+        this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS))));
         closer.register(graphMDLServer);
     }
 
@@ -48,5 +60,33 @@ public abstract class RequireGraphMDLServer
             throws IOException
     {
         closer.close();
+    }
+
+    protected void reloadGraphMDL()
+    {
+        Request request = preparePut()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/reload"))
+                .build();
+
+        try (HttpClient client = new JettyHttpClient()) {
+            StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
+            if (response.getStatusCode() != 200) {
+                throw new RuntimeException(response.getBody());
+            }
+        }
+    }
+
+    protected void reloadPreAggregation()
+    {
+        Request request = preparePut()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/preAggregation/reload"))
+                .build();
+
+        try (HttpClient client = new JettyHttpClient()) {
+            StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
+            if (response.getStatusCode() != 200) {
+                throw new RuntimeException(response.getBody());
+            }
+        }
     }
 }

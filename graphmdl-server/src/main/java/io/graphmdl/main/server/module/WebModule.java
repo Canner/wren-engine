@@ -17,6 +17,7 @@ package io.graphmdl.main.server.module;
 import com.google.inject.Binder;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.graphmdl.main.web.GraphMDLExceptionMapper;
+import io.graphmdl.main.web.PreAggregationResource;
 import io.graphmdl.main.web.ReloadResource;
 
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
@@ -28,6 +29,7 @@ public class WebModule
     protected void setup(Binder binder)
     {
         jaxrsBinder(binder).bind(ReloadResource.class);
+        jaxrsBinder(binder).bind(PreAggregationResource.class);
         jaxrsBinder(binder).bindInstance(new GraphMDLExceptionMapper());
     }
 }

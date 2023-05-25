@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static io.graphmdl.base.GraphMDL.fromJson;
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,10 +32,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestReloadPreAggregation
         extends AbstractPreAggregationTest
 {
+    private Path graphMDLFilePath;
+
     @Override
     protected Optional<String> getGraphMDLPath()
     {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg/pre_agg_reimport_1_mdl.json")).getPath());
+        try {
+            graphMDLFilePath = Files.createTempFile("graphmdl", ".json");
+            rewriteFile("pre_agg/pre_agg_reload_1_mdl.json");
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return Optional.of(graphMDLFilePath.toString());
     }
 
     @Test
@@ -47,9 +57,10 @@ public class TestReloadPreAggregation
         String beforeMappingName = getDefaultMetricTablePair(beforeMetricName).getRequiredTableName();
         assertPreAggregation(beforeMetricName);
 
-        String reimportJson =
-                Files.readString(Path.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg/pre_agg_reimport_2_mdl.json")).getFile()));
-        preAggregationManager.importPreAggregation(fromJson(reimportJson));
+        rewriteFile("pre_agg/pre_agg_reload_2_mdl.json");
+        reloadGraphMDL();
+        reloadPreAggregation();
+
         assertPreAggregation("Revenue_After");
 
         List<Object[]> tables = queryDuckdb("show tables");
@@ -67,5 +78,11 @@ public class TestReloadPreAggregation
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);
         assertThat(preAggregationManager.metricScheduledFutureExists(mapping)).isTrue();
+    }
+
+    private void rewriteFile(String resourcePath)
+            throws IOException
+    {
+        Files.copy(Path.of(requireNonNull(getClass().getClassLoader().getResource(resourcePath)).getPath()), graphMDLFilePath, REPLACE_EXISTING);
     }
 }

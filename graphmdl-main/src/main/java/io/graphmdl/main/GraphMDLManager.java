@@ -45,6 +45,7 @@ public class GraphMDLManager
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
         if (graphMDLFile.exists()) {
             loadGraphMDLFromFile();
+            preAggregationManager.importPreAggregation(getGraphMDL());
         }
         else {
             LOG.warn("GraphMDL file %s does not exist", graphMDLFile);
@@ -60,8 +61,9 @@ public class GraphMDLManager
     private void loadGraphMDL(String json)
             throws JsonProcessingException
     {
+        GraphMDL oldGraphMDL = graphMDL.get();
+        preAggregationManager.removePreAggregation(oldGraphMDL.getCatalog(), oldGraphMDL.getSchema());
         graphMDL.set(GraphMDL.fromJson(json));
-        preAggregationManager.importPreAggregation(getGraphMDL());
     }
 
     @Override
