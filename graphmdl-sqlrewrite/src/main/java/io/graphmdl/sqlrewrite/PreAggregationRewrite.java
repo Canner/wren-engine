@@ -14,6 +14,7 @@
 package io.graphmdl.sqlrewrite;
 
 import com.google.common.collect.ImmutableSet;
+import io.airlift.log.Logger;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
@@ -21,7 +22,10 @@ import io.graphmdl.base.dto.Metric;
 import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.PreAggregationAnalysis;
 import io.graphmdl.sqlrewrite.analyzer.Scope;
+import io.trino.sql.SqlFormatter;
+import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlBaseLexer;
+import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
@@ -45,27 +49,36 @@ import java.util.function.Function;
 import static io.graphmdl.sqlrewrite.Utils.analyzeFrom;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
 public class PreAggregationRewrite
 {
+    private static final Logger LOG = Logger.get(PreAggregationRewrite.class);
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private PreAggregationRewrite() {}
 
-    public static Optional<Statement> rewrite(
+    public static Optional<String> rewrite(
             SessionContext sessionContext,
-            Statement statement,
+            String sql,
             Function<CatalogSchemaTableName, Optional<String>> converter,
             GraphMDL graphMDL)
     {
-        PreAggregationAnalysis aggregationAnalysis = new PreAggregationAnalysis();
-        Statement rewritten = (Statement) new Rewriter(sessionContext, converter, graphMDL, aggregationAnalysis).process(statement, Optional.empty());
-        if (rewritten instanceof Query
-                && aggregationAnalysis.onlyPreAggregationTables()) {
-            return Optional.of(rewritten);
+        try {
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            PreAggregationAnalysis aggregationAnalysis = new PreAggregationAnalysis();
+            Statement rewritten = (Statement) new Rewriter(sessionContext, converter, graphMDL, aggregationAnalysis).process(statement, Optional.empty());
+            if (rewritten instanceof Query
+                    && aggregationAnalysis.onlyPreAggregationTables()) {
+                return Optional.of(SqlFormatter.formatSql(rewritten));
+            }
+        }
+        catch (Exception e) {
+            LOG.warn(e, "Failed to rewrite query: %s", sql);
         }
         return Optional.empty();
     }

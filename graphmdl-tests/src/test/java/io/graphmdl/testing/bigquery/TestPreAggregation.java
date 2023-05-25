@@ -22,6 +22,7 @@ import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.main.GraphMDLMetastore;
+import io.graphmdl.sqlrewrite.PreAggregationRewrite;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -126,7 +127,11 @@ public class TestPreAggregation
             throws Exception
     {
         String rewritten =
-                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
+                PreAggregationRewrite.rewrite(
+                                defaultSessionContext,
+                                "select custkey, revenue from Revenue limit 100",
+                                metricTableMapping::convertToAggregationTable,
+                                graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
             int count = 0;
@@ -138,7 +143,11 @@ public class TestPreAggregation
         }
 
         String withParam =
-                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
+                PreAggregationRewrite.rewrite(
+                                defaultSessionContext,
+                                "select custkey, revenue from Revenue where custkey = ?",
+                                metricTableMapping::convertToAggregationTable,
+                                graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();

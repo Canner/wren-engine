@@ -26,6 +26,7 @@ import io.graphmdl.main.netty.ChannelBootstrapFactory;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.wireprotocol.ssl.SslContextProvider;
 import io.graphmdl.main.wireprotocol.ssl.SslReqHandler;
+import io.graphmdl.preaggregation.MetricTableMapping;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -88,6 +89,7 @@ public class PostgresNetty
     private BoundTransportAddress boundAddress;
     private final GraphMDLMetastore graphMDLMetastore;
     private final PreAggregationManager preAggregationManager;
+    private final MetricTableMapping metricTableMapping;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -97,7 +99,8 @@ public class PostgresNetty
             Metadata connector,
             SqlConverter sqlConverter,
             GraphMDLMetastore graphMDLMetastore,
-            PreAggregationManager preAggregationManager)
+            PreAggregationManager preAggregationManager,
+            MetricTableMapping metricTableMapping)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -111,6 +114,7 @@ public class PostgresNetty
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
+        this.metricTableMapping = requireNonNull(metricTableMapping, "metricTableMapping is null");
     }
 
     public void start()
@@ -125,7 +129,8 @@ public class PostgresNetty
             {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
-                WireProtocolSession wireProtocolSession = new WireProtocolSession(regObjectFactory, connector, sqlConverter, graphMDLMetastore, preAggregationManager);
+                WireProtocolSession wireProtocolSession =
+                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, graphMDLMetastore, preAggregationManager, metricTableMapping);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

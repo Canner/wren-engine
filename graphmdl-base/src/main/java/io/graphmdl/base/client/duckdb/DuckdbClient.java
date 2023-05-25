@@ -14,6 +14,7 @@
 
 package io.graphmdl.base.client.duckdb;
 
+import io.airlift.log.Logger;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
@@ -32,10 +33,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.graphmdl.base.client.jdbc.JdbcTypeMapping.toGraphMDLType;
+import static java.lang.String.format;
 
 public final class DuckdbClient
         implements Client
 {
+    private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final Connection duckDBConnection;
 
     public DuckdbClient()
@@ -129,6 +132,16 @@ public final class DuckdbClient
         }
         catch (SQLException se) {
             throw new RuntimeException(se);
+        }
+    }
+
+    public void dropTableQuietly(String tableName)
+    {
+        try {
+            executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName));
+        }
+        catch (Exception e) {
+            LOG.error(e, "Failed to drop table %s", tableName);
         }
     }
 
