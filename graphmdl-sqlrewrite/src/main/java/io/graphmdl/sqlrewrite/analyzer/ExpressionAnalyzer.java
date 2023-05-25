@@ -43,15 +43,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Stack;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.Utils.checkArgument;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.LAMBDA_RESULT_NAME;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.filter;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
-import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.TRANSFORM_RESULT_NAME;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.SOURCE_REFERENCE;
 import static io.graphmdl.sqlrewrite.Utils.getNextPart;
 import static io.graphmdl.sqlrewrite.analyzer.ExpressionAnalyzer.DereferenceName.dereferenceName;
 import static java.lang.String.format;
@@ -116,15 +120,18 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
-            if (isLambdaFunction(node.getName())) {
-                checkArgument(node.getArguments().size() == 2, "Lambda function should have 2 arguments");
-                Optional<Field> field = collectRelationshipFields(node.getArguments().get(0), true, true);
-                field.ifPresent(value -> collectRelationshipLambdaExpression(node, (LambdaExpression) node.getArguments().get(1), value));
-            }
-            else if (isArrayFunction(node.getName())) {
-                for (Expression argument : node.getArguments()) {
-                    collectRelationshipFields(argument, true, false);
-                }
+            FunctionCallProcessor functionCallProcessor = new FunctionCallProcessor();
+            functionCallProcessor.process(node, ignored);
+
+            for (FunctionCall functionCall : functionCallProcessor.getReplaceFunctionCalls()) {
+                relationshipCTENames.add(functionCall.toString());
+                relationshipFieldsRewrite.put(
+                        NodeRef.of(functionCall),
+                        DereferenceExpression.from(
+                                QualifiedName.of(
+                                        ImmutableList.<String>builder()
+                                                .add(relationshipCteGenerator.getNameMapping().get(functionCall.toString()))
+                                                .add(LAMBDA_RESULT_NAME).build())));
             }
             return ignored;
         }
@@ -139,7 +146,7 @@ public final class ExpressionAnalyzer
 
         private boolean isLambdaFunction(QualifiedName funcName)
         {
-            return List.of("transform", "find").contains(funcName.getSuffix());
+            return List.of("transform", "filter").contains(funcName.getSuffix());
         }
 
         @Override
@@ -261,34 +268,137 @@ public final class ExpressionAnalyzer
             return optField;
         }
 
-        private void collectRelationshipLambdaExpression(FunctionCall functionCall, LambdaExpression lambdaExpression, Field baseField)
+        private void collectRelationshipLambdaExpression(
+                FunctionCall functionCall,
+                LambdaExpression lambdaExpression,
+                Field baseField,
+                Optional<FunctionCall> previousLambdaCall)
         {
             checkArgument(baseField.isRelationship(), "base field must be a relationship");
             checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
             Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), baseField, lambdaExpression.getArguments().get(0).getName());
             String modelName = baseField.getModelName().getSchemaTableName().getTableName();
             QualifiedName baseName = QualifiedName.of(modelName, baseField.getName().get());
-            Column column = graphMDL.getModel(modelName)
-                    .orElseThrow(() -> new IllegalArgumentException(modelName + " model not found"))
-                    .getColumns().stream().filter(col -> col.getName().equals(baseName.getSuffix()))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException(baseName + " column not found"));
-            String relationshipName = column.getRelationship().orElseThrow(() -> new IllegalArgumentException(baseName + " relationship not found"));
+            String relationshipName = baseField.getRelationship().get();
             Relationship relationship = graphMDL.getRelationship(relationshipName)
                     .orElseThrow(() -> new IllegalArgumentException(relationshipName + " relationship not found"));
 
-            RelationshipCteGenerator.RelationshipOperation operation = transform(
-                    List.of(rsItem(baseName.toString(), CTE),
-                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)), expression, baseField.getColumnName());
+            RelationshipCteGenerator.RelationshipOperation operation;
+            String functionName = functionCall.getName().toString();
+            String cteName = previousLambdaCall.map(Expression::toString).orElse(baseName.toString());
+            Expression unnestField = previousLambdaCall.isPresent() ? DereferenceExpression.from(QualifiedName.of(SOURCE_REFERENCE, LAMBDA_RESULT_NAME)) : null;
+            if (functionName.equalsIgnoreCase("transform")) {
+                operation = transform(
+                        List.of(rsItem(cteName, CTE),
+                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                        expression,
+                        baseField.getColumnName(),
+                        unnestField);
+            }
+            else if (functionName.equalsIgnoreCase("filter")) {
+                operation = filter(
+                        List.of(rsItem(cteName, CTE),
+                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                        expression,
+                        baseField.getColumnName(),
+                        unnestField);
+            }
+            else {
+                throw new IllegalArgumentException(functionName + " not supported");
+            }
+
             relationshipCteGenerator.register(List.of(functionCall.toString()), operation, modelName);
-            relationshipCTENames.add(functionCall.toString());
-            relationshipFieldsRewrite.put(
-                    NodeRef.of(functionCall),
-                    DereferenceExpression.from(
-                            QualifiedName.of(
-                                    ImmutableList.<String>builder()
-                                            .add(relationshipCteGenerator.getNameMapping().get(functionCall.toString()))
-                                            .add(TRANSFORM_RESULT_NAME).build())));
+        }
+
+        private class FunctionCallProcessorContext
+        {
+            private final List<Field> relationshipField;
+
+            public FunctionCallProcessorContext(List<Field> relationshipField)
+            {
+                this.relationshipField = requireNonNull(relationshipField, "relationshipField is null");
+            }
+
+            public List<Field> getRelationshipField()
+            {
+                return relationshipField;
+            }
+        }
+
+        private class FunctionCallProcessor
+                extends AstVisitor<FunctionCallProcessorContext, Void>
+        {
+            // record lambda function call that doesn't use any lambda function calls
+            // e.g. filter(col1, col -> true) will be recorded while filter(filter(col1, col -> true), col -> false) won't
+            private final Stack<FunctionCall> rootLambdaCalls = new Stack<>();
+            private final Stack<FunctionCall> nodesToReplace = new Stack<>();
+
+            @Override
+            protected FunctionCallProcessorContext visitFunctionCall(FunctionCall node, Void ignored)
+            {
+                List<FunctionCallProcessorContext> contexts = node.getArguments().stream()
+                        .filter(argument -> argument instanceof FunctionCall)
+                        .map(functionCall -> visitFunctionCall((FunctionCall) functionCall, ignored))
+                        .collect(toImmutableList());
+
+                if (isLambdaFunction(node.getName())) {
+                    checkArgument(node.getArguments().size() == 2, "Lambda function should have 2 arguments");
+                    // TODO: remove this check
+                    checkArgument(
+                            contexts.stream()
+                                    .map(FunctionCallProcessorContext::getRelationshipField)
+                                    .flatMap(List::stream)
+                                    .map(rsField -> rsField.getRelationship().orElse(null))
+                                    .filter(Objects::nonNull)
+                                    .distinct()
+                                    .count() <= 1,
+                            "Lambda function chain only allow one relationship");
+
+                    // if exists, means first argument is a field
+                    Optional<Field> field = collectRelationshipFields(node.getArguments().get(0), true, true);
+                    if (field.isPresent()) {
+                        collectRelationshipLambdaExpression(
+                                node,
+                                (LambdaExpression) node.getArguments().get(1),
+                                field.get(),
+                                Optional.empty());
+                        rootLambdaCalls.push(node);
+                    }
+                    else {
+                        nodesToReplace.clear();
+                        collectRelationshipLambdaExpression(
+                                node,
+                                (LambdaExpression) node.getArguments().get(1),
+                                contexts.get(0).getRelationshipField().get(0),
+                                Optional.of(rootLambdaCalls.pop()));
+                        // TODO: remove this check
+                        checkArgument(rootLambdaCalls.empty(), "Currently the first argument of a lambda function cannot contain more than one lambda function.");
+                    }
+                    nodesToReplace.push(node);
+
+                    Field relationshipField = field.orElseGet(() -> contexts.get(0).getRelationshipField().get(0));
+                    return new FunctionCallProcessorContext(List.of(relationshipField));
+                }
+                else {
+                    List<Field> relationshipFields = new ArrayList<>();
+                    for (int i = 0; i < node.getArguments().size(); i++) {
+                        Expression argument = node.getArguments().get(i);
+                        if (relationshipCteGenerator.getNameMapping().containsKey(argument.toString())) {
+                            relationshipFields.addAll(contexts.get(i).getRelationshipField());
+                        }
+                        else {
+                            collectRelationshipFields(argument, isArrayFunction(node.getName()), false)
+                                    .ifPresent(relationshipFields::add);
+                        }
+                    }
+                    return new FunctionCallProcessorContext(relationshipFields);
+                }
+            }
+
+            public List<FunctionCall> getReplaceFunctionCalls()
+            {
+                return ImmutableList.copyOf(nodesToReplace.iterator());
+            }
         }
     }
 
