@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
+import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
 
@@ -92,6 +93,9 @@ public class DuckdbRecordIterator
     {
         if (pgType instanceof TimestampType) {
             return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
+        }
+        if (pgType instanceof DateType) {
+            return value.toString();
         }
         return value;
     }

@@ -17,6 +17,7 @@ package io.graphmdl.testing.bigquery;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -92,7 +93,7 @@ public class TestBigQueryPreAggregation
 //                assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_bignumeric"));
             assertThatNoException().isThrownBy(() -> resultSet.getBoolean("c_boolean"));
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_timestamp"));
-//                assertThatNoException().isThrownBy(() -> resultSet.getDate("c_date"));
+            assertThatNoException().isThrownBy(() -> resultSet.getDate("c_date"));
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_datetime"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_json"));
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_interval"));
@@ -107,7 +108,7 @@ public class TestBigQueryPreAggregation
 //                assertThat(resultSet.getBigDecimal("c_bignumeric")).isEqualTo(new BigDecimal("1.2345"));
             assertThat(resultSet.getBoolean("c_boolean")).isTrue();
             assertThat(resultSet.getTimestamp("c_timestamp")).isEqualTo(Timestamp.valueOf("2020-01-01 15:10:55"));
-//                assertThat(resultSet.getDate("c_date")).isEqualTo(Date.valueOf("2020-01-01"));
+            assertThat(resultSet.getDate("c_date")).isEqualTo(Date.valueOf("2020-01-01"));
             assertThat(resultSet.getTimestamp("c_datetime")).isEqualTo(Timestamp.valueOf("2020-01-01 15:10:55.123456"));
 //                assertThat(resultSet.getString("c_json")).isEqualTo("{\"a\":1}");
 //            assertThat(resultSet.getObject("c_interval")).isEqualTo(new PGInterval(0, 0, 1, 0, 0, 0));
