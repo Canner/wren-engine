@@ -96,6 +96,11 @@
           "type": "double"
         },
         {
+          "name": "c_numeric",
+          "expression": "c_numeric",
+          "type": "numeric"
+        },
+        {
           "name": "c_boolean",
           "expression": "c_boolean",
           "type": "boolean"

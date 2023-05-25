@@ -16,6 +16,7 @@ package io.graphmdl.testing.bigquery;
 
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -89,8 +90,9 @@ public class TestBigQueryPreAggregation
 //                assertThatNoException().isThrownBy(() -> resultSet.getString("c_bytes"));
             assertThatNoException().isThrownBy(() -> resultSet.getLong("c_integer"));
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("c_float"));
-//                assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_numeric"));
-//                assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_bignumeric"));
+            assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_numeric"));
+            // DuckDB only support the maximum precision of numeric is 38, but BigQuery support 76
+//            assertThatNoException().isThrownBy(() -> resultSet.getBigDecimal("c_bignumeric"));
             assertThatNoException().isThrownBy(() -> resultSet.getBoolean("c_boolean"));
             assertThatNoException().isThrownBy(() -> resultSet.getTimestamp("c_timestamp"));
             assertThatNoException().isThrownBy(() -> resultSet.getDate("c_date"));
@@ -106,8 +108,10 @@ public class TestBigQueryPreAggregation
 //                assertThat(resultSet.getBytes("c_bytes")).isEqualTo("hello".getBytes(UTF_8));
             assertThat(resultSet.getLong("c_integer")).isEqualTo(12345L);
             assertThat(resultSet.getDouble("c_float")).isEqualTo(1.2345);
-//                assertThat(resultSet.getBigDecimal("c_numeric")).isEqualTo(new BigDecimal("1.2345"));
-//                assertThat(resultSet.getBigDecimal("c_bignumeric")).isEqualTo(new BigDecimal("1.2345"));
+            // TODO DuckDB use NUMERIC(38, 9) to store NUMERIC
+            assertThat(resultSet.getBigDecimal("c_numeric")).isEqualTo(new BigDecimal("1.234500000"));
+            // DuckDB only support the maximum precision of numeric is 38, but BigQuery support 76
+//            assertThat(resultSet.getBigDecimal("c_bignumeric")).isEqualTo(new BigDecimal("1.2345"));
             assertThat(resultSet.getBoolean("c_boolean")).isTrue();
             assertThat(resultSet.getTimestamp("c_timestamp")).isEqualTo(Timestamp.valueOf("2020-01-01 15:10:55"));
             assertThat(resultSet.getDate("c_date")).isEqualTo(Date.valueOf("2020-01-01"));
