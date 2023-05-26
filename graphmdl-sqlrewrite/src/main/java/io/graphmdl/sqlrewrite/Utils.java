@@ -22,7 +22,6 @@ import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
-import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.MetricRollupInfo;
 import io.graphmdl.sqlrewrite.analyzer.RelationType;
@@ -165,15 +164,6 @@ public final class Utils
                 String.join(",", selectItems),
                 metric.getBaseModel(),
                 groupByColumnOrdinals);
-    }
-
-    public static Query getViewStatement(View view)
-    {
-        Statement statement = SQL_PARSER.createStatement(view.getStatement(), new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
-        }
-        throw new IllegalArgumentException(format("view %s is not a query, sql %s", view.getName(), view.getStatement()));
     }
 
     public static String randomTableSuffix()

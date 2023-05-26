@@ -54,7 +54,6 @@ public class Analysis
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Set<Metric> metrics = new HashSet<>();
     private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
-
     private final Set<View> views = new HashSet<>();
     private final Map<NodeRef<GroupBy>, GroupByAnalysis> groupByAnalysis = new HashMap<>();
 

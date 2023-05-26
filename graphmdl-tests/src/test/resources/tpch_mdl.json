@@ -225,6 +225,10 @@
     {
       "name": "useMetricRollUp",
       "statement": "select * from roll_up(Revenue, orderdate, YEAR)"
+    },
+    {
+      "name": "useUseMetric",
+      "statement": "select * from useMetric"
     }
   ]
 }

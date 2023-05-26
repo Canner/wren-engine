@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
+import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.analyzer.Analysis;
 import io.graphmdl.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.Identifier;
@@ -32,11 +33,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.graphmdl.sqlrewrite.ScopeAwareRewrite.SCOPE_AWARE_REWRITE;
-import static io.graphmdl.sqlrewrite.Utils.getViewStatement;
 import static io.graphmdl.sqlrewrite.Utils.parseView;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -56,12 +55,16 @@ public class MetricViewSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, GraphMDL graphMDL)
     {
-        // analyze if the metric used by a view.
-        List<Analysis> viewAnalysis = analysis.getViews().stream().filter(view -> graphMDL.getView(view.getName()).isPresent())
-                .map(view -> StatementAnalyzer.analyze(parseView(view.getStatement()), sessionContext, graphMDL))
-                .collect(Collectors.toList());
+        MetricViewAnalyzer metricViewAnalyzer = new MetricViewAnalyzer(sessionContext, graphMDL);
 
-        List<Analysis> allAnalysis = ImmutableList.<Analysis>builder().addAll(viewAnalysis).add(analysis).build();
+        // analyze if the metric used by a view.
+        analysis.getViews().stream().filter(view -> graphMDL.getView(view.getName()).isPresent())
+                .forEach(metricViewAnalyzer::analyze);
+
+        List<Analysis> allAnalysis = ImmutableList.<Analysis>builder()
+                // the metricViewAnalyzer must be the first because the view maybe used by the view in analysis.
+                .addAll(metricViewAnalyzer.getAnalyses())
+                .add(analysis).build();
 
         Map<String, Query> metricQueries =
                 allAnalysis.stream().flatMap(a -> a.getMetrics().stream())
@@ -73,8 +76,8 @@ public class MetricViewSqlRewrite
 
         // The generation of views has a sequential order, with later views being able to reference earlier views.
         Map<String, Query> viewQueries = new LinkedHashMap<>();
-        analysis.getViews()
-                .forEach(view -> viewQueries.put(view.getName(), (Query) SCOPE_AWARE_REWRITE.rewrite(getViewStatement(view), graphMDL, sessionContext)));
+        allAnalysis.stream().flatMap(a -> a.getViews().stream())
+                .forEach(view -> viewQueries.put(view.getName(), (Query) SCOPE_AWARE_REWRITE.rewrite(parseView(view.getStatement()), graphMDL, sessionContext)));
 
         return (Statement) new WithRewriter(metricQueries, metricRollupQueries, ImmutableMap.copyOf(viewQueries)).process(root);
     }
@@ -111,7 +114,6 @@ public class MetricViewSqlRewrite
                     .collect(toUnmodifiableList());
 
             List<WithQuery> viewWithQueries = viewQueries.entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
 
@@ -134,6 +136,31 @@ public class MetricViewSqlRewrite
                     node.getOrderBy(),
                     node.getOffset(),
                     node.getLimit());
+        }
+    }
+
+    private static class MetricViewAnalyzer
+    {
+        ImmutableList.Builder<Analysis> analyses = ImmutableList.builder();
+        private final SessionContext sessionContext;
+        private final GraphMDL graphMDL;
+
+        private MetricViewAnalyzer(SessionContext sessionContext, GraphMDL graphMDL)
+        {
+            this.sessionContext = sessionContext;
+            this.graphMDL = graphMDL;
+        }
+
+        public void analyze(View view)
+        {
+            Analysis analysis = StatementAnalyzer.analyze(parseView(view.getStatement()), sessionContext, graphMDL);
+            analyses.add(analysis);
+            analysis.getViews().forEach(this::analyze);
+        }
+
+        public List<Analysis> getAnalyses()
+        {
+            return analyses.build();
         }
     }
 }

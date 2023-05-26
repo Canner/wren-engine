@@ -116,7 +116,8 @@ public class TestMetricViewSqlRewrite
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))))))
                 .setViews(List.of(
                         view("UseModel", "select * from Album"),
-                        view("useMetric", "select * from Collection")))
+                        view("useMetric", "select * from Collection"),
+                        view("useView", "select * from useMetric")))
                 .build());
 
         invalidGraphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
@@ -221,6 +222,34 @@ public class TestMetricViewSqlRewrite
                                 ", price\n" +
                                 "FROM\n" +
                                 "  useMetric"
+                },
+                {
+                        "SELECT album_name, price FROM useView",
+                        "WITH\n" + MODEL_CTES +
+                                ", Collection AS (\n" +
+                                "   SELECT\n" +
+                                "     author\n" +
+                                "   , Album.name album_name\n" +
+                                "   , sum(Album.price) price\n" +
+                                "   FROM\n" +
+                                "     Album\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", useMetric AS (\n" +
+                                "   SELECT *\n" +
+                                "   FROM\n" +
+                                "     Collection\n" +
+                                ") \n" +
+                                ", useView AS (\n" +
+                                "   SELECT *\n" +
+                                "   FROM\n" +
+                                "     useMetric\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  album_name\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  useView"
                 }
         };
     }

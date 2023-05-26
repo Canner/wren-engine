@@ -19,7 +19,6 @@ import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Column;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
@@ -207,17 +206,6 @@ public final class StatementAnalyzer
                     .parent(scope)
                     .relationType(new RelationType(modelFields))
                     .isTableScope(true)
-                    .build();
-        }
-
-        private static Field toField(CatalogSchemaTableName tableName, Column column)
-        {
-            return Field.builder()
-                    .modelName(tableName)
-                    .columnName(column.getName())
-                    .name(column.getName())
-                    .isRelationship(column.getRelationship().isPresent())
-                    .type(column.getType())
                     .build();
         }
 
