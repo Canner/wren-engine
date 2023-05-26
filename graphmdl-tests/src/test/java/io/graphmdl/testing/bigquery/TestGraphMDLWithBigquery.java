@@ -222,6 +222,83 @@ public class TestGraphMDLWithBigquery
     }
 
     @Test
+    public void testLambdaFunctionChain()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "select transform(array_reverse(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F')), orderItem -> orderItem.totalprice)\n" +
+                            "as col_1\n" +
+                            "from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "select transform(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F'), orderItem -> orderItem.totalprice)\n" +
+                            "as col_1\n" +
+                            "from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "select array_concat(\n" +
+                            "filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O'),\n" +
+                            "filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F'))\n" +
+                            "as col_1\n" +
+                            "from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        // test failed stmt
+        try (Connection connection = createConnection()) {
+            assertThatThrownBy(() -> {
+                PreparedStatement stmt = connection.prepareStatement(
+                        "select filter(transform(Customer.orders, orderItem -> orderItem.orderstatus), orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F')\n" +
+                                "as col_1\n" +
+                                "from Customer limit 100");
+                stmt.executeQuery();
+            }).hasMessageStartingWith("ERROR: Invalid statement");
+        }
+
+        // test failed stmt
+        try (Connection connection = createConnection()) {
+            assertThatThrownBy(() -> {
+                PreparedStatement stmt = connection.prepareStatement(
+                        "select transform(array_concat(\n" +
+                                "filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O'),\n" +
+                                "filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F'))," +
+                                "orderItem -> orderItem.totalprice)\n" +
+                                "as col_1\n" +
+                                "from Customer limit 100");
+                stmt.executeQuery();
+            }).hasMessageStartingWith("ERROR: Currently the first argument of a lambda function cannot contain more than one lambda function.");
+        }
+    }
+
+    @Test
     public void testGroupByRelationship()
             throws Exception
     {

@@ -15,7 +15,6 @@
 package io.graphmdl.sqlrewrite;
 
 import io.graphmdl.sqlrewrite.analyzer.Field;
-import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -46,7 +45,7 @@ public class LambdaExpressionBodyRewrite
     private LambdaExpressionBodyRewrite() {}
 
     static class Visitor
-            extends AstVisitor<Node, Optional<Node>>
+            extends BaseRewriter<Optional<Node>>
     {
         private final Field baseField;
         private final Identifier argument;
