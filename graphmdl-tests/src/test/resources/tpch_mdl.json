@@ -19,7 +19,7 @@
         {
           "name": "orderstatus",
           "expression": "o_orderstatus",
-          "type": "string"
+          "type": "OrderStatus"
         },
         {
           "name": "totalprice",
@@ -185,6 +185,22 @@
             "YEAR",
             "MONTH"
           ]
+        }
+      ]
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "Status",
+      "values": [
+        {
+          "name": "F"
+        },
+        {
+          "name": "O"
+        },
+        {
+          "name": "P"
         }
       ]
     }

@@ -18,6 +18,7 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
 import io.graphmdl.base.dto.EnumDefinition;
+import io.graphmdl.base.dto.EnumValue;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -51,7 +52,7 @@ public class EnumValueValidation
     {
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
-            try (AutoCloseableIterator<Object[]> result = client.query(buildEnumCheck(refSql, columName, enumDefinition.getValues()))) {
+            try (AutoCloseableIterator<Object[]> result = client.query(buildEnumCheck(refSql, columName, enumDefinition.getValues().stream().map(EnumValue::getValue).collect(toUnmodifiableList())))) {
                 long elapsed = System.currentTimeMillis() - start;
                 if (result.hasNext()) {
                     Object[] row = result.next();

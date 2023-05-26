@@ -35,6 +35,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.graphmdl.base.dto.EnumValue.enumValue;
 import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static java.lang.String.format;
 import static java.lang.String.join;
@@ -61,8 +62,8 @@ public class TestMetricValidation
                                         Column.column("DestCityName", GraphMDLTypes.VARCHAR, null, false),
                                         Column.column("Status", "Status", null, false)))))
                 .setEnumDefinitions(List.of(
-                        EnumDefinition.enumDefinition("Carrier", List.of("AA", "UA")),
-                        EnumDefinition.enumDefinition("Status", List.of("OK", "NOT_OK"))))
+                        EnumDefinition.enumDefinition("Carrier", List.of(enumValue("AA"), enumValue("UA"))),
+                        EnumDefinition.enumDefinition("Status", List.of(enumValue("OK"), enumValue("NOT_OK")))))
                 .build());
     }
 

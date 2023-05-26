@@ -29,6 +29,8 @@ import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
 import static io.graphmdl.base.dto.Column.column;
 import static io.graphmdl.base.dto.Column.relationshipColumn;
+import static io.graphmdl.base.dto.EnumDefinition.enumDefinition;
+import static io.graphmdl.base.dto.EnumValue.enumValue;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.Relationship.relationship;
@@ -46,16 +48,18 @@ public class TestAllRulesRewrite
         graphMDL = GraphMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         model("Album",
-                                "select * from (values (1, 'Gusare', 1, 2560), " +
-                                        "(2, 'HisoHiso Banashi', 1, 1500), " +
-                                        "(3, 'Dakara boku wa ongaku o yameta', 2, 2553)) " +
-                                        "Album(id, name, bandId, price)",
+                                "select * from (values (1, 'Gusare', 1, 2560, 'I', 'IN_STOCK'), " +
+                                        "(2, 'HisoHiso Banashi', 1, 1500, 'O', 'OUT_OF_STOCK'), " +
+                                        "(3, 'Dakara boku wa ongaku o yameta', 2, 2553, 'I', 'IN_STOCK')) " +
+                                        "Album(id, name, bandId, price, status, statusA)",
                                 List.of(
                                         column("id", INTEGER, null, true),
                                         column("name", VARCHAR, null, true),
                                         relationshipColumn("band", "Band", "AlbumBand"),
                                         column("price", INTEGER, null, true),
-                                        column("bandId", INTEGER, null, true)),
+                                        column("bandId", INTEGER, null, true),
+                                        column("status", "Inventory", null, true),
+                                        column("statusA", "InventoryA", null, true)),
                                 "id"),
                         model("Band",
                                 "select * from (values (1, 'ZUTOMAYO'), " +
@@ -79,6 +83,9 @@ public class TestAllRulesRewrite
                                 List.of(column("band", VARCHAR, null, true, null)),
                                 List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
                                 List.of())))
+                .setEnumDefinitions(List.of(
+                        enumDefinition("Inventory", List.of(enumValue("IN_STOCK", "I"), enumValue("OUT_OF_STOCK", "O"))),
+                        enumDefinition("InventoryA", List.of(enumValue("IN_STOCK"), enumValue("OUT_OF_STOCK")))))
                 .build());
     }
 
@@ -93,7 +100,10 @@ public class TestAllRulesRewrite
                 {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
                 {"select band, price from Collection order by price", "values ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
                 {"select band, price from CollectionA order by price", "values ('relationship<AlbumBand>', cast(2553 as long)), ('relationship<AlbumBand>', cast(4060 as long))"},
-                {"select band from Album", "values ('relationship<AlbumBand>'), ('relationship<AlbumBand>'), ('relationship<AlbumBand>')"}};
+                {"select band from Album", "values ('relationship<AlbumBand>'), ('relationship<AlbumBand>'), ('relationship<AlbumBand>')"},
+                {"select Inventory.IN_STOCK, InventoryA.IN_STOCK", "values ('I', 'IN_STOCK')"},
+                {"select band.name as band_name, name from Album where status = Inventory.IN_STOCK",
+                        "values ('ZUTOMAYO', 'Gusare'), ('Yorushika', 'Dakara boku wa ongaku o yameta')"}};
     }
 
     @Test(dataProvider = "graphMDLUsedCases")

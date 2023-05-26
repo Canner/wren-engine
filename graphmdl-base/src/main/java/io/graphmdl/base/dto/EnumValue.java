@@ -17,34 +17,33 @@ package io.graphmdl.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
-public class EnumDefinition
+public class EnumValue
 {
-    public static EnumDefinition enumDefinition(String name, List<EnumValue> values)
+    public static EnumValue enumValue(String name)
     {
-        return new EnumDefinition(name, values);
+        return enumValue(name, null);
+    }
+
+    public static EnumValue enumValue(String name, String value)
+    {
+        return new EnumValue(name, value);
     }
 
     private final String name;
-    private final List<EnumValue> values;
+    private final String value;
 
     @JsonCreator
-    public EnumDefinition(
+    public EnumValue(
             @JsonProperty("name") String name,
-            @JsonProperty("values") List<EnumValue> values)
+            @JsonProperty("value") String value)
     {
-        this.name = requireNonNull(name);
-        this.values = requireNonNull(values);
-    }
-
-    public List<EnumValue> getValues()
-    {
-        return values;
+        this.name = requireNonNull(name, "name is null");
+        this.value = value;
     }
 
     public String getName()
@@ -52,29 +51,27 @@ public class EnumDefinition
         return name;
     }
 
-    public Optional<EnumValue> valueOf(String enumValueName)
+    public String getValue()
     {
-        return values.stream()
-                .filter(candidate -> candidate.getName().equals(enumValueName))
-                .findAny();
+        return Optional.ofNullable(value).orElse(name);
     }
 
     @Override
-    public boolean equals(Object obj)
+    public boolean equals(Object o)
     {
-        if (this == obj) {
+        if (this == o) {
             return true;
         }
-        if (obj == null || getClass() != obj.getClass()) {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        EnumDefinition that = (EnumDefinition) obj;
-        return Objects.equals(name, that.name) && Objects.equals(values, that.values);
+        EnumValue enumValue = (EnumValue) o;
+        return Objects.equals(name, enumValue.name) && Objects.equals(value, enumValue.value);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, values);
+        return Objects.hash(name, value);
     }
 }
