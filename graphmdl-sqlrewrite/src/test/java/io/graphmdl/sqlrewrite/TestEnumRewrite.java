@@ -47,11 +47,11 @@ public class TestEnumRewrite
                                 List.of(
                                         column("userId", GraphMDLTypes.INTEGER, null, true),
                                         column("name", GraphMDLTypes.VARCHAR, null, true),
-                                        column("gender", "Gender", null, true),
+                                        column("sex", "Sex", null, true),
                                         column("country", "Country", null, true)),
                                 "userId")))
                 .setEnumDefinitions(List.of(
-                        enumDefinition("Gender", List.of(enumValue("MALE"), enumValue("FEMALE"))),
+                        enumDefinition("Sex", List.of(enumValue("MALE"), enumValue("FEMALE"))),
                         enumDefinition("Country", List.of(enumValue("TAIWAN", "tw"), enumValue("JAPAN", "jp"), enumValue("USA", "us")))))
                 .build());
     }
@@ -59,11 +59,11 @@ public class TestEnumRewrite
     @Test
     public void testBasic()
     {
-        assertThat(rewrite("select Gender.MALE")).isEqualTo(parse("select 'MALE'"));
+        assertThat(rewrite("select Sex.MALE")).isEqualTo(parse("select 'MALE'"));
         assertThat(rewrite("select Country.TAIWAN")).isEqualTo(parse("select 'tw'"));
-        assertThat(rewrite("select gender = Gender.MALE from People")).isEqualTo(rewrite("select gender = 'MALE' from People"));
+        assertThat(rewrite("select sex = Sex.MALE from People")).isEqualTo(rewrite("select sex = 'MALE' from People"));
         assertThat(rewrite("select country = Country.JAPAN from People")).isEqualTo(rewrite("select country = 'jp' from People"));
-        assertThat(rewrite("select * from People WHERE gender = Gender.MALE")).isEqualTo(rewrite("select * from People WHERE gender = 'MALE'"));
+        assertThat(rewrite("select * from People WHERE sex = Sex.MALE")).isEqualTo(rewrite("select * from People WHERE sex = 'MALE'"));
     }
 
     @Test
