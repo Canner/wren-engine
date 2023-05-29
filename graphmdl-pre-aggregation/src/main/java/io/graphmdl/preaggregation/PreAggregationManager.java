@@ -51,6 +51,7 @@ import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.runAsync;
@@ -143,8 +144,8 @@ public class PreAggregationManager
     private CompletableFuture<Void> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName());
-        final Optional<String> oldDuckdbTableName =
-                metricTableMapping.containsKey(catalogSchemaTableName) ? metricTableMapping.get(catalogSchemaTableName).getTableName() : Optional.empty();
+        String duckdbTableName = format("%s_%s", metric.getName(), randomUUID().toString().replace("-", ""));
+        long createTime = currentTimeMillis();
         return runAsync(() -> {
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
@@ -156,20 +157,31 @@ public class PreAggregationManager
                     mdl);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
-            String duckdbTableName = format("%s_%s", metric.getName(), randomUUID().toString().replace("-", ""));
 
-            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName, oldDuckdbTableName);
-            metricTableMapping.put(catalogSchemaTableName, new MetricTablePair(metric, duckdbTableName));
+            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName);
+            putMetricTableMapping(catalogSchemaTableName, new MetricTablePair(metric, duckdbTableName, createTime));
         }).exceptionally(e -> {
-            if (metricTableMapping.containsKey(catalogSchemaTableName)) {
-                metricTableMapping.get(catalogSchemaTableName).getTableName().ifPresent(this::dropTable);
-            }
-            oldDuckdbTableName.ifPresent(this::dropTable);
+            dropTable(duckdbTableName);
             String errMsg = format("Failed to do pre-aggregation for metric %s; caused by %s", metric.getName(), e.getMessage());
             LOG.error(e, errMsg);
-            metricTableMapping.put(catalogSchemaTableName, new MetricTablePair(metric, Optional.empty(), Optional.of(errMsg)));
+            putMetricTableMapping(catalogSchemaTableName, new MetricTablePair(metric, Optional.empty(), Optional.of(errMsg), createTime));
             return null;
         });
+    }
+
+    private void putMetricTableMapping(CatalogSchemaTableName catalogSchemaTableName, MetricTablePair metricTablePair)
+    {
+        synchronized (metricTableMapping) {
+            if (metricTableMapping.containsKey(catalogSchemaTableName)) {
+                MetricTablePair existedMetricTablePair = metricTableMapping.get(catalogSchemaTableName);
+                if (existedMetricTablePair.getCreateTime() > metricTablePair.getCreateTime()) {
+                    metricTablePair.getTableName().ifPresent(this::dropTable);
+                    return;
+                }
+                existedMetricTablePair.getTableName().ifPresent(this::dropTable);
+            }
+            metricTableMapping.put(catalogSchemaTableName, metricTablePair);
+        }
     }
 
     private void createMetricPreAggregation(
@@ -177,8 +189,7 @@ public class PreAggregationManager
             Metric metric,
             SessionContext sessionContext,
             Statement rewrittenStatement,
-            String duckdbTableName,
-            Optional<String> oldDuckdbTableName)
+            String duckdbTableName)
     {
         preAggregationService.createPreAggregation(
                         mdl.getCatalog(),
@@ -188,7 +199,7 @@ public class PreAggregationManager
                 .ifPresent(pathInfo -> {
                     try {
                         tempFileLocations.add(pathInfo);
-                        refreshPreAggInDuckDB(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName, oldDuckdbTableName);
+                        refreshPreAggInDuckDB(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName);
                     }
                     finally {
                         removeTempFile(pathInfo);
@@ -196,7 +207,7 @@ public class PreAggregationManager
                 });
     }
 
-    private void refreshPreAggInDuckDB(String path, String tableName, Optional<String> oldDuckdbTableName)
+    private void refreshPreAggInDuckDB(String path, String tableName)
     {
         // ref: https://github.com/duckdb/duckdb/issues/1403
         StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
@@ -206,7 +217,7 @@ public class PreAggregationManager
         duckdbStorageConfig.getSecretKey().ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
         sb.append(format("SET s3_url_style='%s';\n", duckdbStorageConfig.getUrlStyle()));
         sb.append("BEGIN TRANSACTION;\n");
-        oldDuckdbTableName.ifPresent(old -> sb.append(format("DROP TABLE IF EXISTS %s;\n", old)));
+//        oldDuckdbTableName.ifPresent(old -> sb.append(format("DROP TABLE IF EXISTS %s;\n", old)));
         sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
         sb.append("COMMIT;\n");
         duckdbClient.executeDDL(sb.toString());
@@ -227,18 +238,19 @@ public class PreAggregationManager
         private final Metric metric;
         private final Optional<String> tableName;
         private final Optional<String> errorMessage;
-        private final long createTime = System.currentTimeMillis();
+        private final long createTime;
 
-        private MetricTablePair(Metric metric, String tableName)
+        private MetricTablePair(Metric metric, String tableName, long createTime)
         {
-            this(metric, Optional.of(tableName), Optional.empty());
+            this(metric, Optional.of(tableName), Optional.empty(), createTime);
         }
 
-        private MetricTablePair(Metric metric, Optional<String> tableName, Optional<String> errorMessage)
+        private MetricTablePair(Metric metric, Optional<String> tableName, Optional<String> errorMessage, long createTime)
         {
             this.metric = requireNonNull(metric, "metric is null");
             this.tableName = requireNonNull(tableName, "tableName is null");
             this.errorMessage = requireNonNull(errorMessage, "errorMessage is null");
+            this.createTime = createTime;
         }
 
         public Metric getMetric()
@@ -259,6 +271,11 @@ public class PreAggregationManager
         public Optional<String> getErrorMessage()
         {
             return errorMessage;
+        }
+
+        public long getCreateTime()
+        {
+            return createTime;
         }
     }
 
