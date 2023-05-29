@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static io.graphmdl.base.Utils.checkArgument;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.Character.MAX_RADIX;
 import static java.lang.Math.abs;
@@ -67,6 +68,14 @@ public final class Utils
     public static Node parseSql(String sql)
     {
         return SQL_PARSER.createStatement(sql, PARSING_OPTIONS);
+    }
+
+    public static Query parseView(String sql)
+    {
+        Query query = (Query) parseSql(sql);
+        // TODO: we don't support view have WITH clause yet
+        checkArgument(query.getWith().isEmpty(), "view cannot have WITH clause");
+        return query;
     }
 
     public static Expression parseExpression(String expression)

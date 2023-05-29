@@ -22,6 +22,7 @@ import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
+import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
@@ -130,6 +131,14 @@ public final class StatementAnalyzer
                         .collect(toUnmodifiableSet()));
 
         analysis.addMetrics(metrics);
+
+        Set<View> views = analysis.getTables().stream()
+                .map(graphMDL::getView)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toUnmodifiableSet());
+
+        analysis.addViews(views);
 
         return analysis;
     }

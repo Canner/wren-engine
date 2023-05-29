@@ -18,6 +18,7 @@ import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
 import io.graphmdl.base.dto.Relationship;
+import io.graphmdl.base.dto.View;
 import io.graphmdl.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
@@ -53,6 +54,7 @@ public class Analysis
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Set<Metric> metrics = new HashSet<>();
     private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
+    private final Set<View> views = new HashSet<>();
     private final Map<NodeRef<GroupBy>, GroupByAnalysis> groupByAnalysis = new HashMap<>();
 
     Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
@@ -194,6 +196,16 @@ public class Analysis
     public Map<NodeRef<GroupBy>, GroupByAnalysis> getGroupByAnalysis()
     {
         return groupByAnalysis;
+    }
+
+    public Set<View> getViews()
+    {
+        return views;
+    }
+
+    void addViews(Set<View> views)
+    {
+        this.views.addAll(views);
     }
 
     public static class GroupByAnalysis
