@@ -63,7 +63,7 @@
           ]
         }
       ],
-      "refreshByTime": "10m"
+      "refreshTime": "10m"
     },
     {
       "preAggregated": "true",
@@ -92,7 +92,7 @@
           ]
         }
       ],
-      "refreshByTime": "1s"
+      "refreshTime": "1s"
     }
   ]
 }

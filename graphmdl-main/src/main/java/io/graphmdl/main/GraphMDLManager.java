@@ -45,14 +45,14 @@ public class GraphMDLManager
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
         if (graphMDLFile.exists()) {
             loadGraphMDLFromFile();
-            preAggregationManager.importPreAggregation(getGraphMDL());
+            preAggregationManager.refreshPreAggregation(getGraphMDL());
         }
         else {
             LOG.warn("GraphMDL file %s does not exist", graphMDLFile);
         }
     }
 
-    public void loadGraphMDLFromFile()
+    public synchronized void loadGraphMDLFromFile()
             throws IOException
     {
         loadGraphMDL(Files.readString(graphMDLFile.toPath()));

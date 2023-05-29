@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
@@ -44,7 +45,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException
 public class TestPreAggregation
         extends AbstractPreAggregationTest
 {
-    private final String dropTableStatement = "BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;";
+    private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
     private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
     private final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
@@ -75,6 +76,12 @@ public class TestPreAggregation
         String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
+    }
+
+    @Test
+    public void testMetricWithoutPreAggregation()
+    {
+        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
     }
 
     @Override
@@ -148,7 +155,7 @@ public class TestPreAggregation
         String tableName = getDefaultMetricTablePair("ForDropTable").getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
-        duckdbClient.executeDDL(format(dropTableStatement, tableName));
+        duckdbClient.executeDDL(dropTableStatement.apply(tableName));
 
         try (Connection connection = createConnection();
                 PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");

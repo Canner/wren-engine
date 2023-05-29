@@ -69,7 +69,6 @@ public class PreAggregationManager
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<CatalogSchemaTableName, MetricTablePair> metricTableMapping = new ConcurrentHashMap<>();
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> metricScheduledFutures = new ConcurrentHashMap<>();
-
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
 
     @Inject
@@ -98,8 +97,8 @@ public class PreAggregationManager
                                 new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), metric.getName()),
                                 refreshExecutor.scheduleWithFixedDelay(
                                         () -> doSingleMetricPreAggregation(graphMDL, metric).join(),
-                                        metric.getRefreshByTime().toMillis(),
-                                        metric.getRefreshByTime().toMillis(),
+                                        metric.getRefreshTime().toMillis(),
+                                        metric.getRefreshTime().toMillis(),
                                         MILLISECONDS)));
     }
 
@@ -109,11 +108,10 @@ public class PreAggregationManager
         return metricTableMapping.get(new CatalogSchemaTableName(catalog, schema, table));
     }
 
-    public synchronized void importPreAggregation(GraphMDL mdl)
+    public synchronized void refreshPreAggregation(GraphMDL mdl)
     {
         removePreAggregation(mdl.getCatalog(), mdl.getSchema());
         doPreAggregation(mdl).join();
-        scheduleGraphMDL(mdl);
     }
 
     private CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
@@ -127,6 +125,7 @@ public class PreAggregationManager
             if (e != null) {
                 LOG.error(e, "Failed to do pre-aggregation");
             }
+            scheduleGraphMDL(mdl);
         });
     }
 
@@ -189,7 +188,7 @@ public class PreAggregationManager
                 .ifPresent(pathInfo -> {
                     try {
                         tempFileLocations.add(pathInfo);
-                        importData(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName, oldDuckdbTableName);
+                        refreshPreAggInDuckDB(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName, oldDuckdbTableName);
                     }
                     finally {
                         removeTempFile(pathInfo);
@@ -197,7 +196,7 @@ public class PreAggregationManager
                 });
     }
 
-    private void importData(String path, String tableName, Optional<String> oldDuckdbTableName)
+    private void refreshPreAggInDuckDB(String path, String tableName, Optional<String> oldDuckdbTableName)
     {
         // ref: https://github.com/duckdb/duckdb/issues/1403
         StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
@@ -228,6 +227,7 @@ public class PreAggregationManager
         private final Metric metric;
         private final Optional<String> tableName;
         private final Optional<String> errorMessage;
+        private final long createTime = System.currentTimeMillis();
 
         private MetricTablePair(Metric metric, String tableName)
         {

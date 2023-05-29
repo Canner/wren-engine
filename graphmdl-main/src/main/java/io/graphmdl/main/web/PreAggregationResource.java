@@ -42,7 +42,7 @@ public class PreAggregationResource
     @Path("reload")
     public void reload(@Suspended AsyncResponse asyncResponse)
     {
-        preAggregationManager.importPreAggregation(graphMDLManager.getGraphMDL());
+        preAggregationManager.refreshPreAggregation(graphMDLManager.getGraphMDL());
         asyncResponse.resume(Response.ok().build());
     }
 }

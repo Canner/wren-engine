@@ -34,7 +34,7 @@ public class Metric
     private final List<Column> measure;
     private final List<TimeGrain> timeGrain;
     private final boolean preAggregated;
-    private final Duration refreshByTime;
+    private final Duration refreshTime;
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
@@ -54,7 +54,7 @@ public class Metric
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
             @JsonProperty("preAggregated") boolean preAggregated,
-            @JsonProperty("refreshByTime") Duration refreshByTime)
+            @JsonProperty("refreshTime") Duration refreshTime)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseModel = requireNonNull(baseModel, "baseModel is null");
@@ -63,7 +63,7 @@ public class Metric
         this.preAggregated = preAggregated;
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
-        this.refreshByTime = refreshByTime == null ? new Duration(30, MINUTES) : refreshByTime;
+        this.refreshTime = refreshTime == null ? new Duration(30, MINUTES) : refreshTime;
     }
 
     public String getName()
@@ -103,9 +103,9 @@ public class Metric
         return preAggregated;
     }
 
-    public Duration getRefreshByTime()
+    public Duration getRefreshTime()
     {
-        return refreshByTime;
+        return refreshTime;
     }
 
     @Override
@@ -124,12 +124,12 @@ public class Metric
                 && Objects.equals(dimension, that.dimension)
                 && Objects.equals(measure, that.measure)
                 && Objects.equals(timeGrain, that.timeGrain)
-                && Objects.equals(refreshByTime, that.refreshByTime);
+                && Objects.equals(refreshTime, that.refreshTime);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated, refreshByTime);
+        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated, refreshTime);
     }
 }
