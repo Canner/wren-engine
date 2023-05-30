@@ -90,19 +90,6 @@ public class PreAggregationManager
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    private void scheduleGraphMDL(GraphMDL graphMDL)
-    {
-        graphMDL.listPreAggregatedMetrics()
-                .forEach(metric ->
-                        metricScheduledFutures.put(
-                                new CatalogSchemaTableName(graphMDL.getCatalog(), graphMDL.getSchema(), metric.getName()),
-                                refreshExecutor.scheduleWithFixedDelay(
-                                        () -> doSingleMetricPreAggregation(graphMDL, metric).join(),
-                                        metric.getRefreshTime().toMillis(),
-                                        metric.getRefreshTime().toMillis(),
-                                        MILLISECONDS)));
-    }
-
     @VisibleForTesting
     public MetricTablePair getPreAggregationMetricTablePair(String catalog, String schema, String table)
     {
@@ -119,14 +106,21 @@ public class PreAggregationManager
     {
         List<CompletableFuture<Void>> futures = mdl.listPreAggregatedMetrics()
                 .stream()
-                .map(metric -> doSingleMetricPreAggregation(mdl, metric))
+                .map(metric ->
+                        doSingleMetricPreAggregation(mdl, metric)
+                                .thenRun(() -> metricScheduledFutures.put(
+                                        new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName()),
+                                        refreshExecutor.scheduleWithFixedDelay(
+                                                () -> doSingleMetricPreAggregation(mdl, metric).join(),
+                                                metric.getRefreshTime().toMillis(),
+                                                metric.getRefreshTime().toMillis(),
+                                                MILLISECONDS))))
                 .collect(toImmutableList());
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         return allFutures.whenComplete((v, e) -> {
             if (e != null) {
                 LOG.error(e, "Failed to do pre-aggregation");
             }
-            scheduleGraphMDL(mdl);
         });
     }
 
@@ -217,7 +211,6 @@ public class PreAggregationManager
         duckdbStorageConfig.getSecretKey().ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
         sb.append(format("SET s3_url_style='%s';\n", duckdbStorageConfig.getUrlStyle()));
         sb.append("BEGIN TRANSACTION;\n");
-//        oldDuckdbTableName.ifPresent(old -> sb.append(format("DROP TABLE IF EXISTS %s;\n", old)));
         sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
         sb.append("COMMIT;\n");
         duckdbClient.executeDDL(sb.toString());
