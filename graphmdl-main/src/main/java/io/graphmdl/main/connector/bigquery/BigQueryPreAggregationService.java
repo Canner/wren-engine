@@ -13,15 +13,17 @@
  */
 package io.graphmdl.main.connector.bigquery;
 
-import io.airlift.log.Logger;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.connector.bigquery.GcsStorageClient;
 import io.graphmdl.main.metadata.Metadata;
+import io.graphmdl.preaggregation.PathInfo;
 import io.graphmdl.preaggregation.PreAggregationService;
 
 import javax.inject.Inject;
 
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
@@ -31,8 +33,16 @@ import static java.util.UUID.randomUUID;
 public class BigQueryPreAggregationService
         implements PreAggregationService
 {
-    private static final Logger LOG = Logger.get(BigQueryPreAggregationService.class);
     private static final String PRE_AGGREGATION_FOLDER = format("pre-agg-%s", randomUUID());
+    // Pattern: bucket/PRE_AGGREGATION_FOLDER/catalog/schema/name/uuid
+    private static final Pattern PATH_PATTERN = Pattern.compile(
+            ".+/(?<preAggFolder>pre-agg-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/(?<catalog>[-_a-z0-9]+)/(?<schema>[-_a-z0-9]+)/(?<metricName>[-_a-zA-Z0-9]+)/(?<randomTail>[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+    private static final String PRE_AGGREGATION_FOLDER_GROUP = "preAggFolder";
+    private static final String CATALOG_GROUP = "catalog";
+    private static final String SCHEMA_GROUP = "schema";
+    private static final String METRIC_NAME_GROUP = "metricName";
+    private static final String RANDOM_TAIL_GROUP = "randomTail";
+
     private final Optional<String> bucketName;
     private final Metadata metadata;
     private final GcsStorageClient gcsStorageClient;
@@ -50,33 +60,46 @@ public class BigQueryPreAggregationService
     }
 
     @Override
-    public String createPreAggregation(String catalog, String schema, String name, String statement)
+    public Optional<PathInfo> createPreAggregation(String catalog, String schema, String name, String statement)
     {
-        String path = format("%s/%s/%s/%s/%s/%s/*.parquet",
+        String path = format("%s/%s/%s/%s/%s/%s",
                 getRequiredBucketName(),
                 PRE_AGGREGATION_FOLDER,
                 catalog,
                 schema,
                 name,
                 randomUUID());
+        String pattern = "*.parquet";
         String exportStatement = format("EXPORT DATA OPTIONS(\n" +
-                        "  uri='gs://%s',\n" +
+                        "  uri='gs://%s/%s',\n" +
                         "  format='PARQUET',\n" +
                         "  overwrite=true) AS %s",
                 path,
+                pattern,
                 statement);
         metadata.directDDL(exportStatement);
-        return path;
+        return Optional.of(PathInfo.of(path, pattern));
     }
 
     @Override
-    public void cleanPreAggregation()
+    public void deleteTarget(PathInfo pathInfo)
     {
-        bucketName.ifPresent(bucket -> {
-            if (!gcsStorageClient.cleanFolders(bucket, PRE_AGGREGATION_FOLDER)) {
-                LOG.error("Failed to clean pre-aggregation folder. Please check the bucket %s", getRequiredBucketName());
-            }
-        });
+        getTableLocationPrefix(pathInfo.getPath())
+                .ifPresent(prefix -> gcsStorageClient.cleanFolders(getRequiredBucketName(), prefix));
+    }
+
+    public static Optional<String> getTableLocationPrefix(String path)
+    {
+        Matcher matcher = PATH_PATTERN.matcher(path);
+        if (matcher.matches()) {
+            return Optional.of(format("%s/%s/%s/%s/%s",
+                    matcher.group(PRE_AGGREGATION_FOLDER_GROUP),
+                    matcher.group(CATALOG_GROUP),
+                    matcher.group(SCHEMA_GROUP),
+                    matcher.group(METRIC_NAME_GROUP),
+                    matcher.group(RANDOM_TAIL_GROUP)));
+        }
+        return Optional.empty();
     }
 
     public String getRequiredBucketName()

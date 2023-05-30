@@ -15,75 +15,53 @@
 package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.main.GraphMDLMetastore;
-import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.preaggregation.PreAggregationManager;
-import io.graphmdl.testing.AbstractWireProtocolTest;
-import io.graphmdl.testing.TestingGraphMDLServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
-import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 
+@Test(singleThreaded = true)
 public class TestPreAggregation
-        extends AbstractWireProtocolTest
+        extends AbstractPreAggregationTest
 {
-    private final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
+    private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
     private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
-
-    @Override
-    protected TestingGraphMDLServer createGraphMDLServer()
-    {
-        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .put("bigquery.location", "asia-east1")
-                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .put("bigquery.bucket-name", getenv("TEST_BIG_QUERY_BUCKET_NAME"))
-                .put("duckdb.storage.access-key", getenv("TEST_DUCKDB_STORAGE_ACCESS_KEY"))
-                .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"));
-
-        if (getGraphMDLPath().isPresent()) {
-            properties.put("graphmdl.file", getGraphMDLPath().get());
-        }
-
-        return TestingGraphMDLServer.builder()
-                .setRequiredConfigs(properties.build())
-                .build();
-    }
-
-    @Override
-    protected Optional<String> getGraphMDLPath()
-    {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg_mdl.json")).getPath());
-    }
+    private final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
+    private final SessionContext defaultSessionContext = SessionContext.builder()
+            .setCatalog("canner-cml")
+            .setSchema("tpch_tiny")
+            .build();
 
     @Test
     public void testPreAggregation()
     {
-        String mappingName = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "Revenue").getRequiredTableName();
+        String mappingName = getDefaultMetricTablePair("Revenue").getRequiredTableName();
+        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
         List<Object[]> tables = queryDuckdb("show tables");
 
-        assertThat(tables.size()).isOne();
-        assertThat(tables.get(0)[0]).isEqualTo(mappingName);
+        Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
+        assertThat(tableNames).contains(mappingName);
 
         List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
         List<Object[]> bqResult = queryBigQuery(format("SELECT\n" +
@@ -95,9 +73,21 @@ public class TestPreAggregation
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
-        String errMsg = preAggregationManager.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", "unqualified").getErrorMessage()
+        String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
+    }
+
+    @Test
+    public void testMetricWithoutPreAggregation()
+    {
+        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
+    }
+
+    @Override
+    protected Optional<String> getGraphMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("pre_agg/pre_agg_mdl.json")).getPath());
     }
 
     @Test
@@ -135,12 +125,8 @@ public class TestPreAggregation
     public void testExecuteRewrittenQuery()
             throws Exception
     {
-        SessionContext sessionContext = SessionContext.builder()
-                .setCatalog("canner-cml")
-                .setSchema("tpch_tiny")
-                .build();
         String rewritten =
-                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
+                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue limit 100", graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
             int count = 0;
@@ -152,7 +138,7 @@ public class TestPreAggregation
         }
 
         String withParam =
-                preAggregationManager.rewritePreAggregation(sessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
+                preAggregationManager.rewritePreAggregation(defaultSessionContext, "select custkey, revenue from Revenue where custkey = ?", graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
@@ -162,33 +148,23 @@ public class TestPreAggregation
         }
     }
 
-    private List<Object[]> queryDuckdb(String statement)
+    @Test
+    public void testQueryMetricWithDroppedPreAggTable()
+            throws SQLException
     {
-        DuckdbClient client = getInstance(Key.get(DuckdbClient.class));
-        try (AutoCloseableIterator<Object[]> iterator = client.query(statement)) {
-            ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add(iterator.next());
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+        String tableName = getDefaultMetricTablePair("ForDropTable").getRequiredTableName();
+        List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
+        assertThat(origin.size()).isGreaterThan(0);
+        duckdbClient.executeDDL(dropTableStatement.apply(tableName));
 
-    private List<Object[]> queryBigQuery(String statement)
-    {
-        Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
-        try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
-            ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add(iterator.next());
+        try (Connection connection = createConnection();
+                PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");
+                ResultSet resultSet = stmt.executeQuery()) {
+            int count = 0;
+            while (resultSet.next()) {
+                count++;
             }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
+            assertThat(count).isEqualTo(100);
         }
     }
 }

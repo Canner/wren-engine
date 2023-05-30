@@ -100,7 +100,8 @@
             "MONTH"
           ]
         }
-      ]
+      ],
+      "refreshTime": "2m"
     },
     {
       "preAggregated": "true",
@@ -148,6 +149,34 @@
           "name": "avg_revenue",
           "type": "double",
           "expression": "avg(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "preAggregated": "true",
+      "name": "ForDropTable",
+      "baseModel": "Orders",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "integer"
+        }
+      ],
+      "measure": [
+        {
+          "name": "revenue",
+          "type": "integer",
+          "expression": "sum(totalprice)"
         }
       ],
       "timeGrain": [

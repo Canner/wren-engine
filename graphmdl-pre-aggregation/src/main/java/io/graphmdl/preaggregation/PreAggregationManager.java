@@ -15,6 +15,7 @@
 package io.graphmdl.preaggregation;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.ConnectorRecordIterator;
@@ -27,7 +28,6 @@ import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.graphmdl.sqlrewrite.PreAggregationRewrite;
-import io.trino.execution.sql.SqlFormatterUtil;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
@@ -37,19 +37,25 @@ import javax.inject.Inject;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class PreAggregationManager
 {
@@ -61,7 +67,10 @@ public class PreAggregationManager
     private final SqlConverter sqlConverter;
     private final DuckdbClient duckdbClient;
     private final DuckdbStorageConfig duckdbStorageConfig;
-    private final AtomicReference<Map<CatalogSchemaTableName, MetricTablePair>> metricTableMapping = new AtomicReference<>(Map.of());
+    private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
+    private final ConcurrentMap<CatalogSchemaTableName, MetricTablePair> metricTableMapping = new ConcurrentHashMap<>();
+    private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> metricScheduledFutures = new ConcurrentHashMap<>();
+    private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
 
     @Inject
     public PreAggregationManager(
@@ -78,40 +87,46 @@ public class PreAggregationManager
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbStorageConfig = requireNonNull(duckdbStorageConfig, "storageConfig is null");
+        refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
     @VisibleForTesting
     public MetricTablePair getPreAggregationMetricTablePair(String catalog, String schema, String table)
     {
-        return metricTableMapping.get().get(new CatalogSchemaTableName(catalog, schema, table));
+        return metricTableMapping.get(new CatalogSchemaTableName(catalog, schema, table));
     }
 
-    public CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
+    public synchronized void refreshPreAggregation(GraphMDL mdl)
     {
-        List<CompletableFuture<MetricTablePair>> futures = mdl.listMetrics()
+        removePreAggregation(mdl.getCatalog(), mdl.getSchema());
+        doPreAggregation(mdl).join();
+    }
+
+    private CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
+    {
+        List<CompletableFuture<Void>> futures = mdl.listPreAggregatedMetrics()
                 .stream()
-                .filter(Metric::isPreAggregated)
-                .map(metric -> doSingleMetricPreAggregation(mdl, metric))
+                .map(metric ->
+                        doSingleMetricPreAggregation(mdl, metric)
+                                .thenRun(() -> metricScheduledFutures.put(
+                                        new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName()),
+                                        refreshExecutor.scheduleWithFixedDelay(
+                                                () -> doSingleMetricPreAggregation(mdl, metric).join(),
+                                                metric.getRefreshTime().toMillis(),
+                                                metric.getRefreshTime().toMillis(),
+                                                MILLISECONDS))))
                 .collect(toImmutableList());
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         return allFutures.whenComplete((v, e) -> {
             if (e != null) {
                 LOG.error(e, "Failed to do pre-aggregation");
             }
-            else {
-                Map<CatalogSchemaTableName, MetricTablePair> mapping = futures.stream()
-                        .map(CompletableFuture::join)
-                        .collect(toImmutableMap(
-                                pair -> new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), pair.getMetric().getName()),
-                                pair -> pair));
-                metricTableMapping.set(mapping);
-            }
         });
     }
 
     public Optional<String> convertToAggregationTable(CatalogSchemaTableName catalogSchemaTableName)
     {
-        return metricTableMapping.get().get(catalogSchemaTableName).getTableName();
+        return metricTableMapping.get(catalogSchemaTableName).getTableName();
     }
 
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
@@ -120,9 +135,12 @@ public class PreAggregationManager
         return DuckdbRecordIterator.of(duckdbClient.executeQuery(sql, parameters));
     }
 
-    private CompletableFuture<MetricTablePair> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
+    private CompletableFuture<Void> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
     {
-        return supplyAsync(() -> {
+        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName());
+        String duckdbTableName = format("%s_%s", metric.getName(), randomUUID().toString().replace("-", ""));
+        long createTime = currentTimeMillis();
+        return runAsync(() -> {
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
                     .setSchema(mdl.getSchema())
@@ -133,22 +151,57 @@ public class PreAggregationManager
                     mdl);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
-            String exportPath = preAggregationService.createPreAggregation(
-                    mdl.getCatalog(),
-                    mdl.getSchema(),
-                    metric.getName(),
-                    sqlConverter.convert(SqlFormatterUtil.getFormattedSql(rewrittenStatement, sqlParser), sessionContext));
-            String duckdbTableName = format("%s_%s", metric.getName(), randomUUID());
-            importData(exportPath, duckdbTableName);
-            return new MetricTablePair(metric, duckdbTableName);
+
+            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName);
+            putMetricTableMapping(catalogSchemaTableName, new MetricTablePair(metric, duckdbTableName, createTime));
         }).exceptionally(e -> {
+            dropTable(duckdbTableName);
             String errMsg = format("Failed to do pre-aggregation for metric %s; caused by %s", metric.getName(), e.getMessage());
             LOG.error(e, errMsg);
-            return new MetricTablePair(metric, null, errMsg);
+            putMetricTableMapping(catalogSchemaTableName, new MetricTablePair(metric, Optional.empty(), Optional.of(errMsg), createTime));
+            return null;
         });
     }
 
-    private void importData(String path, String tableName)
+    private void putMetricTableMapping(CatalogSchemaTableName catalogSchemaTableName, MetricTablePair metricTablePair)
+    {
+        synchronized (metricTableMapping) {
+            if (metricTableMapping.containsKey(catalogSchemaTableName)) {
+                MetricTablePair existedMetricTablePair = metricTableMapping.get(catalogSchemaTableName);
+                if (existedMetricTablePair.getCreateTime() > metricTablePair.getCreateTime()) {
+                    metricTablePair.getTableName().ifPresent(this::dropTable);
+                    return;
+                }
+                existedMetricTablePair.getTableName().ifPresent(this::dropTable);
+            }
+            metricTableMapping.put(catalogSchemaTableName, metricTablePair);
+        }
+    }
+
+    private void createMetricPreAggregation(
+            GraphMDL mdl,
+            Metric metric,
+            SessionContext sessionContext,
+            Statement rewrittenStatement,
+            String duckdbTableName)
+    {
+        preAggregationService.createPreAggregation(
+                        mdl.getCatalog(),
+                        mdl.getSchema(),
+                        metric.getName(),
+                        sqlConverter.convert(getFormattedSql(rewrittenStatement, sqlParser), sessionContext))
+                .ifPresent(pathInfo -> {
+                    try {
+                        tempFileLocations.add(pathInfo);
+                        refreshPreAggInDuckDB(pathInfo.getPath() + "/" + pathInfo.getFilePattern(), duckdbTableName);
+                    }
+                    finally {
+                        removeTempFile(pathInfo);
+                    }
+                });
+    }
+
+    private void refreshPreAggInDuckDB(String path, String tableName)
     {
         // ref: https://github.com/duckdb/duckdb/issues/1403
         StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
@@ -157,8 +210,20 @@ public class PreAggregationManager
         duckdbStorageConfig.getAccessKey().ifPresent(accessKey -> sb.append(format("SET s3_access_key_id='%s';\n", accessKey)));
         duckdbStorageConfig.getSecretKey().ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
         sb.append(format("SET s3_url_style='%s';\n", duckdbStorageConfig.getUrlStyle()));
+        sb.append("BEGIN TRANSACTION;\n");
         sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
+        sb.append("COMMIT;\n");
         duckdbClient.executeDDL(sb.toString());
+    }
+
+    private void dropTable(String tableName)
+    {
+        try {
+            duckdbClient.executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName));
+        }
+        catch (Exception e) {
+            LOG.error(e, "Failed to drop table %s", tableName);
+        }
     }
 
     public static class MetricTablePair
@@ -166,17 +231,19 @@ public class PreAggregationManager
         private final Metric metric;
         private final Optional<String> tableName;
         private final Optional<String> errorMessage;
+        private final long createTime;
 
-        public MetricTablePair(Metric metric, String tableName)
+        private MetricTablePair(Metric metric, String tableName, long createTime)
         {
-            this(metric, tableName, null);
+            this(metric, Optional.of(tableName), Optional.empty(), createTime);
         }
 
-        public MetricTablePair(Metric metric, String tableName, String errorMessage)
+        private MetricTablePair(Metric metric, Optional<String> tableName, Optional<String> errorMessage, long createTime)
         {
-            this.metric = metric;
-            this.tableName = Optional.ofNullable(tableName);
-            this.errorMessage = Optional.ofNullable(errorMessage);
+            this.metric = requireNonNull(metric, "metric is null");
+            this.tableName = requireNonNull(tableName, "tableName is null");
+            this.errorMessage = requireNonNull(errorMessage, "errorMessage is null");
+            this.createTime = createTime;
         }
 
         public Metric getMetric()
@@ -186,7 +253,7 @@ public class PreAggregationManager
 
         public String getRequiredTableName()
         {
-            return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name not exists"));
+            return tableName.orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "Mapping table name is refreshing or not exists"));
         }
 
         public Optional<String> getTableName()
@@ -198,6 +265,11 @@ public class PreAggregationManager
         {
             return errorMessage;
         }
+
+        public long getCreateTime()
+        {
+            return createTime;
+        }
     }
 
     public Optional<String> rewritePreAggregation(SessionContext sessionContext, String sql, GraphMDL graphMDL)
@@ -205,7 +277,7 @@ public class PreAggregationManager
         try {
             Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
             return PreAggregationRewrite.rewrite(sessionContext, statement, this::convertToAggregationTable, graphMDL)
-                    .map(rewrittenStatement -> SqlFormatterUtil.getFormattedSql(rewrittenStatement, sqlParser));
+                    .map(rewrittenStatement -> getFormattedSql(rewrittenStatement, sqlParser));
         }
         catch (Exception e) {
             LOG.error(e, "Failed to rewrite pre-aggregation for statement: %s", sql);
@@ -213,9 +285,56 @@ public class PreAggregationManager
         return Optional.empty();
     }
 
-    @PreDestroy
-    public void cleanPreAggregation()
+    public void removePreAggregation(String catalogName, String schemaName)
     {
-        preAggregationService.cleanPreAggregation();
+        requireNonNull(catalogName, "catalogName is null");
+        requireNonNull(schemaName, "schemaName is null");
+
+        metricScheduledFutures.keySet().stream()
+                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(catalogName)
+                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(schemaName))
+                .forEach(catalogSchemaTableName -> {
+                    metricScheduledFutures.get(catalogSchemaTableName).cancel(true);
+                    metricScheduledFutures.remove(catalogSchemaTableName);
+                });
+
+        metricTableMapping.entrySet().stream()
+                .filter(entry -> entry.getKey().getCatalogName().equals(catalogName)
+                        && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
+                .forEach(entry -> {
+                    entry.getValue().getTableName().ifPresent(this::dropTable);
+                    metricTableMapping.remove(entry.getKey());
+                });
+    }
+
+    public boolean metricScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
+    {
+        return metricScheduledFutures.containsKey(catalogSchemaTableName);
+    }
+
+    @PreDestroy
+    public void stop()
+    {
+        refreshExecutor.shutdown();
+        cleanTempFiles();
+    }
+
+    public void cleanTempFiles()
+    {
+        try {
+            List<PathInfo> locations = ImmutableList.copyOf(tempFileLocations);
+            locations.forEach(this::removeTempFile);
+        }
+        catch (Exception e) {
+            LOG.error(e, "Failed to clean temp file");
+        }
+    }
+
+    public void removeTempFile(PathInfo pathInfo)
+    {
+        if (tempFileLocations.contains(pathInfo)) {
+            preAggregationService.deleteTarget(pathInfo);
+            tempFileLocations.remove(pathInfo);
+        }
     }
 }

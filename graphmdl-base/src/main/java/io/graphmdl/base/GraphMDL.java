@@ -26,6 +26,7 @@ import io.graphmdl.base.dto.View;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 public class GraphMDL
@@ -104,6 +105,14 @@ public class GraphMDL
     public List<Metric> listMetrics()
     {
         return manifest.getMetrics();
+    }
+
+    public List<Metric> listPreAggregatedMetrics()
+    {
+        return manifest.getMetrics()
+                .stream()
+                .filter(Metric::isPreAggregated)
+                .collect(toImmutableList());
     }
 
     public Optional<Metric> getMetric(String name)

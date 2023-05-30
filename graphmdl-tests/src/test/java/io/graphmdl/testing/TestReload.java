@@ -16,10 +16,6 @@ package io.graphmdl.testing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
-import io.airlift.http.client.HttpClient;
-import io.airlift.http.client.Request;
-import io.airlift.http.client.StringResponseHandler;
-import io.airlift.http.client.jetty.JettyHttpClient;
 import io.graphmdl.base.dto.Manifest;
 import io.graphmdl.main.GraphMDLMetastore;
 import org.testng.annotations.Test;
@@ -28,8 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static io.airlift.http.client.Request.Builder.preparePut;
-import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static java.lang.System.getenv;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -85,15 +79,6 @@ public class TestReload
             throws IOException
     {
         Files.write(graphMDLFilePath, graphMDLFileContent.getBytes(UTF_8));
-        Request request = preparePut()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/reload"))
-                .build();
-
-        try (HttpClient client = new JettyHttpClient()) {
-            StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
-            if (response.getStatusCode() != 200) {
-                throw new RuntimeException(response.getBody());
-            }
-        }
+        reloadGraphMDL();
     }
 }

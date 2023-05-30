@@ -1,0 +1,98 @@
+{
+  "catalog": "canner-cml",
+  "schema": "tpch_tiny",
+  "models": [
+    {
+      "name": "Orders",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "o_orderkey",
+          "type": "integer"
+        },
+        {
+          "name": "custkey",
+          "expression": "o_custkey",
+          "type": "integer"
+        },
+        {
+          "name": "orderstatus",
+          "expression": "o_orderstatus",
+          "type": "string"
+        },
+        {
+          "name": "totalprice",
+          "expression": "o_totalprice",
+          "type": "float"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
+        }
+      ],
+      "primaryKey": "orderkey"
+    }
+  ],
+  "metrics": [
+    {
+      "preAggregated": "true",
+      "name": "Revenue",
+      "baseModel": "Orders",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "integer"
+        }
+      ],
+      "measure": [
+        {
+          "name": "revenue",
+          "type": "integer",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ],
+      "refreshTime": "5m"
+    },
+    {
+      "preAggregated": "true",
+      "name": "ForRefresh",
+      "baseModel": "Orders",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "integer"
+        }
+      ],
+      "measure": [
+        {
+          "name": "revenue",
+          "type": "integer",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ],
+      "refreshTime": "1s"
+    }
+  ]
+}

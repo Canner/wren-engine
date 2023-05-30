@@ -17,6 +17,7 @@ package io.graphmdl.connector.bigquery;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import javax.inject.Inject;
@@ -47,5 +48,14 @@ public class GcsStorageClient
             storageBatch.submit();
         }
         return results.stream().allMatch(result -> result != null && result.get());
+    }
+
+    @VisibleForTesting
+    public boolean checkFolderExists(String bucket, String prefix)
+    {
+        return storage.list(bucket, Storage.BlobListOption.prefix(prefix))
+                .iterateAll()
+                .iterator()
+                .hasNext();
     }
 }

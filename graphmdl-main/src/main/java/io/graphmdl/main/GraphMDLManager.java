@@ -45,22 +45,24 @@ public class GraphMDLManager
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
         if (graphMDLFile.exists()) {
             loadGraphMDLFromFile();
+            preAggregationManager.refreshPreAggregation(getGraphMDL());
         }
         else {
             LOG.warn("GraphMDL file %s does not exist", graphMDLFile);
         }
     }
 
-    public void loadGraphMDLFromFile()
+    public synchronized void loadGraphMDLFromFile()
             throws IOException
     {
         loadGraphMDL(Files.readString(graphMDLFile.toPath()));
-        preAggregationManager.doPreAggregation(getGraphMDL()).join();
     }
 
     private void loadGraphMDL(String json)
             throws JsonProcessingException
     {
+        GraphMDL oldGraphMDL = graphMDL.get();
+        preAggregationManager.removePreAggregation(oldGraphMDL.getCatalog(), oldGraphMDL.getSchema());
         graphMDL.set(GraphMDL.fromJson(json));
     }
 
