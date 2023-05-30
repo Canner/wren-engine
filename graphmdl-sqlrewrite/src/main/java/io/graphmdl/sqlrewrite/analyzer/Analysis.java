@@ -80,7 +80,7 @@ public class Analysis
 
     public Map<String, WithQuery> getRelationshipCTE()
     {
-        return relationshipCteGenerator.getRegisteredCte();
+        return relationshipCteGenerator.getRegisteredWithQuery();
     }
 
     public Map<String, String> getRelationshipNameMapping()
