@@ -189,35 +189,6 @@
           ]
         }
       ]
-    },
-    {
-      "preAggregated": "true",
-      "name": "ForRefresh",
-      "baseModel": "Orders",
-      "dimension": [
-        {
-          "name": "custkey",
-          "type": "integer"
-        }
-      ],
-      "measure": [
-        {
-          "name": "revenue",
-          "type": "integer",
-          "expression": "sum(totalprice)"
-        }
-      ],
-      "timeGrain": [
-        {
-          "name": "orderdate",
-          "refColumn": "orderdate",
-          "dateParts": [
-            "YEAR",
-            "MONTH"
-          ]
-        }
-      ],
-      "refreshTime": "3s"
     }
   ]
 }

@@ -167,14 +167,4 @@ public class TestPreAggregation
             assertThat(count).isEqualTo(100);
         }
     }
-
-    @Test
-    public void testRefreshPreAggregation()
-            throws InterruptedException
-    {
-        String before = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
-        Thread.sleep(6000);
-        String after = getDefaultMetricTablePair("ForRefresh").getRequiredTableName();
-        assertThat(before).isNotEqualTo(after);
-    }
 }

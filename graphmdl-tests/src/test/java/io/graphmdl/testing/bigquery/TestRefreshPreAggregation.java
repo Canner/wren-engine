@@ -25,7 +25,7 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
-public class TestPreAggregationRefreshFrequently
+public class TestRefreshPreAggregation
         extends AbstractPreAggregationTest
 {
     private final GraphMDL graphMDL = getInstance(Key.get(GraphMDLMetastore.class)).getGraphMDL();
@@ -40,11 +40,25 @@ public class TestPreAggregationRefreshFrequently
     public void testRefreshFrequently()
             throws InterruptedException
     {
+        // manually reload pre-aggregation
         preAggregationManager.refreshPreAggregation(graphMDL);
+        // We have one pre-aggregation table and the most tables existing in duckdb is 2
         assertThat(queryDuckdb("show tables").size()).isLessThan(3);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 50; i++) {
+            System.out.println(getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName());
             Thread.sleep(200);
             assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         }
+    }
+
+    @Test
+    public void testRefreshPreAggregation()
+            throws InterruptedException
+    {
+        String before = getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName();
+        // considering the refresh connects to BigQuery service, it will take some time
+        Thread.sleep(3000);
+        String after = getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName();
+        assertThat(before).isNotEqualTo(after);
     }
 }

@@ -76,7 +76,7 @@
   "metrics": [
     {
       "preAggregated": "true",
-      "name": "RaceCondition",
+      "name": "RefreshFrequently",
       "baseModel": "Orders",
       "dimension": [
         {
@@ -86,7 +86,7 @@
       ],
       "measure": [
         {
-          "name": "race_revenue",
+          "name": "revenue",
           "type": "integer",
           "expression": "sum(totalprice)"
         }
