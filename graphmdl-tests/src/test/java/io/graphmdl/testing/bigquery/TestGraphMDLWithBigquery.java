@@ -361,13 +361,28 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
 
-        // TODO: https://github.com/Canner/canner-metric-layer/issues/229
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.customer.name from Lineitem limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        // TODO: analyze nested to_many relationship access
         // try (Connection connection = createConnection()) {
-        //     PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.customer.name from Lineitem limit 100");
+        //     PreparedStatement stmt = connection.prepareStatement("select name, orders[1].lineitem[1].extendedprice from Customer limit 100");
         //     ResultSet resultSet = stmt.executeQuery();
         //     resultSet.next();
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
-        //     assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("name"));
+        //     assertThatNoException().isThrownBy(() -> resultSet.getString("extendedprice"));
         //
         //     int count = 1;
         //
