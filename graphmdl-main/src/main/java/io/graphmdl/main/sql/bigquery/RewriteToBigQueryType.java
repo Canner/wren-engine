@@ -14,7 +14,6 @@
 
 package io.graphmdl.main.sql.bigquery;
 
-import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.type.PGArray;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.sql.SqlRewrite;
@@ -104,7 +103,8 @@ public class RewriteToBigQueryType
                         .collect(Collectors.toList());
                 if (arrayConstructor.getLocation().isPresent()) {
                     return new Cast(
-                            new ArrayConstructor(arrayConstructor.getLocation().get(), values),
+                            arrayConstructor.getLocation().get(),
+                            new ArrayConstructor(values),
                             visitAndCast(node.getType(), context));
                 }
                 return new Cast(
@@ -198,8 +198,8 @@ public class RewriteToBigQueryType
                     if (typeName.startsWith("_")) {
                         PGArray pgArray = getPgArrayType(typeName);
                         return new GenericDataType(nodeLocation, new Identifier("ARRAY"),
-                                ImmutableList.of(
-                                        new TypeParameter(new GenericDataType(nodeLocation, new Identifier(toBqType(pgArray.getInnerType()).name()), ImmutableList.of()))));
+                                List.of(
+                                        new TypeParameter(new GenericDataType(nodeLocation, new Identifier(toBqType(pgArray.getInnerType()).name()), List.of()))));
                     }
                     throw new UnsupportedOperationException("Unsupported type: " + typeName);
             }
