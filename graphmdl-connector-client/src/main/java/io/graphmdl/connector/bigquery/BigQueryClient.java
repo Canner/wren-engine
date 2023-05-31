@@ -38,6 +38,8 @@ import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.SchemaTableName;
+import io.graphmdl.base.type.PGArray;
+import io.graphmdl.base.type.PGType;
 
 import java.util.List;
 import java.util.Optional;
@@ -127,10 +129,7 @@ public class BigQueryClient
                             .newBuilder(sql);
 
             for (Parameter parameter : parameters) {
-                queryConfigBuilder.addPositionalParameter(
-                        QueryParameterValue.of(
-                                BigQueryType.toBqValue(parameter.getType(), parameter.getValue()),
-                                BigQueryType.toBqType(parameter.getType())));
+                queryConfigBuilder.addPositionalParameter(toQueryParameterValue(parameter.getType(), parameter.getValue()));
             }
 
             return bigQuery.query(queryConfigBuilder.build());
@@ -153,10 +152,7 @@ public class BigQueryClient
             datasetIdOptional.ifPresent(queryConfigBuilder::setDefaultDataset);
 
             for (Parameter parameter : parameters) {
-                queryConfigBuilder.addPositionalParameter(
-                        QueryParameterValue.of(
-                                BigQueryType.toBqValue(parameter.getType(), parameter.getValue()),
-                                BigQueryType.toBqType(parameter.getType())));
+                queryConfigBuilder.addPositionalParameter(toQueryParameterValue(parameter.getType(), parameter.getValue()));
             }
 
             Job job = bigQuery.create(JobInfo.of(queryConfigBuilder.build()));
@@ -179,5 +175,18 @@ public class BigQueryClient
         if (!bigQuery.delete(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))) {
             throw new GraphMDLException(NOT_FOUND, schemaTableName + " was not found");
         }
+    }
+
+    private QueryParameterValue toQueryParameterValue(PGType<?> type, Object value)
+    {
+        if (type instanceof PGArray) {
+            PGType<?> innerType = ((PGArray) type).getInnerType();
+            return QueryParameterValue.array(
+                    (Object[]) BigQueryType.toBqValue(type, value),
+                    BigQueryType.toBqType(innerType));
+        }
+        return QueryParameterValue.of(
+                BigQueryType.toBqValue(type, value),
+                BigQueryType.toBqType(type));
     }
 }

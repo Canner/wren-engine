@@ -890,7 +890,9 @@ public class TestWireProtocolWithBigquery
                 {"json", "{\"test\":3, \"test2\":4}"},
                 {"bytea", "test1".getBytes(UTF_8)},
                 {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
-                {"array", "[true, false]"}
+                {"array", new Boolean[] {true, false}},
+                {"array", new Double[] {1.0, 2.0, 3.0}},
+                {"array", new String[] {"hello", "world"}}
 
                 // TODO: type support
                 // {"any", new Object[] {1, "test", new BigDecimal(10)}}
@@ -923,7 +925,13 @@ public class TestWireProtocolWithBigquery
             else if (name.equals("timestamp")) {
                 expected = Timestamp.valueOf((LocalDateTime) obj);
             }
-            assertThat(result.getObject(1)).isEqualTo(expected);
+
+            if (name.equals("array")) {
+                assertThat(result.getArray(1).getArray()).isEqualTo(expected);
+            }
+            else {
+                assertThat(result.getObject(1)).isEqualTo(expected);
+            }
         }
     }
 

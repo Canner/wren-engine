@@ -21,13 +21,16 @@ import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.IntervalType;
 import io.graphmdl.base.type.JsonType;
 import io.graphmdl.base.type.NumericType;
+import io.graphmdl.base.type.PGArray;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
 import org.joda.time.Period;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.google.cloud.bigquery.StandardSQLTypeName.ARRAY;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BIGNUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BOOL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
@@ -100,12 +103,22 @@ public final class BigQueryType
 
     public static StandardSQLTypeName toBqType(PGType<?> pgType)
     {
+        if (pgType instanceof PGArray) {
+            return ARRAY;
+        }
         return Optional.ofNullable(pgTypeToBqTypeMap.get(pgType))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + pgType.typName()));
     }
 
     public static Object toBqValue(PGType<?> pgType, Object value)
     {
+        if (pgType instanceof PGArray && value instanceof List) {
+            PGType<?> innerType = ((PGArray) pgType).getInnerType();
+            return ((List<Object>) value).stream()
+                    .map(v -> toBqValue(innerType, v))
+                    .toArray();
+        }
+
         // Cast a short type value to an integer to fit the BigQuery type INT64, because there is the limitation of BigQuery API in QueryParameterValue.
         // https://github.com/googleapis/java-bigquery/blob/909a574e6857332dfc71c746c4500b601de57dcf/google-cloud-bigquery/src/main/java/com/google/cloud/bigquery/QueryParameterValue.java#L409
         if (pgType.equals(SMALLINT) && value instanceof Short) {
