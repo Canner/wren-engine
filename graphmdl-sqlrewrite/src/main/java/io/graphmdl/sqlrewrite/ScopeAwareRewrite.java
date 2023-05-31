@@ -22,6 +22,7 @@ import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.Scope;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
@@ -98,7 +99,7 @@ public class ScopeAwareRewrite
         protected Node visitDereferenceExpression(DereferenceExpression node, Scope context)
         {
             if (context != null && context.getRelationType().isPresent()) {
-                List<String> parts = getParts(node);
+                List<String> parts = getPartsQuietly(node);
                 for (int i = 0; i < parts.size(); i++) {
                     List<Field> field = context.getRelationType().get().resolveFields(QualifiedName.of(parts.subList(0, i + 1)));
                     if (field.size() == 1) {
@@ -116,7 +117,17 @@ public class ScopeAwareRewrite
             return node;
         }
 
-        private List<String> getParts(Expression expression)
+        private static List<String> getPartsQuietly(Expression expression)
+        {
+            try {
+                return getParts(expression);
+            }
+            catch (IllegalArgumentException ex) {
+                return List.of();
+            }
+        }
+
+        private static List<String> getParts(Expression expression)
         {
             if (expression instanceof Identifier) {
                 return ImmutableList.of(((Identifier) expression).getValue());
@@ -138,6 +149,9 @@ public class ScopeAwareRewrite
                     builder.add(format("%s[%s]", getLast(baseQualifiedName), subscriptExpression.getIndex().toString()));
                     return builder.build();
                 }
+            }
+            else if (expression instanceof FunctionCall) {
+                throw new IllegalArgumentException("Contains function call");
             }
             return ImmutableList.of();
         }

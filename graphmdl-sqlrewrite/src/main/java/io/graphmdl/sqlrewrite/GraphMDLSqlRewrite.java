@@ -222,7 +222,11 @@ public class GraphMDLSqlRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
-            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), rewriteEnumIfNeed(node));
+            Node newNode = analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), rewriteEnumIfNeed(node));
+            if (newNode != node) {
+                return newNode;
+            }
+            return new DereferenceExpression(node.getLocation(), (Expression) process(node.getBase()), node.getField());
         }
 
         private Expression rewriteEnumIfNeed(DereferenceExpression node)

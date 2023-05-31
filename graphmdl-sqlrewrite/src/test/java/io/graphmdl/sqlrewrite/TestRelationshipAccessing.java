@@ -943,6 +943,93 @@ public class TestRelationshipAccessing
     }
 
     @DataProvider
+    public Object[][] any()
+    {
+        return new Object[][] {
+                {"select p.name, any(p.books) as any_book from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1\n" +
+                                ") \n" +
+                                ", ${any_cte} (userId, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , t.bookId f1\n" +
+                                "   FROM\n" +
+                                "     (${People.books} s\n" +
+                                "   LEFT JOIN Book t ON (s.books[1] = t.bookId))\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", ${any_cte}.f1 any_book\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${any_cte} ON (p.userId = ${any_cte}.userId))\n"},
+                {"select p.name, any(p.books).name as any_book from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1\n" +
+                                ") \n" +
+                                ", ${any_cte} (userId, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , t.name f1\n" +
+                                "   FROM\n" +
+                                "     (${People.books} s\n" +
+                                "   LEFT JOIN Book t ON (s.books[1] = t.bookId))\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  p.name\n" +
+                                ", ${any_cte}.f1 any_book\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${any_cte} ON (p.userId = ${any_cte}.userId))\n"},
+        };
+    }
+
+    @Test(dataProvider = "any")
+    public void testAny(String original, String expected)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Statement rewrittenStatement = GRAPHMDL_SQL_REWRITE.apply(statement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("any_cte", generator.getNameMapping().get("any(p.books)"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
+
+    @Test
+    public void testInvalidAny()
+    {
+        assertThatThrownBy(
+                () -> StatementAnalyzer.analyze(
+                        SQL_PARSER.createStatement("select p.name, any(p.books).foo as any_book from People p", new ParsingOptions(AS_DECIMAL)),
+                        DEFAULT_SESSION_CONTEXT,
+                        oneToManyGraphMDL,
+                        new RelationshipCteGenerator(oneToManyGraphMDL)))
+                .hasMessage("there is no foo in target relationship cte");
+    }
+
+    @DataProvider
     public Object[][] functionChain()
     {
         return new Object[][] {

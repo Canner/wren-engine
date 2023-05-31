@@ -21,6 +21,7 @@ import org.testng.annotations.Test;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -221,6 +222,36 @@ public class TestGraphMDLWithBigquery
         }
     }
 
+    @DataProvider
+    public Object[][] any()
+    {
+        return new Object[][] {
+                {"select any(Part.lineitem) as col from Part limit 100"},
+                {"select any(Part.lineitem).linenumber as col from Part limit 100"},
+                // TODO: enable this test
+                // {"select any(Part.lineitem).orderkey + any(Part.lineitem).linenumber as col from Part limit 100"}
+        };
+    }
+
+    @Test(dataProvider = "any")
+    public void testAny(String sql)
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     public void testLambdaFunctionChain()
             throws Exception
@@ -243,6 +274,21 @@ public class TestGraphMDLWithBigquery
         try (Connection connection = createConnection()) {
             PreparedStatement stmt = connection.prepareStatement(
                     "select transform(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F'), orderItem -> orderItem.totalprice)\n" +
+                            "as col_1\n" +
+                            "from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(
+                    "select any(filter(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O'), orderItem -> orderItem.orderstatus = 'F')).totalprice\n" +
                             "as col_1\n" +
                             "from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();

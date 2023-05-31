@@ -126,6 +126,11 @@
           "name": "name",
           "expression": "p_name",
           "type": "string"
+        },
+        {
+          "name": "lineitem",
+          "type": "Lineitem",
+          "relationship": "LineitemPart"
         }
       ],
       "primaryKey": "partkey"
