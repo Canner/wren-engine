@@ -40,6 +40,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 
 import static java.lang.String.format;
+import static java.lang.System.currentTimeMillis;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +49,7 @@ public class TestBigQueryType
         extends AbstractWireProtocolTest
 {
     private static final Logger LOG = Logger.get(TestBigQueryType.class);
-    private static final SchemaTableName TEST_SCHEMA_TABLE = new SchemaTableName("cml_temp", "test_bigquery_type");
+    private SchemaTableName testSchemaTableName;
     private BigQueryClient bigQueryClient;
     private Multimap<DataType, TypeCase> testCases;
 
@@ -76,6 +77,7 @@ public class TestBigQueryType
     public void init()
             throws SQLException
     {
+        testSchemaTableName = new SchemaTableName("cml_temp", "test_bigquery_type_" + currentTimeMillis());
         bigQueryClient = getInstance(Key.get(BigQueryClient.class));
         testCases = initTestcases();
         createBigQueryTable();
@@ -84,7 +86,7 @@ public class TestBigQueryType
     @AfterClass(alwaysRun = true)
     public void close()
     {
-        bigQueryClient.dropTable(TEST_SCHEMA_TABLE);
+        bigQueryClient.dropTable(testSchemaTableName);
     }
 
     private Multimap<DataType, TypeCase> initTestcases()
@@ -145,12 +147,12 @@ public class TestBigQueryType
         String columnValue = Joiner.on(", ").join(testCases.values().stream().map(TypeCase::getValue).collect(toList()));
 
         // CREATE TABLE table_name (column_name1 data_type1, column_name2 data_type2, ...);
-        String createTableQuery = format("CREATE TABLE %s (%s)", TEST_SCHEMA_TABLE, columnType);
+        String createTableQuery = format("CREATE TABLE %s (%s)", testSchemaTableName, columnType);
         LOG.info("[Input sql]: %s", createTableQuery);
         bigQueryClient.query(createTableQuery, ImmutableList.of());
 
         // INSERT INTO table_name VALUES (value1, value2, value3, ...);
-        String insertTableQuery = format("INSERT INTO %s VALUES (%s)", TEST_SCHEMA_TABLE, columnValue);
+        String insertTableQuery = format("INSERT INTO %s VALUES (%s)", testSchemaTableName, columnValue);
         LOG.info("[Input sql]: %s", insertTableQuery);
         bigQueryClient.query(insertTableQuery, ImmutableList.of());
     }
@@ -306,7 +308,7 @@ public class TestBigQueryType
     {
         try (Connection conn = createConnection()) {
             Statement stmt = conn.createStatement();
-            String sql = format("SELECT %s FROM %s", typeCase.columnName, TEST_SCHEMA_TABLE);
+            String sql = format("SELECT %s FROM %s", typeCase.columnName, testSchemaTableName);
             LOG.info("[Input sql]: %s", sql);
             stmt.execute(sql);
             ResultSet result = stmt.getResultSet();
