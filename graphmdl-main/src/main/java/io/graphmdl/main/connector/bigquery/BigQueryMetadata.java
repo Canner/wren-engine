@@ -17,7 +17,6 @@ package io.graphmdl.main.connector.bigquery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetInfo;
-import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
@@ -32,8 +31,6 @@ import io.graphmdl.base.GraphMDLException;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.base.metadata.TableMetadata;
-import io.graphmdl.base.type.PGType;
-import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.connector.bigquery.BigQueryClient;
 import io.graphmdl.connector.bigquery.BigQueryType;
 import io.graphmdl.main.metadata.Metadata;
@@ -209,13 +206,7 @@ public class BigQueryMetadata
     {
         JobStatistics.QueryStatistics queryStatistics = bigQueryClient.queryDryRun(Optional.empty(), sql, parameters);
         return queryStatistics.getSchema().getFields().stream()
-                .map(field -> {
-                    PGType<?> type = BigQueryType.toPGType(field);
-                    if (field.getMode().equals(Field.Mode.REPEATED)) {
-                        type = PGTypes.getArrayType(type.oid());
-                    }
-                    return new Column(field.getName(), type);
-                })
+                .map(field -> new Column(field.getName(), BigQueryType.toPGType(field)))
                 .collect(toImmutableList());
     }
 

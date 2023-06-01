@@ -24,6 +24,7 @@ import io.graphmdl.base.type.JsonType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGArray;
 import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.base.type.RecordType;
 import io.graphmdl.base.type.TimestampType;
 import org.joda.time.Period;
@@ -111,6 +112,10 @@ public final class BigQueryType
             }
             List<PGType<?>> innerPgTypes = field.getSubFields().stream().map(BigQueryType::toPGType).collect(toImmutableList());
             return new RecordType(innerPgTypes);
+        }
+        // BIGQUERY ARRAY
+        if (field.getMode().equals(Field.Mode.REPEATED)) {
+            return PGTypes.getArrayType(toPGType(bigQueryType).oid());
         }
         return toPGType(bigQueryType);
     }

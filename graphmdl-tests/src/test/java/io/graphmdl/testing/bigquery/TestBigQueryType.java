@@ -42,6 +42,7 @@ import java.sql.Timestamp;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -138,6 +139,11 @@ public class TestBigQueryType
         structObject2.setType("record");
         structObject2.setValue("(1,\"(2,hello)\")");
         typeCaseMap.put(DataType.STRUCT, new TypeCase("c_multi_struct", "struct<s1 int64, s2 struct<s2_1 int64, s2_2 string>>", "(1, struct(2, \"hello\"))", structObject2));
+        PGobject structObject3 = new PGobject();
+        structObject3.setType("record");
+        structObject3.setValue("(1,\"{hello,world}\")");
+
+        typeCaseMap.put(DataType.STRUCT, new TypeCase("c_array_struct", "struct<s1 int64, s2 array<string>>", "(1, [\"hello\", \"world\"])", structObject3));
         return typeCaseMap;
     }
 
@@ -348,10 +354,10 @@ public class TestBigQueryType
 
         TypeCase(String columnName, String typeStatement, String value, Object expectedPgValue)
         {
-            this.columnName = columnName;
-            this.typeStatement = typeStatement;
-            this.value = value;
-            this.expectedPgValue = expectedPgValue;
+            this.columnName = requireNonNull(columnName, "columnName is null");
+            this.typeStatement = requireNonNull(typeStatement, "typeStatement is null");
+            this.value = requireNonNull(value, "value is null");
+            this.expectedPgValue = requireNonNull(expectedPgValue, "expectedPgValue is null");
         }
 
         public String getColumnName()
