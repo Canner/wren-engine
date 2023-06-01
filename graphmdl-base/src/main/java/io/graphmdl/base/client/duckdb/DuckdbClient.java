@@ -118,6 +118,20 @@ public final class DuckdbClient
         }
     }
 
+    public void executeDDL(String sql, List<Object> parameters)
+    {
+        try (Connection connection = createConnection();
+                PreparedStatement statement = connection.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                statement.setObject(i + 1, parameters.get(i));
+            }
+            statement.execute();
+        }
+        catch (SQLException se) {
+            throw new RuntimeException(se);
+        }
+    }
+
     @Override
     public List<String> listTables()
     {
