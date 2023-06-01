@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -79,9 +78,8 @@ public class BigQueryRecordIterator
     public Object[] next()
     {
         FieldValueList fieldValues = resultIterator.next();
-        AtomicInteger index = new AtomicInteger(0);
-        return fieldValues.stream()
-                .map(fieldValue -> getFieldValue(bqFields.get(index.getAndIncrement()), fieldValue))
+        return bqFields.stream()
+                .map(field -> getFieldValue(field, fieldValues.get(field.getName())))
                 .toArray();
     }
 
