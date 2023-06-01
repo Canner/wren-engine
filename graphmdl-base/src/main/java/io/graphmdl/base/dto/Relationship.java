@@ -175,11 +175,13 @@ public class Relationship
             this.isDescending = ordering == Ordering.DESC;
         }
 
+        @JsonProperty
         public String getName()
         {
             return name;
         }
 
+        @JsonProperty
         public boolean isDescending()
         {
             return isDescending;

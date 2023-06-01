@@ -60,16 +60,19 @@ public class TimeGrain
         this.timeUnits = timeUnits == null ? List.of() : timeUnits;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getRefColumn()
     {
         return refColumn;
     }
 
+    @JsonProperty
     public List<TimeUnit> getDateParts()
     {
         return timeUnits;

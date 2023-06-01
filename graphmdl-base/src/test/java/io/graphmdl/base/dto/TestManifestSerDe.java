@@ -24,7 +24,11 @@ import static io.graphmdl.base.dto.EnumDefinition.enumDefinition;
 import static io.graphmdl.base.dto.EnumValue.enumValue;
 import static io.graphmdl.base.dto.Metric.metric;
 import static io.graphmdl.base.dto.Model.model;
+import static io.graphmdl.base.dto.Relationship.SortKey.sortKey;
 import static io.graphmdl.base.dto.Relationship.relationship;
+import static io.graphmdl.base.dto.TimeGrain.TimeUnit.DAY;
+import static io.graphmdl.base.dto.TimeGrain.TimeUnit.MONTH;
+import static io.graphmdl.base.dto.TimeGrain.timeGrain;
 import static io.graphmdl.base.dto.View.view;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -81,7 +85,11 @@ public class TestManifestSerDe
                                         column("orders", "OrdersModel", "OrdersCustomer", true)),
                                 "custkey")))
                 .setRelationships(List.of(
-                        relationship("OrdersCustomer", List.of("OrdersModel", "CustomerModel"), JoinType.MANY_TO_ONE, "OrdersModel.custkey = CustomerModel.custkey")))
+                        relationship("OrdersCustomer",
+                                List.of("OrdersModel", "CustomerModel"),
+                                JoinType.MANY_TO_ONE,
+                                "OrdersModel.custkey = CustomerModel.custkey",
+                                List.of(sortKey("orderkey", Relationship.SortKey.Ordering.ASC)))))
                 .setEnumDefinitions(List.of(
                         enumDefinition("OrderStatus", List.of(
                                 enumValue("PENDING", "pending"),
@@ -91,7 +99,7 @@ public class TestManifestSerDe
                 .setMetrics(List.of(metric("Revenue", "OrdersModel",
                         List.of(column("orderkey", "string", null, true)),
                         List.of(column("total", "integer", null, true)),
-                        List.of())))
+                        List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))))))
                 .setViews(List.of(view("useMetric", "select * from Revenue")))
                 .build();
     }
