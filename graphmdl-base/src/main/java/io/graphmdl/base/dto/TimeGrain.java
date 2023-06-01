@@ -95,4 +95,14 @@ public class TimeGrain
     {
         return Objects.hash(name, refColumn, timeUnits);
     }
+
+    @Override
+    public String toString()
+    {
+        return "TimeGrain{" +
+                "name='" + name + '\'' +
+                ", refColumn='" + refColumn + '\'' +
+                ", timeUnits=" + timeUnits +
+                '}';
+    }
 }

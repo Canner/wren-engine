@@ -52,21 +52,25 @@ public class Model
         this.primaryKey = primaryKey;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getRefSql()
     {
         return refSql;
     }
 
+    @JsonProperty
     public List<Column> getColumns()
     {
         return columns;
     }
 
+    @JsonProperty
     public String getPrimaryKey()
     {
         return primaryKey;
@@ -92,5 +96,16 @@ public class Model
     public int hashCode()
     {
         return Objects.hash(name, refSql, columns, primaryKey);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Model{" +
+                "name='" + name + '\'' +
+                ", refSql='" + refSql + '\'' +
+                ", columns=" + columns +
+                ", primaryKey='" + primaryKey + '\'' +
+                '}';
     }
 }
