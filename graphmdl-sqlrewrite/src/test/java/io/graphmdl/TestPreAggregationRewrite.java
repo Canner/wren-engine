@@ -43,7 +43,7 @@ import static io.graphmdl.base.dto.TimeGrain.TimeUnit.YEAR;
 import static io.graphmdl.base.dto.TimeGrain.timeGrain;
 import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -395,8 +395,8 @@ public class TestPreAggregationRewrite
                 defaultSchema,
                 tableConverter).orElseThrow(() -> new AssertionError("No rewrite result"));
 
-        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DECIMAL));
-        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DECIMAL));
+        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
+        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DOUBLE));
         assertThat(result).isEqualTo(formatSql(expect));
         assertThat(actualStatement).isEqualTo(expect);
     }
