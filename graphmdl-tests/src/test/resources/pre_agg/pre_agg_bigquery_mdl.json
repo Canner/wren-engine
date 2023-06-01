@@ -99,6 +99,16 @@
           "name": "c_boolean",
           "expression": "c_boolean",
           "type": "boolean"
+        },
+        {
+          "name": "c_timestamp",
+          "expression": "c_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_datetime",
+          "expression": "c_datetime",
+          "type": "timestamp"
         }
       ],
       "measure": [
