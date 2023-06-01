@@ -28,6 +28,7 @@ import static io.graphmdl.base.type.BooleanType.BOOLEAN;
 import static io.graphmdl.base.type.CharType.CHAR;
 import static io.graphmdl.base.type.DateType.DATE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class PGArray
         extends PGType<List<Object>>
@@ -242,7 +243,9 @@ public class PGArray
                 else {
                     bytes = ((PGType) innerType).encodeAsUTF8Text(o);
 
-                    encodedValues.add((byte) '"');
+                    if (needDoubleQuoteAround(innerType.oid(), bytes)) {
+                        encodedValues.add((byte) '"');
+                    }
                     if (isJson) {
                         for (byte aByte : bytes) {
                             // Escape double quotes with backslash for json
@@ -258,7 +261,9 @@ public class PGArray
                             encodedValues.add(aByte);
                         }
                     }
-                    encodedValues.add((byte) '"');
+                    if (needDoubleQuoteAround(innerType.oid(), bytes)) {
+                        encodedValues.add((byte) '"');
+                    }
                 }
             }
         }
@@ -375,5 +380,21 @@ public class PGArray
                 readArrayAsBinary(buffer, list, dims, thisDimension + 1);
             }
         }
+    }
+
+    private static boolean needDoubleQuoteAround(int typeOid, byte[] element)
+    {
+        // The array output routine will put double quotes around element values
+        // if they are empty strings, contain curly braces, delimiter characters, double quotes, backslashes, or white space, or match the word NULL.
+        // https://www.postgresql.org/docs/13/arrays.html#ARRAYS-IO
+        for (byte b : element) {
+            if (b == '{' || b == '}' || b == '"' || b == '\\' || b == ',' || b == '\t' || b == '\n' || b == '\r' || b == '\f' || b == ' ') {
+                return true;
+            }
+        }
+        if (VarcharType.OID == typeOid) {
+            return element.length == 0 || new String(element, UTF_8).equalsIgnoreCase("NULL");
+        }
+        return false;
     }
 }
