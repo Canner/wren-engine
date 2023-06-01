@@ -14,6 +14,7 @@
 
 package io.graphmdl.connector.bigquery;
 
+import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.graphmdl.base.GraphMDLException;
@@ -23,6 +24,8 @@ import io.graphmdl.base.type.JsonType;
 import io.graphmdl.base.type.NumericType;
 import io.graphmdl.base.type.PGArray;
 import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.PGTypes;
+import io.graphmdl.base.type.RecordType;
 import io.graphmdl.base.type.TimestampType;
 import org.joda.time.Period;
 
@@ -35,13 +38,16 @@ import static com.google.cloud.bigquery.StandardSQLTypeName.BIGNUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BOOL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.BYTES;
 import static com.google.cloud.bigquery.StandardSQLTypeName.DATE;
+import static com.google.cloud.bigquery.StandardSQLTypeName.DATETIME;
 import static com.google.cloud.bigquery.StandardSQLTypeName.FLOAT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INT64;
 import static com.google.cloud.bigquery.StandardSQLTypeName.INTERVAL;
 import static com.google.cloud.bigquery.StandardSQLTypeName.JSON;
 import static com.google.cloud.bigquery.StandardSQLTypeName.NUMERIC;
 import static com.google.cloud.bigquery.StandardSQLTypeName.STRING;
+import static com.google.cloud.bigquery.StandardSQLTypeName.STRUCT;
 import static com.google.cloud.bigquery.StandardSQLTypeName.TIMESTAMP;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.BooleanType.BOOLEAN;
@@ -50,6 +56,7 @@ import static io.graphmdl.base.type.CharType.CHAR;
 import static io.graphmdl.base.type.DoubleType.DOUBLE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static io.graphmdl.base.type.RealType.REAL;
+import static io.graphmdl.base.type.RecordType.EMPTY_RECORD;
 import static io.graphmdl.base.type.SmallIntType.SMALLINT;
 import static io.graphmdl.base.type.TinyIntType.TINYINT;
 import static io.graphmdl.base.type.VarcharType.VARCHAR;
@@ -69,6 +76,7 @@ public final class BigQueryType
                 .put(FLOAT64, DOUBLE)
                 .put(DATE, DateType.DATE)
                 .put(BYTES, BYTEA)
+                .put(DATETIME, TimestampType.TIMESTAMP)
                 .put(TIMESTAMP, TimestampType.TIMESTAMP)
                 .put(NUMERIC, NumericType.NUMERIC)
                 .put(BIGNUMERIC, NumericType.NUMERIC)
@@ -95,7 +103,24 @@ public final class BigQueryType
                 .build();
     }
 
-    public static PGType<?> toPGType(StandardSQLTypeName bigQueryType)
+    public static PGType<?> toPGType(Field field)
+    {
+        StandardSQLTypeName bigQueryType = field.getType().getStandardType();
+        if (bigQueryType.equals(STRUCT)) {
+            if (field.getSubFields().isEmpty()) {
+                return EMPTY_RECORD;
+            }
+            List<PGType<?>> innerPgTypes = field.getSubFields().stream().map(BigQueryType::toPGType).collect(toImmutableList());
+            return new RecordType(innerPgTypes);
+        }
+        // BIGQUERY ARRAY
+        if (field.getMode().equals(Field.Mode.REPEATED)) {
+            return PGTypes.getArrayType(toPGType(bigQueryType).oid());
+        }
+        return toPGType(bigQueryType);
+    }
+
+    private static PGType<?> toPGType(StandardSQLTypeName bigQueryType)
     {
         return Optional.ofNullable(bqTypeToPgTypeMap.get(bigQueryType))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + bigQueryType));

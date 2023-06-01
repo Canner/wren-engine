@@ -21,19 +21,22 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.type.PGType;
-import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.connector.bigquery.BigQueryType;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.google.cloud.bigquery.StandardSQLTypeName.STRUCT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -56,13 +59,7 @@ public class BigQueryRecordIterator
         this.resultIterator = tableResult.iterateAll().iterator();
 
         this.types = tableResult.getSchema().getFields().stream()
-                .map(field -> {
-                    PGType<?> fieldType = BigQueryType.toPGType(field.getType().getStandardType());
-                    if (field.getMode().equals(Field.Mode.REPEATED)) {
-                        return PGTypes.getArrayType(fieldType.oid());
-                    }
-                    return fieldType;
-                })
+                .map(BigQueryType::toPGType)
                 .collect(toImmutableList());
 
         this.bqFields = tableResult.getSchema().getFields();
@@ -81,28 +78,37 @@ public class BigQueryRecordIterator
     public Object[] next()
     {
         FieldValueList fieldValues = resultIterator.next();
-        AtomicInteger index = new AtomicInteger(0);
-        return fieldValues.stream()
-                .map(fieldValue -> getFieldValue(index.getAndIncrement(), fieldValue))
+        return bqFields.stream()
+                .map(field -> getFieldValue(field, fieldValues.get(field.getName())))
                 .toArray();
     }
 
-    private Object getFieldValue(int index, FieldValue fieldValue)
+    private static Object getFieldValue(Field field, FieldValue fieldValue)
     {
         if (fieldValue.isNull()) {
             return null;
         }
 
-        StandardSQLTypeName typeName = bqFields.get(index).getType().getStandardType();
-        if (bqFields.get(index).getMode().equals(Field.Mode.REPEATED)) {
+        StandardSQLTypeName typeName = field.getType().getStandardType();
+        if (field.getMode().equals(Field.Mode.REPEATED)) {
             return fieldValue.getRepeatedValue().stream()
                     .map(innerField -> getFieldValue(typeName, innerField))
                     .collect(toImmutableList());
         }
+
+        if (typeName.equals(STRUCT)) {
+            List<Field> subFields = field.getSubFields();
+            List<FieldValue> subFieldValues = fieldValue.getRecordValue();
+            Map<String, Object> result = new HashMap<>();
+            for (int i = 0; i < subFields.size(); i++) {
+                result.put(subFields.get(i).getName(), getFieldValue(subFields.get(i), subFieldValues.get(i)));
+            }
+            return result;
+        }
         return getFieldValue(typeName, fieldValue);
     }
 
-    private Object getFieldValue(StandardSQLTypeName typeName, FieldValue fieldValue)
+    private static Object getFieldValue(StandardSQLTypeName typeName, FieldValue fieldValue)
     {
         switch (typeName) {
             case BOOL:
@@ -118,6 +124,8 @@ public class BigQueryRecordIterator
                 return fieldValue.getBytesValue();
             case DATE:
                 return fieldValue.getValue();
+            case DATETIME:
+                return convertToMicroseconds(LocalDateTime.parse(fieldValue.getStringValue()));
             case TIMESTAMP:
                 return fieldValue.getTimestampValue();
             case NUMERIC:
@@ -135,7 +143,7 @@ public class BigQueryRecordIterator
         return types;
     }
 
-    private Period convertBigQueryIntervalToPeriod(String value)
+    private static Period convertBigQueryIntervalToPeriod(String value)
     {
         // BigQuery interval format: [sign]Y-M [sign]D [sign]H:M:S[.F], and F up to six digits
         Pattern pattern = Pattern.compile("(?<NEG>-?)(?<Y>[0-9]+)-(?<M>[0-9]+) (?<D>-?[0-9]+) (?<NEGTIME>-?)(?<H>[0-9]+):(?<MIN>[0-9]+):(?<S>[0-9]+).?(?<F>[0-9]{1,6})?");
@@ -156,5 +164,10 @@ public class BigQueryRecordIterator
         }
         String micro = StringUtils.rightPad(matcher.group("F"), 6, '0');
         return new Period(year, mon, 0, day, hour, min, sec, Integer.parseInt(micro) / 1000);
+    }
+
+    private static long convertToMicroseconds(LocalDateTime localDateTime)
+    {
+        return (localDateTime.toInstant(UTC).getEpochSecond() * 1000000) + (localDateTime.getNano() / 1000);
     }
 }
