@@ -1,0 +1,123 @@
+{
+  "catalog": "canner-cml",
+  "schema": "cml_temp",
+  "models": [
+    {
+      "name": "BigQueryType",
+      "refSql": "select * from \"canner-cml\".cml_temp.preagg_bigquery_type",
+      "columns": [
+        {
+          "name": "c_string",
+          "expression": "c_string",
+          "type": "string"
+        },
+        {
+          "name": "c_bytes",
+          "expression": "c_bytes",
+          "type": "bytea"
+        },
+        {
+          "name": "c_integer",
+          "expression": "c_integer",
+          "type": "integer"
+        },
+        {
+          "name": "c_float",
+          "expression": "c_float",
+          "type": "double"
+        },
+        {
+          "name": "c_numeric",
+          "expression": "c_numeric",
+          "type": "numeric"
+        },
+        {
+          "name": "c_bignumeric",
+          "expression": "c_bignumeric",
+          "type": "numeric"
+        },
+        {
+          "name": "c_boolean",
+          "expression": "c_boolean",
+          "type": "boolean"
+        },
+        {
+          "name": "c_timestamp",
+          "expression": "c_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_date",
+          "expression": "c_date",
+          "type": "date"
+        },
+        {
+          "name": "c_datetime",
+          "expression": "c_datetime",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_time",
+          "expression": "c_time",
+          "type": "time"
+        },
+        {
+          "name": "c_json",
+          "expression": "c_json",
+          "type": "json"
+        },
+        {
+          "name": "c_interval",
+          "expression": "c_interval",
+          "type": "interval"
+        }
+      ],
+      "primaryKey": "c_string"
+    }
+  ],
+  "metrics": [
+    {
+      "preAggregated": "true",
+      "name": "PrintBigQueryType",
+      "baseModel": "BigQueryType",
+      "dimension": [
+        {
+          "name": "c_string",
+          "type": "string"
+        },
+        {
+          "name": "c_integer",
+          "expression": "c_integer",
+          "type": "integer"
+        },
+        {
+          "name": "c_float",
+          "expression": "c_float",
+          "type": "double"
+        },
+        {
+          "name": "c_boolean",
+          "expression": "c_boolean",
+          "type": "boolean"
+        }
+      ],
+      "measure": [
+        {
+          "name": "print_bigquery_type",
+          "type": "string",
+          "expression": "c_string"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "c_timestamp",
+          "refColumn": "c_timestamp",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    }
+  ]
+}
