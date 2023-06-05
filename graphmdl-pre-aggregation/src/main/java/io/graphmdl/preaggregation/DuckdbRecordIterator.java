@@ -26,9 +26,8 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import static io.graphmdl.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
 import static java.time.ZoneOffset.UTC;
@@ -83,9 +82,9 @@ public class DuckdbRecordIterator
     @Override
     public Object[] next()
     {
-        AtomicInteger index = new AtomicInteger();
-        return Arrays.stream(recordIterator.next())
-                .map(value -> convertValue(types.get(index.getAndIncrement()), value))
+        Object[] record = recordIterator.next();
+        return IntStream.range(0, record.length)
+                .mapToObj(index -> convertValue(types.get(index), record[index]))
                 .toArray();
     }
 
