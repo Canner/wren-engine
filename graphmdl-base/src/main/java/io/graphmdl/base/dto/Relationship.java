@@ -107,7 +107,6 @@ public class Relationship
         return manySideSortKeys;
     }
 
-    @JsonProperty
     public boolean isReverse()
     {
         return isReverse;
