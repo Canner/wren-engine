@@ -1,0 +1,127 @@
+{
+  "catalog": "canner-cml",
+  "schema": "cml_temp",
+  "models": [
+    {
+      "name": "BigQueryType",
+      "refSql": "select * from \"canner-cml\".cml_temp.preagg_bigquery_type",
+      "columns": [
+        {
+          "name": "c_string",
+          "type": "string"
+        },
+        {
+          "name": "c_bytes",
+          "type": "bytea"
+        },
+        {
+          "name": "c_integer",
+          "type": "integer"
+        },
+        {
+          "name": "c_float",
+          "type": "double"
+        },
+        {
+          "name": "c_numeric",
+          "type": "numeric"
+        },
+        {
+          "name": "c_bignumeric",
+          "type": "numeric"
+        },
+        {
+          "name": "c_boolean",
+          "type": "boolean"
+        },
+        {
+          "name": "c_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_date",
+          "type": "date"
+        },
+        {
+          "name": "c_datetime",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_time",
+          "type": "time"
+        },
+        {
+          "name": "c_json",
+          "type": "json"
+        },
+        {
+          "name": "c_interval",
+          "type": "interval"
+        }
+      ],
+      "primaryKey": "c_string"
+    }
+  ],
+  "metrics": [
+    {
+      "preAggregated": "true",
+      "name": "PrintBigQueryType",
+      "baseModel": "BigQueryType",
+      "dimension": [
+        {
+          "name": "c_string",
+          "type": "string"
+        },
+        {
+          "name": "c_bytes",
+          "type": "bytea"
+        },
+        {
+          "name": "c_integer",
+          "type": "integer"
+        },
+        {
+          "name": "c_float",
+          "type": "double"
+        },
+        {
+          "name": "c_numeric",
+          "type": "numeric"
+        },
+        {
+          "name": "c_boolean",
+          "type": "boolean"
+        },
+        {
+          "name": "c_timestamp",
+          "type": "timestamp"
+        },
+        {
+          "name": "c_date",
+          "type": "date"
+        },
+        {
+          "name": "c_datetime",
+          "type": "timestamp"
+        }
+      ],
+      "measure": [
+        {
+          "name": "print_bigquery_type",
+          "type": "string",
+          "expression": "c_string"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "c_timestamp",
+          "refColumn": "c_timestamp",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    }
+  ]
+}

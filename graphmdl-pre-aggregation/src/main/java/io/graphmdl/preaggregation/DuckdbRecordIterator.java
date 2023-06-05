@@ -17,14 +17,20 @@ import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
+import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.PGType;
+import io.graphmdl.base.type.TimestampType;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static io.graphmdl.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 
 public class DuckdbRecordIterator
@@ -76,6 +82,30 @@ public class DuckdbRecordIterator
     @Override
     public Object[] next()
     {
-        return recordIterator.next();
+        Object[] record = recordIterator.next();
+        return IntStream.range(0, record.length)
+                .mapToObj(index -> convertValue(types.get(index), record[index]))
+                .toArray();
+    }
+
+    private Object convertValue(PGType<?> pgType, Object value)
+    {
+        try {
+            if (pgType instanceof TimestampType) {
+                return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
+            }
+            if (pgType instanceof DateType) {
+                return value.toString();
+            }
+            return value;
+        }
+        catch (Exception e) {
+            throw new IllegalArgumentException("Unsupported value: " + value, e);
+        }
+    }
+
+    private static long convertToMicroseconds(LocalDateTime localDateTime)
+    {
+        return (localDateTime.toInstant(UTC).getEpochSecond() * 1000000) + (localDateTime.getNano() / 1000);
     }
 }
