@@ -60,16 +60,19 @@ public class TimeGrain
         this.timeUnits = timeUnits == null ? List.of() : timeUnits;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getRefColumn()
     {
         return refColumn;
     }
 
+    @JsonProperty
     public List<TimeUnit> getDateParts()
     {
         return timeUnits;
@@ -94,5 +97,15 @@ public class TimeGrain
     public int hashCode()
     {
         return Objects.hash(name, refColumn, timeUnits);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "TimeGrain{" +
+                "name='" + name + '\'' +
+                ", refColumn='" + refColumn + '\'' +
+                ", timeUnits=" + timeUnits +
+                '}';
     }
 }

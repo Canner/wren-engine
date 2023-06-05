@@ -46,11 +46,13 @@ public class EnumValue
         this.value = value;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getValue()
     {
         return Optional.ofNullable(value).orElse(name);
@@ -73,5 +75,14 @@ public class EnumValue
     public int hashCode()
     {
         return Objects.hash(name, value);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "EnumValue{" +
+                "name='" + name + '\'' +
+                ", value='" + value + '\'' +
+                '}';
     }
 }

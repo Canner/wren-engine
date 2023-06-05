@@ -61,26 +61,31 @@ public class Column
         this.expression = expression;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getType()
     {
         return type;
     }
 
+    @JsonProperty
     public Optional<String> getRelationship()
     {
         return Optional.ofNullable(relationship);
     }
 
+    @JsonProperty
     public boolean isNotNull()
     {
         return notNull;
     }
 
+    @JsonProperty
     public Optional<String> getExpression()
     {
         return Optional.ofNullable(expression);
@@ -120,5 +125,17 @@ public class Column
     public int hashCode()
     {
         return Objects.hash(name, type, notNull, relationship, expression);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Column{" +
+                "name='" + name + '\'' +
+                ", type='" + type + '\'' +
+                ", notNull=" + notNull +
+                ", relationship='" + relationship + '\'' +
+                ", expression='" + expression + '\'' +
+                '}';
     }
 }

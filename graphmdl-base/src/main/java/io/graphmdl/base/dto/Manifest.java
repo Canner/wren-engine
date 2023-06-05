@@ -16,14 +16,12 @@ package io.graphmdl.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-@JsonDeserialize(builder = Manifest.Builder.class)
 public class Manifest
 {
     private final String catalog;
@@ -95,12 +93,60 @@ public class Manifest
         return metrics;
     }
 
+    @JsonProperty
     public List<View> getViews()
     {
         return views;
     }
 
-    @JsonPOJOBuilder(buildMethodName = "build", withPrefix = "set")
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Manifest manifest = (Manifest) o;
+        return Objects.equals(catalog, manifest.catalog) &&
+                Objects.equals(schema, manifest.schema) &&
+                Objects.equals(models, manifest.models) &&
+                Objects.equals(relationships, manifest.relationships) &&
+                Objects.equals(enumDefinitions, manifest.enumDefinitions) &&
+                Objects.equals(metrics, manifest.metrics) &&
+                Objects.equals(views, manifest.views);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(
+                catalog,
+                schema,
+                models,
+                relationships,
+                enumDefinitions,
+                metrics,
+                views);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Manifest{" +
+                "catalog='" + catalog + '\'' +
+                ", schema='" + schema + '\'' +
+                ", models=" + models +
+                ", relationships=" + relationships +
+                ", enumDefinitions=" + enumDefinitions +
+                ", metrics=" + metrics +
+                ", views=" + views +
+                '}';
+    }
+
     public static class Builder
     {
         private String catalog;

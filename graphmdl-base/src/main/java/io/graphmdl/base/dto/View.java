@@ -40,11 +40,13 @@ public class View
         this.statement = requireNonNull(statement, "statement is null");
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getStatement()
     {
         return statement;
@@ -68,5 +70,14 @@ public class View
     public int hashCode()
     {
         return Objects.hash(name, statement);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "View{" +
+                "name='" + name + '\'' +
+                ", statement='" + statement + '\'' +
+                '}';
     }
 }

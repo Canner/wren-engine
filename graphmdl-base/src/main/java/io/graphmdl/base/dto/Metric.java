@@ -66,26 +66,31 @@ public class Metric
         this.refreshTime = refreshTime == null ? new Duration(30, MINUTES) : refreshTime;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public String getBaseModel()
     {
         return baseModel;
     }
 
+    @JsonProperty
     public List<Column> getDimension()
     {
         return dimension;
     }
 
+    @JsonProperty
     public List<Column> getMeasure()
     {
         return measure;
     }
 
+    @JsonProperty
     public List<TimeGrain> getTimeGrain()
     {
         return timeGrain;
@@ -98,11 +103,13 @@ public class Metric
                 .findFirst();
     }
 
+    @JsonProperty
     public boolean isPreAggregated()
     {
         return preAggregated;
     }
 
+    @JsonProperty
     public Duration getRefreshTime()
     {
         return refreshTime;
@@ -131,5 +138,19 @@ public class Metric
     public int hashCode()
     {
         return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated, refreshTime);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Metric{" +
+                "name='" + name + '\'' +
+                ", baseModel='" + baseModel + '\'' +
+                ", dimension=" + dimension +
+                ", measure=" + measure +
+                ", timeGrain=" + timeGrain +
+                ", preAggregated=" + preAggregated +
+                ", refreshTime=" + refreshTime +
+                '}';
     }
 }

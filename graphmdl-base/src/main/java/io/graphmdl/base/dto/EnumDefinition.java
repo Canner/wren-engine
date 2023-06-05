@@ -42,11 +42,13 @@ public class EnumDefinition
         this.values = requireNonNull(values);
     }
 
+    @JsonProperty
     public List<EnumValue> getValues()
     {
         return values;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
@@ -76,5 +78,14 @@ public class EnumDefinition
     public int hashCode()
     {
         return Objects.hash(name, values);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "EnumDefinition{" +
+                "name='" + name + '\'' +
+                ", values=" + values +
+                '}';
     }
 }

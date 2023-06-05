@@ -77,29 +77,39 @@ public class Relationship
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
     }
 
+    @JsonProperty
     public List<String> getModels()
     {
         return models;
     }
 
+    @JsonProperty
     public JoinType getJoinType()
     {
         return joinType;
     }
 
+    @JsonProperty
     public String getCondition()
     {
         return condition;
     }
 
+    @JsonProperty
     public List<SortKey> getManySideSortKeys()
     {
         return manySideSortKeys;
+    }
+
+    public boolean isReverse()
+    {
+        return isReverse;
     }
 
     @Override
@@ -124,6 +134,19 @@ public class Relationship
     public int hashCode()
     {
         return Objects.hash(name, models, joinType, condition, isReverse, manySideSortKeys);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Relationship{" +
+                "name='" + name + '\'' +
+                ", models=" + models +
+                ", joinType=" + joinType +
+                ", condition='" + condition + '\'' +
+                ", isReverse=" + isReverse +
+                ", manySideSortKeys=" + manySideSortKeys +
+                '}';
     }
 
     public static class SortKey
@@ -151,11 +174,13 @@ public class Relationship
             this.isDescending = ordering == Ordering.DESC;
         }
 
+        @JsonProperty
         public String getName()
         {
             return name;
         }
 
+        @JsonProperty
         public boolean isDescending()
         {
             return isDescending;
@@ -179,6 +204,15 @@ public class Relationship
         public int hashCode()
         {
             return Objects.hash(name, isDescending);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "SortKey{" +
+                    "name='" + name + '\'' +
+                    ", isDescending=" + isDescending +
+                    '}';
         }
     }
 }
