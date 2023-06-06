@@ -118,6 +118,7 @@ public final class DuckdbClient
         }
     }
 
+    // for canner use
     public void executeDDL(String sql, List<Object> parameters)
     {
         try (Connection connection = createConnection();
