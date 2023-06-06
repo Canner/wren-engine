@@ -112,15 +112,27 @@ public class RelationshipCteGenerator
     {
         requireNonNull(nameParts, "nameParts is null");
         checkArgument(!nameParts.isEmpty(), "nameParts is empty");
-        register(nameParts, operation, nameParts.get(0));
+        register(nameParts, operation, nameParts.get(0), getLast(nameParts));
     }
 
     public void register(List<String> nameParts, RelationshipOperation operation, String baseModel)
     {
         requireNonNull(nameParts, "nameParts is null");
+        checkArgument(!nameParts.isEmpty(), "nameParts is empty");
+        register(nameParts, operation, baseModel, getLast(nameParts));
+    }
+
+    public void register(List<String> nameParts, RelationshipOperation operation, String baseModel, String originalName)
+    {
+        requireNonNull(nameParts, "nameParts is null");
         requireNonNull(operation.getRsItems(), "rsItems is null");
         checkArgument(!nameParts.isEmpty(), "nameParts is empty");
         checkArgument(!operation.getRsItems().isEmpty() && operation.getRsItems().size() <= 2, "The size of rsItems should be 1 or 2");
+
+        // avoid duplicate cte registering
+        if (nameMapping.containsKey(String.join(".", nameParts))) {
+            return;
+        }
 
         RelationshipCTE relationshipCTE = createRelationshipCTE(operation.getRsItems());
         String name = String.join(".", nameParts);
@@ -633,6 +645,11 @@ public class RelationshipCteGenerator
     public Map<String, RelationshipCTEJoinInfo> getRelationshipInfoMapping()
     {
         return relationshipInfoMapping;
+    }
+
+    public Map<String, RelationshipCTE> getRelationshipCTEs()
+    {
+        return registeredCte;
     }
 
     public static class RelationshipOperation

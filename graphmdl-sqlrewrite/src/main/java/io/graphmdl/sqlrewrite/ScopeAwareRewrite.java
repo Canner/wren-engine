@@ -98,7 +98,7 @@ public class ScopeAwareRewrite
         protected Node visitDereferenceExpression(DereferenceExpression node, Scope context)
         {
             if (context != null && context.getRelationType().isPresent()) {
-                List<String> parts = getParts(node);
+                List<String> parts = getPartsQuietly(node);
                 for (int i = 0; i < parts.size(); i++) {
                     List<Field> field = context.getRelationType().get().resolveFields(QualifiedName.of(parts.subList(0, i + 1)));
                     if (field.size() == 1) {
@@ -114,6 +114,16 @@ public class ScopeAwareRewrite
                 }
             }
             return node;
+        }
+
+        private List<String> getPartsQuietly(Expression expression)
+        {
+            try {
+                return getParts(expression);
+            }
+            catch (IllegalArgumentException ex) {
+                return List.of();
+            }
         }
 
         private List<String> getParts(Expression expression)
@@ -138,6 +148,9 @@ public class ScopeAwareRewrite
                     builder.add(format("%s[%s]", getLast(baseQualifiedName), subscriptExpression.getIndex().toString()));
                     return builder.build();
                 }
+            }
+            else {
+                throw new IllegalArgumentException("Unsupported node ");
             }
             return ImmutableList.of();
         }

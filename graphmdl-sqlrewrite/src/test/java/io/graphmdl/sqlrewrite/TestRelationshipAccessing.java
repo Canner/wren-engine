@@ -1045,4 +1045,75 @@ public class TestRelationshipAccessing
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
+
+    @DataProvider
+    public Object[][] functionIndex()
+    {
+        return new Object[][] {
+                {"select filter(p.books, (book) -> book.name = 'book1' or book.name = 'book2')[0].name as filter_books from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${filter_cte} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , array_agg(t.bookId ORDER BY t.bookId ASC) filter(WHERE t.bookId IS NOT NULL) f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   WHERE ((t.name = 'book1') OR (t.name = 'book2'))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${filter_cte_index} (bookId, name, author, author_reverse, authorId, bk) AS (\n" +
+                                "   SELECT\n" +
+                                "     t.bookId bookId\n" +
+                                "   , t.name name\n" +
+                                "   , t.author author\n" +
+                                "   , t.author_reverse author_reverse\n" +
+                                "   , t.authorId authorId\n" +
+                                "   , s.bk bk\n" +
+                                "   FROM\n" +
+                                "     (${filter_cte} s\n" +
+                                "   LEFT JOIN Book t ON (s.f1[0] = t.bookId))\n" +
+                                ") \n" +
+                                "SELECT ${filter_cte_index}.name filter_books\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${filter_cte_index} ON (p.userId = ${filter_cte_index}.bk))"},
+        };
+    }
+
+    @Test(dataProvider = "functionIndex")
+    public void testFunctionIndex(String original, String expected)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Statement rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("filter_cte",
+                generator.getNameMapping().get("filter(p.books, (book) -> ((book.name = 'book1') OR (book.name = 'book2')))"));
+        replaceMap.put("filter_cte_index",
+                generator.getNameMapping().get("filter(p.books, (book) -> ((book.name = 'book1') OR (book.name = 'book2')))[0]"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
 }

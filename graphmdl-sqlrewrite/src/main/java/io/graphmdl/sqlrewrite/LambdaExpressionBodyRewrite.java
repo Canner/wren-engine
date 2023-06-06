@@ -14,7 +14,6 @@
 
 package io.graphmdl.sqlrewrite;
 
-import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -37,9 +36,9 @@ import static java.util.stream.Collectors.toList;
 
 public class LambdaExpressionBodyRewrite
 {
-    public static Expression rewrite(Node node, Field baseField, Identifier argument)
+    public static Expression rewrite(Node node, String modelName, Identifier argument)
     {
-        return (Expression) new Visitor(baseField, argument).process(node, Optional.empty());
+        return (Expression) new Visitor(modelName, argument).process(node, Optional.empty());
     }
 
     private LambdaExpressionBodyRewrite() {}
@@ -47,12 +46,12 @@ public class LambdaExpressionBodyRewrite
     static class Visitor
             extends BaseRewriter<Optional<Node>>
     {
-        private final Field baseField;
+        private final String modelName;
         private final Identifier argument;
 
-        Visitor(Field baseField, Identifier argument)
+        Visitor(String modelName, Identifier argument)
         {
-            this.baseField = requireNonNull(baseField, "baseField is null");
+            this.modelName = requireNonNull(modelName, "baseField is null");
             this.argument = requireNonNull(argument, "argument is null");
         }
 
@@ -80,7 +79,7 @@ public class LambdaExpressionBodyRewrite
         protected Node visitIdentifier(Identifier node, Optional<Node> context)
         {
             if (context.isEmpty()) {
-                return new StringLiteral(String.format("Relationship<%s>", baseField.getModelName().getSchemaTableName().getTableName()));
+                return new StringLiteral(String.format("Relationship<%s>", modelName));
             }
             if (argument.equals(node)) {
                 return new DereferenceExpression(new Identifier(TARGET_REFERENCE), (Identifier) context.get());

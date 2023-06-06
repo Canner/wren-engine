@@ -35,6 +35,11 @@
           "name": "orderdate",
           "expression": "o_orderdate",
           "type": "date"
+        },
+        {
+          "name": "lineitem",
+          "type": "Lineitem",
+          "relationship": "OrdersLineitem"
         }
       ],
       "primaryKey": "orderkey"

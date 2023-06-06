@@ -49,7 +49,8 @@ public class GraphMDLPlanner
         Statement scopedStatement = ScopeAwareRewrite.SCOPE_AWARE_REWRITE.rewrite(statement, graphMDL, sessionContext);
         Statement result = scopedStatement;
         for (GraphMDLRule rule : rules) {
-            result = rule.apply(result, sessionContext, graphMDL);
+            // we will replace or rewrite sql node in sql rewrite, to avoid rewrite rules affect each other, format and parse sql before each rewrite
+            result = rule.apply(SQL_PARSER.createStatement(SqlFormatter.formatSql(result), new ParsingOptions(AS_DECIMAL)), sessionContext, graphMDL);
         }
         return SqlFormatter.formatSql(result);
     }
