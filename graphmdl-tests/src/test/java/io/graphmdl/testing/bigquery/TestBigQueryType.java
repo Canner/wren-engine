@@ -127,6 +127,13 @@ public class TestBigQueryType
                 Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_json", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
                 "{a:2}"}));
+        PGobject s1 = new PGobject();
+        s1.setType("record");
+        s1.setValue("(1,hello)");
+        PGobject s2 = new PGobject();
+        s2.setType("record");
+        s2.setValue("(2,world)");
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_struct_in_array", "array<struct<s1 int64, s2 string>>", "[(1, 'hello'), (2, 'world')]", new PGobject[] {s1, s2}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_interval", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
 //                new PGInterval(0, 0, 1, 0, 0, 0), new PGInterval(0, 0, 2, 0, 0, 0)}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_geography", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
