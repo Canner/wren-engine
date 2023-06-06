@@ -114,7 +114,7 @@ public final class BigQueryType
             return new RecordType(innerPgTypes);
         }
         // BIGQUERY ARRAY
-        if (field.getMode().equals(Field.Mode.REPEATED)) {
+        if (Field.Mode.REPEATED.equals(field.getMode())) {
             return PGTypes.getArrayType(toPGType(bigQueryType).oid());
         }
         return toPGType(bigQueryType);
