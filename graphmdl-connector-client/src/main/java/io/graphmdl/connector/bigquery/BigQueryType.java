@@ -55,6 +55,7 @@ import static io.graphmdl.base.type.ByteaType.BYTEA;
 import static io.graphmdl.base.type.CharType.CHAR;
 import static io.graphmdl.base.type.DoubleType.DOUBLE;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.PGTypes.toPgRecordArray;
 import static io.graphmdl.base.type.RealType.REAL;
 import static io.graphmdl.base.type.RecordType.EMPTY_RECORD;
 import static io.graphmdl.base.type.SmallIntType.SMALLINT;
@@ -105,25 +106,33 @@ public final class BigQueryType
 
     public static PGType<?> toPGType(Field field)
     {
-        StandardSQLTypeName bigQueryType = field.getType().getStandardType();
-        if (bigQueryType.equals(STRUCT)) {
-            if (field.getSubFields().isEmpty()) {
-                return EMPTY_RECORD;
-            }
-            List<PGType<?>> innerPgTypes = field.getSubFields().stream().map(BigQueryType::toPGType).collect(toImmutableList());
-            return new RecordType(innerPgTypes);
-        }
         // BIGQUERY ARRAY
         if (Field.Mode.REPEATED.equals(field.getMode())) {
-            return PGTypes.getArrayType(toPGType(bigQueryType).oid());
+            if (field.getType().getStandardType().equals(STRUCT)) {
+                return toPgRecordArray(toPGTypeWithoutRepeated(field));
+            }
+            return PGTypes.getArrayType(toPGTypeWithoutRepeated(field).oid());
         }
-        return toPGType(bigQueryType);
+        return toPGTypeWithoutRepeated(field);
     }
 
-    private static PGType<?> toPGType(StandardSQLTypeName bigQueryType)
+    private static PGType<?> toPGTypeWithoutRepeated(Field field)
     {
+        StandardSQLTypeName bigQueryType = field.getType().getStandardType();
+        if (bigQueryType.equals(STRUCT)) {
+            return toPgRecordType(field);
+        }
         return Optional.ofNullable(bqTypeToPgTypeMap.get(bigQueryType))
                 .orElseThrow(() -> new GraphMDLException(NOT_SUPPORTED, "Unsupported Type: " + bigQueryType));
+    }
+
+    private static RecordType toPgRecordType(Field field)
+    {
+        if (field.getSubFields().isEmpty()) {
+            return EMPTY_RECORD;
+        }
+        List<PGType<?>> innerPgTypes = field.getSubFields().stream().map(BigQueryType::toPGType).collect(toImmutableList());
+        return new RecordType(innerPgTypes);
     }
 
     public static StandardSQLTypeName toBqType(PGType<?> pgType)
