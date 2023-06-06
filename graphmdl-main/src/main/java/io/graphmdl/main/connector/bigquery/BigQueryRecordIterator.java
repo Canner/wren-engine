@@ -90,7 +90,7 @@ public class BigQueryRecordIterator
         }
 
         StandardSQLTypeName typeName = field.getType().getStandardType();
-        if (field.getMode().equals(Field.Mode.REPEATED)) {
+        if (Field.Mode.REPEATED.equals(field.getMode())) {
             return fieldValue.getRepeatedValue().stream()
                     .map(innerField -> getFieldValue(typeName, innerField))
                     .collect(toImmutableList());
