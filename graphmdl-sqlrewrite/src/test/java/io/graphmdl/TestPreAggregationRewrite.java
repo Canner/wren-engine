@@ -33,6 +33,7 @@ import java.util.function.Function;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.graphmdl.base.GraphMDLTypes.DATE;
+import static io.graphmdl.base.GraphMDLTypes.DECIMAL;
 import static io.graphmdl.base.GraphMDLTypes.INTEGER;
 import static io.graphmdl.base.GraphMDLTypes.TIMESTAMP;
 import static io.graphmdl.base.GraphMDLTypes.VARCHAR;
@@ -42,8 +43,9 @@ import static io.graphmdl.base.dto.Model.model;
 import static io.graphmdl.base.dto.TimeGrain.TimeUnit.YEAR;
 import static io.graphmdl.base.dto.TimeGrain.timeGrain;
 import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
+import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -95,7 +97,7 @@ public class TestPreAggregationRewrite
                                 List.of(
                                         column("author", VARCHAR, null, true),
                                         column("album_name", VARCHAR, null, true, "Album.name")),
-                                List.of(column("price", INTEGER, null, true, "avg(Album.price)")),
+                                List.of(column("price", DECIMAL, null, true, "avg(Album.price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))),
@@ -300,6 +302,16 @@ public class TestPreAggregationRewrite
                 "with test_a as (with AvgCollection as (select * from table_Collection) select * from AvgCollection) select * from table_AvgCollection");
     }
 
+    @Test
+    public void testDecimalRewrite()
+    {
+        assertRewrite(
+                "SELECT * from AvgCollection where avg = DECIMAL '1.0'",
+                "graphmdl",
+                "test",
+                "SELECT * FROM table_AvgCollection WHERE avg = 1.0");
+    }
+
     @DataProvider(name = "unexpectedStatementProvider")
     public Object[][] unexpectedStatementProvider()
     {
@@ -395,9 +407,9 @@ public class TestPreAggregationRewrite
                 defaultSchema,
                 tableConverter).orElseThrow(() -> new AssertionError("No rewrite result"));
 
-        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
-        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DOUBLE));
-        assertThat(result).isEqualTo(formatSql(expect));
+        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DECIMAL));
+        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DECIMAL));
+        assertThat(result).isEqualTo(formatSql(expect, DUCKDB));
         assertThat(actualStatement).isEqualTo(expect);
     }
 

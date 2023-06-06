@@ -115,6 +115,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.sql.RowPatternFormatter.formatPattern;
 import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
+import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatName;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.tree.ComparisonExpression.Operator.EQUAL;
@@ -138,7 +139,7 @@ public final class ExpressionFormatter
 
     private static String formatIdentifier(String s, Dialect dialect)
     {
-        if (dialect == DEFAULT) {
+        if (dialect == DEFAULT || dialect == DUCKDB) {
             return '"' + s.replace("\"", "\"\"") + '"';
         }
         else if (dialect == BIGQUERY) {
@@ -288,7 +289,7 @@ public final class ExpressionFormatter
         protected String visitSubscriptExpression(SubscriptExpression node, Void context)
         {
             String subscript;
-            if (dialect == DEFAULT) {
+            if (dialect == DEFAULT || dialect == DUCKDB) {
                 subscript = formatSql(node.getIndex(), dialect);
             }
             else if (dialect == BIGQUERY) {
@@ -313,12 +314,18 @@ public final class ExpressionFormatter
         @Override
         protected String visitDoubleLiteral(DoubleLiteral node, Void context)
         {
+            if (dialect == DUCKDB) {
+                return String.valueOf(node.getValue());
+            }
             return doubleFormatter.get().format(node.getValue());
         }
 
         @Override
         protected String visitDecimalLiteral(DecimalLiteral node, Void context)
         {
+            if (dialect == DUCKDB) {
+                return node.getValue();
+            }
             // TODO return node value without "DECIMAL '..'" when FeaturesConfig#parseDecimalLiteralsAsDouble switch is removed
             return "DECIMAL '" + node.getValue() + "'";
         }
@@ -338,6 +345,9 @@ public final class ExpressionFormatter
         @Override
         protected String visitTimestampLiteral(TimestampLiteral node, Void context)
         {
+            if (dialect == DUCKDB) {
+                return "'" + node.getValue() + "'";
+            }
             return "TIMESTAMP '" + node.getValue() + "'";
         }
 
@@ -612,7 +622,7 @@ public final class ExpressionFormatter
                     .append(" LIKE ")
                     .append(process(node.getPattern(), context));
 
-            if (dialect == DEFAULT) {
+            if (dialect == DEFAULT || dialect == DUCKDB) {
                 node.getEscape().ifPresent(escape -> builder.append(" ESCAPE ")
                         .append(process(escape, context)));
             }
@@ -936,7 +946,7 @@ public final class ExpressionFormatter
         }
 
         StringBuilder builder = new StringBuilder();
-        if (dialect == DEFAULT) {
+        if (dialect == DEFAULT || dialect == DUCKDB) {
             builder.append("U&");
         }
         builder.append("'");
@@ -952,7 +962,7 @@ public final class ExpressionFormatter
                 builder.append(ch);
             }
             else {
-                if (dialect == DEFAULT) {
+                if (dialect == DEFAULT || dialect == DUCKDB) {
                     if (codePoint <= 0xFFFF) {
                         builder.append('\\');
                         builder.append(format("%04X", codePoint));
