@@ -66,7 +66,7 @@ public class TestReloadPreAggregation
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).doesNotContain(beforeMappingName);
-        assertThat(preAggregationManager.metricScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
+        assertThat(preAggregationManager.preAggregationScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
         assertThatThrownBy(() -> getDefaultMetricTablePair(beforeMappingName).getRequiredTableName()).isInstanceOf(NullPointerException.class);
     }
 
@@ -77,7 +77,7 @@ public class TestReloadPreAggregation
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);
-        assertThat(preAggregationManager.metricScheduledFutureExists(mapping)).isTrue();
+        assertThat(preAggregationManager.preAggregationScheduledFutureExists(mapping)).isTrue();
     }
 
     private void rewriteFile(String resourcePath)

@@ -16,6 +16,7 @@ package io.graphmdl.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.airlift.units.Duration;
 
 import java.util.List;
 import java.util.Objects;
@@ -23,20 +24,23 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 public class Model
+        implements PreAggregationInfo
 {
     private final String name;
     private final String refSql;
     private final List<Column> columns;
     private final String primaryKey;
+    private final boolean preAggregated;
+    private final Duration refreshTime;
 
     public static Model model(String name, String refSql, List<Column> columns)
     {
-        return new Model(name, refSql, columns, null);
+        return model(name, refSql, columns, null);
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
-        return new Model(name, refSql, columns, primaryKey);
+        return new Model(name, refSql, columns, primaryKey, false, null);
     }
 
     @JsonCreator
@@ -44,12 +48,16 @@ public class Model
             @JsonProperty("name") String name,
             @JsonProperty("refSql") String refSql,
             @JsonProperty("columns") List<Column> columns,
-            @JsonProperty("primaryKey") String primaryKey)
+            @JsonProperty("primaryKey") String primaryKey,
+            @JsonProperty("preAggregated") boolean preAggregated,
+            @JsonProperty("refreshTime") Duration refreshTime)
     {
         this.name = requireNonNull(name, "name is null");
         this.refSql = requireNonNull(refSql, "refSql is null");
         this.columns = columns == null ? List.of() : columns;
         this.primaryKey = primaryKey;
+        this.preAggregated = preAggregated;
+        this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
     }
 
     @JsonProperty
@@ -77,6 +85,20 @@ public class Model
     }
 
     @Override
+    @JsonProperty
+    public boolean isPreAggregated()
+    {
+        return preAggregated;
+    }
+
+    @Override
+    @JsonProperty
+    public Duration getRefreshTime()
+    {
+        return refreshTime;
+    }
+
+    @Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -86,10 +108,12 @@ public class Model
             return false;
         }
         Model that = (Model) obj;
-        return Objects.equals(name, that.name)
+        return preAggregated == that.preAggregated
+                && Objects.equals(name, that.name)
                 && Objects.equals(refSql, that.refSql)
                 && Objects.equals(columns, that.columns)
-                && Objects.equals(primaryKey, that.primaryKey);
+                && Objects.equals(primaryKey, that.primaryKey)
+                && Objects.equals(refreshTime, that.refreshTime);
     }
 
     @Override
@@ -106,6 +130,8 @@ public class Model
                 ", refSql='" + refSql + '\'' +
                 ", columns=" + columns +
                 ", primaryKey='" + primaryKey + '\'' +
+                ", preAggregated=" + preAggregated +
+                ", refreshTime=" + refreshTime +
                 '}';
     }
 }

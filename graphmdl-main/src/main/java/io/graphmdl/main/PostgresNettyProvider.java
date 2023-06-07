@@ -20,8 +20,8 @@ import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
 import io.graphmdl.main.wireprotocol.ssl.SslContextProvider;
-import io.graphmdl.preaggregation.MetricTableMapping;
 import io.graphmdl.preaggregation.PreAggregationManager;
+import io.graphmdl.preaggregation.PreAggregationTableMapping;
 import org.elasticsearch.common.network.NetworkService;
 
 import javax.inject.Inject;
@@ -40,7 +40,7 @@ public class PostgresNettyProvider
     private final SqlConverter sqlConverter;
     private final GraphMDLMetastore graphMDLMetastore;
     private final PreAggregationManager preAggregationManager;
-    private final MetricTableMapping metricTableMapping;
+    private final PreAggregationTableMapping preAggregationTableMapping;
 
     @Inject
     public PostgresNettyProvider(
@@ -51,7 +51,7 @@ public class PostgresNettyProvider
             SqlConverter sqlConverter,
             GraphMDLMetastore graphMDLMetastore,
             PreAggregationManager preAggregationManager,
-            MetricTableMapping metricTableMapping)
+            PreAggregationTableMapping preAggregationTableMapping)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
@@ -60,7 +60,7 @@ public class PostgresNettyProvider
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
-        this.metricTableMapping = requireNonNull(metricTableMapping, "metricTableMapping is null");
+        this.preAggregationTableMapping = requireNonNull(preAggregationTableMapping, "metricTableMapping is null");
     }
 
     @Override
@@ -76,7 +76,7 @@ public class PostgresNettyProvider
                 sqlConverter,
                 graphMDLMetastore,
                 preAggregationManager,
-                metricTableMapping);
+                preAggregationTableMapping);
         postgresNetty.start();
         return postgresNetty;
     }

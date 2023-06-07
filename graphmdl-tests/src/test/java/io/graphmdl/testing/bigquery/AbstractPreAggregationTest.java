@@ -20,8 +20,8 @@ import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.main.metadata.Metadata;
-import io.graphmdl.preaggregation.MetricTableMapping;
 import io.graphmdl.preaggregation.PreAggregationManager;
+import io.graphmdl.preaggregation.PreAggregationTableMapping;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 
@@ -33,7 +33,7 @@ public abstract class AbstractPreAggregationTest
         extends AbstractWireProtocolTest
 {
     protected final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
-    protected final MetricTableMapping metricTableMapping = getInstance(Key.get(MetricTableMapping.class));
+    protected final PreAggregationTableMapping preAggregationTableMapping = getInstance(Key.get(PreAggregationTableMapping.class));
     protected final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
 
     @Override
@@ -56,9 +56,9 @@ public abstract class AbstractPreAggregationTest
                 .build();
     }
 
-    protected MetricTableMapping.MetricTablePair getDefaultMetricTablePair(String metric)
+    protected PreAggregationTableMapping.PreAggregationInfoPair getDefaultMetricTablePair(String metric)
     {
-        return metricTableMapping.getPreAggregationMetricTablePair("canner-cml", "tpch_tiny", metric);
+        return preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "tpch_tiny", metric);
     }
 
     protected List<Object[]> queryDuckdb(String statement)

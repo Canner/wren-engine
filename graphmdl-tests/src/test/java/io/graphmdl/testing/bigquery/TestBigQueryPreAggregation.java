@@ -77,7 +77,7 @@ public class TestBigQueryPreAggregation
     public void testType()
             throws SQLException
     {
-        String mappingName = metricTableMapping.getPreAggregationMetricTablePair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());

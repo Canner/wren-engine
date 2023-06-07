@@ -20,11 +20,13 @@ import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.Manifest;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.base.dto.PreAggregationInfo;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.base.dto.View;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -107,11 +109,10 @@ public class GraphMDL
         return manifest.getMetrics();
     }
 
-    public List<Metric> listPreAggregatedMetrics()
+    public List<PreAggregationInfo> listPreAggregated()
     {
-        return manifest.getMetrics()
-                .stream()
-                .filter(Metric::isPreAggregated)
+        return Stream.concat(manifest.getMetrics().stream(), manifest.getModels().stream())
+                .filter(PreAggregationInfo::isPreAggregated)
                 .collect(toImmutableList());
     }
 

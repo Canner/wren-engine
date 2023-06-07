@@ -76,7 +76,7 @@ public class TestPreAggregation
 
         String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
-        assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
+        assertThat(errMsg).matches("Failed to do pre-aggregation for preAggregationInfo .*");
     }
 
     @Test
@@ -130,7 +130,7 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue limit 100",
-                                metricTableMapping::convertToAggregationTable,
+                                preAggregationTableMapping::convertToAggregationTable,
                                 graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
@@ -146,7 +146,7 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue where custkey = ?",
-                                metricTableMapping::convertToAggregationTable,
+                                preAggregationTableMapping::convertToAggregationTable,
                                 graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {

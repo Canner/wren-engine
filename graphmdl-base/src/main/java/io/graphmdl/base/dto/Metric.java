@@ -24,9 +24,9 @@ import java.util.Optional;
 
 import static io.graphmdl.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MINUTES;
 
 public class Metric
+        implements PreAggregationInfo
 {
     private final String name;
     private final String baseModel;
@@ -63,9 +63,10 @@ public class Metric
         this.preAggregated = preAggregated;
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
-        this.refreshTime = refreshTime == null ? new Duration(30, MINUTES) : refreshTime;
+        this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
     }
 
+    @Override
     @JsonProperty
     public String getName()
     {
@@ -103,12 +104,14 @@ public class Metric
                 .findFirst();
     }
 
+    @Override
     @JsonProperty
     public boolean isPreAggregated()
     {
         return preAggregated;
     }
 
+    @Override
     @JsonProperty
     public Duration getRefreshTime()
     {
