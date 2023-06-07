@@ -14,6 +14,7 @@
 
 package io.graphmdl.testing.bigquery;
 
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
@@ -23,12 +24,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -124,6 +129,82 @@ public class TestBigQueryPreAggregation
             // TODO complex type
 //            assertThat(resultSet.getObject("c_struct")).isEqualTo(ImmutableList.of(1L, "hello"));
 //            assertThat(resultSet.getObject("c_array_string")).isEqualTo(ImmutableList.of("hello", "world"));
+        }
+    }
+
+    @DataProvider(name = "typesInPredicateProvider")
+    public static Object[][] typesInPredicateProvider()
+    {
+        return new Object[][] {
+                {"c_string", "'hello'"},
+                {"c_bytes", "varbinary 'hello'"},
+                {"c_integer", 12345},
+                {"c_float", 1.2345},
+                {"c_numeric", 1.2345},
+                {"c_boolean", true},
+                {"c_timestamp", "'2020-01-01 15:10:55'"},
+                {"c_date", "'2020-01-01'"},
+                {"c_datetime", "'2020-01-01 15:10:55.123456'"},
+        };
+    }
+
+    @Test(dataProvider = "typesInPredicateProvider")
+    public void testTypesInPredicate(String columnName, Object value)
+            throws SQLException
+    {
+        String mappingName = metricTableMapping.getPreAggregationMetricTablePair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        List<Object[]> tables = queryDuckdb("show tables");
+
+        Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
+        assertThat(tableNames).contains(mappingName);
+
+        try (Connection connection = createConnection();
+                PreparedStatement stmt = connection.prepareStatement(format("select * from PrintBigQueryType where %s = %s", columnName, value))) {
+            ResultSet resultSet = stmt.executeQuery();
+            int count = 0;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(1);
+        }
+    }
+
+    @DataProvider(name = "typesInPredicateWithPreparedStatementProvider")
+    public static Object[][] typesInPredicateWithPreparedStatementProvider()
+    {
+        return new Object[][] {
+                {"c_string", "hello"},
+                {"c_bytes", "hello".getBytes(UTF_8)},
+                {"c_integer", 12345},
+                {"c_float", 1.2345},
+                {"c_numeric", 1.2345},
+                {"c_boolean", true},
+                {"c_timestamp", LocalDateTime.parse("2020-01-01 15:10:55", DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss"))},
+                {"c_date", LocalDate.parse("2020-01-01", DateTimeFormatter.ofPattern("uuuu-MM-dd"))},
+                // todo https://github.com/Canner/canner-metric-layer/issues/262
+//                {"c_datetime", LocalDateTime.parse("2020-01-01 15:10:55.123456", DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss.SSSSSS"))},
+        };
+    }
+
+    @Test(dataProvider = "typesInPredicateWithPreparedStatementProvider")
+    public void testTypesInPredicateWithPreparedStatement(String columnName, Object value)
+            throws SQLException
+    {
+        String mappingName = metricTableMapping.getPreAggregationMetricTablePair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        List<Object[]> tables = queryDuckdb("show tables");
+
+        Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
+        assertThat(tableNames).contains(mappingName);
+
+        try (Connection connection = createConnection();
+                PreparedStatement stmt = connection.prepareStatement(format("select * from PrintBigQueryType where %s = ?", columnName))) {
+            stmt.setObject(1, value);
+            ResultSet resultSet = stmt.executeQuery();
+            int count = 0;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(1);
         }
     }
 }
