@@ -27,8 +27,10 @@ public class PreAggregationModule
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(DuckdbStorageConfig.class);
+        configBinder(binder).bindConfig(DuckdbS3StyleStorageConfig.class);
+        binder.bind(PreAggregationStorageConfig.class).to(DuckdbS3StyleStorageConfig.class).in(Scopes.SINGLETON);
         binder.bind(PreAggregationManager.class).in(Scopes.SINGLETON);
         binder.bind(DuckdbClient.class).in(Scopes.SINGLETON);
+        binder.bind(MetricTableMapping.class).in(Scopes.SINGLETON);
     }
 }

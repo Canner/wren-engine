@@ -26,8 +26,10 @@ import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.sql.PostgreSqlRewrite;
 import io.graphmdl.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
+import io.graphmdl.preaggregation.MetricTableMapping;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
+import io.graphmdl.sqlrewrite.PreAggregationRewrite;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Deallocate;
@@ -82,13 +84,15 @@ public class WireProtocolSession
     private final SqlConverter sqlConverter;
     private final GraphMDLMetastore graphMDLMetastore;
     private final PreAggregationManager preAggregationManager;
+    private final MetricTableMapping metricTableMapping;
 
     public WireProtocolSession(
             RegObjectFactory regObjectFactory,
             Metadata metadata,
             SqlConverter sqlConverter,
             GraphMDLMetastore graphMDLMetastore,
-            PreAggregationManager preAggregationManager)
+            PreAggregationManager preAggregationManager,
+            MetricTableMapping metricTableMapping)
     {
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
@@ -96,6 +100,7 @@ public class WireProtocolSession
         this.sqlConverter = sqlConverter;
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
+        this.metricTableMapping = requireNonNull(metricTableMapping, "metricTableMapping is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -234,7 +239,7 @@ public class WireProtocolSession
                     new PreparedStatement(
                             statementName,
                             getFormattedSql(rewrittenStatement, sqlParser),
-                            preAggregationManager.rewritePreAggregation(sessionContext, statementPreRewritten, graphMDLMetastore.getGraphMDL()),
+                            PreAggregationRewrite.rewrite(sessionContext, statementPreRewritten, metricTableMapping::convertToAggregationTable, graphMDLMetastore.getGraphMDL()),
                             rewrittenParamTypes,
                             statementTrimmed,
                             isSessionCommand(rewrittenStatement)));

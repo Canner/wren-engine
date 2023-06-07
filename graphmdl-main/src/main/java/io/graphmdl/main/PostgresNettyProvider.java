@@ -20,6 +20,7 @@ import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.main.pgcatalog.regtype.RegObjectFactory;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
 import io.graphmdl.main.wireprotocol.ssl.SslContextProvider;
+import io.graphmdl.preaggregation.MetricTableMapping;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import org.elasticsearch.common.network.NetworkService;
 
@@ -39,6 +40,7 @@ public class PostgresNettyProvider
     private final SqlConverter sqlConverter;
     private final GraphMDLMetastore graphMDLMetastore;
     private final PreAggregationManager preAggregationManager;
+    private final MetricTableMapping metricTableMapping;
 
     @Inject
     public PostgresNettyProvider(
@@ -48,7 +50,8 @@ public class PostgresNettyProvider
             Metadata connector,
             SqlConverter sqlConverter,
             GraphMDLMetastore graphMDLMetastore,
-            PreAggregationManager preAggregationManager)
+            PreAggregationManager preAggregationManager,
+            MetricTableMapping metricTableMapping)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
@@ -57,6 +60,7 @@ public class PostgresNettyProvider
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.graphMDLMetastore = requireNonNull(graphMDLMetastore, "graphMDLMetastore is null");
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
+        this.metricTableMapping = requireNonNull(metricTableMapping, "metricTableMapping is null");
     }
 
     @Override
@@ -71,7 +75,8 @@ public class PostgresNettyProvider
                 connector,
                 sqlConverter,
                 graphMDLMetastore,
-                preAggregationManager);
+                preAggregationManager,
+                metricTableMapping);
         postgresNetty.start();
         return postgresNetty;
     }

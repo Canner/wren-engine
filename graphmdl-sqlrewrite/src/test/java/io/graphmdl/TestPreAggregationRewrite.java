@@ -43,7 +43,7 @@ import static io.graphmdl.base.dto.TimeGrain.TimeUnit.YEAR;
 import static io.graphmdl.base.dto.TimeGrain.timeGrain;
 import static io.graphmdl.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -389,18 +389,19 @@ public class TestPreAggregationRewrite
             String expectSql,
             Function<CatalogSchemaTableName, Optional<String>> tableConverter)
     {
-        Statement result = rewritePreAgg(
+        String result = rewritePreAgg(
                 sql,
                 defaultCatalog,
                 defaultSchema,
                 tableConverter).orElseThrow(() -> new AssertionError("No rewrite result"));
 
-        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DECIMAL));
-        assertThat(formatSql(result)).isEqualTo(formatSql(expect));
-        assertThat(result).isEqualTo(expect);
+        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
+        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DOUBLE));
+        assertThat(result).isEqualTo(formatSql(expect));
+        assertThat(actualStatement).isEqualTo(expect);
     }
 
-    private Optional<Statement> rewritePreAgg(String sql)
+    private Optional<String> rewritePreAgg(String sql)
     {
         return rewritePreAgg(
                 sql,
@@ -409,7 +410,7 @@ public class TestPreAggregationRewrite
                 this::toPreAggregationTable);
     }
 
-    private Optional<Statement> rewritePreAgg(
+    private Optional<String> rewritePreAgg(
             String sql,
             String defaultCatalog,
             String defaultSchema,
@@ -419,10 +420,9 @@ public class TestPreAggregationRewrite
                 .setCatalog(defaultCatalog)
                 .setSchema(defaultSchema)
                 .build();
-        Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         return PreAggregationRewrite.rewrite(
                 sessionContext,
-                statement,
+                sql,
                 tableConverter,
                 graphMDL);
     }
