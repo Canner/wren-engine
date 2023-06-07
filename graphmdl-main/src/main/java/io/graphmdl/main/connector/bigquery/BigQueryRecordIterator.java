@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -129,7 +130,7 @@ public class BigQueryRecordIterator
                 for (int i = 0; i < subFields.size(); i++) {
                     result.put(subFields.get(i).getName(), getFieldValue(subFields.get(i), subFieldValues.get(i)));
                 }
-                return result;
+                return unmodifiableMap(result);
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);
         }
