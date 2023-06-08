@@ -124,7 +124,7 @@ public class RelationshipCteGenerator
 
         RelationshipCTE relationshipCTE = createRelationshipCTE(operation.getRsItems());
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE, operation);
+        WithQuery withQuery = transferToCte(originalName, relationshipCTE, operation);
         registeredWithQuery.put(name, withQuery);
         registeredCte.put(name, relationshipCTE);
         nameMapping.put(name, withQuery.getName().getValue());
@@ -278,12 +278,12 @@ public class RelationshipCteGenerator
                 .stream()
                 .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
                 .collect(toList());
+        normalFields.add(new SingleColumn(nameReference(ONE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
 
         ImmutableSet.Builder<SelectItem> builder = ImmutableSet
                 .<SelectItem>builder()
                 .addAll(normalFields)
-                .add(relationshipField)
-                .add(new SingleColumn(nameReference(ONE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
+                .add(relationshipField);
         List<SelectItem> selectItems = ImmutableList.copyOf(builder.build());
 
         List<Identifier> outputSchema = selectItems.stream()
@@ -300,9 +300,10 @@ public class RelationshipCteGenerator
                                 aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), MANY_REFERENCE),
                                 joinOn(equal(nameReference(ONE_REFERENCE, relationshipCTE.getSource().getJoinKey()), nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getJoinKey())))),
                         Optional.empty(),
-                        Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
+                        Optional.of(new GroupBy(false, IntStream.rangeClosed(1, normalFields.size())
                                 .mapToObj(number -> new LongLiteral(String.valueOf(number)))
-                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral))).collect(toList()))),
+                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral)))
+                                .collect(toList()))),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
