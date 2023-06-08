@@ -37,7 +37,8 @@
           "type": "date"
         }
       ],
-      "primaryKey": "orderkey"
+      "primaryKey": "orderkey",
+      "preAggregated": "true"
     },
     {
       "name": "Customer",
