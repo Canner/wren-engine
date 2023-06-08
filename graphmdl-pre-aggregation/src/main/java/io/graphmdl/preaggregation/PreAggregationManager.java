@@ -22,7 +22,7 @@ import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.Parameter;
 import io.graphmdl.base.SessionContext;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
-import io.graphmdl.base.dto.Metric;
+import io.graphmdl.base.dto.PreAggregationInfo;
 import io.graphmdl.base.sql.SqlConverter;
 import io.graphmdl.sqlrewrite.GraphMDLPlanner;
 import io.trino.sql.parser.ParsingOptions;
@@ -63,8 +63,8 @@ public class PreAggregationManager
     private final DuckdbClient duckdbClient;
     private final PreAggregationStorageConfig preAggregationStorageConfig;
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
-    private final MetricTableMapping metricTableMapping;
-    private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> metricScheduledFutures = new ConcurrentHashMap<>();
+    private final PreAggregationTableMapping preAggregationTableMapping;
+    private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> preAggregationScheduledFutures = new ConcurrentHashMap<>();
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
 
     @Inject
@@ -74,7 +74,7 @@ public class PreAggregationManager
             ExtraRewriter extraRewriter,
             DuckdbClient duckdbClient,
             PreAggregationStorageConfig preAggregationStorageConfig,
-            MetricTableMapping metricTableMapping)
+            PreAggregationTableMapping preAggregationTableMapping)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
@@ -82,7 +82,7 @@ public class PreAggregationManager
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.preAggregationStorageConfig = requireNonNull(preAggregationStorageConfig, "preAggregationStorageConfig is null");
-        this.metricTableMapping = requireNonNull(metricTableMapping, "metricTableMapping is null");
+        this.preAggregationTableMapping = requireNonNull(preAggregationTableMapping, "preAggregationTableMapping is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
@@ -94,16 +94,16 @@ public class PreAggregationManager
 
     private CompletableFuture<Void> doPreAggregation(GraphMDL mdl)
     {
-        List<CompletableFuture<Void>> futures = mdl.listPreAggregatedMetrics()
+        List<CompletableFuture<Void>> futures = mdl.listPreAggregated()
                 .stream()
-                .map(metric ->
-                        doSingleMetricPreAggregation(mdl, metric)
-                                .thenRun(() -> metricScheduledFutures.put(
-                                        new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName()),
+                .map(preAggregationInfo ->
+                        doSinglePreAggregation(mdl, preAggregationInfo)
+                                .thenRun(() -> preAggregationScheduledFutures.put(
+                                        new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), preAggregationInfo.getName()),
                                         refreshExecutor.scheduleWithFixedDelay(
-                                                () -> doSingleMetricPreAggregation(mdl, metric).join(),
-                                                metric.getRefreshTime().toMillis(),
-                                                metric.getRefreshTime().toMillis(),
+                                                () -> doSinglePreAggregation(mdl, preAggregationInfo).join(),
+                                                preAggregationInfo.getRefreshTime().toMillis(),
+                                                preAggregationInfo.getRefreshTime().toMillis(),
                                                 MILLISECONDS))))
                 .collect(toImmutableList());
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -120,10 +120,10 @@ public class PreAggregationManager
         return DuckdbRecordIterator.of(duckdbClient.executeQuery(sql, parameters));
     }
 
-    private CompletableFuture<Void> doSingleMetricPreAggregation(GraphMDL mdl, Metric metric)
+    private CompletableFuture<Void> doSinglePreAggregation(GraphMDL mdl, PreAggregationInfo preAggregationInfo)
     {
-        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), metric.getName());
-        String duckdbTableName = format("%s_%s", metric.getName(), randomUUID().toString().replace("-", ""));
+        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), preAggregationInfo.getName());
+        String duckdbTableName = format("%s_%s", preAggregationInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
         return runAsync(() -> {
             SessionContext sessionContext = SessionContext.builder()
@@ -131,26 +131,26 @@ public class PreAggregationManager
                     .setSchema(mdl.getSchema())
                     .build();
             String graphMDLRewritten = GraphMDLPlanner.rewrite(
-                    format("select * from %s", metric.getName()),
+                    format("select * from %s", preAggregationInfo.getName()),
                     sessionContext,
                     mdl);
             Statement parsedStatement = sqlParser.createStatement(graphMDLRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
 
-            createMetricPreAggregation(mdl, metric, sessionContext, rewrittenStatement, duckdbTableName);
-            metricTableMapping.putMetricTableMapping(catalogSchemaTableName, new MetricTableMapping.MetricTablePair(metric, duckdbTableName, createTime));
+            createPreAggregation(mdl, preAggregationInfo, sessionContext, rewrittenStatement, duckdbTableName);
+            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationTableMapping.PreAggregationInfoPair(preAggregationInfo, duckdbTableName, createTime));
         }).exceptionally(e -> {
             duckdbClient.dropTableQuietly(duckdbTableName);
-            String errMsg = format("Failed to do pre-aggregation for metric %s; caused by %s", metric.getName(), e.getMessage());
+            String errMsg = format("Failed to do pre-aggregation for preAggregationInfo %s; caused by %s", preAggregationInfo.getName(), e.getMessage());
             LOG.error(e, errMsg);
-            metricTableMapping.putMetricTableMapping(catalogSchemaTableName, new MetricTableMapping.MetricTablePair(metric, Optional.empty(), Optional.of(errMsg), createTime));
+            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationTableMapping.PreAggregationInfoPair(preAggregationInfo, Optional.empty(), Optional.of(errMsg), createTime));
             return null;
         });
     }
 
-    private void createMetricPreAggregation(
+    private void createPreAggregation(
             GraphMDL mdl,
-            Metric metric,
+            PreAggregationInfo preAggregationInfo,
             SessionContext sessionContext,
             Statement rewrittenStatement,
             String duckdbTableName)
@@ -158,7 +158,7 @@ public class PreAggregationManager
         preAggregationService.createPreAggregation(
                         mdl.getCatalog(),
                         mdl.getSchema(),
-                        metric.getName(),
+                        preAggregationInfo.getName(),
                         sqlConverter.convert(getFormattedSql(rewrittenStatement, sqlParser), sessionContext))
                 .ifPresent(pathInfo -> {
                     try {
@@ -181,26 +181,26 @@ public class PreAggregationManager
         requireNonNull(catalogName, "catalogName is null");
         requireNonNull(schemaName, "schemaName is null");
 
-        metricScheduledFutures.keySet().stream()
+        preAggregationScheduledFutures.keySet().stream()
                 .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(catalogName)
                         && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(schemaName))
                 .forEach(catalogSchemaTableName -> {
-                    metricScheduledFutures.get(catalogSchemaTableName).cancel(true);
-                    metricScheduledFutures.remove(catalogSchemaTableName);
+                    preAggregationScheduledFutures.get(catalogSchemaTableName).cancel(true);
+                    preAggregationScheduledFutures.remove(catalogSchemaTableName);
                 });
 
-        metricTableMapping.entrySet().stream()
+        preAggregationTableMapping.entrySet().stream()
                 .filter(entry -> entry.getKey().getCatalogName().equals(catalogName)
                         && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
                 .forEach(entry -> {
                     entry.getValue().getTableName().ifPresent(duckdbClient::dropTableQuietly);
-                    metricTableMapping.remove(entry.getKey());
+                    preAggregationTableMapping.remove(entry.getKey());
                 });
     }
 
-    public boolean metricScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
+    public boolean preAggregationScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
     {
-        return metricScheduledFutures.containsKey(catalogSchemaTableName);
+        return preAggregationScheduledFutures.containsKey(catalogSchemaTableName);
     }
 
     @PreDestroy

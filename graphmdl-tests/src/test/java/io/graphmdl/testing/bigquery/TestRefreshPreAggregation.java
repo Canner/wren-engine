@@ -45,7 +45,7 @@ public class TestRefreshPreAggregation
         // We have one pre-aggregation table and the most tables existing in duckdb is 2
         assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         for (int i = 0; i < 50; i++) {
-            System.out.println(getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName());
+            System.out.println(getDefaultPreAggregationInfoPair("RefreshFrequently").getRequiredTableName());
             Thread.sleep(200);
             assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         }
@@ -56,10 +56,10 @@ public class TestRefreshPreAggregation
     public void testRefreshPreAggregation()
             throws InterruptedException
     {
-        String before = getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName();
+        String before = getDefaultPreAggregationInfoPair("RefreshFrequently").getRequiredTableName();
         // considering the refresh connects to BigQuery service, it will take some time
         Thread.sleep(3000);
-        String after = getDefaultMetricTablePair("RefreshFrequently").getRequiredTableName();
+        String after = getDefaultPreAggregationInfoPair("RefreshFrequently").getRequiredTableName();
         assertThat(before).isNotEqualTo(after);
     }
 }

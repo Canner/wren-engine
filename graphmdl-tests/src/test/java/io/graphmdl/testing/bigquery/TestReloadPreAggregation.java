@@ -52,10 +52,10 @@ public class TestReloadPreAggregation
     public void testReloadPreAggregation()
             throws IOException
     {
-        String beforeMetricName = "Revenue";
-        CatalogSchemaTableName beforeCatalogSchemaTableName = new CatalogSchemaTableName("canner-cml", "tpch_tiny", beforeMetricName);
-        String beforeMappingName = getDefaultMetricTablePair(beforeMetricName).getRequiredTableName();
-        assertPreAggregation(beforeMetricName);
+        String beforeName = "Revenue";
+        CatalogSchemaTableName beforeCatalogSchemaTableName = new CatalogSchemaTableName("canner-cml", "tpch_tiny", beforeName);
+        String beforeMappingName = getDefaultPreAggregationInfoPair(beforeName).getRequiredTableName();
+        assertPreAggregation(beforeName);
 
         rewriteFile("pre_agg/pre_agg_reload_2_mdl.json");
         reloadGraphMDL();
@@ -66,18 +66,18 @@ public class TestReloadPreAggregation
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).doesNotContain(beforeMappingName);
-        assertThat(preAggregationManager.metricScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
-        assertThatThrownBy(() -> getDefaultMetricTablePair(beforeMappingName).getRequiredTableName()).isInstanceOf(NullPointerException.class);
+        assertThat(preAggregationManager.preAggregationScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
+        assertThatThrownBy(() -> getDefaultPreAggregationInfoPair(beforeMappingName).getRequiredTableName()).isInstanceOf(NullPointerException.class);
     }
 
-    private void assertPreAggregation(String metricName)
+    private void assertPreAggregation(String name)
     {
-        CatalogSchemaTableName mapping = new CatalogSchemaTableName("canner-cml", "tpch_tiny", metricName);
-        String mappingName = getDefaultMetricTablePair(metricName).getRequiredTableName();
+        CatalogSchemaTableName mapping = new CatalogSchemaTableName("canner-cml", "tpch_tiny", name);
+        String mappingName = getDefaultPreAggregationInfoPair(name).getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);
-        assertThat(preAggregationManager.metricScheduledFutureExists(mapping)).isTrue();
+        assertThat(preAggregationManager.preAggregationScheduledFutureExists(mapping)).isTrue();
     }
 
     private void rewriteFile(String resourcePath)

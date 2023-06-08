@@ -57,8 +57,8 @@ public class TestPreAggregation
     @Test
     public void testPreAggregation()
     {
-        String mappingName = getDefaultMetricTablePair("Revenue").getRequiredTableName();
-        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
+        String mappingName = getDefaultPreAggregationInfoPair("Revenue").getRequiredTableName();
+        assertThat(getDefaultPreAggregationInfoPair("AvgRevenue")).isNull();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -74,15 +74,15 @@ public class TestPreAggregation
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
-        String errMsg = getDefaultMetricTablePair("unqualified").getErrorMessage()
+        String errMsg = getDefaultPreAggregationInfoPair("unqualified").getErrorMessage()
                 .orElseThrow(AssertionError::new);
-        assertThat(errMsg).matches("Failed to do pre-aggregation for metric .*");
+        assertThat(errMsg).matches("Failed to do pre-aggregation for preAggregationInfo .*");
     }
 
     @Test
     public void testMetricWithoutPreAggregation()
     {
-        assertThat(getDefaultMetricTablePair("AvgRevenue")).isNull();
+        assertThat(getDefaultPreAggregationInfoPair("AvgRevenue")).isNull();
     }
 
     @Override
@@ -130,7 +130,7 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue limit 100",
-                                metricTableMapping::convertToAggregationTable,
+                                preAggregationTableMapping::convertToAggregationTable,
                                 graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
@@ -146,7 +146,7 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue where custkey = ?",
-                                metricTableMapping::convertToAggregationTable,
+                                preAggregationTableMapping::convertToAggregationTable,
                                 graphMDL)
                         .orElseThrow(AssertionError::new);
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
@@ -161,7 +161,7 @@ public class TestPreAggregation
     public void testQueryMetricWithDroppedPreAggTable()
             throws SQLException
     {
-        String tableName = getDefaultMetricTablePair("ForDropTable").getRequiredTableName();
+        String tableName = getDefaultPreAggregationInfoPair("ForDropTable").getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
         duckdbClient.executeDDL(dropTableStatement.apply(tableName));
