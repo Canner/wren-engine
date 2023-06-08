@@ -136,6 +136,7 @@ public class TestBigQueryType
         s2.setType("record");
         s2.setValue("(2,world)");
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_struct_in_array", "array<struct<s1 int64, s2 string>>", "[(1, 'hello'), (2, 'world')]", new PGobject[] {s1, s2}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_multi_struct_in_array", "array<struct<s1 int64, s2 struct<s2_1 string, s2_2 int64>>>", "[(1, ('hello', 123)), (2, ('world', 234))]", new PGobject[] {s1, s2}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_interval_in_array", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
 //                new PGInterval(0, 0, 1, 0, 0, 0), new PGInterval(0, 0, 2, 0, 0, 0)}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_geography_in_array", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
