@@ -19,12 +19,15 @@ import com.google.inject.Key;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.duckdb.DuckdbClient;
+import io.graphmdl.base.type.DateType;
+import io.graphmdl.base.type.PGType;
 import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.preaggregation.PreAggregationTableMapping;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 
+import java.sql.Date;
 import java.util.List;
 
 import static java.lang.System.getenv;
@@ -79,9 +82,18 @@ public abstract class AbstractPreAggregationTest
     {
         Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
         try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
+            List<PGType> pgTypes = iterator.getTypes();
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
-                builder.add(iterator.next());
+                Object[] bqResults = iterator.next();
+                Object[] returnResults = new Object[pgTypes.size()];
+                for (int i = 0; i < pgTypes.size(); i++) {
+                    returnResults[i] = bqResults[i];
+                    if (DateType.DATE.oid() == pgTypes.get(i).oid()) {
+                        returnResults[i] = Date.valueOf(bqResults[i].toString());
+                    }
+                }
+                builder.add(returnResults);
             }
             return builder.build();
         }

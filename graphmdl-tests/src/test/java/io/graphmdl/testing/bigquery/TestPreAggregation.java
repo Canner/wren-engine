@@ -176,4 +176,26 @@ public class TestPreAggregation
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @Test
+    public void testModelPreAggregation()
+    {
+        String mappingName = getDefaultMetricTablePair("Orders").getRequiredTableName();
+        List<Object[]> tables = queryDuckdb("show tables");
+
+        Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
+        assertThat(tableNames).contains(mappingName);
+
+        List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
+        List<Object[]> bqResult = queryBigQuery("SELECT\n" +
+                "     o_orderkey orderkey\n" +
+                "   , o_custkey custkey\n" +
+                "   , o_orderstatus orderstatus\n" +
+                "   , o_totalprice totalprice\n" +
+                "   , 'relationship<OrdersCustomer>' customer\n" +
+                "   , o_orderdate orderdate" +
+                " from `canner-cml`.tpch_tiny.orders");
+        assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
+        assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
+    }
 }
