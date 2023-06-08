@@ -40,14 +40,17 @@ public class RelationshipCTE
 
     private final String index;
     private final Relationship relationship;
+    // The base key is the primary key of the base model.
+    private final String baseKey;
 
-    public RelationshipCTE(String name, Relation source, Relation target, Relationship relationship, String index)
+    public RelationshipCTE(String name, Relation source, Relation target, Relationship relationship, String index, String baseKey)
     {
         this.name = name;
         this.source = source;
         this.target = target;
         this.relationship = relationship;
         this.index = index;
+        this.baseKey = baseKey;
     }
 
     public String getName()
@@ -89,6 +92,11 @@ public class RelationshipCTE
     public Optional<String> getIndex()
     {
         return Optional.ofNullable(index);
+    }
+
+    public String getBaseKey()
+    {
+        return baseKey;
     }
 
     public static class Relation
