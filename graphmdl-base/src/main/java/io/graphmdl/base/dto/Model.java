@@ -28,15 +28,21 @@ public class Model
     private final String refSql;
     private final List<Column> columns;
     private final String primaryKey;
+    private final String description;
 
     public static Model model(String name, String refSql, List<Column> columns)
     {
-        return new Model(name, refSql, columns, null);
+        return model(name, refSql, columns, null, null);
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
-        return new Model(name, refSql, columns, primaryKey);
+        return model(name, refSql, columns, primaryKey, null);
+    }
+
+    public static Model model(String name, String refSql, List<Column> columns, String primaryKey, String description)
+    {
+        return new Model(name, refSql, columns, primaryKey, description);
     }
 
     @JsonCreator
@@ -44,12 +50,14 @@ public class Model
             @JsonProperty("name") String name,
             @JsonProperty("refSql") String refSql,
             @JsonProperty("columns") List<Column> columns,
-            @JsonProperty("primaryKey") String primaryKey)
+            @JsonProperty("primaryKey") String primaryKey,
+            @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
         this.refSql = requireNonNull(refSql, "refSql is null");
         this.columns = columns == null ? List.of() : columns;
         this.primaryKey = primaryKey;
+        this.description = description;
     }
 
     @JsonProperty
@@ -76,6 +84,12 @@ public class Model
         return primaryKey;
     }
 
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -89,13 +103,14 @@ public class Model
         return Objects.equals(name, that.name)
                 && Objects.equals(refSql, that.refSql)
                 && Objects.equals(columns, that.columns)
-                && Objects.equals(primaryKey, that.primaryKey);
+                && Objects.equals(primaryKey, that.primaryKey)
+                && Objects.equals(description, that.description);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, columns, primaryKey);
+        return Objects.hash(name, refSql, columns, primaryKey, description);
     }
 
     @Override
@@ -106,6 +121,7 @@ public class Model
                 ", refSql='" + refSql + '\'' +
                 ", columns=" + columns +
                 ", primaryKey='" + primaryKey + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

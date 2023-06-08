@@ -25,19 +25,27 @@ public class View
 {
     private final String name;
     private final String statement;
+    private final String description;
 
     public static View view(String name, String statement)
     {
-        return new View(name, statement);
+        return view(name, statement, null);
+    }
+
+    public static View view(String name, String statement, String description)
+    {
+        return new View(name, statement, description);
     }
 
     @JsonCreator
     public View(
             @JsonProperty("name") String name,
-            @JsonProperty("statement") String statement)
+            @JsonProperty("statement") String statement,
+            @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
         this.statement = requireNonNull(statement, "statement is null");
+        this.description = description;
     }
 
     @JsonProperty
@@ -52,6 +60,12 @@ public class View
         return statement;
     }
 
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -63,13 +77,17 @@ public class View
         }
         View view = (View) o;
         return Objects.equals(name, view.name) &&
-                Objects.equals(statement, view.statement);
+                Objects.equals(statement, view.statement) &&
+                Objects.equals(description, view.description);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, statement);
+        return Objects.hash(
+                name,
+                statement,
+                description);
     }
 
     @Override
@@ -78,6 +96,7 @@ public class View
         return "View{" +
                 "name='" + name + '\'' +
                 ", statement='" + statement + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

@@ -30,20 +30,26 @@ public class Column
     private final boolean notNull;
     private final String relationship;
     private final String expression;
+    private final String description;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return new Column(name, type, relationship, notNull, null);
+        return column(name, type, relationship, notNull, null, null);
     }
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression)
     {
-        return new Column(name, type, relationship, notNull, expression);
+        return column(name, type, relationship, notNull, expression, null);
+    }
+
+    public static Column column(String name, String type, String relationship, boolean notNull, String expression, String description)
+    {
+        return new Column(name, type, relationship, notNull, expression, description);
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, null);
+        return new Column(name, type, relationship, false, null, null);
     }
 
     @JsonCreator
@@ -52,13 +58,15 @@ public class Column
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
             @JsonProperty("notNull") boolean notNull,
-            @JsonProperty("expression") String expression)
+            @JsonProperty("expression") String expression,
+            @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = relationship;
         this.notNull = notNull;
         this.expression = expression;
+        this.description = description;
     }
 
     @JsonProperty
@@ -83,6 +91,12 @@ public class Column
     public boolean isNotNull()
     {
         return notNull;
+    }
+
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
     }
 
     @JsonProperty
@@ -118,7 +132,8 @@ public class Column
                 && Objects.equals(name, that.name)
                 && Objects.equals(type, that.type)
                 && Objects.equals(relationship, that.relationship)
-                && Objects.equals(expression, that.expression);
+                && Objects.equals(expression, that.expression)
+                && Objects.equals(description, that.description);
     }
 
     @Override
@@ -136,6 +151,7 @@ public class Column
                 ", notNull=" + notNull +
                 ", relationship='" + relationship + '\'' +
                 ", expression='" + expression + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

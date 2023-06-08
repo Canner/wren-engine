@@ -35,6 +35,7 @@ public class Metric
     private final List<TimeGrain> timeGrain;
     private final boolean preAggregated;
     private final Duration refreshTime;
+    private final String description;
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
@@ -43,7 +44,12 @@ public class Metric
 
     public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
     {
-        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null);
+        return metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null);
+    }
+
+    public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated, String description)
+    {
+        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null, description);
     }
 
     @JsonCreator
@@ -54,7 +60,8 @@ public class Metric
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
             @JsonProperty("preAggregated") boolean preAggregated,
-            @JsonProperty("refreshTime") Duration refreshTime)
+            @JsonProperty("refreshTime") Duration refreshTime,
+            @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseModel = requireNonNull(baseModel, "baseModel is null");
@@ -64,6 +71,7 @@ public class Metric
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
         this.refreshTime = refreshTime == null ? new Duration(30, MINUTES) : refreshTime;
+        this.description = description;
     }
 
     @JsonProperty
@@ -115,6 +123,12 @@ public class Metric
         return refreshTime;
     }
 
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -131,13 +145,22 @@ public class Metric
                 && Objects.equals(dimension, that.dimension)
                 && Objects.equals(measure, that.measure)
                 && Objects.equals(timeGrain, that.timeGrain)
-                && Objects.equals(refreshTime, that.refreshTime);
+                && Objects.equals(refreshTime, that.refreshTime)
+                && Objects.equals(description, that.description);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseModel, dimension, measure, timeGrain, preAggregated, refreshTime);
+        return Objects.hash(
+                name,
+                baseModel,
+                dimension,
+                measure,
+                timeGrain,
+                preAggregated,
+                refreshTime,
+                description);
     }
 
     @Override
@@ -151,6 +174,7 @@ public class Metric
                 ", timeGrain=" + timeGrain +
                 ", preAggregated=" + preAggregated +
                 ", refreshTime=" + refreshTime +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

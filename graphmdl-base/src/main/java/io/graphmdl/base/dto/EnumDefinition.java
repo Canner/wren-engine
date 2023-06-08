@@ -27,19 +27,27 @@ public class EnumDefinition
 {
     public static EnumDefinition enumDefinition(String name, List<EnumValue> values)
     {
-        return new EnumDefinition(name, values);
+        return enumDefinition(name, values, null);
+    }
+
+    public static EnumDefinition enumDefinition(String name, List<EnumValue> values, String description)
+    {
+        return new EnumDefinition(name, values, description);
     }
 
     private final String name;
     private final List<EnumValue> values;
+    private final String description;
 
     @JsonCreator
     public EnumDefinition(
             @JsonProperty("name") String name,
-            @JsonProperty("values") List<EnumValue> values)
+            @JsonProperty("values") List<EnumValue> values,
+            @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name);
         this.values = requireNonNull(values);
+        this.description = description;
     }
 
     @JsonProperty
@@ -52,6 +60,12 @@ public class EnumDefinition
     public String getName()
     {
         return name;
+    }
+
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
     }
 
     public Optional<EnumValue> valueOf(String enumValueName)
@@ -71,13 +85,18 @@ public class EnumDefinition
             return false;
         }
         EnumDefinition that = (EnumDefinition) obj;
-        return Objects.equals(name, that.name) && Objects.equals(values, that.values);
+        return Objects.equals(name, that.name)
+                && Objects.equals(values, that.values)
+                && Objects.equals(description, that.description);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, values);
+        return Objects.hash(
+                name,
+                values,
+                description);
     }
 
     @Override
@@ -86,6 +105,7 @@ public class EnumDefinition
         return "EnumDefinition{" +
                 "name='" + name + '\'' +
                 ", values=" + values +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

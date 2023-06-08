@@ -33,20 +33,26 @@ public class Relationship
     // for debugging internally
     private final boolean isReverse;
     private final List<SortKey> manySideSortKeys;
+    private final String description;
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys)
     {
-        return new Relationship(name, models, joinType, condition, false, manySideSortKeys);
+        return relationship(name, models, joinType, condition, manySideSortKeys, null);
     }
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition)
     {
-        return new Relationship(name, models, joinType, condition, false, null);
+        return relationship(name, models, joinType, condition, null, null);
+    }
+
+    public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys, String description)
+    {
+        return new Relationship(name, models, joinType, condition, manySideSortKeys, description);
     }
 
     public static Relationship reverse(Relationship relationship)
     {
-        return new Relationship(relationship.name, relationship.getModels(), JoinType.reverse(relationship.joinType), relationship.getCondition(), true, relationship.getManySideSortKeys());
+        return new Relationship(relationship.name, relationship.getModels(), JoinType.reverse(relationship.joinType), relationship.getCondition(), true, relationship.getManySideSortKeys(), relationship.getDescription());
     }
 
     @JsonCreator
@@ -55,9 +61,10 @@ public class Relationship
             @JsonProperty("models") List<String> models,
             @JsonProperty("joinType") JoinType joinType,
             @JsonProperty("condition") String condition,
-            @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys)
+            @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys,
+            @JsonProperty("description") String description)
     {
-        this(name, models, joinType, condition, false, manySideSortKeys);
+        this(name, models, joinType, condition, false, manySideSortKeys, description);
     }
 
     public Relationship(
@@ -66,7 +73,8 @@ public class Relationship
             JoinType joinType,
             String condition,
             boolean isReverse,
-            List<SortKey> manySideSortKeys)
+            List<SortKey> manySideSortKeys,
+            String description)
     {
         this.name = requireNonNull(name, "name is null");
         checkArgument(models != null && models.size() >= 2, "relationship should contain at least 2 models");
@@ -75,6 +83,7 @@ public class Relationship
         this.condition = requireNonNull(condition, "condition is null");
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
+        this.description = description;
     }
 
     @JsonProperty
@@ -112,6 +121,12 @@ public class Relationship
         return isReverse;
     }
 
+    @JsonProperty
+    public String getDescription()
+    {
+        return description;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
@@ -127,7 +142,8 @@ public class Relationship
                 && joinType == that.joinType
                 && Objects.equals(condition, that.condition)
                 && isReverse == that.isReverse
-                && Objects.equals(manySideSortKeys, that.manySideSortKeys);
+                && Objects.equals(manySideSortKeys, that.manySideSortKeys)
+                && Objects.equals(description, that.description);
     }
 
     @Override
@@ -146,6 +162,7 @@ public class Relationship
                 ", condition='" + condition + '\'' +
                 ", isReverse=" + isReverse +
                 ", manySideSortKeys=" + manySideSortKeys +
+                ", description='" + description + '\'' +
                 '}';
     }
 

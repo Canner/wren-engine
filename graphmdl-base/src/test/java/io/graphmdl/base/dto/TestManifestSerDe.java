@@ -54,7 +54,7 @@ public class TestManifestSerDe
                         model("OrdersModel",
                                 "select * from orders",
                                 List.of(
-                                        column("orderkey", "integer", null, true),
+                                        column("orderkey", "integer", null, true, "the key of each order"),
                                         column("custkey", "integer", null, true),
                                         column("orderstatus", "string", null, true),
                                         column("totalprice", "double", null, true),
@@ -64,7 +64,8 @@ public class TestManifestSerDe
                                         column("shippriority", "integer", null, true),
                                         column("comment", "string", null, true),
                                         column("customer", "CustomerModel", "OrdersCustomer", true)),
-                                "orderkey"),
+                                "orderkey",
+                                "tpch tiny orders table"),
                         model("LineitemModel",
                                 "select * from lineitem",
                                 List.of(
@@ -89,18 +90,21 @@ public class TestManifestSerDe
                                 List.of("OrdersModel", "CustomerModel"),
                                 JoinType.MANY_TO_ONE,
                                 "OrdersModel.custkey = CustomerModel.custkey",
-                                List.of(sortKey("orderkey", Relationship.SortKey.Ordering.ASC)))))
+                                List.of(sortKey("orderkey", Relationship.SortKey.Ordering.ASC)),
+                                "the relationship between orders and customers")))
                 .setEnumDefinitions(List.of(
                         enumDefinition("OrderStatus", List.of(
-                                enumValue("PENDING", "pending"),
-                                enumValue("PROCESSING", "processing"),
-                                enumValue("SHIPPED", "shipped"),
-                                enumValue("COMPLETE", "complete")))))
+                                        enumValue("PENDING", "pending"),
+                                        enumValue("PROCESSING", "processing"),
+                                        enumValue("SHIPPED", "shipped"),
+                                        enumValue("COMPLETE", "complete")),
+                                "the status of an order")))
                 .setMetrics(List.of(metric("Revenue", "OrdersModel",
                         List.of(column("orderkey", "string", null, true)),
                         List.of(column("total", "integer", null, true)),
-                        List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))))))
-                .setViews(List.of(view("useMetric", "select * from Revenue")))
+                        List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))),
+                        true, "the revenue of an order")))
+                .setViews(List.of(view("useMetric", "select * from Revenue", "the view for the revenue metric")))
                 .build();
     }
 }
