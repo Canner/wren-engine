@@ -165,6 +165,7 @@ public final class SqlFormatter
     {
         DEFAULT,
         BIGQUERY,
+        DUCKDB,
     }
 
     private SqlFormatter() {}

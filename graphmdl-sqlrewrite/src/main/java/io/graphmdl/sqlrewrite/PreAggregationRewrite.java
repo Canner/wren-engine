@@ -49,7 +49,8 @@ import java.util.function.Function;
 import static io.graphmdl.sqlrewrite.Utils.analyzeFrom;
 import static io.graphmdl.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.QueryUtil.getQualifiedName;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -69,12 +70,12 @@ public class PreAggregationRewrite
             GraphMDL graphMDL)
     {
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
             PreAggregationAnalysis aggregationAnalysis = new PreAggregationAnalysis();
             Statement rewritten = (Statement) new Rewriter(sessionContext, converter, graphMDL, aggregationAnalysis).process(statement, Optional.empty());
             if (rewritten instanceof Query
                     && aggregationAnalysis.onlyPreAggregationTables()) {
-                return Optional.of(SqlFormatter.formatSql(rewritten));
+                return Optional.of(SqlFormatter.formatSql(rewritten, DUCKDB));
             }
         }
         catch (Exception e) {
