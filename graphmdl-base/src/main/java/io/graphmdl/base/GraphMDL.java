@@ -20,6 +20,7 @@ import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.Manifest;
 import io.graphmdl.base.dto.Metric;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.base.dto.PreAggregationInfo;
 import io.graphmdl.base.dto.Relationship;
 import io.graphmdl.base.dto.View;
 
@@ -107,7 +108,7 @@ public class GraphMDL
         return manifest.getMetrics();
     }
 
-    public List<Metric> listPreAggregatedMetrics()
+    public List<PreAggregationInfo> listPreAggregated()
     {
         return manifest.getMetrics()
                 .stream()
