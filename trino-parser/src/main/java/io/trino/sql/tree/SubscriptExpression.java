@@ -37,7 +37,7 @@ public class SubscriptExpression
         this(Optional.of(location), base, index);
     }
 
-    private SubscriptExpression(Optional<NodeLocation> location, Expression base, Expression index)
+    public SubscriptExpression(Optional<NodeLocation> location, Expression base, Expression index)
     {
         super(location);
         this.base = requireNonNull(base, "base is null");

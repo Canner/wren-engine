@@ -221,6 +221,36 @@ public class TestGraphMDLWithBigquery
         }
     }
 
+    @DataProvider
+    public static Object[][] functionIndex()
+    {
+        return new Object[][] {
+                {"select filter(orders, orderItem -> orderItem.orderstatus = 'F')[1].orderstatus as col_1 from Customer limit 100"},
+                {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].orderstatus as col_1 from Customer limit 100"},
+                {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].customer.name as col_1 from Customer limit 100"},
+                {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].customer.orders[2].orderstatus as col_1 from Customer limit 100"},
+                {"select filter(Customer.orders[1].lineitem, lineitem -> lineitem.linenumber = 1)[1].linenumber as col_1 from Customer limit 100"},
+                {"select filter(filter(Customer.orders[1].lineitem, lineitem -> lineitem.linenumber = 1), lineitem -> lineitem.partkey = 1)[1].linenumber as col_1 from Customer limit 100"},
+        };
+    }
+
+    @Test(dataProvider = "functionIndex")
+    public void testFunctionIndex(String sql)
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
     @Test
     public void testLambdaFunctionChain()
             throws Exception
@@ -294,7 +324,7 @@ public class TestGraphMDLWithBigquery
                                 "as col_1\n" +
                                 "from Customer limit 100");
                 stmt.executeQuery();
-            }).hasMessageStartingWith("ERROR: Currently the first argument of a lambda function cannot contain more than one lambda function.");
+            }).hasMessageStartingWith("ERROR: There should be only one relationship field function chain in dereference expression");
         }
     }
 

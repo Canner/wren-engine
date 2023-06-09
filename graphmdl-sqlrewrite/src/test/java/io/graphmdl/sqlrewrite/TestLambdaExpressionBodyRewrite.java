@@ -14,18 +14,13 @@
 
 package io.graphmdl.sqlrewrite;
 
-import io.graphmdl.base.CatalogSchemaTableName;
-import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
-import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-
-import java.util.Optional;
 
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -49,16 +44,7 @@ public class TestLambdaExpressionBodyRewrite
     @Test(dataProvider = "lambdaExpression")
     public void testLambdaExpressionRewrite(String actual, String expected)
     {
-        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName("graphmdl", "test", "Book");
-        Node node = LambdaExpressionBodyRewrite.rewrite(parse(actual),
-                Field.builder()
-                        .relationship(Optional.of("UserBooks"))
-                        .modelName(catalogSchemaTableName)
-                        .columnName("books")
-                        .name("books")
-                        .relationAlias(QualifiedName.of("t"))
-                        .type("Book")
-                        .build(), new Identifier("book"));
+        Node node = LambdaExpressionBodyRewrite.rewrite(parse(actual), "Book", new Identifier("book"));
         assertThat(node.toString()).isEqualTo(parse(expected).toString());
     }
 

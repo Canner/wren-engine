@@ -112,19 +112,31 @@ public class RelationshipCteGenerator
     {
         requireNonNull(nameParts, "nameParts is null");
         checkArgument(!nameParts.isEmpty(), "nameParts is empty");
-        register(nameParts, operation, nameParts.get(0));
+        register(nameParts, operation, nameParts.get(0), getLast(nameParts));
     }
 
     public void register(List<String> nameParts, RelationshipOperation operation, String baseModel)
+    {
+        requireNonNull(nameParts, "nameParts is null");
+        checkArgument(!nameParts.isEmpty(), "nameParts is empty");
+        register(nameParts, operation, baseModel, getLast(nameParts));
+    }
+
+    public void register(List<String> nameParts, RelationshipOperation operation, String baseModel, String originalName)
     {
         requireNonNull(nameParts, "nameParts is null");
         requireNonNull(operation.getRsItems(), "rsItems is null");
         checkArgument(!nameParts.isEmpty(), "nameParts is empty");
         checkArgument(!operation.getRsItems().isEmpty() && operation.getRsItems().size() <= 2, "The size of rsItems should be 1 or 2");
 
+        // avoid duplicate cte registering
+        if (nameMapping.containsKey(String.join(".", nameParts))) {
+            return;
+        }
+
         RelationshipCTE relationshipCTE = createRelationshipCTE(operation.getRsItems());
         String name = String.join(".", nameParts);
-        WithQuery withQuery = transferToCte(getLast(nameParts), relationshipCTE, operation);
+        WithQuery withQuery = transferToCte(originalName, relationshipCTE, operation);
         registeredWithQuery.put(name, withQuery);
         registeredCte.put(name, relationshipCTE);
         nameMapping.put(name, withQuery.getName().getValue());
@@ -278,12 +290,12 @@ public class RelationshipCteGenerator
                 .stream()
                 .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
                 .collect(toList());
+        normalFields.add(new SingleColumn(nameReference(ONE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
 
         ImmutableSet.Builder<SelectItem> builder = ImmutableSet
                 .<SelectItem>builder()
                 .addAll(normalFields)
-                .add(relationshipField)
-                .add(new SingleColumn(nameReference(ONE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
+                .add(relationshipField);
         List<SelectItem> selectItems = ImmutableList.copyOf(builder.build());
 
         List<Identifier> outputSchema = selectItems.stream()
@@ -300,9 +312,10 @@ public class RelationshipCteGenerator
                                 aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), MANY_REFERENCE),
                                 joinOn(equal(nameReference(ONE_REFERENCE, relationshipCTE.getSource().getJoinKey()), nameReference(MANY_REFERENCE, relationshipCTE.getTarget().getJoinKey())))),
                         Optional.empty(),
-                        Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
+                        Optional.of(new GroupBy(false, IntStream.rangeClosed(1, normalFields.size())
                                 .mapToObj(number -> new LongLiteral(String.valueOf(number)))
-                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral))).collect(toList()))),
+                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral)))
+                                .collect(toList()))),
                         Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
@@ -632,6 +645,11 @@ public class RelationshipCteGenerator
     public Map<String, RelationshipCTEJoinInfo> getRelationshipInfoMapping()
     {
         return relationshipInfoMapping;
+    }
+
+    public Map<String, RelationshipCTE> getRelationshipCTEs()
+    {
+        return registeredCte;
     }
 
     public static class RelationshipOperation

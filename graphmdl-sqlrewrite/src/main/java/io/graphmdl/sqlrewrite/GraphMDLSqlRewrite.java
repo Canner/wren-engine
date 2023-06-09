@@ -38,6 +38,7 @@ import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.StringLiteral;
+import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
@@ -222,7 +223,21 @@ public class GraphMDLSqlRewrite
         @Override
         protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
         {
-            return analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), rewriteEnumIfNeed(node));
+            Expression newNode = analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), rewriteEnumIfNeed(node));
+            if (newNode != node) {
+                return newNode;
+            }
+            return new DereferenceExpression(node.getLocation(), (Expression) process(node.getBase()), node.getField());
+        }
+
+        @Override
+        protected Node visitSubscriptExpression(SubscriptExpression node, Void context)
+        {
+            Expression newNode = analysis.getRelationshipFields().getOrDefault(NodeRef.of(node), node);
+            if (newNode != node) {
+                return newNode;
+            }
+            return new SubscriptExpression(node.getLocation(), (Expression) process(node.getBase()), node.getIndex());
         }
 
         private Expression rewriteEnumIfNeed(DereferenceExpression node)
