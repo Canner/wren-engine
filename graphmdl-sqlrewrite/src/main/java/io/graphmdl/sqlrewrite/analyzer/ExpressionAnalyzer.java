@@ -50,6 +50,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.Utils.checkArgument;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.LAMBDA_RESULT_NAME;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.aggregate;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.filter;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
@@ -143,7 +144,12 @@ public final class ExpressionAnalyzer
 
         private boolean isLambdaFunction(QualifiedName funcName)
         {
-            return List.of("transform", "filter").contains(funcName.getSuffix());
+            return List.of("transform", "filter").contains(funcName.getSuffix()) || isAggregateFunction(funcName);
+        }
+
+        private boolean isAggregateFunction(QualifiedName funcName)
+        {
+            return List.of("array_count", "array_sum", "array_avg", "array_min", "array_max").contains(funcName.getSuffix());
         }
 
         @Override
@@ -351,11 +357,25 @@ public final class ExpressionAnalyzer
                         columnName,
                         unnestField);
             }
+            else if (isAggregateFunction(QualifiedName.of(functionName))) {
+                operation = aggregate(
+                        List.of(rsItem(cteName, CTE),
+                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                        expression,
+                        columnName,
+                        unnestField,
+                        getArrayBaseFunctionName(functionName));
+            }
             else {
                 throw new IllegalArgumentException(functionName + " not supported");
             }
 
             relationshipCteGenerator.register(List.of(functionCall.toString()), operation, relationshipField.getBaseModelName());
+        }
+
+        private String getArrayBaseFunctionName(String functionName)
+        {
+            return functionName.split("_")[1];
         }
 
         private class FunctionCallProcessorContext
