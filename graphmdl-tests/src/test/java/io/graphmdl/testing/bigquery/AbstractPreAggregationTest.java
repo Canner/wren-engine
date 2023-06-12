@@ -22,6 +22,7 @@ import io.graphmdl.base.client.duckdb.DuckdbClient;
 import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.main.metadata.Metadata;
+import io.graphmdl.preaggregation.PreAggregationInfoPair;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.preaggregation.PreAggregationTableMapping;
 import io.graphmdl.testing.AbstractWireProtocolTest;
@@ -59,7 +60,7 @@ public abstract class AbstractPreAggregationTest
                 .build();
     }
 
-    protected PreAggregationTableMapping.PreAggregationInfoPair getDefaultPreAggregationInfoPair(String name)
+    protected PreAggregationInfoPair getDefaultPreAggregationInfoPair(String name)
     {
         return preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "tpch_tiny", name);
     }
