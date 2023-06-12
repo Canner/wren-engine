@@ -145,8 +145,8 @@ public class Model
                 ", refSql='" + refSql + '\'' +
                 ", columns=" + columns +
                 ", primaryKey='" + primaryKey + '\'' +
-                ", preAggregated=" + preAggregated + '\'' +
-                ", refreshTime=" + refreshTime + '\'' +
+                ", preAggregated=" + preAggregated +
+                ", refreshTime='" + refreshTime + '\'' +
                 ", description='" + description + '\'' +
                 '}';
     }
