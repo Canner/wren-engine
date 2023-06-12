@@ -138,12 +138,12 @@ public class PreAggregationManager
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
 
             createPreAggregation(mdl, preAggregationInfo, sessionContext, rewrittenStatement, duckdbTableName);
-            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationTableMapping.PreAggregationInfoPair(preAggregationInfo, duckdbTableName, createTime));
+            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationInfoPair(preAggregationInfo, duckdbTableName, createTime));
         }).exceptionally(e -> {
             duckdbClient.dropTableQuietly(duckdbTableName);
             String errMsg = format("Failed to do pre-aggregation for preAggregationInfo %s; caused by %s", preAggregationInfo.getName(), e.getMessage());
             LOG.error(e, errMsg);
-            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationTableMapping.PreAggregationInfoPair(preAggregationInfo, Optional.empty(), Optional.of(errMsg), createTime));
+            preAggregationTableMapping.putPreAggregationTableMapping(catalogSchemaTableName, new PreAggregationInfoPair(preAggregationInfo, Optional.empty(), Optional.of(errMsg), createTime));
             return null;
         });
     }

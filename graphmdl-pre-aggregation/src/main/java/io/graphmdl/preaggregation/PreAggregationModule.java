@@ -31,6 +31,6 @@ public class PreAggregationModule
         binder.bind(PreAggregationStorageConfig.class).to(DuckdbS3StyleStorageConfig.class).in(Scopes.SINGLETON);
         binder.bind(PreAggregationManager.class).in(Scopes.SINGLETON);
         binder.bind(DuckdbClient.class).in(Scopes.SINGLETON);
-        binder.bind(PreAggregationTableMapping.class).in(Scopes.SINGLETON);
+        binder.bind(PreAggregationTableMapping.class).to(DefaultPreAggregationTableMapping.class).in(Scopes.SINGLETON);
     }
 }
