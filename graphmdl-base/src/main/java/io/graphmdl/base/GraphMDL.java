@@ -26,6 +26,7 @@ import io.graphmdl.base.dto.View;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -110,9 +111,8 @@ public class GraphMDL
 
     public List<PreAggregationInfo> listPreAggregated()
     {
-        return manifest.getMetrics()
-                .stream()
-                .filter(Metric::isPreAggregated)
+        return Stream.concat(manifest.getMetrics().stream(), manifest.getModels().stream())
+                .filter(PreAggregationInfo::isPreAggregated)
                 .collect(toImmutableList());
     }
 
