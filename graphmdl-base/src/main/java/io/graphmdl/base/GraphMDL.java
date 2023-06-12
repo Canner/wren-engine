@@ -35,6 +35,7 @@ import static java.util.Objects.requireNonNull;
 public class GraphMDL
 {
     public static final GraphMDL EMPTY_GRAPHMDL = GraphMDL.fromManifest(Manifest.builder().setCatalog("").setSchema("").build());
+    private static final ObjectMapper MAPPER = new ObjectMapper().disable(FAIL_ON_UNKNOWN_PROPERTIES);
 
     private final String catalog;
     private final String schema;
@@ -43,8 +44,7 @@ public class GraphMDL
     public static GraphMDL fromJson(String manifest)
             throws JsonProcessingException
     {
-        ObjectMapper objectMapper = new ObjectMapper().disable(FAIL_ON_UNKNOWN_PROPERTIES);
-        return new GraphMDL(objectMapper.readValue(manifest, Manifest.class));
+        return new GraphMDL(MAPPER.readValue(manifest, Manifest.class));
     }
 
     public static GraphMDL fromManifest(Manifest manifest)
