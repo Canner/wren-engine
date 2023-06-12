@@ -23,6 +23,7 @@ import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
+import static io.graphmdl.sqlrewrite.AnyFunctionSqlRewrite.ANY_FUNCTION_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.GraphMDLSqlRewrite.GRAPHMDL_SQL_REWRITE;
 import static io.graphmdl.sqlrewrite.GroupByKeyRewrite.GROUP_BY_KEY_REWRITE;
 import static io.graphmdl.sqlrewrite.MetricViewSqlRewrite.METRIC_VIEW_SQL_REWRITE;
@@ -33,6 +34,7 @@ public class GraphMDLPlanner
     private static final SqlParser SQL_PARSER = new SqlParser();
     private static final List<GraphMDLRule> ALL_RULES = List.of(
             METRIC_VIEW_SQL_REWRITE,
+            ANY_FUNCTION_SQL_REWRITE,
             GROUP_BY_KEY_REWRITE,
             GRAPHMDL_SQL_REWRITE);
 

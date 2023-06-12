@@ -234,6 +234,10 @@
     {
       "name": "useUseMetric",
       "statement": "select * from useMetric"
+    },
+    {
+      "name": "useAny",
+      "statement": "SELECT any(filter(orders, orderItem -> orderItem.orderstatus = 'F')).totalprice FROM Customer LIMIT 100"
     }
   ]
 }

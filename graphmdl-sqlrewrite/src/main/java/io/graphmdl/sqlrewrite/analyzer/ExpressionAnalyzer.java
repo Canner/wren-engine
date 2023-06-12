@@ -30,6 +30,7 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.IsNotNullPredicate;
 import io.trino.sql.tree.LambdaExpression;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -111,6 +112,20 @@ public final class ExpressionAnalyzer
         {
             process(node.getLeft());
             process(node.getRight());
+            return ignored;
+        }
+
+        @Override
+        protected Void visitIsNotNullPredicate(IsNotNullPredicate node, Void ignored)
+        {
+            process(node.getValue());
+            return ignored;
+        }
+
+        @Override
+        protected Void visitSubscriptExpression(SubscriptExpression node, Void ignored)
+        {
+            process(node.getBase());
             return ignored;
         }
 
@@ -249,7 +264,9 @@ public final class ExpressionAnalyzer
                 if (expression instanceof DereferenceExpression) {
                     DereferenceExpression dereferenceExpression = (DereferenceExpression) expression;
                     RelationshipCTE cte = relationshipCteGenerator.getRelationshipCTEs().get(String.join(".", nameParts));
-                    checkArgument(cte != null, String.join(".", nameParts) + " cte not found");
+                    if (cte == null) {
+                        return Optional.empty();
+                    }
 
                     Identifier field = dereferenceExpression.getField().orElseThrow();
                     String modelName = cte.getTarget().getName();

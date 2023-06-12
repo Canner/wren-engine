@@ -33,7 +33,6 @@ import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DataType;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
-import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Relation;
@@ -65,7 +64,7 @@ public final class Utils
 
     private Utils() {}
 
-    public static Node parseSql(String sql)
+    public static Statement parseSql(String sql)
     {
         return SQL_PARSER.createStatement(sql, PARSING_OPTIONS);
     }
