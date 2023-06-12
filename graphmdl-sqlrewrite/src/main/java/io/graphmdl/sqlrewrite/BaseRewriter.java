@@ -1734,7 +1734,7 @@ public class BaseRewriter<T>
     {
         return new DereferenceExpression(
                 node.getLocation(),
-                node.getBase(),
+                visitAndCast(node.getBase(), context),
                 node.getField());
     }
 

@@ -15,12 +15,14 @@
 package io.graphmdl.testing.bigquery;
 
 import io.graphmdl.testing.AbstractWireProtocolTest;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -518,6 +520,35 @@ public class TestGraphMDLWithBigquery
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
             assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @DataProvider
+    public Object[][] anyFunction()
+    {
+        return new Object[][] {
+                {"SELECT (any(filter(orders, orderItem -> orderItem.orderstatus = 'F')) IS NOT NULL) AS col_1 FROM Customer LIMIT 100"},
+                {"SELECT any(filter(orders, orderItem -> orderItem.orderstatus = 'F')).totalprice FROM Customer LIMIT 100"},
+                // useAny is a view that invoke any function
+                {"SELECT * FROM useAny"}
+        };
+    }
+
+    @Test(dataProvider = "anyFunction")
+    public void testAnyFunction(@Language("sql") String sql)
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
             int count = 1;
 
             while (resultSet.next()) {
