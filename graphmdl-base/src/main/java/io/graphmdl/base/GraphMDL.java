@@ -117,6 +117,16 @@ public class GraphMDL
                 .collect(toImmutableList());
     }
 
+    public Optional<PreAggregationInfo> getPreAggregationInfo(CatalogSchemaTableName name)
+    {
+        if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
+            return listPreAggregated().stream()
+                    .filter(preAggregationInfo -> preAggregationInfo.getName().equals(name.getSchemaTableName().getTableName()))
+                    .findAny();
+        }
+        return Optional.empty();
+    }
+
     public Optional<Metric> getMetric(String name)
     {
         return manifest.getMetrics().stream()

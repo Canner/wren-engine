@@ -59,6 +59,7 @@ public class TestPreAggregationRewrite
                     .put(new CatalogSchemaTableName("graphmdl", "test", "Collection"), "table_Collection")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "AvgCollection"), "table_AvgCollection")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "t-1"), "table_t-1")
+                    .put(new CatalogSchemaTableName("graphmdl", "test", "Album"), "table_Album")
                     .build();
 
     @BeforeClass
@@ -78,7 +79,8 @@ public class TestPreAggregationRewrite
                                         column("author", VARCHAR, null, true),
                                         column("price", INTEGER, null, true),
                                         column("publish_date", DATE, null, true),
-                                        column("release_date", TIMESTAMP, null, true)))))
+                                        column("release_date", TIMESTAMP, null, true)),
+                                true)))
                 .setMetrics(List.of(
                         metric(
                                 "Collection",
@@ -145,6 +147,15 @@ public class TestPreAggregationRewrite
     public void testSelect(OneTableTestData testData)
     {
         assertOneTable("SELECT * FROM {0}", testData);
+    }
+
+    @Test
+    public void testSelectModel()
+    {
+        assertRewrite("select * from Album",
+                "graphmdl",
+                "test",
+                "select * from table_Album");
     }
 
     @Test(dataProvider = "twoTableProvider")
