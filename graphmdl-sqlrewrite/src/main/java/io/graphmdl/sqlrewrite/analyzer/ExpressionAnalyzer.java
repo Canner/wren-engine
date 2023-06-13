@@ -149,7 +149,14 @@ public final class ExpressionAnalyzer
 
         private boolean isAggregateFunction(QualifiedName funcName)
         {
-            return List.of("array_count", "array_sum", "array_avg", "array_min", "array_max").contains(funcName.getSuffix());
+            return List.of("array_count",
+                            "array_sum",
+                            "array_avg",
+                            "array_min",
+                            "array_max",
+                            "array_bool_or",
+                            "array_every")
+                    .contains(funcName.getSuffix());
         }
 
         @Override
@@ -375,7 +382,7 @@ public final class ExpressionAnalyzer
 
         private String getArrayBaseFunctionName(String functionName)
         {
-            return functionName.split("_")[1];
+            return functionName.split("array_")[1];
         }
 
         private class FunctionCallProcessorContext

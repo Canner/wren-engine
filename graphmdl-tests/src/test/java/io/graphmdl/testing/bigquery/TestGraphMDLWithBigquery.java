@@ -421,6 +421,36 @@ public class TestGraphMDLWithBigquery
         catch (SQLException e) {
             throw new RuntimeException(e);
         }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_bool_or(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_every(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test

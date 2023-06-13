@@ -67,6 +67,12 @@ public class RewriteToBigQueryFunction
                 // bigquery DATE_TRUNC(date_expression, date_part) date_part should be an identifier while in pg it's a string literal
                 arguments = ImmutableList.of(arguments.get(1), new Identifier(((StringLiteral) arguments.get(0)).getValue()));
             }
+            else if (functionName.toString().equalsIgnoreCase("bool_or")) {
+                functionName = QualifiedName.of("logical_or");
+            }
+            else if (functionName.toString().equalsIgnoreCase("every")) {
+                functionName = QualifiedName.of("logical_and");
+            }
 
             return FunctionCall.builder(node)
                     .name(functionName)

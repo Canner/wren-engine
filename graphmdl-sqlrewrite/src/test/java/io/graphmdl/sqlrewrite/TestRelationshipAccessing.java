@@ -1122,7 +1122,7 @@ public class TestRelationshipAccessing
     public Object[][] aggregateForArray()
     {
         return new Object[][] {
-                {"select array_count(p.books, book -> book.name) as arraycount from People p",
+                {"select array_count(p.books, (book) -> book.name) as arraycount from People p",
                         "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
                                 " ${People.books} (userId, bk, books) AS (\n" +
                                 "   SELECT\n" +
@@ -1149,6 +1149,60 @@ public class TestRelationshipAccessing
                                 "FROM\n" +
                                 "  (People p\n" +
                                 "LEFT JOIN ${array_count} ON (p.userId = ${array_count}.bk))"},
+                {"select array_bool_or(p.books, (book) -> (book.name = 'The Lord of the rings')) as result from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${array_bool_or} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , bool_or(t.name = 'The Lord of the rings') f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT ${array_bool_or}.f1 result\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${array_bool_or} ON (p.userId = ${array_bool_or}.bk))"},
+                {"select array_every(p.books, (book) -> (book.name = 'The Lord of the rings')) as result from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${array_every} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , every(t.name = 'The Lord of the rings') f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT ${array_every}.f1 result\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${array_every} ON (p.userId = ${array_every}.bk))"},
         };
     }
 
@@ -1168,6 +1222,10 @@ public class TestRelationshipAccessing
         replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
         replaceMap.put("array_count",
                 generator.getNameMapping().get("array_count(p.books, (book) -> book.name)"));
+        replaceMap.put("array_bool_or",
+                generator.getNameMapping().get("array_bool_or(p.books, (book) -> (book.name = 'The Lord of the rings'))"));
+        replaceMap.put("array_every",
+                generator.getNameMapping().get("array_every(p.books, (book) -> (book.name = 'The Lord of the rings'))"));
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
