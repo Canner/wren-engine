@@ -180,6 +180,12 @@ public class RelationshipCteGenerator
                 return transferToFilterCte(
                         operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
                         operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField());
+            case AGGREGATE:
+                checkArgument(operation.getLambdaExpression().isPresent(), "Lambda expression is missing");
+                checkArgument(operation.getAggregateOperator().isPresent(), "Aggregate operator is missing");
+                return transferToAggregateCte(
+                        operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
+                        operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField(), operation.getAggregateOperator().get());
         }
         throw new UnsupportedOperationException(format("%s relationship operation is unsupported", operation.getOperatorType()));
     }
@@ -427,6 +433,71 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
+    private WithQuery transferToAggregateCte(
+            String manyResultField,
+            Expression lambdaExpressionBody,
+            RelationshipCTE relationshipCTE,
+            Optional<Expression> outputField,
+            String operator)
+    {
+        List<Expression> oneTableFields =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key be first.
+                        .add(relationshipCTE.getSource().getPrimaryKey())
+                        // remove duplicate column name
+                        .addAll(relationshipCTE.getSource().getColumns().stream()
+                                .filter(column -> !column.equals(manyResultField) && !column.equals(LAMBDA_RESULT_NAME))
+                                .collect(toList()))
+                        .add(relationshipCTE.getSource().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference(SOURCE_REFERENCE, column))
+                        .collect(toList());
+
+        SingleColumn arrayAggField = new SingleColumn(
+                toAggregate(lambdaExpressionBody, operator),
+                identifier(LAMBDA_RESULT_NAME));
+
+        List<SingleColumn> normalFields = oneTableFields
+                .stream()
+                .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
+                .collect(toList());
+
+        ImmutableSet.Builder<SelectItem> builder = ImmutableSet
+                .<SelectItem>builder()
+                .addAll(normalFields)
+                .add(arrayAggField)
+                .add(new SingleColumn(nameReference(SOURCE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
+        List<SelectItem> selectItems = ImmutableList.copyOf(builder.build());
+
+        List<Identifier> outputSchema = selectItems.stream()
+                .map(selectItem -> (SingleColumn) selectItem)
+                .map(singleColumn ->
+                        singleColumn.getAlias()
+                                .orElse(quotedIdentifier(singleColumn.getExpression().toString())))
+                .collect(toList());
+
+        Expression unnestField = outputField.orElse(nameReference(SOURCE_REFERENCE, manyResultField));
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        new Select(false, selectItems),
+                        leftJoin(
+                                crossJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                                        aliased(unnest(unnestField), UNNEST_REFERENCE, List.of(UNNEST_COLUMN_REFERENCE))),
+                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), TARGET_REFERENCE),
+                                joinOn(equal(nameReference(UNNEST_REFERENCE, UNNEST_COLUMN_REFERENCE), nameReference(TARGET_REFERENCE, relationshipCTE.getTarget().getPrimaryKey())))),
+                        Optional.empty(),
+                        Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
+                                .mapToObj(number -> new LongLiteral(String.valueOf(number)))
+                                .map(longLiteral -> new SimpleGroupBy(List.of(longLiteral))).collect(toList()))),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()),
+                Optional.of(outputSchema));
+    }
+
     private WithQuery transferToFilterCte(
             String manyResultField,
             Expression lambdaExpressionBody,
@@ -517,6 +588,20 @@ public class RelationshipCteGenerator
                                 new SortItem(nameReference(sortKeyPrefix, sortKey.getName()), sortKey.isDescending() ? SortItem.Ordering.DESCENDING : SortItem.Ordering.ASCENDING,
                                         SortItem.NullOrdering.UNDEFINED))
                         .collect(toList()))),
+                false,
+                Optional.empty(),
+                Optional.empty(),
+                List.of(field));
+    }
+
+    private Expression toAggregate(Expression field, String operator)
+    {
+        return new FunctionCall(
+                Optional.empty(),
+                QualifiedName.of(operator),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
                 false,
                 Optional.empty(),
                 Optional.empty(),
@@ -661,21 +746,27 @@ public class RelationshipCteGenerator
             FILTER,
             FIND,
             ANY_MATCH,
+            AGGREGATE,
         }
 
         public static RelationshipOperation access(List<RsItem> rsItems)
         {
-            return new RelationshipOperation(rsItems, OperatorType.ACCESS, null, null, null);
+            return new RelationshipOperation(rsItems, OperatorType.ACCESS, null, null, null, null);
         }
 
         public static RelationshipOperation transform(List<RsItem> rsItems, Expression lambdaExpression, String manySideResultField, Expression unnestField)
         {
-            return new RelationshipOperation(rsItems, OperatorType.TRANSFORM, lambdaExpression, manySideResultField, unnestField);
+            return new RelationshipOperation(rsItems, OperatorType.TRANSFORM, lambdaExpression, manySideResultField, unnestField, null);
         }
 
         public static RelationshipOperation filter(List<RsItem> rsItems, Expression lambdaExpression, String manySideResultField, Expression unnestField)
         {
-            return new RelationshipOperation(rsItems, OperatorType.FILTER, lambdaExpression, manySideResultField, unnestField);
+            return new RelationshipOperation(rsItems, OperatorType.FILTER, lambdaExpression, manySideResultField, unnestField, null);
+        }
+
+        public static RelationshipOperation aggregate(List<RsItem> rsItems, Expression lambdaExpression, String manySideResultField, Expression unnestField, String aggregateOperator)
+        {
+            return new RelationshipOperation(rsItems, OperatorType.AGGREGATE, lambdaExpression, manySideResultField, unnestField, aggregateOperator);
         }
 
         private final List<RsItem> rsItems;
@@ -684,19 +775,22 @@ public class RelationshipCteGenerator
         private final String manySideResultField;
         // for lambda cte generation
         private final Expression unnestField;
+        private final String aggregateOperator;
 
         private RelationshipOperation(
                 List<RsItem> rsItems,
                 OperatorType operatorType,
                 Expression lambdaExpression,
                 String manySideResultField,
-                Expression unnestField)
+                Expression unnestField,
+                String aggregateOperator)
         {
             this.rsItems = requireNonNull(rsItems);
             this.operatorType = requireNonNull(operatorType);
             this.lambdaExpression = lambdaExpression;
             this.manySideResultField = manySideResultField;
             this.unnestField = unnestField;
+            this.aggregateOperator = aggregateOperator;
         }
 
         public List<RsItem> getRsItems()
@@ -722,6 +816,11 @@ public class RelationshipCteGenerator
         public Optional<Expression> getUnnestField()
         {
             return Optional.ofNullable(unnestField);
+        }
+
+        public Optional<String> getAggregateOperator()
+        {
+            return Optional.ofNullable(aggregateOperator);
         }
     }
 

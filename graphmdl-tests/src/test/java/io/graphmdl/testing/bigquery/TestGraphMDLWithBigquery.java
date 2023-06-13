@@ -331,6 +331,130 @@ public class TestGraphMDLWithBigquery
     }
 
     @Test
+    public void testAggregateForArray()
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_sum(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_avg(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_count(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_max(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_min(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_min(filter(orders, a -> a.orderstatus = 'F'), a -> a.totalprice) as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_bool_or(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select array_every(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     public void testGroupByRelationship()
             throws Exception
     {

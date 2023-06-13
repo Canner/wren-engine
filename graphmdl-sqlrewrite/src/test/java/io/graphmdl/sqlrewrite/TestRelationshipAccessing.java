@@ -910,6 +910,7 @@ public class TestRelationshipAccessing
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
 
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        System.out.println(actualSql);
 
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
@@ -1111,6 +1112,120 @@ public class TestRelationshipAccessing
                 generator.getNameMapping().get("filter(p.books, (book) -> ((book.name = 'book1') OR (book.name = 'book2')))"));
         replaceMap.put("filter_cte_index",
                 generator.getNameMapping().get("filter(p.books, (book) -> ((book.name = 'book1') OR (book.name = 'book2')))[0]"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
+
+    @DataProvider
+    public Object[][] aggregateForArray()
+    {
+        return new Object[][] {
+                {"select array_count(p.books, (book) -> book.name) as arraycount from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${array_count} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , count(t.name) f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT ${array_count}.f1 arraycount\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${array_count} ON (p.userId = ${array_count}.bk))"},
+                {"select array_bool_or(p.books, (book) -> (book.name = 'The Lord of the rings')) as result from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${array_bool_or} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , bool_or(t.name = 'The Lord of the rings') f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT ${array_bool_or}.f1 result\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${array_bool_or} ON (p.userId = ${array_bool_or}.bk))"},
+                {"select array_every(p.books, (book) -> (book.name = 'The Lord of the rings')) as result from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${array_every} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , every(t.name = 'The Lord of the rings') f1\n" +
+                                "   FROM\n" +
+                                "     ((${People.books} s\n" +
+                                "   CROSS JOIN UNNEST(s.books) u (uc))\n" +
+                                "   LEFT JOIN Book t ON (u.uc = t.bookId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                "SELECT ${array_every}.f1 result\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${array_every} ON (p.userId = ${array_every}.bk))"},
+        };
+    }
+
+    @Test(dataProvider = "aggregateForArray")
+    public void testAggregateForArray(String original, String expected)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Statement rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("array_count",
+                generator.getNameMapping().get("array_count(p.books, (book) -> book.name)"));
+        replaceMap.put("array_bool_or",
+                generator.getNameMapping().get("array_bool_or(p.books, (book) -> (book.name = 'The Lord of the rings'))"));
+        replaceMap.put("array_every",
+                generator.getNameMapping().get("array_every(p.books, (book) -> (book.name = 'The Lord of the rings'))"));
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
