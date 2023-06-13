@@ -37,6 +37,7 @@ import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESULT;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
+import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_TO_CHAR;
 
 @ThreadSafe
 public final class PgFunctionRegistry
@@ -59,6 +60,7 @@ public final class PgFunctionRegistry
                 .add(PG_GET_EXPR_PRETTY)
                 .add(FORMAT_TYPE)
                 .add(PG_GET_FUNCTION_RESULT)
+                .add(PG_TO_CHAR)
                 .build();
 
         // TODO: handle function name overloading
