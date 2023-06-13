@@ -710,4 +710,33 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @DataProvider
+    public Object[][] first()
+    {
+        return new Object[][] {
+                {"SELECT first(orders, totalprice, DESC) IS NOT NULL FROM Customer LIMIT 100"},
+                {"SELECT first(c.orders, totalprice, DESC).totalprice FROM Customer c LIMIT 100"},
+                {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC) IS NOT NULL FROM Customer LIMIT 100"},
+                {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC).totalprice FROM Customer LIMIT 100"},
+        };
+    }
+
+    @Test(dataProvider = "first")
+    public void testFirstFunction(String sql)
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
 }
