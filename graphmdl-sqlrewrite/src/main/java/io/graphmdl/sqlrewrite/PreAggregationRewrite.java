@@ -18,7 +18,6 @@ import io.airlift.log.Logger;
 import io.graphmdl.base.CatalogSchemaTableName;
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.SessionContext;
-import io.graphmdl.base.dto.Metric;
 import io.graphmdl.sqlrewrite.analyzer.Field;
 import io.graphmdl.sqlrewrite.analyzer.PreAggregationAnalysis;
 import io.graphmdl.sqlrewrite.analyzer.Scope;
@@ -170,7 +169,7 @@ public class PreAggregationRewrite
 
             CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, node.getName());
             aggregationAnalysis.addTable(catalogSchemaTableName);
-            if (graphMDL.getMetric(catalogSchemaTableName).filter(Metric::isPreAggregated).isPresent()) {
+            if (graphMDL.getPreAggregationInfo(catalogSchemaTableName).isPresent()) {
                 Optional<String> preAggregationTableOpt = convertTable(catalogSchemaTableName);
                 if (preAggregationTableOpt.isPresent()) {
                     aggregationAnalysis.addPreAggregationTables(catalogSchemaTableName);

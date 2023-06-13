@@ -39,6 +39,11 @@ public class Model
         return model(name, refSql, columns, null);
     }
 
+    public static Model model(String name, String refSql, List<Column> columns, boolean preAggregated)
+    {
+        return new Model(name, refSql, columns, null, preAggregated, null, null);
+    }
+
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
         return model(name, refSql, columns, primaryKey, null);
