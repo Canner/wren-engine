@@ -60,6 +60,7 @@ public class TestPreAggregationRewrite
                     .put(new CatalogSchemaTableName("graphmdl", "test", "AvgCollection"), "table_AvgCollection")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "t-1"), "table_t-1")
                     .put(new CatalogSchemaTableName("graphmdl", "test", "Album"), "table_Album")
+                    .put(new CatalogSchemaTableName("graphmdl", "test", "Tag"), "table_Tag")
                     .build();
 
     @BeforeClass
@@ -80,6 +81,23 @@ public class TestPreAggregationRewrite
                                         column("price", INTEGER, null, true),
                                         column("publish_date", DATE, null, true),
                                         column("release_date", TIMESTAMP, null, true)),
+                                true),
+                        model("Tag",
+                                "select * from (VALUES\n" +
+                                        " (1, 'U2',     5),\n" +
+                                        " (2, 'Blur',   5),\n" +
+                                        " (3, 'Oasis',  5),\n" +
+                                        " (4, '2Pac',   6),\n" +
+                                        " (5, 'Rock',   7),\n" +
+                                        " (6, 'Rap',    7),\n" +
+                                        " (7, 'Music',  9),\n" +
+                                        " (8, 'Movies', 9),\n" +
+                                        " (9, 'Art', NULL))\n" +
+                                        "tag(id, name, subclassof)",
+                                List.of(
+                                        column("id", INTEGER, null, true),
+                                        column("name", VARCHAR, null, true),
+                                        column("subclassof", INTEGER, null, false)),
                                 true)))
                 .setMetrics(List.of(
                         metric(
@@ -156,6 +174,38 @@ public class TestPreAggregationRewrite
                 "graphmdl",
                 "test",
                 "select * from table_Album");
+    }
+
+    @Test
+    public void testSelectWithRecursive()
+    {
+        // sample from duckdb https://duckdb.org/docs/sql/query_syntax/with.html
+        assertRewrite("WITH RECURSIVE tag_hierarchy(id, source, path) AS (\n" +
+                        "  SELECT id, name, name AS path\n" +
+                        "  FROM Tag\n" +
+                        "  WHERE subclassof IS NULL\n" +
+                        "UNION ALL\n" +
+                        "  SELECT Tag.id, Tag.name, CONCAT(Tag.name, ',', tag_hierarchy.path)\n" +
+                        "  FROM Tag, tag_hierarchy\n" +
+                        "  WHERE Tag.subclassof = tag_hierarchy.id\n" +
+                        ")\n" +
+                        "SELECT path\n" +
+                        "FROM tag_hierarchy\n" +
+                        "WHERE source = 'Oasis'",
+                "graphmdl",
+                "test",
+                "WITH RECURSIVE tag_hierarchy(id, source, path) AS (\n" +
+                        "  SELECT id, name, name AS path\n" +
+                        "  FROM table_Tag\n" +
+                        "  WHERE subclassof IS NULL\n" +
+                        "UNION ALL\n" +
+                        "  SELECT table_Tag.id, table_Tag.name, CONCAT(table_Tag.name, ',', tag_hierarchy.path)\n" +
+                        "  FROM table_Tag, tag_hierarchy\n" +
+                        "  WHERE table_Tag.subclassof = tag_hierarchy.id\n" +
+                        ")\n" +
+                        "SELECT path\n" +
+                        "FROM tag_hierarchy\n" +
+                        "WHERE source = 'Oasis'");
     }
 
     @Test(dataProvider = "twoTableProvider")
