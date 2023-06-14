@@ -199,7 +199,7 @@ public class PreAggregationRewrite
         private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
         {
             if (node.getWith().isEmpty()) {
-                return Optional.empty();
+                return Optional.of(Scope.builder().parent(scope).build());
             }
 
             With with = node.getWith().get();
@@ -210,8 +210,14 @@ public class PreAggregationRewrite
                 if (withScopeBuilder.containsNamedQuery(name)) {
                     throw new IllegalArgumentException(format("WITH query name '%s' specified more than once", name));
                 }
-                visitAndCast(withQuery.getQuery(), Optional.of(withScopeBuilder.build()));
-                withScopeBuilder.namedQuery(name, withQuery);
+                if (with.isRecursive()) {
+                    withScopeBuilder.namedQuery(name, withQuery);
+                    visitAndCast(withQuery.getQuery(), Optional.of(withScopeBuilder.build()));
+                }
+                else {
+                    visitAndCast(withQuery.getQuery(), Optional.of(withScopeBuilder.build()));
+                    withScopeBuilder.namedQuery(name, withQuery);
+                }
             }
 
             return Optional.of(withScopeBuilder.build());
