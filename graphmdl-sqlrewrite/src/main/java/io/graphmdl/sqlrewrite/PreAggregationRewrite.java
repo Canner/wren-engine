@@ -195,7 +195,6 @@ public class PreAggregationRewrite
             return converter.apply(preAggregationTable);
         }
 
-        // TODO: from StatementAnalyzer.analyzeWith will recursive query mess up anything here?
         private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
         {
             if (node.getWith().isEmpty()) {
