@@ -22,6 +22,7 @@ import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.BooleanType.BOOLEAN;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
+import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
 import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.Argument.argument;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.Language.SQL;
@@ -130,6 +131,23 @@ public final class PgFunctions
             .setLanguage(SQL)
             .setDefinition("select regexp_extract(remotename, r\".*___([_a-zA-Z1-9]+)*\", 1) from pg_catalog.pg_proc WHERE oid = func")
             .setArguments(List.of(argument("func", INTEGER)))
+            .setReturnType(VARCHAR)
+            .build();
+
+    // TODO Support more date/time format https://www.postgresql.org/docs/13/functions-formatting.html#FUNCTIONS-FORMATTING-DATETIME-TABLE
+    // TODO Support more timezone, now only support UTC
+    public static final PgFunction PG_TO_CHAR = builder()
+            .setName("to_char")
+            .setLanguage(SQL)
+            .setDefinition("WITH to_char AS (SELECT " +
+                    "CONTAINS_SUBSTR(string_format, 'TZ') as contain_timezone, " +
+                    "CAST(TIMESTAMP(value) AS STRING FORMAT REPLACE(REPLACE(string_format, 'MS', 'FF3'), 'TZ', '')) AS timestamp_with_format) " +
+                    "SELECT CASE WHEN contain_timezone " +
+                    "THEN CONCAT(timestamp_with_format, 'UTC') " +
+                    "ELSE timestamp_with_format " +
+                    "END " +
+                    "FROM to_char")
+            .setArguments(List.of(argument("value", TIMESTAMP), argument("string_format", VARCHAR)))
             .setReturnType(VARCHAR)
             .build();
 }
