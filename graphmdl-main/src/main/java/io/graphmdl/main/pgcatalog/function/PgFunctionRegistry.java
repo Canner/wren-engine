@@ -32,6 +32,7 @@ import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_UPPER;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.FORMAT_TYPE;
+import static io.graphmdl.main.pgcatalog.function.PgFunctions.NOW;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_EXPR;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY;
 import static io.graphmdl.main.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESULT;
@@ -61,6 +62,7 @@ public final class PgFunctionRegistry
                 .add(FORMAT_TYPE)
                 .add(PG_GET_FUNCTION_RESULT)
                 .add(PG_TO_CHAR)
+                .add(NOW)
                 .build();
 
         // TODO: handle function name overloading

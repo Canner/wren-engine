@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,6 +77,17 @@ public class TestFunctions
             else {
                 assertThat(resultSet.getString(1)).isEqualTo(expected);
             }
+        }
+    }
+
+    @Test
+    public void testNow()
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            Statement stmt = connection.createStatement();
+            ResultSet resultSet = stmt.executeQuery("select now()");
+            assertThat(resultSet.next()).isTrue();
         }
     }
 }

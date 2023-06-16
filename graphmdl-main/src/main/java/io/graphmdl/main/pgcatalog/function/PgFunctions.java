@@ -150,4 +150,11 @@ public final class PgFunctions
             .setArguments(List.of(argument("value", TIMESTAMP), argument("string_format", VARCHAR)))
             .setReturnType(VARCHAR)
             .build();
+
+    public static final PgFunction NOW = builder()
+            .setName("now")
+            .setLanguage(SQL)
+            .setDefinition("SELECT CURRENT_TIMESTAMP")
+            .setReturnType(TIMESTAMP)
+            .build();
 }
