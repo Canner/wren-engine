@@ -19,8 +19,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
-import static io.graphmdl.base.metadata.SchemaUtil.checkNotEmpty;
-
 public final class SchemaTableName
 {
     private final String schemaName;
@@ -29,8 +27,8 @@ public final class SchemaTableName
     @JsonCreator
     public SchemaTableName(@JsonProperty("schema") String schemaName, @JsonProperty("table") String tableName)
     {
-        this.schemaName = checkNotEmpty(schemaName, "schemaName");
-        this.tableName = checkNotEmpty(tableName, "tableName");
+        this.schemaName = schemaName;
+        this.tableName = tableName;
     }
 
     @JsonProperty("schema")

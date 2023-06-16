@@ -842,6 +842,7 @@ public class TestWireProtocolWithBigquery
                         ", current_schemas(false)[s.r] nspname\n" +
                         "FROM\n" +
                         "UNNEST(generate_array(1, array_upper(current_schemas(false), 1))) s (r)"},
+                {"SELECT nspname, typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE t.oid IN (SELECT DISTINCT enumtypid FROM pg_enum e)"},
         };
     }
 

@@ -181,10 +181,8 @@ public final class Utils
 
         List<String> parts = Lists.reverse(name.getParts());
         String objectName = parts.get(0);
-        String schemaName = (parts.size() > 1) ? parts.get(1) : sessionContext.getSchema().orElseThrow(() ->
-                new IllegalArgumentException("Schema must be specified when session schema is not set"));
-        String catalogName = (parts.size() > 2) ? parts.get(2) : sessionContext.getCatalog().orElseThrow(() ->
-                new IllegalArgumentException("Catalog must be specified when session catalog is not set"));
+        String schemaName = (parts.size() > 1) ? parts.get(1) : sessionContext.getSchema().orElse(null);
+        String catalogName = (parts.size() > 2) ? parts.get(2) : sessionContext.getCatalog().orElse(null);
 
         return new CatalogSchemaTableName(catalogName, schemaName, objectName);
     }
