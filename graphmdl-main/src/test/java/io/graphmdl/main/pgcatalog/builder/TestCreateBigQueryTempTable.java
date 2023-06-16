@@ -37,11 +37,11 @@ public class TestCreateBigQueryTempTable
     {
         assertThat(createOrReplaceAllColumn(metadata))
                 .isEqualTo("CREATE OR REPLACE VIEW `graphmdl_temp.all_columns` AS " +
-                        "SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
+                        "SELECT 'testing_schema1' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                         "FROM `testing_schema1`.INFORMATION_SCHEMA.COLUMNS col " +
                         "LEFT JOIN `graphmdl_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
                         "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid " +
-                        "UNION ALL SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
+                        "UNION ALL SELECT 'testing_schema2' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                         "FROM `testing_schema2`.INFORMATION_SCHEMA.COLUMNS col " +
                         "LEFT JOIN `graphmdl_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
                         "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid;");
