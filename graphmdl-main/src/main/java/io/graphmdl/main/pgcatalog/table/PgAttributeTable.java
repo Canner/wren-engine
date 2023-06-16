@@ -71,7 +71,7 @@ public class PgAttributeTable
     protected Map<String, String> createTableContent()
     {
         return ImmutableMap.<String, String>builder()
-                .put("attrelid", "${hash}(${tableName})")
+                .put("attrelid", "${hash}(${concat}(${schemaName},${tableName}))")
                 .put("attname", "${columnName}")
                 .put("atttypid", "${typeOid}")
                 .put("attstattarget", "0")

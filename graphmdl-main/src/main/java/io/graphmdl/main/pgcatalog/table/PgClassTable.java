@@ -80,7 +80,7 @@ public class PgClassTable
     protected Map<String, String> createTableContent()
     {
         return ImmutableMap.<String, String>builder()
-                .put("oid", "${hash}(${tableName})")
+                .put("oid", "${hash}(${concat}(${schemaName},${tableName}))")
                 .put("relname", "${tableName}")
                 .put("relnamespace", "${hash}(${schemaName})")
                 .put("reltype", "0")

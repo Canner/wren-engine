@@ -64,6 +64,7 @@ public final class BigQueryPgCatalogTableBuilder
                 .put("functionSchema", "routine_schema")
                 .put("split", "split")
                 .put("firstOrdinal", "[ordinal(1)]")
+                .put("concat", "concat")
                 .build();
     }
 

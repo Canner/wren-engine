@@ -39,6 +39,7 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -932,6 +933,30 @@ public class TestWireProtocolWithBigquery
             else {
                 assertThat(result.getObject(1)).isEqualTo(expected);
             }
+        }
+    }
+
+    @Test
+    public void testColumns()
+            throws SQLException
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT\n" +
+                    "n.nspname AS TABLE_SCHEM,\n" +
+                    "ct.relname AS TABLE_NAME,\n" +
+                    "a.attname AS COLUMN_NAME,\n" +
+                    "a.attnum AS A_ATTNUM\n" +
+                    "FROM pg_catalog.pg_class ct\n" +
+                    "JOIN pg_catalog.pg_attribute a ON (ct.oid = a.attrelid)\n" +
+                    "JOIN pg_catalog.pg_namespace n ON (ct.relnamespace = n.oid) WHERE true  AND n.nspname = E'tpch_sf1' AND ct.relname = E'region'");
+            int count = 0;
+            List<String> columnNames = new ArrayList<>();
+            while (result.next()) {
+                columnNames.add(result.getString("COLUMN_NAME"));
+                count++;
+            }
+            assertThat(count).isEqualTo(3);
+            assertThat(columnNames).containsExactly("regionkey", "name", "comment");
         }
     }
 

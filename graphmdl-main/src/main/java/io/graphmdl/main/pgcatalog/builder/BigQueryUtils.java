@@ -145,10 +145,10 @@ public final class BigQueryUtils
         List<String> schemas = connector.listSchemas();
         return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", GRAPHMDL_TEMP_NAME) +
                 schemas.stream()
-                        .map(schema -> format("SELECT col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
+                        .map(schema -> format("SELECT '%s' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
                                 "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
                                 "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, GRAPHMDL_TEMP_NAME + ".pg_type_mapping"))
+                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, schema, GRAPHMDL_TEMP_NAME + ".pg_type_mapping"))
                         .reduce((a, b) -> a + " UNION ALL " + b)
                         .orElseThrow(() -> new GraphMDLException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
     }
