@@ -16,12 +16,12 @@ package io.graphmdl.preaggregation;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
 import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
 import io.graphmdl.base.type.DateType;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.TimestampType;
 
-import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -39,17 +39,22 @@ public class DuckdbRecordIterator
     private final List<PGType> types;
     private final AutoCloseableIterator<Object[]> recordIterator;
 
-    public static DuckdbRecordIterator of(ResultSet resultSet)
+    public static DuckdbRecordIterator of(Client client, String sql, List<Object> parameters)
             throws SQLException
     {
-        return new DuckdbRecordIterator(resultSet);
+        return new DuckdbRecordIterator(client, sql, parameters);
     }
 
-    private DuckdbRecordIterator(ResultSet resultSet)
+    private DuckdbRecordIterator(Client client, String sql, List<Object> parameters)
             throws SQLException
     {
-        requireNonNull(resultSet, "resultSet is null");
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        requireNonNull(client, "client is null");
+        requireNonNull(sql, "sql is null");
+        requireNonNull(parameters, "parameters is null");
+        JdbcRecordIterator jdbcRecordIterator = JdbcRecordIterator.of(client, sql, parameters);
+        this.recordIterator = jdbcRecordIterator;
+
+        ResultSetMetaData resultSetMetaData = jdbcRecordIterator.getResultSetMetaData();
         ImmutableList.Builder<PGType> typeBuilder = ImmutableList.builder();
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             int columnType = resultSetMetaData.getColumnType(i);
@@ -57,7 +62,6 @@ public class DuckdbRecordIterator
             typeBuilder.add(pgType);
         }
         this.types = typeBuilder.build();
-        this.recordIterator = new JdbcRecordIterator(resultSet);
     }
 
     @Override

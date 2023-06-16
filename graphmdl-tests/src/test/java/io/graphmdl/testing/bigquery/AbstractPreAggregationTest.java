@@ -28,7 +28,7 @@ import io.graphmdl.preaggregation.PreAggregationTableMapping;
 import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 
-import java.sql.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 import static java.lang.System.getenv;
@@ -91,7 +91,7 @@ public abstract class AbstractPreAggregationTest
                 for (int i = 0; i < pgTypes.size(); i++) {
                     returnResults[i] = bqResults[i];
                     if (DateType.DATE.oid() == pgTypes.get(i).oid()) {
-                        returnResults[i] = Date.valueOf(bqResults[i].toString());
+                        returnResults[i] = LocalDate.parse(bqResults[i].toString());
                     }
                 }
                 builder.add(returnResults);

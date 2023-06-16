@@ -15,10 +15,10 @@
 package io.graphmdl.base.client.duckdb;
 
 import io.airlift.log.Logger;
-import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
 import io.graphmdl.base.client.ColumnDescription;
+import io.graphmdl.base.client.jdbc.BaseJdbcRecordIterator;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
 import org.duckdb.DuckDBConnection;
 
@@ -56,53 +56,22 @@ public final class DuckdbClient
     @Override
     public AutoCloseableIterator<Object[]> query(String sql)
     {
-        try (Connection connection = createConnection()) {
-            Statement statement = connection.createStatement();
-            statement.execute(sql);
-            ResultSet resultSet = statement.getResultSet();
-            return new JdbcRecordIterator(resultSet);
+        try {
+            return JdbcRecordIterator.of(this, sql);
         }
-        catch (SQLException se) {
-            throw new RuntimeException(se);
+        catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public AutoCloseableIterator<ColumnDescription> describe(String sql)
     {
-        String describeSql = "describe " + sql;
-        try (Connection connection = createConnection()) {
-            Statement statement = connection.createStatement();
-            statement.execute(describeSql);
-            ResultSet resultSet = statement.getResultSet();
-            return new ColumnMetadataIterator(resultSet);
+        try {
+            return new ColumnMetadataIterator(this, "describe " + sql);
         }
-        catch (SQLException se) {
-            throw new RuntimeException(se);
-        }
-    }
-
-    public ResultSet executeQuery(String sql, List<Parameter> parameters)
-    {
-        PreparedStatement statement = null;
-        try (Connection connection = createConnection()) {
-            statement = connection.prepareStatement(sql);
-            for (int i = 0; i < parameters.size(); i++) {
-                statement.setObject(i + 1, parameters.get(i).getValue());
-            }
-
-            return statement.executeQuery();
-        }
-        catch (SQLException se) {
-            try {
-                if (statement != null) {
-                    statement.close();
-                }
-            }
-            catch (SQLException e) {
-                se.addSuppressed(e);
-            }
-            throw new RuntimeException(se);
+        catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -161,45 +130,13 @@ public final class DuckdbClient
     }
 
     static class ColumnMetadataIterator
+            extends BaseJdbcRecordIterator<ColumnDescription>
             implements AutoCloseableIterator<ColumnDescription>
     {
-        private final ResultSet resultSet;
-
-        private boolean hasNext;
-
-        private ColumnDescription nowBuffer;
-
-        public ColumnMetadataIterator(ResultSet resultSet)
+        public ColumnMetadataIterator(Client client, String sql)
                 throws SQLException
         {
-            this.resultSet = resultSet;
-
-            hasNext = resultSet.next();
-            if (hasNext) {
-                nowBuffer = getCurrentRecord();
-            }
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-            return hasNext;
-        }
-
-        @Override
-        public ColumnDescription next()
-        {
-            ColumnDescription nowRecord = nowBuffer;
-            try {
-                hasNext = resultSet.next();
-                if (hasNext) {
-                    nowBuffer = getCurrentRecord();
-                }
-            }
-            catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-            return nowRecord;
+            super(client, sql);
         }
 
         // The schema of a describe query in duckDB:
@@ -207,23 +144,18 @@ public final class DuckdbClient
         // ╞═════════════╪═════════════╪══════╪═════╪═════════╪═══════╡
         // │ 1           ┆ INTEGER     ┆ YES  ┆     ┆         ┆       │
 
-        private ColumnDescription getCurrentRecord()
+        @Override
+        public ColumnDescription getCurrentRecord()
                 throws SQLException
         {
             return new ColumnDescription(
                     resultSet.getString(1),
                     toGraphMDLType(JDBCType.valueOf(resultSet.getString(2))));
         }
-
-        @Override
-        public void close()
-                throws Exception
-        {
-            this.resultSet.close();
-        }
     }
 
-    private Connection createConnection()
+    @Override
+    public Connection createConnection()
             throws SQLException
     {
         // Refer to the official doc, if we want to create multiple read-write connections,

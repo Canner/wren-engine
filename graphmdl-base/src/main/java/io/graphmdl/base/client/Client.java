@@ -14,6 +14,8 @@
 
 package io.graphmdl.base.client;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 public interface Client
@@ -25,4 +27,7 @@ public interface Client
     AutoCloseableIterator<ColumnDescription> describe(String sql);
 
     List<String> listTables();
+
+    Connection createConnection()
+            throws SQLException;
 }
