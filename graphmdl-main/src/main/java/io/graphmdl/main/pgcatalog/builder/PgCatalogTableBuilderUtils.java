@@ -21,6 +21,9 @@ import io.graphmdl.main.pgcatalog.table.PgCatalogTable;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_IN;
+import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_OUT;
+import static io.graphmdl.main.pgcatalog.function.PgFunctions.ARRAY_RECV;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.graphmdl.main.pgcatalog.table.PgCatalogTableUtils.PG_CATALOG;
 import static java.lang.String.format;
@@ -65,7 +68,21 @@ public final class PgCatalogTableBuilderUtils
 
     private static String withProcHash(String key)
     {
-        return withHash("PROC" + key);
+        return withHash("PROC" + rewriteTyp(key));
+    }
+
+    private static String rewriteTyp(String typInput)
+    {
+        if (ARRAY_IN.getName().equals(typInput)) {
+            return ARRAY_IN.getRemoteName();
+        }
+        if (ARRAY_OUT.getName().equals(typInput)) {
+            return ARRAY_OUT.getRemoteName();
+        }
+        if (ARRAY_RECV.getName().equals(typInput)) {
+            return ARRAY_RECV.getRemoteName();
+        }
+        return typInput;
     }
 
     private static String withHash(String key)

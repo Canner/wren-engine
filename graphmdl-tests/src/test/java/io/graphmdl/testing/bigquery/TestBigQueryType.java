@@ -109,27 +109,36 @@ public class TestBigQueryType
         typeCaseMap.put(DataType.INTERVAL, new TypeCase("interval", "INTERVAL '1' day", new PGInterval(0, 0, 1, 0, 0, 0)));
         typeCaseMap.put(DataType.GEOGRAPHY, new TypeCase("geography", "ST_GEOGPOINT(30, 50)", "POINT(30 50)"));
 
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_bool", "array<bool>", "[true, false]", new Boolean[] {true, false}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_bytes", "array<bytes>", "[B\"hello\", B\"world\"]", new byte[][] {"hello".getBytes(UTF_8), "world".getBytes(UTF_8)}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_string", "array<string>", "[\"hello\", \"world\"]", new String[] {"hello", "world"}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_int64", "array<int64>", "[1, 2, 3]", new Long[] {1L, 2L, 3L}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_float64", "array<float64>", "[1.1, 2.2, 3.3]", new Double[] {1.1, 2.2, 3.3}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_numeric", "array<numeric>", "[numeric '1.1', numeric '2.2', numeric '3.3']", new BigDecimal[] {new BigDecimal("1.1"),
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_bool_in_array", "array<bool>", "[true, false]", new Boolean[] {true, false}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_bytes_in_array", "array<bytes>", "[B\"hello\", B\"world\"]", new byte[][] {"hello".getBytes(UTF_8),
+                "world".getBytes(UTF_8)}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_string_in_array", "array<string>", "[\"hello\", \"world\"]", new String[] {"hello", "world"}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_int64_in_array", "array<int64>", "[1, 2, 3]", new Long[] {1L, 2L, 3L}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_float64_in_array", "array<float64>", "[1.1, 2.2, 3.3]", new Double[] {1.1, 2.2, 3.3}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_numeric_in_array", "array<numeric>", "[numeric '1.1', numeric '2.2', numeric '3.3']", new BigDecimal[] {
+                new BigDecimal("1.1"),
                 new BigDecimal("2.2"), new BigDecimal("3.3")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_bignumeric", "array<bignumeric>", "[bignumeric '1.1', bignumeric '2.2', bignumeric '3.3']", new BigDecimal[] {
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_bignumeric_in_array", "array<bignumeric>", "[bignumeric '1.1', bignumeric '2.2', bignumeric '3.3']", new BigDecimal[] {
                 new BigDecimal("1.1"), new BigDecimal("2.2"), new BigDecimal("3.3")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_date", "array<date>", "[date \"2020-01-01\", date \"2020-01-02\"]", new Date[] {Date.valueOf("2020-01-01"),
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_date_in_array", "array<date>", "[date \"2020-01-01\", date \"2020-01-02\"]", new Date[] {Date.valueOf("2020-01-01"),
                 Date.valueOf("2020-01-02")}));
-//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_time", "array<time>", "[time \"15:10:55\", time \"15:10:56\"]", new Time[]{Time.valueOf("15:10:55"), Time.valueOf("15:10:56")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_timestamp", "array<timestamp>", "[timestamp \"2020-01-01 15:10:55\", timestamp \"2020-01-01 15:10:56\"]", new Timestamp[] {
+//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_time_in_array", "array<time>", "[time \"15:10:55\", time \"15:10:56\"]", new Time[]{Time.valueOf("15:10:55"), Time.valueOf("15:10:56")}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_timestamp_in_array", "array<timestamp>", "[timestamp \"2020-01-01 15:10:55\", timestamp \"2020-01-01 15:10:56\"]", new Timestamp[] {
                 Timestamp.valueOf("2020-01-01 15:10:55"), Timestamp.valueOf("2020-01-01 15:10:56")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_datetime", "array<datetime>", "[datetime \"2020-01-01 15:10:55.123456\", datetime \"2020-01-01 15:10:56.123456\"]", new Timestamp[] {
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_datetime_in_array", "array<datetime>", "[datetime \"2020-01-01 15:10:55.123456\", datetime \"2020-01-01 15:10:56.123456\"]", new Timestamp[] {
                 Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_json", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_json_in_array", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
                 "{a:2}"}));
-//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_interval", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
+        PGobject s1 = new PGobject();
+        s1.setType("record");
+        s1.setValue("(1,hello)");
+        PGobject s2 = new PGobject();
+        s2.setType("record");
+        s2.setValue("(2,world)");
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_struct_in_array", "array<struct<s1 int64, s2 string>>", "[(1, 'hello'), (2, 'world')]", new PGobject[] {s1, s2}));
+//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_interval_in_array", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
 //                new PGInterval(0, 0, 1, 0, 0, 0), new PGInterval(0, 0, 2, 0, 0, 0)}));
-//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_array_geography", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
+//        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_geography_in_array", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
 
         PGobject structObject = new PGobject();
         structObject.setType("record");

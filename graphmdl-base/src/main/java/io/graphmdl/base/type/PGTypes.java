@@ -112,4 +112,9 @@ public final class PGTypes
         }
         return arrayType;
     }
+
+    public static PGType<?> toPgRecordArray(PGType<?> innerRecordType)
+    {
+        return new PGArray(2287, innerRecordType);
+    }
 }

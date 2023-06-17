@@ -26,17 +26,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.cloud.bigquery.StandardSQLTypeName.STRUCT;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -89,27 +89,17 @@ public class BigQueryRecordIterator
             return null;
         }
 
-        StandardSQLTypeName typeName = field.getType().getStandardType();
         if (Field.Mode.REPEATED.equals(field.getMode())) {
             return fieldValue.getRepeatedValue().stream()
-                    .map(innerField -> getFieldValue(typeName, innerField))
+                    .map(innerField -> getFieldValueByType(field, innerField))
                     .collect(toImmutableList());
         }
-
-        if (typeName.equals(STRUCT)) {
-            List<Field> subFields = field.getSubFields();
-            List<FieldValue> subFieldValues = fieldValue.getRecordValue();
-            Map<String, Object> result = new HashMap<>();
-            for (int i = 0; i < subFields.size(); i++) {
-                result.put(subFields.get(i).getName(), getFieldValue(subFields.get(i), subFieldValues.get(i)));
-            }
-            return result;
-        }
-        return getFieldValue(typeName, fieldValue);
+        return getFieldValueByType(field, fieldValue);
     }
 
-    private static Object getFieldValue(StandardSQLTypeName typeName, FieldValue fieldValue)
+    private static Object getFieldValueByType(Field field, FieldValue fieldValue)
     {
+        StandardSQLTypeName typeName = field.getType().getStandardType();
         switch (typeName) {
             case BOOL:
                 return fieldValue.getBooleanValue();
@@ -133,6 +123,14 @@ public class BigQueryRecordIterator
                 return fieldValue.getNumericValue();
             case INTERVAL:
                 return convertBigQueryIntervalToPeriod(fieldValue.getStringValue());
+            case STRUCT:
+                List<Field> subFields = field.getSubFields();
+                List<FieldValue> subFieldValues = fieldValue.getRecordValue();
+                Map<String, Object> result = new LinkedHashMap<>();
+                for (int i = 0; i < subFields.size(); i++) {
+                    result.put(subFields.get(i).getName(), getFieldValue(subFields.get(i), subFieldValues.get(i)));
+                }
+                return unmodifiableMap(result);
             default:
                 throw new IllegalArgumentException("Unsupported type: " + typeName);
         }
