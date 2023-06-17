@@ -14,71 +14,39 @@
 
 package io.graphmdl.base.client.jdbc;
 
-import io.graphmdl.base.client.AutoCloseableIterator;
+import io.graphmdl.base.client.Client;
 
 import java.sql.Blob;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Objects.requireNonNull;
+import static java.util.Collections.emptyList;
 
 public class JdbcRecordIterator
-        implements AutoCloseableIterator<Object[]>
+        extends BaseJdbcRecordIterator<Object[]>
 {
-    private final ResultSet resultSet;
-    private final int columnCount;
-
-    private boolean hasNext;
-
-    private Object[] nowBuffer;
-
-    public JdbcRecordIterator(ResultSet resultSet)
+    public static JdbcRecordIterator of(Client client, String sql)
             throws SQLException
     {
-        this.resultSet = requireNonNull(resultSet);
-        ResultSetMetaData metaData = resultSet.getMetaData();
-        this.columnCount = metaData.getColumnCount();
+        return of(client, sql, emptyList());
+    }
 
-        hasNext = resultSet.next();
-        if (hasNext) {
-            nowBuffer = getCurrentRecord();
-        }
+    public static JdbcRecordIterator of(Client client, String sql, List<Object> parameters)
+            throws SQLException
+    {
+        return new JdbcRecordIterator(client, sql, parameters);
+    }
+
+    private JdbcRecordIterator(Client client, String sql, List<Object> parameters)
+            throws SQLException
+    {
+        super(client, sql, parameters);
     }
 
     @Override
-    public boolean hasNext()
-    {
-        return hasNext;
-    }
-
-    @Override
-    public Object[] next()
-    {
-        Object[] nowRecord = nowBuffer;
-        try {
-            hasNext = resultSet.next();
-            if (hasNext) {
-                nowBuffer = getCurrentRecord();
-            }
-        }
-        catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return nowRecord;
-    }
-
-    @Override
-    public void close()
-            throws Exception
-    {
-        this.resultSet.close();
-    }
-
-    private Object[] getCurrentRecord()
+    public Object[] getCurrentRecord()
             throws SQLException
     {
         List<Object> builder = new ArrayList<>(columnCount);

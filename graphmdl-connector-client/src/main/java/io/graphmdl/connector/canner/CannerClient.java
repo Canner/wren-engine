@@ -36,7 +36,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -91,14 +90,11 @@ public final class CannerClient
     @Override
     public AutoCloseableIterator<Object[]> query(String sql)
     {
-        try (Connection connection = createConnection()) {
-            Statement statement = connection.createStatement();
-            statement.execute(sql);
-            ResultSet resultSet = statement.getResultSet();
-            return new JdbcRecordIterator(resultSet);
+        try {
+            return JdbcRecordIterator.of(this, sql);
         }
-        catch (SQLException se) {
-            throw new RuntimeException(se);
+        catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -195,7 +191,8 @@ public final class CannerClient
                         .build());
     }
 
-    private Connection createConnection()
+    @Override
+    public Connection createConnection()
             throws SQLException
     {
         String url = format("jdbc:postgresql://%s/%s", pgUrl, cannerAvailableWorkspace);
