@@ -14,7 +14,6 @@
 
 package io.graphmdl.base.client.jdbc;
 
-import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
 
 import java.sql.Blob;
@@ -27,7 +26,6 @@ import static java.util.Collections.emptyList;
 
 public class JdbcRecordIterator
         extends BaseJdbcRecordIterator<Object[]>
-        implements AutoCloseableIterator<Object[]>
 {
     public static JdbcRecordIterator of(Client client, String sql)
             throws SQLException

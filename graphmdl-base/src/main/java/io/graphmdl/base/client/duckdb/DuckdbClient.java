@@ -131,7 +131,6 @@ public final class DuckdbClient
 
     static class ColumnMetadataIterator
             extends BaseJdbcRecordIterator<ColumnDescription>
-            implements AutoCloseableIterator<ColumnDescription>
     {
         public ColumnMetadataIterator(Client client, String sql)
                 throws SQLException
