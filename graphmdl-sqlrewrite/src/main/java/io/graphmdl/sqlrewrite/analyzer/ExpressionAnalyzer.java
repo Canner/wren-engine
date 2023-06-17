@@ -52,6 +52,7 @@ import static io.graphmdl.base.Utils.checkArgument;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.LAMBDA_RESULT_NAME;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.aggregate;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.arraySort;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.filter;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
@@ -60,6 +61,7 @@ import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.SOURCE_REFERENCE;
 import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
 public final class ExpressionAnalyzer
@@ -155,6 +157,11 @@ public final class ExpressionAnalyzer
             //  Refer to trino array function temporarily
             // TODO: bigquery array function mapping
             return List.of("cardinality", "array_max", "array_min", "array_length").contains(funcName.toString());
+        }
+
+        private boolean isGraphMDLFunction(QualifiedName funcName)
+        {
+            return isLambdaFunction(funcName) || funcName.getSuffix().equalsIgnoreCase("array_sort");
         }
 
         private boolean isLambdaFunction(QualifiedName funcName)
@@ -349,15 +356,12 @@ public final class ExpressionAnalyzer
                                     chain.isEmpty() ? Optional.empty() : Optional.of(chain.getLast())));
         }
 
-        private void collectRelationshipLambdaExpression(
+        private void collectRelationshipInFunction(
                 FunctionCall functionCall,
-                LambdaExpression lambdaExpression,
                 RelationshipField relationshipField,
                 Optional<FunctionCall> previousLambdaCall)
         {
-            checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
             String modelName = relationshipField.getModelName();
-            Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), modelName, lambdaExpression.getArguments().get(0).getName());
             String columnName = relationshipField.getColumnName();
             Relationship relationship = relationshipField.getRelationship();
 
@@ -365,30 +369,48 @@ public final class ExpressionAnalyzer
             String functionName = functionCall.getName().toString();
             String cteName = previousLambdaCall.map(Expression::toString).orElse(String.join(".", relationshipField.getCteNameParts()));
             Expression unnestField = previousLambdaCall.isPresent() ? DereferenceExpression.from(QualifiedName.of(SOURCE_REFERENCE, LAMBDA_RESULT_NAME)) : null;
-            if (functionName.equalsIgnoreCase("transform")) {
-                operation = transform(
-                        List.of(rsItem(cteName, CTE),
-                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        expression,
-                        columnName,
-                        unnestField);
+            List<Expression> arguments = functionCall.getArguments();
+            if (isLambdaFunction(QualifiedName.of(functionName.toLowerCase(ENGLISH)))) {
+                checkArgument(arguments.size() == 2, "Lambda function should have 2 arguments");
+                LambdaExpression lambdaExpression = (LambdaExpression) functionCall.getArguments().get(1);
+                checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
+                Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), modelName, lambdaExpression.getArguments().get(0).getName());
+                if (functionName.equalsIgnoreCase("transform")) {
+                    operation = transform(
+                            List.of(rsItem(cteName, CTE),
+                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                            expression,
+                            columnName,
+                            unnestField);
+                }
+                else if (functionName.equalsIgnoreCase("filter")) {
+                    operation = filter(
+                            List.of(rsItem(cteName, CTE),
+                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                            expression,
+                            columnName,
+                            unnestField);
+                }
+                else if (isAggregateFunction(QualifiedName.of(functionName))) {
+                    operation = aggregate(
+                            List.of(rsItem(cteName, CTE),
+                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                            expression,
+                            columnName,
+                            unnestField,
+                            getArrayBaseFunctionName(functionName));
+                }
+                else {
+                    throw new IllegalArgumentException(functionName + " not supported");
+                }
             }
-            else if (functionName.equalsIgnoreCase("filter")) {
-                operation = filter(
+            else if (functionName.equalsIgnoreCase("array_sort")) {
+                operation = arraySort(
                         List.of(rsItem(cteName, CTE),
                                 rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        expression,
-                        columnName,
-                        unnestField);
-            }
-            else if (isAggregateFunction(QualifiedName.of(functionName))) {
-                operation = aggregate(
-                        List.of(rsItem(cteName, CTE),
-                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        expression,
                         columnName,
                         unnestField,
-                        getArrayBaseFunctionName(functionName));
+                        arguments);
             }
             else {
                 throw new IllegalArgumentException(functionName + " not supported");
@@ -433,8 +455,7 @@ public final class ExpressionAnalyzer
                         .map(functionCall -> visitFunctionCall((FunctionCall) functionCall, ignored))
                         .collect(toImmutableList());
 
-                if (isLambdaFunction(node.getName())) {
-                    checkArgument(node.getArguments().size() == 2, "Lambda function should have 2 arguments");
+                if (isGraphMDLFunction(node.getName())) {
                     // TODO: remove this check
                     checkArgument(
                             contexts.stream()
@@ -450,18 +471,16 @@ public final class ExpressionAnalyzer
                     if (replaceNodeInfo.isPresent()
                             && replaceNodeInfo.get().getLastRelationshipField().isPresent()
                             && replaceNodeInfo.get().getOriginal() == node.getArguments().get(0)) {
-                        collectRelationshipLambdaExpression(
+                        collectRelationshipInFunction(
                                 node,
-                                (LambdaExpression) node.getArguments().get(1),
                                 replaceNodeInfo.get().getLastRelationshipField().get(),
                                 Optional.empty());
                         rootLambdaCalls.push(node);
                     }
                     else {
                         nodesToReplace.clear();
-                        collectRelationshipLambdaExpression(
+                        collectRelationshipInFunction(
                                 node,
-                                (LambdaExpression) node.getArguments().get(1),
                                 contexts.get(0).getRelationshipField().get(0),
                                 Optional.of(rootLambdaCalls.pop()));
                         // TODO: remove this check

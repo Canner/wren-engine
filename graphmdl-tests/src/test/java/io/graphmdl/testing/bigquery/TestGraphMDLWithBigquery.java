@@ -681,4 +681,33 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @DataProvider
+    public Object[][] arraySort()
+    {
+        return new Object[][] {
+                {"SELECT array_sort(orders, totalprice, DESC) FROM Customer LIMIT 100"},
+                {"SELECT array_sort(c.orders, totalprice, DESC) FROM Customer c LIMIT 100"},
+                {"SELECT array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC) FROM Customer LIMIT 100"},
+                {"SELECT array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC)[1].totalprice FROM Customer LIMIT 100"},
+        };
+    }
+
+    @Test(dataProvider = "arraySort")
+    public void testArraySortFunction(String sql)
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
 }
