@@ -15,12 +15,14 @@
 package io.graphmdl.main.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
+import io.graphmdl.base.type.RecordType;
 
 import java.util.List;
 
 import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.BooleanType.BOOLEAN;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
+import static io.graphmdl.base.type.PGArray.INT4_ARRAY;
 import static io.graphmdl.base.type.PGArray.VARCHAR_ARRAY;
 import static io.graphmdl.base.type.TimestampType.TIMESTAMP;
 import static io.graphmdl.base.type.VarcharType.VARCHAR;
@@ -156,5 +158,14 @@ public final class PgFunctions
             .setLanguage(SQL)
             .setDefinition("SELECT CURRENT_TIMESTAMP")
             .setReturnType(TIMESTAMP)
+            .build();
+
+    // TODO This is a mock function, need to be implemented
+    public static final PgFunction PG_EXPANDARRAY = builder()
+            .setName("_pg_expandarray")
+            .setLanguage(SQL)
+            .setDefinition("SELECT CASE WHEN (array_length(int_arr) > 0) THEN CAST((int_arr[0], 1) AS STRUCT<x INT64, n INT64>) ELSE NULL END")
+            .setArguments(List.of(argument("int_arr", INT4_ARRAY)))
+            .setReturnType(new RecordType(List.of(BIGINT, BIGINT)))
             .build();
 }
