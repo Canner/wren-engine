@@ -13,6 +13,7 @@
  */
 package io.graphmdl.base.client.jdbc;
 
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
 
@@ -32,7 +33,7 @@ public abstract class BaseJdbcRecordIterator<T>
         implements AutoCloseableIterator<T>
 {
     private final Connection connection;
-    private final PreparedStatement statement;
+    protected final PreparedStatement statement;
     protected final ResultSet resultSet;
     private final ResultSetMetaData resultSetMetaData;
     protected final int columnCount;
@@ -47,15 +48,13 @@ public abstract class BaseJdbcRecordIterator<T>
         this(client, sql, emptyList());
     }
 
-    public BaseJdbcRecordIterator(Client client, String sql, List<Object> parameters)
+    public BaseJdbcRecordIterator(Client client, String sql, List<Parameter> parameters)
             throws SQLException
     {
         requireNonNull(client, "client is null");
         connection = client.createConnection();
         statement = connection.prepareStatement(sql);
-        for (int i = 0; i < parameters.size(); i++) {
-            statement.setObject(i + 1, parameters.get(i));
-        }
+        setParameter(parameters);
         resultSet = statement.executeQuery();
 
         this.resultSetMetaData = resultSet.getMetaData();
@@ -64,6 +63,14 @@ public abstract class BaseJdbcRecordIterator<T>
         hasNext = resultSet.next();
         if (hasNext) {
             nowBuffer = getCurrentRecord();
+        }
+    }
+
+    protected void setParameter(List<Parameter> parameters)
+            throws SQLException
+    {
+        for (int i = 0; i < parameters.size(); i++) {
+            statement.setObject(i + 1, parameters.get(i).getValue());
         }
     }
 
