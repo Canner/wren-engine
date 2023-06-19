@@ -24,6 +24,7 @@ import io.accio.main.sql.bigquery.RemoveCatalogSchemaColumnPrefix;
 import io.accio.main.sql.bigquery.RemoveColumnAliasInAliasRelation;
 import io.accio.main.sql.bigquery.RemoveParameterInTypesInCast;
 import io.accio.main.sql.bigquery.ReplaceColumnAliasInUnnest;
+import io.accio.main.sql.bigquery.RewriteNamesToAlias;
 import io.accio.main.sql.bigquery.RewriteToBigQueryFunction;
 import io.accio.main.sql.bigquery.RewriteToBigQueryType;
 import io.accio.main.sql.bigquery.TransformCorrelatedJoinToJoin;
@@ -72,7 +73,8 @@ public class BigQuerySqlConverter
                 // this should happen after RewriteToBigQueryType since RewriteToBigQueryType will replace
                 // GenericLiteral with Cast and types in Cast could contain parameter.
                 RemoveParameterInTypesInCast.INSTANCE,
-                FlattenGroupingElements.INSTANCE);
+                FlattenGroupingElements.INSTANCE,
+                RewriteNamesToAlias.INSTANCE);
 
         LOG.info("[Input sql]: %s", sql);
 
