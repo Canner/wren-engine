@@ -81,6 +81,8 @@ public final class DuckdbClient
             for (int i = 0; i < parameters.size(); i++) {
                 preparedStatement.setObject(i + 1, parameters.get(i).getValue());
             }
+            // workaround for describe duckdb sql
+            preparedStatement.execute();
             ResultSetMetaData metaData = preparedStatement.getMetaData();
             int columnCount = metaData.getColumnCount();
 
