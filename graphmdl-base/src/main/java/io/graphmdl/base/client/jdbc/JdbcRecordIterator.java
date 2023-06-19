@@ -14,6 +14,7 @@
 
 package io.graphmdl.base.client.jdbc;
 
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.Client;
 
 import java.sql.Blob;
@@ -28,18 +29,19 @@ public class JdbcRecordIterator
         extends BaseJdbcRecordIterator<Object[]>
 {
     public static JdbcRecordIterator of(Client client, String sql)
+
             throws SQLException
     {
         return of(client, sql, emptyList());
     }
 
-    public static JdbcRecordIterator of(Client client, String sql, List<Object> parameters)
+    public static JdbcRecordIterator of(Client client, String sql, List<Parameter> parameters)
             throws SQLException
     {
         return new JdbcRecordIterator(client, sql, parameters);
     }
 
-    private JdbcRecordIterator(Client client, String sql, List<Object> parameters)
+    private JdbcRecordIterator(Client client, String sql, List<Parameter> parameters)
             throws SQLException
     {
         super(client, sql, parameters);
@@ -55,6 +57,9 @@ public class JdbcRecordIterator
                 Blob blob = resultSet.getBlob(i);
                 byte[] bytes = blob.getBytes(0, (int) blob.length());
                 builder.add(bytes);
+            }
+            else if (resultSet.getMetaData().getColumnType(i) == Types.SMALLINT) {
+                builder.add(resultSet.getShort(i));
             }
             else {
                 builder.add(resultSet.getObject(i));
