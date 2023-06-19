@@ -16,9 +16,9 @@ package io.graphmdl.validation;
 
 import io.graphmdl.base.GraphMDL;
 import io.graphmdl.base.client.Client;
-import io.graphmdl.base.client.ColumnDescription;
 import io.graphmdl.base.dto.EnumDefinition;
 import io.graphmdl.base.dto.Model;
+import io.graphmdl.base.metadata.ColumnMetadata;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -53,8 +53,8 @@ public class ModelValidation
     {
         return CompletableFuture.supplyAsync(() -> {
             long start = System.currentTimeMillis();
-            Iterable<ColumnDescription> result = () -> client.describe(buildSql(model.getRefSql()));
-            List<ColumnDescription> columnDescriptions = StreamSupport.stream(result.spliterator(), false).collect(toUnmodifiableList());
+            Iterable<ColumnMetadata> result = () -> client.describe(buildSql(model.getRefSql()), List.of()).iterator();
+            List<ColumnMetadata> columnDescriptions = StreamSupport.stream(result.spliterator(), false).collect(toUnmodifiableList());
 
             if (columnDescriptions.isEmpty()) {
                 return ValidationResult.error(ValidationResult.formatRuleWithIdentifier(RULE_NAME, model.getName()),
@@ -66,7 +66,7 @@ public class ModelValidation
                 if (!matcher.matches()) {
                     return new ColumnValidationFailed(modelColumn.getName(), "Illegal column name");
                 }
-                Optional<ColumnDescription> descriptionOptional = columnDescriptions.stream()
+                Optional<ColumnMetadata> descriptionOptional = columnDescriptions.stream()
                         .filter(columnDescription -> columnDescription.getName().equals(modelColumn.getName())).findAny();
                 if (descriptionOptional.isEmpty()) {
                     return new ColumnValidationFailed(modelColumn.getName(), format("Can't be found in model %s", model.getName()));
