@@ -54,6 +54,7 @@ import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperat
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.aggregate;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.arraySort;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.filter;
+import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.slice;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.graphmdl.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
@@ -161,7 +162,9 @@ public final class ExpressionAnalyzer
 
         private boolean isGraphMDLFunction(QualifiedName funcName)
         {
-            return isLambdaFunction(funcName) || funcName.getSuffix().equalsIgnoreCase("array_sort");
+            return isLambdaFunction(funcName)
+                    || funcName.getSuffix().equalsIgnoreCase("array_sort")
+                    || funcName.getSuffix().equalsIgnoreCase("slice");
         }
 
         private boolean isLambdaFunction(QualifiedName funcName)
@@ -410,6 +413,14 @@ public final class ExpressionAnalyzer
                                 rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
                         columnName,
                         unnestField,
+                        arguments);
+            }
+            else if (functionName.equalsIgnoreCase("slice")) {
+                checkArgument(arguments.size() == 3, "slice function should have 3 arguments");
+                operation = slice(
+                        List.of(rsItem(cteName, CTE),
+                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                        previousLambdaCall.isPresent() ? LAMBDA_RESULT_NAME : columnName,
                         arguments);
             }
             else {

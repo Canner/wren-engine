@@ -1289,4 +1289,58 @@ public class TestRelationshipAccessing
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
     }
+
+    @DataProvider
+    public Object[][] slice()
+    {
+        return new Object[][] {
+                {"select slice(p.books, 1, 5) as sliced_books from People p",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + ",\n" +
+                                " ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) filter(WHERE m.bookId IS NOT NULL) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2\n" +
+                                ") \n" +
+                                ", ${slice_cte} (userId, bk, f1) AS (\n" +
+                                "   SELECT\n" +
+                                "     s.userId userId\n" +
+                                "   , s.bk bk\n" +
+                                "   , slice(s.books, 1, 5) f1\n" +
+                                "   FROM\n" +
+                                "     ${People.books} s\n" +
+                                ") \n" +
+                                "SELECT\n" +
+                                "  ${slice_cte}.f1 sliced_books\n" +
+                                "FROM\n" +
+                                "  (People p\n" +
+                                "LEFT JOIN ${slice_cte}\n" +
+                                "ON (p.userId = ${slice_cte}.bk))"}
+        };
+    }
+
+    @Test(dataProvider = "slice")
+    public void testSlice(String original, String expected)
+    {
+        Statement statement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyGraphMDL);
+        Analysis analysis = StatementAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, oneToManyGraphMDL, generator);
+
+        Statement rewrittenStatement = statement;
+        for (GraphMDLRule rule : List.of(GRAPHMDL_SQL_REWRITE)) {
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyGraphMDL);
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
+        replaceMap.put("slice_cte", generator.getNameMapping().get("slice(p.books, 1, 5)"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
 }

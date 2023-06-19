@@ -739,4 +739,39 @@ public class TestGraphMDLWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @DataProvider
+    public Object[][] slice()
+    {
+        return new Object[][] {
+                {"SELECT slice(orders, 1, 5) FROM Customer LIMIT 100"},
+                {"SELECT slice(c.orders, 1, 5) FROM Customer c LIMIT 100"},
+                {"SELECT slice(c.orders, 1, 5)[0] FROM Customer c LIMIT 100"},
+                {"SELECT slice(c.orders, 1, 5)[0].totalprice FROM Customer c LIMIT 100"},
+                {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5) FROM Customer LIMIT 100"},
+                {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
+                {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
+                // TODO: Currently if there is more than 2 functions in a chain, the chain goes wrong
+                // https://github.com/Canner/canner-metric-layer/issues/288
+                // {"SELECT transform(slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5), s -> s.totalprice) FROM Customer LIMIT 100"},
+        };
+    }
+
+    @Test(dataProvider = "slice")
+    public void testSlice(String sql)
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
 }

@@ -75,7 +75,6 @@ import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.Parameter;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuantifiedComparisonExpression;
 import io.trino.sql.tree.Rollup;
 import io.trino.sql.tree.Row;
@@ -297,7 +296,9 @@ public final class ExpressionFormatter
                 // It should use `ORDINAL` or `OFFSET` operator to handle index value.
                 // Since pg is 1-based array index, that's why we use `ORDINAL` here.
                 // https://cloud.google.com/bigquery/docs/reference/standard-sql/arrays#accessing_array_elements
-                subscript = "ORDINAL(" + formatSql(node.getIndex(), dialect) + ")";
+                // use `SAFE_ORDINAL` to avoid array out of bounds error since in sql rewrite one-to-many relationship
+                // could use array index in join condition, sometimes the array column could be null
+                subscript = "SAFE_ORDINAL(" + formatSql(node.getIndex(), dialect) + ")";
             }
             else {
                 throw new IllegalArgumentException("Unsupported dialect: " + dialect);
@@ -432,8 +433,14 @@ public final class ExpressionFormatter
         @Override
         protected String visitFunctionCall(FunctionCall node, Void context)
         {
-            if (QualifiedName.of("LISTAGG").equals(node.getName())) {
+            if ("LISTAGG".equalsIgnoreCase(node.getName().toString())) {
                 return visitListagg(node);
+            }
+
+            // TODO: support slice function in duckdb & postgresql dialect
+            // https://github.com/Canner/canner-metric-layer/issues/289
+            if ("SLICE".equalsIgnoreCase(node.getName().toString()) && dialect.equals(BIGQUERY)) {
+                return processSliceInBigQuery(node);
             }
 
             StringBuilder builder = new StringBuilder();
@@ -930,6 +937,19 @@ public final class ExpressionFormatter
             }
 
             return builder.toString();
+        }
+
+        private String processSliceInBigQuery(FunctionCall node)
+        {
+            List<Expression> arguments = node.getArguments();
+            Expression expression = arguments.get(0);
+            LongLiteral start = (LongLiteral) arguments.get(1);
+            LongLiteral length = (LongLiteral) arguments.get(2);
+            return format("ARRAY(SELECT p FROM UNNEST(%s) p WITH OFFSET index WHERE index BETWEEN %s AND %s ORDER BY index)",
+                    process(expression),
+                    // bigquery use zero-based indexes
+                    start.getValue() - 1,
+                    start.getValue() - 1 + length.getValue());
         }
     }
 
