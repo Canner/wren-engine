@@ -70,7 +70,12 @@ public final class DuckdbClient
     @Override
     public AutoCloseableIterator<Object[]> query(String sql, List<Parameter> parameters)
     {
-        throw new UnsupportedOperationException("DuckDB connector does not implement prepared statement");
+        try {
+            return JdbcRecordIterator.of(this, sql, parameters);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
