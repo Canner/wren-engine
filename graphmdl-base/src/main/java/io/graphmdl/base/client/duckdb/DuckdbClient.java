@@ -73,8 +73,9 @@ public final class DuckdbClient
         try {
             return JdbcRecordIterator.of(this, sql, parameters);
         }
-        catch (SQLException e) {
-            throw new RuntimeException(e);
+        catch (Exception e) {
+            LOG.error(e, "Error executing DDL");
+            throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
 
