@@ -169,6 +169,7 @@ public class RelationshipCteGenerator
 
     private WithQuery transferToCte(String originalName, RelationshipCTE relationshipCTE, RelationshipOperation operation)
     {
+        List<Expression> arguments = operation.getFunctionCallArguments();
         switch (operation.getOperatorType()) {
             case ACCESS:
                 return transferToAccessCte(originalName, relationshipCTE);
@@ -189,7 +190,6 @@ public class RelationshipCteGenerator
                         operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
                         operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField(), operation.getAggregateOperator().get());
             case ARRAY_SORT:
-                List<Expression> arguments = operation.getFunctionCallArguments();
                 checkArgument(arguments.size() == 3, "array_sort function should have 3 arguments");
                 SortKey sortKey = sortKey(arguments.get(1).toString(), SortKey.Ordering.valueOf(arguments.get(2).toString()));
                 return transferToArraySortCte(
@@ -197,6 +197,14 @@ public class RelationshipCteGenerator
                         sortKey,
                         relationshipCTE,
                         operation.getUnnestField());
+            case SLICE:
+                checkArgument(arguments.size() == 3, "slice function should have 3 arguments");
+                checkArgument(arguments.get(1) instanceof LongLiteral, "Incorrect argument in slice function second argument");
+                checkArgument(arguments.get(2) instanceof LongLiteral, "Incorrect argument in slice function third argument");
+                return transferToSliceCte(
+                        operation.getManySideResultField().orElseThrow(() -> new IllegalArgumentException("array_sort relationship field not found")),
+                        relationshipCTE,
+                        arguments.subList(1, 3));
         }
         throw new UnsupportedOperationException(format("%s relationship operation is unsupported", operation.getOperatorType()));
     }
@@ -641,6 +649,67 @@ public class RelationshipCteGenerator
                 Optional.of(outputSchema));
     }
 
+    // TODO: find a way to combine slice to upper ctes https://github.com/Canner/canner-metric-layer/issues/302
+    private WithQuery transferToSliceCte(
+            String manyResultField,
+            RelationshipCTE relationshipCTE,
+            List<Expression> startEnd)
+    {
+        List<Expression> oneTableFields =
+                ImmutableSet.<String>builder()
+                        // make sure the primary key be first.
+                        .add(relationshipCTE.getSource().getPrimaryKey())
+                        // remove column name
+                        .addAll(relationshipCTE.getSource().getColumns().stream()
+                                .filter(column -> !column.equals(manyResultField) && !column.equals(LAMBDA_RESULT_NAME))
+                                .collect(toList()))
+                        .add(relationshipCTE.getSource().getJoinKey())
+                        .build()
+                        .stream()
+                        .map(column -> nameReference(SOURCE_REFERENCE, column))
+                        .collect(toList());
+
+        SingleColumn sliceColumn = new SingleColumn(
+                new FunctionCall(
+                        QualifiedName.of("slice"),
+                        List.of(
+                                DereferenceExpression.from(QualifiedName.of(SOURCE_REFERENCE, manyResultField)),
+                                startEnd.get(0),
+                                startEnd.get(1))),
+                identifier(LAMBDA_RESULT_NAME));
+
+        List<SingleColumn> normalFields = oneTableFields
+                .stream()
+                .map(field -> new SingleColumn(field, identifier(requireNonNull(getQualifiedName(field)).getSuffix())))
+                .collect(toList());
+
+        ImmutableSet.Builder<SelectItem> builder = ImmutableSet
+                .<SelectItem>builder()
+                .addAll(normalFields)
+                .add(sliceColumn)
+                .add(new SingleColumn(nameReference(SOURCE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
+        List<SelectItem> selectItems = ImmutableList.copyOf(builder.build());
+
+        List<Identifier> outputSchema = selectItems.stream()
+                .map(selectItem -> (SingleColumn) selectItem)
+                .map(singleColumn ->
+                        singleColumn.getAlias()
+                                .orElse(quotedIdentifier(singleColumn.getExpression().toString())))
+                .collect(toList());
+
+        return new WithQuery(identifier(relationshipCTE.getName()),
+                simpleQuery(
+                        new Select(false, selectItems),
+                        aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()),
+                Optional.of(outputSchema));
+    }
+
     private QualifiedName getQualifiedName(Expression expression)
     {
         if (expression instanceof DereferenceExpression) {
@@ -822,6 +891,7 @@ public class RelationshipCteGenerator
             FILTER,
             AGGREGATE,
             ARRAY_SORT,
+            SLICE,
         }
 
         public static RelationshipOperation access(List<RsItem> rsItems)
@@ -847,6 +917,11 @@ public class RelationshipCteGenerator
         public static RelationshipOperation arraySort(List<RsItem> rsItems, String manySideResultField, Expression unnestField, List<Expression> functionCallArguments)
         {
             return new RelationshipOperation(rsItems, OperatorType.ARRAY_SORT, null, manySideResultField, unnestField, null, functionCallArguments);
+        }
+
+        public static RelationshipOperation slice(List<RsItem> rsItems, String manySideResultField, List<Expression> functionCallArguments)
+        {
+            return new RelationshipOperation(rsItems, OperatorType.SLICE, null, manySideResultField, null, null, functionCallArguments);
         }
 
         private final List<RsItem> rsItems;
