@@ -17,7 +17,6 @@ package io.graphmdl.testing.bigquery;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -43,7 +42,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestResultSetMetadata
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     private static final String TEST_CATALOG = "canner-cml";
 

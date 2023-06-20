@@ -29,8 +29,10 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.graphmdl.main.GraphMDLConfig;
 import io.graphmdl.main.GraphMDLModule;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.server.module.PostgresConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
 import io.graphmdl.main.server.module.WebModule;
 import io.graphmdl.main.wireprotocol.PostgresNetty;
@@ -44,6 +46,9 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
+import static io.graphmdl.main.GraphMDLConfig.DataSourceType.BIGQUERY;
+import static io.graphmdl.main.GraphMDLConfig.DataSourceType.POSTGRES;
 import static io.graphmdl.main.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
 public class TestingGraphMDLServer
@@ -76,7 +81,8 @@ public class TestingGraphMDLServer
                 new JaxrsModule(),
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule(),
+                conditionalModule(GraphMDLConfig.class, config -> config.getDataSourceType().equals(BIGQUERY), new BigQueryConnectorModule()),
+                conditionalModule(GraphMDLConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
                 new GraphMDLModule(),
                 new PreAggregationModule(),
                 new WebModule()));

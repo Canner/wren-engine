@@ -17,7 +17,6 @@ package io.graphmdl.testing.bigquery;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.type.PGArray;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.DataType;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
@@ -85,7 +84,7 @@ import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestWireProtocolType
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     // BigQuery has only INT64 type. We should cast other int to int32 after got them.
     private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint", "array(integer)", "array(smallint)", "array(tinyint)");

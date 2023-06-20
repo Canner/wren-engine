@@ -52,7 +52,8 @@ public class TestReload
                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .put("bigquery.location", "asia-east1")
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .put("graphmdl.file", graphMDLFilePath.toAbsolutePath().toString());
+                .put("graphmdl.file", graphMDLFilePath.toAbsolutePath().toString())
+                .put("graphmdl.datasource.type", "bigquery");
 
         return TestingGraphMDLServer.builder()
                 .setRequiredConfigs(properties.build())

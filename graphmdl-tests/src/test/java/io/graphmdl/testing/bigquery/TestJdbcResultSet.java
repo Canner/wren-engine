@@ -15,7 +15,6 @@
 package io.graphmdl.testing.bigquery;
 
 import com.google.common.collect.ImmutableMap;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.postgresql.util.PGInterval;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -41,7 +40,7 @@ import static org.testng.Assert.assertTrue;
 
 @Test(singleThreaded = true)
 public class TestJdbcResultSet
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     // TODO Force mapping type before we fix https://github.com/Canner/canner-metric-layer/issues/196
     private static final Map<Integer, Integer> TYPE_FORCE_MAPPING = ImmutableMap.<Integer, Integer>builder()

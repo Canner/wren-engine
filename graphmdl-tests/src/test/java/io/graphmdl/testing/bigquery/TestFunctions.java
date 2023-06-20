@@ -14,7 +14,6 @@
 
 package io.graphmdl.testing.bigquery;
 
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -27,7 +26,7 @@ import java.sql.Statement;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFunctions
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     @DataProvider
     public Object[][] functions()

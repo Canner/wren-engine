@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.type.PGType;
 import io.graphmdl.base.type.PGTypes;
 import io.graphmdl.main.wireprotocol.PostgresWireProtocol;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
@@ -56,7 +55,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithBigquery
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     @Test
     public void testSimpleQuery()

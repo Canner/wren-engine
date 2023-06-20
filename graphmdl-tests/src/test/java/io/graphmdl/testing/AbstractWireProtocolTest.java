@@ -14,7 +14,6 @@
 
 package io.graphmdl.testing;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 
 import java.io.IOException;
@@ -26,34 +25,20 @@ import java.util.Optional;
 import java.util.Properties;
 
 import static java.lang.String.format;
-import static java.lang.System.getenv;
 
 public abstract class AbstractWireProtocolTest
         extends RequireGraphMDLServer
 {
     public static final String MOCK_PASSWORD = "ignored";
 
-    @Override
-    protected TestingGraphMDLServer createGraphMDLServer()
-    {
-        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .put("bigquery.location", "asia-east1")
-                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"));
-
-        if (getGraphMDLPath().isPresent()) {
-            properties.put("graphmdl.file", getGraphMDLPath().get());
-        }
-
-        return TestingGraphMDLServer.builder()
-                .setRequiredConfigs(properties.build())
-                .build();
-    }
-
     protected Optional<String> getGraphMDLPath()
     {
         return Optional.empty();
     }
+
+    protected abstract String getDefaultCatalog();
+
+    protected abstract String getDefaultSchema();
 
     protected TestingWireProtocolClient wireProtocolClient()
             throws IOException
@@ -67,7 +52,7 @@ public abstract class AbstractWireProtocolTest
             throws SQLException
     {
         HostAndPort hostAndPort = server().getPgHostAndPort();
-        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "canner-cml");
+        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), getDefaultCatalog());
         Properties props = getDefaultProperties();
         return DriverManager.getConnection(url, props);
     }
@@ -78,7 +63,7 @@ public abstract class AbstractWireProtocolTest
         props.setProperty("password", MOCK_PASSWORD);
         props.setProperty("user", "graphmdl");
         props.setProperty("ssl", "false");
-        props.setProperty("currentSchema", "tpch_tiny");
+        props.setProperty("currentSchema", getDefaultSchema());
         return props;
     }
 }

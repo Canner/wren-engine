@@ -22,7 +22,6 @@ import com.google.inject.Key;
 import io.airlift.log.Logger;
 import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.connector.bigquery.BigQueryClient;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.AfterClass;
@@ -47,7 +46,7 @@ import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQueryType
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     private static final Logger LOG = Logger.get(TestBigQueryType.class);
     private SchemaTableName testSchemaTableName;
