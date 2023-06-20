@@ -128,13 +128,16 @@ public class GroupByKeyRewrite
                 }
                 builder.add(key);
             }
-            else {
+            else if (key instanceof DereferenceExpression || key instanceof Identifier) {
                 scope.getRelationType().map(relationType -> relationType.resolveFields(getQualifiedName(key)).get(0))
                         .filter(Field::isRelationship)
                         .map(field -> accioMDL.getModel(field.getType()).map(Model::getPrimaryKey)
                                 .map(primaryKey -> new DereferenceExpression(key, new Identifier(primaryKey)))
                                 .orElseThrow(() -> new IllegalStateException("No model found for " + field.getType())))
                         .ifPresent(builder::add);
+                builder.add(key);
+            }
+            else {
                 builder.add(key);
             }
         }
