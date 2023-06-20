@@ -64,13 +64,28 @@ public class PostgresRecordIterator
                 Blob blob = resultSet.getBlob(i);
                 byte[] bytes = blob.getBytes(0, (int) blob.length());
                 builder.add(bytes);
-                continue;
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.SMALLINT) {
                 builder.add(resultSet.getShort(i));
-                continue;
             }
-            else if (resultSet.getMetaData().getColumnType(i) == Types.OTHER) {
+            else if (resultSet.getMetaData().getColumnType(i) == Types.ARRAY) {
+                List<Object> objarray = Optional.ofNullable(resultSet.getArray(i))
+                        .map(array -> {
+                            try {
+                                return Arrays.stream((Object[]) array.getArray()).map(obj -> {
+                                    if (obj instanceof PGobject) {
+                                        return getPgObjectValue((PGobject) obj);
+                                    }
+                                    return obj;
+                                }).collect(Collectors.toList());
+                            }
+                            catch (SQLException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }).orElse(null);
+                builder.add(objarray);
+            }
+            else {
                 Object obj = resultSet.getObject(i);
                 if (obj instanceof PGInterval) {
                     PGInterval pgInterval = (PGInterval) obj;
@@ -83,33 +98,14 @@ public class PostgresRecordIterator
                             pgInterval.getMinutes(),
                             pgInterval.getWholeSeconds(),
                             pgInterval.getMicroSeconds() * 1000));
-                    continue;
+                }
+                else if (obj instanceof PGobject) {
+                    builder.add(getPgObjectValue((PGobject) obj));
+                }
+                else {
+                    builder.add(obj);
                 }
             }
-            else if (resultSet.getMetaData().getColumnType(i) == Types.ARRAY) {
-                List<Object> objarray = Optional.ofNullable(resultSet.getArray(i))
-                        .map(array -> {
-                            try {
-                                return Arrays.asList((Object[]) array.getArray()).stream().map(obj -> {
-                                    if (obj instanceof PGobject) {
-                                        return getPgObjectValue((PGobject) obj);
-                                    }
-                                    return obj;
-                                }).collect(Collectors.toList());
-                            }
-                            catch (SQLException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }).orElse(null);
-                builder.add(objarray);
-                continue;
-            }
-            Object obj = resultSet.getObject(i);
-            if (obj instanceof PGobject) {
-                builder.add(getPgObjectValue((PGobject) obj));
-                continue;
-            }
-            builder.add(obj);
         }
         return builder.toArray();
     }

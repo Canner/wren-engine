@@ -34,16 +34,15 @@ import io.graphmdl.base.type.TimestampWithTimeZoneType;
 import io.graphmdl.base.type.VarcharType;
 
 import java.util.Map;
-import java.util.Optional;
 
 public final class PostgresJdbcType
 {
     private PostgresJdbcType() {}
 
-    private static final Map<String, PGType> jdbcTypeToPgTypeMap;
+    private static final Map<String, PGType<?>> jdbcTypeToPgTypeMap;
 
     static {
-        ImmutableMap.Builder<String, PGType> jdbcToPgBuilder = ImmutableMap.<String, PGType>builder()
+        ImmutableMap.Builder<String, PGType<?>> jdbcToPgBuilder = ImmutableMap.<String, PGType<?>>builder()
                 .put("bool", BooleanType.BOOLEAN)
                 .put("int2", SmallIntType.SMALLINT)
                 .put("int4", IntegerType.INTEGER)
@@ -71,7 +70,6 @@ public final class PostgresJdbcType
 
     public static PGType<?> toPGType(String jdbcType)
     {
-        return Optional.ofNullable(jdbcTypeToPgTypeMap.get(jdbcType))
-                .orElse(VarcharType.VARCHAR);
+        return jdbcTypeToPgTypeMap.getOrDefault(jdbcType, VarcharType.VARCHAR);
     }
 }

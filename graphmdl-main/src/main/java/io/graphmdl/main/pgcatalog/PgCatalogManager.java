@@ -100,17 +100,13 @@ public class PgCatalogManager
                 .build();
     }
 
-    public void initGraphMDLTables()
-    {
-        createCatalogIfNotExist(GRAPHMDL_TEMP_NAME);
-    }
-
     public void initPgCatalog()
     {
         if (connector.isPgCompatible()) {
             return;
         }
 
+        createCatalogIfNotExist(GRAPHMDL_TEMP_NAME);
         createCatalogIfNotExist(PG_CATALOG_NAME);
         if (!isPgCatalogValid()) {
             initPgTables();

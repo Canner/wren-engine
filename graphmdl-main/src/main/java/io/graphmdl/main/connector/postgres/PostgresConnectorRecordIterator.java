@@ -30,8 +30,8 @@ public class PostgresConnectorRecordIterator
         implements ConnectorRecordIterator
 {
     // TODO: Implement ConnectorRecordIterator instead of JdbcRecordIterator
-    private PostgresRecordIterator internalIterator;
-    private List<PGType> types;
+    private final PostgresRecordIterator internalIterator;
+    private final List<PGType> types;
 
     public PostgresConnectorRecordIterator(PostgresRecordIterator internalIterator)
             throws SQLException

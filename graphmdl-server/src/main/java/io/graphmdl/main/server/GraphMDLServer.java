@@ -48,7 +48,6 @@ public class GraphMDLServer
     protected void configure(Injector injector)
     {
         PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
-        pgCatalogManager.initGraphMDLTables();
         pgCatalogManager.initPgCatalog();
     }
 

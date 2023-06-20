@@ -64,7 +64,7 @@ public class PostgresClient
             ResultSet resultSet = connection.getMetaData().getColumns(null, schemaName, null, null);
             ListMultimap<SchemaTableName, ColumnMetadata> metadataBuilder = ArrayListMultimap.create();
             while (resultSet.next()) {
-                LOG.info("type: %s", resultSet.getString("TYPE_NAME"));
+                LOG.debug("type: %s", resultSet.getString("TYPE_NAME"));
                 metadataBuilder.put(new SchemaTableName(resultSet.getString("TABLE_SCHEM"), resultSet.getString("TABLE_NAME")),
                         ColumnMetadata.builder()
                                 .setName(resultSet.getString("COLUMN_NAME"))
@@ -79,7 +79,7 @@ public class PostgresClient
                     }).collect(toUnmodifiableList());
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing listTables");
             throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
@@ -91,7 +91,7 @@ public class PostgresClient
             return PostgresRecordIterator.of(this, sql);
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing query");
             throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
@@ -116,6 +116,7 @@ public class PostgresClient
         }
         catch (Exception e) {
             LOG.error(e, "Error executing DDL");
+            throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
 
@@ -146,7 +147,31 @@ public class PostgresClient
     @Override
     public List<String> listTables()
     {
-        return null;
+        try (Connection connection = createConnection()) {
+            ResultSet resultSet = connection.getMetaData().getColumns(null, null, null, null);
+            ListMultimap<SchemaTableName, ColumnMetadata> metadataBuilder = ArrayListMultimap.create();
+            while (resultSet.next()) {
+                LOG.info("type: %s", resultSet.getString("TYPE_NAME"));
+                metadataBuilder.put(new SchemaTableName(resultSet.getString("TABLE_SCHEM"), resultSet.getString("TABLE_NAME")),
+                        ColumnMetadata.builder()
+                                .setName(resultSet.getString("COLUMN_NAME"))
+                                .setType(toPGType(resultSet.getString("TYPE_NAME")))
+                                .build());
+            }
+            return metadataBuilder.asMap().entrySet().stream()
+                    .map(entry -> {
+                        TableMetadata.Builder builder = TableMetadata.builder(entry.getKey());
+                        entry.getValue().forEach(builder::column);
+                        return builder.build();
+                    })
+                    .map(TableMetadata::getTable)
+                    .map(SchemaTableName::toString)
+                    .collect(toUnmodifiableList());
+        }
+        catch (Exception e) {
+            LOG.error(e, "Error executing DDL");
+            throw new GraphMDLException(GENERIC_USER_ERROR, e);
+        }
     }
 
     public Connection createConnection()
@@ -159,7 +184,7 @@ public class PostgresClient
             throws SQLException
     {
         for (int i = 1; i <= parameters.size(); i++) {
-            PGType pgType = parameters.get(i - 1).getType();
+            PGType<?> pgType = parameters.get(i - 1).getType();
             if (pgType == IntervalType.INTERVAL) {
                 Period period = (Period) parameters.get(i - 1).getValue();
                 preparedStatement.setObject(i, new PGInterval(period.getYears(), period.getMonths(), period.getDays(), period.getHours(), period.getMinutes(), period.getSeconds()));

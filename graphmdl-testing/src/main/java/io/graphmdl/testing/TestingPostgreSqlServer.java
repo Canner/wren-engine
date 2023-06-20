@@ -14,7 +14,6 @@
 package io.graphmdl.testing;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import java.io.Closeable;
@@ -129,16 +128,6 @@ public class TestingPostgreSqlServer
     public String getJdbcUrl()
     {
         return String.format("jdbc:postgresql://%s:%s/%s", dockerContainer.getContainerIpAddress(), dockerContainer.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT), DATABASE);
-    }
-
-    public HostAndPort getAddress()
-    {
-        return HostAndPort.fromParts(dockerContainer.getContainerIpAddress(), dockerContainer.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT));
-    }
-
-    public PostgreSQLContainer<?> getDockerContainer()
-    {
-        return dockerContainer;
     }
 
     @Override
