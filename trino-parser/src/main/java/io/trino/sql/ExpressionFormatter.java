@@ -116,6 +116,7 @@ import static io.trino.sql.RowPatternFormatter.formatPattern;
 import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
+import static io.trino.sql.SqlFormatter.Dialect.POSTGRES;
 import static io.trino.sql.SqlFormatter.formatName;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.tree.ComparisonExpression.Operator.EQUAL;
@@ -139,7 +140,7 @@ public final class ExpressionFormatter
 
     private static String formatIdentifier(String s, Dialect dialect)
     {
-        if (dialect == DEFAULT || dialect == DUCKDB) {
+        if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
             return '"' + s.replace("\"", "\"\"") + '"';
         }
         else if (dialect == BIGQUERY) {
@@ -167,7 +168,8 @@ public final class ExpressionFormatter
         @Override
         protected String visitRow(Row node, Void context)
         {
-            return "ROW (" + Joiner.on(", ").join(node.getItems().stream()
+            String rowPrefix = dialect != POSTGRES ? "ROW" : "";
+            return rowPrefix + " (" + Joiner.on(", ").join(node.getItems().stream()
                     .map(child -> process(child, context))
                     .collect(toList())) + ")";
         }
@@ -289,7 +291,7 @@ public final class ExpressionFormatter
         protected String visitSubscriptExpression(SubscriptExpression node, Void context)
         {
             String subscript;
-            if (dialect == DEFAULT || dialect == DUCKDB) {
+            if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
                 subscript = formatSql(node.getIndex(), dialect);
             }
             else if (dialect == BIGQUERY) {
@@ -301,6 +303,9 @@ public final class ExpressionFormatter
             }
             else {
                 throw new IllegalArgumentException("Unsupported dialect: " + dialect);
+            }
+            if (dialect == POSTGRES) {
+                return "(" + formatSql(node.getBase(), dialect) + ")[" + subscript + "]";
             }
             return formatSql(node.getBase(), dialect) + "[" + subscript + "]";
         }

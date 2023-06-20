@@ -103,7 +103,8 @@ public final class Utils
         if (model.getColumns().isEmpty()) {
             return model.getRefSql();
         }
-        return format("SELECT %s FROM (%s)", model.getColumns().stream().map(Column::getSqlExpression).collect(joining(", ")), model.getRefSql());
+        // In postgres, all subquery should have alias.
+        return format("SELECT %s FROM (%s) t", model.getColumns().stream().map(Column::getSqlExpression).collect(joining(", ")), model.getRefSql());
     }
 
     public static Query parseMetricSql(Metric metric)
