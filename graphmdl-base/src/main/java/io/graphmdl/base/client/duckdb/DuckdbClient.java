@@ -14,25 +14,28 @@
 
 package io.graphmdl.base.client.duckdb;
 
+import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.graphmdl.base.GraphMDLException;
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
-import io.graphmdl.base.client.ColumnDescription;
-import io.graphmdl.base.client.jdbc.BaseJdbcRecordIterator;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
+import io.graphmdl.base.metadata.ColumnMetadata;
 import org.duckdb.DuckDBConnection;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.graphmdl.base.client.jdbc.JdbcTypeMapping.toGraphMDLType;
+import static io.graphmdl.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
+import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
 
 public final class DuckdbClient
@@ -65,13 +68,41 @@ public final class DuckdbClient
     }
 
     @Override
-    public AutoCloseableIterator<ColumnDescription> describe(String sql)
+    public AutoCloseableIterator<Object[]> query(String sql, List<Parameter> parameters)
     {
         try {
-            return new ColumnMetadataIterator(this, "describe " + sql);
+            return JdbcRecordIterator.of(this, sql, parameters);
         }
         catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<ColumnMetadata> describe(String sql, List<Parameter> parameters)
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i).getValue());
+            }
+            // workaround for describe duckdb sql
+            preparedStatement.execute();
+            ResultSetMetaData metaData = preparedStatement.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();
+            for (int i = 1; i <= columnCount; i++) {
+                builder.add(ColumnMetadata.builder()
+                        .setName(metaData.getColumnName(i))
+                        .setType(DUCKDB_TYPE.toPGType(metaData.getColumnType(i)))
+                        .build());
+            }
+            return builder.build();
+        }
+        catch (Exception e) {
+            LOG.error(e, "Error executing DDL");
+            throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
 
@@ -126,30 +157,6 @@ public final class DuckdbClient
         }
         catch (Exception e) {
             LOG.error(e, "Failed to drop table %s", tableName);
-        }
-    }
-
-    static class ColumnMetadataIterator
-            extends BaseJdbcRecordIterator<ColumnDescription>
-    {
-        public ColumnMetadataIterator(Client client, String sql)
-                throws SQLException
-        {
-            super(client, sql);
-        }
-
-        // The schema of a describe query in duckDB:
-        // │ column_name ┆ column_type ┆ null ┆ key ┆ default ┆ extra │
-        // ╞═════════════╪═════════════╪══════╪═════╪═════════╪═══════╡
-        // │ 1           ┆ INTEGER     ┆ YES  ┆     ┆         ┆       │
-
-        @Override
-        public ColumnDescription getCurrentRecord()
-                throws SQLException
-        {
-            return new ColumnDescription(
-                    resultSet.getString(1),
-                    toGraphMDLType(JDBCType.valueOf(resultSet.getString(2))));
         }
     }
 

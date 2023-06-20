@@ -15,6 +15,7 @@ package io.graphmdl.preaggregation;
 
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.ConnectorRecordIterator;
+import io.graphmdl.base.Parameter;
 import io.graphmdl.base.client.AutoCloseableIterator;
 import io.graphmdl.base.client.Client;
 import io.graphmdl.base.client.jdbc.JdbcRecordIterator;
@@ -39,13 +40,13 @@ public class DuckdbRecordIterator
     private final List<PGType> types;
     private final AutoCloseableIterator<Object[]> recordIterator;
 
-    public static DuckdbRecordIterator of(Client client, String sql, List<Object> parameters)
+    public static DuckdbRecordIterator of(Client client, String sql, List<Parameter> parameters)
             throws SQLException
     {
         return new DuckdbRecordIterator(client, sql, parameters);
     }
 
-    private DuckdbRecordIterator(Client client, String sql, List<Object> parameters)
+    private DuckdbRecordIterator(Client client, String sql, List<Parameter> parameters)
             throws SQLException
     {
         requireNonNull(client, "client is null");

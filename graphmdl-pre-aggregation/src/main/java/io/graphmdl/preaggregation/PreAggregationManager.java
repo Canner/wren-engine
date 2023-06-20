@@ -117,7 +117,7 @@ public class PreAggregationManager
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
             throws SQLException
     {
-        return DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().map(Parameter::getValue).collect(toImmutableList()));
+        return DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList()));
     }
 
     private CompletableFuture<Void> doSinglePreAggregation(GraphMDL mdl, PreAggregationInfo preAggregationInfo)

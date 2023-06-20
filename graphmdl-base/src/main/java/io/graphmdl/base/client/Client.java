@@ -14,6 +14,9 @@
 
 package io.graphmdl.base.client;
 
+import io.graphmdl.base.Parameter;
+import io.graphmdl.base.metadata.ColumnMetadata;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -22,9 +25,11 @@ public interface Client
 {
     AutoCloseableIterator<Object[]> query(String sql);
 
+    AutoCloseableIterator<Object[]> query(String sql, List<Parameter> parameters);
+
     void executeDDL(String sql);
 
-    AutoCloseableIterator<ColumnDescription> describe(String sql);
+    List<ColumnMetadata> describe(String sql, List<Parameter> parameters);
 
     List<String> listTables();
 
