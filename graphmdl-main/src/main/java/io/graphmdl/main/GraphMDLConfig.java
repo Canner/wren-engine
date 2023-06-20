@@ -22,7 +22,14 @@ import java.io.File;
 
 public class GraphMDLConfig
 {
+    public enum DataSourceType
+    {
+        BIGQUERY,
+        POSTGRES,
+    }
+
     private File graphMDLFile = new File("etc/graphmdl.json");
+    private DataSourceType dataSourceType;
 
     @NotNull
     public File getGraphMDLFile()
@@ -34,6 +41,19 @@ public class GraphMDLConfig
     public GraphMDLConfig setGraphMDLFile(File graphMDLFile)
     {
         this.graphMDLFile = graphMDLFile;
+        return this;
+    }
+
+    @NotNull
+    public DataSourceType getDataSourceType()
+    {
+        return dataSourceType;
+    }
+
+    @Config("graphmdl.datasource.type")
+    public GraphMDLConfig setDataSourceType(DataSourceType dataSourceType)
+    {
+        this.dataSourceType = dataSourceType;
         return this;
     }
 }

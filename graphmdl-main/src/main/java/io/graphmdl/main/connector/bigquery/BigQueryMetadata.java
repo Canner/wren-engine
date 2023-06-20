@@ -47,7 +47,6 @@ import java.util.regex.Matcher;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.graphmdl.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.graphmdl.base.metadata.StandardErrorCode.NOT_FOUND;
-import static io.graphmdl.base.metadata.TableMetadata.Builder.builder;
 import static io.graphmdl.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.graphmdl.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static java.lang.String.format;
@@ -121,7 +120,7 @@ public class BigQueryMetadata
         Iterable<Table> result = bigQueryClient.listTables(dataset.get().getDatasetId());
         return Streams.stream(result)
                 .map(table -> {
-                    TableMetadata.Builder builder = builder(
+                    TableMetadata.Builder builder = TableMetadata.builder(
                             new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()));
                     Table fullTable = bigQueryClient.getTable(table.getTableId());
                     // TODO: type mapping
@@ -214,5 +213,11 @@ public class BigQueryMetadata
     public String getDefaultCatalog()
     {
         return bigQueryClient.getProjectId();
+    }
+
+    @Override
+    public boolean isPgCompatible()
+    {
+        return false;
     }
 }

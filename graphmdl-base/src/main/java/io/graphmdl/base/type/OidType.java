@@ -22,13 +22,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 
 public class OidType
-        extends PGType<Integer>
+        extends PGType<Long>
 {
     public static final OidType OID_INSTANCE = new OidType();
 
     static final int OID = 26;
 
-    private static final int TYPE_LEN = 4;
+    private static final int TYPE_LEN = 8;
     private static final int TYPE_MOD = -1;
 
     OidType()
@@ -55,29 +55,29 @@ public class OidType
     }
 
     @Override
-    public int writeAsBinary(ByteBuf buffer, Integer value)
+    public int writeAsBinary(ByteBuf buffer, Long value)
     {
         buffer.writeInt(TYPE_LEN);
-        buffer.writeInt(value);
+        buffer.writeLong(value);
         return INT32_BYTE_SIZE + TYPE_LEN;
     }
 
     @Override
-    public Integer readBinaryValue(ByteBuf buffer, int valueLength)
+    public Long readBinaryValue(ByteBuf buffer, int valueLength)
     {
         checkArgument(valueLength == TYPE_LEN, format("length should be %s because oid is int32. Actual length: %s", TYPE_LEN, valueLength));
-        return buffer.readInt();
+        return buffer.readLong();
     }
 
     @Override
-    public byte[] encodeAsUTF8Text(Integer value)
+    public byte[] encodeAsUTF8Text(Long value)
     {
-        return Integer.toString(value).getBytes(StandardCharsets.UTF_8);
+        return Long.toString(value).getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
-    public Integer decodeUTF8Text(byte[] bytes)
+    public Long decodeUTF8Text(byte[] bytes)
     {
-        return Integer.parseInt(new String(bytes, StandardCharsets.UTF_8));
+        return Long.parseLong(new String(bytes, StandardCharsets.UTF_8));
     }
 }

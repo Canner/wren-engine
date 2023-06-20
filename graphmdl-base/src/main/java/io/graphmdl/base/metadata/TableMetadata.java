@@ -25,6 +25,11 @@ public class TableMetadata
     private final SchemaTableName table;
     private final List<ColumnMetadata> columns;
 
+    public static Builder builder(SchemaTableName tableName)
+    {
+        return new Builder(tableName);
+    }
+
     public TableMetadata(SchemaTableName table, List<ColumnMetadata> columns)
     {
         this.table = requireNonNull(table, "table is null");
@@ -53,11 +58,6 @@ public class TableMetadata
 
     public static class Builder
     {
-        public static Builder builder(SchemaTableName tableName)
-        {
-            return new Builder(tableName);
-        }
-
         private final SchemaTableName tableName;
         private final ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
 
@@ -71,6 +71,12 @@ public class TableMetadata
             columns.add(ColumnMetadata.builder()
                     .setName(columnName)
                     .setType(type).build());
+            return this;
+        }
+
+        public Builder column(ColumnMetadata columnMetadata)
+        {
+            columns.add(columnMetadata);
             return this;
         }
 

@@ -43,6 +43,7 @@
         <dep.airlift.version>214</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.14</dep.drift.version>
+        <dep.testcontainers.version>1.16.3</dep.testcontainers.version>
         <dep.errorprone.version>2.13.0</dep.errorprone.version>
 
         <netty.version>4.1.45.Final</netty.version>
@@ -373,6 +374,26 @@
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>42.3.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>${dep.testcontainers.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.osgi</groupId>
+                        <artifactId>org.osgi.core</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <type>pom</type>
+                <version>${dep.testcontainers.version}</version>
+                <scope>import</scope>
             </dependency>
 
             <dependency>

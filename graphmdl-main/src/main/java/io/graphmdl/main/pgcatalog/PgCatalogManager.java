@@ -100,8 +100,17 @@ public class PgCatalogManager
                 .build();
     }
 
+    public void initGraphMDLTables()
+    {
+        createCatalogIfNotExist(GRAPHMDL_TEMP_NAME);
+    }
+
     public void initPgCatalog()
     {
+        if (connector.isPgCompatible()) {
+            return;
+        }
+
         createCatalogIfNotExist(PG_CATALOG_NAME);
         if (!isPgCatalogValid()) {
             initPgTables();
@@ -111,8 +120,6 @@ public class PgCatalogManager
 
     public void initPgTables()
     {
-        createCatalogIfNotExist(GRAPHMDL_TEMP_NAME);
-
         // Some table has dependency with the high priority table.
         // Create them first.
         for (String tableName : highPriorityTableName) {
