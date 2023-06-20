@@ -65,7 +65,7 @@ public class TestRelationshipAccessing
             "           (2, 'book2', 2),\n" +
             "           (3, 'book3', 3)\n" +
             "        ) Book(bookId, name, authorId)\n" +
-            "     )\n" +
+            "     ) t\n" +
             "  ),\n" +
             "  People AS (\n" +
             "   SELECT\n" +
@@ -82,7 +82,7 @@ public class TestRelationshipAccessing
             "           (2, 'user2'),\n" +
             "           (3, 'user3')\n" +
             "        ) People (userId, name)\n" +
-            "     )\n" +
+            "     ) t\n" +
             "  )\n";
 
     @Language("SQL")
@@ -102,7 +102,7 @@ public class TestRelationshipAccessing
             "           (2, 'book2', 2),\n" +
             "           (3, 'book3', 1)\n" +
             "        ) Book(bookId, name, authorId)\n" +
-            "     )\n" +
+            "     ) t\n" +
             "  ),\n" +
             "  People AS (\n" +
             "   SELECT\n" +
@@ -120,7 +120,7 @@ public class TestRelationshipAccessing
             "           (1, 'user1'),\n" +
             "           (2, 'user2')\n" +
             "        ) People (userId, name)\n" +
-            "     )\n" +
+            "     ) t\n" +
             "  )\n";
 
     @Language("SQL")
@@ -478,7 +478,7 @@ public class TestRelationshipAccessing
                 "         , ROW (2, 'book2', 2)\n" +
                 "         , ROW (3, 'book3', 3)\n" +
                 "      )  Book (bookId, name, authorId)\n" +
-                "   ) \n" +
+                "   ) t\n" +
                 ") \n" +
                 "SELECT b.book.author.book.name\n" +
                 "FROM\n" +

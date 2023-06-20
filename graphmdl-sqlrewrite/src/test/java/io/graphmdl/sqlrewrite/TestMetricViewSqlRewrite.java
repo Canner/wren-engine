@@ -68,7 +68,7 @@ public class TestMetricViewSqlRewrite
                     "         , ROW (2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500, DATE '2023-04-29', TIMESTAMP '2023-05-27 07:07:07')\n" +
                     "         , ROW (3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553, DATE '2023-05-29', TIMESTAMP '2023-06-27 08:08:08')\n" +
                     "      )  album (id, name, author, price, publish_date, release_date)\n" +
-                    "   ) \n" +
+                    "   ) t\n" +
                     ") \n";
 
     @Language("sql")
