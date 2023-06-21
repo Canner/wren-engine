@@ -103,7 +103,7 @@ public class PostgresClient
             return PostgresRecordIterator.of(this, sql, parameters);
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing query");
             throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
@@ -139,7 +139,7 @@ public class PostgresClient
             return builder.build();
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing describe");
             throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
@@ -169,7 +169,7 @@ public class PostgresClient
                     .collect(toUnmodifiableList());
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing listTables");
             throw new GraphMDLException(GENERIC_USER_ERROR, e);
         }
     }
