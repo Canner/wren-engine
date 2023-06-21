@@ -1819,7 +1819,7 @@ class AstBuilder
     {
         QualifiedName name = getQualifiedName(context.functionExpression().qualifiedName());
 
-        // graphmdl function: metric roll_up
+        // accio function: metric roll_up
         if (name.toString().equalsIgnoreCase("roll_up")) {
             List<Expression> arguments = visit(context.functionExpression().expression(), Expression.class);
             return new FunctionRelation(getLocation(context), name, arguments);

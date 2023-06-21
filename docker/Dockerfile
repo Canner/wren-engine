@@ -10,8 +10,8 @@ RUN \
     apt update && \
     apt -y install postgresql-client-13
 
-ARG GRAPHMDL_VERSION
-ENV ENV_GRAPHMDL_VERSION=${GRAPHMDL_VERSION}
-COPY graphmdl-server-${GRAPHMDL_VERSION}-executable.jar ./
+ARG ACCIO_VERSION
+ENV ENV_ACCIO_VERSION=${ACCIO_VERSION}
+COPY accio-server-${ACCIO_VERSION}-executable.jar ./
 
-CMD ["sh", "-c", "java -Dconfig=etc/config.properties -jar graphmdl-server-${ENV_GRAPHMDL_VERSION}-executable.jar"]
+CMD ["sh", "-c", "java -Dconfig=etc/config.properties -jar accio-server-${ENV_ACCIO_VERSION}-executable.jar"]

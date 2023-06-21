@@ -13,5 +13,5 @@ target/
 .checkstyle
 .mvn/timing.properties
 .mvn/maven.config
-graphmdl-server/etc
-graphmdl-server/var/log
+accio-server/etc
+accio-server/var/log

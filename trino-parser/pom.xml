@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.graphmdl</groupId>
-        <artifactId>graphmdl-root</artifactId>
+        <groupId>io.accio</groupId>
+        <artifactId>accio-root</artifactId>
         <version>1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>

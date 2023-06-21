@@ -8,12 +8,12 @@
         <version>122</version>
     </parent>
 
-    <groupId>io.graphmdl</groupId>
-    <artifactId>graphmdl-root</artifactId>
+    <groupId>io.accio</groupId>
+    <artifactId>accio-root</artifactId>
     <version>1-SNAPSHOT</version>
 
-    <name>graphmdl</name>
-    <description>Graph Metric Definition Language</description>
+    <name>accio</name>
+    <description>Accio</description>
     <packaging>pom</packaging>
 
     <inceptionYear>2022</inceptionYear>
@@ -65,16 +65,16 @@
     </properties>
 
     <modules>
-        <module>graphmdl-base</module>
-        <module>graphmdl-connector-client</module>
-        <module>graphmdl-main</module>
-        <module>graphmdl-pre-aggregation</module>
-        <module>graphmdl-server</module>
-        <module>graphmdl-shaded</module>
-        <module>graphmdl-sqlrewrite</module>
-        <module>graphmdl-testing</module>
-        <module>graphmdl-tests</module>
-        <module>graphmdl-validation</module>
+        <module>accio-base</module>
+        <module>accio-connector-client</module>
+        <module>accio-main</module>
+        <module>accio-pre-aggregation</module>
+        <module>accio-server</module>
+        <module>accio-shaded</module>
+        <module>accio-sqlrewrite</module>
+        <module>accio-testing</module>
+        <module>accio-tests</module>
+        <module>accio-validation</module>
         <module>trino-parser</module>
     </modules>
 
@@ -248,67 +248,67 @@
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-base</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-base</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-connector-client</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-connector-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-main</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-pre-aggregation</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-pre-aggregation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-server</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-shaded</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-shaded</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-sqlrewrite</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-sqlrewrite</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-testing</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-tests</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-tests</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
-                <artifactId>graphmdl-validation</artifactId>
+                <groupId>io.accio</groupId>
+                <artifactId>accio-validation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>io.graphmdl</groupId>
+                <groupId>io.accio</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
             </dependency>
