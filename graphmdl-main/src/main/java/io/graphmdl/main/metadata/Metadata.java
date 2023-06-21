@@ -42,4 +42,6 @@ public interface Metadata
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
     List<Column> describeQuery(String sql, List<Parameter> parameters);
+
+    boolean isPgCompatible();
 }

@@ -80,28 +80,28 @@ public class TestGraphMDLSqlRewrite
     public void testModelRewrite()
     {
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)) SELECT * FROM People");
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t) SELECT * FROM People");
         assertSqlEqualsAndValid(rewrite("SELECT * FROM Book"),
-                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)) SELECT * FROM Book");
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book) t) SELECT * FROM Book");
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People WHERE id = 'SN1001'"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)) SELECT * FROM People WHERE People.id = 'SN1001'");
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t) SELECT * FROM People WHERE People.id = 'SN1001'");
 
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'"),
-                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book)),\n" +
-                        "People AS (SELECT id, email FROM (SELECT * FROM People))\n" +
+                "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book) t),\n" +
+                        "People AS (SELECT id, email FROM (SELECT * FROM People) t)\n" +
                         "SELECT * FROM People a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'");
 
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People a join WishList b ON a.id = b.id WHERE a.id = 'SN1001'"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People))\n" +
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t)\n" +
                         "SELECT * FROM People a join WishList b ON a.id = b.id WHERE a.id = 'SN1001'");
 
         assertSqlEqualsAndValid(rewrite("WITH a AS (SELECT * FROM WishList) SELECT * FROM a JOIN People ON a.id = People.id"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)), a AS (SELECT * FROM WishList)\n" +
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t), a AS (SELECT * FROM WishList)\n" +
                         "SELECT * FROM a JOIN People ON a.id = People.id");
 
         // rewrite table in with query
         assertSqlEqualsAndValid(rewrite("WITH a AS (SELECT * FROM People) SELECT * FROM a"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People)),\n" +
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t),\n" +
                         "a AS (SELECT * FROM People)\n" +
                         "SELECT * FROM a");
     }

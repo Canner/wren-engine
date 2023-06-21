@@ -25,7 +25,6 @@ import io.graphmdl.main.metadata.Metadata;
 import io.graphmdl.preaggregation.PreAggregationInfoPair;
 import io.graphmdl.preaggregation.PreAggregationManager;
 import io.graphmdl.preaggregation.PreAggregationTableMapping;
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import io.graphmdl.testing.TestingGraphMDLServer;
 
 import java.time.LocalDate;
@@ -34,7 +33,7 @@ import java.util.List;
 import static java.lang.System.getenv;
 
 public abstract class AbstractPreAggregationTest
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     protected final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
     protected final PreAggregationTableMapping preAggregationTableMapping = getInstance(Key.get(PreAggregationTableMapping.class));
@@ -49,7 +48,8 @@ public abstract class AbstractPreAggregationTest
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .put("bigquery.bucket-name", getenv("TEST_BIG_QUERY_BUCKET_NAME"))
                 .put("duckdb.storage.access-key", getenv("TEST_DUCKDB_STORAGE_ACCESS_KEY"))
-                .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"));
+                .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"))
+                .put("graphmdl.datasource.type", "bigquery");
 
         if (getGraphMDLPath().isPresent()) {
             properties.put("graphmdl.file", getGraphMDLPath().get());

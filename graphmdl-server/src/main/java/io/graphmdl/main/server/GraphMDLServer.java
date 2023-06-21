@@ -22,13 +22,19 @@ import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.graphmdl.main.GraphMDLConfig;
 import io.graphmdl.main.GraphMDLModule;
 import io.graphmdl.main.pgcatalog.PgCatalogManager;
 import io.graphmdl.main.server.module.BigQueryConnectorModule;
+import io.graphmdl.main.server.module.PostgresConnectorModule;
 import io.graphmdl.main.server.module.PostgresWireProtocolModule;
 import io.graphmdl.main.server.module.WebModule;
 import io.graphmdl.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.graphmdl.preaggregation.PreAggregationModule;
+
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
+import static io.graphmdl.main.GraphMDLConfig.DataSourceType.BIGQUERY;
+import static io.graphmdl.main.GraphMDLConfig.DataSourceType.POSTGRES;
 
 public class GraphMDLServer
         extends Server
@@ -55,7 +61,8 @@ public class GraphMDLServer
                 new JaxrsModule(),
                 new EventModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                new BigQueryConnectorModule(),
+                conditionalModule(GraphMDLConfig.class, config -> config.getDataSourceType().equals(BIGQUERY), new BigQueryConnectorModule()),
+                conditionalModule(GraphMDLConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
                 new GraphMDLModule(),
                 new PreAggregationModule(),
                 new WebModule());

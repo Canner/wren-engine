@@ -85,4 +85,10 @@ public class TestingMetadata
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }
+
+    @Override
+    public boolean isPgCompatible()
+    {
+        return false;
+    }
 }

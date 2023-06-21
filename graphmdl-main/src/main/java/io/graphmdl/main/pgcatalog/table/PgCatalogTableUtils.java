@@ -17,8 +17,6 @@ package io.graphmdl.main.pgcatalog.table;
 import io.graphmdl.base.metadata.SchemaTableName;
 import io.graphmdl.base.metadata.TableMetadata;
 
-import static io.graphmdl.base.metadata.TableMetadata.Builder.builder;
-
 public final class PgCatalogTableUtils
 {
     public static final String PG_CATALOG = "pg_catalog";
@@ -37,6 +35,6 @@ public final class PgCatalogTableUtils
 
     public static TableMetadata.Builder table(String schema, String tableName)
     {
-        return builder(new SchemaTableName(schema, tableName));
+        return TableMetadata.builder(new SchemaTableName(schema, tableName));
     }
 }

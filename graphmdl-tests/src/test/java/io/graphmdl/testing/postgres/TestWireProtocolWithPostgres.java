@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.graphmdl.testing.bigquery;
+package io.graphmdl.testing.postgres;
 
 import com.google.common.collect.ImmutableList;
 import io.graphmdl.base.type.PGType;
@@ -28,23 +28,19 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.graphmdl.base.type.BigIntType.BIGINT;
 import static io.graphmdl.base.type.IntegerType.INTEGER;
 import static io.graphmdl.base.type.VarcharType.VARCHAR;
 import static io.graphmdl.testing.TestingWireProtocolClient.DescribeType.PORTAL;
@@ -54,8 +50,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-public class TestWireProtocolWithBigquery
-        extends AbstractWireProtocolTestWithBigQuery
+public class TestWireProtocolWithPostgres
+        extends AbstractWireProtocolTestWithPostgres
 {
     @Test
     public void testSimpleQuery()
@@ -72,7 +68,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            assertThat(types).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -108,13 +104,13 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -205,7 +201,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -242,7 +238,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -490,7 +486,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertCommandComplete("BEGIN");
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(BIGINT, BIGINT, BIGINT));
+            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(INTEGER, INTEGER, INTEGER));
             protocolClient.assertDataRow("1,2,3");
             protocolClient.assertDataRow("2,4,6");
             protocolClient.assertCommandComplete("SELECT 2");
@@ -823,17 +819,17 @@ public class TestWireProtocolWithBigquery
                         "  t.typname\n" +
                         ", t.oid\n" +
                         "FROM\n" +
-                        "  (\"canner-cml\".pg_catalog.pg_type t\n" +
-                        "INNER JOIN \"canner-cml\".pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
+                        "  (pg_catalog.pg_type t\n" +
+                        "INNER JOIN pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
                         "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (SELECT (c.relkind = 'c') \"?column?\"\n" +
                         "FROM\n" +
-                        "  \"canner-cml\".pg_catalog.pg_class c\n" +
+                        "  pg_catalog.pg_class c\n" +
                         "WHERE (c.oid = t.typrelid)\n" +
                         ")))"},
                 {"SELECT 1, 2, 3"},
                 {"SELECT array[1,2,3][1]"},
                 {"select current_schemas(false)[1]"},
-                {"select typinput = 1, typoutput = 1, typreceive = 1 from \"canner-cml\".pg_catalog.pg_type"},
+                {"select typinput = 1, typoutput = 1, typreceive = 1 from pg_catalog.pg_type"},
                 {"select * from unnest(generate_array(1, 10)) t(col_1)"},
                 {"select * from unnest(array[1,2,3]) t(col_1)"},
                 {"SELECT\n" +
@@ -909,50 +905,24 @@ public class TestWireProtocolWithBigquery
             ResultSet result = stmt.executeQuery();
             result.next();
             Object expected = obj;
-            // TODO https://github.com/Canner/canner-metric-layer/issues/196
+
             if (name.equals("int2")) {
-                expected = ((Short) obj).longValue();
-            }
-            else if (name.equals("int4")) {
-                expected = ((Integer) obj).longValue();
-            }
-            else if (name.equals("float4")) {
-                expected = Double.valueOf(obj.toString());
-            }
-            else if (name.equals("date")) {
-                expected = Date.valueOf((LocalDate) obj);
-            }
-            else if (name.equals("timestamp")) {
-                expected = Timestamp.valueOf((LocalDateTime) obj);
+                expected = ((Short) obj).intValue();
             }
 
             if (name.equals("array")) {
                 assertThat(result.getArray(1).getArray()).isEqualTo(expected);
             }
+            else if (name.equals("date")) {
+                // pg jdbc handle date type as String if using `getObject`
+                assertThat(result.getDate(1).toLocalDate()).isEqualTo(expected);
+            }
+            else if (name.equals("timestamp")) {
+                assertThat(result.getTimestamp(1).toLocalDateTime()).isEqualTo(expected);
+            }
             else {
                 assertThat(result.getObject(1)).isEqualTo(expected);
             }
-        }
-    }
-
-    @Test
-    public void testColumns()
-            throws SQLException
-    {
-        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet result = stmt.executeQuery("SELECT\n" +
-                    "n.nspname AS TABLE_SCHEM,\n" +
-                    "ct.relname AS TABLE_NAME,\n" +
-                    "a.attname AS COLUMN_NAME,\n" +
-                    "a.attnum AS A_ATTNUM\n" +
-                    "FROM pg_catalog.pg_class ct\n" +
-                    "JOIN pg_catalog.pg_attribute a ON (ct.oid = a.attrelid)\n" +
-                    "JOIN pg_catalog.pg_namespace n ON (ct.relnamespace = n.oid) WHERE true AND n.nspname = E'tpch_sf1' AND ct.relname = E'region'");
-            List<String> columnNames = new ArrayList<>();
-            while (result.next()) {
-                columnNames.add(result.getString("COLUMN_NAME"));
-            }
-            assertThat(columnNames).containsExactlyInAnyOrder("regionkey", "name", "comment");
         }
     }
 

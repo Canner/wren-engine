@@ -14,7 +14,6 @@
 
 package io.graphmdl.testing.bigquery;
 
-import io.graphmdl.testing.AbstractWireProtocolTest;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -30,7 +29,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestGraphMDLWithBigquery
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     @Override
     protected Optional<String> getGraphMDLPath()

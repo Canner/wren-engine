@@ -53,6 +53,7 @@ import io.trino.sql.tree.ExplainType;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FetchCursor;
 import io.trino.sql.tree.FetchFirst;
+import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Grant;
 import io.trino.sql.tree.GrantRoles;
@@ -154,6 +155,7 @@ import static io.trino.sql.ExpressionFormatter.formatStringLiteral;
 import static io.trino.sql.ExpressionFormatter.formatWindowSpecification;
 import static io.trino.sql.RowPatternFormatter.formatPattern;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
+import static io.trino.sql.SqlFormatter.Dialect.POSTGRES;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -166,6 +168,7 @@ public final class SqlFormatter
         DEFAULT,
         BIGQUERY,
         DUCKDB,
+        POSTGRES,
     }
 
     private SqlFormatter() {}
@@ -238,6 +241,20 @@ public final class SqlFormatter
         @Override
         protected Void visitUnnest(Unnest node, Integer indent)
         {
+            // Postgres doesn't have `generate_array` function and `generate_series` is a table function.
+            // Use `generate_series` to instead `UNNEST(generate_array(...))` for Postgres.
+            if (dialect == POSTGRES &&
+                    node.getExpressions().size() == 1 &&
+                    node.getExpressions().get(0) instanceof FunctionCall &&
+                    ((FunctionCall) node.getExpressions().get(0)).getName().equals(QualifiedName.of("generate_array"))) {
+                builder.append("generate_series(")
+                        .append(((FunctionCall) node.getExpressions().get(0)).getArguments().stream()
+                                .map(expression -> formatExpression(expression, dialect))
+                                .collect(joining(", ")))
+                        .append(")");
+                return null;
+            }
+
             builder.append("UNNEST(")
                     .append(node.getExpressions().stream()
                             .map(expression -> formatExpression(expression, dialect))
