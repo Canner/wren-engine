@@ -35,6 +35,13 @@ import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Rewrite syntactic sugar to standard Accio SQL:
+ * <p>
+ * 1. Directly access a relationship field. (e.g. `select author from Book` -> `select author.userId from Book`)
+ * 2. `any` Function is an alias of to-many result accessing. (e.g. `select any(books) from User` -> `select books[1] from User`)
+ * 3. `first` Function is an alias of sorted to-many result accessing. (e.g. `select first(books) from User` -> `select array_sort(books)[1] from User`)
+ */
 public class SyntacticSugarRewrite
         implements AccioRule
 {
@@ -68,6 +75,7 @@ public class SyntacticSugarRewrite
         @Override
         protected Node visitIdentifier(Identifier node, Void context)
         {
+            // To directly access the relationship, we rewrite it to its primary key.
             QualifiedName qualifiedName = QualifiedName.of(List.of(node));
             return analysis.tryGetScope(node)
                     .flatMap(Scope::getRelationType)
