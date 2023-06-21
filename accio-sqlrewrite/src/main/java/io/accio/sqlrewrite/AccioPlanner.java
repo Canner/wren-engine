@@ -23,10 +23,9 @@ import io.trino.sql.tree.Statement;
 
 import java.util.List;
 
-import static io.accio.sqlrewrite.AccioFunctionSqlRewrite.ACCIO_FUNCTION_SQL_REWRITE;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
-import static io.accio.sqlrewrite.GroupByKeyRewrite.GROUP_BY_KEY_REWRITE;
 import static io.accio.sqlrewrite.MetricViewSqlRewrite.METRIC_VIEW_SQL_REWRITE;
+import static io.accio.sqlrewrite.SyntacticSugarRewrite.SYNTACTIC_SUGAR_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 
 public class AccioPlanner
@@ -34,8 +33,7 @@ public class AccioPlanner
     private static final SqlParser SQL_PARSER = new SqlParser();
     private static final List<AccioRule> ALL_RULES = List.of(
             METRIC_VIEW_SQL_REWRITE,
-            ACCIO_FUNCTION_SQL_REWRITE,
-            GROUP_BY_KEY_REWRITE,
+            SYNTACTIC_SUGAR_REWRITE,
             ACCIO_SQL_REWRITE);
 
     private AccioPlanner() {}

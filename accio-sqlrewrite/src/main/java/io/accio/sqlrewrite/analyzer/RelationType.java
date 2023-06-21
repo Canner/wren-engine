@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -43,5 +44,12 @@ public class RelationType
         return fields.stream()
                 .filter(input -> input.canResolve(name))
                 .collect(toImmutableList());
+    }
+
+    public Optional<Field> resolveAnyField(QualifiedName name)
+    {
+        return fields.stream()
+                .filter(input -> input.canResolve(name))
+                .findAny();
     }
 }
