@@ -69,7 +69,7 @@ public class PostgresRecordIterator
                 builder.add(resultSet.getShort(i));
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.ARRAY) {
-                List<Object> objarray = Optional.ofNullable(resultSet.getArray(i))
+                List<Object> objArray = Optional.ofNullable(resultSet.getArray(i))
                         .map(array -> {
                             try {
                                 return Arrays.stream((Object[]) array.getArray()).map(obj -> {
@@ -83,7 +83,7 @@ public class PostgresRecordIterator
                                 throw new RuntimeException(e);
                             }
                         }).orElse(null);
-                builder.add(objarray);
+                builder.add(objArray);
             }
             else {
                 Object obj = resultSet.getObject(i);
@@ -97,7 +97,7 @@ public class PostgresRecordIterator
                             pgInterval.getHours(),
                             pgInterval.getMinutes(),
                             pgInterval.getWholeSeconds(),
-                            pgInterval.getMicroSeconds() * 1000));
+                            pgInterval.getMicroSeconds() / 1000));
                 }
                 else if (obj instanceof PGobject) {
                     builder.add(getPgObjectValue((PGobject) obj));
