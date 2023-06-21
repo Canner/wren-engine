@@ -31,16 +31,16 @@ import java.util.List;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Relationship.SortKey.sortKey;
 import static io.accio.base.dto.Relationship.relationship;
-import static io.accio.sqlrewrite.GroupByKeyRewrite.GROUP_BY_KEY_REWRITE;
+import static io.accio.sqlrewrite.SyntacticSugarRewrite.SYNTACTIC_SUGAR_REWRITE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-public class TestGroupByKeyRewrite
+public class TestSyntacticSugarRewrite
         extends AbstractTestFramework
 {
     private final AccioMDL oneToManyAccioMDL;
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    public TestGroupByKeyRewrite()
+    public TestSyntacticSugarRewrite()
     {
         oneToManyAccioMDL = AccioMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
@@ -73,15 +73,13 @@ public class TestGroupByKeyRewrite
     public Object[][] testCase()
     {
         return new Object[][] {
-                // TODO: remove unnecessary group by key `author` in the expected answer
-                {"select count(*) from Book group by author", "select count(*) from Book group by (author.userId, author)"},
-                // TODO: remove unnecessary group by key `author` in the expected answer
-                {"select count(*) from Book group by author, name", "select count(*) from Book group by (author.userId, author), name"},
-                {"select author, count(*) from Book group by author", "select author, count(*) from Book group by (author.userId, author)"},
-                {"select author, count(*) from Book group by author, name", "select author, count(*) from Book group by (author.userId, author), name"},
-                {"select author, count(*) from Book group by 1", "select author, count(*) from Book group by (author.userId, 1)"},
-                {"select author, name, count(*) from Book group by 1, 2", "select author, name, count(*) from Book group by (author.userId, 1), 2"},
-                {"select author, name, count(*) from Book group by (author, name)", "select author, name, count(*) from Book group by (author.userId, author, name)"},
+                {"select count(*) from Book group by author", "select count(*) from Book group by author.userId"},
+                {"select count(*) from Book group by author, name", "select count(*) from Book group by author.userId, name"},
+                {"select author, count(*) from Book group by author", "select author.userId, count(*) from Book group by author.userId"},
+                {"select author, count(*) from Book group by author, name", "select author.userId, count(*) from Book group by author.userId, name"},
+                {"select author, count(*) from Book group by 1", "select author.userId, count(*) from Book group by 1"},
+                {"select author, name, count(*) from Book group by 1, 2", "select author.userId, name, count(*) from Book group by 1, 2"},
+                {"select author, name, count(*) from Book group by (author, name)", "select author.userId, name, count(*) from Book group by (author.userId, name)"},
         };
     }
 
@@ -91,9 +89,32 @@ public class TestGroupByKeyRewrite
         assertThat(rewrite(actual)).isEqualTo(parse(expected));
     }
 
+    @DataProvider
+    public Object[][] anyFunction()
+    {
+        return new Object[][] {
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) IS NOT NULL FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] IS NOT NULL FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')).name + 1 FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name + 1 FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) AS a FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] AS a FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')).name FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')).name AS a FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name AS a FROM Book"},
+                {"SELECT concat(any(filter(author, rs -> rs.name = 'F')).name, 'foo') AS a FROM Book",
+                        "SELECT concat(filter(author, rs -> rs.name = 'F')[1].name, 'foo') AS a FROM Book"},
+                {"SELECT first(filter(author, rs -> rs.name = 'F'), name, ASC).name AS a FROM Book",
+                        "SELECT array_sort(filter(author, rs -> rs.name = 'F'), name, ASC)[1].name AS a FROM Book"},
+        };
+    }
+
+    @Test(dataProvider = "anyFunction")
+    public void testAnyFunctionRewrite(String actual, String expected)
+    {
+        assertThat(rewrite(actual)).isEqualTo(parse(expected));
+    }
+
     private Statement rewrite(String sql)
     {
-        return GROUP_BY_KEY_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, oneToManyAccioMDL);
+        return SYNTACTIC_SUGAR_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, oneToManyAccioMDL);
     }
 
     private Statement parse(String sql)
