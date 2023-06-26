@@ -92,6 +92,24 @@ public class SyntacticSugarRewrite
         }
 
         @Override
+        protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
+        {
+            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(node);
+            return analysis.tryGetScope(node)
+                    .flatMap(Scope::getRelationType)
+                    .map(relationType -> relationType.resolveAnyField(qualifiedName))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .filter(Field::isRelationship)
+                    .map(field -> accioMDL.getModel(field.getType())
+                            .map(Model::getPrimaryKey)
+                            .map(Identifier::new)
+                            .orElse(null))
+                    .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
+                    .orElse(node);
+        }
+
+        @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
             String name = node.getName().toString();
