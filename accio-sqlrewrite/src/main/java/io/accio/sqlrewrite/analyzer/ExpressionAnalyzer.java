@@ -37,17 +37,16 @@ import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SubscriptExpression;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.Stack;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.LAMBDA_RESULT_NAME;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
@@ -66,6 +65,7 @@ import static io.trino.sql.QueryUtil.identifier;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 public final class ExpressionAnalyzer
 {
@@ -143,19 +143,37 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
-            FunctionCallProcessor functionCallProcessor = new FunctionCallProcessor();
-            functionCallProcessor.process(node, ignored);
-
-            for (FunctionCall functionCall : functionCallProcessor.getReplaceFunctionCalls()) {
-                relationshipCTENames.add(functionCall.toString());
-                relationshipFieldsRewrite.put(
-                        NodeRef.of(functionCall),
-                        DereferenceExpression.from(
-                                QualifiedName.of(
-                                        ImmutableList.<String>builder()
-                                                .add(relationshipCteGenerator.getNameMapping().get(functionCall.toString()))
-                                                .add(LAMBDA_RESULT_NAME).build())));
+            FunctionChainProcessor functionChainProcessor = new FunctionChainProcessor();
+            Optional<ReturnContext> returnContext = functionChainProcessor.process(node, new Context());
+            if (returnContext.isEmpty()) {
+                return null;
             }
+
+            returnContext.get().nodesToReplace.forEach((nodeToReplace, rsField) -> {
+                // nodeToReplace is a lambda function call
+                if (nodeToReplace.getNode() instanceof FunctionCall) {
+                    relationshipCTENames.add(nodeToReplace.getNode().toString());
+                    relationshipFieldsRewrite.put(
+                            nodeToReplace,
+                            DereferenceExpression.from(
+                                    QualifiedName.of(
+                                            List.of(
+                                                    relationshipCteGenerator.getNameMapping().get(nodeToReplace.getNode().toString()),
+                                                    LAMBDA_RESULT_NAME))));
+                }
+                // nodeToReplace is a relationship field in function
+                else {
+                    String cteName = String.join(".", rsField.getCteNameParts());
+                    relationshipCTENames.add(cteName);
+                    relationshipFieldsRewrite.put(
+                            nodeToReplace,
+                            DereferenceExpression.from(
+                                    QualifiedName.of(
+                                            List.of(
+                                                    relationshipCteGenerator.getNameMapping().get(cteName),
+                                                    rsField.getColumnName()))));
+                }
+            });
             return null;
         }
 
@@ -220,22 +238,28 @@ public final class ExpressionAnalyzer
             LinkedList<RelationshipField> chain = new LinkedList<>();
             // process the root node, root node should be either FunctionCall or Identifier, if not, relationship rewrite won't be fired
             if (root instanceof FunctionCall) {
-                FunctionCallProcessor functionCallProcessor = new FunctionCallProcessor();
-                FunctionCallProcessorContext functionCallProcessorContext = functionCallProcessor.process(root, null);
-                List<RelationshipField> relationshipFields = functionCallProcessorContext.getRelationshipField();
-                checkArgument(relationshipFields.size() == 1, "There should be only one relationship field function chain in dereference expression");
-
-                for (FunctionCall functionCall : functionCallProcessor.getReplaceFunctionCalls()) {
-                    relationshipFieldsRewrite.put(
-                            NodeRef.of(functionCall),
-                            DereferenceExpression.from(
-                                    QualifiedName.of(
-                                            ImmutableList.<String>builder()
-                                                    .add(relationshipCteGenerator.getNameMapping().get(functionCall.toString()))
-                                                    .add(LAMBDA_RESULT_NAME).build())));
+                FunctionChainProcessor functionChainProcessor = new FunctionChainProcessor();
+                Optional<ReturnContext> returnContext = functionChainProcessor.process(root, new Context());
+                boolean functionCallNoReplacement = returnContext.stream()
+                        .map(context -> context.nodesToReplace.isEmpty())
+                        .findAny()
+                        .orElse(true);
+                if (functionCallNoReplacement) {
+                    return Optional.empty();
                 }
+                Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContext.get().nodesToReplace;
+                checkArgument(nodesToReplace.size() == 1, "No node or multiple node to replace in function chain in DereferenceExpression chain");
+
+                nodesToReplace.forEach((nodeToReplace, rsField) ->
+                        relationshipFieldsRewrite.put(
+                                nodeToReplace,
+                                DereferenceExpression.from(
+                                        QualifiedName.of(
+                                                ImmutableList.<String>builder()
+                                                        .add(relationshipCteGenerator.getNameMapping().get(nodeToReplace.getNode().toString()))
+                                                        .add(LAMBDA_RESULT_NAME).build()))));
                 nameParts.add(elements.pop().toString());
-                baseModelName = relationshipFields.get(0).getBaseModelName();
+                baseModelName = nodesToReplace.values().iterator().next().getBaseModelName();
             }
             else if (root instanceof Identifier) {
                 List<Field> modelFields = scope.getRelationType()
@@ -439,105 +463,109 @@ public final class ExpressionAnalyzer
             return functionName.split("array_")[1];
         }
 
-        private class FunctionCallProcessorContext
+        // TODO: make these two static
+        private class Context
         {
-            private final List<RelationshipField> relationshipField;
+            private final List<FunctionCall> functionChain;
 
-            public FunctionCallProcessorContext(List<RelationshipField> relationshipField)
+            public Context()
             {
-                this.relationshipField = requireNonNull(relationshipField, "relationshipField is null");
+                this.functionChain = List.of();
             }
 
-            public List<RelationshipField> getRelationshipField()
+            public Context(List<FunctionCall> functionChain)
             {
-                return relationshipField;
+                this.functionChain = requireNonNull(functionChain);
             }
         }
 
-        private class FunctionCallProcessor
-                extends AstVisitor<FunctionCallProcessorContext, Void>
+        private class ReturnContext
         {
-            // record lambda function call that doesn't use any lambda function calls
-            // e.g. filter(col1, col -> true) will be recorded while filter(filter(col1, col -> true), col -> false) won't
-            private final Stack<FunctionCall> rootLambdaCalls = new Stack<>();
-            private final Stack<FunctionCall> nodesToReplace = new Stack<>();
+            private final Map<NodeRef<Expression>, RelationshipField> nodesToReplace;
 
-            @Override
-            protected FunctionCallProcessorContext visitFunctionCall(FunctionCall node, Void ignored)
+            public ReturnContext(Map<NodeRef<Expression>, RelationshipField> nodesToReplace)
             {
-                List<FunctionCallProcessorContext> contexts = node.getArguments().stream()
-                        .filter(argument -> argument instanceof FunctionCall)
-                        .map(functionCall -> visitFunctionCall((FunctionCall) functionCall, ignored))
-                        .collect(toImmutableList());
+                this.nodesToReplace = requireNonNull(nodesToReplace);
+            }
+        }
 
-                if (isAccioFunction(node.getName())) {
-                    // TODO: remove this check
-                    checkArgument(
-                            contexts.stream()
-                                    .map(FunctionCallProcessorContext::getRelationshipField)
-                                    .flatMap(List::stream)
-                                    .map(RelationshipField::getRelationship)
-                                    .filter(Objects::nonNull)
-                                    .distinct()
-                                    .count() <= 1,
-                            "Lambda function chain only allow one relationship");
-
-                    Optional<ReplaceNodeInfo> replaceNodeInfo = registerRelationshipCTEs(node.getArguments().get(0));
-                    if (replaceNodeInfo.isPresent()
-                            && replaceNodeInfo.get().getLastRelationshipField().isPresent()
-                            && replaceNodeInfo.get().getOriginal() == node.getArguments().get(0)) {
-                        collectRelationshipInFunction(
-                                node,
-                                replaceNodeInfo.get().getLastRelationshipField().get(),
-                                Optional.empty());
-                        rootLambdaCalls.push(node);
-                    }
-                    else {
-                        nodesToReplace.clear();
-                        collectRelationshipInFunction(
-                                node,
-                                contexts.get(0).getRelationshipField().get(0),
-                                Optional.of(rootLambdaCalls.pop()));
-                        // TODO: remove this check
-                        checkArgument(rootLambdaCalls.empty(), "Currently the first argument of a lambda function cannot contain more than one lambda function.");
-                    }
-                    nodesToReplace.push(node);
-
-                    RelationshipField relationshipField = replaceNodeInfo
-                            .flatMap(ReplaceNodeInfo::getLastRelationshipField)
-                            .orElseGet(() -> contexts.get(0).getRelationshipField().get(0));
-
-                    return new FunctionCallProcessorContext(List.of(relationshipField));
+        // TODO: make this static
+        // Add tests
+        private void checkFunctionChainIsValid(List<FunctionCall> functionCalls)
+        {
+            boolean startChaining = false;
+            for (FunctionCall functionCall : functionCalls) {
+                if (isAccioFunction(functionCall.getName())) {
+                    startChaining = true;
                 }
                 else {
-                    List<RelationshipField> relationshipFields = new ArrayList<>();
-                    for (int i = 0; i < node.getArguments().size(); i++) {
-                        Expression argument = node.getArguments().get(i);
-                        if (relationshipCteGenerator.getNameMapping().containsKey(argument.toString())) {
-                            relationshipFields.addAll(contexts.get(i).getRelationshipField());
-                        }
-                        else {
-                            registerRelationshipCTEs(argument)
-                                    .ifPresent(info -> {
-                                        info.getLastRelationshipField().ifPresent(relationshipFields::add);
-                                        List<String> cteNameParts = info.getReplacementNameParts();
-                                        if (isArrayFunction(node.getName())) {
-                                            relationshipCTENames.add(String.join(".", cteNameParts));
-                                            relationshipFieldsRewrite.put(
-                                                    NodeRef.of(info.getOriginal()),
-                                                    DereferenceExpression.from(
-                                                            QualifiedName.of(info.getReplacement().toString(), cteNameParts.get(cteNameParts.size() - 1))));
-                                        }
-                                    });
-                        }
-                    }
-                    return new FunctionCallProcessorContext(relationshipFields);
+                    checkArgument(!startChaining, format("accio function chain contains invalid function %s", functionCall.getName()));
                 }
             }
+        }
 
-            public List<FunctionCall> getReplaceFunctionCalls()
+        private class FunctionChainProcessor
+                extends AstVisitor<Optional<ReturnContext>, Context>
+        {
+            private Optional<ReturnContext> processFunctionChain(Expression node, Context context)
             {
-                return ImmutableList.copyOf(nodesToReplace.iterator());
+                checkArgument(node instanceof DereferenceExpression || node instanceof Identifier, "node is not DereferenceExpression or Identifier");
+                checkFunctionChainIsValid(context.functionChain);
+
+                Optional<ReplaceNodeInfo> replaceNodeInfo = registerRelationshipCTEs(node);
+                if (replaceNodeInfo.isEmpty()) {
+                    return Optional.empty();
+                }
+
+                RelationshipField rsField = replaceNodeInfo.get().getLastRelationshipField().get();
+
+                FunctionCall previousFunctionCall = null;
+                for (FunctionCall functionCall : Lists.reverse(context.functionChain)) {
+                    if (isAccioFunction(functionCall.getName())) {
+                        collectRelationshipInFunction(
+                                functionCall,
+                                rsField,
+                                Optional.ofNullable(previousFunctionCall));
+                    }
+                    else if (isArrayFunction(functionCall.getName())) {
+                        return Optional.of(new ReturnContext(Map.of(NodeRef.of(node), rsField)));
+                    }
+                    else {
+                        break;
+                    }
+                    previousFunctionCall = functionCall;
+                }
+                return Optional.ofNullable(previousFunctionCall)
+                        .map(functionCall -> new ReturnContext(Map.of(NodeRef.of(functionCall), rsField)));
+            }
+
+            @Override
+            protected Optional<ReturnContext> visitFunctionCall(FunctionCall node, Context context)
+            {
+                List<ReturnContext> returnContexts = new ArrayList<>();
+                Context newContext = new Context(ImmutableList.<FunctionCall>builder().addAll(context.functionChain).add(node).build());
+                for (Expression argument : node.getArguments()) {
+                    if (argument instanceof FunctionCall) {
+                        visitFunctionCall((FunctionCall) argument, newContext).ifPresent(returnContexts::add);
+                    }
+                    else if (argument instanceof DereferenceExpression || argument instanceof Identifier) {
+                        processFunctionChain(argument, newContext).ifPresent(returnContexts::add);
+                    }
+                }
+
+                Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContexts.stream()
+                        .map(returnContext -> returnContext.nodesToReplace.entrySet())
+                        .flatMap(Collection::stream)
+                        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+                Optional<Entry<NodeRef<Expression>, RelationshipField>> fullMatch = nodesToReplace.entrySet().stream()
+                        .filter(entry -> NodeRef.of(node).equals(entry.getKey()))
+                        .findAny();
+
+                return Optional.of(
+                        fullMatch
+                                .map(match -> new ReturnContext(Map.of(match.getKey(), match.getValue())))
+                                .orElseGet(() -> new ReturnContext(nodesToReplace)));
             }
         }
     }
