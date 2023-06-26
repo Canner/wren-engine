@@ -844,7 +844,12 @@ public class TestWireProtocolWithBigquery
                 {"SELECT FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 AS \"l_orderkey\", COUNT(*) AS \"count\" " +
                         "FROM \"tpch_tiny\".\"lineitem\" " +
                         "GROUP BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 " +
-                        "ORDER BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 ASC"}
+                        "ORDER BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 ASC"},
+                {"SELECT (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) AS \"l_shipdate\", " +
+                        "count(distinct \"tpch_tiny\".\"lineitem\".\"l_orderkey\") AS \"count\" " +
+                        "FROM \"tpch_tiny\".\"lineitem\" " +
+                        "GROUP BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) " +
+                        "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) ASC LIMIT 10\n"}
         };
     }
 
