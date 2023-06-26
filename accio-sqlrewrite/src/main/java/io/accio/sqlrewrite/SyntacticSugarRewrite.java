@@ -106,7 +106,7 @@ public class SyntacticSugarRewrite
                             .map(Identifier::new)
                             .orElse(null))
                     .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
-                    .orElse(node);
+                    .orElse(super.visitDereferenceExpression(node, context));
         }
 
         @Override
