@@ -22,11 +22,13 @@ import io.accio.sqlrewrite.analyzer.Field;
 import io.accio.sqlrewrite.analyzer.Scope;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.SubscriptExpression;
 
@@ -107,6 +109,25 @@ public class SyntacticSugarRewrite
                             .orElse(null))
                     .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
                     .orElse(super.visitDereferenceExpression(node, context));
+        }
+
+        @Override
+        protected Node visitSingleColumn(SingleColumn node, Void context)
+        {
+            Expression result = visitAndCast(node.getExpression(), context);
+            Identifier resultAlias = node.getAlias().orElse(null);
+            if (node.getExpression() instanceof Identifier && !result.equals(node.getExpression())) {
+                Identifier identifier = (Identifier) node.getExpression();
+                resultAlias = node.getAlias().orElse(identifier);
+            }
+            else if (node.getExpression() instanceof DereferenceExpression && !result.equals(node.getExpression())) {
+                DereferenceExpression dereferenceExpression = (DereferenceExpression) node.getExpression();
+                resultAlias = node.getAlias().orElse(dereferenceExpression.getField().orElse(null));
+            }
+            if (node.getLocation().isPresent()) {
+                return new SingleColumn(node.getLocation().get(), result, Optional.ofNullable(resultAlias));
+            }
+            return new SingleColumn(node.getLocation().get(), result, Optional.ofNullable(resultAlias));
         }
 
         @Override
