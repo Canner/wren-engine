@@ -67,6 +67,7 @@ public class RewriteNamesToAlias
     public static class RewriteNamesToAliasRewriter
             extends BaseRewriter<Void>
     {
+        @Override
         protected Node visitQuerySpecification(QuerySpecification node, Void context)
         {
             Map<Expression, Identifier> selectItemAliasMap = new HashMap<>();
