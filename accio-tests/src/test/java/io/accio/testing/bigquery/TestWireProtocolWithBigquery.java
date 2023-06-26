@@ -841,6 +841,10 @@ public class TestWireProtocolWithBigquery
                         ", current_schemas(false)[s.r] nspname\n" +
                         "FROM\n" +
                         "UNNEST(generate_array(1, array_upper(current_schemas(false), 1))) s (r)"},
+                {"SELECT FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 AS \"l_orderkey\", COUNT(*) AS \"count\" " +
+                        "FROM \"tpch_tiny\".\"lineitem\" " +
+                        "GROUP BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 " +
+                        "ORDER BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 ASC"}
         };
     }
 

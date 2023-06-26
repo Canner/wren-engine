@@ -311,4 +311,39 @@ public class TestBigQuerySqlConverter
                         "  accio.test.t1\n" +
                         "GROUP BY c1, c2, c3\n");
     }
+
+    @Test
+    public void testRewriteNamesToAlias()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT FLOOR(l_orderkey) l_orderkey\n" +
+                        ", COUNT(*) count\n" +
+                        "FROM\n" +
+                        "  tpch_tiny.lineitem\n" +
+                        "GROUP BY FLOOR(l_orderkey)\n" +
+                        "ORDER BY FLOOR(l_orderkey) ASC\n", SessionContext.builder().build()))
+                .isEqualTo("SELECT\n" +
+                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        ", COUNT(*) count\n" +
+                        "FROM\n" +
+                        "  tpch_tiny.lineitem\n" +
+                        "GROUP BY l_orderkey\n" +
+                        "ORDER BY l_orderkey ASC\n");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT\n" +
+                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        ", COUNT(*) count\n" +
+                        "FROM\n" +
+                        "  tpch_tiny.lineitem\n" +
+                        "GROUP BY l_orderkey\n" +
+                        "ORDER BY l_orderkey ASC\n", SessionContext.builder().build()))
+                .isEqualTo("SELECT\n" +
+                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        ", COUNT(*) count\n" +
+                        "FROM\n" +
+                        "  tpch_tiny.lineitem\n" +
+                        "GROUP BY l_orderkey\n" +
+                        "ORDER BY l_orderkey ASC\n");
+    }
 }
