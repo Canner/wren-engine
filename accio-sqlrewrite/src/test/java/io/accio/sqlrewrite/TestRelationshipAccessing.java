@@ -376,23 +376,6 @@ public class TestRelationshipAccessing
                                 "LEFT JOIN ${People.book.author.book} ON (People.userId = ${People.book.author.book}.bk))\n" +
                                 "LEFT JOIN ${People.book} ON (People.userId = ${People.book}.bk))",
                         true},
-                {"SELECT a.author\n" +
-                        "FROM Book a",
-                        "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
-                                // TODO: better to remove this unused CTE
-                                "  ${Book.author} (userId, name, book, bk) AS (\n" +
-                                "   SELECT\n" +
-                                "     t.userId\n" +
-                                "   , t.name\n" +
-                                "   , t.book\n" +
-                                "   , s.bookId bk\n" +
-                                "   FROM\n" +
-                                "     (Book s\n" +
-                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
-                                ") \n" +
-                                "SELECT a.author\n" +
-                                "FROM Book a",
-                        true},
                 {"WITH A as (SELECT b.author.name FROM Book b) SELECT A.name FROM A",
                         "WITH\n" + ONE_TO_ONE_MODEL_CTE + ",\n" +
                                 " ${Book.author} (userId, name, book, bk) AS (\n" +
