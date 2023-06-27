@@ -21,9 +21,9 @@ import io.accio.base.SessionContext;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
-import io.accio.sqlrewrite.LambdaExpressionBodyRewrite;
 import io.accio.sqlrewrite.RelationshipCTE;
 import io.accio.sqlrewrite.RelationshipCteGenerator;
+import io.accio.sqlrewrite.analyzer.FunctionChainAnalyzer.ReturnContext;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
@@ -31,41 +31,29 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.IsNotNullPredicate;
-import io.trino.sql.tree.LambdaExpression;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SubscriptExpression;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.LAMBDA_RESULT_NAME;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.access;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.aggregate;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.arraySort;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.filter;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.slice;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.RelationshipOperation.transform;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
-import static io.accio.sqlrewrite.RelationshipCteGenerator.SOURCE_REFERENCE;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static io.trino.sql.QueryUtil.identifier;
 import static java.lang.String.format;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toMap;
 
 public final class ExpressionAnalyzer
 {
@@ -104,6 +92,7 @@ public final class ExpressionAnalyzer
         private final AccioMDL accioMDL;
         private final RelationshipCteGenerator relationshipCteGenerator;
         private final Scope scope;
+        private final FunctionChainAnalyzer functionChainAnalyzer;
 
         public Visitor(SessionContext sessionContext, AccioMDL accioMDL, RelationshipCteGenerator relationshipCteGenerator, Scope scope)
         {
@@ -111,6 +100,7 @@ public final class ExpressionAnalyzer
             this.accioMDL = requireNonNull(accioMDL, "accioMDL is null");
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
             this.scope = requireNonNull(scope, "scope is null");
+            this.functionChainAnalyzer = FunctionChainAnalyzer.of(relationshipCteGenerator, this::registerRelationshipCTEs);
         }
 
         @Override
@@ -143,13 +133,12 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
-            FunctionChainProcessor functionChainProcessor = new FunctionChainProcessor();
-            Optional<ReturnContext> returnContext = functionChainProcessor.process(node, new Context());
+            Optional<ReturnContext> returnContext = functionChainAnalyzer.analyze(node);
             if (returnContext.isEmpty()) {
                 return null;
             }
 
-            returnContext.get().nodesToReplace.forEach((nodeToReplace, rsField) -> {
+            returnContext.get().getNodesToReplace().forEach((nodeToReplace, rsField) -> {
                 // nodeToReplace is a lambda function call
                 if (nodeToReplace.getNode() instanceof FunctionCall) {
                     relationshipCTENames.add(nodeToReplace.getNode().toString());
@@ -175,38 +164,6 @@ public final class ExpressionAnalyzer
                 }
             });
             return null;
-        }
-
-        private boolean isArrayFunction(QualifiedName funcName)
-        {
-            // TODO: define what's array function
-            //  Refer to trino array function temporarily
-            // TODO: bigquery array function mapping
-            return List.of("cardinality", "array_max", "array_min", "array_length").contains(funcName.toString());
-        }
-
-        private boolean isAccioFunction(QualifiedName funcName)
-        {
-            return isLambdaFunction(funcName)
-                    || funcName.getSuffix().equalsIgnoreCase("array_sort")
-                    || funcName.getSuffix().equalsIgnoreCase("slice");
-        }
-
-        private boolean isLambdaFunction(QualifiedName funcName)
-        {
-            return List.of("transform", "filter").contains(funcName.getSuffix()) || isAggregateFunction(funcName);
-        }
-
-        private boolean isAggregateFunction(QualifiedName funcName)
-        {
-            return List.of("array_count",
-                            "array_sum",
-                            "array_avg",
-                            "array_min",
-                            "array_max",
-                            "array_bool_or",
-                            "array_every")
-                    .contains(funcName.getSuffix());
         }
 
         @Override
@@ -238,16 +195,15 @@ public final class ExpressionAnalyzer
             LinkedList<RelationshipField> chain = new LinkedList<>();
             // process the root node, root node should be either FunctionCall or Identifier, if not, relationship rewrite won't be fired
             if (root instanceof FunctionCall) {
-                FunctionChainProcessor functionChainProcessor = new FunctionChainProcessor();
-                Optional<ReturnContext> returnContext = functionChainProcessor.process(root, new Context());
+                Optional<ReturnContext> returnContext = functionChainAnalyzer.analyze((FunctionCall) root);
                 boolean functionCallNoReplacement = returnContext.stream()
-                        .map(context -> context.nodesToReplace.isEmpty())
+                        .map(context -> context.getNodesToReplace().isEmpty())
                         .findAny()
                         .orElse(true);
                 if (functionCallNoReplacement) {
                     return Optional.empty();
                 }
-                Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContext.get().nodesToReplace;
+                Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContext.get().getNodesToReplace();
                 checkArgument(nodesToReplace.size() == 1, "No node or multiple node to replace in function chain in DereferenceExpression chain");
 
                 nodesToReplace.forEach((nodeToReplace, rsField) ->
@@ -386,188 +342,6 @@ public final class ExpressionAnalyzer
                                     new Identifier(cteName),
                                     chain.isEmpty() ? Optional.empty() : Optional.of(chain.getLast())));
         }
-
-        private void collectRelationshipInFunction(
-                FunctionCall functionCall,
-                RelationshipField relationshipField,
-                Optional<FunctionCall> previousLambdaCall)
-        {
-            String modelName = relationshipField.getModelName();
-            String columnName = relationshipField.getColumnName();
-            Relationship relationship = relationshipField.getRelationship();
-
-            RelationshipCteGenerator.RelationshipOperation operation;
-            String functionName = functionCall.getName().toString();
-            String cteName = previousLambdaCall.map(Expression::toString).orElse(String.join(".", relationshipField.getCteNameParts()));
-            Expression unnestField = previousLambdaCall.isPresent() ? DereferenceExpression.from(QualifiedName.of(SOURCE_REFERENCE, LAMBDA_RESULT_NAME)) : null;
-            List<Expression> arguments = functionCall.getArguments();
-            if (isLambdaFunction(QualifiedName.of(functionName.toLowerCase(ENGLISH)))) {
-                checkArgument(arguments.size() == 2, "Lambda function should have 2 arguments");
-                LambdaExpression lambdaExpression = (LambdaExpression) functionCall.getArguments().get(1);
-                checkArgument(lambdaExpression.getArguments().size() == 1, "lambda expression must have one argument");
-                Expression expression = LambdaExpressionBodyRewrite.rewrite(lambdaExpression.getBody(), modelName, lambdaExpression.getArguments().get(0).getName());
-                if (functionName.equalsIgnoreCase("transform")) {
-                    operation = transform(
-                            List.of(rsItem(cteName, CTE),
-                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                            expression,
-                            columnName,
-                            unnestField);
-                }
-                else if (functionName.equalsIgnoreCase("filter")) {
-                    operation = filter(
-                            List.of(rsItem(cteName, CTE),
-                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                            expression,
-                            columnName,
-                            unnestField);
-                }
-                else if (isAggregateFunction(QualifiedName.of(functionName))) {
-                    operation = aggregate(
-                            List.of(rsItem(cteName, CTE),
-                                    rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                            expression,
-                            columnName,
-                            unnestField,
-                            getArrayBaseFunctionName(functionName));
-                }
-                else {
-                    throw new IllegalArgumentException(functionName + " not supported");
-                }
-            }
-            else if (functionName.equalsIgnoreCase("array_sort")) {
-                operation = arraySort(
-                        List.of(rsItem(cteName, CTE),
-                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        columnName,
-                        unnestField,
-                        arguments);
-            }
-            else if (functionName.equalsIgnoreCase("slice")) {
-                checkArgument(arguments.size() == 3, "slice function should have 3 arguments");
-                operation = slice(
-                        List.of(rsItem(cteName, CTE),
-                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        previousLambdaCall.isPresent() ? LAMBDA_RESULT_NAME : columnName,
-                        arguments);
-            }
-            else {
-                throw new IllegalArgumentException(functionName + " not supported");
-            }
-
-            relationshipCteGenerator.register(List.of(functionCall.toString()), operation, relationshipField.getBaseModelName());
-        }
-
-        private String getArrayBaseFunctionName(String functionName)
-        {
-            return functionName.split("array_")[1];
-        }
-
-        // TODO: make these two static
-        private class Context
-        {
-            private final List<FunctionCall> functionChain;
-
-            public Context()
-            {
-                this.functionChain = List.of();
-            }
-
-            public Context(List<FunctionCall> functionChain)
-            {
-                this.functionChain = requireNonNull(functionChain);
-            }
-        }
-
-        private class ReturnContext
-        {
-            private final Map<NodeRef<Expression>, RelationshipField> nodesToReplace;
-
-            public ReturnContext(Map<NodeRef<Expression>, RelationshipField> nodesToReplace)
-            {
-                this.nodesToReplace = requireNonNull(nodesToReplace);
-            }
-        }
-
-        // TODO: make this static
-        // Add tests
-        private void checkFunctionChainIsValid(List<FunctionCall> functionCalls)
-        {
-            boolean startChaining = false;
-            for (FunctionCall functionCall : functionCalls) {
-                if (isAccioFunction(functionCall.getName())) {
-                    startChaining = true;
-                }
-                else {
-                    checkArgument(!startChaining, format("accio function chain contains invalid function %s", functionCall.getName()));
-                }
-            }
-        }
-
-        private class FunctionChainProcessor
-                extends AstVisitor<Optional<ReturnContext>, Context>
-        {
-            private Optional<ReturnContext> processFunctionChain(Expression node, Context context)
-            {
-                checkArgument(node instanceof DereferenceExpression || node instanceof Identifier, "node is not DereferenceExpression or Identifier");
-                checkFunctionChainIsValid(context.functionChain);
-
-                Optional<ReplaceNodeInfo> replaceNodeInfo = registerRelationshipCTEs(node);
-                if (replaceNodeInfo.isEmpty()) {
-                    return Optional.empty();
-                }
-
-                RelationshipField rsField = replaceNodeInfo.get().getLastRelationshipField().get();
-
-                FunctionCall previousFunctionCall = null;
-                for (FunctionCall functionCall : Lists.reverse(context.functionChain)) {
-                    if (isAccioFunction(functionCall.getName())) {
-                        collectRelationshipInFunction(
-                                functionCall,
-                                rsField,
-                                Optional.ofNullable(previousFunctionCall));
-                    }
-                    else if (isArrayFunction(functionCall.getName())) {
-                        return Optional.of(new ReturnContext(Map.of(NodeRef.of(node), rsField)));
-                    }
-                    else {
-                        break;
-                    }
-                    previousFunctionCall = functionCall;
-                }
-                return Optional.ofNullable(previousFunctionCall)
-                        .map(functionCall -> new ReturnContext(Map.of(NodeRef.of(functionCall), rsField)));
-            }
-
-            @Override
-            protected Optional<ReturnContext> visitFunctionCall(FunctionCall node, Context context)
-            {
-                List<ReturnContext> returnContexts = new ArrayList<>();
-                Context newContext = new Context(ImmutableList.<FunctionCall>builder().addAll(context.functionChain).add(node).build());
-                for (Expression argument : node.getArguments()) {
-                    if (argument instanceof FunctionCall) {
-                        visitFunctionCall((FunctionCall) argument, newContext).ifPresent(returnContexts::add);
-                    }
-                    else if (argument instanceof DereferenceExpression || argument instanceof Identifier) {
-                        processFunctionChain(argument, newContext).ifPresent(returnContexts::add);
-                    }
-                }
-
-                Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContexts.stream()
-                        .map(returnContext -> returnContext.nodesToReplace.entrySet())
-                        .flatMap(Collection::stream)
-                        .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-                Optional<Entry<NodeRef<Expression>, RelationshipField>> fullMatch = nodesToReplace.entrySet().stream()
-                        .filter(entry -> NodeRef.of(node).equals(entry.getKey()))
-                        .findAny();
-
-                return Optional.of(
-                        fullMatch
-                                .map(match -> new ReturnContext(Map.of(match.getKey(), match.getValue())))
-                                .orElseGet(() -> new ReturnContext(nodesToReplace)));
-            }
-        }
     }
 
     private static LinkedList<Expression> elements(Expression expression)
@@ -597,7 +371,7 @@ public final class ExpressionAnalyzer
         return new LinkedList<>(Lists.reverse(elements));
     }
 
-    private static class RelationshipField
+    static class RelationshipField
     {
         private final List<String> cteNameParts;
         private final String modelName;
@@ -614,7 +388,7 @@ public final class ExpressionAnalyzer
             this.baseModelName = requireNonNull(baseModelName);
         }
 
-        private List<String> getCteNameParts()
+        public List<String> getCteNameParts()
         {
             return cteNameParts;
         }
@@ -640,7 +414,7 @@ public final class ExpressionAnalyzer
         }
     }
 
-    private static class ReplaceNodeInfo
+    static class ReplaceNodeInfo
     {
         private final List<String> replacementNameParts;
         private final Expression original;
