@@ -114,6 +114,8 @@ public class SyntacticSugarRewrite
         @Override
         protected Node visitSingleColumn(SingleColumn node, Void context)
         {
+            // Because we rewrite the relationship field to its primary key,
+            // we need to add an alias to keep its original name.
             Expression result = visitAndCast(node.getExpression(), context);
             Identifier resultAlias = node.getAlias().orElse(null);
             if (node.getExpression() instanceof Identifier && !result.equals(node.getExpression())) {
