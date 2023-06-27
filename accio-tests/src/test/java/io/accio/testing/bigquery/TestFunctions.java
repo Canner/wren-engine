@@ -97,4 +97,18 @@ public class TestFunctions
             assertThat(resultSet.next()).isTrue();
         }
     }
+
+    @Test
+    public void testSubstring()
+            throws SQLException
+    {
+        try (Connection conn = createConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT substring(tpch_tiny.lineitem.l_comment FROM ?) FROM tpch_tiny.lineitem LIMIT 1");
+            stmt.setString(1, "[a-z]+");
+            ResultSet result = stmt.executeQuery();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isNotEmpty();
+            assertThat(result.next()).isFalse();
+        }
+    }
 }
