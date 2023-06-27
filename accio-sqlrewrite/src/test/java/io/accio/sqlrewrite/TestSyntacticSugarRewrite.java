@@ -73,13 +73,14 @@ public class TestSyntacticSugarRewrite
     public Object[][] testCase()
     {
         return new Object[][] {
-                {"select count(*) from Book group by author", "select count(*) from Book group by author.userId"},
-                {"select count(*) from Book group by author, name", "select count(*) from Book group by author.userId, name"},
-                {"select author, count(*) from Book group by author", "select author.userId, count(*) from Book group by author.userId"},
-                {"select author, count(*) from Book group by author, name", "select author.userId, count(*) from Book group by author.userId, name"},
-                {"select author, count(*) from Book group by 1", "select author.userId, count(*) from Book group by 1"},
-                {"select author, name, count(*) from Book group by 1, 2", "select author.userId, name, count(*) from Book group by 1, 2"},
-                {"select author, name, count(*) from Book group by (author, name)", "select author.userId, name, count(*) from Book group by (author.userId, name)"},
+                {"select count(*) from Book group by author", "select count(*) from Book group by Book.author.userId"},
+                {"select count(*) from Book group by author, name", "select count(*) from Book group by Book.author.userId, Book.name"},
+                {"select author, count(*) from Book group by author", "select Book.author.userId author, count(*) from Book group by Book.author.userId"},
+                {"select author, count(*) from Book group by author, name", "select Book.author.userId author, count(*) from Book group by Book.author.userId, Book.name"},
+                {"select author, count(*) from Book group by 1", "select Book.author.userId author, count(*) from Book group by 1"},
+                {"select author, name, count(*) from Book group by 1, 2", "select Book.author.userId author, Book.name, count(*) from Book group by 1, 2"},
+                {"select author, name, count(*) from Book group by (author, name)",
+                        "select Book.author.userId author, Book.name, count(*) from Book group by (Book.author.userId, Book.name)"},
         };
     }
 
@@ -93,14 +94,19 @@ public class TestSyntacticSugarRewrite
     public Object[][] anyFunction()
     {
         return new Object[][] {
-                {"SELECT any(filter(author, rs -> rs.name = 'F')) FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] FROM Book"},
-                {"SELECT any(filter(author, rs -> rs.name = 'F')) IS NOT NULL FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] IS NOT NULL FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) FROM Book", "SELECT filter(Book.author, rs -> rs.name = 'F')[1] FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) IS NOT NULL FROM Book", "SELECT filter(Book.author, rs -> rs.name = 'F')[1] IS NOT NULL FROM Book"},
+                // TODO: Fix scope awareness for the arguments of dereferenceExpression with functionCalls
                 {"SELECT any(filter(author, rs -> rs.name = 'F')).name + 1 FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name + 1 FROM Book"},
-                {"SELECT any(filter(author, rs -> rs.name = 'F')) AS a FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1] AS a FROM Book"},
-                {"SELECT any(filter(author, rs -> rs.name = 'F')).name FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name FROM Book"},
+                {"SELECT any(filter(author, rs -> rs.name = 'F')) AS a FROM Book", "SELECT filter(Book.author, rs -> rs.name = 'F')[1] AS a FROM Book"},
+                // TODO: Fix scope awareness for the arguments of dereferenceExpression with functionCalls
+                {"SELECT any(filter(author, rs -> rs.name = 'F')).name FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name name FROM Book"},
+                // TODO: Fix scope awareness for the arguments of dereferenceExpression with functionCalls
                 {"SELECT any(filter(author, rs -> rs.name = 'F')).name AS a FROM Book", "SELECT filter(author, rs -> rs.name = 'F')[1].name AS a FROM Book"},
+                // TODO: Fix scope awareness for the arguments of dereferenceExpression with functionCalls
                 {"SELECT concat(any(filter(author, rs -> rs.name = 'F')).name, 'foo') AS a FROM Book",
                         "SELECT concat(filter(author, rs -> rs.name = 'F')[1].name, 'foo') AS a FROM Book"},
+                // TODO: Fix scope awareness for the arguments of dereferenceExpression with functionCalls
                 {"SELECT first(filter(author, rs -> rs.name = 'F'), name, ASC).name AS a FROM Book",
                         "SELECT array_sort(filter(author, rs -> rs.name = 'F'), name, ASC)[1].name AS a FROM Book"},
         };
@@ -114,7 +120,8 @@ public class TestSyntacticSugarRewrite
 
     private Statement rewrite(String sql)
     {
-        return SYNTACTIC_SUGAR_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, oneToManyAccioMDL);
+        Statement scoped = ScopeAwareRewrite.SCOPE_AWARE_REWRITE.rewrite(parse(sql), oneToManyAccioMDL, DEFAULT_SESSION_CONTEXT);
+        return SYNTACTIC_SUGAR_REWRITE.apply(scoped, DEFAULT_SESSION_CONTEXT, oneToManyAccioMDL);
     }
 
     private Statement parse(String sql)
