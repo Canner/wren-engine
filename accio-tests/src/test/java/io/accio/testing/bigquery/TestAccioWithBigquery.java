@@ -659,7 +659,10 @@ public class TestAccioWithBigquery
                 {"SELECT (any(filter(orders, orderItem -> orderItem.orderstatus = 'F')) IS NOT NULL) AS col_1 FROM Customer LIMIT 100"},
                 {"SELECT any(filter(orders, orderItem -> orderItem.orderstatus = 'F')).totalprice FROM Customer LIMIT 100"},
                 // useAny is a view that invoke any function
-                {"SELECT * FROM useAny"}
+                {"SELECT * FROM useAny"},
+                {"select orders[1] from Customer LIMIT 100"},
+                {"select any(orders) from Customer LIMIT 100"},
+                {"select any(filter(orders, orderItem -> orderItem.orderstatus = 'F')) FROM Customer LIMIT 100"},
         };
     }
 
