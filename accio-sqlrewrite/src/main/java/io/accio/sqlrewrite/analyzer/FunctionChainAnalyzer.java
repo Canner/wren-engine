@@ -67,13 +67,48 @@ public interface FunctionChainAnalyzer
                 .process(functionCall, new Context());
     }
 
+    class Context
+    {
+        private final List<FunctionCall> functionChain;
+
+        private Context()
+        {
+            this.functionChain = List.of();
+        }
+
+        private Context(List<FunctionCall> functionChain)
+        {
+            this.functionChain = requireNonNull(functionChain);
+        }
+
+        public List<FunctionCall> getFunctionChain()
+        {
+            return functionChain;
+        }
+    }
+
+    class ReturnContext
+    {
+        private final Map<NodeRef<Expression>, RelationshipField> nodesToReplace;
+
+        private ReturnContext(Map<NodeRef<Expression>, RelationshipField> nodesToReplace)
+        {
+            this.nodesToReplace = requireNonNull(nodesToReplace);
+        }
+
+        public Map<NodeRef<Expression>, RelationshipField> getNodesToReplace()
+        {
+            return nodesToReplace;
+        }
+    }
+
     class FunctionChainProcessor
             extends AstVisitor<Optional<ReturnContext>, Context>
     {
         private final RelationshipCteGenerator relationshipCteGenerator;
         private final Function<Expression, Optional<ReplaceNodeInfo>> registerRelationshipCTEs;
 
-        public FunctionChainProcessor(
+        private FunctionChainProcessor(
                 RelationshipCteGenerator relationshipCteGenerator,
                 Function<Expression, Optional<ReplaceNodeInfo>> registerRelationshipCTEs)
         {
@@ -85,7 +120,7 @@ public interface FunctionChainAnalyzer
         protected Optional<ReturnContext> visitFunctionCall(FunctionCall node, Context context)
         {
             List<ReturnContext> returnContexts = new ArrayList<>();
-            Context newContext = new Context(ImmutableList.<FunctionCall>builder().addAll(context.functionChain).add(node).build());
+            Context newContext = new Context(ImmutableList.<FunctionCall>builder().addAll(context.getFunctionChain()).add(node).build());
             for (Expression argument : node.getArguments()) {
                 if (argument instanceof FunctionCall) {
                     visitFunctionCall((FunctionCall) argument, newContext).ifPresent(returnContexts::add);
@@ -113,17 +148,18 @@ public interface FunctionChainAnalyzer
         private Optional<ReturnContext> processFunctionChain(Expression node, Context context)
         {
             checkArgument(node instanceof DereferenceExpression || node instanceof Identifier, "node is not DereferenceExpression or Identifier");
-            checkFunctionChainIsValid(context.functionChain);
+            checkFunctionChainIsValid(context.getFunctionChain());
 
             Optional<ReplaceNodeInfo> replaceNodeInfo = registerRelationshipCTEs.apply(node);
             if (replaceNodeInfo.isEmpty()) {
                 return Optional.empty();
             }
 
+            checkArgument(replaceNodeInfo.get().getLastRelationshipField().isPresent(), "last relationship field not found in function call");
             RelationshipField rsField = replaceNodeInfo.get().getLastRelationshipField().get();
 
             FunctionCall previousFunctionCall = null;
-            for (FunctionCall functionCall : Lists.reverse(context.functionChain)) {
+            for (FunctionCall functionCall : Lists.reverse(context.getFunctionChain())) {
                 if (isAccioFunction(functionCall.getName())) {
                     collectRelationshipInFunction(
                             functionCall,
@@ -264,35 +300,5 @@ public interface FunctionChainAnalyzer
     private static String getArrayBaseFunctionName(String functionName)
     {
         return functionName.split("array_")[1];
-    }
-
-    class Context
-    {
-        private final List<FunctionCall> functionChain;
-
-        public Context()
-        {
-            this.functionChain = List.of();
-        }
-
-        public Context(List<FunctionCall> functionChain)
-        {
-            this.functionChain = requireNonNull(functionChain);
-        }
-    }
-
-    class ReturnContext
-    {
-        private final Map<NodeRef<Expression>, RelationshipField> nodesToReplace;
-
-        public ReturnContext(Map<NodeRef<Expression>, RelationshipField> nodesToReplace)
-        {
-            this.nodesToReplace = requireNonNull(nodesToReplace);
-        }
-
-        public Map<NodeRef<Expression>, RelationshipField> getNodesToReplace()
-        {
-            return nodesToReplace;
-        }
     }
 }

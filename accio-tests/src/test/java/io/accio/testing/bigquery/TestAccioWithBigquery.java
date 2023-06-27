@@ -750,6 +750,8 @@ public class TestAccioWithBigquery
                 {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
                 {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
                 {"SELECT transform(slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5), s -> s.totalprice) FROM Customer LIMIT 100"},
+                {"SELECT slice(array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, DESC), 1, 5) FROM Customer LIMIT 100"},
+                {"SELECT array_reverse(slice(array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, DESC), 1, 5)) FROM Customer LIMIT 100"},
         };
     }
 

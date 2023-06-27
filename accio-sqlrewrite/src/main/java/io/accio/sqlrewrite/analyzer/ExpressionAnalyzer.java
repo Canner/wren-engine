@@ -196,11 +196,8 @@ public final class ExpressionAnalyzer
             // process the root node, root node should be either FunctionCall or Identifier, if not, relationship rewrite won't be fired
             if (root instanceof FunctionCall) {
                 Optional<ReturnContext> returnContext = functionChainAnalyzer.analyze((FunctionCall) root);
-                boolean functionCallNoReplacement = returnContext.stream()
-                        .map(context -> context.getNodesToReplace().isEmpty())
-                        .findAny()
-                        .orElse(true);
-                if (functionCallNoReplacement) {
+                boolean functionCallNeedsReplacement = returnContext.isPresent() && returnContext.get().getNodesToReplace().size() > 0;
+                if (!functionCallNeedsReplacement) {
                     return Optional.empty();
                 }
                 Map<NodeRef<Expression>, RelationshipField> nodesToReplace = returnContext.get().getNodesToReplace();
