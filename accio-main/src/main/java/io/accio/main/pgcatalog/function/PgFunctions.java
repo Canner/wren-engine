@@ -19,6 +19,7 @@ import io.accio.base.type.RecordType;
 
 import java.util.List;
 
+import static io.accio.base.type.AnyType.ANY;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
 import static io.accio.base.type.IntegerType.INTEGER;
@@ -167,5 +168,18 @@ public final class PgFunctions
             .setDefinition("SELECT CASE WHEN (array_length(int_arr) > 0) THEN CAST((int_arr[0], 1) AS STRUCT<x INT64, n INT64>) ELSE NULL END")
             .setArguments(List.of(argument("int_arr", INT4_ARRAY)))
             .setReturnType(new RecordType(List.of(BIGINT, BIGINT)))
+            .build();
+
+    // TODO If the input is a string only include number, it will be parsed as a number. So substring('123' from '1') would get the wrong answer '123', actual should be '1'
+    public static final PgFunction SUBSTR = builder()
+            .setName("substr")
+            .setLanguage(SQL)
+            .setDefinition("SELECT " +
+                    "CASE WHEN REGEXP_CONTAINS(SAFE_CAST(arg2 AS STRING), '^[0-9]*$') IS TRUE\n" +
+                    "THEN SUBSTR(arg1, CAST(arg2 AS INT64))\n" +
+                    "ELSE REGEXP_EXTRACT(arg1, CAST(arg2 AS STRING))\n" +
+                    "END")
+            .setArguments(List.of(argument("arg1", VARCHAR), argument("arg2", ANY)))
+            .setReturnType(VARCHAR)
             .build();
 }

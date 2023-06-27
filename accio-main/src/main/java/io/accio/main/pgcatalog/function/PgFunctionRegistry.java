@@ -40,6 +40,7 @@ import static io.accio.main.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESUL
 import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
 import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
 import static io.accio.main.pgcatalog.function.PgFunctions.PG_TO_CHAR;
+import static io.accio.main.pgcatalog.function.PgFunctions.SUBSTR;
 
 @ThreadSafe
 public final class PgFunctionRegistry
@@ -65,6 +66,7 @@ public final class PgFunctionRegistry
                 .add(PG_TO_CHAR)
                 .add(NOW)
                 .add(PG_EXPANDARRAY)
+                .add(SUBSTR)
                 .build();
 
         // TODO: handle function name overloading

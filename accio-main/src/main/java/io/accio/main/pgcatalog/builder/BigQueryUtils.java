@@ -26,6 +26,7 @@ import java.util.Map;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.accio.base.type.AnyType.ANY;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
 import static io.accio.base.type.BpCharType.BPCHAR;
@@ -85,7 +86,8 @@ public final class BigQueryUtils
                 .put(BPCHAR, "STRING")
                 .put(INET, "INET")
                 .put(UUID, "STRING")
-                .put(REGPROC, "INT64");
+                .put(REGPROC, "INT64")
+                .put(ANY, "ANY TYPE");
         // TODO: support record type, hstore
         // .put(EMPTY_RECORD, "STRUCT")
         // .put(HSTORE, "STRUCT")
