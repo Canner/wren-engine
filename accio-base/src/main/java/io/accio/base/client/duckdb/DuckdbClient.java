@@ -48,10 +48,11 @@ public final class DuckdbClient
     {
         try {
             // The instance will be cleared after the process end. We don't need to
-            // close this connection.
+            // close this connection
+            Class.forName("org.duckdb.DuckDBDriver");
             this.duckDBConnection = DriverManager.getConnection("jdbc:duckdb:");
         }
-        catch (SQLException e) {
+        catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
