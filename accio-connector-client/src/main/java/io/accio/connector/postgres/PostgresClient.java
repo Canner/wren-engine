@@ -177,6 +177,12 @@ public class PostgresClient
     public Connection createConnection()
             throws SQLException
     {
+        try {
+            Class.forName("org.postgresql.Driver");
+        }
+        catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         return DriverManager.getConnection(postgresConfig.getJdbcUrl(), postgresConfig.getUser(), postgresConfig.getPassword());
     }
 
