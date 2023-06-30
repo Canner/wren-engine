@@ -29,7 +29,12 @@ import io.accio.base.type.RecordType;
 import io.accio.base.type.TimestampType;
 import org.joda.time.Period;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -68,6 +73,12 @@ public final class BigQueryType
 
     private static final Map<StandardSQLTypeName, PGType<?>> bqTypeToPgTypeMap;
     private static final Map<PGType<?>, StandardSQLTypeName> pgTypeToBqTypeMap;
+
+    private static final DateTimeFormatter ISO_FORMATTER_AD = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .appendPattern("yyyy-MM-dd")
+            .toFormatter(Locale.ENGLISH)
+            .withResolverStyle(ResolverStyle.STRICT);
 
     static {
         bqTypeToPgTypeMap = ImmutableMap.<StandardSQLTypeName, PGType<?>>builder()
@@ -160,6 +171,10 @@ public final class BigQueryType
         }
         if (pgType.equals(IntervalType.INTERVAL) && value instanceof Period) {
             return value.toString();
+        }
+        if (pgType.equals(DateType.DATE)) {
+            // BigQuery client can handle String to java.sql.Date automatically.
+            return ((LocalDate) value).format(ISO_FORMATTER_AD);
         }
         return value;
     }
