@@ -24,13 +24,11 @@ import io.accio.base.dto.Relationship;
 import io.accio.sqlrewrite.RelationshipCTE;
 import io.accio.sqlrewrite.RelationshipCteGenerator;
 import io.accio.sqlrewrite.analyzer.FunctionChainAnalyzer.ReturnContext;
-import io.trino.sql.tree.AstVisitor;
-import io.trino.sql.tree.ComparisonExpression;
+import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
-import io.trino.sql.tree.IsNotNullPredicate;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SubscriptExpression;
@@ -86,7 +84,7 @@ public final class ExpressionAnalyzer
     }
 
     private class Visitor
-            extends AstVisitor<Void, Void>
+            extends DefaultTraversalVisitor<Void>
     {
         private final SessionContext sessionContext;
         private final AccioMDL accioMDL;
@@ -101,21 +99,6 @@ public final class ExpressionAnalyzer
             this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
             this.scope = requireNonNull(scope, "scope is null");
             this.functionChainAnalyzer = FunctionChainAnalyzer.of(relationshipCteGenerator, this::registerRelationshipCTEs);
-        }
-
-        @Override
-        protected Void visitComparisonExpression(ComparisonExpression node, Void ignored)
-        {
-            process(node.getLeft());
-            process(node.getRight());
-            return ignored;
-        }
-
-        @Override
-        protected Void visitIsNotNullPredicate(IsNotNullPredicate node, Void ignored)
-        {
-            process(node.getValue());
-            return ignored;
         }
 
         @Override
