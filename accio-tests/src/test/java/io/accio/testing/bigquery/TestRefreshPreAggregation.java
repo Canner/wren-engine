@@ -41,11 +41,10 @@ public class TestRefreshPreAggregation
             throws InterruptedException
     {
         // manually reload pre-aggregation
-        preAggregationManager.refreshPreAggregation(accioMDL);
+        preAggregationManager.createTaskUtilDone(accioMDL);
         // We have one pre-aggregation table and the most tables existing in duckdb is 2
         assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         for (int i = 0; i < 50; i++) {
-            System.out.println(getDefaultPreAggregationInfoPair("RefreshFrequently").getRequiredTableName());
             Thread.sleep(200);
             assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         }

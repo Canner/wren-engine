@@ -45,7 +45,7 @@ public class AccioManager
         this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
         if (accioMDLFile.exists()) {
             loadAccioMDLFromFile();
-            preAggregationManager.refreshPreAggregation(getAccioMDL());
+            preAggregationManager.createTaskUtilDone(getAccioMDL());
         }
         else {
             LOG.warn("AccioMDL file %s does not exist", accioMDLFile);

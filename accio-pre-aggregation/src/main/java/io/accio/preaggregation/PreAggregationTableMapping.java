@@ -15,6 +15,7 @@ package io.accio.preaggregation;
 
 import io.accio.base.CatalogSchemaTableName;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -32,4 +33,6 @@ public interface PreAggregationTableMapping
     Optional<String> convertToAggregationTable(CatalogSchemaTableName catalogSchemaTableName);
 
     Set<Map.Entry<CatalogSchemaTableName, PreAggregationInfoPair>> entrySet();
+
+    List<PreAggregationInfoPair> getPreAggregationInfoPairs(String catalogName, String schemaName);
 }
