@@ -84,11 +84,9 @@ public class SyntacticSugarRewrite
                     .map(relationType -> relationType.resolveAnyField(qualifiedName))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .filter(Field::isRelationship)
-                    .map(field -> accioMDL.getModel(field.getType())
+                    .filter(Field::isRelationship).flatMap(field -> accioMDL.getModel(field.getType())
                             .map(Model::getPrimaryKey)
-                            .map(Identifier::new)
-                            .orElse(null))
+                            .map(Identifier::new))
                     .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
                     .orElse(node);
         }
@@ -102,11 +100,9 @@ public class SyntacticSugarRewrite
                     .map(relationType -> relationType.resolveAnyField(qualifiedName))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .filter(Field::isRelationship)
-                    .map(field -> accioMDL.getModel(field.getType())
+                    .filter(Field::isRelationship).flatMap(field -> accioMDL.getModel(field.getType())
                             .map(Model::getPrimaryKey)
-                            .map(Identifier::new)
-                            .orElse(null))
+                            .map(Identifier::new))
                     .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
                     .orElse(super.visitDereferenceExpression(node, context));
         }
@@ -117,19 +113,24 @@ public class SyntacticSugarRewrite
             // Because we rewrite the relationship field to its primary key,
             // we need to add an alias to keep its original name.
             Expression result = visitAndCast(node.getExpression(), context);
+
+            if (result.equals(node.getExpression())) {
+                return node;
+            }
+
             Identifier resultAlias = node.getAlias().orElse(null);
-            if (node.getExpression() instanceof Identifier && !result.equals(node.getExpression())) {
+            if (node.getExpression() instanceof Identifier) {
                 Identifier identifier = (Identifier) node.getExpression();
                 resultAlias = node.getAlias().orElse(identifier);
             }
-            else if (node.getExpression() instanceof DereferenceExpression && !result.equals(node.getExpression())) {
+            else if (node.getExpression() instanceof DereferenceExpression) {
                 DereferenceExpression dereferenceExpression = (DereferenceExpression) node.getExpression();
                 resultAlias = node.getAlias().orElse(dereferenceExpression.getField().orElse(null));
             }
             if (node.getLocation().isPresent()) {
                 return new SingleColumn(node.getLocation().get(), result, Optional.ofNullable(resultAlias));
             }
-            return new SingleColumn(node.getLocation().get(), result, Optional.ofNullable(resultAlias));
+            return new SingleColumn(result, Optional.ofNullable(resultAlias));
         }
 
         @Override
