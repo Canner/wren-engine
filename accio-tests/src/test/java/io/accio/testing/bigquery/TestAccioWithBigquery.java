@@ -258,21 +258,6 @@ public class TestAccioWithBigquery
     {
         try (Connection connection = createConnection()) {
             PreparedStatement stmt = connection.prepareStatement(
-                    "select transform(array_reverse(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F')), orderItem -> orderItem.totalprice)\n" +
-                            "as col_1\n" +
-                            "from Customer limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("col_1"));
-            int count = 1;
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
-
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement(
                     "select transform(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F'), orderItem -> orderItem.totalprice)\n" +
                             "as col_1\n" +
                             "from Customer limit 100");
@@ -325,7 +310,18 @@ public class TestAccioWithBigquery
                                 "as col_1\n" +
                                 "from Customer limit 100");
                 stmt.executeQuery();
-            }).hasMessageStartingWith("ERROR: There should be only one relationship field function chain in dereference expression");
+            }).hasMessageStartingWith("ERROR: accio function chain contains invalid function array_concat");
+        }
+
+        // test failed stmt
+        try (Connection connection = createConnection()) {
+            assertThatThrownBy(() -> {
+                PreparedStatement stmt = connection.prepareStatement(
+                        "select transform(array_reverse(filter(Customer.orders, orderItem -> orderItem.orderstatus = 'O' or orderItem.orderstatus = 'F')), orderItem -> orderItem.totalprice)\n" +
+                                "as col_1\n" +
+                                "from Customer limit 100");
+                stmt.executeQuery();
+            }).hasMessageStartingWith("ERROR: accio function chain contains invalid function array_reverse");
         }
     }
 
@@ -753,9 +749,9 @@ public class TestAccioWithBigquery
                 {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5) FROM Customer LIMIT 100"},
                 {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
                 {"SELECT slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5)[1].totalprice FROM Customer LIMIT 100"},
-                // TODO: Currently if there is more than 2 functions in a chain, the chain goes wrong
-                // https://github.com/Canner/canner-metric-layer/issues/288
-                // {"SELECT transform(slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5), s -> s.totalprice) FROM Customer LIMIT 100"},
+                {"SELECT transform(slice(filter(orders, orderItem -> orderItem.orderstatus = 'F'), 1, 5), s -> s.totalprice) FROM Customer LIMIT 100"},
+                {"SELECT slice(array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, DESC), 1, 5) FROM Customer LIMIT 100"},
+                {"SELECT array_reverse(slice(array_sort(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, DESC), 1, 5)) FROM Customer LIMIT 100"},
         };
     }
 
