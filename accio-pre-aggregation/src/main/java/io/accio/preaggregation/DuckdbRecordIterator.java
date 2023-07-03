@@ -19,7 +19,6 @@ import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.Client;
 import io.accio.base.client.jdbc.JdbcRecordIterator;
-import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.base.type.TimestampType;
 
@@ -98,9 +97,6 @@ public class DuckdbRecordIterator
         try {
             if (pgType instanceof TimestampType) {
                 return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
-            }
-            if (pgType instanceof DateType) {
-                return value.toString();
             }
             return value;
         }

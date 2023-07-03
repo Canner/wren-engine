@@ -29,6 +29,7 @@ import io.accio.base.type.RecordType;
 import io.accio.base.type.TimestampType;
 import org.joda.time.Period;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -160,6 +161,9 @@ public final class BigQueryType
         }
         if (pgType.equals(IntervalType.INTERVAL) && value instanceof Period) {
             return value.toString();
+        }
+        if (pgType.equals(DateType.DATE) && value instanceof LocalDate) {
+            return java.sql.Date.valueOf((LocalDate) value);
         }
         return value;
     }

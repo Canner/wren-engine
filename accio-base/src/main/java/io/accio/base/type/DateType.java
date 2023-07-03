@@ -18,7 +18,6 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -29,7 +28,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 
 public class DateType
-        extends PGType
+        extends PGType<LocalDate>
 {
     public static final PGType DATE = new DateType();
 
@@ -73,28 +72,26 @@ public class DateType
     }
 
     @Override
-    public byte[] encodeAsUTF8Text(@Nonnull Object value)
+    public byte[] encodeAsUTF8Text(@Nonnull LocalDate value)
     {
-        LocalDate date = LocalDate.parse((String) value);
-        return date.format(ISO_FORMATTER_AD).getBytes(UTF_8);
+        return value.format(ISO_FORMATTER_AD).getBytes(UTF_8);
     }
 
     @Override
-    public Object decodeUTF8Text(byte[] bytes)
+    public LocalDate decodeUTF8Text(byte[] bytes)
     {
         String s = new String(bytes, UTF_8);
-        LocalDate dt = LocalDate.parse(s, ISO_FORMATTER);
-        return Date.valueOf(dt);
+        return LocalDate.parse(s, ISO_FORMATTER);
     }
 
     @Override
-    public int writeAsBinary(ByteBuf buffer, @Nonnull Object value)
+    public int writeAsBinary(ByteBuf buffer, @Nonnull LocalDate value)
     {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object readBinaryValue(ByteBuf buffer, int valueLength)
+    public LocalDate readBinaryValue(ByteBuf buffer, int valueLength)
     {
         throw new UnsupportedOperationException();
     }

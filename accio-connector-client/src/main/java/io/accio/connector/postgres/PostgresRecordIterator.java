@@ -85,6 +85,9 @@ public class PostgresRecordIterator
                         }).orElse(null);
                 builder.add(objArray);
             }
+            else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
+                builder.add(resultSet.getDate(i).toLocalDate());
+            }
             else {
                 Object obj = resultSet.getObject(i);
                 if (obj instanceof PGInterval) {

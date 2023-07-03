@@ -25,6 +25,7 @@ import io.accio.connector.bigquery.BigQueryType;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -113,7 +114,7 @@ public class BigQueryRecordIterator
             case BYTES:
                 return fieldValue.getBytesValue();
             case DATE:
-                return fieldValue.getValue();
+                return LocalDate.parse((String) fieldValue.getValue());
             case DATETIME:
                 return convertToMicroseconds(LocalDateTime.parse(fieldValue.getStringValue()));
             case TIMESTAMP:
