@@ -61,6 +61,8 @@ import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_R
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.SOURCE_REFERENCE;
+import static io.trino.sql.QueryUtil.getQualifiedName;
+import static io.trino.sql.QueryUtil.identifier;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -129,7 +131,12 @@ public final class ExpressionAnalyzer
         @Override
         protected Void visitSubscriptExpression(SubscriptExpression node, Void ignored)
         {
-            process(node.getBase());
+            String suffix = Optional.ofNullable(getQualifiedName(node.getBase())).map(QualifiedName::getSuffix).orElse(LAMBDA_RESULT_NAME);
+            registerRelationshipCTEs(node.getBase())
+                    .ifPresent(info -> {
+                        relationshipCTENames.add(String.join(".", info.getReplacementNameParts()));
+                        relationshipFieldsRewrite.put(NodeRef.of(info.getOriginal()), new DereferenceExpression(info.getReplacement(), identifier(suffix)));
+                    });
             return ignored;
         }
 
@@ -189,11 +196,8 @@ public final class ExpressionAnalyzer
         {
             registerRelationshipCTEs(node)
                     .ifPresent(info -> {
-                        // TODO: remove this check after we support directly select relationship column
-                        if (node != info.getOriginal()) {
-                            relationshipCTENames.add(String.join(".", info.getReplacementNameParts()));
-                            relationshipFieldsRewrite.put(NodeRef.of(info.getOriginal()), info.getReplacement());
-                        }
+                        relationshipCTENames.add(String.join(".", info.getReplacementNameParts()));
+                        relationshipFieldsRewrite.put(NodeRef.of(info.getOriginal()), info.getReplacement());
                     });
             return null;
         }

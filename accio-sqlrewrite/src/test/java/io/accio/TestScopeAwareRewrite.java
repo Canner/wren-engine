@@ -100,6 +100,9 @@ public class TestScopeAwareRewrite
                 {"SELECT name FROM (SELECT name FROM Book) b", "SELECT name FROM (SELECT Book.name FROM Book) b"},
                 {"WITH b AS (SELECT name, author FROM Book) SELECT author FROM b", "WITH b AS (SELECT Book.name, Book.author FROM Book) SELECT author FROM b"},
                 {"WITH b AS (SELECT o_clerk, author FROM Book) SELECT author FROM b", "WITH b AS (SELECT o_clerk, Book.author FROM Book) SELECT author FROM b"},
+                {"SELECT concat(name, '12') FROM test.Book", "SELECT concat(Book.name, '12') FROM test.Book"},
+                {"SELECT concat(name, '12') = '123' FROM test.Book", "SELECT concat(Book.name, '12') = '123' FROM test.Book"},
+                {"SELECT concat(name, '12') + 123 FROM test.Book", "SELECT concat(Book.name, '12') + 123 FROM test.Book"}
         };
     }
 
