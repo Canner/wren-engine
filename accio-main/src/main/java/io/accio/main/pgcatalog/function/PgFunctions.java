@@ -171,6 +171,7 @@ public final class PgFunctions
             .build();
 
     // TODO If the input is a string only include number, it will be parsed as a number. So substring('123' from '1') would get the wrong answer '123', actual should be '1'
+    // https://github.com/Canner/accio/issues/329
     public static final PgFunction SUBSTR = builder()
             .setName("substr")
             .setLanguage(SQL)
