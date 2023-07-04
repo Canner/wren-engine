@@ -61,7 +61,12 @@ public class TestFunctions
                 {"SELECT to_char(TIMESTAMP '2023-06-13 09:17:04.859462', 'YYYY-MM-DD HH24:MI:SS.MS TZ') to_char", "2023-06-13 09:17:04.859 UTC", false},
                 {"select information_schema._pg_expandarray(array[1, 2, 3])", "(1,1)", false},
                 {"select extract(DOW from timestamp '2023-06-26 14:15:20')", "1", false},
-                {"select extract(DOY from timestamp '2023-06-26 14:15:20')", "177", false}
+                {"select extract(DOY from timestamp '2023-06-26 14:15:20')", "177", false},
+                {"select substring('Thomas' from 2 for 3)", "hom", false},
+                {"select substring('Thomas' from 3)", "omas", false},
+                {"select substring('Thomas' from '...$')", "mas", false},
+                // TODO: fix substring function with regex pattern only include number
+                // {"select substring('123' from '1')", "1", false}
         };
     }
 
@@ -90,6 +95,20 @@ public class TestFunctions
             Statement stmt = connection.createStatement();
             ResultSet resultSet = stmt.executeQuery("select now()");
             assertThat(resultSet.next()).isTrue();
+        }
+    }
+
+    @Test
+    public void testSubstring()
+            throws SQLException
+    {
+        try (Connection conn = createConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT substring(tpch_tiny.lineitem.l_comment FROM ?) FROM tpch_tiny.lineitem LIMIT 1");
+            stmt.setString(1, "[a-z]+");
+            ResultSet result = stmt.executeQuery();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isNotEmpty();
+            assertThat(result.next()).isFalse();
         }
     }
 }
