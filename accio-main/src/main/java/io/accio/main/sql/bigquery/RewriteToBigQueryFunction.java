@@ -39,6 +39,9 @@ public class RewriteToBigQueryFunction
         implements SqlRewrite
 {
     public static final RewriteToBigQueryFunction INSTANCE = new RewriteToBigQueryFunction();
+    public static final Extract.Field DAYOFYEAR = new Extract.Field("DAYOFYEAR");
+    public static final Extract.Field DAYOFWEEK = new Extract.Field("DAYOFWEEK");
+    public static final LongLiteral ONE = new LongLiteral("1");
 
     private RewriteToBigQueryFunction() {}
 
@@ -63,30 +66,30 @@ public class RewriteToBigQueryFunction
             switch (node.getField().getName()) {
                 case "DOY":
                     if (node.getLocation().isPresent()) {
-                        return new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), new Extract.Field("DAYOFYEAR"));
+                        return new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), DAYOFYEAR);
                     }
-                    return new Extract(visitAndCast(node.getExpression(), context), new Extract.Field("DAYOFYEAR"));
+                    return new Extract(visitAndCast(node.getExpression(), context), DAYOFYEAR);
                 case "DOW":
                     // PostgreSQL returns the day of the week as an integer between 0 and 6, while BigQuery returns an integer between 1 and 7.
                     // We need to subtract 1 from the result to get the same result as PostgreSQL.
                     Extract dowExtract;
                     if (node.getLocation().isPresent()) {
-                        dowExtract = new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), new Extract.Field("DAYOFWEEK"));
+                        dowExtract = new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), DAYOFWEEK);
                     }
                     else {
-                        dowExtract = new Extract(visitAndCast(node.getExpression(), context), new Extract.Field("DAYOFWEEK"));
+                        dowExtract = new Extract(visitAndCast(node.getExpression(), context), DAYOFWEEK);
                     }
                     if (node.getLocation().isPresent()) {
                         return new ArithmeticBinaryExpression(
                                 node.getLocation().get(),
                                 SUBTRACT,
                                 dowExtract,
-                                new LongLiteral("1"));
+                                ONE);
                     }
                     return new ArithmeticBinaryExpression(
                             SUBTRACT,
                             dowExtract,
-                            new LongLiteral("1"));
+                            ONE);
                 default:
                     return super.visitExtract(node, context);
             }
