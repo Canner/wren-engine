@@ -30,26 +30,45 @@ public class Extract
     private final Expression expression;
     private final Field field;
 
-    public enum Field
+    public static class Field
     {
-        YEAR,
-        QUARTER,
-        MONTH,
-        WEEK,
-        DAY,
-        DAY_OF_MONTH,
-        DAY_OF_WEEK,
-        DOW,
-        DAY_OF_YEAR,
-        DOY,
-        YEAR_OF_WEEK,
-        YOW,
-        HOUR,
-        MINUTE,
-        SECOND,
-        TIMEZONE_MINUTE,
-        TIMEZONE_HOUR,
-        EPOCH // for pg extraction function
+        private final String name;
+
+        public Field(String name)
+        {
+            this.name = name;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        @Override
+        public String toString()
+        {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Field that = (Field) o;
+            return name.equals(that.name);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(name);
+        }
     }
 
     public Extract(Expression expression, Field field)
@@ -106,7 +125,7 @@ public class Extract
 
         Extract that = (Extract) o;
         return Objects.equals(expression, that.expression) &&
-                (field == that.field);
+                Objects.equals(field, that.field);
     }
 
     @Override

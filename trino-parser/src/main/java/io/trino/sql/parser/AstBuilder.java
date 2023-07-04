@@ -2152,7 +2152,7 @@ class AstBuilder
         String fieldString = context.identifier().getText();
         Extract.Field field;
         try {
-            field = Extract.Field.valueOf(fieldString.toUpperCase(ENGLISH));
+            field = new Extract.Field(fieldString.toUpperCase(ENGLISH));
         }
         catch (IllegalArgumentException e) {
             throw parseError("Invalid EXTRACT field: " + fieldString, context);

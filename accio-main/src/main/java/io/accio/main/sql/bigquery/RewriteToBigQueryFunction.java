@@ -18,9 +18,12 @@ import com.google.common.collect.ImmutableList;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
 import io.accio.sqlrewrite.BaseRewriter;
+import io.trino.sql.tree.ArithmeticBinaryExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.Extract;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
@@ -29,12 +32,16 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.trino.sql.tree.ArithmeticBinaryExpression.Operator.SUBTRACT;
 import static java.util.Objects.requireNonNull;
 
 public class RewriteToBigQueryFunction
         implements SqlRewrite
 {
     public static final RewriteToBigQueryFunction INSTANCE = new RewriteToBigQueryFunction();
+    public static final Extract.Field DAYOFYEAR = new Extract.Field("DAYOFYEAR");
+    public static final Extract.Field DAYOFWEEK = new Extract.Field("DAYOFWEEK");
+    public static final LongLiteral ONE = new LongLiteral("1");
 
     private RewriteToBigQueryFunction() {}
 
@@ -51,6 +58,41 @@ public class RewriteToBigQueryFunction
         private RewriteToBigQueryFunctionRewriter(Metadata metadata)
         {
             this.metadata = requireNonNull(metadata, "metadata is null");
+        }
+
+        @Override
+        protected Node visitExtract(Extract node, Void context)
+        {
+            switch (node.getField().getName()) {
+                case "DOY":
+                    if (node.getLocation().isPresent()) {
+                        return new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), DAYOFYEAR);
+                    }
+                    return new Extract(visitAndCast(node.getExpression(), context), DAYOFYEAR);
+                case "DOW":
+                    // PostgreSQL returns the day of the week as an integer between 0 and 6, while BigQuery returns an integer between 1 and 7.
+                    // We need to subtract 1 from the result to get the same result as PostgreSQL.
+                    Extract dowExtract;
+                    if (node.getLocation().isPresent()) {
+                        dowExtract = new Extract(node.getLocation().get(), visitAndCast(node.getExpression(), context), DAYOFWEEK);
+                    }
+                    else {
+                        dowExtract = new Extract(visitAndCast(node.getExpression(), context), DAYOFWEEK);
+                    }
+                    if (node.getLocation().isPresent()) {
+                        return new ArithmeticBinaryExpression(
+                                node.getLocation().get(),
+                                SUBTRACT,
+                                dowExtract,
+                                ONE);
+                    }
+                    return new ArithmeticBinaryExpression(
+                            SUBTRACT,
+                            dowExtract,
+                            ONE);
+                default:
+                    return super.visitExtract(node, context);
+            }
         }
 
         @Override
