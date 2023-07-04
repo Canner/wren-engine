@@ -157,7 +157,7 @@ public final class PgFunctions
     public static final PgFunction NOW = builder()
             .setName("now")
             .setLanguage(SQL)
-            .setDefinition("SELECT CURRENT_TIMESTAMP")
+            .setDefinition("SELECT CURRENT_DATETIME")
             .setReturnType(TIMESTAMP)
             .build();
 

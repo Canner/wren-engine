@@ -849,7 +849,8 @@ public class TestWireProtocolWithBigquery
                         "count(distinct \"tpch_tiny\".\"lineitem\".\"l_orderkey\") AS \"count\" " +
                         "FROM \"tpch_tiny\".\"lineitem\" " +
                         "GROUP BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) " +
-                        "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) ASC LIMIT 10\n"}
+                        "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) ASC LIMIT 10\n"},
+                {"SELECT DATE_TRUNC('year', (NOW() + INTERVAL '-30 year'))"}
         };
     }
 
