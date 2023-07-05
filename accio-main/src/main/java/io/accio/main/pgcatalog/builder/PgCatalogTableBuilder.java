@@ -15,6 +15,8 @@
 package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
+import io.accio.base.AccioMDL;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.table.CharacterSets;
 import io.accio.main.pgcatalog.table.KeyColumnUsage;
@@ -52,12 +54,14 @@ public abstract class PgCatalogTableBuilder
     private final Metadata metadata;
     private final Map<String, String> replaceMap;
     private final StrSubstitutor strSubstitutor;
+    private final AccioMDL accioMDL;
 
-    public PgCatalogTableBuilder(Metadata metadata)
+    public PgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.replaceMap = initReplaceMap();
         this.strSubstitutor = new StrSubstitutor(getReplaceMap());
+        this.accioMDL = requireNonNull(accioMetastore.getAccioMDL(), "accioMDL is null");
     }
 
     public void createPgTable(PgCatalogTable pgCatalogTable)
@@ -137,6 +141,11 @@ public abstract class PgCatalogTableBuilder
     public Metadata getMetadata()
     {
         return metadata;
+    }
+
+    protected AccioMDL getAccioMDL()
+    {
+        return accioMDL;
     }
 
     public Map<String, String> getReplaceMap()

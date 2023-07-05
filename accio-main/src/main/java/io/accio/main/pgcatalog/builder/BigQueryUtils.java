@@ -17,10 +17,14 @@ package io.accio.main.pgcatalog.builder;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioException;
+import io.accio.base.AccioMDL;
+import io.accio.base.dto.Metric;
+import io.accio.base.dto.Model;
 import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.main.metadata.Metadata;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +62,8 @@ import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public final class BigQueryUtils
 {
@@ -128,14 +134,30 @@ public final class BigQueryUtils
 
     private BigQueryUtils() {}
 
-    public static String createOrReplaceAllTable(Metadata connector)
+    public static String createOrReplaceAllTable(AccioMDL accioMDL)
     {
-        List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", ACCIO_TEMP_NAME) +
-                schemas.stream()
-                        .map(schema -> format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES", schema))
-                        .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", ACCIO_TEMP_NAME))
+                .append("SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
+        if (!getAccioTable(accioMDL).isEmpty()) {
+            stringBuilder.append(" UNION ALL ")
+                    .append("SELECT * FROM UNNEST([STRUCT<table_catalog STRING, table_schema STRING, table_name STRING> ")
+                    .append(getAccioTable(accioMDL).stream()
+                            .map(tableName -> format("('%s', '%s', '%s')", accioMDL.getCatalog(), accioMDL.getSchema(), tableName))
+                            .collect(joining(", ")))
+                    .append("]);");
+        }
+        return stringBuilder.toString();
+    }
+
+    private static List<String> getAccioTable(AccioMDL accioMDL)
+    {
+        List<String> accioTables = new ArrayList<>();
+        accioTables.addAll(accioMDL.listModels().stream().map(Model::getName).collect(toList()));
+        accioTables.addAll(accioMDL.listMetrics().stream().map(Metric::getName).collect(toList()));
+        // TODO add view https://github.com/Canner/accio/issues/334
+//        accioTables.addAll(accioMDL.listViews().stream().map(View::getName).collect(Collectors.toList()));
+        return accioTables;
     }
 
     /**
