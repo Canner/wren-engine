@@ -191,7 +191,7 @@ public class RelationshipCteGenerator
                         operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField(), operation.getAggregateOperator().get());
             case ARRAY_SORT:
                 checkArgument(arguments.size() == 3, "array_sort function should have 3 arguments");
-                SortKey sortKey = sortKey(arguments.get(1).toString(), SortKey.Ordering.valueOf(arguments.get(2).toString()));
+                SortKey sortKey = sortKey(arguments.get(1).toString(), SortKey.Ordering.get(arguments.get(2).toString()));
                 return transferToArraySortCte(
                         operation.getManySideResultField().orElseThrow(() -> new IllegalArgumentException("array_sort relationship field not found")),
                         sortKey,
