@@ -329,7 +329,7 @@ public class TestAccioWithBigquery
     public void testAggregateForArray()
     {
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_sum(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_sum(transform(orders, a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -344,7 +344,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_avg(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_avg(transform(orders, a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -359,7 +359,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_count(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_count(transform(orders, a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -374,7 +374,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_max(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_max(transform(orders, a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -389,7 +389,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_min(orders, a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_min(transform(orders, a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -404,7 +404,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_min(filter(orders, a -> a.orderstatus = 'F'), a -> a.totalprice) as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_min(transform(filter(orders, a -> a.orderstatus = 'F'), a -> a.totalprice)) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -419,7 +419,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_bool_or(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_bool_or(transform(orders, a -> a.orderstatus = 'F')) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
@@ -434,7 +434,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select array_every(orders, a -> a.orderstatus = 'F') as col_1 from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select array_every(transform(orders, a -> a.orderstatus = 'F')) as col_1 from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getDouble("col_1"));
