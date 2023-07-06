@@ -114,7 +114,7 @@ public final class BigQueryPgCatalogTableBuilder
     protected String createPgAttributeTable(PgCatalogTable pgCatalogTable)
     {
         getMetadata().directDDL(createOrReplacePgTypeMapping());
-        getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllColumn(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();

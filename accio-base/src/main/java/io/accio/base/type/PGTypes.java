@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.accio.base.type.BigIntType.BIGINT;
@@ -101,6 +102,13 @@ public final class PGTypes
                     format("No oid mapping from '%s' to pg_type", oid));
         }
         return pgType;
+    }
+
+    public static Optional<PGType<?>> getPgType(String pgType)
+    {
+        return TYPE_TABLE.values().stream()
+                .filter(table -> table.typName().equalsIgnoreCase(pgType))
+                .findFirst();
     }
 
     public static PGType<?> getArrayType(int innerOid)

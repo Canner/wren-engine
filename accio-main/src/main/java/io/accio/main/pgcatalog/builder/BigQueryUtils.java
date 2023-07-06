@@ -18,18 +18,18 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
-import io.accio.main.metadata.Metadata;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.base.type.AnyType.ANY;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
@@ -51,6 +51,7 @@ import static io.accio.base.type.PGArray.INT8_ARRAY;
 import static io.accio.base.type.PGArray.NUMERIC_ARRAY;
 import static io.accio.base.type.PGArray.TIMESTAMP_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
+import static io.accio.base.type.PGTypes.getPgType;
 import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RegprocType.REGPROC;
 import static io.accio.base.type.SmallIntType.SMALLINT;
@@ -163,18 +164,52 @@ public final class BigQueryUtils
     /**
      * all_columns should be created after pg_type_mapping created.
      */
-    public static String createOrReplaceAllColumn(Metadata connector)
+    public static String createOrReplaceAllColumn(AccioMDL accioMDL)
     {
         // TODO: we should check if pg_type has created or not.
-        List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", ACCIO_TEMP_NAME) +
-                schemas.stream()
-                        .map(schema -> format("SELECT '%s' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
-                                "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
-                                "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, schema, ACCIO_TEMP_NAME + ".pg_type_mapping"))
-                        .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", ACCIO_TEMP_NAME))
+                .append(format("SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
+                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", ACCIO_TEMP_NAME + ".pg_type_mapping"));
+        if (!getAccioTable(accioMDL).isEmpty()) {
+            stringBuilder.append(" UNION ALL ")
+                    .append("SELECT * FROM UNNEST([STRUCT<table_schema STRING, table_name STRING, column_name STRING, ordinal_position int64, typoid integer, typlen integer> ")
+                    .append(listColumnsRecords(accioMDL))
+                    .append("]);");
+        }
+        return stringBuilder.toString();
+    }
+
+    private static String listColumnsRecords(AccioMDL accioMDL)
+    {
+        // TODO add view https://github.com/Canner/accio/issues/334
+        List<String> records = new ArrayList<>();
+        for (Model model : accioMDL.listModels()) {
+            List<Column> columns = model.getColumns();
+            for (int i = 0; i < columns.size(); i++) {
+                Optional<PGType<?>> pgType = getPgType(columns.get(i).getType());
+                if (pgType.isPresent()) {
+                    records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), columns.get(i).getName(), i + 1, pgType.get().oid(), pgType.get().typeLen()));
+                }
+            }
+        }
+        // TODO Add timegrain as column https://github.com/Canner/accio/issues/342
+        for (Metric metric : accioMDL.listMetrics()) {
+            int i = 1;
+            List<Column> columns = new ArrayList<>();
+            columns.addAll(metric.getDimension());
+            columns.addAll(metric.getMeasure());
+            for (Column col : columns) {
+                Optional<PGType<?>> pgType = getPgType(col.getType());
+                if (pgType.isPresent()) {
+                    records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), metric.getName(), col.getName(), i, pgType.get().oid(), pgType.get().typeLen()));
+                    i = i + 1;
+                }
+            }
+        }
+        return String.join(", ", records);
     }
 
     public static String createOrReplacePgTypeMapping()

@@ -18,8 +18,6 @@ import io.accio.base.AccioMDL;
 import io.accio.base.dto.JoinType;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Relationship;
-import io.accio.main.TestingMetadata;
-import io.accio.main.metadata.Metadata;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -42,12 +40,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCreateBigQueryTempTable
 {
-    private final Metadata metadata;
     private final AccioMDL accioMDL;
 
     public TestCreateBigQueryTempTable()
     {
-        this.metadata = new TestingMetadata();
         this.accioMDL = AccioMDL.fromManifest(
                 Manifest.builder()
                         .setCatalog("accio_catalog")
@@ -56,35 +52,35 @@ public class TestCreateBigQueryTempTable
                                 model("OrdersModel",
                                         "select * from orders",
                                         List.of(
-                                                column("orderkey", "integer", null, true, "the key of each order"),
-                                                column("custkey", "integer", null, true),
-                                                column("orderstatus", "string", null, true),
-                                                column("totalprice", "double", null, true),
+                                                column("orderkey", "int4", null, true, "the key of each order"),
+                                                column("custkey", "int4", null, true),
+                                                column("orderstatus", "varchar", null, true),
+                                                column("totalprice", "float8", null, true),
                                                 column("orderdate", "date", null, true),
-                                                column("orderpriority", "string", null, true),
-                                                column("clerk", "string", null, true),
-                                                column("shippriority", "integer", null, true),
-                                                column("comment", "string", null, true),
+                                                column("orderpriority", "varchar", null, true),
+                                                column("clerk", "varchar", null, true),
+                                                column("shippriority", "int4", null, true),
+                                                column("comment", "varchar", null, true),
                                                 column("customer", "CustomerModel", "OrdersCustomer", true)),
                                         "orderkey",
                                         "tpch tiny orders table"),
                                 model("LineitemModel",
                                         "select * from lineitem",
                                         List.of(
-                                                column("orderkey", "integer", null, true),
-                                                column("linenumber", "integer", null, true),
-                                                column("extendedprice", "integer", null, true))),
+                                                column("orderkey", "int4", null, true),
+                                                column("linenumber", "int4", null, true),
+                                                column("extendedprice", "int4", null, true))),
                                 model("CustomerModel",
                                         "select * from customer",
                                         List.of(
-                                                column("custkey", "integer", null, true),
-                                                column("name", "string", null, true),
-                                                column("address", "string", null, true),
-                                                column("nationkey", "integer", null, true),
-                                                column("phone", "string", null, true),
-                                                column("acctbal", "double", null, true),
-                                                column("mktsegment", "string", null, true),
-                                                column("comment", "string", null, true),
+                                                column("custkey", "int4", null, true),
+                                                column("name", "varchar", null, true),
+                                                column("address", "varchar", null, true),
+                                                column("nationkey", "int4", null, true),
+                                                column("phone", "varchar", null, true),
+                                                column("acctbal", "float8", null, true),
+                                                column("mktsegment", "varchar", null, true),
+                                                column("comment", "varchar", null, true),
                                                 column("orders", "OrdersModel", "OrdersCustomer", true)),
                                         "custkey")))
                         .setRelationships(List.of(
@@ -102,8 +98,8 @@ public class TestCreateBigQueryTempTable
                                                 enumValue("COMPLETE", "complete")),
                                         "the status of an order")))
                         .setMetrics(List.of(metric("Revenue", "OrdersModel",
-                                List.of(column("orderkey", "string", null, true)),
-                                List.of(column("total", "integer", null, true)),
+                                List.of(column("orderkey", "varchar", null, true)),
+                                List.of(column("total", "int4", null, true)),
                                 List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))),
                                 true, "the revenue of an order")))
                         .setViews(List.of(view("useMetric", "select * from Revenue", "the view for the revenue metric")))
@@ -113,16 +109,35 @@ public class TestCreateBigQueryTempTable
     @Test
     public void testAllColumns()
     {
-        assertThat(createOrReplaceAllColumn(metadata))
+        assertThat(createOrReplaceAllColumn(accioMDL))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
-                        "SELECT 'testing_schema1' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
-                        "FROM `testing_schema1`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
+                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
                         "LEFT JOIN `accio_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
                         "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid " +
-                        "UNION ALL SELECT 'testing_schema2' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
-                        "FROM `testing_schema2`.INFORMATION_SCHEMA.COLUMNS col " +
-                        "LEFT JOIN `accio_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
-                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid;");
+                        "UNION ALL SELECT * FROM UNNEST([STRUCT<table_schema STRING, table_name STRING, column_name STRING, ordinal_position int64, typoid integer, typlen integer> " +
+                        "('accio_schema', 'OrdersModel', 'orderkey', 1, 23, 4), " +
+                        "('accio_schema', 'OrdersModel', 'custkey', 2, 23, 4), " +
+                        "('accio_schema', 'OrdersModel', 'orderstatus', 3, 1043, -1), " +
+                        "('accio_schema', 'OrdersModel', 'totalprice', 4, 701, 8), " +
+                        "('accio_schema', 'OrdersModel', 'orderdate', 5, 1082, 4), " +
+                        "('accio_schema', 'OrdersModel', 'orderpriority', 6, 1043, -1), " +
+                        "('accio_schema', 'OrdersModel', 'clerk', 7, 1043, -1), " +
+                        "('accio_schema', 'OrdersModel', 'shippriority', 8, 23, 4), " +
+                        "('accio_schema', 'OrdersModel', 'comment', 9, 1043, -1), " +
+                        "('accio_schema', 'LineitemModel', 'orderkey', 1, 23, 4), " +
+                        "('accio_schema', 'LineitemModel', 'linenumber', 2, 23, 4), " +
+                        "('accio_schema', 'LineitemModel', 'extendedprice', 3, 23, 4), " +
+                        "('accio_schema', 'CustomerModel', 'custkey', 1, 23, 4), " +
+                        "('accio_schema', 'CustomerModel', 'name', 2, 1043, -1), " +
+                        "('accio_schema', 'CustomerModel', 'address', 3, 1043, -1), " +
+                        "('accio_schema', 'CustomerModel', 'nationkey', 4, 23, 4), " +
+                        "('accio_schema', 'CustomerModel', 'phone', 5, 1043, -1), " +
+                        "('accio_schema', 'CustomerModel', 'acctbal', 6, 701, 8), " +
+                        "('accio_schema', 'CustomerModel', 'mktsegment', 7, 1043, -1), " +
+                        "('accio_schema', 'CustomerModel', 'comment', 8, 1043, -1), " +
+                        "('accio_schema', 'Revenue', 'orderkey', 1, 1043, -1), " +
+                        "('accio_schema', 'Revenue', 'total', 2, 23, 4)]);");
     }
 
     @Test
