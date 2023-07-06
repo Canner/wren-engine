@@ -714,9 +714,9 @@ public class TestAccioWithBigquery
     {
         return new Object[][] {
                 {"SELECT first(orders, totalprice, DESC) IS NOT NULL FROM Customer LIMIT 100"},
-                {"SELECT first(c.orders, totalprice, DESC).totalprice FROM Customer c LIMIT 100"},
+                {"SELECT first(c.orders, totalprice, desc).totalprice FROM Customer c LIMIT 100"},
                 {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC) IS NOT NULL FROM Customer LIMIT 100"},
-                {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC).totalprice FROM Customer LIMIT 100"},
+                {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, asc).totalprice FROM Customer LIMIT 100"},
         };
     }
 

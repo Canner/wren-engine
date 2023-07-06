@@ -17,6 +17,7 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -171,7 +172,15 @@ public class Relationship
         public enum Ordering
         {
             ASC,
-            DESC
+            DESC;
+
+            public static Ordering get(String value)
+            {
+                return Arrays.stream(values())
+                        .filter(v -> v.toString().equalsIgnoreCase(value))
+                        .findAny()
+                        .orElseThrow(() -> new IllegalArgumentException("Unsupported ordering"));
+            }
         }
 
         private final String name;
