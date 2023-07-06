@@ -184,11 +184,11 @@ public class RelationshipCteGenerator
                         operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
                         operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField());
             case AGGREGATE:
-                checkArgument(operation.getLambdaExpression().isPresent(), "Lambda expression is missing");
                 checkArgument(operation.getAggregateOperator().isPresent(), "Aggregate operator is missing");
                 return transferToAggregateCte(
-                        operation.getManySideResultField().orElse(operation.getLambdaExpression().get().toString()),
-                        operation.getLambdaExpression().get(), relationshipCTE, operation.getUnnestField(), operation.getAggregateOperator().get());
+                        operation.getManySideResultField()
+                                .orElseThrow(() -> new IllegalArgumentException(operation.getAggregateOperator().get() + " relationship field not found")),
+                        relationshipCTE, operation.getUnnestField(), operation.getAggregateOperator().get());
             case ARRAY_SORT:
                 checkArgument(arguments.size() == 3, "array_sort function should have 3 arguments");
                 SortKey sortKey = sortKey(arguments.get(1).toString(), SortKey.Ordering.get(arguments.get(2).toString()));
@@ -454,7 +454,6 @@ public class RelationshipCteGenerator
 
     private WithQuery transferToAggregateCte(
             String manyResultField,
-            Expression lambdaExpressionBody,
             RelationshipCTE relationshipCTE,
             Optional<Expression> outputField,
             String operator)
@@ -473,8 +472,8 @@ public class RelationshipCteGenerator
                         .map(column -> nameReference(SOURCE_REFERENCE, column))
                         .collect(toList());
 
-        SingleColumn arrayAggField = new SingleColumn(
-                toAggregate(lambdaExpressionBody, operator),
+        SingleColumn aggField = new SingleColumn(
+                toAggregate(DereferenceExpression.from(QualifiedName.of(UNNEST_REFERENCE, UNNEST_COLUMN_REFERENCE)), operator),
                 identifier(LAMBDA_RESULT_NAME));
 
         List<SingleColumn> normalFields = oneTableFields
@@ -485,7 +484,7 @@ public class RelationshipCteGenerator
         ImmutableSet.Builder<SelectItem> builder = ImmutableSet
                 .<SelectItem>builder()
                 .addAll(normalFields)
-                .add(arrayAggField)
+                .add(aggField)
                 .add(new SingleColumn(nameReference(SOURCE_REFERENCE, relationshipCTE.getBaseKey()), identifier(BASE_KEY_ALIAS)));
         List<SelectItem> selectItems = ImmutableList.copyOf(builder.build());
 
@@ -501,11 +500,8 @@ public class RelationshipCteGenerator
         return new WithQuery(identifier(relationshipCTE.getName()),
                 simpleQuery(
                         new Select(false, selectItems),
-                        leftJoin(
-                                crossJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
-                                        aliased(unnest(unnestField), UNNEST_REFERENCE, List.of(UNNEST_COLUMN_REFERENCE))),
-                                aliased(table(QualifiedName.of(relationshipCTE.getTarget().getName())), TARGET_REFERENCE),
-                                joinOn(equal(nameReference(UNNEST_REFERENCE, UNNEST_COLUMN_REFERENCE), nameReference(TARGET_REFERENCE, relationshipCTE.getTarget().getPrimaryKey())))),
+                        crossJoin(aliased(table(QualifiedName.of(relationshipCTE.getSource().getName())), SOURCE_REFERENCE),
+                                aliased(unnest(unnestField), UNNEST_REFERENCE, List.of(UNNEST_COLUMN_REFERENCE))),
                         Optional.empty(),
                         Optional.of(new GroupBy(false, IntStream.range(1, oneTableFields.size() + 1)
                                 .mapToObj(number -> new LongLiteral(String.valueOf(number)))
@@ -909,9 +905,9 @@ public class RelationshipCteGenerator
             return new RelationshipOperation(rsItems, OperatorType.FILTER, lambdaExpression, manySideResultField, unnestField, null, null);
         }
 
-        public static RelationshipOperation aggregate(List<RsItem> rsItems, Expression lambdaExpression, String manySideResultField, Expression unnestField, String aggregateOperator)
+        public static RelationshipOperation aggregate(List<RsItem> rsItems, String manySideResultField, String aggregateOperator)
         {
-            return new RelationshipOperation(rsItems, OperatorType.AGGREGATE, lambdaExpression, manySideResultField, unnestField, aggregateOperator, null);
+            return new RelationshipOperation(rsItems, OperatorType.AGGREGATE, null, manySideResultField, null, aggregateOperator, null);
         }
 
         public static RelationshipOperation arraySort(List<RsItem> rsItems, String manySideResultField, Expression unnestField, List<Expression> functionCallArguments)

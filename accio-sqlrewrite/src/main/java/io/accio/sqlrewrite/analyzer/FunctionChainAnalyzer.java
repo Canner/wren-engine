@@ -196,16 +196,17 @@ public interface FunctionChainAnalyzer
     private static boolean isAccioFunction(QualifiedName funcName)
     {
         return isLambdaFunction(funcName)
+                || isArrayAggregateFunction(funcName)
                 || funcName.getSuffix().equalsIgnoreCase("array_sort")
                 || funcName.getSuffix().equalsIgnoreCase("slice");
     }
 
     private static boolean isLambdaFunction(QualifiedName funcName)
     {
-        return List.of("transform", "filter").contains(funcName.getSuffix()) || isAggregateFunction(funcName);
+        return List.of("transform", "filter").contains(funcName.getSuffix());
     }
 
-    private static boolean isAggregateFunction(QualifiedName funcName)
+    private static boolean isArrayAggregateFunction(QualifiedName funcName)
     {
         return List.of("array_count",
                         "array_sum",
@@ -261,18 +262,17 @@ public interface FunctionChainAnalyzer
                         columnName,
                         unnestField);
             }
-            else if (isAggregateFunction(QualifiedName.of(functionName))) {
-                operation = aggregate(
-                        List.of(rsItem(cteName, CTE),
-                                rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
-                        expression,
-                        columnName,
-                        unnestField,
-                        getArrayBaseFunctionName(functionName));
-            }
             else {
                 throw new IllegalArgumentException(functionName + " not supported");
             }
+        }
+        else if (isArrayAggregateFunction(QualifiedName.of(functionName))) {
+            checkArgument(arguments.size() == 1, "Accio aggregate function should have 1 argument");
+            operation = aggregate(
+                    List.of(rsItem(cteName, CTE),
+                            rsItem(relationship.getName(), relationship.getModels().get(0).equals(modelName) ? RS : REVERSE_RS)),
+                    previousLambdaCall.isPresent() ? LAMBDA_RESULT_NAME : columnName,
+                    getArrayBaseFunctionName(functionName));
         }
         else if (functionName.equalsIgnoreCase("array_sort")) {
             operation = arraySort(
