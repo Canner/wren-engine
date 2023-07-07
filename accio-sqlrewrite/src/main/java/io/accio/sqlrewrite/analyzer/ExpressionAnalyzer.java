@@ -258,7 +258,7 @@ public final class ExpressionAnalyzer
                             .stream()
                             .map(Model::getColumns)
                             .flatMap(List::stream)
-                            .filter(column -> column.getName().equals(field.toString()) && column.getRelationship().isPresent())
+                            .filter(column -> column.getName().equals(field.getValue()) && column.getRelationship().isPresent())
                             .findAny();
 
                     if (relationshipColumn.isPresent()) {
@@ -266,7 +266,7 @@ public final class ExpressionAnalyzer
                                 .orElseThrow(() -> new IllegalArgumentException("Relationship not found"));
                         relationships.add(relationship);
                         String relationshipColumnType = relationshipColumn.get().getType();
-                        nameParts.add(field.toString());
+                        nameParts.add(field.getValue());
                         relationshipCteGenerator.register(
                                 nameParts,
                                 access(List.of(
