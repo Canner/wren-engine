@@ -37,7 +37,7 @@
           "type": "date"
         },
         {
-          "name": "lineitem",
+          "name": "lineitems",
           "type": "Lineitem",
           "relationship": "OrdersLineitem"
         }
@@ -111,7 +111,7 @@
           "type": "date"
         },
         {
-          "name": "orders",
+          "name": "order",
           "type": "Orders",
           "relationship": "OrdersLineitem"
         },
