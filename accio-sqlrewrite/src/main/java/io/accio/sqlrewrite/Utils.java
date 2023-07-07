@@ -205,6 +205,7 @@ public final class Utils
         return base;
     }
 
+    // TODO: handle accio view scope https://github.com/Canner/accio/issues/338
     public static Scope analyzeFrom(AccioMDL accioMDL, SessionContext sessionContext, Relation node, Optional<Scope> context)
     {
         ScopeAnalysis analysis = ScopeAnalyzer.analyze(accioMDL, node, sessionContext);
