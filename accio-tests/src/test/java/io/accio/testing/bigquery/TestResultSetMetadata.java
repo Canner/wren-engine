@@ -159,41 +159,41 @@ public class TestResultSetMetadata
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas();
-            assertGetSchemasResult(rs, List.of("accio_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("pg_catalog", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, null);
-            assertGetSchemasResult(rs, List.of("accio_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("pg_catalog", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, null);
-            assertGetSchemasResult(rs, List.of("accio_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("pg_catalog", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("unknown", null);
-            assertGetSchemasResult(rs, List.of("accio_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("pg_catalog", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas("", null);
-            assertGetSchemasResult(rs, List.of("accio_temp", "pg_catalog", "tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("pg_catalog", "tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "accio_temp");
-            assertGetSchemasResult(rs, List.of("accio_temp"));
+            ResultSet rs = connection.getMetaData().getSchemas(TEST_CATALOG, "tpch_tiny");
+            assertGetSchemasResult(rs, List.of("tpch_tiny"));
         }
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getSchemas(null, "accio_temp");
-            assertGetSchemasResult(rs, List.of("accio_temp"));
+            ResultSet rs = connection.getMetaData().getSchemas(null, "tpch_tiny");
+            assertGetSchemasResult(rs, List.of("tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getSchemas(null, "tpch%");
-            assertGetSchemasResult(rs, List.of("tpch_sf1", "tpch_tiny"));
+            assertGetSchemasResult(rs, List.of("tpch_tiny"));
         }
 
         try (Connection connection = this.createConnection()) {
