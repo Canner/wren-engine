@@ -54,10 +54,10 @@ public class TestRelationshipAccessing
     private static final String ONE_TO_ONE_MODEL_CTE = "" +
             "  Book AS (\n" +
             "     SELECT\n" +
-            "        bookId,\n" +
-            "        name,\n" +
-            "        'relationship<BookPeople>' as author,\n" +
-            "        authorId\n" +
+            "        \"bookId\",\n" +
+            "        \"name\",\n" +
+            "        'relationship<BookPeople>' as \"author\",\n" +
+            "        \"authorId\"\n" +
             "     FROM (\n" +
             "        SELECT *\n" +
             "        FROM (\n" +
@@ -70,9 +70,9 @@ public class TestRelationshipAccessing
             "  ),\n" +
             "  People AS (\n" +
             "   SELECT\n" +
-            "     userId,\n" +
-            "     name,\n" +
-            "     'relationship<BookPeople>' AS book\n" +
+            "     \"userId\",\n" +
+            "     \"name\",\n" +
+            "     'relationship<BookPeople>' AS \"book\"\n" +
             "   FROM\n" +
             "     (\n" +
             "      SELECT *\n" +
@@ -90,11 +90,11 @@ public class TestRelationshipAccessing
     private static final String ONE_TO_MANY_MODEL_CTE = "" +
             "  Book AS (\n" +
             "     SELECT\n" +
-            "        bookId,\n" +
-            "        name,\n" +
-            "        'relationship<PeopleBook>' as author,\n" +
-            "        'relationship<BookPeople>' as author_reverse,\n" +
-            "        authorId\n" +
+            "        \"bookId\",\n" +
+            "        \"name\",\n" +
+            "        'relationship<PeopleBook>' as \"author\",\n" +
+            "        'relationship<BookPeople>' as \"author_reverse\",\n" +
+            "        \"authorId\"\n" +
             "     FROM (\n" +
             "        SELECT *\n" +
             "        FROM (\n" +
@@ -107,11 +107,11 @@ public class TestRelationshipAccessing
             "  ),\n" +
             "  People AS (\n" +
             "   SELECT\n" +
-            "     userId,\n" +
-            "     name,\n" +
+            "     \"userId\",\n" +
+            "     \"name\",\n" +
             // TODO: Remove this field. In ONE_TO_MANY relationship, user can access it directly.
-            "     'relationship<PeopleBook>' AS books\n" +
-            ",    'relationship<PeopleBookOrderByName>' sorted_books\n" +
+            "     'relationship<PeopleBook>' AS \"books\"\n" +
+            ",    'relationship<PeopleBookOrderByName>' \"sorted_books\"\n" +
             "   FROM\n" +
             "     (\n" +
             "      SELECT *\n" +
@@ -448,10 +448,10 @@ public class TestRelationshipAccessing
         String expected = "WITH\n" +
                 "  Book AS (\n" +
                 "   SELECT\n" +
-                "     bookId\n" +
-                "   , name\n" +
-                "   , 'relationship<BookPeople>' author\n" +
-                "   , authorId\n" +
+                "     \"bookId\"\n" +
+                "   , \"name\"\n" +
+                "   , 'relationship<BookPeople>' \"author\"\n" +
+                "   , \"authorId\"\n" +
                 "   FROM\n" +
                 "     (\n" +
                 "      SELECT *\n" +
@@ -471,7 +471,7 @@ public class TestRelationshipAccessing
         @Language("SQL") String actualSql = SqlFormatter.formatSql(rewrittenStatement);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
         assertThatThrownBy(() -> query(actualSql))
-                .hasMessageContaining("Database \"B\" not found;");
+                .hasMessageContaining("Database \"b\" not found;");
     }
 
     @DataProvider

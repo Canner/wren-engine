@@ -60,7 +60,8 @@ public class TestAllRulesRewrite
                                         column("price", INTEGER, null, true),
                                         column("bandId", INTEGER, null, true),
                                         column("status", "Inventory", null, true),
-                                        column("statusA", "InventoryA", null, true)),
+                                        column("statusA", "InventoryA", null, true),
+                                        relationshipColumn("orders", "Order", "AlbumOrder")),
                                 "id"),
                         model("Band",
                                 "select * from (values (1, 'ZUTOMAYO'), " +
@@ -70,8 +71,18 @@ public class TestAllRulesRewrite
                                         column("id", INTEGER, null, true),
                                         column("name", VARCHAR, null, true),
                                         relationshipColumn("albums", "Album", "AlbumBand")),
-                                "id")))
-                .setRelationships(List.of(relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id")))
+                                "id"),
+                        model("Order", "select * from (values (1, 1), (2, 1), (3, 2), (4, 3)) Orders(orderkey, albumId)",
+                                List.of(
+                                        column("orderkey", INTEGER, null, true),
+                                        column("albumId", INTEGER, null, true)),
+                                "orderkey")))
+                .setRelationships(List.of(
+                        relationship("AlbumBand", List.of("Album", "Band"), JoinType.MANY_TO_ONE, "Album.bandId = Band.id"),
+                        relationship("AlbumOrder", List.of("Album", "Order"), JoinType.ONE_TO_MANY,
+                                // It's hard to quote the reserve word in the user-defined join condition.
+                                // We should ask users to quote the identifier by themselves if it's a reserve word.
+                                "Album.id = \"Order\".albumId")))
                 .setMetrics(List.of(
                         metric(
                                 "Collection",
@@ -117,6 +128,9 @@ public class TestAllRulesRewrite
                 {"select band, price from useMetric", "values  ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
                 {"select albums[1] from Band", "values (1), (3)"},
                 {"select any(albums) from Band", "values (1), (3)"},
+                {"select * from \"Order\"", "values (1, 1), (2, 1), (3, 2), (4, 3)"},
+                {"select orders[1].orderkey from Album", "values (1), (3), (4)"}
+
                 // TODO: h2 doesn't support the BigQuery style array element converting. (unnest cross join with an implicit join key)
                 // {"select any(filter(albums, a -> a.name = 'Gusare')) from Band", "values (1)"},
         };
