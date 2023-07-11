@@ -21,6 +21,7 @@ import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
+import io.accio.base.dto.Relationship;
 import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 
@@ -51,6 +52,7 @@ import static io.accio.base.type.PGArray.INT8_ARRAY;
 import static io.accio.base.type.PGArray.NUMERIC_ARRAY;
 import static io.accio.base.type.PGArray.TIMESTAMP_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
+import static io.accio.base.type.PGTypes.getArrayType;
 import static io.accio.base.type.PGTypes.getPgType;
 import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RegprocType.REGPROC;
@@ -189,9 +191,19 @@ public final class BigQueryUtils
         for (Model model : accioMDL.listModels()) {
             List<Column> columns = model.getColumns();
             for (int i = 0; i < columns.size(); i++) {
-                Optional<PGType<?>> pgType = getPgType(columns.get(i).getType());
-                if (pgType.isPresent()) {
-                    records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), columns.get(i).getName(), i + 1, pgType.get().oid(), pgType.get().typeLen()));
+                Column col = columns.get(i);
+                Optional<Relationship> colRelationship = getColRelationship(accioMDL, col);
+                if (colRelationship.isEmpty()) {
+                    Optional<PGType<?>> pgType = getPgType(col.getType());
+                    if (pgType.isPresent()) {
+                        records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), col.getName(), i + 1, pgType.get().oid(), pgType.get().typeLen()));
+                    }
+                }
+                else {
+                    Optional<PGType<?>> colRelationShipType = getRelationshipType(accioMDL, model, colRelationship.get());
+                    if (colRelationShipType.isPresent()) {
+                        records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), col.getName(), i + 1, colRelationShipType.get().oid(), colRelationShipType.get().typeLen()));
+                    }
                 }
             }
         }
@@ -210,6 +222,55 @@ public final class BigQueryUtils
             }
         }
         return String.join(", ", records);
+    }
+
+    private static Optional<PGType<?>> getRelationshipType(AccioMDL accioMDL, Model model, Relationship relationship)
+    {
+        if (model.getName().equals(relationship.getModels().get(0))) {
+            switch (relationship.getJoinType()) {
+                case ONE_TO_ONE:
+                case MANY_TO_ONE:
+                    return accioMDL.getModel(relationship.getModels().get(1)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
+                case ONE_TO_MANY:
+                case MANY_TO_MANY:
+                    return accioMDL.getModel(relationship.getModels().get(0))
+                            .flatMap(BigQueryUtils::getModelPrimaryKeyType)
+                            .flatMap(type -> Optional.of(getArrayType(type.oid())));
+                default:
+                    throw new AccioException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed");
+            }
+        }
+
+        switch (relationship.getJoinType()) {
+            case ONE_TO_ONE:
+            case ONE_TO_MANY:
+                return accioMDL.getModel(relationship.getModels().get(0)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
+            case MANY_TO_ONE:
+            case MANY_TO_MANY:
+                return accioMDL.getModel(relationship.getModels().get(1))
+                        .flatMap(BigQueryUtils::getModelPrimaryKeyType)
+                        .flatMap(type -> Optional.of(getArrayType(type.oid())));
+            default:
+                throw new AccioException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed");
+        }
+    }
+
+    private static Optional<Relationship> getColRelationship(AccioMDL accioMDL, Column col)
+    {
+        if (col.getRelationship().isEmpty()) {
+            return Optional.empty();
+        }
+        return accioMDL.getRelationship(col.getRelationship().get());
+    }
+
+    private static Optional<PGType<?>> getModelPrimaryKeyType(Model model)
+    {
+        String primaryKey = model.getPrimaryKey();
+        Optional<Column> column = model.getColumns().stream().filter(col -> col.getName().equals(primaryKey)).findFirst();
+        if (column.isEmpty()) {
+            return Optional.empty();
+        }
+        return getPgType(column.get().getType());
     }
 
     public static String createOrReplacePgTypeMapping()

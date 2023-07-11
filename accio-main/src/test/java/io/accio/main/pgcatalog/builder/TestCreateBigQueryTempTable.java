@@ -125,6 +125,7 @@ public class TestCreateBigQueryTempTable
                         "('accio_schema', 'OrdersModel', 'clerk', 7, 1043, -1), " +
                         "('accio_schema', 'OrdersModel', 'shippriority', 8, 23, 4), " +
                         "('accio_schema', 'OrdersModel', 'comment', 9, 1043, -1), " +
+                        "('accio_schema', 'OrdersModel', 'customer', 10, 23, 4), " +
                         "('accio_schema', 'LineitemModel', 'orderkey', 1, 23, 4), " +
                         "('accio_schema', 'LineitemModel', 'linenumber', 2, 23, 4), " +
                         "('accio_schema', 'LineitemModel', 'extendedprice', 3, 23, 4), " +
@@ -136,6 +137,7 @@ public class TestCreateBigQueryTempTable
                         "('accio_schema', 'CustomerModel', 'acctbal', 6, 701, 8), " +
                         "('accio_schema', 'CustomerModel', 'mktsegment', 7, 1043, -1), " +
                         "('accio_schema', 'CustomerModel', 'comment', 8, 1043, -1), " +
+                        "('accio_schema', 'CustomerModel', 'orders', 9, 1007, -1), " +
                         "('accio_schema', 'Revenue', 'orderkey', 1, 1043, -1), " +
                         "('accio_schema', 'Revenue', 'total', 2, 23, 4)]);");
     }
