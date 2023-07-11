@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.accio.base.AccioMDL.EMPTY;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
 import static io.accio.base.dto.EnumValue.enumValue;
@@ -140,6 +141,13 @@ public class TestCreateBigQueryTempTable
                         "('accio_schema', 'CustomerModel', 'orders', 9, 1007, -1), " +
                         "('accio_schema', 'Revenue', 'orderkey', 1, 1043, -1), " +
                         "('accio_schema', 'Revenue', 'total', 2, 23, 4)]);");
+
+        assertThat(createOrReplaceAllColumn(EMPTY))
+                .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
+                        "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
+                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "LEFT JOIN `accio_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid");
     }
 
     @Test
@@ -153,6 +161,10 @@ public class TestCreateBigQueryTempTable
                         "('accio_catalog', 'accio_schema', 'LineitemModel'), " +
                         "('accio_catalog', 'accio_schema', 'CustomerModel'), " +
                         "('accio_catalog', 'accio_schema', 'Revenue')]);");
+
+        assertThat(createOrReplaceAllTable(EMPTY))
+                .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_tables` AS " +
+                        "SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
     }
 
     @Test
