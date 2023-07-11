@@ -30,11 +30,11 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 
 public class AccioPlanner
 {
-    private static final SqlParser SQL_PARSER = new SqlParser();
-    private static final List<AccioRule> ALL_RULES = List.of(
+    public static final List<AccioRule> ALL_RULES = List.of(
             METRIC_VIEW_SQL_REWRITE,
             SYNTACTIC_SUGAR_REWRITE,
             ACCIO_SQL_REWRITE);
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private AccioPlanner() {}
 

@@ -54,6 +54,11 @@
           "type": "integer"
         },
         {
+          "name": "nationkey",
+          "expression": "c_nationkey",
+          "type": "integer"
+        },
+        {
           "name": "name",
           "expression": "c_name",
           "type": "string"
@@ -62,6 +67,11 @@
           "name": "orders",
           "type": "Orders",
           "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "nation",
+          "type": "Nation",
+          "relationship": "CustomerNation"
         }
       ],
       "primaryKey": "custkey"
@@ -134,6 +144,48 @@
         }
       ],
       "primaryKey": "partkey"
+    },
+    {
+      "name": "Nation",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.nation",
+      "columns": [
+        {
+          "name": "nationkey",
+          "expression": "n_nationkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "n_name",
+          "type": "string"
+        },
+        {
+          "name": "regionkey",
+          "expression": "n_regionkey",
+          "type": "integer"
+        },
+        {
+          "name": "comment",
+          "expression": "n_comment",
+          "type": "string"
+        },
+        {
+          "name": "region",
+          "type": "Region",
+          "relationship": "NationRegion"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "CustomerNation"
+        },
+        {
+          "name": "supplier",
+          "type": "Supplier",
+          "relationship": "NationSupplier"
+        }
+      ],
+      "primaryKey": "nationkey"
     }
   ],
   "relationships": [
@@ -163,6 +215,15 @@
       ],
       "joinType": "MANY_TO_ONE",
       "condition": "Lineitem.partkey = Part.partkey"
+    },
+    {
+      "name": "CustomerNation",
+      "models": [
+        "Customer",
+        "Nation"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Customer.nationkey = Nation.nationkey"
     }
   ],
   "metrics": [

@@ -165,6 +165,30 @@ public class TestAccioWithBigquery
             }
             assertThat(count).isEqualTo(100);
         }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer.nation as nation_key from Orders limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("nation_key"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select orders from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("orders"));
+            int count = 1;
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     @Test
@@ -527,21 +551,20 @@ public class TestAccioWithBigquery
             assertThat(count).isEqualTo(100);
         }
 
-        // TODO: analyze nested to_many relationship access
-        // try (Connection connection = createConnection()) {
-        //     PreparedStatement stmt = connection.prepareStatement("select name, orders[1].lineitem[1].extendedprice from Customer limit 100");
-        //     ResultSet resultSet = stmt.executeQuery();
-        //     resultSet.next();
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("name"));
-        //     assertThatNoException().isThrownBy(() -> resultSet.getString("extendedprice"));
-        //
-        //     int count = 1;
-        //
-        //     while (resultSet.next()) {
-        //         count++;
-        //     }
-        //     assertThat(count).isEqualTo(100);
-        // }
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select name, orders[1].lineitem[2].extendedprice from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
+            assertThatNoException().isThrownBy(() -> resultSet.getDouble("extendedprice"));
+
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     @Test
@@ -715,6 +738,8 @@ public class TestAccioWithBigquery
         return new Object[][] {
                 {"SELECT first(orders, totalprice, DESC) IS NOT NULL FROM Customer LIMIT 100"},
                 {"SELECT first(c.orders, totalprice, desc).totalprice FROM Customer c LIMIT 100"},
+                {"SELECT first(c.orders, totalprice, desc).customer.name FROM Customer c LIMIT 100"},
+                {"SELECT first(c.orders, totalprice, desc).customer.nation.name FROM Customer c LIMIT 100"},
                 {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, ASC) IS NOT NULL FROM Customer LIMIT 100"},
                 {"SELECT first(filter(orders, orderItem -> orderItem.orderstatus = 'F'), totalprice, asc).totalprice FROM Customer LIMIT 100"},
         };

@@ -48,8 +48,6 @@ import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.CTE;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.REVERSE_RS;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.Type.RS;
 import static io.accio.sqlrewrite.RelationshipCteGenerator.RsItem.rsItem;
-import static io.trino.sql.QueryUtil.getQualifiedName;
-import static io.trino.sql.QueryUtil.identifier;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -102,18 +100,6 @@ public final class ExpressionAnalyzer
         }
 
         @Override
-        protected Void visitSubscriptExpression(SubscriptExpression node, Void ignored)
-        {
-            String suffix = Optional.ofNullable(getQualifiedName(node.getBase())).map(QualifiedName::getSuffix).orElse(LAMBDA_RESULT_NAME);
-            registerRelationshipCTEs(node.getBase())
-                    .ifPresent(info -> {
-                        relationshipCTENames.add(String.join(".", info.getReplacementNameParts()));
-                        relationshipFieldsRewrite.put(NodeRef.of(info.getOriginal()), new DereferenceExpression(info.getReplacement(), identifier(suffix)));
-                    });
-            return ignored;
-        }
-
-        @Override
         protected Void visitFunctionCall(FunctionCall node, Void ignored)
         {
             Optional<ReturnContext> returnContext = functionChainAnalyzer.analyze(node);
@@ -151,6 +137,17 @@ public final class ExpressionAnalyzer
 
         @Override
         protected Void visitDereferenceExpression(DereferenceExpression node, Void ignored)
+        {
+            registerRelationshipCTEs(node)
+                    .ifPresent(info -> {
+                        relationshipCTENames.add(String.join(".", info.getReplacementNameParts()));
+                        relationshipFieldsRewrite.put(NodeRef.of(info.getOriginal()), info.getReplacement());
+                    });
+            return null;
+        }
+
+        @Override
+        protected Void visitIdentifier(Identifier node, Void ignored)
         {
             registerRelationshipCTEs(node)
                     .ifPresent(info -> {
@@ -227,7 +224,7 @@ public final class ExpressionAnalyzer
                     String fieldModelName = relationshipField.get().getModelName().getSchemaTableName().getTableName();
                     String fieldTypeName = relationshipField.get().getType();
                     String fieldName = relationshipField.get().getColumnName();
-                    Relationship relationship = accioMDL.getRelationship(relationshipField.get().getRelationship().orElseThrow()).orElseThrow();
+                    Relationship relationship = relationshipField.get().getRelationship().orElseThrow();
                     List<String> parts = List.of(fieldModelName, relationshipField.get().getColumnName());
                     relationships.add(relationship);
                     relationshipCteGenerator.register(
@@ -314,13 +311,30 @@ public final class ExpressionAnalyzer
                 }
             }
 
-            return Optional.ofNullable(relationshipCteGenerator.getNameMapping().get(String.join(".", nameParts)))
-                    .map(cteName ->
+            // whole dereference expression or identifier is a relationship column
+            return Optional.ofNullable(relationshipCteGenerator.getRelationshipCTEs().get(String.join(".", nameParts)))
+                    .map(relationshipCTE ->
                             new ReplaceNodeInfo(
                                     nameParts,
                                     node,
-                                    new Identifier(cteName),
+                                    toRelationshipReplacement(relationshipCTE, nameParts.getLast()),
                                     chain.isEmpty() ? Optional.empty() : Optional.of(chain.getLast())));
+        }
+
+        // if rs column is a to-1 rs, use the to-1 side model primary key
+        // if rs column is a to-N rs, use the last name part of expression since we keep the relationship column
+        // name as the same in all CTEs, here we could directly use last name part in expression to represent
+        // the target to-N rs column name.
+        private Expression toRelationshipReplacement(RelationshipCTE relationshipCTE, String lastNamePart)
+        {
+            if (relationshipCTE.getRelationship().getJoinType().isToOne()) {
+                return DereferenceExpression.from(
+                        QualifiedName.of(relationshipCTE.getName(), relationshipCTE.getTarget().getPrimaryKey()));
+            }
+            else {
+                return DereferenceExpression.from(
+                        QualifiedName.of(relationshipCTE.getName(), lastNamePart));
+            }
         }
     }
 

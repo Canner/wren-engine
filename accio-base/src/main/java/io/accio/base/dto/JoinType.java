@@ -14,14 +14,30 @@
 
 package io.accio.base.dto;
 
+import static io.accio.base.dto.JoinType.GenericJoinType.TO_MANY;
+import static io.accio.base.dto.JoinType.GenericJoinType.TO_ONE;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public enum JoinType
 {
-    MANY_TO_MANY,
-    ONE_TO_ONE,
-    MANY_TO_ONE,
-    ONE_TO_MANY;
+    MANY_TO_MANY(TO_MANY),
+    ONE_TO_ONE(TO_ONE),
+    MANY_TO_ONE(TO_ONE),
+    ONE_TO_MANY(TO_MANY);
+
+    public enum GenericJoinType
+    {
+        TO_ONE,
+        TO_MANY,
+    }
+
+    private final GenericJoinType type;
+
+    JoinType(GenericJoinType type)
+    {
+        this.type = requireNonNull(type);
+    }
 
     public static JoinType reverse(JoinType joinType)
     {
@@ -34,5 +50,20 @@ public enum JoinType
                 return ONE_TO_MANY;
         }
         throw new IllegalArgumentException(format("Invalid join type %s", joinType));
+    }
+
+    public GenericJoinType getType()
+    {
+        return type;
+    }
+
+    public boolean isToOne()
+    {
+        return type == TO_ONE;
+    }
+
+    public boolean isToMany()
+    {
+        return type == TO_MANY;
     }
 }

@@ -242,7 +242,7 @@ public final class Utils
                 .columnName(column.getName())
                 .name(column.getName())
                 .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
-                .relationship(accioMDL.listModels().stream().map(Model::getName).filter(name -> name.equals(column.getType())).findFirst())
+                .relationship(column.getRelationship().flatMap(accioMDL::getRelationship))
                 .type(column.getType())
                 .build();
     }

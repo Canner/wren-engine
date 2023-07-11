@@ -197,7 +197,7 @@ public final class StatementAnalyzer
                                         .modelName(tableName)
                                         .columnName(column.getName())
                                         .name(column.getName())
-                                        .relationship(column.getRelationship())
+                                        .relationship(column.getRelationship().flatMap(accioMDL::getRelationship))
                                         .type(column.getType())
                                         .build())
                         .collect(toImmutableList());

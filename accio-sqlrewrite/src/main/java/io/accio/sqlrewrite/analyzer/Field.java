@@ -15,6 +15,7 @@
 package io.accio.sqlrewrite.analyzer;
 
 import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.dto.Relationship;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.Optional;
@@ -35,7 +36,7 @@ public class Field
     private final CatalogSchemaTableName modelName;
     private final String columnName;
     private final Optional<String> name;
-    private final Optional<String> relationship;
+    private final Optional<Relationship> relationship;
     private final String type;
 
     private Field(
@@ -43,7 +44,7 @@ public class Field
             CatalogSchemaTableName modelName,
             String columnName,
             String name,
-            Optional<String> relationship,
+            Optional<Relationship> relationship,
             String type)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
@@ -79,7 +80,7 @@ public class Field
         return relationship.isPresent();
     }
 
-    public Optional<String> getRelationship()
+    public Optional<Relationship> getRelationship()
     {
         return relationship;
     }
@@ -136,7 +137,7 @@ public class Field
         private CatalogSchemaTableName modelName;
         private String columnName;
         private String name;
-        private Optional<String> relationship;
+        private Optional<Relationship> relationship;
         private String type;
 
         public Builder() {}
@@ -176,7 +177,7 @@ public class Field
             return this;
         }
 
-        public Builder relationship(Optional<String> relationship)
+        public Builder relationship(Optional<Relationship> relationship)
         {
             this.relationship = relationship;
             return this;
