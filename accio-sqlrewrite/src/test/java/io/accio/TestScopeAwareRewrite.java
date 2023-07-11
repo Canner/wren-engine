@@ -36,7 +36,10 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.accio.base.AccioTypes.INTEGER;
+import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.ScopeAwareRewrite.SCOPE_AWARE_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -78,6 +81,13 @@ public class TestScopeAwareRewrite
                 .setRelationships(List.of(
                         relationship("BookPeople", List.of("Book", "People"), JoinType.ONE_TO_ONE, "Book.authorId  = People.userId"),
                         relationship("ItemPeople", List.of("Item", "People"), JoinType.MANY_TO_ONE, "Item.userId  = People.userId")))
+                .setMetrics(List.of(
+                        metric(
+                                "AuthorBookCount",
+                                "Book",
+                                List.of(column("authorId", VARCHAR, null, true)),
+                                List.of(column("count", INTEGER, null, true, "sum(*)")),
+                                List.of())))
                 .build());
     }
 
@@ -102,7 +112,14 @@ public class TestScopeAwareRewrite
                 {"WITH b AS (SELECT o_clerk, author FROM Book) SELECT author FROM b", "WITH b AS (SELECT o_clerk, Book.author FROM Book) SELECT author FROM b"},
                 {"SELECT concat(name, '12') FROM test.Book", "SELECT concat(Book.name, '12') FROM test.Book"},
                 {"SELECT concat(name, '12') = '123' FROM test.Book", "SELECT concat(Book.name, '12') = '123' FROM test.Book"},
-                {"SELECT concat(name, '12') + 123 FROM test.Book", "SELECT concat(Book.name, '12') + 123 FROM test.Book"}
+                {"SELECT concat(name, '12') + 123 FROM test.Book", "SELECT concat(Book.name, '12') + 123 FROM test.Book"},
+                {"SELECT accio.test.Book.author.book.name FROM Book", "SELECT Book.author.book.name FROM Book"},
+                {"SELECT accio.test.Book.author.books[1].name FROM Book", "SELECT Book.author.books[1].name FROM Book"},
+                {"SELECT test.Book.author.book.name FROM Book", "SELECT Book.author.book.name FROM Book"},
+                {"SELECT test.Book.author.books[1].name FROM Book", "SELECT Book.author.books[1].name FROM Book"},
+                {"SELECT accio.test.AuthorBookCount.authorId FROM AuthorBookCount", "SELECT AuthorBookCount.authorId FROM AuthorBookCount"},
+                {"SELECT test.AuthorBookCount.authorId FROM AuthorBookCount", "SELECT AuthorBookCount.authorId FROM AuthorBookCount"},
+                {"SELECT authorId FROM AuthorBookCount", "SELECT AuthorBookCount.authorId FROM AuthorBookCount"},
         };
     }
 
@@ -157,16 +174,17 @@ public class TestScopeAwareRewrite
     {
         return new Object[][] {
                 {"SELECT Book.name FROM Book"},
-                {"SELECT test.Book.name FROM Book"},
-                {"SELECT accio.test.Book.name FROM Book"},
                 {"SELECT name FROM NotBelongToAccio"},
                 {"SELECT Book.author.book.name FROM Book"},
-                {"SELECT test.Book.author.book.name FROM Book"},
-                {"SELECT accio.test.Book.author.book.name FROM Book"},
                 {"SELECT name FROM fake1.fake2.Book"},
                 {"SELECT name FROM fake2.Book"},
                 {"WITH b AS (SELECT * FROM Book) SELECT author FROM b"},
-                {"SELECT notfound FROM b"}
+                {"SELECT notfound FROM b"},
+                {"SELECT Book.author.books[1].name FROM Book"},
+                {"SELECT AuthorBookCount.authorId FROM AuthorBookCount"},
+                {"SELECT Book.author.book.name FROM Book"},
+                {"SELECT fakecatalog.fakeschema.Book.author.book.name FROM Book"},
+                {"SELECT fakeschema.Book.author.book.name FROM Book"},
         };
     }
 

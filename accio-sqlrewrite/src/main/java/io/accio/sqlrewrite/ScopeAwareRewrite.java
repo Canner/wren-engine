@@ -29,12 +29,15 @@ import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.SubscriptExpression;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.Iterables.getLast;
 import static io.accio.sqlrewrite.Utils.analyzeFrom;
 import static io.accio.sqlrewrite.Utils.getNextPart;
+import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.toQualifiedName;
 import static io.trino.sql.QueryUtil.identifier;
 import static java.lang.String.format;
@@ -102,8 +105,17 @@ public class ScopeAwareRewrite
                 for (int i = 0; i < parts.size(); i++) {
                     List<Field> field = context.getRelationType().get().resolveFields(QualifiedName.of(parts.subList(0, i + 1)));
                     if (field.size() == 1) {
-                        if (i > 0) {
-                            // The node is resolvable and has the relation prefix. No need to rewrite.
+                        Field firstMatch = field.get(0);
+                        if (i == 3) {
+                            // catalog.schema.table.column
+                            return removePrefix(node, 2);
+                        }
+                        if (i == 2) {
+                            // schema.table.column
+                            return removePrefix(node, 1);
+                        }
+                        if (i == 1) {
+                            // table.column
                             return node;
                         }
                         return addPrefix(node, identifier(field.get(0).getRelationAlias().orElse(toQualifiedName(field.get(0).getModelName())).getSuffix()));
@@ -196,5 +208,13 @@ public class ScopeAwareRewrite
             }
             throw new IllegalArgumentException(format("Unexpected expression: %s", b));
         }).orElseThrow(() -> new IllegalArgumentException(format("Unexpected expression: %s", source)));
+    }
+
+    private static Expression removePrefix(DereferenceExpression dereferenceExpression, int removeFirstN)
+    {
+        return parseExpression(
+                Arrays.stream(dereferenceExpression.toString().split("\\."))
+                        .skip(removeFirstN)
+                        .collect(Collectors.joining(".")));
     }
 }
