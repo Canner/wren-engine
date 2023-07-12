@@ -24,6 +24,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.Collections.emptyList;
@@ -39,8 +40,6 @@ public abstract class BaseJdbcRecordIterator<T>
     protected final int columnCount;
 
     private boolean hasNext;
-
-    private T nowBuffer;
 
     public BaseJdbcRecordIterator(Client client, String sql)
             throws SQLException
@@ -61,9 +60,6 @@ public abstract class BaseJdbcRecordIterator<T>
         this.columnCount = resultSetMetaData.getColumnCount();
 
         hasNext = resultSet.next();
-        if (hasNext) {
-            nowBuffer = getCurrentRecord();
-        }
     }
 
     protected void setParameter(List<Parameter> parameters)
@@ -83,17 +79,19 @@ public abstract class BaseJdbcRecordIterator<T>
     @Override
     public T next()
     {
-        T nowRecord = nowBuffer;
+        if (!hasNext) {
+            throw new NoSuchElementException();
+        }
+        T currentResult;
         try {
+            currentResult = getCurrentRecord();
+            // move to next row
             hasNext = resultSet.next();
-            if (hasNext) {
-                nowBuffer = getCurrentRecord();
-            }
         }
         catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return nowRecord;
+        return currentResult;
     }
 
     @Override
