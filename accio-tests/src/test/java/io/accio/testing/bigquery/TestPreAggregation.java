@@ -152,7 +152,7 @@ public class TestPreAggregation
         try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
             assertThat(result.length).isEqualTo(2);
-            assertThat(connectorRecordIterator.next()[0]).isEqualTo(1202L);
+            assertThat(result[0]).isEqualTo(1202L);
             assertThat(connectorRecordIterator.hasNext()).isFalse();
         }
     }
