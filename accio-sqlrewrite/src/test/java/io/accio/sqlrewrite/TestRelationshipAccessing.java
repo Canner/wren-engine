@@ -39,6 +39,7 @@ import java.util.Map;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Relationship.SortKey.sortKey;
 import static io.accio.base.dto.Relationship.relationship;
+import static io.accio.sqlrewrite.AccioPlanner.ALL_RULES;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
@@ -1338,6 +1339,86 @@ public class TestRelationshipAccessing
         Map<String, String> replaceMap = new HashMap<>();
         replaceMap.put("People.books", generator.getNameMapping().get("People.books"));
         replaceMap.put("slice_cte", generator.getNameMapping().get("slice(p.books, 1, 5)"));
+
+        Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
+        String actualSql = SqlFormatter.formatSql(rewrittenStatement);
+        assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedResult));
+    }
+
+    @DataProvider
+    public Object[][] directAccessRelationship()
+    {
+        return new Object[][] {
+                {"SELECT author, count(*) FROM Book GROUP BY author",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + "\n" +
+                                ", ${Book.author} (userId, name, books, sorted_books, bk) AS (\n" +
+                                "   SELECT DISTINCT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.books\n" +
+                                "   , t.sorted_books\n" +
+                                "   , s.bookId bk\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                "SELECT ${Book.author}.userId AS author , count(*)\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author} ON (Book.bookId = ${Book.author}.bk))" +
+                                "GROUP BY ${Book.author}.userId"},
+                {"SELECT author, name, count(*) FROM Book GROUP BY (author, name)",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + "\n" +
+                                ", ${Book.author} (userId, name, books, sorted_books, bk) AS (\n" +
+                                "   SELECT DISTINCT\n" +
+                                "     t.userId\n" +
+                                "   , t.name\n" +
+                                "   , t.books\n" +
+                                "   , t.sorted_books\n" +
+                                "   , s.bookId bk\n" +
+                                "   FROM\n" +
+                                "     (Book s\n" +
+                                "   LEFT JOIN People t ON (s.authorId = t.userId))\n" +
+                                ") \n" +
+                                "SELECT ${Book.author}.userId AS author, name name, count(*)\n" +
+                                "FROM\n" +
+                                "  (Book\n" +
+                                "LEFT JOIN ${Book.author} ON (Book.bookId = ${Book.author}.bk))" +
+                                "GROUP BY (${Book.author}.userId, name)"},
+                {"SELECT books FROM People",
+                        "WITH\n" + ONE_TO_MANY_MODEL_CTE + "\n" +
+                                ", ${People.books} (userId, bk, books) AS (\n" +
+                                "   SELECT\n" +
+                                "     o.userId userId\n" +
+                                "   , o.userId bk\n" +
+                                "   , array_agg(m.bookId ORDER BY m.bookId ASC) FILTER (WHERE (m.bookId IS NOT NULL)) books\n" +
+                                "   FROM\n" +
+                                "     (People o\n" +
+                                "   LEFT JOIN Book m ON (o.userId = m.authorId))\n" +
+                                "   GROUP BY 1, 2" +
+                                ") \n" +
+                                "SELECT ${People.books}.books AS books\n" +
+                                "FROM\n" +
+                                "  (People\n" +
+                                "LEFT JOIN ${People.books} ON (People.userId = ${People.books}.bk))"},
+        };
+    }
+
+    @Test(dataProvider = "directAccessRelationship")
+    public void testDirectAccessRelationship(String original, String expected)
+    {
+        Statement rewrittenStatement = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        Map<String, String> nameMapping = Map.of();
+        for (AccioRule rule : ALL_RULES) {
+            RelationshipCteGenerator generator = new RelationshipCteGenerator(oneToManyAccioMDL);
+            Analysis analysis = StatementAnalyzer.analyze(rewrittenStatement, DEFAULT_SESSION_CONTEXT, oneToManyAccioMDL, generator);
+            rewrittenStatement = rule.apply(rewrittenStatement, DEFAULT_SESSION_CONTEXT, analysis, oneToManyAccioMDL);
+            nameMapping = generator.getNameMapping();
+        }
+
+        Map<String, String> replaceMap = new HashMap<>();
+        replaceMap.put("Book.author", nameMapping.get("Book.author"));
+        replaceMap.put("People.books", nameMapping.get("People.books"));
 
         Statement expectedResult = SQL_PARSER.createStatement(new StrSubstitutor(replaceMap).replace(expected), new ParsingOptions(AS_DECIMAL));
         String actualSql = SqlFormatter.formatSql(rewrittenStatement);

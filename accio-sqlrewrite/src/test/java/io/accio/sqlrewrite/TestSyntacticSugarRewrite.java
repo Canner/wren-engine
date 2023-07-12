@@ -73,14 +73,8 @@ public class TestSyntacticSugarRewrite
     public Object[][] testCase()
     {
         return new Object[][] {
-                {"select count(*) from Book group by author", "select count(*) from Book group by Book.author.userId"},
-                {"select count(*) from Book group by author, name", "select count(*) from Book group by Book.author.userId, Book.name"},
-                {"select author, count(*) from Book group by author", "select Book.author.userId author, count(*) from Book group by Book.author.userId"},
-                {"select author, count(*) from Book group by author, name", "select Book.author.userId author, count(*) from Book group by Book.author.userId, Book.name"},
-                {"select author, count(*) from Book group by 1", "select Book.author.userId author, count(*) from Book group by 1"},
-                {"select author, name, count(*) from Book group by 1, 2", "select Book.author.userId author, Book.name, count(*) from Book group by 1, 2"},
-                {"select author, name, count(*) from Book group by (author, name)",
-                        "select Book.author.userId author, Book.name, count(*) from Book group by (Book.author.userId, Book.name)"},
+                {"SELECT author FROM Book", "SELECT Book.author AS author FROM Book"},
+                {"SELECT books FROM People", "SELECT People.books AS books FROM People"},
         };
     }
 

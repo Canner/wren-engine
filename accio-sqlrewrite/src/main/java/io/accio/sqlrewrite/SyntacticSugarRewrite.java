@@ -16,9 +16,7 @@ package io.accio.sqlrewrite;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
-import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Analysis;
-import io.accio.sqlrewrite.analyzer.Field;
 import io.accio.sqlrewrite.analyzer.Scope;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
@@ -38,11 +36,13 @@ import java.util.Optional;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Rewrite syntactic sugar to standard Accio SQL:
- * <p>
- * 1. Directly access a relationship field. (e.g. `select author from Book` -> `select author.userId from Book`)
- * 2. `any` Function is an alias of to-many result accessing. (e.g. `select any(books) from User` -> `select books[1] from User`)
- * 3. `first` Function is an alias of sorted to-many result accessing. (e.g. `select first(books) from User` -> `select array_sort(books)[1] from User`)
+ * Rewrite Accio syntactic sugar:
+ * <li>Add column alias to avoid losing original column name since we will rewrite relationship column in {@link AccioSqlRewrite}
+ * e.g. {@code SELECT author FROM Book} -> {@code SELECT author AS author FROM Book}</li>
+ * <li>`any` Function is an alias of to-many result accessing.
+ * e.g. {@code SELECT any(books) FROM User} -> {@code SELECT books[1] FROM User}</li>
+ * <li>`first` Function is an alias of sorted to-many result accessing.
+ * e.g. {@code SELECT first(books) FROM User} -> {@code SELECT array_sort(books)[1] FROM User}</li>
  */
 public class SyntacticSugarRewrite
         implements AccioRule
@@ -59,65 +59,28 @@ public class SyntacticSugarRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
     {
-        return (Statement) new SyntacticSugarRewrite.Rewriter(accioMDL, analysis).process(root);
+        return (Statement) new SyntacticSugarRewrite.Rewriter(analysis).process(root);
     }
 
     private static class Rewriter
             extends BaseRewriter<Void>
     {
-        private final AccioMDL accioMDL;
         private final Analysis analysis;
 
-        Rewriter(AccioMDL accioMDL, Analysis analysis)
+        Rewriter(Analysis analysis)
         {
-            this.accioMDL = accioMDL;
-            this.analysis = analysis;
-        }
-
-        @Override
-        protected Node visitIdentifier(Identifier node, Void context)
-        {
-            // To directly access the relationship, we rewrite it to its primary key.
-            QualifiedName qualifiedName = QualifiedName.of(List.of(node));
-            return analysis.tryGetScope(node)
-                    .flatMap(Scope::getRelationType)
-                    .map(relationType -> relationType.resolveAnyField(qualifiedName))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .filter(Field::isRelationship).flatMap(field -> accioMDL.getModel(field.getType())
-                            .map(Model::getPrimaryKey)
-                            .map(Identifier::new))
-                    .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
-                    .orElse(node);
-        }
-
-        @Override
-        protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
-        {
-            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(node);
-            return analysis.tryGetScope(node)
-                    .flatMap(Scope::getRelationType)
-                    .map(relationType -> relationType.resolveAnyField(qualifiedName))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .filter(Field::isRelationship).flatMap(field -> accioMDL.getModel(field.getType())
-                            .map(Model::getPrimaryKey)
-                            .map(Identifier::new))
-                    .map(primaryKey -> (Node) new DereferenceExpression(node, primaryKey))
-                    .orElse(super.visitDereferenceExpression(node, context));
+            this.analysis = requireNonNull(analysis);
         }
 
         @Override
         protected Node visitSingleColumn(SingleColumn node, Void context)
         {
-            // Because we rewrite the relationship field to its primary key,
-            // we need to add an alias to keep its original name.
             Expression result = visitAndCast(node.getExpression(), context);
-
-            if (result.equals(node.getExpression())) {
-                return node;
+            if (result.equals(node.getExpression()) && !belongsToAccioDataObject(node.getExpression())) {
+                return new SingleColumn(result, node.getAlias());
             }
-
+            // Because we rewrite the relationship field in AccioSqlRewrite
+            // we need to add an alias to keep its original name.
             Identifier resultAlias = node.getAlias().orElse(null);
             if (node.getExpression() instanceof Identifier) {
                 Identifier identifier = (Identifier) node.getExpression();
@@ -144,6 +107,25 @@ public class SyntacticSugarRewrite
                 return new SubscriptExpression(new FunctionCall(QualifiedName.of("array_sort"), node.getArguments()), new LongLiteral("1"));
             }
             return super.visitFunctionCall(node, context);
+        }
+
+        private boolean belongsToAccioDataObject(Expression node)
+        {
+            QualifiedName qualifiedName;
+            if (node instanceof Identifier) {
+                qualifiedName = QualifiedName.of(List.of((Identifier) node));
+            }
+            else if (node instanceof DereferenceExpression) {
+                qualifiedName = DereferenceExpression.getQualifiedName((DereferenceExpression) node);
+            }
+            else {
+                return false;
+            }
+
+            return analysis.tryGetScope(node)
+                    .flatMap(Scope::getRelationType)
+                    .flatMap(relationType -> relationType.resolveAnyField(qualifiedName))
+                    .isPresent();
         }
     }
 }
