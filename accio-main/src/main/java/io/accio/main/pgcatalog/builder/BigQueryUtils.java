@@ -232,7 +232,6 @@ public final class BigQueryUtils
                 case MANY_TO_ONE:
                     return accioMDL.getModel(relationship.getModels().get(1)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
                 case ONE_TO_MANY:
-                case MANY_TO_MANY:
                     return accioMDL.getModel(relationship.getModels().get(0))
                             .flatMap(BigQueryUtils::getModelPrimaryKeyType)
                             .flatMap(type -> Optional.of(getArrayType(type.oid())));
@@ -246,7 +245,6 @@ public final class BigQueryUtils
             case ONE_TO_MANY:
                 return accioMDL.getModel(relationship.getModels().get(0)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
             case MANY_TO_ONE:
-            case MANY_TO_MANY:
                 return accioMDL.getModel(relationship.getModels().get(1))
                         .flatMap(BigQueryUtils::getModelPrimaryKeyType)
                         .flatMap(type -> Optional.of(getArrayType(type.oid())));
