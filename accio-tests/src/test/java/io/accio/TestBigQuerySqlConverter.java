@@ -346,4 +346,16 @@ public class TestBigQuerySqlConverter
                         "GROUP BY l_orderkey\n" +
                         "ORDER BY l_orderkey ASC\n");
     }
+
+    @Test
+    public void testRewriteArithemetic()
+    {
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT TIMESTAMP '2023-07-04 09:41:43.805201' + INTERVAL '1 YEAR'", SessionContext.builder().build()))
+                .isEqualTo("SELECT (CAST(TIMESTAMP '2023-07-04 09:41:43.805201' AS DATETIME) + INTERVAL '1' YEAR)\n\n");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT DATE '2023-07-04' + INTERVAL '1 YEAR'", SessionContext.builder().build()))
+                .isEqualTo("SELECT (CAST('2023-07-04' AS DATE) + INTERVAL '1' YEAR)\n\n");
+    }
 }
