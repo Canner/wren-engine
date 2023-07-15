@@ -267,10 +267,7 @@ public final class BigQueryUtils
     {
         String primaryKey = model.getPrimaryKey();
         Optional<Column> column = model.getColumns().stream().filter(col -> col.getName().equals(primaryKey)).findFirst();
-        if (column.isEmpty()) {
-            return Optional.empty();
-        }
-        return getPgType(column.get().getType());
+        return column.flatMap(value -> getPgType(value.getType()));
     }
 
     public static String createOrReplacePgTypeMapping()
