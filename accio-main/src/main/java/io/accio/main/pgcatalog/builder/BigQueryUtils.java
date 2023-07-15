@@ -227,29 +227,31 @@ public final class BigQueryUtils
     private static Optional<PGType<?>> getRelationshipType(AccioMDL accioMDL, Model model, Relationship relationship)
     {
         if (model.getName().equals(relationship.getModels().get(0))) {
+            Optional<Model> rightModel = accioMDL.getModel(relationship.getModels().get(1));
             switch (relationship.getJoinType()) {
                 case ONE_TO_ONE:
                 case MANY_TO_ONE:
-                    return accioMDL.getModel(relationship.getModels().get(1)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
+                    return rightModel.flatMap(BigQueryUtils::getModelPrimaryKeyType);
                 case ONE_TO_MANY:
-                    return accioMDL.getModel(relationship.getModels().get(0))
+                    return rightModel
                             .flatMap(BigQueryUtils::getModelPrimaryKeyType)
                             .flatMap(type -> Optional.of(getArrayType(type.oid())));
                 default:
-                    throw new AccioException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed");
+                    throw new AccioException(GENERIC_INTERNAL_ERROR, "Get relationship type failed, relationship: " + relationship.getName());
             }
         }
 
+        Optional<Model> leftModel = accioMDL.getModel(relationship.getModels().get(0));
         switch (relationship.getJoinType()) {
             case ONE_TO_ONE:
             case ONE_TO_MANY:
-                return accioMDL.getModel(relationship.getModels().get(0)).flatMap(BigQueryUtils::getModelPrimaryKeyType);
+                return leftModel.flatMap(BigQueryUtils::getModelPrimaryKeyType);
             case MANY_TO_ONE:
-                return accioMDL.getModel(relationship.getModels().get(1))
+                return leftModel
                         .flatMap(BigQueryUtils::getModelPrimaryKeyType)
                         .flatMap(type -> Optional.of(getArrayType(type.oid())));
             default:
-                throw new AccioException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed");
+                throw new AccioException(GENERIC_INTERNAL_ERROR, "Get relationship type failed, relationship: " + relationship.getName());
         }
     }
 
