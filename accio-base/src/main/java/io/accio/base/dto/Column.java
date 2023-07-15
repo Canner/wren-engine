@@ -155,7 +155,7 @@ public class Column
                 '}';
     }
 
-    private String quote(String name)
+    private static String quote(String name)
     {
         return String.format("\"%s\"", name);
     }
