@@ -688,7 +688,7 @@ public class PostgresWireProtocol
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
         {
-            LOG.error("Uncaught exception: %s", cause);
+            LOG.error(cause, "Uncaught exception: %s", cause);
         }
 
         @Override
