@@ -68,6 +68,8 @@ public class Identifier
 
         checkArgument(!value.isEmpty(), "value is empty");
         checkArgument(delimited || isValidIdentifier(value), "value contains illegal characters: %s", value);
+        // Firstly, check if RESERVED_IDENTIFIERS is null because we are unsure why RESERVED_IDENTIFIERS would be null at times.
+        checkArgument(delimited || RESERVED_IDENTIFIERS == null || !RESERVED_IDENTIFIERS.contains(value.toUpperCase(ENGLISH)), "value is a reserved identifier: %s", value);
     }
 
     public String getValue()
