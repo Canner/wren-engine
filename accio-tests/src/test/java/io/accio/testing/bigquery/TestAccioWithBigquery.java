@@ -552,7 +552,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select name, orders[1].lineitem[2].extendedprice from Customer limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select name, orders[1].lineitems[2].extendedprice from Customer limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getString("name"));
