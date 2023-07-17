@@ -25,7 +25,6 @@ import io.accio.base.type.NumericType;
 import io.accio.base.type.PGType;
 import io.accio.base.type.RealType;
 import io.accio.base.type.SmallIntType;
-import io.accio.base.type.TinyIntType;
 import io.accio.base.type.VarcharType;
 
 import java.math.BigDecimal;
@@ -67,11 +66,6 @@ public class DataType<T>
     public static DataType<Short> smallintDataType()
     {
         return dataType("smallint", SmallIntType.SMALLINT);
-    }
-
-    public static DataType<Byte> tinyintDataType()
-    {
-        return dataType("tinyint", TinyIntType.TINYINT);
     }
 
     public static DataType<Float> realDataType()

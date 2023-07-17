@@ -55,7 +55,6 @@ import static io.accio.base.type.PGArray.NUMERIC_ARRAY;
 import static io.accio.base.type.PGArray.TIMESTAMP_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
 import static io.accio.base.type.SmallIntType.SMALLINT;
-import static io.accio.base.type.TinyIntType.TINYINT;
 import static io.accio.testing.DataType.bigintDataType;
 import static io.accio.testing.DataType.booleanDataType;
 import static io.accio.testing.DataType.byteaDataType;
@@ -109,7 +108,6 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(bigintDataType(), 123_456_789_012L)
                 .addInput(integerDataType(), 1_234_567_890)
                 .addInput(jdbcSmallintDataType(), 32_456)
-                .addInput(jdbcTinyintDataType(), 125)
                 .addInput(doubleDataType(), 123.45d)
                 .addInput(realDataType(), 123.45f)
                 .executeSuite();
@@ -366,14 +364,6 @@ public abstract class AbstractWireProtocolTypeTest
     private static DataType<Integer> jdbcSmallintDataType()
     {
         return dataType("smallint", SMALLINT, Object::toString);
-    }
-
-    /**
-     * JDBC get pg tinyint by Integer.
-     */
-    private static DataType<Integer> jdbcTinyintDataType()
-    {
-        return dataType("tinyint", TINYINT, Object::toString);
     }
 
     public class WireProtocolTypeTest
