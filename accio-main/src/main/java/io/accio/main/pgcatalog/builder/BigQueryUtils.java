@@ -53,7 +53,7 @@ import static io.accio.base.type.PGArray.NUMERIC_ARRAY;
 import static io.accio.base.type.PGArray.TIMESTAMP_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
 import static io.accio.base.type.PGTypes.getArrayType;
-import static io.accio.base.type.PGTypes.getPgType;
+import static io.accio.base.type.PgTypeUtils.pgNameToType;
 import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RegprocType.REGPROC;
 import static io.accio.base.type.SmallIntType.SMALLINT;
@@ -194,7 +194,7 @@ public final class BigQueryUtils
                 Column col = columns.get(i);
                 Optional<Relationship> colRelationship = getColRelationship(accioMDL, col);
                 if (colRelationship.isEmpty()) {
-                    Optional<PGType<?>> pgType = getPgType(col.getType());
+                    Optional<PGType<?>> pgType = pgNameToType(col.getType());
                     if (pgType.isPresent()) {
                         records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), col.getName(), i + 1, pgType.get().oid(), pgType.get().typeLen()));
                     }
@@ -214,7 +214,7 @@ public final class BigQueryUtils
             columns.addAll(metric.getDimension());
             columns.addAll(metric.getMeasure());
             for (Column col : columns) {
-                Optional<PGType<?>> pgType = getPgType(col.getType());
+                Optional<PGType<?>> pgType = pgNameToType(col.getType());
                 if (pgType.isPresent()) {
                     records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), metric.getName(), col.getName(), i, pgType.get().oid(), pgType.get().typeLen()));
                     i = i + 1;
@@ -267,7 +267,7 @@ public final class BigQueryUtils
     {
         String primaryKey = model.getPrimaryKey();
         Optional<Column> column = model.getColumns().stream().filter(col -> col.getName().equals(primaryKey)).findFirst();
-        return column.flatMap(value -> getPgType(value.getType()));
+        return column.flatMap(value -> pgNameToType(value.getType()));
     }
 
     public static String createOrReplacePgTypeMapping()

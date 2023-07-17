@@ -151,6 +151,48 @@ public class TestCreateBigQueryTempTable
     }
 
     @Test
+    public void testAllColumnsWithType()
+    {
+        AccioMDL typeMDL = AccioMDL.fromManifest(
+                Manifest.builder()
+                        .setCatalog("accio_catalog")
+                        .setSchema("accio_schema")
+                        .setModels(List.of(
+                                model("TypeModel",
+                                        "select * from type_test",
+                                        List.of(
+                                                column("c_boolean", "boolean", null, true),
+                                                column("c_boolean2", "BOOLEAN", null, true),
+                                                column("c_bool", "bool", null, true),
+                                                column("c_bool_array", "_bool", null, true),
+                                                column("c_bool_array2", "_BOOL", null, true),
+                                                column("c_bool_array3", "bool[]", null, true),
+                                                column("c_bool_array4", "bool array", null, true),
+                                                column("c_boolean_array", "boolean[]", null, true),
+                                                column("c_boolean_array2", "boolean array", null, true)),
+                                        "c_boolean",
+                                        "test type table")))
+                        .build());
+
+        assertThat(createOrReplaceAllColumn(typeMDL))
+                .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
+                        "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
+                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "LEFT JOIN `accio_temp.pg_type_mapping` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid " +
+                        "UNION ALL SELECT * FROM UNNEST([STRUCT<table_schema STRING, table_name STRING, column_name STRING, ordinal_position int64, typoid integer, typlen integer> " +
+                        "('accio_schema', 'TypeModel', 'c_boolean', 1, 16, 1), " +
+                        "('accio_schema', 'TypeModel', 'c_boolean2', 2, 16, 1), " +
+                        "('accio_schema', 'TypeModel', 'c_bool', 3, 16, 1), " +
+                        "('accio_schema', 'TypeModel', 'c_bool_array', 4, 1000, -1), " +
+                        "('accio_schema', 'TypeModel', 'c_bool_array2', 5, 1000, -1), " +
+                        "('accio_schema', 'TypeModel', 'c_bool_array3', 6, 1000, -1), " +
+                        "('accio_schema', 'TypeModel', 'c_bool_array4', 7, 1000, -1), " +
+                        "('accio_schema', 'TypeModel', 'c_boolean_array', 8, 1000, -1), " +
+                        "('accio_schema', 'TypeModel', 'c_boolean_array2', 9, 1000, -1)]);");
+    }
+
+    @Test
     public void testAllTables()
     {
         assertThat(createOrReplaceAllTable(accioMDL))
