@@ -20,9 +20,11 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
+import static io.trino.sql.ReservedIdentifiers.reservedIdentifiers;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -37,6 +39,8 @@ public class Identifier
             .or(CharMatcher.is('_'))
             .or(CharMatcher.inRange('0', '9'))
             .precomputed();
+
+    private static final Set<String> RESERVED_IDENTIFIERS = reservedIdentifiers();
 
     private final String value;
     private final boolean delimited;
@@ -53,7 +57,7 @@ public class Identifier
 
     public Identifier(String value)
     {
-        this(Optional.empty(), value, !isValidIdentifier(value));
+        this(Optional.empty(), value, !isValidIdentifier(value) || RESERVED_IDENTIFIERS.contains(value.toUpperCase(ENGLISH)));
     }
 
     private Identifier(Optional<NodeLocation> location, String value, boolean delimited)
@@ -64,6 +68,8 @@ public class Identifier
 
         checkArgument(!value.isEmpty(), "value is empty");
         checkArgument(delimited || isValidIdentifier(value), "value contains illegal characters: %s", value);
+        // Firstly, check if RESERVED_IDENTIFIERS is null because we are unsure why RESERVED_IDENTIFIERS would be null at times.
+        checkArgument(delimited || RESERVED_IDENTIFIERS == null || !RESERVED_IDENTIFIERS.contains(value.toUpperCase(ENGLISH)), "value is a reserved identifier: %s", value);
     }
 
     public String getValue()

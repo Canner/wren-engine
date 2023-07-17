@@ -254,8 +254,8 @@ public class TestAccioWithBigquery
                 {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].orderstatus as col_1 from Customer limit 100"},
                 {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].customer.name as col_1 from Customer limit 100"},
                 {"select filter(Customer.orders, orderItem -> orderItem.orderstatus = 'F')[1].customer.orders[2].orderstatus as col_1 from Customer limit 100"},
-                {"select filter(Customer.orders[1].lineitem, lineitem -> lineitem.linenumber = 1)[1].linenumber as col_1 from Customer limit 100"},
-                {"select filter(filter(Customer.orders[1].lineitem, lineitem -> lineitem.linenumber = 1), lineitem -> lineitem.partkey = 1)[1].linenumber as col_1 from Customer limit 100"},
+                {"select filter(Customer.orders[1].lineitems, lineitem -> lineitem.linenumber = 1)[1].linenumber as col_1 from Customer limit 100"},
+                {"select filter(filter(Customer.orders[1].lineitems, lineitem -> lineitem.linenumber = 1), lineitem -> lineitem.partkey = 1)[1].linenumber as col_1 from Customer limit 100"},
         };
     }
 
@@ -508,7 +508,7 @@ public class TestAccioWithBigquery
             throws Exception
     {
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.orderstatus from Lineitem limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, \"order\".orderstatus from Lineitem limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
@@ -522,7 +522,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.orderstatus, part.name from Lineitem limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, \"order\".orderstatus, part.name from Lineitem limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
@@ -537,7 +537,7 @@ public class TestAccioWithBigquery
         }
 
         try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select linenumber, orders.customer.name from Lineitem limit 100");
+            PreparedStatement stmt = connection.prepareStatement("select linenumber, \"order\".customer.name from Lineitem limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getInt("linenumber"));
@@ -786,6 +786,37 @@ public class TestAccioWithBigquery
     {
         try (Connection connection = createConnection()) {
             PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @Test
+    public void testQuerySqlReservedWord()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select \"order\".orderkey from Lineitem limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select transform(\"order\".lineitems, l -> l.shipdate)[1] from Lineitem limit 100");
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
             assertThatNoException().isThrownBy(() -> resultSet.getObject(1));

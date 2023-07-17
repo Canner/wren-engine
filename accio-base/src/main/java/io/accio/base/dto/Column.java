@@ -108,14 +108,14 @@ public class Column
     public String getSqlExpression()
     {
         if (getRelationship().isPresent()) {
-            return String.format("'relationship<%s>' as %s", relationship, name);
+            return String.format("'relationship<%s>' as %s", relationship, quote(name));
         }
 
         if (getExpression().isEmpty()) {
-            return getName();
+            return quote(name);
         }
 
-        return String.format("%s as %s", expression, name);
+        return String.format("%s as %s", expression, quote(name));
     }
 
     @Override
@@ -153,5 +153,10 @@ public class Column
                 ", expression='" + expression + '\'' +
                 ", description='" + description + '\'' +
                 '}';
+    }
+
+    private static String quote(String name)
+    {
+        return String.format("\"%s\"", name);
     }
 }

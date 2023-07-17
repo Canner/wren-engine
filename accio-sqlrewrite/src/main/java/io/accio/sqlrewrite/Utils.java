@@ -141,7 +141,7 @@ public final class Utils
         requireNonNull(metricRollupInfo, "metricRollupInfo is null");
 
         Metric metric = metricRollupInfo.getMetric();
-        String timeGrain = format("DATE_TRUNC('%s', %s) %s",
+        String timeGrain = format("DATE_TRUNC('%s', %s) \"%s\"",
                 metricRollupInfo.getDatePart(),
                 metricRollupInfo.getTimeGrain().getRefColumn(),
                 metricRollupInfo.getTimeGrain().getName());
