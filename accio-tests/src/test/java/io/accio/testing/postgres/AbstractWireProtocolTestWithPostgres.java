@@ -19,7 +19,7 @@ import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
 import io.accio.testing.TestingPostgreSqlServer;
 
-public class AbstractWireProtocolTestWithPostgres
+public abstract class AbstractWireProtocolTestWithPostgres
         extends AbstractWireProtocolTest
 {
     private TestingPostgreSqlServer testingPostgreSqlServer;
