@@ -962,7 +962,7 @@ public class TestWireProtocolWithBigquery
             while (result.next()) {
                 columnNames.add(result.getString("COLUMN_NAME"));
             }
-            assertThat(columnNames).containsExactlyInAnyOrder("orderkey", "custkey", "totalprice", "customer", "orderdate", "lineitem");
+            assertThat(columnNames).containsExactlyInAnyOrder("orderkey", "custkey", "totalprice", "customer", "orderdate", "lineitems");
         }
     }
 
