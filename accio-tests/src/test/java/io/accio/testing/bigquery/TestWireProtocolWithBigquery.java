@@ -957,12 +957,12 @@ public class TestWireProtocolWithBigquery
                     "a.attnum AS A_ATTNUM\n" +
                     "FROM pg_catalog.pg_class ct\n" +
                     "JOIN pg_catalog.pg_attribute a ON (ct.oid = a.attrelid)\n" +
-                    "JOIN pg_catalog.pg_namespace n ON (ct.relnamespace = n.oid) WHERE true AND n.nspname = E'tpch_sf1' AND ct.relname = E'region'");
+                    "JOIN pg_catalog.pg_namespace n ON (ct.relnamespace = n.oid) WHERE true AND n.nspname = E'tpch_tiny' AND ct.relname = E'Orders'");
             List<String> columnNames = new ArrayList<>();
             while (result.next()) {
                 columnNames.add(result.getString("COLUMN_NAME"));
             }
-            assertThat(columnNames).containsExactlyInAnyOrder("regionkey", "name", "comment");
+            assertThat(columnNames).containsExactlyInAnyOrder("orderkey", "custkey", "totalprice", "customer", "orderdate", "lineitems");
         }
     }
 

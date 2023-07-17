@@ -17,6 +17,7 @@ package io.accio.main.pgcatalog.builder;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.metadata.ColumnMetadata;
 import io.accio.base.type.PGType;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.table.PgCatalogTable;
 
@@ -43,9 +44,9 @@ public final class BigQueryPgCatalogTableBuilder
         extends PgCatalogTableBuilder
 {
     @Inject
-    public BigQueryPgCatalogTableBuilder(Metadata metadata)
+    public BigQueryPgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
     {
-        super(metadata);
+        super(metadata, accioMetastore);
     }
 
     @Override
@@ -71,7 +72,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgClass(PgCatalogTable pgCatalogTable)
     {
-        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllTable(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();
@@ -113,7 +114,7 @@ public final class BigQueryPgCatalogTableBuilder
     protected String createPgAttributeTable(PgCatalogTable pgCatalogTable)
     {
         getMetadata().directDDL(createOrReplacePgTypeMapping());
-        getMetadata().directDDL(createOrReplaceAllColumn(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllColumn(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();
@@ -142,7 +143,7 @@ public final class BigQueryPgCatalogTableBuilder
     protected String createPgDatabaseTable(PgCatalogTable pgCatalogTable)
     {
         // TODO get project id from config
-        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllTable(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();
@@ -176,7 +177,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createPgNamespaceTable(PgCatalogTable pgCatalogTable)
     {
-        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllTable(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();
@@ -233,7 +234,7 @@ public final class BigQueryPgCatalogTableBuilder
     @Override
     protected String createCharacterSets(PgCatalogTable pgCatalogTable)
     {
-        getMetadata().directDDL(createOrReplaceAllTable(getMetadata()));
+        getMetadata().directDDL(createOrReplaceAllTable(getAccioMDL()));
         StringBuilder builder = new StringBuilder();
         builder.append(format("CREATE OR REPLACE VIEW `%s.%s` AS SELECT DISTINCT ", PG_CATALOG_NAME, pgCatalogTable.getName()));
         Map<String, String> tableContent = pgCatalogTable.getTableContent();

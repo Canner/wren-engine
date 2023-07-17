@@ -16,6 +16,7 @@ package io.accio.main.pgcatalog.builder;
 
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioException;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.table.PgCatalogTable;
 
@@ -29,9 +30,9 @@ public class PostgresPgCatalogTableBuilder
         extends PgCatalogTableBuilder
 {
     @Inject
-    public PostgresPgCatalogTableBuilder(Metadata metadata)
+    public PostgresPgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
     {
-        super(metadata);
+        super(metadata, accioMetastore);
     }
 
     @Override

@@ -9,12 +9,12 @@
         {
           "name": "orderkey",
           "expression": "o_orderkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "custkey",
           "expression": "o_custkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "orderstatus",
@@ -24,7 +24,7 @@
         {
           "name": "totalprice",
           "expression": "o_totalprice",
-          "type": "float"
+          "type": "float8"
         },
         {
           "name": "customer",
@@ -51,7 +51,7 @@
         {
           "name": "custkey",
           "expression": "c_custkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "nationkey",
@@ -61,7 +61,7 @@
         {
           "name": "name",
           "expression": "c_name",
-          "type": "string"
+          "type": "varchar"
         },
         {
           "name": "orders",
@@ -83,27 +83,27 @@
         {
           "name": "orderkey",
           "expression": "l_orderkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "partkey",
           "expression": "l_partkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "linenumber",
           "expression": "l_linenumber",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "extendedprice",
           "expression": "l_extendedprice",
-          "type": "double"
+          "type": "float8"
         },
         {
           "name": "discount",
           "expression": "l_discount",
-          "type": "double"
+          "type": "float8"
         },
         {
           "name": "shipdate",
@@ -122,7 +122,7 @@
         },
         {
           "name": "orderkey_linenumber",
-          "type": "string",
+          "type": "varchar",
           "expression": "concat(l_orderkey, l_linenumber)"
         }
       ],
@@ -135,12 +135,12 @@
         {
           "name": "partkey",
           "expression": "p_partkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "name",
           "expression": "p_name",
-          "type": "string"
+          "type": "varchar"
         }
       ],
       "primaryKey": "partkey"
@@ -152,22 +152,22 @@
         {
           "name": "nationkey",
           "expression": "n_nationkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "name",
           "expression": "n_name",
-          "type": "string"
+          "type": "varchar"
         },
         {
           "name": "regionkey",
           "expression": "n_regionkey",
-          "type": "integer"
+          "type": "int4"
         },
         {
           "name": "comment",
           "expression": "n_comment",
-          "type": "string"
+          "type": "varchar"
         },
         {
           "name": "region",
@@ -233,13 +233,13 @@
       "dimension": [
         {
           "name": "custkey",
-          "type": "integer"
+          "type": "int4"
         }
       ],
       "measure": [
         {
           "name": "totalprice",
-          "type": "integer",
+          "type": "int4",
           "expression": "sum(totalprice)"
         }
       ],

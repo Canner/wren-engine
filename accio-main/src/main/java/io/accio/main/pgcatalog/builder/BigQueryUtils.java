@@ -17,15 +17,20 @@ package io.accio.main.pgcatalog.builder;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioException;
+import io.accio.base.AccioMDL;
+import io.accio.base.dto.Column;
+import io.accio.base.dto.Metric;
+import io.accio.base.dto.Model;
+import io.accio.base.dto.Relationship;
 import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
-import io.accio.main.metadata.Metadata;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.base.type.AnyType.ANY;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
@@ -47,6 +52,8 @@ import static io.accio.base.type.PGArray.INT8_ARRAY;
 import static io.accio.base.type.PGArray.NUMERIC_ARRAY;
 import static io.accio.base.type.PGArray.TIMESTAMP_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
+import static io.accio.base.type.PGTypes.getArrayType;
+import static io.accio.base.type.PgTypeUtils.pgNameToType;
 import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RegprocType.REGPROC;
 import static io.accio.base.type.SmallIntType.SMALLINT;
@@ -58,6 +65,8 @@ import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public final class BigQueryUtils
 {
@@ -128,31 +137,137 @@ public final class BigQueryUtils
 
     private BigQueryUtils() {}
 
-    public static String createOrReplaceAllTable(Metadata connector)
+    public static String createOrReplaceAllTable(AccioMDL accioMDL)
     {
-        List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", ACCIO_TEMP_NAME) +
-                schemas.stream()
-                        .map(schema -> format("SELECT * FROM `%s`.INFORMATION_SCHEMA.TABLES", schema))
-                        .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", ACCIO_TEMP_NAME))
+                .append("SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
+        if (!getAccioTable(accioMDL).isEmpty()) {
+            stringBuilder.append(" UNION ALL ")
+                    .append("SELECT * FROM UNNEST([STRUCT<table_catalog STRING, table_schema STRING, table_name STRING> ")
+                    .append(getAccioTable(accioMDL).stream()
+                            .map(tableName -> format("('%s', '%s', '%s')", accioMDL.getCatalog(), accioMDL.getSchema(), tableName))
+                            .collect(joining(", ")))
+                    .append("]);");
+        }
+        return stringBuilder.toString();
+    }
+
+    private static List<String> getAccioTable(AccioMDL accioMDL)
+    {
+        List<String> accioTables = new ArrayList<>();
+        accioTables.addAll(accioMDL.listModels().stream().map(Model::getName).collect(toList()));
+        accioTables.addAll(accioMDL.listMetrics().stream().map(Metric::getName).collect(toList()));
+        // TODO add view https://github.com/Canner/accio/issues/334
+//        accioTables.addAll(accioMDL.listViews().stream().map(View::getName).collect(Collectors.toList()));
+        return accioTables;
     }
 
     /**
      * all_columns should be created after pg_type_mapping created.
      */
-    public static String createOrReplaceAllColumn(Metadata connector)
+    public static String createOrReplaceAllColumn(AccioMDL accioMDL)
     {
         // TODO: we should check if pg_type has created or not.
-        List<String> schemas = connector.listSchemas();
-        return format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", ACCIO_TEMP_NAME) +
-                schemas.stream()
-                        .map(schema -> format("SELECT '%s' as table_schema, col.column_name, col.ordinal_position, col.table_name, ptype.oid as typoid, ptype.typlen " +
-                                "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
-                                "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                                "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", schema, schema, ACCIO_TEMP_NAME + ".pg_type_mapping"))
-                        .reduce((a, b) -> a + " UNION ALL " + b)
-                        .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "The BigQuery project is empty")) + ";";
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", ACCIO_TEMP_NAME))
+                .append(format("SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
+                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
+                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", ACCIO_TEMP_NAME + ".pg_type_mapping"));
+        if (!getAccioTable(accioMDL).isEmpty()) {
+            stringBuilder.append(" UNION ALL ")
+                    .append("SELECT * FROM UNNEST([STRUCT<table_schema STRING, table_name STRING, column_name STRING, ordinal_position int64, typoid integer, typlen integer> ")
+                    .append(listColumnsRecords(accioMDL))
+                    .append("]);");
+        }
+        return stringBuilder.toString();
+    }
+
+    private static String listColumnsRecords(AccioMDL accioMDL)
+    {
+        // TODO add view https://github.com/Canner/accio/issues/334
+        List<String> records = new ArrayList<>();
+        for (Model model : accioMDL.listModels()) {
+            List<Column> columns = model.getColumns();
+            for (int i = 0; i < columns.size(); i++) {
+                Column col = columns.get(i);
+                Optional<Relationship> colRelationship = getColRelationship(accioMDL, col);
+                if (colRelationship.isEmpty()) {
+                    Optional<PGType<?>> pgType = pgNameToType(col.getType());
+                    if (pgType.isPresent()) {
+                        records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), col.getName(), i + 1, pgType.get().oid(), pgType.get().typeLen()));
+                    }
+                }
+                else {
+                    Optional<PGType<?>> colRelationShipType = getRelationshipType(accioMDL, model, colRelationship.get());
+                    if (colRelationShipType.isPresent()) {
+                        records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), model.getName(), col.getName(), i + 1, colRelationShipType.get().oid(), colRelationShipType.get().typeLen()));
+                    }
+                }
+            }
+        }
+        // TODO Add timegrain as column https://github.com/Canner/accio/issues/342
+        for (Metric metric : accioMDL.listMetrics()) {
+            int i = 1;
+            List<Column> columns = new ArrayList<>();
+            columns.addAll(metric.getDimension());
+            columns.addAll(metric.getMeasure());
+            for (Column col : columns) {
+                Optional<PGType<?>> pgType = pgNameToType(col.getType());
+                if (pgType.isPresent()) {
+                    records.add(format("('%s', '%s', '%s', %s, %s, %s)", accioMDL.getSchema(), metric.getName(), col.getName(), i, pgType.get().oid(), pgType.get().typeLen()));
+                    i = i + 1;
+                }
+            }
+        }
+        return String.join(", ", records);
+    }
+
+    private static Optional<PGType<?>> getRelationshipType(AccioMDL accioMDL, Model model, Relationship relationship)
+    {
+        if (model.getName().equals(relationship.getModels().get(0))) {
+            Optional<Model> rightModel = accioMDL.getModel(relationship.getModels().get(1));
+            switch (relationship.getJoinType()) {
+                case ONE_TO_ONE:
+                case MANY_TO_ONE:
+                    return rightModel.flatMap(BigQueryUtils::getModelPrimaryKeyType);
+                case ONE_TO_MANY:
+                    return rightModel
+                            .flatMap(BigQueryUtils::getModelPrimaryKeyType)
+                            .flatMap(type -> Optional.of(getArrayType(type.oid())));
+                default:
+                    throw new AccioException(GENERIC_INTERNAL_ERROR, "Get relationship type failed, relationship: " + relationship.getName());
+            }
+        }
+
+        Optional<Model> leftModel = accioMDL.getModel(relationship.getModels().get(0));
+        switch (relationship.getJoinType()) {
+            case ONE_TO_ONE:
+            case ONE_TO_MANY:
+                return leftModel.flatMap(BigQueryUtils::getModelPrimaryKeyType);
+            case MANY_TO_ONE:
+                return leftModel
+                        .flatMap(BigQueryUtils::getModelPrimaryKeyType)
+                        .flatMap(type -> Optional.of(getArrayType(type.oid())));
+            default:
+                throw new AccioException(GENERIC_INTERNAL_ERROR, "Get relationship type failed, relationship: " + relationship.getName());
+        }
+    }
+
+    private static Optional<Relationship> getColRelationship(AccioMDL accioMDL, Column col)
+    {
+        if (col.getRelationship().isEmpty()) {
+            return Optional.empty();
+        }
+        return accioMDL.getRelationship(col.getRelationship().get());
+    }
+
+    private static Optional<PGType<?>> getModelPrimaryKeyType(Model model)
+    {
+        String primaryKey = model.getPrimaryKey();
+        Optional<Column> column = model.getColumns().stream().filter(col -> col.getName().equals(primaryKey)).findFirst();
+        return column.flatMap(value -> pgNameToType(value.getType()));
     }
 
     public static String createOrReplacePgTypeMapping()
