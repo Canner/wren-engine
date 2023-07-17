@@ -34,4 +34,6 @@ jobs:
           ACCIO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
           LATEST_COMMIT=$(git log -1 --pretty=%h)
           docker tag accio:${ACCIO_VERSION}-amd64 ghcr.io/canner/accio:dev-${LATEST_COMMIT}
+          docker tag accio:${ACCIO_VERSION}-amd64 ghcr.io/canner/accio:latest
           docker push ghcr.io/canner/accio:dev-${LATEST_COMMIT}
+          docker push ghcr.io/canner/accio:latest
