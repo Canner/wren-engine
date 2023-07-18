@@ -46,7 +46,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
@@ -63,6 +62,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
 
 public class PreAggregationManager
 {
@@ -105,7 +105,7 @@ public class PreAggregationManager
     {
         String catalogName = mdl.getCatalog();
         String schemaName = mdl.getSchema();
-        List<TaskInfo> taskInfoList = listTaskInfo(catalogName, schemaName, Optional.of(Boolean.TRUE)).join();
+        List<TaskInfo> taskInfoList = listTaskInfo(catalogName, schemaName, Optional.of(true)).join();
         if (!taskInfoList.isEmpty()) {
             throw new AccioException(GENERIC_USER_ERROR, format("Pre-aggregation is already running; catalogName: %s, schemaName: %s", mdl.getCatalog(), mdl.getSchema()));
         }
@@ -289,10 +289,8 @@ public class PreAggregationManager
         return supplyAsync(
                 () -> tasks.values().stream()
                         .map(Task::getTaskInfo)
-                        .filter(catalogNamePred)
-                        .filter(schemaNamePred)
-                        .filter(inProgressPred)
-                        .collect(Collectors.toList()),
+                        .filter(TaskInfo::inProgress)
+                        .collect(toList()),
                 executorService);
     }
 

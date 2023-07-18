@@ -48,7 +48,7 @@ public abstract class RequireAccioServer
     protected final Closer closer = Closer.create();
     protected final HttpClient client;
 
-    public static final JsonCodec<TaskInfo> TASK_INFO_CODEC = JsonCodec.jsonCodec(TaskInfo.class);
+    public static final JsonCodec<TaskInfo> TASK_INFO_CODEC = jsonCodec(TaskInfo.class);
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
 
     public RequireAccioServer()

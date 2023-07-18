@@ -44,6 +44,7 @@ public class PreAggregationResource
         this.accioManager = requireNonNull(accioManager, "accioManager is null");
     }
 
+    @Deprecated
     @PUT
     @Path("reload")
     public void reload(@Suspended AsyncResponse asyncResponse)

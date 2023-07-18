@@ -86,7 +86,7 @@ public class TestReloadPreAggregation
         reloadAccioMDL();
         TaskInfo taskInfo = reloadPreAggregationAsync();
         assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
-        taskInfo = waitUntilFinishing(taskInfo.getTaskId());
+        taskInfo = waitUntilFinished(taskInfo.getTaskId());
         assertPreAggregation("Revenue");
         assertThat(taskInfo.getCatalogName()).isEqualTo("canner-cml");
         assertThat(taskInfo.getSchemaName()).isEqualTo("tpch_tiny");
@@ -105,7 +105,7 @@ public class TestReloadPreAggregation
         reloadAccioMDL();
         taskInfo = reloadPreAggregationAsync();
         assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
-        taskInfo = waitUntilFinishing(taskInfo.getTaskId());
+        taskInfo = waitUntilFinished(taskInfo.getTaskId());
         preAggregationTable = taskInfo.getPreAggregationTables().get(0);
         assertThat(preAggregationTable.getErrorMessage()).isPresent();
         assertThat(taskInfo.getEndTime()).isAfter(taskInfo.getStartTime());
@@ -132,7 +132,7 @@ public class TestReloadPreAggregation
         Files.copy(Path.of(requireNonNull(getClass().getClassLoader().getResource(resourcePath)).getPath()), accioMDLFilePath, REPLACE_EXISTING);
     }
 
-    private TaskInfo waitUntilFinishing(String taskId)
+    private TaskInfo waitUntilFinished(String taskId)
             throws InterruptedException, ExecutionException, TimeoutException
     {
         return supplyAsync(() -> {
