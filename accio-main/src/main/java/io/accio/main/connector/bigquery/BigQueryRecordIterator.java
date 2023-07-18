@@ -25,6 +25,7 @@ import io.accio.connector.bigquery.BigQueryType;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
@@ -118,7 +119,9 @@ public class BigQueryRecordIterator
             case DATETIME:
                 return convertToMicroseconds(LocalDateTime.parse(fieldValue.getStringValue()));
             case TIMESTAMP:
-                return fieldValue.getTimestampValue();
+                long microSeconds = fieldValue.getTimestampValue();
+                Instant instant = Instant.ofEpochSecond(microSeconds / 1000000, microSeconds % 1000000 * 1000);
+                return LocalDateTime.ofInstant(instant, UTC);
             case NUMERIC:
             case BIGNUMERIC:
                 return fieldValue.getNumericValue();

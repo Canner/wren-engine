@@ -18,9 +18,7 @@ import io.netty.buffer.ByteBuf;
 
 import javax.annotation.Nonnull;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
@@ -74,9 +72,7 @@ public class TimestampType
     @Override
     public byte[] encodeAsUTF8Text(@Nonnull Object value)
     {
-        long microSeconds = (long) value;
-        Instant instant = Instant.ofEpochSecond(microSeconds / 1000000, microSeconds % 1000000 * 1000);
-        LocalDateTime dt = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+        LocalDateTime dt = (LocalDateTime) value;
         return PG_TIMESTAMP.format(dt).getBytes(UTF_8);
     }
 

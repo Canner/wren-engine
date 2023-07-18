@@ -22,7 +22,9 @@ import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
 
 import java.sql.Blob;
+import java.sql.Date;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,6 +70,9 @@ public class PostgresRecordIterator
             else if (resultSet.getMetaData().getColumnType(i) == Types.SMALLINT) {
                 builder.add(resultSet.getShort(i));
             }
+            else if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
+                builder.add(resultSet.getTimestamp(i).toLocalDateTime());
+            }
             else if (resultSet.getMetaData().getColumnType(i) == Types.ARRAY) {
                 List<Object> objArray = Optional.ofNullable(resultSet.getArray(i))
                         .map(array -> {
@@ -75,6 +80,12 @@ public class PostgresRecordIterator
                                 return Arrays.stream((Object[]) array.getArray()).map(obj -> {
                                     if (obj instanceof PGobject) {
                                         return getPgObjectValue((PGobject) obj);
+                                    }
+                                    if (obj instanceof Timestamp) {
+                                        return ((Timestamp) obj).toLocalDateTime();
+                                    }
+                                    if (obj instanceof Date) {
+                                        return ((Date) obj).toLocalDate();
                                     }
                                     return obj;
                                 }).collect(Collectors.toList());
