@@ -84,7 +84,7 @@ public class DataType<T>
 
     public static DataType<Double> doubleDataType()
     {
-        return dataType("double", DoubleType.DOUBLE,
+        return dataType("float8", DoubleType.DOUBLE,
                 value -> {
                     if (Double.isFinite(value)) {
                         return value.toString();
