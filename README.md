@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://imgur.com/jXoTUDP" width="600" >
+  <img src="https://imgur.com/jXoTUDP.png" width="600" >
 </p>
 
 <p align="center">
@@ -12,19 +12,17 @@
   <a aria-label="Join the community on GitHub" href="https://discord.gg/ztDz8DCmG4">
     <img alt="" src="https://img.shields.io/badge/-JOIN%20THE%20COMMUNITY-orange?style=for-the-badge&logo=discord&logoColor=white&labelColor=grey&logoWidth=20">
   </a>
-  <a aria-label="Follow us" href="https://twitter.com/vulcansql">
-    <img alt="" src="https://img.shields.io/badge/-@vulcansql-orange?style=for-the-badge&logo=twitter&logoColor=white&labelColor=gray&logoWidth=20">
-  </a>
 </p>
 
 ## What is Accio
 
-Define relationships, metrics, and expressions consistently with Accio. Experience a unified data view and let us generate on-demand SQL for a composable, reusable approach.
+Define relationships, metrics, and expressions consistently with [Accio](https://www.getaccio.ai/). Experience a unified data view and let us generate on-demand SQL for a
+composable, reusable approach.
 
 Accio unites your data in one expansive view, putting an end to scattered metrics and inconsistent queries. We enable the definition of relationships and easy computation of
 metrics. By generating SQL on-demand, we ensure a consistent, composable, and reusable approach, making data analytics smoother and more efficient.
 
-![overview of Accio](https://imgur.com/o8sdYRC)
+![overview of Accio](https://imgur.com/o8sdYRC.png)
 
 ## Examples
 
@@ -53,9 +51,7 @@ IDEs.
 
 ## Documentation
 
-Below are some common scenarios that you may be interested:
-
-## Use Cases
+More details, please see our [documentation](https://www.getaccio.ai/docs/get-started/intro)!
 
 ## Community
 
