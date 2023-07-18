@@ -25,12 +25,10 @@ import io.accio.base.type.TimestampType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;
 
 import static io.accio.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
-import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 
 public class DuckdbRecordIterator
@@ -96,17 +94,12 @@ public class DuckdbRecordIterator
     {
         try {
             if (pgType instanceof TimestampType) {
-                return convertToMicroseconds(((Timestamp) value).toLocalDateTime());
+                return ((Timestamp) value).toLocalDateTime();
             }
             return value;
         }
         catch (Exception e) {
             throw new IllegalArgumentException("Unsupported value: " + value, e);
         }
-    }
-
-    private static long convertToMicroseconds(LocalDateTime localDateTime)
-    {
-        return (localDateTime.toInstant(UTC).getEpochSecond() * 1000000) + (localDateTime.getNano() / 1000);
     }
 }
