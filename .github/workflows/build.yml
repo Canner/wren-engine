@@ -24,6 +24,10 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+      - name: Remove Trino from local Maven repo to avoid caching it
+        # avoid caching
+        run: | 
+          rm -rf ~/.m2/repository/io/accio
       - name: build
         run: |
           ./mvnw clean install -B -DskipTests
