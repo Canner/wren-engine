@@ -6,15 +6,15 @@
   <a aria-label="Canner" href="https://cannerdata.com/">
     <img src="https://img.shields.io/badge/%F0%9F%A7%A1-Made%20by%20Canner-orange?style=for-the-badge">
   </a>
-  <a aria-label="License" href="https://github.com/Canner/vulcan-sql/blob/develop/LICENSE">
-    <img alt="" src="https://img.shields.io/github/license/canner/vulcan-sql?color=orange&style=for-the-badge">
+  <a aria-label="License" href="https://github.com/Canner/accio/blob/main/LICENSE">
+    <img alt="" src="https://img.shields.io/github/license/canner/accio?color=orange&style=for-the-badge">
   </a>
   <a aria-label="Join the community on GitHub" href="https://discord.gg/ztDz8DCmG4">
     <img alt="" src="https://img.shields.io/badge/-JOIN%20THE%20COMMUNITY-orange?style=for-the-badge&logo=discord&logoColor=white&labelColor=grey&logoWidth=20">
   </a>
 </p>
 
-## What is Accio
+## What is Accio ?
 
 Define relationships, metrics, and expressions consistently with [Accio](https://www.getaccio.ai/). Experience a unified data view and let us generate on-demand SQL for a
 composable, reusable approach.
