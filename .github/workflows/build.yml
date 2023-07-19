@@ -36,4 +36,4 @@ jobs:
           TEST_DUCKDB_STORAGE_ACCESS_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_ACCESS_KEY }}
           TEST_DUCKDB_STORAGE_SECRET_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_SECRET_KEY }}
         run: |
-          ./mvnw test -B --fail-at-end
+          ./mvnw test -e -B --fail-at-end
