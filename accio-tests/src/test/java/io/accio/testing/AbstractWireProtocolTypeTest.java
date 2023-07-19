@@ -83,10 +83,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractWireProtocolTypeTest
         extends AbstractWireProtocolTest
 {
-    // BigQuery has only INT64 type. We should cast other int to int32 after got them.
-    private static final List<String> TYPE_FORCED_TO_LONG = ImmutableList.of("integer", "smallint", "tinyint", "array(integer)", "array(smallint)", "array(tinyint)");
-    private static final List<String> TYPE_FORCED_TO_DOUBLE = ImmutableList.of("real", "array(real)");
-
     private final LocalDateTime beforeEpoch = LocalDateTime.of(1958, 1, 1, 13, 18, 3, 123_000_000);
     private final LocalDateTime epoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0);
     private final LocalDateTime afterEpoch = LocalDateTime.of(2019, 3, 18, 10, 1, 17, 987_000_000);
@@ -99,15 +95,50 @@ public abstract class AbstractWireProtocolTypeTest
     private final LocalDateTime timeGapInKathmandu = LocalDateTime.of(1986, 1, 1, 0, 13, 7);
 
     @Test
-    public void testBasicTypes()
+    public void testBoolean()
     {
         createTypeTest()
                 .addInput(booleanDataType(), true)
                 .addInput(booleanDataType(), false)
-                .addInput(bigintDataType(), 123_456_789_012L)
+                .executeSuite();
+    }
+
+    @Test
+    public void testSmallint()
+    {
+        createTypeTest()
+                .addInput(smallintDataType(), (short) 32_456, value -> (int) value)
+                .executeSuite();
+    }
+
+    @Test
+    public void testInteger()
+    {
+        createTypeTest()
                 .addInput(integerDataType(), 1_234_567_890)
-                .addInput(smallintDataType(), (short)32_456)
+                .executeSuite();
+    }
+
+    @Test
+    public void tesBigint()
+    {
+        createTypeTest()
+                .addInput(bigintDataType(), 123_456_789_012L)
+                .executeSuite();
+    }
+
+    @Test
+    public void testDouble()
+    {
+        createTypeTest()
                 .addInput(doubleDataType(), 123.45d)
+                .executeSuite();
+    }
+
+    @Test
+    public void testReal()
+    {
+        createTypeTest()
                 .addInput(realDataType(), 123.45f)
                 .executeSuite();
     }
@@ -197,39 +228,31 @@ public abstract class AbstractWireProtocolTypeTest
     }
 
     @Test
-    public void testCreatedDecimal()
+    public void testDecimal()
     {
-        decimalTests()
-                .executeSuite();
-    }
-
-    private WireProtocolTypeTest decimalTests()
-    {
-        // BigQuery will remove trailing zeros from values.
-        Function<BigDecimal, BigDecimal> removeTrailingZeros = value -> new BigDecimal(value.stripTrailingZeros().toPlainString());
-
-        return createTypeTest()
+        createTypeTest()
                 .addInput(decimalDataType(), new BigDecimal("0.123"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("0"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("193"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("19"))
                 .addInput(decimalDataType(3, 0), new BigDecimal("-193"))
-                .addInput(decimalDataType(3, 1), new BigDecimal("10.0"), removeTrailingZeros)
+                .addInput(decimalDataType(3, 1), new BigDecimal("10.0"))
                 .addInput(decimalDataType(3, 1), new BigDecimal("10.1"))
                 .addInput(decimalDataType(3, 1), new BigDecimal("-10.1"))
-                .addInput(decimalDataType(4, 2), new BigDecimal("2.00"), removeTrailingZeros)
-                .addInput(decimalDataType(4, 2), new BigDecimal("2.30"), removeTrailingZeros)
-                .addInput(decimalDataType(24, 2), new BigDecimal("2.00"), removeTrailingZeros)
-                .addInput(decimalDataType(24, 2), new BigDecimal("2.30"), removeTrailingZeros)
-                .addInput(decimalDataType(24, 2), new BigDecimal("123456789.30"), removeTrailingZeros)
-                .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"), removeTrailingZeros)
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.00"))
+                .addInput(decimalDataType(4, 2), new BigDecimal("2.30"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.00"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("2.30"))
+                .addInput(decimalDataType(24, 2), new BigDecimal("123456789.30"))
+                .addInput(decimalDataType(24, 4), new BigDecimal("12345678901234567890.3100"))
                 .addInput(decimalDataType(30, 5), new BigDecimal("3141592653589793238462643.38327"))
                 .addInput(decimalDataType(30, 5), new BigDecimal("-3141592653589793238462643.38327"))
                 .addInput(decimalDataType(30, 0), new BigDecimal("9223372036854775807"))
                 .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"))
                 .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
                 .addInput(decimalDataType(39, 9), new BigDecimal("271828182845904523536028747130.526624977"))
-                .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"));
+                .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"))
+                .executeSuite();
     }
 
     @Test
@@ -238,16 +261,16 @@ public abstract class AbstractWireProtocolTypeTest
         // basic types
         createTypeTest()
                 .addInput(arrayDataType(booleanDataType(), BOOL_ARRAY), asList(true, false))
-                .addInput(arrayDataType(smallintDataType(), INT2_ARRAY), asList((short) 1, (short) 2), value -> asList(1L, 2L))
-                .addInput(arrayDataType(integerDataType(), INT4_ARRAY), asList(1, 2, 1_234_567_890), value -> asList(1L, 2L, 1_234_567_890L))
+                .addInput(arrayDataType(smallintDataType(), INT2_ARRAY), asList((short) 1, (short) 2))
+                .addInput(arrayDataType(integerDataType(), INT4_ARRAY), asList(1, 2, 1_234_567_890))
                 .addInput(arrayDataType(bigintDataType(), INT8_ARRAY), asList(123_456_789_012L, 1_234_567_890L))
-                .addInput(arrayDataType(realDataType(), FLOAT4_ARRAY), asList(123.45f, 1.2345f), value -> asList(123.45, 1.2345))
+                .addInput(arrayDataType(realDataType(), FLOAT4_ARRAY), asList(123.45f, 1.2345f))
                 .addInput(arrayDataType(doubleDataType(), FLOAT8_ARRAY), asList(123.45d, 1.2345d))
                 .addInput(arrayDataType(decimalDataType(3, 1), NUMERIC_ARRAY), asList(new BigDecimal("1"), new BigDecimal("1.1")))
                 .addInput(arrayDataType(varcharDataType(), VARCHAR_ARRAY), asList("hello", "world"))
                 .addInput(arrayDataType(charDataType(), CHAR_ARRAY), asList("h", "w"))
                 .addInput(arrayDataType(byteaDataType(), BYTEA_ARRAY), asList("hello", "world"), value -> asList("\\x68656c6c6f", "\\x776f726c64"))
-                .addInput(arrayDataType(jsonDataType(), JSON_ARRAY), asList("{\"a\": \"apple\"}", "{\"b\": \"banana\"}"), value -> asList("{a:apple}", "{b:banana}"))
+                .addInput(arrayDataType(jsonDataType(), JSON_ARRAY), asList("{\"a\": \"apple\"}", "{\"b\": \"banana\"}"))
                 .addInput(arrayDataType(timestampDataType(3), TIMESTAMP_ARRAY),
                         asList(LocalDateTime.of(2019, 1, 1, 1, 1, 1, 1_000_000),
                                 LocalDateTime.of(2019, 1, 1, 1, 1, 1, 2_000_000)),
@@ -344,7 +367,7 @@ public abstract class AbstractWireProtocolTypeTest
         verify(zone.getRules().getValidOffsets(dateTime).size() == 2, "Expected %s to be doubled in %s", dateTime, zone);
     }
 
-    private static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, PGArray insertType)
+    protected static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, PGArray insertType)
     {
         return dataType(
                 insertType.typName(),
@@ -352,7 +375,7 @@ public abstract class AbstractWireProtocolTypeTest
                 valuesList -> "array" + valuesList.stream().map(elementType::toLiteral).collect(toList()));
     }
 
-    private WireProtocolTypeTest createTypeTest()
+    protected WireProtocolTypeTest createTypeTest()
     {
         return new WireProtocolTypeTest();
     }
@@ -405,12 +428,6 @@ public abstract class AbstractWireProtocolTypeTest
                         if (actual instanceof Array) {
                             assertArrayEquals((Array) actual, (List<?>) expectedResults.get(i), expectedTypeName.get(i));
                         }
-                        else if (TYPE_FORCED_TO_LONG.contains(expectedTypeName.get(i))) {
-                            assertThat(Long.valueOf((long) actual).intValue()).isEqualTo(expectedResults.get(i));
-                        }
-                        else if (TYPE_FORCED_TO_DOUBLE.contains(expectedTypeName.get(i))) {
-                            assertThat(Double.valueOf((double) actual).floatValue()).isEqualTo(expectedResults.get(i));
-                        }
                         else {
                             assertThat(actual).isEqualTo(expectedResults.get(i));
                         }
@@ -439,12 +456,6 @@ public abstract class AbstractWireProtocolTypeTest
                     String pValue = ((PGobject) value).getValue();
                     return ImmutableList.copyOf(pValue.substring(1, pValue.length() - 1).split(","));
                 }
-            }
-            if (TYPE_FORCED_TO_LONG.contains(expectedType) && value instanceof Long) {
-                return Long.valueOf((long) value).intValue();
-            }
-            if (TYPE_FORCED_TO_DOUBLE.contains(expectedType) && value instanceof Double) {
-                return Double.valueOf((double) value).floatValue();
             }
             return value;
         }
