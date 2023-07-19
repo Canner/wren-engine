@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main.server.module;
+package io.accio.server.module;
 
 import com.google.inject.Binder;
 import io.accio.main.web.AccioExceptionMapper;
