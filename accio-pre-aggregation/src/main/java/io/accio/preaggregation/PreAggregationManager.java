@@ -15,6 +15,7 @@
 package io.accio.preaggregation;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
@@ -23,6 +24,7 @@ import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.PreAggregationInfo;
 import io.accio.base.sql.SqlConverter;
+import io.accio.preaggregation.dto.PreAggregationTable;
 import io.accio.sqlrewrite.AccioPlanner;
 import io.airlift.log.Logger;
 import io.trino.sql.parser.ParsingOptions;
@@ -33,24 +35,34 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.accio.preaggregation.TaskInfo.TaskStatus.DONE;
+import static io.accio.preaggregation.TaskInfo.TaskStatus.RUNNING;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
+import static io.airlift.concurrent.Threads.threadsNamed;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
 
 public class PreAggregationManager
 {
@@ -66,6 +78,9 @@ public class PreAggregationManager
     private final PreAggregationTableMapping preAggregationTableMapping;
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> preAggregationScheduledFutures = new ConcurrentHashMap<>();
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("pre-aggregation-refresh-%s"));
+
+    private final ExecutorService executorService = newCachedThreadPool(threadsNamed("pre-aggregation-manager-%s"));
+    private final ConcurrentHashMap<String, Task> tasks = new ConcurrentHashMap<>();
 
     @Inject
     public PreAggregationManager(
@@ -86,10 +101,16 @@ public class PreAggregationManager
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    public synchronized void refreshPreAggregation(AccioMDL mdl)
+    private synchronized CompletableFuture<Void> refreshPreAggregation(AccioMDL mdl)
     {
-        removePreAggregation(mdl.getCatalog(), mdl.getSchema());
-        doPreAggregation(mdl).join();
+        String catalogName = mdl.getCatalog();
+        String schemaName = mdl.getSchema();
+        List<TaskInfo> taskInfoList = listTaskInfo(catalogName, schemaName, Optional.of(true)).join();
+        if (!taskInfoList.isEmpty()) {
+            throw new AccioException(GENERIC_USER_ERROR, format("Pre-aggregation is already running; catalogName: %s, schemaName: %s", mdl.getCatalog(), mdl.getSchema()));
+        }
+        removePreAggregation(catalogName, schemaName);
+        return doPreAggregation(mdl);
     }
 
     private CompletableFuture<Void> doPreAggregation(AccioMDL mdl)
@@ -226,6 +247,97 @@ public class PreAggregationManager
         if (tempFileLocations.contains(pathInfo)) {
             preAggregationService.deleteTarget(pathInfo);
             tempFileLocations.remove(pathInfo);
+        }
+    }
+
+    public TaskInfo createTaskUtilDone(AccioMDL mdl)
+    {
+        Optional<TaskInfo> taskInfoOptional = createTask(mdl)
+                .thenCompose(taskInfo -> {
+                    tasks.get(taskInfo.getTaskId()).waitUntilDone();
+                    return getTaskInfo(taskInfo.getTaskId());
+                })
+                .join();
+        return taskInfoOptional.orElseThrow(() -> new RuntimeException("Failed to create task"));
+    }
+
+    public CompletableFuture<TaskInfo> createTask(AccioMDL mdl)
+    {
+        return supplyAsync(() -> {
+            String taskId = randomUUID().toString();
+            TaskInfo taskInfo = new TaskInfo(taskId, mdl.getCatalog(), mdl.getSchema(), RUNNING, Instant.now());
+            Task task = new Task(taskInfo, refreshPreAggregation(mdl));
+            tasks.put(taskId, task);
+            return taskInfo;
+        });
+    }
+
+    public CompletableFuture<List<TaskInfo>> listTaskInfo(String catalogName, String schemaName, Optional<Boolean> inProgress)
+    {
+        Predicate<TaskInfo> catalogNamePred = catalogName.isEmpty() ?
+                (t) -> true :
+                (t) -> catalogName.equals(t.getCatalogName());
+
+        Predicate<TaskInfo> schemaNamePred = schemaName.isEmpty() ?
+                (t) -> true :
+                (t) -> schemaName.equals(t.getSchemaName());
+
+        Predicate<TaskInfo> inProgressPred = inProgress.isEmpty() ?
+                (t) -> true :
+                (t) -> t.inProgress() == inProgress.get();
+
+        return supplyAsync(
+                () -> tasks.values().stream()
+                        .map(Task::getTaskInfo)
+                        .filter(TaskInfo::inProgress)
+                        .collect(toList()),
+                executorService);
+    }
+
+    public CompletableFuture<Optional<TaskInfo>> getTaskInfo(String taskId)
+    {
+        requireNonNull(taskId);
+        return supplyAsync(
+                () -> tasks.containsKey(taskId) ?
+                        Optional.of(tasks.get(taskId).getTaskInfo()) :
+                        Optional.empty(),
+                executorService);
+    }
+
+    private class Task
+    {
+        private final TaskInfo taskInfo;
+        private final CompletableFuture<?> completableFuture;
+
+        public Task(TaskInfo taskInfo, CompletableFuture<?> completableFuture)
+        {
+            this.taskInfo = taskInfo;
+            this.completableFuture =
+                    completableFuture
+                            .thenRun(() -> {
+                                taskInfo.setPreAggregationTables(
+                                        preAggregationTableMapping.getPreAggregationInfoPairs(
+                                                        taskInfo.getCatalogName(),
+                                                        taskInfo.getSchemaName())
+                                                .stream()
+                                                .map(preAggregationInfoPair -> new PreAggregationTable(
+                                                        preAggregationInfoPair.getPreAggregationInfo().getName(),
+                                                        preAggregationInfoPair.getErrorMessage(),
+                                                        preAggregationInfoPair.getPreAggregationInfo().getRefreshTime(),
+                                                        Instant.ofEpochMilli(preAggregationInfoPair.getCreateTime())))
+                                                .collect(toImmutableList()));
+                                taskInfo.setTaskStatus(DONE);
+                            });
+        }
+
+        public TaskInfo getTaskInfo()
+        {
+            return taskInfo;
+        }
+
+        public void waitUntilDone()
+        {
+            completableFuture.join();
         }
     }
 }

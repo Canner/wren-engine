@@ -38,19 +38,19 @@
   "metrics": [
     {
       "preAggregated": "true",
-      "name": "Revenue_After",
+      "name": "Revenue_Fake",
       "baseModel": "Orders",
       "dimension": [
         {
-          "name": "custkey",
+          "name": "custkey_f",
           "type": "integer"
         }
       ],
       "measure": [
         {
-          "name": "revenue",
+          "name": "revenue_f",
           "type": "integer",
-          "expression": "sum(totalprice)"
+          "expression": "sum(totalprice_f)"
         }
       ],
       "timeGrain": [

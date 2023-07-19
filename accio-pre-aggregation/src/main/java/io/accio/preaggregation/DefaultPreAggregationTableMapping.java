@@ -18,12 +18,14 @@ import io.accio.base.client.duckdb.DuckdbClient;
 
 import javax.inject.Inject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 public class DefaultPreAggregationTableMapping
@@ -82,5 +84,19 @@ public class DefaultPreAggregationTableMapping
     public Set<Map.Entry<CatalogSchemaTableName, PreAggregationInfoPair>> entrySet()
     {
         return preAggregationTableMapping.entrySet();
+    }
+
+    @Override
+    public List<PreAggregationInfoPair> getPreAggregationInfoPairs(String catalogName, String schemaName)
+    {
+        requireNonNull(catalogName, "catalogName is null");
+        requireNonNull(schemaName, "schemaName is null");
+        return preAggregationTableMapping.entrySet()
+                .stream()
+                .filter(entry ->
+                        entry.getKey().getCatalogName().equals(catalogName)
+                                && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
+                .map(Map.Entry::getValue)
+                .collect(toImmutableList());
     }
 }

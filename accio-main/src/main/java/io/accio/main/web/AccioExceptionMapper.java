@@ -18,10 +18,13 @@ import io.accio.base.AccioException;
 import io.accio.main.web.dto.ErrorMessageDto;
 import io.airlift.log.Logger;
 
+import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
@@ -35,6 +38,21 @@ public final class AccioExceptionMapper
 {
     private static final Logger LOG = Logger.get(AccioExceptionMapper.class);
 
+    public static BiConsumer<? super Object, ? super Throwable> bindAsyncResponse(AsyncResponse asyncResponse)
+    {
+        return (response, throwable) -> {
+            if (throwable != null) {
+                asyncResponse.resume(throwable);
+            }
+            else if (response instanceof Response) {
+                asyncResponse.resume(response);
+            }
+            else {
+                asyncResponse.resume(Response.ok(response).build());
+            }
+        };
+    }
+
     @Override
     public Response toResponse(Throwable throwable)
     {
@@ -42,7 +60,8 @@ public final class AccioExceptionMapper
         if (throwable instanceof AccioException) {
             return failure((AccioException) throwable);
         }
-        else if (throwable instanceof ExecutionException && throwable.getCause() instanceof AccioException) {
+        else if ((throwable instanceof ExecutionException || throwable instanceof CompletionException)
+                && throwable.getCause() instanceof AccioException) {
             return failure((AccioException) throwable.getCause());
         }
         else {
