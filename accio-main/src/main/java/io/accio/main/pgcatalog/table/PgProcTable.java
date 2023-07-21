@@ -30,6 +30,7 @@ import static io.accio.base.type.RegprocType.REGPROC;
 import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.INTERNAL_LANGUAGE;
+import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.PG_CATALOG;
 import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.table;
 
 /**
@@ -83,7 +84,7 @@ public class PgProcTable
         return ImmutableMap.<String, String>builder()
                 .put("oid", "${hash}(concat('PROC', ${functionName}))")
                 .put("proname", "${split}(${functionName}, '__')${firstOrdinal}")
-                .put("pronamespace", "${hash}(${functionSchema})")
+                .put("pronamespace", "${hash}('" + PG_CATALOG + "')")
                 .put("proowner", "${hash}('" + DEFAULT_AUTH + "')")
                 .put("prolang", "${hash}('" + INTERNAL_LANGUAGE + "')")
                 .put("procost", "1")

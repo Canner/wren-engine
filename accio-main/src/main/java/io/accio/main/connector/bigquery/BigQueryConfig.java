@@ -18,6 +18,8 @@ import io.airlift.configuration.ConfigDescription;
 import io.airlift.configuration.ConfigSecuritySensitive;
 import io.airlift.configuration.validation.FileExists;
 
+import javax.validation.constraints.NotNull;
+
 import java.util.Optional;
 
 public class BigQueryConfig
@@ -30,6 +32,7 @@ public class BigQueryConfig
     private Optional<String> location = Optional.empty();
 
     private Optional<String> bucketName = Optional.empty();
+    private String metadataSchemaPrefix = "";
 
     public Optional<String> getCredentialsKey()
     {
@@ -107,6 +110,20 @@ public class BigQueryConfig
     public BigQueryConfig setBucketName(String bucketName)
     {
         this.bucketName = Optional.of(bucketName);
+        return this;
+    }
+
+    @NotNull
+    public String getMetadataSchemaPrefix()
+    {
+        return metadataSchemaPrefix;
+    }
+
+    @Config("bigquery.metadata.schema.prefix")
+    @ConfigDescription("Accio needs to create two schemas in BigQuery: accio_temp, pg_catalog. This is a config to add a prefix to the names of these two schemas if it's set.")
+    public BigQueryConfig setMetadataSchemaPrefix(String metadataSchemaPrefix)
+    {
+        this.metadataSchemaPrefix = metadataSchemaPrefix;
         return this;
     }
 }

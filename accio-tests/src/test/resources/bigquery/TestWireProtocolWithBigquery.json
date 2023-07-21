@@ -1,0 +1,101 @@
+{
+  "catalog": "canner-cml",
+  "schema": "tpch_tiny",
+  "relationships": [
+    {
+      "name": "OrdersLineitem",
+      "models": [
+        "Orders",
+        "Lineitem"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "Orders.orderkey = Lineitem.orderkey"
+    }
+  ],
+  "models": [
+    {
+      "name": "Orders",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "o_orderkey",
+          "type": "int4"
+        },
+        {
+          "name": "custkey",
+          "expression": "o_custkey",
+          "type": "int4"
+        },
+        {
+          "name": "orderstatus",
+          "expression": "o_orderstatus",
+          "type": "OrderStatus"
+        },
+        {
+          "name": "totalprice",
+          "expression": "o_totalprice",
+          "type": "float8"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
+        },
+        {
+          "name": "lineitems",
+          "type": "Lineitem",
+          "relationship": "OrdersLineitem"
+        }
+      ],
+      "primaryKey": "orderkey"
+    },
+    {
+      "name": "Lineitem",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.lineitem",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "l_orderkey",
+          "type": "int4"
+        },
+        {
+          "name": "partkey",
+          "expression": "l_partkey",
+          "type": "int4"
+        },
+        {
+          "name": "linenumber",
+          "expression": "l_linenumber",
+          "type": "int4"
+        },
+        {
+          "name": "extendedprice",
+          "expression": "l_extendedprice",
+          "type": "float8"
+        },
+        {
+          "name": "discount",
+          "expression": "l_discount",
+          "type": "float8"
+        },
+        {
+          "name": "shipdate",
+          "expression": "l_shipdate",
+          "type": "date"
+        },
+        {
+          "name": "orderkey_linenumber",
+          "type": "varchar",
+          "expression": "concat(l_orderkey, l_linenumber)"
+        }
+      ],
+      "primaryKey": "orderkey_linenumber"
+    }
+  ]
+}

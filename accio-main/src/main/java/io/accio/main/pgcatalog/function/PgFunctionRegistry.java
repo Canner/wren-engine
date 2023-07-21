@@ -41,6 +41,7 @@ import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT
 import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
 import static io.accio.main.pgcatalog.function.PgFunctions.PG_TO_CHAR;
 import static io.accio.main.pgcatalog.function.PgFunctions.SUBSTR;
+import static java.util.Objects.requireNonNull;
 
 @ThreadSafe
 public final class PgFunctionRegistry
@@ -48,8 +49,9 @@ public final class PgFunctionRegistry
     private final List<PgFunction> pgFunctions;
     private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();
 
-    public PgFunctionRegistry()
+    public PgFunctionRegistry(String pgCatalogName)
     {
+        requireNonNull(pgCatalogName);
         pgFunctions = ImmutableList.<PgFunction>builder()
                 .add(CURRENT_DATABASE)
                 .add(CURRENT_SCHEMAS)
@@ -61,8 +63,8 @@ public final class PgFunctionRegistry
                 .add(ARRAY_UPPER)
                 .add(PG_GET_EXPR)
                 .add(PG_GET_EXPR_PRETTY)
-                .add(FORMAT_TYPE)
-                .add(PG_GET_FUNCTION_RESULT)
+                .add(FORMAT_TYPE.apply(pgCatalogName))
+                .add(PG_GET_FUNCTION_RESULT.apply(pgCatalogName))
                 .add(PG_TO_CHAR)
                 .add(NOW)
                 .add(PG_EXPANDARRAY)

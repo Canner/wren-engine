@@ -48,16 +48,16 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
-import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.util.Objects.requireNonNull;
 
 public class PgCatalogManager
 {
     private final Map<String, PgCatalogTable> tables;
 
-    private final Metadata connector;
+    protected final String metadataSchemaName;
+    protected final String pgCatalogName;
 
+    private final Metadata connector;
     private final PgFunctionRegistry pgFunctionRegistry;
     private final PgCatalogTableBuilder pgCatalogTableBuilder;
     private final PgFunctionBuilder pgFunctionBuilder;
@@ -71,7 +71,9 @@ public class PgCatalogManager
         this.connector = requireNonNull(connector, "connector is null");
         this.pgCatalogTableBuilder = requireNonNull(pgCatalogTableBuilder, "pgCatalogBuilder is null");
         this.pgFunctionBuilder = requireNonNull(pgFunctionBuilder, "pgFunctionBuilder is null");
-        this.pgFunctionRegistry = new PgFunctionRegistry();
+        this.metadataSchemaName = requireNonNull(connector.getMetadataSchemaName());
+        this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
+        this.pgFunctionRegistry = new PgFunctionRegistry(pgCatalogName);
     }
 
     private Map<String, PgCatalogTable> initTables()
@@ -106,8 +108,8 @@ public class PgCatalogManager
             return;
         }
 
-        createCatalogIfNotExist(ACCIO_TEMP_NAME);
-        createCatalogIfNotExist(PG_CATALOG_NAME);
+        createCatalogIfNotExist(metadataSchemaName);
+        createCatalogIfNotExist(pgCatalogName);
         if (!isPgCatalogValid()) {
             initPgTables();
             initPgFunctions();
@@ -147,12 +149,12 @@ public class PgCatalogManager
 
     private boolean isPgCatalogValid()
     {
-        List<TableMetadata> remoteTables = connector.listTables(PG_CATALOG_NAME);
+        List<TableMetadata> remoteTables = connector.listTables(pgCatalogName);
         if (remoteTables.size() != tables.values().size()) {
             return false;
         }
 
-        List<String> remoteFunctions = connector.listFunctionNames(PG_CATALOG_NAME);
+        List<String> remoteFunctions = connector.listFunctionNames(pgCatalogName);
         return pgFunctionRegistry.getPgFunctions().size() == remoteFunctions.size();
     }
 

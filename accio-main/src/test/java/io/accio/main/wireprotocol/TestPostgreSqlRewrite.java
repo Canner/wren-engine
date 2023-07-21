@@ -28,6 +28,7 @@ import java.text.MessageFormat;
 
 import static io.accio.main.pgcatalog.OidHash.functionOid;
 import static io.accio.main.pgcatalog.OidHash.oid;
+import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static java.lang.String.format;
@@ -299,7 +300,7 @@ public class TestPostgreSqlRewrite
             @Language("SQL") String expectSql)
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
-        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
+        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, PG_CATALOG_NAME, statement);
         Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DOUBLE));
         assertThat(getFormattedSql(result, sqlParser)).isEqualTo(getFormattedSql(expect, sqlParser));
         assertThat(result).isEqualTo(expect);
@@ -309,7 +310,7 @@ public class TestPostgreSqlRewrite
     {
         Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DOUBLE));
 
-        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, statement);
+        Statement result = PostgreSqlRewrite.rewrite(regObjectFactory, DEFAULT_CATALOG, PG_CATALOG_NAME, statement);
 
         assertThat(result).describedAs("%n[actual]%n%s[expect]%n%s", getFormattedSql(result, sqlParser), getFormattedSql(statement, sqlParser)).isEqualTo(statement);
     }

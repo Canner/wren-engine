@@ -30,6 +30,8 @@ import javax.inject.Inject;
 import java.util.List;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
+import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -145,5 +147,17 @@ public class PostgresMetadata
     public boolean isPgCompatible()
     {
         return true;
+    }
+
+    @Override
+    public String getMetadataSchemaName()
+    {
+        return ACCIO_TEMP_NAME;
+    }
+
+    @Override
+    public String getPgCatalogName()
+    {
+        return PG_CATALOG_NAME;
     }
 }

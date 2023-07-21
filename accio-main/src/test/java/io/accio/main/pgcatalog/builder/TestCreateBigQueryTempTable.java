@@ -34,6 +34,8 @@ import static io.accio.base.dto.TimeGrain.TimeUnit.DAY;
 import static io.accio.base.dto.TimeGrain.TimeUnit.MONTH;
 import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.View.view;
+import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
+import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.accio.main.pgcatalog.builder.BigQueryUtils.createOrReplaceAllColumn;
 import static io.accio.main.pgcatalog.builder.BigQueryUtils.createOrReplaceAllTable;
 import static io.accio.main.pgcatalog.builder.BigQueryUtils.createOrReplacePgTypeMapping;
@@ -110,7 +112,7 @@ public class TestCreateBigQueryTempTable
     @Test
     public void testAllColumns()
     {
-        assertThat(createOrReplaceAllColumn(accioMDL))
+        assertThat(createOrReplaceAllColumn(accioMDL, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
                         "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
                         "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
@@ -142,7 +144,7 @@ public class TestCreateBigQueryTempTable
                         "('accio_schema', 'Revenue', 'orderkey', 1, 1043, -1), " +
                         "('accio_schema', 'Revenue', 'total', 2, 23, 4)]);");
 
-        assertThat(createOrReplaceAllColumn(EMPTY))
+        assertThat(createOrReplaceAllColumn(EMPTY, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
                         "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
                         "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
@@ -174,7 +176,7 @@ public class TestCreateBigQueryTempTable
                                         "test type table")))
                         .build());
 
-        assertThat(createOrReplaceAllColumn(typeMDL))
+        assertThat(createOrReplaceAllColumn(typeMDL, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_columns` AS " +
                         "SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
                         "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
@@ -195,24 +197,24 @@ public class TestCreateBigQueryTempTable
     @Test
     public void testAllTables()
     {
-        assertThat(createOrReplaceAllTable(accioMDL))
+        assertThat(createOrReplaceAllTable(accioMDL, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_tables` AS " +
-                        "SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES " +
+                        "SELECT table_catalog, 'pg_catalog' AS table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES " +
                         "UNION ALL SELECT * FROM UNNEST([STRUCT<table_catalog STRING, table_schema STRING, table_name STRING> " +
                         "('accio_catalog', 'accio_schema', 'OrdersModel'), " +
                         "('accio_catalog', 'accio_schema', 'LineitemModel'), " +
                         "('accio_catalog', 'accio_schema', 'CustomerModel'), " +
                         "('accio_catalog', 'accio_schema', 'Revenue')]);");
 
-        assertThat(createOrReplaceAllTable(EMPTY))
+        assertThat(createOrReplaceAllTable(EMPTY, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.all_tables` AS " +
-                        "SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
+                        "SELECT table_catalog, 'pg_catalog' AS table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
     }
 
     @Test
     public void testPgTypeMapping()
     {
-        assertThat(createOrReplacePgTypeMapping())
+        assertThat(createOrReplacePgTypeMapping(ACCIO_TEMP_NAME))
                 .isEqualTo("CREATE OR REPLACE VIEW `accio_temp.pg_type_mapping` AS SELECT * FROM " +
                         "UNNEST([STRUCT<bq_type string, oid int64> ('BOOL', 16),('ARRAY<BOOL>', 1000),('BYTES', 17),('ARRAY<BYTES>', 1001),('FLOAT64', 701)," +
                         "('ARRAY<FLOAT64>', 1022),('INT64', 20),('ARRAY<INT64>', 1016),('STRING', 1043),('ARRAY<STRING>', 1015),('DATE', 1082),('ARRAY<DATE>', 1182)," +

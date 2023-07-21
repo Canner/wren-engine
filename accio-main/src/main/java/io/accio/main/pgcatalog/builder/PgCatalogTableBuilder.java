@@ -133,7 +133,7 @@ public abstract class PgCatalogTableBuilder
         }
 
         metadata.directDDL(strSubstitutor.replace(sql));
-        LOG.info("pg_catalog.%s has created or updated", pgCatalogTable.getName());
+        LOG.info("%s.%s has created or updated", metadata.getPgCatalogName(), pgCatalogTable.getName());
     }
 
     protected abstract Map<String, String> initReplaceMap();

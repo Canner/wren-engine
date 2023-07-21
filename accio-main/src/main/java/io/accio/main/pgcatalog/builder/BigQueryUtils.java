@@ -63,7 +63,6 @@ import static io.accio.base.type.UuidType.UUID;
 import static io.accio.base.type.VarcharType.NameType.NAME;
 import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
-import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -137,11 +136,11 @@ public final class BigQueryUtils
 
     private BigQueryUtils() {}
 
-    public static String createOrReplaceAllTable(AccioMDL accioMDL)
+    public static String createOrReplaceAllTable(AccioMDL accioMDL, String metadataSchema, String pgCatalogName)
     {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", ACCIO_TEMP_NAME))
-                .append("SELECT table_catalog, table_schema, table_name FROM `pg_catalog`.INFORMATION_SCHEMA.TABLES");
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_tables` AS ", metadataSchema))
+                .append(format("SELECT table_catalog, 'pg_catalog' AS table_schema, table_name FROM `%s`.INFORMATION_SCHEMA.TABLES", pgCatalogName));
         if (!getAccioTable(accioMDL).isEmpty()) {
             stringBuilder.append(" UNION ALL ")
                     .append("SELECT * FROM UNNEST([STRUCT<table_catalog STRING, table_schema STRING, table_name STRING> ")
@@ -166,15 +165,15 @@ public final class BigQueryUtils
     /**
      * all_columns should be created after pg_type_mapping created.
      */
-    public static String createOrReplaceAllColumn(AccioMDL accioMDL)
+    public static String createOrReplaceAllColumn(AccioMDL accioMDL, String metadataSchema, String pgCatalogName)
     {
         // TODO: we should check if pg_type has created or not.
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", ACCIO_TEMP_NAME))
+        stringBuilder.append(format("CREATE OR REPLACE VIEW `%s.all_columns` AS ", metadataSchema))
                 .append(format("SELECT 'pg_catalog' as table_schema, col.table_name, col.column_name, col.ordinal_position, ptype.oid as typoid, ptype.typlen " +
-                        "FROM `pg_catalog`.INFORMATION_SCHEMA.COLUMNS col " +
+                        "FROM `%s`.INFORMATION_SCHEMA.COLUMNS col " +
                         "LEFT JOIN `%s` mapping ON col.data_type = mapping.bq_type " +
-                        "LEFT JOIN `pg_catalog.pg_type` ptype ON mapping.oid = ptype.oid", ACCIO_TEMP_NAME + ".pg_type_mapping"));
+                        "LEFT JOIN `%s.pg_type` ptype ON mapping.oid = ptype.oid", pgCatalogName, metadataSchema + ".pg_type_mapping", pgCatalogName));
         if (!getAccioTable(accioMDL).isEmpty()) {
             stringBuilder.append(" UNION ALL ")
                     .append("SELECT * FROM UNNEST([STRUCT<table_schema STRING, table_name STRING, column_name STRING, ordinal_position int64, typoid integer, typlen integer> ")
@@ -270,14 +269,14 @@ public final class BigQueryUtils
         return column.flatMap(value -> pgNameToType(value.getType()));
     }
 
-    public static String createOrReplacePgTypeMapping()
+    public static String createOrReplacePgTypeMapping(String metadataSchema)
     {
         String columnDefinition = "bq_type string, oid int64";
         String records = getBqTypeToPgType().entrySet().stream()
                 .map(entry -> format("('%s', %s)", entry.getKey(), entry.getValue().oid()))
                 .reduce((a, b) -> a + "," + b)
                 .orElseThrow(() -> new AccioException(GENERIC_INTERNAL_ERROR, "Build pg_type_mapping failed"));
-        return buildPgCatalogTableView(ACCIO_TEMP_NAME, "pg_type_mapping", columnDefinition, records, false);
+        return buildPgCatalogTableView(metadataSchema, "pg_type_mapping", columnDefinition, records, false);
     }
 
     public static String buildPgCatalogTableView(String datasetName, String viewName, String columnDefinition, String records, boolean isEmpty)

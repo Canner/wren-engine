@@ -39,6 +39,6 @@ public class PgWireProtocolExtraRewriter
     @Override
     public Statement rewrite(Statement statement)
     {
-        return PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), statement);
+        return PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), metadata.getPgCatalogName(), statement);
     }
 }

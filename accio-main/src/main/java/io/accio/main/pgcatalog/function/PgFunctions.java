@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.type.RecordType;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static io.accio.base.type.AnyType.ANY;
 import static io.accio.base.type.BigIntType.BIGINT;
@@ -30,6 +31,7 @@ import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.main.pgcatalog.function.PgFunction.Argument.argument;
 import static io.accio.main.pgcatalog.function.PgFunction.Language.SQL;
 import static io.accio.main.pgcatalog.function.PgFunction.builder;
+import static java.lang.String.format;
 
 public final class PgFunctions
 {
@@ -120,19 +122,19 @@ public final class PgFunctions
             .setReturnType(VARCHAR)
             .build();
 
-    public static final PgFunction FORMAT_TYPE = builder()
+    public static final Function<String, PgFunction> FORMAT_TYPE = (pgCatalogName) -> builder()
             .setName("format_type")
             .setLanguage(SQL)
-            .setDefinition("SELECT CASE WHEN type IS NULL THEN null ELSE CASE WHEN ARRAY_LENGTH(typresult) = 0 THEN '???' ELSE typresult[ordinal(1)] END END " +
-                    "FROM (SELECT array(SELECT typname FROM pg_catalog.pg_type WHERE oid = type) as typresult)")
+            .setDefinition(format("SELECT CASE WHEN type IS NULL THEN null ELSE CASE WHEN ARRAY_LENGTH(typresult) = 0 THEN '???' ELSE typresult[ordinal(1)] END END " +
+                    "FROM (SELECT array(SELECT typname FROM %s.pg_type WHERE oid = type) as typresult)", pgCatalogName))
             .setArguments(List.of(argument("type", INTEGER), argument("typmod", INTEGER)))
             .setReturnType(VARCHAR)
             .build();
 
-    public static final PgFunction PG_GET_FUNCTION_RESULT = builder()
+    public static final Function<String, PgFunction> PG_GET_FUNCTION_RESULT = (pgCatalogName) -> builder()
             .setName("pg_get_function_result")
             .setLanguage(SQL)
-            .setDefinition("select regexp_extract(remotename, r\".*___([_a-zA-Z1-9]+)*\", 1) from pg_catalog.pg_proc WHERE oid = func")
+            .setDefinition(format("select regexp_extract(remotename, r\".*___([_a-zA-Z1-9]+)*\", 1) from %s.pg_proc WHERE oid = func", pgCatalogName))
             .setArguments(List.of(argument("func", INTEGER)))
             .setReturnType(VARCHAR)
             .build();

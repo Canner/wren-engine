@@ -24,7 +24,6 @@ import io.accio.connector.bigquery.BigQueryClient;
 import io.airlift.log.Logger;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -83,9 +82,10 @@ public class TestBigQueryType
         createBigQueryTable();
     }
 
-    @AfterClass(alwaysRun = true)
-    public void close()
+    @Override
+    protected void cleanup()
     {
+        super.cleanup();
         bigQueryClient.dropTable(testSchemaTableName);
     }
 

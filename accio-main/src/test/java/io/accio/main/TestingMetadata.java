@@ -23,6 +23,9 @@ import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
 
+import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
+import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+
 public class TestingMetadata
         implements Metadata
 {
@@ -90,5 +93,17 @@ public class TestingMetadata
     public boolean isPgCompatible()
     {
         return false;
+    }
+
+    @Override
+    public String getMetadataSchemaName()
+    {
+        return ACCIO_TEMP_NAME;
+    }
+
+    @Override
+    public String getPgCatalogName()
+    {
+        return PG_CATALOG_NAME;
     }
 }

@@ -28,6 +28,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
@@ -45,6 +46,12 @@ public class TestResultSetMetadata
         extends AbstractWireProtocolTestWithBigQuery
 {
     private static final String TEST_CATALOG = "canner-cml";
+
+    @Override
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("bigquery/TestResultSetMetadata.json")).getPath());
+    }
 
     @Test
     public void testGetClientInfoProperties()

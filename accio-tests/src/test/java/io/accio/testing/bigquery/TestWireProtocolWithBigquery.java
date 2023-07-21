@@ -41,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -51,12 +52,19 @@ import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithBigquery
         extends AbstractWireProtocolTestWithBigQuery
 {
+    @Override
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("bigquery/TestWireProtocolWithBigquery.json")).getPath());
+    }
+
     @Test
     public void testSimpleQuery()
             throws IOException
@@ -823,17 +831,17 @@ public class TestWireProtocolWithBigquery
                         "  t.typname\n" +
                         ", t.oid\n" +
                         "FROM\n" +
-                        "  (\"canner-cml\".pg_catalog.pg_type t\n" +
-                        "INNER JOIN \"canner-cml\".pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
+                        "  (pg_catalog.pg_type t\n" +
+                        "INNER JOIN pg_catalog.pg_namespace n ON (t.typnamespace = n.oid))\n" +
                         "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (SELECT (c.relkind = 'c') \"?column?\"\n" +
                         "FROM\n" +
-                        "  \"canner-cml\".pg_catalog.pg_class c\n" +
+                        "  pg_catalog.pg_class c\n" +
                         "WHERE (c.oid = t.typrelid)\n" +
                         ")))"},
                 {"SELECT 1, 2, 3"},
                 {"SELECT array[1,2,3][1]"},
                 {"select current_schemas(false)[1]"},
-                {"select typinput = 1, typoutput = 1, typreceive = 1 from \"canner-cml\".pg_catalog.pg_type"},
+                {"select typinput = 1, typoutput = 1, typreceive = 1 from pg_catalog.pg_type"},
                 {"select * from unnest(generate_array(1, 10)) t(col_1)"},
                 {"select * from unnest(array[1,2,3]) t(col_1)"},
                 {"SELECT\n" +
@@ -841,15 +849,15 @@ public class TestWireProtocolWithBigquery
                         ", current_schemas(false)[s.r] nspname\n" +
                         "FROM\n" +
                         "UNNEST(generate_array(1, array_upper(current_schemas(false), 1))) s (r)"},
-                {"SELECT FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 AS \"l_orderkey\", COUNT(*) AS \"count\" " +
-                        "FROM \"tpch_tiny\".\"lineitem\" " +
-                        "GROUP BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 " +
-                        "ORDER BY FLOOR((\"tpch_tiny\".\"lineitem\".\"l_orderkey\" / 7500.0)) * 7500.0 ASC"},
-                {"SELECT (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) AS \"l_shipdate\", " +
-                        "count(distinct \"tpch_tiny\".\"lineitem\".\"l_orderkey\") AS \"count\" " +
-                        "FROM \"tpch_tiny\".\"lineitem\" " +
-                        "GROUP BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) " +
-                        "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"lineitem\".\"l_shipdate\") AS integer) + 1) ASC LIMIT 10\n"},
+                {"SELECT FLOOR((\"tpch_tiny\".\"Lineitem\".\"orderkey\" / 7500.0)) * 7500.0 AS \"l_orderkey\", COUNT(*) AS \"count\" " +
+                        "FROM \"tpch_tiny\".\"Lineitem\" " +
+                        "GROUP BY FLOOR((\"tpch_tiny\".\"Lineitem\".\"orderkey\" / 7500.0)) * 7500.0 " +
+                        "ORDER BY FLOOR((\"tpch_tiny\".\"Lineitem\".\"orderkey\" / 7500.0)) * 7500.0 ASC"},
+                {"SELECT (CAST(extract(dow from \"tpch_tiny\".\"Lineitem\".\"shipdate\") AS integer) + 1) AS \"l_shipdate\", " +
+                        "count(distinct \"tpch_tiny\".\"Lineitem\".\"orderkey\") AS \"count\" " +
+                        "FROM \"tpch_tiny\".\"Lineitem\" " +
+                        "GROUP BY (CAST(extract(dow from \"tpch_tiny\".\"Lineitem\".\"shipdate\") AS integer) + 1) " +
+                        "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"Lineitem\".\"shipdate\") AS integer) + 1) ASC LIMIT 10\n"},
                 {"SELECT DATE_TRUNC('year', (NOW() + INTERVAL '-30 year'))"}
         };
     }
@@ -962,7 +970,7 @@ public class TestWireProtocolWithBigquery
             while (result.next()) {
                 columnNames.add(result.getString("COLUMN_NAME"));
             }
-            assertThat(columnNames).containsExactlyInAnyOrder("orderkey", "custkey", "totalprice", "customer", "orderdate", "lineitems");
+            assertThat(columnNames).containsExactlyInAnyOrder("orderkey", "custkey", "totalprice", "orderdate", "lineitems");
         }
     }
 

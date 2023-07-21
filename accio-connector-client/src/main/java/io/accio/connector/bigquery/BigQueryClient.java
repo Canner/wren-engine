@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.cloud.bigquery.BigQuery.DatasetDeleteOption.deleteContents;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.AMBIGUOUS_NAME;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
@@ -174,6 +175,13 @@ public class BigQueryClient
     {
         if (!bigQuery.delete(TableId.of(schemaTableName.getSchemaName(), schemaTableName.getTableName()))) {
             throw new AccioException(NOT_FOUND, schemaTableName + " was not found");
+        }
+    }
+
+    public void dropDatasetWithAllContent(DatasetId datasetId)
+    {
+        if (!bigQuery.delete(datasetId, deleteContents())) {
+            throw new AccioException(NOT_FOUND, datasetId + " was not found");
         }
     }
 
