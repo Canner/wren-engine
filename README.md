@@ -12,6 +12,9 @@
   <a aria-label="Join the community on GitHub" href="https://discord.gg/ztDz8DCmG4">
     <img alt="" src="https://img.shields.io/badge/-JOIN%20THE%20COMMUNITY-orange?style=for-the-badge&logo=discord&logoColor=white&labelColor=grey&logoWidth=20">
   </a>
+  <a aria-label="Follow us" href="https://twitter.com/getaccio">
+    <img alt="" src="https://img.shields.io/badge/-@getaccio-orange?style=for-the-badge&logo=twitter&logoColor=white&labelColor=gray&logoWidth=20">
+  </a>
 </p>
 
 ## What is Accio ?
