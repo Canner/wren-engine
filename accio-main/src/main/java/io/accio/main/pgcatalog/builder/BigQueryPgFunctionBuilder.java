@@ -24,17 +24,20 @@ import java.util.Locale;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.base.type.VarcharType.VARCHAR;
-import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.accio.main.pgcatalog.builder.BigQueryUtils.toBqType;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class BigQueryPgFunctionBuilder
         extends PgFunctionBuilder
 {
+    private final String pgCatalogName;
+
     @Inject
     public BigQueryPgFunctionBuilder(Metadata connector)
     {
         super(connector);
+        this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
     }
 
     @Override
@@ -61,7 +64,7 @@ public class BigQueryPgFunctionBuilder
             parameterBuilder.setLength(parameterBuilder.length() - 1);
         }
 
-        return format("CREATE OR REPLACE FUNCTION %s.%s(%s) AS ((%s))", PG_CATALOG_NAME, pgFunction.getRemoteName(), parameterBuilder, pgFunction.getDefinition());
+        return format("CREATE OR REPLACE FUNCTION %s.%s(%s) AS ((%s))", pgCatalogName, pgFunction.getRemoteName(), parameterBuilder, pgFunction.getDefinition());
     }
 
     private String generateCreateJsFunction(PgFunction pgFunction)
@@ -77,7 +80,7 @@ public class BigQueryPgFunctionBuilder
         }
 
         return format("CREATE OR REPLACE FUNCTION %s.%s(%s) RETURNS %s LANGUAGE %s AS r\"\"\"%s\"\"\"",
-                PG_CATALOG_NAME,
+                pgCatalogName,
                 pgFunction.getRemoteName(),
                 parameterBuilder,
                 toBqType(pgFunction.getReturnType().orElse(VARCHAR)),

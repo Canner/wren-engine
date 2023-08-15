@@ -76,9 +76,9 @@ public final class PostgreSqlRewrite
 
     private PostgreSqlRewrite() {}
 
-    public static Statement rewrite(RegObjectFactory regObjectFactory, String defaultCatalog, Statement statement)
+    public static Statement rewrite(RegObjectFactory regObjectFactory, String defaultCatalog, String pgCatalogName, Statement statement)
     {
-        return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory), defaultCatalog).process(statement);
+        return (Statement) new Visitor(new RegObjectInterpreter(regObjectFactory), defaultCatalog, pgCatalogName).process(statement);
     }
 
     private static class Visitor
@@ -89,11 +89,13 @@ public final class PostgreSqlRewrite
         private final RegObjectInterpreter regObjectInterpreter;
 
         private final String defaultCatalog;
+        private final String pgCatalogName;
 
-        public Visitor(RegObjectInterpreter regObjectInterpreter, String defaultCatalog)
+        public Visitor(RegObjectInterpreter regObjectInterpreter, String defaultCatalog, String pgCatalogName)
         {
             this.regObjectInterpreter = regObjectInterpreter;
             this.defaultCatalog = defaultCatalog;
+            this.pgCatalogName = pgCatalogName;
         }
 
         @Override
@@ -358,7 +360,7 @@ public final class PostgreSqlRewrite
 
         private CatalogSchemaTableName toDefaultCatalogPgCatalogSchemaTableName(List<String> parts)
         {
-            return new CatalogSchemaTableName(defaultCatalog, new SchemaTableName(PGCATALOG, parts.get(parts.size() - 1)));
+            return new CatalogSchemaTableName(defaultCatalog, new SchemaTableName(pgCatalogName, parts.get(parts.size() - 1)));
         }
 
         private static QualifiedName removeNamespace(QualifiedName name)

@@ -44,4 +44,8 @@ public interface Metadata
     List<Column> describeQuery(String sql, List<Parameter> parameters);
 
     boolean isPgCompatible();
+
+    String getMetadataSchemaName();
+
+    String getPgCatalogName();
 }

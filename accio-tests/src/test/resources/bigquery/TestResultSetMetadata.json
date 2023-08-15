@@ -1,0 +1,33 @@
+{
+  "catalog": "canner-cml",
+  "schema": "tpch_tiny",
+  "models": [
+    {
+      "name": "Nation",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.nation",
+      "columns": [
+        {
+          "name": "nationkey",
+          "expression": "n_nationkey",
+          "type": "int4"
+        },
+        {
+          "name": "name",
+          "expression": "n_name",
+          "type": "varchar"
+        },
+        {
+          "name": "regionkey",
+          "expression": "n_regionkey",
+          "type": "int4"
+        },
+        {
+          "name": "comment",
+          "expression": "n_comment",
+          "type": "varchar"
+        }
+      ],
+      "primaryKey": "nationkey"
+    }
+  ]
+}

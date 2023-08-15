@@ -47,6 +47,7 @@ import java.util.regex.Matcher;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
+import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static io.accio.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static java.lang.String.format;
@@ -59,11 +60,13 @@ public class BigQueryMetadata
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
 
-    private final PgFunctionRegistry pgFunctionRegistry = new PgFunctionRegistry();
+    private final PgFunctionRegistry pgFunctionRegistry;
 
     private final Map<String, String> pgToBqFunctionNameMappings;
 
     private final String location;
+    private final String metadataSchemaName;
+    private final String pgCatalogName;
 
     @Inject
     public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig)
@@ -73,6 +76,9 @@ public class BigQueryMetadata
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "Location must be set"));
+        this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + ACCIO_TEMP_NAME;
+        this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
+        this.pgFunctionRegistry = new PgFunctionRegistry(pgCatalogName);
     }
 
     /**
@@ -162,7 +168,7 @@ public class BigQueryMetadata
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
         if (pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).isPresent()) {
-            return QualifiedName.of(PG_CATALOG_NAME, pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).get().getRemoteName());
+            return QualifiedName.of(pgCatalogName, pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).get().getRemoteName());
         }
 
         return QualifiedName.of(functionName);
@@ -219,5 +225,17 @@ public class BigQueryMetadata
     public boolean isPgCompatible()
     {
         return false;
+    }
+
+    @Override
+    public String getMetadataSchemaName()
+    {
+        return metadataSchemaName;
+    }
+
+    @Override
+    public String getPgCatalogName()
+    {
+        return pgCatalogName;
     }
 }

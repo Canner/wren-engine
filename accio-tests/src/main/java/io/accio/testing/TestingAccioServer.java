@@ -23,6 +23,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
+import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.server.module.BigQueryConnectorModule;
 import io.accio.main.server.module.PostgresConnectorModule;
 import io.accio.main.server.module.PostgresWireProtocolModule;
@@ -92,6 +93,9 @@ public class TestingAccioServer
                 .setRequiredConfigurationProperties(requiredConfigProps)
                 .quiet()
                 .initialize();
+
+        PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
+        pgCatalogManager.initPgCatalog();
 
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }

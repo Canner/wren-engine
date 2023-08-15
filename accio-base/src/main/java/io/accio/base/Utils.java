@@ -18,11 +18,16 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Objects;
 
+import static java.lang.Character.MAX_RADIX;
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
+
 public class Utils
 {
     private Utils() {}
 
     private static final SecureRandom random = new SecureRandom();
+    private static final int RANDOM_SUFFIX_LENGTH = 10;
 
     public static void checkArgument(boolean expression, String errorMessage)
     {
@@ -33,7 +38,8 @@ public class Utils
 
     public static String randomIntString()
     {
-        return Integer.toString(random.nextInt());
+        String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
+        return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
     }
 
     public static <T> T firstNonNull(T... objects)

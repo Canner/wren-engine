@@ -74,8 +74,11 @@ public abstract class RequireAccioServer
     public void close()
             throws IOException
     {
+        cleanup();
         closer.close();
     }
+
+    protected void cleanup() {}
 
     protected void reloadAccioMDL()
     {

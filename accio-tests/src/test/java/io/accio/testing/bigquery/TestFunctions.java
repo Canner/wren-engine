@@ -39,7 +39,6 @@ public class TestFunctions
                 // {"select array_out(array[1,2])", null, false},
                 {"select pg_relation_size(1)", null, false},
                 {"select pg_relation_size(1, 'abc')", null, false},
-                {"select current_schemas(false)", "pg_catalog", true},
                 // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
@@ -84,6 +83,18 @@ public class TestFunctions
             else {
                 assertThat(resultSet.getString(1)).isEqualTo(expected);
             }
+        }
+    }
+
+    @Test
+    public void testCurrentSchemas()
+            throws SQLException
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select current_schemas(false)");
+            ResultSet resultSet = stmt.executeQuery();
+            assertThat(resultSet.next()).isTrue();
+            assertThat(resultSet.getArray(1).getArray()).isNotNull();
         }
     }
 

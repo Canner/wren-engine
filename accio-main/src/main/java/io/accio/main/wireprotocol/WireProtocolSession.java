@@ -233,7 +233,7 @@ public class WireProtocolSession
                     accioMetastore.getAccioMDL());
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(accioRewritten, PARSE_AS_DECIMAL);
-            Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), parsedStatement);
+            Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), metadata.getPgCatalogName(), parsedStatement);
             List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
             preparedStatements.put(statementName,
                     new PreparedStatement(

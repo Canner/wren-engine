@@ -32,7 +32,7 @@ public abstract class PgFunctionBuilder
     {
         String sql = generateCreateFunction(pgFunction);
         connector.directDDL(sql);
-        LOG.info("pg_catalog.%s has created or updated", pgFunction.getName());
+        LOG.info("%s.%s has created or updated", connector.getPgCatalogName(), pgFunction.getName());
     }
 
     protected abstract String generateCreateFunction(PgFunction pgFunction);
