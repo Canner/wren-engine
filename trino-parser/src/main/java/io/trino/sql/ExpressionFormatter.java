@@ -971,7 +971,7 @@ public final class ExpressionFormatter
         }
 
         StringBuilder builder = new StringBuilder();
-        if (dialect == DEFAULT || dialect == DUCKDB) {
+        if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
             builder.append("U&");
         }
         builder.append("'");
@@ -987,7 +987,7 @@ public final class ExpressionFormatter
                 builder.append(ch);
             }
             else {
-                if (dialect == DEFAULT || dialect == DUCKDB) {
+                if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
                     if (codePoint <= 0xFFFF) {
                         builder.append('\\');
                         builder.append(format("%04X", codePoint));

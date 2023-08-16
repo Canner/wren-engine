@@ -15,19 +15,17 @@
 package io.accio.testing.postgres;
 
 import com.google.common.collect.ImmutableMap;
-import io.accio.testing.AbstractWireProtocolTest;
+import io.accio.testing.AbstractWireProtocolTypeTest;
 import io.accio.testing.TestingAccioServer;
 import io.accio.testing.TestingPostgreSqlServer;
 
-public abstract class AbstractWireProtocolTestWithPostgres
-        extends AbstractWireProtocolTest
+public class TestWireProtocolTypeWithPostgres
+        extends AbstractWireProtocolTypeTest
 {
-    private TestingPostgreSqlServer testingPostgreSqlServer;
-
     @Override
     protected TestingAccioServer createAccioServer()
     {
-        testingPostgreSqlServer = new TestingPostgreSqlServer();
+        TestingPostgreSqlServer testingPostgreSqlServer = new TestingPostgreSqlServer();
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("postgres.jdbc.url", testingPostgreSqlServer.getJdbcUrl())
                 .put("postgres.user", testingPostgreSqlServer.getUser())
