@@ -248,6 +248,12 @@
             </dependency>
 
             <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>4.6.1</version>
+            </dependency>
+
+            <dependency>
                 <groupId>io.accio</groupId>
                 <artifactId>accio-base</artifactId>
                 <version>${project.version}</version>
@@ -368,6 +374,12 @@
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
                 <version>19.0.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jgrapht</groupId>
+                <artifactId>jgrapht-core</artifactId>
+                <version>1.5.2</version>
             </dependency>
 
             <dependency>

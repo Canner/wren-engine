@@ -15,6 +15,8 @@ popd
 
 WORK_DIR="$(mktemp -d)"
 cp ${SOURCE_DIR}/accio-server/target/accio-server-${ACCIO_VERSION}-executable.jar ${WORK_DIR}
+cp ${SOURCE_DIR}/accio-validation/target/accio-cli ${WORK_DIR}
+
 
 CONTAINER="accio:${ACCIO_VERSION}"
 
