@@ -22,9 +22,10 @@ import java.util.List;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class Model
-        implements PreAggregationInfo
+        implements PreAggregationInfo, AccioObject
 {
     private final String name;
     private final String refSql;
@@ -154,5 +155,11 @@ public class Model
                 ", refreshTime='" + refreshTime + '\'' +
                 ", description='" + description + '\'' +
                 '}';
+    }
+
+    @Override
+    public List<String> getColumnNames()
+    {
+        return columns.stream().map(Column::getName).collect(toList());
     }
 }

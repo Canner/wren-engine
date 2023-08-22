@@ -16,6 +16,7 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import io.airlift.units.Duration;
 
 import java.util.List;
@@ -24,9 +25,10 @@ import java.util.Optional;
 
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class Metric
-        implements PreAggregationInfo
+        implements PreAggregationInfo, AccioObject
 {
     private final String name;
     private final String baseModel;
@@ -179,5 +181,15 @@ public class Metric
                 ", refreshTime=" + refreshTime +
                 ", description='" + description + '\'' +
                 '}';
+    }
+
+    @Override
+    public List<String> getColumnNames()
+    {
+        return ImmutableList.<String>builder()
+                .addAll(dimension.stream().map(Column::getName).collect(toList()))
+                .addAll(measure.stream().map(Column::getName).collect(toList()))
+                .addAll(timeGrain.stream().map(TimeGrain::getRefColumn).collect(toList()))
+                .build();
     }
 }
