@@ -271,7 +271,7 @@ public class TestBigQuerySqlConverter
                         "ORDER BY test.t1.c2", SessionContext.builder().build()))
                 .isEqualTo("SELECT\n" +
                         "  t1.c1\n" +
-                        ", t1.c2\n" +
+                        ", `t1`.c2\n" +
                         ", t1.c3\n" +
                         "FROM\n" +
                         "  accio.test.t1\n" +
