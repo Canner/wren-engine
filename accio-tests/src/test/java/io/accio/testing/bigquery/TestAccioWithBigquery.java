@@ -39,9 +39,10 @@ public class TestAccioWithBigquery
     public Object[][] queryModel()
     {
         return new Object[][] {
-                {"select * from Orders"},
-                {"select * from Orders WHERE orderkey > 100"},
-                {"select * from Orders a JOIN Customer b ON a.custkey = b.custkey"},
+                {"SELECT * FROM Orders"},
+                {"SELECT * FROM Orders WHERE orderkey > 100"},
+                {"SELECT * FROM Orders a JOIN Customer b ON a.custkey = b.custkey"},
+                {"SELECT * FROM Orders WHERE nation_name IS NOT NULL"}
         };
     }
 
@@ -69,6 +70,7 @@ public class TestAccioWithBigquery
             assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
             assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatus"));
             assertThatNoException().isThrownBy(() -> resultSet.getString("totalprice"));
+            assertThatNoException().isThrownBy(() -> resultSet.getString("nation_name"));
             assertThatThrownBy(() -> resultSet.getString("o_orderkey"))
                     .hasMessageMatching(".*The column name o_orderkey was not found in this ResultSet.*");
             int count = 1;

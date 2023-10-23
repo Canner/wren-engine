@@ -16,6 +16,7 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,7 +54,14 @@ public class Relationship
 
     public static Relationship reverse(Relationship relationship)
     {
-        return new Relationship(relationship.name, relationship.getModels(), JoinType.reverse(relationship.joinType), relationship.getCondition(), true, relationship.getManySideSortKeys(), relationship.getDescription());
+        return new Relationship(
+                relationship.name,
+                Lists.reverse(relationship.getModels()),
+                JoinType.reverse(relationship.joinType),
+                relationship.getCondition(),
+                true,
+                relationship.getManySideSortKeys(),
+                relationship.getDescription());
     }
 
     @JsonCreator

@@ -82,7 +82,7 @@ public class TestBigQueryPreAggregation
     public void testType()
             throws SQLException
     {
-        String mappingName = preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = preAggregationTableMapping.get().getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -152,7 +152,7 @@ public class TestBigQueryPreAggregation
     public void testTypesInPredicate(String columnName, Object value)
             throws SQLException
     {
-        String mappingName = preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = preAggregationTableMapping.get().getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -190,7 +190,7 @@ public class TestBigQueryPreAggregation
     public void testTypesInPredicateWithPreparedStatement(String columnName, Object value)
             throws SQLException
     {
-        String mappingName = preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = preAggregationTableMapping.get().getPreAggregationInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());

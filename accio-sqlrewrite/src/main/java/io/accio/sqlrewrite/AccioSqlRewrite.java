@@ -14,15 +14,12 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableSet;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
-import io.accio.base.dto.EnumDefinition;
-import io.accio.base.dto.EnumValue;
-import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Analysis;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
-import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
@@ -30,21 +27,25 @@ import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Statement;
-import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
+import org.jgrapht.graph.DirectedAcyclicGraph;
+import org.jgrapht.graph.GraphCycleProhibitedException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.google.common.base.Strings.nullToEmpty;
+import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
-import static java.util.stream.Collectors.toUnmodifiableMap;
 
 public class AccioSqlRewrite
         implements AccioRule
@@ -56,16 +57,46 @@ public class AccioSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
     {
-        Map<String, Query> modelQueries =
-                analysis.getModels().stream()
-                        .collect(toUnmodifiableMap(Model::getName, Utils::parseModelSql));
+        DirectedAcyclicGraph<String, Object> graph = new DirectedAcyclicGraph<>(Object.class);
+        Set<ModelInfo> modelInfos = analysis.getModels().stream().map(model -> ModelInfo.get(model, accioMDL)).collect(toSet());
+        Set<ModelInfo> requiredModelInfos = new HashSet<>();
+        modelInfos.forEach(modelInfo -> addModelToGraph(modelInfo, graph, accioMDL, requiredModelInfos));
+        Set<ModelInfo> allModelInfos = ImmutableSet.<ModelInfo>builder().addAll(modelInfos).addAll(requiredModelInfos).build();
 
-        Node rewriteWith = new WithRewriter(
-                modelQueries.entrySet()
-                        .stream().map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
-                        .collect(toList()))
-                .process(root);
-        return (Statement) new Rewriter(analysis, accioMDL).process(rewriteWith);
+        List<WithQuery> withQueries = new ArrayList<>();
+        graph.iterator().forEachRemaining(modelName -> {
+            ModelInfo modelInfo = allModelInfos.stream()
+                    .filter(info -> info.getModel().getName().equals(modelName))
+                    .findAny()
+                    .orElseThrow(() -> new IllegalArgumentException(format("Missing model name %s in graph", modelName)));
+            withQueries.add(new WithQuery(new Identifier(modelInfo.getModel().getName()), parseQuery(modelInfo.getSql()), Optional.empty()));
+        });
+
+        Node rewriteWith = new WithRewriter(withQueries).process(root);
+        return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);
+    }
+
+    private static void addModelToGraph(ModelInfo modelInfo, DirectedAcyclicGraph<String, Object> graph, AccioMDL mdl, Set<ModelInfo> modelInfos)
+    {
+        // add vertex
+        graph.addVertex(modelInfo.getModel().getName());
+        modelInfo.getRequiredModels().forEach(graph::addVertex);
+
+        //add edge
+        try {
+            modelInfo.getRequiredModels().forEach(modelName ->
+                    graph.addEdge(modelName, modelInfo.getModel().getName()));
+        }
+        catch (GraphCycleProhibitedException ex) {
+            throw new IllegalArgumentException("found cycle in models", ex);
+        }
+
+        // add required models to graph
+        for (String modelName : modelInfo.getRequiredModels()) {
+            ModelInfo info = ModelInfo.get(mdl.getModel(modelName).orElseThrow(), mdl);
+            modelInfos.add(info);
+            addModelToGraph(info, graph, mdl, modelInfos);
+        }
     }
 
     @Override
@@ -107,10 +138,10 @@ public class AccioSqlRewrite
     private static class Rewriter
             extends BaseRewriter<Void>
     {
-        private final Analysis analysis;
         private final AccioMDL accioMDL;
+        private final Analysis analysis;
 
-        Rewriter(Analysis analysis, AccioMDL accioMDL)
+        Rewriter(AccioMDL accioMDL, Analysis analysis)
         {
             this.analysis = analysis;
             this.accioMDL = accioMDL;
@@ -126,6 +157,24 @@ public class AccioSqlRewrite
             return result;
         }
 
+        // remove catalog schema from expression if exist since all tables are in with cte
+        @Override
+        protected Node visitDereferenceExpression(DereferenceExpression dereferenceExpression, Void context)
+        {
+            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(dereferenceExpression);
+            if (qualifiedName != null && !nullToEmpty(accioMDL.getCatalog()).isEmpty() && !nullToEmpty(accioMDL.getSchema()).isEmpty()) {
+                if (qualifiedName.hasPrefix(QualifiedName.of(accioMDL.getCatalog(), accioMDL.getSchema()))) {
+                    return DereferenceExpression.from(
+                            QualifiedName.of(qualifiedName.getOriginalParts().subList(2, qualifiedName.getOriginalParts().size())));
+                }
+                if (qualifiedName.hasPrefix(QualifiedName.of(accioMDL.getSchema()))) {
+                    return DereferenceExpression.from(
+                            QualifiedName.of(qualifiedName.getOriginalParts().subList(1, qualifiedName.getOriginalParts().size())));
+                }
+            }
+            return dereferenceExpression;
+        }
+
         @Override
         protected Node visitFunctionRelation(FunctionRelation node, Void context)
         {
@@ -134,35 +183,6 @@ public class AccioSqlRewrite
             }
             // this should not happen, every MetricRollup node should be captured and syntax checked in StatementAnalyzer
             throw new IllegalArgumentException("MetricRollup node is not replaced");
-        }
-
-        @Override
-        protected Node visitDereferenceExpression(DereferenceExpression node, Void context)
-        {
-            Expression newNode = rewriteEnumIfNeed(node);
-            if (newNode != node) {
-                return newNode;
-            }
-            return new DereferenceExpression(node.getLocation(), (Expression) process(node.getBase()), node.getField());
-        }
-
-        private Expression rewriteEnumIfNeed(DereferenceExpression node)
-        {
-            QualifiedName qualifiedName = DereferenceExpression.getQualifiedName(node);
-            if (qualifiedName == null || qualifiedName.getOriginalParts().size() != 2) {
-                return node;
-            }
-
-            String enumName = qualifiedName.getOriginalParts().get(0).getValue();
-            Optional<EnumDefinition> enumDefinitionOptional = accioMDL.getEnum(enumName);
-            if (enumDefinitionOptional.isEmpty()) {
-                return node;
-            }
-
-            return enumDefinitionOptional.get().valueOf(qualifiedName.getOriginalParts().get(1).getValue())
-                    .map(EnumValue::getValue)
-                    .map(StringLiteral::new)
-                    .orElseThrow(() -> new IllegalArgumentException(format("Enum value '%s' not found in enum '%s'", qualifiedName.getParts().get(1), qualifiedName.getParts().get(0))));
         }
 
         // the model is added in with query, and the catalog and schema should be removed

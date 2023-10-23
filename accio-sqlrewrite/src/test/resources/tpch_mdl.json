@@ -27,11 +27,6 @@
           "type": "float8"
         },
         {
-          "name": "nation_name",
-          "expression": "customer.nation.name",
-          "type": "varchar"
-        },
-        {
           "name": "customer",
           "type": "Customer",
           "relationship": "OrdersCustomer"
@@ -191,6 +186,33 @@
         }
       ],
       "primaryKey": "nationkey"
+    },
+    {
+      "name": "Region",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.region",
+      "columns": [
+        {
+          "name": "regionkey",
+          "expression": "r_regionkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "r_name",
+          "type": "varchar"
+        },
+        {
+          "name": "comment",
+          "expression": "r_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "nation",
+          "type": "Nation",
+          "relationship": "NationRegion"
+        }
+      ],
+      "primaryKey": "regionkey"
     }
   ],
   "relationships": [
@@ -229,6 +251,15 @@
       ],
       "joinType": "MANY_TO_ONE",
       "condition": "Customer.nationkey = Nation.nationkey"
+    },
+    {
+      "name": "NationRegion",
+      "models": [
+        "Nation",
+        "Region"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Nation.regionkey = Region.regionkey"
     }
   ],
   "metrics": [
