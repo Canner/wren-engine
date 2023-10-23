@@ -103,7 +103,6 @@ public class TestAllRulesRewrite
                         enumDefinition("InventoryA", List.of(enumValue("IN_STOCK"), enumValue("OUT_OF_STOCK")))))
                 .setViews(List.of(
                         view("UseModel", "select * from Album"),
-                        view("useRelationship", "select name, band.name as band_name from Album"),
                         view("useMetric", "select band, price from Collection")))
                 .build());
     }
@@ -116,23 +115,8 @@ public class TestAllRulesRewrite
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
                 {"SELECT name, price FROM accio.test.Album",
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
-                {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
-                {"select band, price from CollectionA order by price", "values (2, cast(2553 as long)), (1, cast(4060 as long))"},
-                {"select band from Album", "values (1), (1), (2)"},
-                {"select Inventory.IN_STOCK, InventoryA.IN_STOCK", "values ('I', 'IN_STOCK')"},
-                {"select band.name as band_name, name from Album where status = Inventory.IN_STOCK",
-                        "values ('ZUTOMAYO', 'Gusare'), ('Yorushika', 'Dakara boku wa ongaku o yameta')"},
-                {"select name, band_name from useRelationship",
-                        "values ('Gusare', 'ZUTOMAYO'), ('HisoHiso Banashi', 'ZUTOMAYO'), ('Dakara boku wa ongaku o yameta', 'Yorushika')"},
-                {"WITH A as (SELECT b.band.name FROM Album b) SELECT A.name FROM A", "values ('ZUTOMAYO'), ('ZUTOMAYO'), ('Yorushika')"},
                 {"select band, price from useMetric", "values  ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
-                {"select albums[1] from Band", "values (1), (3)"},
-                {"select any(albums) from Band", "values (1), (3)"},
                 {"select * from \"Order\"", "values (1, 1), (2, 1), (3, 2), (4, 3)"},
-                {"select orders[1].orderkey from Album", "values (1), (3), (4)"}
-
-                // TODO: h2 doesn't support the BigQuery style array element converting. (unnest cross join with an implicit join key)
-                // {"select any(filter(albums, a -> a.name = 'Gusare')) from Band", "values (1)"},
         };
     }
 

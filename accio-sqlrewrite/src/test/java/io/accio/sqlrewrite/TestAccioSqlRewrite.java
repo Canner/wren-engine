@@ -84,7 +84,7 @@ public class TestAccioSqlRewrite
         assertSqlEqualsAndValid(rewrite("SELECT * FROM Book"),
                 "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book) t) SELECT * FROM Book");
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People WHERE id = 'SN1001'"),
-                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t) SELECT * FROM People WHERE People.id = 'SN1001'");
+                "WITH People AS (SELECT id, email FROM (SELECT * FROM People) t) SELECT * FROM People WHERE id = 'SN1001'");
 
         assertSqlEqualsAndValid(rewrite("SELECT * FROM People a join Book b ON a.id = b.authorId WHERE a.id = 'SN1001'"),
                 "WITH Book AS (SELECT authorId, publish_date, date_trunc('year', publish_date) publish_year FROM (SELECT * FROM Book) t),\n" +

@@ -104,7 +104,12 @@ public final class Utils
             return model.getRefSql();
         }
         // In postgres, all subquery should have alias.
-        return format("SELECT %s FROM (%s) t", model.getColumns().stream().map(Column::getSqlExpression).collect(joining(", ")), model.getRefSql());
+        return format("SELECT %s FROM (%s) t",
+                model.getColumns().stream()
+                        .filter(column -> column.getRelationship().isEmpty())
+                        .map(Column::getSqlExpression)
+                        .collect(joining(", ")),
+                model.getRefSql());
     }
 
     public static Query parseMetricSql(Metric metric)

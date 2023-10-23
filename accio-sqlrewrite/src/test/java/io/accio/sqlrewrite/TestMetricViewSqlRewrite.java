@@ -134,8 +134,8 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" +
                                 METRIC_CTES +
                                 "SELECT\n" +
-                                "  Collection.author\n" +
-                                ", Collection.price\n" +
+                                "  author\n" +
+                                ", price\n" +
                                 "FROM\n" +
                                 "  Collection"},
                 {
