@@ -112,8 +112,8 @@
         },
         {
           "name": "order",
-          "type": "Orders",
-          "relationship": "OrdersLineitem"
+          "type": "int4",
+          "expression": "1"
         },
         {
           "name": "part",
@@ -277,14 +277,6 @@
       "statement": "select * from Orders"
     },
     {
-      "name": "useRelationship",
-      "statement": "select orderkey, customer.name from Orders"
-    },
-    {
-      "name": "useRelationshipCustomer",
-      "statement": "select name, array_length(orders) as length from Customer"
-    },
-    {
       "name": "useMetric",
       "statement": "select * from Revenue"
     },
@@ -295,10 +287,6 @@
     {
       "name": "useUseMetric",
       "statement": "select * from useMetric"
-    },
-    {
-      "name": "useAny",
-      "statement": "SELECT any(filter(orders, orderItem -> orderItem.orderstatus = 'F')).totalprice FROM Customer LIMIT 100"
     }
   ]
 }
