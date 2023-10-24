@@ -248,6 +248,8 @@ public class TestModelSqlRewrite
                                 "id")))
                 .build());
 
+        // TODO: This is not allowed since accio lack of the functionality of analyzing select items in model in sql.
+        //  Currently we treat all columns in models are required, and that cause cycles in generating WITH queries when models reference each other.
         assertThatThrownBy(() -> rewrite("SELECT * FROM People", cycle), "")
                 .hasMessage("found cycle in models");
     }

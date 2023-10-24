@@ -31,9 +31,9 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 public class AccioPlanner
 {
     public static final List<AccioRule> ALL_RULES = List.of(
-            ENUM_REWRITE,
             METRIC_VIEW_SQL_REWRITE,
-            ACCIO_SQL_REWRITE);
+            ACCIO_SQL_REWRITE,
+            ENUM_REWRITE);
     private static final SqlParser SQL_PARSER = new SqlParser();
 
     private AccioPlanner() {}
