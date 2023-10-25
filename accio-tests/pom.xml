@@ -20,7 +20,7 @@
     <parent>
         <artifactId>accio-root</artifactId>
         <groupId>io.accio</groupId>
-        <version>1-SNAPSHOT</version>
+        <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
