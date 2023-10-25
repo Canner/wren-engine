@@ -115,12 +115,12 @@ public class DereferenceExpression
     {
         Expression result = null;
 
-        for (String part : name.getParts()) {
+        for (Identifier part : name.getOriginalParts()) {
             if (result == null) {
-                result = new Identifier(part);
+                result = part;
             }
             else {
-                result = new DereferenceExpression(result, new Identifier(part));
+                result = new DereferenceExpression(result, part);
             }
         }
 

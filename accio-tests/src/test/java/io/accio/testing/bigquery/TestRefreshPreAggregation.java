@@ -20,6 +20,7 @@ import io.accio.main.AccioMetastore;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestRefreshPreAggregation
         extends AbstractPreAggregationTest
 {
-    private final AccioMDL accioMDL = getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
+    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
 
     @Override
     protected Optional<String> getAccioMDLPath()
@@ -41,7 +42,7 @@ public class TestRefreshPreAggregation
             throws InterruptedException
     {
         // manually reload pre-aggregation
-        preAggregationManager.createTaskUtilDone(accioMDL);
+        preAggregationManager.get().createTaskUtilDone(accioMDL.get());
         // We have one pre-aggregation table and the most tables existing in duckdb is 2
         assertThat(queryDuckdb("show tables").size()).isLessThan(3);
         for (int i = 0; i < 50; i++) {

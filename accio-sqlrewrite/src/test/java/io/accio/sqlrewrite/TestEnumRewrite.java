@@ -28,6 +28,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
 import static io.accio.base.dto.EnumValue.enumValue;
 import static io.accio.base.dto.Model.model;
+import static io.accio.sqlrewrite.EnumRewrite.ENUM_REWRITE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
@@ -91,7 +92,7 @@ public class TestEnumRewrite
 
     private Statement rewrite(String sql)
     {
-        return AccioSqlRewrite.ACCIO_SQL_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, accioMDL);
+        return ENUM_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, accioMDL);
     }
 
     private Statement parse(String sql)

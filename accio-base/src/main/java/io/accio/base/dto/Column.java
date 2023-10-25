@@ -107,10 +107,6 @@ public class Column
 
     public String getSqlExpression()
     {
-        if (getRelationship().isPresent()) {
-            return String.format("'relationship<%s>' as %s", relationship, quote(name));
-        }
-
         if (getExpression().isEmpty()) {
             return quote(name);
         }

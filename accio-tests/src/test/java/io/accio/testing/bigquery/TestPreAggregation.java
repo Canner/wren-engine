@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.type.IntegerType.INTEGER;
@@ -47,8 +48,8 @@ public class TestPreAggregation
         extends AbstractPreAggregationTest
 {
     private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
-    private final AccioMDL accioMDL = getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
-    private final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
+    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
+    private final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
             .setCatalog("canner-cml")
             .setSchema("tpch_tiny")
@@ -130,10 +131,10 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue limit 100",
-                                preAggregationTableMapping::convertToAggregationTable,
-                                accioMDL)
+                                preAggregationTableMapping.get()::convertToAggregationTable,
+                                accioMDL.get())
                         .orElseThrow(AssertionError::new);
-        try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(rewritten, ImmutableList.of())) {
+        try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.get().query(rewritten, ImmutableList.of())) {
             int count = 0;
             while (connectorRecordIterator.hasNext()) {
                 count++;
@@ -146,10 +147,10 @@ public class TestPreAggregation
                 PreAggregationRewrite.rewrite(
                                 defaultSessionContext,
                                 "select custkey, revenue from Revenue where custkey = ?",
-                                preAggregationTableMapping::convertToAggregationTable,
-                                accioMDL)
+                                preAggregationTableMapping.get()::convertToAggregationTable,
+                                accioMDL.get())
                         .orElseThrow(AssertionError::new);
-        try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
+        try (ConnectorRecordIterator connectorRecordIterator = preAggregationManager.get().query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
             assertThat(result.length).isEqualTo(2);
             assertThat(result[0]).isEqualTo(1202L);
@@ -164,7 +165,7 @@ public class TestPreAggregation
         String tableName = getDefaultPreAggregationInfoPair("ForDropTable").getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
-        duckdbClient.executeDDL(dropTableStatement.apply(tableName));
+        duckdbClient.get().executeDDL(dropTableStatement.apply(tableName));
 
         try (Connection connection = createConnection();
                 PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");
@@ -192,7 +193,6 @@ public class TestPreAggregation
                 "   , o_custkey custkey\n" +
                 "   , o_orderstatus orderstatus\n" +
                 "   , o_totalprice totalprice\n" +
-                "   , 'relationship<OrdersCustomer>' customer\n" +
                 "   , o_orderdate orderdate" +
                 " from `canner-cml`.tpch_tiny.orders");
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());

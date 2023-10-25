@@ -48,6 +48,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.accio</groupId>
             <artifactId>accio-testing</artifactId>
             <scope>test</scope>

@@ -49,27 +49,37 @@ public class TestMetricViewSqlRewrite
         extends AbstractTestFramework
 {
     @Language("sql")
-    private static final String MODEL_CTES =
-            "Album AS (\n" +
-                    "   SELECT\n" +
-                    "     \"id\"\n" +
-                    "   , \"name\"\n" +
-                    "   , \"author\"\n" +
-                    "   , \"price\"\n" +
-                    "   , \"publish_date\"\n" +
-                    "   , \"release_date\"\n" +
-                    "   FROM\n" +
-                    "     (\n" +
-                    "      SELECT *\n" +
-                    "      FROM\n" +
-                    "        (\n" +
-                    " VALUES \n" +
-                    "           ROW (1, 'Gusare', 'ZUTOMAYO', 2560, DATE '2023-03-29', TIMESTAMP '2023-04-27 06:06:06')\n" +
-                    "         , ROW (2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500, DATE '2023-04-29', TIMESTAMP '2023-05-27 07:07:07')\n" +
-                    "         , ROW (3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553, DATE '2023-05-29', TIMESTAMP '2023-06-27 08:08:08')\n" +
-                    "      )  album (id, name, author, price, publish_date, release_date)\n" +
-                    "   ) t\n" +
-                    ") \n";
+    private static final String MODEL_CTES = "" +
+            "  Album AS (\n" +
+            "   SELECT\n" +
+            "     \"Album\".\"id\" \"id\"\n" +
+            "   , \"Album\".\"name\" \"name\"\n" +
+            "   , \"Album\".\"author\" \"author\"\n" +
+            "   , \"Album\".\"price\" \"price\"\n" +
+            "   , \"Album\".\"publish_date\" \"publish_date\"\n" +
+            "   , \"Album\".\"release_date\" \"release_date\"\n" +
+            "   FROM\n" +
+            "     (\n" +
+            "      SELECT\n" +
+            "        \"Album\".\"id\" \"id\"\n" +
+            "      , \"Album\".\"name\" \"name\"\n" +
+            "      , \"Album\".\"author\" \"author\"\n" +
+            "      , \"Album\".\"price\" \"price\"\n" +
+            "      , \"Album\".\"publish_date\" \"publish_date\"\n" +
+            "      , \"Album\".\"release_date\" \"release_date\"\n" +
+            "      FROM\n" +
+            "        (\n" +
+            "         SELECT *\n" +
+            "         FROM\n" +
+            "           (\n" +
+            " VALUES \n" +
+            "              ROW (1, 'Gusare', 'ZUTOMAYO', 2560, DATE '2023-03-29', TIMESTAMP '2023-04-27 06:06:06')\n" +
+            "            , ROW (2, 'HisoHiso Banashi', 'ZUTOMAYO', 1500, DATE '2023-04-29', TIMESTAMP '2023-05-27 07:07:07')\n" +
+            "            , ROW (3, 'Dakara boku wa ongaku o yameta', 'Yorushika', 2553, DATE '2023-05-29', TIMESTAMP '2023-06-27 08:08:08')\n" +
+            "         )  album (id, name, author, price, publish_date, release_date)\n" +
+            "      )  \"Album\"\n" +
+            "   )  \"Album\"\n" +
+            ")\n";
 
     @Language("sql")
     private static final String METRIC_CTES =
@@ -134,8 +144,8 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" +
                                 METRIC_CTES +
                                 "SELECT\n" +
-                                "  Collection.author\n" +
-                                ", Collection.price\n" +
+                                "  author\n" +
+                                ", price\n" +
                                 "FROM\n" +
                                 "  Collection"},
                 {
