@@ -27,11 +27,6 @@
           "type": "float8"
         },
         {
-          "name": "nation_name",
-          "expression": "customer.nation.name",
-          "type": "varchar"
-        },
-        {
           "name": "customer",
           "type": "Customer",
           "relationship": "OrdersCustomer"
@@ -117,8 +112,8 @@
         },
         {
           "name": "order",
-          "type": "int4",
-          "expression": "1"
+          "type": "Orders",
+          "relationship": "OrdersLineitem"
         },
         {
           "name": "part",
@@ -282,6 +277,14 @@
       "statement": "select * from Orders"
     },
     {
+      "name": "useRelationship",
+      "statement": "select orderkey, customer.name from Orders"
+    },
+    {
+      "name": "useRelationshipCustomer",
+      "statement": "select name, array_length(orders) as length from Customer"
+    },
+    {
       "name": "useMetric",
       "statement": "select * from Revenue"
     },
@@ -292,6 +295,10 @@
     {
       "name": "useUseMetric",
       "statement": "select * from useMetric"
+    },
+    {
+      "name": "useAny",
+      "statement": "SELECT any(filter(orders, orderItem -> orderItem.orderstatus = 'F')).totalprice FROM Customer LIMIT 100"
     }
   ]
 }

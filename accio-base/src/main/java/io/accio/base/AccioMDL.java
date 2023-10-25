@@ -16,7 +16,6 @@ package io.accio.base;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.accio.base.dto.Column;
 import io.accio.base.dto.EnumDefinition;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
@@ -156,20 +155,5 @@ public class AccioMDL
             return getView(name.getSchemaTableName().getTableName());
         }
         return Optional.empty();
-    }
-
-    public static Optional<Column> getRelationshipColumn(Model model, String name)
-    {
-        return getColumn(model, name)
-                .filter(column -> column.getRelationship().isPresent());
-    }
-
-    private static Optional<Column> getColumn(Model model, String name)
-    {
-        requireNonNull(model);
-        requireNonNull(name);
-        return model.getColumns().stream()
-                .filter(column -> column.getName().equals(name))
-                .findAny();
     }
 }

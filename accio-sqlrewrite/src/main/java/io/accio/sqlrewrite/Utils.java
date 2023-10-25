@@ -21,6 +21,7 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Metric;
+import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Field;
 import io.accio.sqlrewrite.analyzer.MetricRollupInfo;
 import io.accio.sqlrewrite.analyzer.RelationType;
@@ -86,13 +87,24 @@ public final class Utils
         return SQL_PARSER.createType(type);
     }
 
-    public static Query parseQuery(String sql)
+    public static Query parseModelSql(Model model)
     {
+        String sql = getModelSql(model);
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         if (statement instanceof Query) {
             return (Query) statement;
         }
-        throw new IllegalArgumentException("model sql is not a query");
+        throw new IllegalArgumentException(format("model %s is not a query, sql %s", model.getName(), sql));
+    }
+
+    public static String getModelSql(Model model)
+    {
+        requireNonNull(model, "model is null");
+        if (model.getColumns().isEmpty()) {
+            return model.getRefSql();
+        }
+        // In postgres, all subquery should have alias.
+        return format("SELECT %s FROM (%s) t", model.getColumns().stream().map(Column::getSqlExpression).collect(joining(", ")), model.getRefSql());
     }
 
     public static Query parseMetricSql(Metric metric)

@@ -29,7 +29,6 @@ import io.accio.testing.TestingAccioServer;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Supplier;
 
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
@@ -38,9 +37,9 @@ import static java.lang.System.getenv;
 public abstract class AbstractPreAggregationTest
         extends AbstractWireProtocolTestWithBigQuery
 {
-    protected final Supplier<PreAggregationManager> preAggregationManager = () -> getInstance(Key.get(PreAggregationManager.class));
-    protected final Supplier<PreAggregationTableMapping> preAggregationTableMapping = () -> getInstance(Key.get(PreAggregationTableMapping.class));
-    protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class));
+    protected final PreAggregationManager preAggregationManager = getInstance(Key.get(PreAggregationManager.class));
+    protected final PreAggregationTableMapping preAggregationTableMapping = getInstance(Key.get(PreAggregationTableMapping.class));
+    protected final DuckdbClient duckdbClient = getInstance(Key.get(DuckdbClient.class));
 
     @Override
     protected TestingAccioServer createAccioServer()
@@ -66,12 +65,12 @@ public abstract class AbstractPreAggregationTest
 
     protected PreAggregationInfoPair getDefaultPreAggregationInfoPair(String name)
     {
-        return preAggregationTableMapping.get().getPreAggregationInfoPair("canner-cml", "tpch_tiny", name);
+        return preAggregationTableMapping.getPreAggregationInfoPair("canner-cml", "tpch_tiny", name);
     }
 
     protected List<Object[]> queryDuckdb(String statement)
     {
-        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.get().query(statement)) {
+        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(statement)) {
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
                 builder.add(iterator.next());
