@@ -19,48 +19,32 @@ import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
-import io.accio.sqlrewrite.RelationshipCteGenerator;
-import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
-import io.trino.sql.tree.GroupBy;
-import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
-import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
-import io.trino.sql.tree.WithQuery;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Analysis
 {
     private final Statement root;
     private final Set<CatalogSchemaTableName> tables = new HashSet<>();
-    private final RelationshipCteGenerator relationshipCteGenerator;
-    private final Map<NodeRef<Expression>, Expression> relationshipFields = new HashMap<>();
     private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
-    private final Map<NodeRef<Relation>, Set<String>> replaceTableWithCTEs = new HashMap<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
-    private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
     private final Set<Metric> metrics = new HashSet<>();
     private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
     private final Set<View> views = new HashSet<>();
-    private final Map<NodeRef<GroupBy>, GroupByAnalysis> groupByAnalysis = new HashMap<>();
 
-    Analysis(Statement statement, RelationshipCteGenerator relationshipCteGenerator)
+    Analysis(Statement statement)
     {
         this.root = requireNonNull(statement, "statement is null");
-        this.relationshipCteGenerator = relationshipCteGenerator;
     }
 
     public Statement getRoot()
@@ -76,46 +60,6 @@ public class Analysis
     public Set<CatalogSchemaTableName> getTables()
     {
         return Set.copyOf(tables);
-    }
-
-    public Map<String, WithQuery> getRelationshipCTE()
-    {
-        return relationshipCteGenerator.getRegisteredWithQuery();
-    }
-
-    public Map<String, String> getRelationshipNameMapping()
-    {
-        return relationshipCteGenerator.getNameMapping();
-    }
-
-    public Map<String, RelationshipCteGenerator.RelationshipCTEJoinInfo> getRelationshipInfoMapping()
-    {
-        return relationshipCteGenerator.getRelationshipInfoMapping();
-    }
-
-    void addRelationshipFields(Map<NodeRef<Expression>, Expression> relationshipFields)
-    {
-        this.relationshipFields.putAll(relationshipFields);
-    }
-
-    public Map<NodeRef<Expression>, Expression> getRelationshipFields()
-    {
-        return Map.copyOf(relationshipFields);
-    }
-
-    public void addReplaceTableWithCTEs(NodeRef<Relation> relationNodeRef, Set<String> relationshipCTENames)
-    {
-        this.replaceTableWithCTEs.put(relationNodeRef, relationshipCTENames);
-    }
-
-    public Map<NodeRef<Relation>, Set<String>> getReplaceTableWithCTEs()
-    {
-        return Map.copyOf(replaceTableWithCTEs);
-    }
-
-    void addRelationships(Set<Relationship> relationships)
-    {
-        this.relationships.addAll(relationships);
     }
 
     public Set<Relationship> getRelationships()
@@ -143,26 +87,6 @@ public class Analysis
         return modelNodeRefs;
     }
 
-    public Optional<RelationType> getOutputDescriptor(Node node)
-    {
-        return getScope(node).getRelationType();
-    }
-
-    public Scope getScope(Node node)
-    {
-        return tryGetScope(node).orElseThrow(() -> new IllegalArgumentException(format("Analysis does not contain information for node: %s", node)));
-    }
-
-    public Optional<Scope> tryGetScope(Node node)
-    {
-        NodeRef<Node> key = NodeRef.of(node);
-        if (scopes.containsKey(key)) {
-            return Optional.of(scopes.get(key));
-        }
-
-        return Optional.empty();
-    }
-
     void addMetrics(Set<Metric> metrics)
     {
         this.metrics.addAll(metrics);
@@ -171,11 +95,6 @@ public class Analysis
     public Set<Metric> getMetrics()
     {
         return metrics;
-    }
-
-    public void setScope(Node node, Scope scope)
-    {
-        scopes.put(NodeRef.of(node), scope);
     }
 
     void addMetricRollups(NodeRef<FunctionRelation> metricRollupNodeRef, MetricRollupInfo metricRollupInfo)
@@ -188,16 +107,6 @@ public class Analysis
         return metricRollups;
     }
 
-    void addGroupAnalysis(GroupBy groupByNode, GroupByAnalysis groupByAnalysis)
-    {
-        this.groupByAnalysis.put(NodeRef.of(groupByNode), groupByAnalysis);
-    }
-
-    public Map<NodeRef<GroupBy>, GroupByAnalysis> getGroupByAnalysis()
-    {
-        return groupByAnalysis;
-    }
-
     public Set<View> getViews()
     {
         return views;
@@ -206,20 +115,5 @@ public class Analysis
     void addViews(Set<View> views)
     {
         this.views.addAll(views);
-    }
-
-    public static class GroupByAnalysis
-    {
-        private final List<Expression> originalExpressions;
-
-        public GroupByAnalysis(List<Expression> originalExpressions)
-        {
-            this.originalExpressions = originalExpressions;
-        }
-
-        public List<Expression> getOriginalExpressions()
-        {
-            return originalExpressions;
-        }
     }
 }
