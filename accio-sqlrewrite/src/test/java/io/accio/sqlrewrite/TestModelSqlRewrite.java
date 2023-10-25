@@ -250,7 +250,7 @@ public class TestModelSqlRewrite
 
         // TODO: This is not allowed since accio lack of the functionality of analyzing select items in model in sql.
         //  Currently we treat all columns in models are required, and that cause cycles in generating WITH queries when models reference each other.
-        assertThatThrownBy(() -> rewrite("SELECT * FROM People", cycle), "")
+        assertThatThrownBy(() -> rewrite("SELECT * FROM People", cycle))
                 .hasMessage("found cycle in models");
     }
 
@@ -258,6 +258,39 @@ public class TestModelSqlRewrite
     public void testNoRewrite()
     {
         assertSqlEquals(rewrite("SELECT * FROM foo"), "SELECT * FROM foo");
+    }
+
+    @Test
+    public void testJoinKeyPrimaryIncludesRelation()
+    {
+        AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
+                .setRelationships(List.of(
+                        relationship("WishListPeople", List.of("WishList", "People"), ONE_TO_ONE, "WishList.peopleId = People.id")))
+                .setModels(List.of(
+                        model(
+                                "People",
+                                "SELECT * FROM People",
+                                List.of(
+                                        column("id", "STRING", null, false),
+                                        column("gift", "STRING", null, false, "wishlist.bookId"),
+                                        relationshipColumn("wishlist", "WishList", "WishListPeople")),
+                                "gift"),
+                        model(
+                                "WishList",
+                                "SELECT * FROM WishList",
+                                List.of(
+                                        column("id", "STRING", null, false),
+                                        column("bookId", "STRING", null, false),
+                                        column("peopleId", "STRING", null, false, "people.id"),
+                                        relationshipColumn("people", "People", "WishListPeople")),
+                                "id")))
+                .build());
+
+        assertThatThrownBy(() -> rewrite("SELECT * FROM People", mdl))
+                .hasMessage("found relation in model People primary key expression");
+
+        assertThatThrownBy(() -> rewrite("SELECT * FROM WishList", mdl))
+                .hasMessage("found relation in relation join condition in WishList.peopleId");
     }
 
     private String rewrite(String sql)
