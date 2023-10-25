@@ -10,7 +10,7 @@
 
     <groupId>io.accio</groupId>
     <artifactId>accio-root</artifactId>
-    <version>1-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
 
     <name>accio</name>
     <description>Accio</description>
@@ -25,6 +25,10 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
+    <scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <air.main.basedir>${project.basedir}</air.main.basedir>
