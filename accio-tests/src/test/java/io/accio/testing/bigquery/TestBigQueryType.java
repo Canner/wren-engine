@@ -24,6 +24,7 @@ import io.accio.connector.bigquery.BigQueryClient;
 import io.airlift.log.Logger;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
@@ -71,17 +72,13 @@ public class TestBigQueryType
         STRUCT
     }
 
-    @Override
-    protected void prepare()
+    @BeforeClass
+    public void init()
+            throws SQLException
     {
         testSchemaTableName = new SchemaTableName("cml_temp", "test_bigquery_type_" + currentTimeMillis());
         bigQueryClient = getInstance(Key.get(BigQueryClient.class));
-        try {
-            testCases = initTestcases();
-        }
-        catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        testCases = initTestcases();
         createBigQueryTable();
     }
 

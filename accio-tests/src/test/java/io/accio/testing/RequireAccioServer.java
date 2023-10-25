@@ -27,7 +27,6 @@ import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
 import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -45,22 +44,18 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public abstract class RequireAccioServer
 {
-    private TestingAccioServer accioServer;
-    protected Closer closer = Closer.create();
-    protected HttpClient client;
+    private final TestingAccioServer accioServer;
+    protected final Closer closer = Closer.create();
+    protected final HttpClient client;
 
     public static final JsonCodec<TaskInfo> TASK_INFO_CODEC = jsonCodec(TaskInfo.class);
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
 
-    public RequireAccioServer() {}
-
-    @BeforeClass
-    public void init()
+    public RequireAccioServer()
     {
         this.accioServer = createAccioServer();
         this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS))));
         closer.register(accioServer);
-        prepare();
     }
 
     protected abstract TestingAccioServer createAccioServer();
@@ -69,8 +64,6 @@ public abstract class RequireAccioServer
     {
         return accioServer;
     }
-
-    protected void prepare() {}
 
     public <T> T getInstance(Key<T> key)
     {

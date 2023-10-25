@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static io.accio.sqlrewrite.ScopeAwareRewrite.SCOPE_AWARE_REWRITE;
 import static io.accio.sqlrewrite.Utils.parseView;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -76,7 +77,7 @@ public class MetricViewSqlRewrite
         // The generation of views has a sequential order, with later views being able to reference earlier views.
         Map<String, Query> viewQueries = new LinkedHashMap<>();
         allAnalysis.stream().flatMap(a -> a.getViews().stream())
-                .forEach(view -> viewQueries.put(view.getName(), parseView(view.getStatement())));
+                .forEach(view -> viewQueries.put(view.getName(), (Query) SCOPE_AWARE_REWRITE.rewrite(parseView(view.getStatement()), accioMDL, sessionContext)));
 
         return (Statement) new WithRewriter(metricQueries, metricRollupQueries, ImmutableMap.copyOf(viewQueries)).process(root);
     }

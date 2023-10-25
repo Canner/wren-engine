@@ -110,15 +110,6 @@ public class QualifiedName
         return Iterables.getLast(parts);
     }
 
-    public boolean hasPrefix(QualifiedName prefix)
-    {
-        if (parts.size() < prefix.getParts().size()) {
-            return false;
-        }
-
-        return parts.subList(0, prefix.getParts().size()).equals(prefix.getParts());
-    }
-
     @Override
     public boolean equals(Object o)
     {

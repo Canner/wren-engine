@@ -14,6 +14,8 @@
 
 package io.accio.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableList;
+import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
@@ -21,17 +23,25 @@ import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
+import io.accio.sqlrewrite.RelationshipCteGenerator;
 import io.trino.sql.tree.AliasedRelation;
+import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
+import io.trino.sql.tree.GroupingElement;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.SelectItem;
+import io.trino.sql.tree.SimpleGroupBy;
+import io.trino.sql.tree.SingleColumn;
+import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
@@ -41,6 +51,7 @@ import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -50,10 +61,14 @@ import java.util.stream.Stream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.dto.TimeGrain.TimeUnit.timeUnit;
+import static io.accio.base.metadata.StandardErrorCode.INVALID_COLUMN_REFERENCE;
 import static io.accio.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 /**
@@ -65,8 +80,13 @@ public final class StatementAnalyzer
 
     public static Analysis analyze(Statement statement, SessionContext sessionContext, AccioMDL accioMDL)
     {
-        Analysis analysis = new Analysis(statement);
-        new Visitor(sessionContext, analysis, accioMDL).process(statement, Optional.empty());
+        return analyze(statement, sessionContext, accioMDL, new RelationshipCteGenerator(accioMDL));
+    }
+
+    public static Analysis analyze(Statement statement, SessionContext sessionContext, AccioMDL accioMDL, RelationshipCteGenerator relationshipCteGenerator)
+    {
+        Analysis analysis = new Analysis(statement, relationshipCteGenerator);
+        new Visitor(sessionContext, analysis, accioMDL, relationshipCteGenerator).process(statement, Optional.empty());
 
         // add models directly used in sql query
         analysis.addModels(
@@ -129,12 +149,14 @@ public final class StatementAnalyzer
         private final SessionContext sessionContext;
         private final Analysis analysis;
         private final AccioMDL accioMDL;
+        private final RelationshipCteGenerator relationshipCteGenerator;
 
-        public Visitor(SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
+        public Visitor(SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL, RelationshipCteGenerator relationshipCteGenerator)
         {
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
             this.accioMDL = requireNonNull(accioMDL, "accioMDL is null");
+            this.relationshipCteGenerator = requireNonNull(relationshipCteGenerator, "relationshipCteGenerator is null");
         }
 
         @Override
@@ -204,9 +226,26 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
-            if (node.getFrom().isPresent()) {
-                return process(node.getFrom().get(), scope);
-            }
+            Scope sourceScope = analyzeFrom(node, scope);
+            List<ExpressionAnalysis> expressionAnalysisList = analyzeSelect(node, sourceScope);
+            Set<String> relationshipCTENames = expressionAnalysisList.stream()
+                    .map(ExpressionAnalysis::getRelationshipCTENames)
+                    .flatMap(Set::stream)
+                    .collect(toSet());
+            node.getWhere().ifPresent(where -> relationshipCTENames.addAll(analyzeExpression(where, sourceScope).getRelationshipCTENames()));
+            node.getGroupBy().ifPresent(groupBy -> {
+                analyzeGroupBy(node, sourceScope, expressionAnalysisList.stream().map(ExpressionAnalysis::getExpression).collect(toList()));
+                groupBy.getGroupingElements().stream()
+                        .map(GroupingElement::getExpressions)
+                        .flatMap(Collection::stream)
+                        .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames()));
+            });
+            node.getHaving().ifPresent(having -> relationshipCTENames.addAll(analyzeExpression(having, sourceScope).getRelationshipCTENames()));
+            node.getOrderBy().ifPresent(orderBy ->
+                    orderBy.getSortItems().stream()
+                            .map(SortItem::getSortKey)
+                            .forEach(expression -> relationshipCTENames.addAll(analyzeExpression(expression, sourceScope).getRelationshipCTENames())));
+            node.getFrom().ifPresent(relation -> analysis.addReplaceTableWithCTEs(NodeRef.of(relation), relationshipCTENames));
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
@@ -318,6 +357,71 @@ public final class StatementAnalyzer
             }
 
             return Optional.of(withScopeBuilder.build());
+        }
+
+        private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
+        {
+            if (node.getFrom().isPresent()) {
+                return process(node.getFrom().get(), scope);
+            }
+            return Scope.builder().parent(scope).build();
+        }
+
+        private List<ExpressionAnalysis> analyzeSelect(QuerySpecification node, Scope scope)
+        {
+            List<ExpressionAnalysis> selectExpressionAnalyses = new ArrayList<>();
+            for (SelectItem item : node.getSelect().getSelectItems()) {
+                if (item instanceof SingleColumn) {
+                    selectExpressionAnalyses.add(analyzeSelectSingleColumn((SingleColumn) item, scope));
+                }
+                else if (item instanceof AllColumns) {
+                    // DO NOTHING
+                }
+                else {
+                    throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
+                }
+            }
+            return List.copyOf(selectExpressionAnalyses);
+        }
+
+        public void analyzeGroupBy(QuerySpecification node, Scope scope, List<Expression> outputExpressions)
+        {
+            if (node.getGroupBy().isEmpty()) {
+                return;
+            }
+            ImmutableList.Builder<Expression> groupingExpressions = ImmutableList.builder();
+            for (GroupingElement groupingElement : node.getGroupBy().get().getGroupingElements()) {
+                if (groupingElement instanceof SimpleGroupBy) {
+                    for (Expression column : groupingElement.getExpressions()) {
+                        // simple GROUP BY expressions allow ordinals or arbitrary expressions
+                        if (column instanceof LongLiteral) {
+                            long ordinal = ((LongLiteral) column).getValue();
+                            if (ordinal < 1 || ordinal > outputExpressions.size()) {
+                                throw new AccioException(INVALID_COLUMN_REFERENCE, format("GROUP BY position %s is not in select list", ordinal));
+                            }
+                            column = outputExpressions.get(toIntExact(ordinal - 1));
+                        }
+                        groupingExpressions.add(column);
+                    }
+                }
+                // TODO: support other grouping elements
+            }
+            analysis.addGroupAnalysis(node.getGroupBy().get(), new Analysis.GroupByAnalysis(groupingExpressions.build()));
+        }
+
+        private ExpressionAnalysis analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
+        {
+            Expression expression = singleColumn.getExpression();
+            return analyzeExpression(expression, scope);
+        }
+
+        private ExpressionAnalysis analyzeExpression(Expression expression, Scope scope)
+        {
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(expression, sessionContext, accioMDL, relationshipCteGenerator, scope);
+            analysis.addRelationshipFields(expressionAnalysis.getRelationshipFieldRewrites());
+            analysis.addRelationships(expressionAnalysis.getRelationships());
+            analysis.setScope(expression, scope);
+            return expressionAnalysis;
         }
 
         private Scope process(Node node, Scope scope)

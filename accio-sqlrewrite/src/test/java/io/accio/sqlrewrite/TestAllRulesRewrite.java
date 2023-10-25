@@ -17,6 +17,7 @@ package io.accio.sqlrewrite;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.JoinType;
 import io.accio.testing.AbstractTestFramework;
+import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
 import org.testng.annotations.DataProvider;
@@ -35,7 +36,6 @@ import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.base.dto.View.view;
 import static io.accio.sqlrewrite.Utils.SQL_PARSER;
-import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,7 +59,6 @@ public class TestAllRulesRewrite
                                         relationshipColumn("band", "Band", "AlbumBand"),
                                         column("price", INTEGER, null, true),
                                         column("bandId", INTEGER, null, true),
-                                        column("bandName", VARCHAR, null, true, "band.name"),
                                         column("status", "Inventory", null, true),
                                         column("statusA", "InventoryA", null, true),
                                         relationshipColumn("orders", "Order", "AlbumOrder")),
@@ -88,7 +87,7 @@ public class TestAllRulesRewrite
                         metric(
                                 "Collection",
                                 "Album",
-                                List.of(column("band", VARCHAR, null, true, "bandName")),
+                                List.of(column("band", VARCHAR, null, true, "Album.band.name")),
                                 List.of(column("price", INTEGER, null, true, "sum(Album.price)")),
                                 List.of()),
                         metric(
@@ -104,6 +103,7 @@ public class TestAllRulesRewrite
                         enumDefinition("InventoryA", List.of(enumValue("IN_STOCK"), enumValue("OUT_OF_STOCK")))))
                 .setViews(List.of(
                         view("UseModel", "select * from Album"),
+                        view("useRelationship", "select name, band.name as band_name from Album"),
                         view("useMetric", "select band, price from Collection")))
                 .build());
     }
@@ -116,8 +116,23 @@ public class TestAllRulesRewrite
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
                 {"SELECT name, price FROM accio.test.Album",
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
-                {"select band, cast(price as integer) from useMetric order by band", "values  ('Yorushika', 2553), ('ZUTOMAYO', 4060)"},
+                {"select band.name, count(*) from Album group by band", "values ('ZUTOMAYO', cast(2 as long)), ('Yorushika', cast(1 as long))"},
+                {"select band, price from CollectionA order by price", "values (2, cast(2553 as long)), (1, cast(4060 as long))"},
+                {"select band from Album", "values (1), (1), (2)"},
+                {"select Inventory.IN_STOCK, InventoryA.IN_STOCK", "values ('I', 'IN_STOCK')"},
+                {"select band.name as band_name, name from Album where status = Inventory.IN_STOCK",
+                        "values ('ZUTOMAYO', 'Gusare'), ('Yorushika', 'Dakara boku wa ongaku o yameta')"},
+                {"select name, band_name from useRelationship",
+                        "values ('Gusare', 'ZUTOMAYO'), ('HisoHiso Banashi', 'ZUTOMAYO'), ('Dakara boku wa ongaku o yameta', 'Yorushika')"},
+                {"WITH A as (SELECT b.band.name FROM Album b) SELECT A.name FROM A", "values ('ZUTOMAYO'), ('ZUTOMAYO'), ('Yorushika')"},
+                {"select band, price from useMetric", "values  ('Yorushika', cast(2553 as long)), ('ZUTOMAYO', cast(4060 as long))"},
+                {"select albums[1] from Band", "values (1), (3)"},
+                {"select any(albums) from Band", "values (1), (3)"},
                 {"select * from \"Order\"", "values (1, 1), (2, 1), (3, 2), (4, 3)"},
+                {"select orders[1].orderkey from Album", "values (1), (3), (4)"}
+
+                // TODO: h2 doesn't support the BigQuery style array element converting. (unnest cross join with an implicit join key)
+                // {"select any(filter(albums, a -> a.name = 'Gusare')) from Band", "values (1)"},
         };
     }
 
@@ -128,9 +143,9 @@ public class TestAllRulesRewrite
         assertQuery(actualSql, expected);
     }
 
-    private void assertQuery(String actual, String expected)
+    private void assertQuery(String acutal, String expected)
     {
-        assertThat(query(actual)).isEqualTo(query(expected));
+        assertThat(query(acutal)).isEqualTo(query(expected));
     }
 
     @DataProvider
@@ -140,7 +155,7 @@ public class TestAllRulesRewrite
                 {"select 1, 2, 3"},
                 {"select id, name from normalTable"},
                 {"with normalCte as (select id, name from normalTable) select id, name from normalCte"},
-                {"SELECT Album.id FROM catalog.schema.Album"},
+                {"SELECT accio.test.Album.id FROM catalog.schema.Album"},
         };
     }
 
@@ -148,7 +163,7 @@ public class TestAllRulesRewrite
     public void testAccioNoRewrite(String original)
     {
         Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
-        assertThat(rewrite(original)).isEqualTo(formatSql(expectedState));
+        assertThat(rewrite(original)).isEqualTo(SqlFormatter.formatSql(expectedState));
     }
 
     private String rewrite(String sql)

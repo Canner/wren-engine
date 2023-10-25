@@ -14,30 +14,23 @@
 
 package io.accio.testing;
 
-import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
-import io.accio.base.client.AutoCloseableIterator;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.Manifest;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import org.intellij.lang.annotations.Language;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-
-import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
-import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractTestFramework
 {
-    private static final SqlParser SQL_PARSER = new SqlParser();
     public static final SessionContext DEFAULT_SESSION_CONTEXT =
             SessionContext.builder().setCatalog("accio").setSchema("test").build();
-    private DuckdbClient duckdbClient;
+    private Handle handle;
 
     public static Manifest.Builder withDefaultCatalogSchema()
     {
@@ -49,37 +42,40 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        duckdbClient = new DuckdbClient();
+        handle = Jdbi.open("jdbc:h2:mem:test" + System.nanoTime() + ThreadLocalRandom.current().nextLong() + ";MODE=PostgreSQL;database_to_upper=false");
         prepareData();
     }
 
     @AfterClass(alwaysRun = true)
     public final void close()
     {
-        cleanup();
+        try {
+            handle.close();
+        }
+        finally {
+            handle = null;
+        }
     }
 
     protected void prepareData() {}
 
-    protected void cleanup() {}
-
     protected List<List<Object>> query(@Language("SQL") String sql)
     {
-        sql = formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL)), DUCKDB);
-        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(sql)) {
-            ImmutableList.Builder<List<Object>> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add(Arrays.asList(iterator.next()));
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return handle.createQuery(sql)
+                .map((resultSet, index, context) -> {
+                    int count = resultSet.getMetaData().getColumnCount();
+                    List<Object> row = new ArrayList<>(count);
+                    for (int i = 1; i <= count; i++) {
+                        Object value = resultSet.getObject(i);
+                        row.add(value);
+                    }
+                    return row;
+                })
+                .list();
     }
 
     protected void exec(@Language("SQL") String sql)
     {
-        duckdbClient.executeDDL(sql);
+        handle.execute(sql);
     }
 }
