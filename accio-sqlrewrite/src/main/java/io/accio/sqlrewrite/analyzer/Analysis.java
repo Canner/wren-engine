@@ -15,6 +15,7 @@
 package io.accio.sqlrewrite.analyzer;
 
 import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
@@ -40,6 +41,8 @@ public class Analysis
     private final Set<Model> models = new HashSet<>();
     private final Set<Metric> metrics = new HashSet<>();
     private final Map<NodeRef<FunctionRelation>, MetricRollupInfo> metricRollups = new HashMap<>();
+
+    private final Set<CumulativeMetric> cumulativeMetrics = new HashSet<>();
     private final Set<View> views = new HashSet<>();
 
     Analysis(Statement statement)
@@ -105,6 +108,16 @@ public class Analysis
     public Map<NodeRef<FunctionRelation>, MetricRollupInfo> getMetricRollups()
     {
         return metricRollups;
+    }
+
+    void addCumulativeMetrics(Set<CumulativeMetric> cumulativeMetrics)
+    {
+        this.cumulativeMetrics.addAll(cumulativeMetrics);
+    }
+
+    public Set<CumulativeMetric> getCumulativeMetrics()
+    {
+        return cumulativeMetrics;
     }
 
     public Set<View> getViews()

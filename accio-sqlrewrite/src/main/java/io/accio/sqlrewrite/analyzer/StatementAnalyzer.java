@@ -17,6 +17,7 @@ package io.accio.sqlrewrite.analyzer;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
@@ -49,7 +50,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
-import static io.accio.base.dto.TimeGrain.TimeUnit.timeUnit;
+import static io.accio.base.dto.TimeUnit.timeUnit;
 import static io.accio.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static java.lang.String.format;
@@ -111,6 +112,20 @@ public final class StatementAnalyzer
                         .collect(toUnmodifiableSet()));
 
         analysis.addMetrics(metrics);
+
+        Set<CumulativeMetric> cumulativeMetrics = analysis.getTables().stream()
+                .map(accioMDL::getCumulativeMetric)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toUnmodifiableSet());
+
+        analysis.addModels(
+                cumulativeMetrics.stream()
+                        .map(CumulativeMetric::getBaseModel)
+                        .distinct()
+                        .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
+                        .collect(toUnmodifiableSet()));
+        analysis.addCumulativeMetrics(cumulativeMetrics);
 
         Set<View> views = analysis.getTables().stream()
                 .map(accioMDL::getView)

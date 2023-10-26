@@ -368,7 +368,7 @@ public final class ExpressionFormatter
         {
             String sign = (node.getSign() == IntervalLiteral.Sign.NEGATIVE) ? "-" : "";
             StringBuilder builder = new StringBuilder();
-            if (dialect.equals(BIGQUERY)) {
+            if (dialect.equals(BIGQUERY) || dialect.equals(DUCKDB)) {
                 builder.append("INTERVAL ")
                         .append("'").append(sign).append(node.getValue()).append("' ")
                         .append(node.getStartField());
@@ -446,6 +446,10 @@ public final class ExpressionFormatter
             // https://github.com/Canner/canner-metric-layer/issues/289
             if ("SLICE".equalsIgnoreCase(node.getName().toString()) && dialect.equals(BIGQUERY)) {
                 return processSliceInBigQuery(node);
+            }
+
+            if ("GENERATE_TIMESTAMP_ARRAY".equalsIgnoreCase(node.getName().toString()) && dialect.equals(DUCKDB)) {
+                return processGenerateTimestampArrayInDuckDB(node);
             }
 
             StringBuilder builder = new StringBuilder();
@@ -955,6 +959,16 @@ public final class ExpressionFormatter
                     // bigquery use zero-based indexes
                     start.getValue() - 1,
                     start.getValue() - 1 + length.getValue());
+        }
+
+        private String processGenerateTimestampArrayInDuckDB(FunctionCall node)
+        {
+            List<Expression> arguments = node.getArguments();
+            Expression start = arguments.get(0);
+            Expression end = arguments.get(1);
+            return format("GENERATE_SERIES(%s, %s, INTERVAL 1 DAY)",
+                    start,
+                    end);
         }
     }
 

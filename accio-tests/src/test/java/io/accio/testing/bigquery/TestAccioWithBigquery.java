@@ -121,6 +121,24 @@ public class TestAccioWithBigquery
     }
 
     @Test
+    public void testQueryCumulativeMetric()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select * from WeeklyRevenue");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(53);
+        }
+    }
+
+    @Test
     public void testEnum()
             throws Exception
     {

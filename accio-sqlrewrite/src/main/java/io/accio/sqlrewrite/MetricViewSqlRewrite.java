@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.View;
 import io.accio.sqlrewrite.analyzer.Analysis;
@@ -35,6 +36,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static io.accio.sqlrewrite.Utils.createDateSpineQuery;
+import static io.accio.sqlrewrite.Utils.parseCumulativeMetricSql;
 import static io.accio.sqlrewrite.Utils.parseView;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -73,12 +76,15 @@ public class MetricViewSqlRewrite
                 allAnalysis.stream().flatMap(a -> a.getMetricRollups().values().stream())
                         .collect(toUnmodifiableMap(rollup -> rollup.getMetric().getName(), Utils::parseMetricRollupSql));
 
+        Map<String, Query> cumulativeMetrics = allAnalysis.stream().flatMap(a -> a.getCumulativeMetrics().stream())
+                .collect(toUnmodifiableMap(CumulativeMetric::getName, query -> parseCumulativeMetricSql(query, accioMDL)));
+
         // The generation of views has a sequential order, with later views being able to reference earlier views.
         Map<String, Query> viewQueries = new LinkedHashMap<>();
         allAnalysis.stream().flatMap(a -> a.getViews().stream())
                 .forEach(view -> viewQueries.put(view.getName(), parseView(view.getStatement())));
 
-        return (Statement) new WithRewriter(metricQueries, metricRollupQueries, ImmutableMap.copyOf(viewQueries)).process(root);
+        return (Statement) new WithRewriter(metricQueries, metricRollupQueries, cumulativeMetrics, ImmutableMap.copyOf(viewQueries), accioMDL).process(root);
     }
 
     private static class WithRewriter
@@ -86,17 +92,23 @@ public class MetricViewSqlRewrite
     {
         private final Map<String, Query> metricQueries;
         private final Map<String, Query> metricRollupQueries;
+        private final Map<String, Query> cumulativeMetricQueries;
 
         private final Map<String, Query> viewQueries;
+        private final AccioMDL accioMDL;
 
         public WithRewriter(
                 Map<String, Query> metricQueries,
                 Map<String, Query> metricRollupQueries,
-                Map<String, Query> viewQueries)
+                Map<String, Query> cumulativeMetricQueries,
+                Map<String, Query> viewQueries,
+                AccioMDL accioMDL)
         {
             this.metricQueries = requireNonNull(metricQueries, "metricQueries is null");
             this.metricRollupQueries = requireNonNull(metricRollupQueries, "metricRollupQueries is null");
             this.viewQueries = requireNonNull(viewQueries, "viewQueries is null");
+            this.cumulativeMetricQueries = requireNonNull(cumulativeMetricQueries, "cumulativeMetricQueries is null");
+            this.accioMDL = requireNonNull(accioMDL, "accioMDL is null");
         }
 
         @Override
@@ -116,9 +128,17 @@ public class MetricViewSqlRewrite
                     .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
                     .collect(toUnmodifiableList());
 
+            List<WithQuery> cumulativeMetricWithQueries = cumulativeMetricQueries.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey()) // sort here to avoid test failed due to wrong with-query order
+                    .map(e -> new WithQuery(new Identifier(e.getKey()), e.getValue(), Optional.empty()))
+                    .collect(toUnmodifiableList());
+
+            WithQuery dateSpineWithQuery = new WithQuery(new Identifier("date_spine"), createDateSpineQuery(accioMDL.getDateSpine()), Optional.empty());
+
             List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
                     .addAll(metricWithQueries)
                     .addAll(metricRollupWithQueries)
+                    .addAll(ImmutableList.<WithQuery>builder().add(dateSpineWithQuery).addAll(cumulativeMetricWithQueries).build())
                     .addAll(viewWithQueries)
                     .build();
 
