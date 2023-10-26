@@ -14,8 +14,11 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Model;
+import io.accio.base.dto.Relationship;
 import io.accio.testing.AbstractTestFramework;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -30,6 +33,7 @@ import static io.accio.base.dto.Column.relationshipColumn;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.JoinType.ONE_TO_ONE;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onModel;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static io.trino.sql.SqlFormatter.formatSql;
@@ -296,6 +300,83 @@ public class TestModelSqlRewrite
                 .hasMessage("found relation in relation join condition in WishList.peopleId");
     }
 
+    @Test
+    public void testModelOnModel()
+    {
+        List<Model> models = ImmutableList.<Model>builder()
+                .addAll(DEFAULT_MANIFEST.getModels())
+                .add(
+                        onModel(
+                                "BookReplica",
+                                "Book",
+                                List.of(
+                                        column("id", "STRING", null, false, "bookId"),
+                                        column("authorId", "STRING", null, false),
+                                        column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)"),
+                                        column("author_gift_id", "STRING", null, false),
+                                        column("wishlist_id", "STRING", null, false, "wishlist.id"),
+                                        relationshipColumn("wishlist", "WishList", "BookReplicaWishList")),
+                                "id"))
+                .build();
+        List<Relationship> relationships = ImmutableList.<Relationship>builder()
+                .addAll(DEFAULT_MANIFEST.getRelationships())
+                .add(relationship("BookReplicaWishList", List.of("BookReplica", "WishList"), ONE_TO_ONE, "BookReplica.id = WishList.bookId"))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(DEFAULT_MANIFEST)
+                        .setModels(models)
+                        .setRelationships(relationships)
+                        .build());
+
+        @Language("SQL")
+        String bookReplica = "" +
+                ", BookReplica AS (\n" +
+                "   SELECT\n" +
+                "     \"BookReplica\".\"id\" \"id\"\n" +
+                "   , \"BookReplica\".\"authorId\" \"authorId\"\n" +
+                "   , \"BookReplica\".\"publish_year\" \"publish_year\"\n" +
+                "   , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
+                "   , \"wishlist_id\".\"wishlist_id\" \"wishlist_id\"\n" +
+                "   FROM\n" +
+                "     ((\n" +
+                "      SELECT\n" +
+                "        bookId \"id\"\n" +
+                "      , \"BookReplica\".\"authorId\" \"authorId\"\n" +
+                "      , date_trunc('year', publish_date) \"publish_year\"\n" +
+                "      , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
+                "      FROM\n" +
+                "        (\n" +
+                "         SELECT *\n" +
+                "         FROM\n" +
+                "           Book\n" +
+                "      )  \"BookReplica\"\n" +
+                "   )  \"BookReplica\"\n" +
+                "   LEFT JOIN (\n" +
+                "      SELECT\n" +
+                "        \"BookReplica\".\"id\"\n" +
+                "      , \"WishList\".\"id\" \"wishlist_id\"\n" +
+                "      FROM\n" +
+                "        ((\n" +
+                "         SELECT\n" +
+                "           bookId \"id\"\n" +
+                "         , bookId \"id\"\n" +
+                "         FROM\n" +
+                "           (\n" +
+                "            SELECT *\n" +
+                "            FROM\n" +
+                "              Book\n" +
+                "         )  \"BookReplica\"\n" +
+                "      )  \"BookReplica\"\n" +
+                "      LEFT JOIN \"WishList\" ON (BookReplica.id = WishList.bookId))\n" +
+                "   )  \"wishlist_id\" ON (\"BookReplica\".\"id\" = \"wishlist_id\".\"id\"))\n" +
+                ") ";
+
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM BookReplica", mdl),
+                "WITH " + (WITH_BOOK_QUERY + bookReplica) + "SELECT * FROM BookReplica");
+        assertSqlEqualsAndValid(rewrite("SELECT * FROM BookReplica br JOIN People p ON br.authorId = p.id", mdl),
+                "WITH " + (WITH_BOOK_QUERY + bookReplica) + "SELECT * FROM BookReplica br JOIN People p ON br.authorId = p.id");
+    }
+
     private static String rewrite(String sql)
     {
         return rewrite(sql, ACCIOMDL);
@@ -314,6 +395,18 @@ public class TestModelSqlRewrite
         Statement expectedStmt = sqlParser.createStatement(expected, parsingOptions);
         assertThat(formatSql(actualStmt))
                 .isEqualTo(formatSql(expectedStmt));
+    }
+
+    private static Manifest.Builder copyOf(Manifest manifest)
+    {
+        return Manifest.builder()
+                .setCatalog(manifest.getCatalog())
+                .setSchema(manifest.getSchema())
+                .setModels(manifest.getModels())
+                .setRelationships(manifest.getRelationships())
+                .setMetrics(manifest.getMetrics())
+                .setViews(manifest.getViews())
+                .setEnumDefinitions(manifest.getEnumDefinitions());
     }
 
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)
