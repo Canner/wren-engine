@@ -26,9 +26,9 @@ import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Relationship.SortKey.sortKey;
 import static io.accio.base.dto.Relationship.relationship;
-import static io.accio.base.dto.TimeGrain.TimeUnit.DAY;
-import static io.accio.base.dto.TimeGrain.TimeUnit.MONTH;
 import static io.accio.base.dto.TimeGrain.timeGrain;
+import static io.accio.base.dto.TimeUnit.DAY;
+import static io.accio.base.dto.TimeUnit.MONTH;
 import static io.accio.base.dto.View.view;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 

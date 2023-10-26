@@ -16,7 +16,7 @@ package io.accio.sqlrewrite.analyzer;
 
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.TimeGrain;
-import io.accio.base.dto.TimeGrain.TimeUnit;
+import io.accio.base.dto.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
