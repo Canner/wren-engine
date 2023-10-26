@@ -135,10 +135,14 @@ public class MetricViewSqlRewrite
 
             WithQuery dateSpineWithQuery = new WithQuery(new Identifier("date_spine"), createDateSpineQuery(accioMDL.getDateSpine()), Optional.empty());
 
+            List<WithQuery> addDateSpineIfNeed = cumulativeMetricWithQueries.isEmpty() ?
+                    List.of() :
+                    ImmutableList.<WithQuery>builder().add(dateSpineWithQuery).addAll(cumulativeMetricWithQueries).build();
+
             List<WithQuery> withQueries = ImmutableList.<WithQuery>builder()
                     .addAll(metricWithQueries)
                     .addAll(metricRollupWithQueries)
-                    .addAll(ImmutableList.<WithQuery>builder().add(dateSpineWithQuery).addAll(cumulativeMetricWithQueries).build())
+                    .addAll(addDateSpineIfNeed)
                     .addAll(viewWithQueries)
                     .build();
 
