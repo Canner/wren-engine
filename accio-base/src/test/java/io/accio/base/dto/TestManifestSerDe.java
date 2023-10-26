@@ -19,7 +19,9 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
 import static io.accio.base.dto.EnumValue.enumValue;
 import static io.accio.base.dto.Metric.metric;
@@ -30,6 +32,7 @@ import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.TimeUnit.DAY;
 import static io.accio.base.dto.TimeUnit.MONTH;
 import static io.accio.base.dto.View.view;
+import static io.accio.base.dto.Window.window;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestManifestSerDe
@@ -105,6 +108,14 @@ public class TestManifestSerDe
                         List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))),
                         true, "the revenue of an order")))
                 .setViews(List.of(view("useMetric", "select * from Revenue", "the view for the revenue metric")))
+                .setCumulativeMetrics(List.of(
+                        cumulativeMetric("DailyRevenue",
+                                "Orders", column("totalprice", INTEGER, null, true),
+                                window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31")),
+                        cumulativeMetric("WeeklyRevenue",
+                                "Orders", column("totalprice", INTEGER, null, true),
+                                window("orderdate", "orderdate", TimeUnit.WEEK, "1994-01-01", "1994-12-31"))))
+                .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31"))
                 .build();
     }
 }

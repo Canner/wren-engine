@@ -17,6 +17,8 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class DateSpine
 {
     public static final DateSpine DEFAULT = new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31");
@@ -52,5 +54,36 @@ public class DateSpine
     public String getEnd()
     {
         return end;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "DateSpine{" +
+                "unit=" + unit +
+                ", start='" + start + '\'' +
+                ", end='" + end + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        DateSpine dateSpine = (DateSpine) o;
+        return unit == dateSpine.unit &&
+                Objects.equals(start, dateSpine.start) &&
+                Objects.equals(end, dateSpine.end);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(unit, start, end);
     }
 }

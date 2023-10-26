@@ -18,6 +18,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.airlift.units.Duration;
 
+import java.util.Objects;
+
 public class CumulativeMetric
 {
     public static CumulativeMetric cumulativeMetric(
@@ -96,5 +98,46 @@ public class CumulativeMetric
     public String getDescription()
     {
         return description;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, baseModel, measure, window, preAggregated, refreshTime, description);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        CumulativeMetric that = (CumulativeMetric) o;
+        return preAggregated == that.preAggregated &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(baseModel, that.baseModel) &&
+                Objects.equals(measure, that.measure) &&
+                Objects.equals(window, that.window) &&
+                Objects.equals(refreshTime, that.refreshTime) &&
+                Objects.equals(description, that.description);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "CumulativeMetric{" +
+                "name='" + name + '\'' +
+                ", baseModel='" + baseModel + '\'' +
+                ", measure=" + measure +
+                ", window=" + window +
+                ", preAggregated=" + preAggregated +
+                ", refreshTime=" + refreshTime +
+                ", description='" + description + '\'' +
+                '}';
     }
 }
