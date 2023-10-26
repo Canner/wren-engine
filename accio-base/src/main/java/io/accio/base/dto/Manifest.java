@@ -20,16 +20,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
 
+import static io.accio.base.dto.DateSpine.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
 public class Manifest
 {
     private final String catalog;
     private final String schema;
+    private final DateSpine dateSpine;
     private final List<Model> models;
     private final List<Relationship> relationships;
     private final List<EnumDefinition> enumDefinitions;
     private final List<Metric> metrics;
+    private final List<CumulativeMetric> cumulativeMetrics;
 
     private final List<View> views;
 
@@ -46,7 +49,9 @@ public class Manifest
             @JsonProperty("relationships") List<Relationship> relationships,
             @JsonProperty("enumDefinitions") List<EnumDefinition> enumDefinitions,
             @JsonProperty("metrics") List<Metric> metrics,
-            @JsonProperty("views") List<View> views)
+            @JsonProperty("cumulativeMetrics") List<CumulativeMetric> cumulativeMetrics,
+            @JsonProperty("views") List<View> views,
+            @JsonProperty("dateSpine") DateSpine dateSpine)
     {
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.schema = requireNonNull(schema, "schema is null");
@@ -54,7 +59,9 @@ public class Manifest
         this.relationships = relationships == null ? List.of() : relationships;
         this.enumDefinitions = enumDefinitions == null ? List.of() : enumDefinitions;
         this.metrics = metrics == null ? List.of() : metrics;
+        this.cumulativeMetrics = cumulativeMetrics == null ? List.of() : cumulativeMetrics;
         this.views = views == null ? List.of() : views;
+        this.dateSpine = dateSpine == null ? DEFAULT : dateSpine;
     }
 
     @JsonProperty
@@ -67,6 +74,12 @@ public class Manifest
     public String getSchema()
     {
         return schema;
+    }
+
+    @JsonProperty
+    public DateSpine getDateSpine()
+    {
+        return dateSpine;
     }
 
     @JsonProperty
@@ -94,6 +107,12 @@ public class Manifest
     }
 
     @JsonProperty
+    public List<CumulativeMetric> getCumulativeMetrics()
+    {
+        return cumulativeMetrics;
+    }
+
+    @JsonProperty
     public List<View> getViews()
     {
         return views;
@@ -117,7 +136,9 @@ public class Manifest
                 Objects.equals(relationships, manifest.relationships) &&
                 Objects.equals(enumDefinitions, manifest.enumDefinitions) &&
                 Objects.equals(metrics, manifest.metrics) &&
-                Objects.equals(views, manifest.views);
+                Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics) &&
+                Objects.equals(views, manifest.views) &&
+                Objects.equals(dateSpine, manifest.dateSpine);
     }
 
     @Override
@@ -130,7 +151,9 @@ public class Manifest
                 relationships,
                 enumDefinitions,
                 metrics,
-                views);
+                cumulativeMetrics,
+                views,
+                dateSpine);
     }
 
     @Override
@@ -143,7 +166,9 @@ public class Manifest
                 ", relationships=" + relationships +
                 ", enumDefinitions=" + enumDefinitions +
                 ", metrics=" + metrics +
+                ", cumulativeMetrics=" + cumulativeMetrics +
                 ", views=" + views +
+                ", dateSpine=" + dateSpine +
                 '}';
     }
 
@@ -155,8 +180,11 @@ public class Manifest
         private List<Relationship> relationships;
         private List<EnumDefinition> enumDefinitions;
         private List<Metric> metrics;
+        private List<CumulativeMetric> cumulativeMetrics;
 
         private List<View> views;
+
+        private DateSpine dateSpine;
 
         private Builder() {}
 
@@ -196,15 +224,27 @@ public class Manifest
             return this;
         }
 
+        public Builder setCumulativeMetrics(List<CumulativeMetric> cumulativeMetrics)
+        {
+            this.cumulativeMetrics = cumulativeMetrics;
+            return this;
+        }
+
         public Builder setViews(List<View> views)
         {
             this.views = views;
             return this;
         }
 
+        public Builder setDateSpine(DateSpine dateSpine)
+        {
+            this.dateSpine = dateSpine;
+            return this;
+        }
+
         public Manifest build()
         {
-            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics, views);
+            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics, cumulativeMetrics, views, dateSpine);
         }
     }
 }
