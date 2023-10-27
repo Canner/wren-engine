@@ -197,7 +197,7 @@ public class ModelInfo
         // TODO: this should be checked in validator too
         primaryKey.getExpression().ifPresent(expression ->
                 checkArgument(ExpressionRelationshipAnalyzer.getRelationships(parseExpression(expression), mdl, model).isEmpty(),
-                        "primary key expression can't use relation"));
+                        format("found relation in model %s primary key expression", model.getName())));
 
         String joinKeys = relationships.stream()
                 .map(relationship -> {
@@ -209,7 +209,7 @@ public class ModelInfo
                     // TODO: this should be checked in validator too
                     joinColumn.getExpression().ifPresent(expression ->
                             checkArgument(ExpressionRelationshipAnalyzer.getRelationships(parseExpression(expression), mdl, model).isEmpty(),
-                                    "column in join condition can't use relation"));
+                                    format("found relation in relation join condition in %s.%s", model.getName(), joinColumn.getName())));
                     return format("%s AS \"%s\"", joinColumn.getExpression().orElse(joinColumn.getName()), joinColumn.getName());
                 })
                 .collect(joining(","));
