@@ -34,15 +34,16 @@ import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.graph.GraphCycleProhibitedException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Strings.nullToEmpty;
-import static io.accio.sqlrewrite.Utils.parseQuery;
-import static java.lang.String.format;
+import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -57,45 +58,79 @@ public class AccioSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
     {
+        Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> ModelInfo.get(model, accioMDL)).collect(toSet());
+        Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(MetricInfo::get).collect(toSet());
+        Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> MetricInfo.get(metric, accioMDL)).collect(toSet());
+        Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, accioMDL, sessionContext)).collect(toSet());
+        Set<QueryDescriptor> allDescriptors = ImmutableSet.<QueryDescriptor>builder()
+                .addAll(modelDescriptors)
+                .addAll(metricDescriptors)
+                .addAll(viewDescriptors)
+                .addAll(cumulativeMetricDescriptors)
+                .build();
+
+        // initDescriptors gathers queries that need to be placed at the beginning of a Common Table Expression (CTE).
+        Set<QueryDescriptor> initDescriptors = new HashSet<>();
+        if (cumulativeMetricDescriptors.size() > 0) {
+            initDescriptors.add(DateSpineInfo.get(accioMDL.getDateSpine()));
+        }
+        return apply(root, sessionContext, analysis, accioMDL, allDescriptors, initDescriptors);
+    }
+
+    private Statement apply(
+            Statement root,
+            SessionContext sessionContext,
+            Analysis analysis,
+            AccioMDL accioMDL,
+            Set<QueryDescriptor> allDescriptors,
+            Set<QueryDescriptor> initDescriptors)
+    {
         DirectedAcyclicGraph<String, Object> graph = new DirectedAcyclicGraph<>(Object.class);
-        Set<ModelInfo> modelInfos = analysis.getModels().stream().map(model -> ModelInfo.get(model, accioMDL)).collect(toSet());
-        Set<ModelInfo> requiredModelInfos = new HashSet<>();
-        modelInfos.forEach(modelInfo -> addModelToGraph(modelInfo, graph, accioMDL, requiredModelInfos));
-        Set<ModelInfo> allModelInfos = ImmutableSet.<ModelInfo>builder().addAll(modelInfos).addAll(requiredModelInfos).build();
+        Set<QueryDescriptor> requiredQueryDescriptors = new HashSet<>();
+        // add to graph
+        allDescriptors.forEach(queryDescriptor -> addSqlDescriptorToGraph(queryDescriptor, graph, accioMDL, requiredQueryDescriptors, sessionContext));
+
+        Map<String, QueryDescriptor> descriptorMap = new HashMap<>();
+        allDescriptors.forEach(queryDescriptor -> descriptorMap.put(queryDescriptor.getName(), queryDescriptor));
+        requiredQueryDescriptors.forEach(queryDescriptor -> descriptorMap.put(queryDescriptor.getName(), queryDescriptor));
 
         List<WithQuery> withQueries = new ArrayList<>();
-        graph.iterator().forEachRemaining(modelName -> {
-            ModelInfo modelInfo = allModelInfos.stream()
-                    .filter(info -> info.getModel().getName().equals(modelName))
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException(format("Missing model name %s in graph", modelName)));
-            withQueries.add(new WithQuery(new Identifier(modelInfo.getModel().getName()), parseQuery(modelInfo.getSql()), Optional.empty()));
+        initDescriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
+        graph.iterator().forEachRemaining(objectName -> {
+            QueryDescriptor queryDescriptor = descriptorMap.get(objectName);
+            checkArgument(queryDescriptor != null, objectName + " not found in query descriptors");
+            withQueries.add(getWithQuery(queryDescriptor));
         });
 
         Node rewriteWith = new WithRewriter(withQueries).process(root);
         return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);
     }
 
-    private static void addModelToGraph(ModelInfo modelInfo, DirectedAcyclicGraph<String, Object> graph, AccioMDL mdl, Set<ModelInfo> modelInfos)
+    private static void addSqlDescriptorToGraph(
+            QueryDescriptor queryDescriptor,
+            DirectedAcyclicGraph<String, Object> graph,
+            AccioMDL mdl,
+            Set<QueryDescriptor> queryDescriptors,
+            SessionContext sessionContext)
     {
         // add vertex
-        graph.addVertex(modelInfo.getModel().getName());
-        modelInfo.getRequiredModels().forEach(graph::addVertex);
+        graph.addVertex(queryDescriptor.getName());
+        queryDescriptor.getRequiredObjects().forEach(graph::addVertex);
 
         //add edge
         try {
-            modelInfo.getRequiredModels().forEach(modelName ->
-                    graph.addEdge(modelName, modelInfo.getModel().getName()));
+            queryDescriptor.getRequiredObjects().forEach(modelName ->
+                    graph.addEdge(modelName, queryDescriptor.getName()));
         }
         catch (GraphCycleProhibitedException ex) {
             throw new IllegalArgumentException("found cycle in models", ex);
         }
 
         // add required models to graph
-        for (String modelName : modelInfo.getRequiredModels()) {
-            ModelInfo info = ModelInfo.get(mdl.getModel(modelName).orElseThrow(), mdl);
-            modelInfos.add(info);
-            addModelToGraph(info, graph, mdl, modelInfos);
+        for (String objectName : queryDescriptor.getRequiredObjects()) {
+            QueryDescriptor descriptor = QueryDescriptor.of(objectName, mdl, sessionContext);
+            queryDescriptors.add(descriptor);
+            addSqlDescriptorToGraph(descriptor, graph, mdl, queryDescriptors, sessionContext);
         }
     }
 
@@ -179,6 +214,8 @@ public class AccioSqlRewrite
         protected Node visitFunctionRelation(FunctionRelation node, Void context)
         {
             if (analysis.getMetricRollups().containsKey(NodeRef.of(node))) {
+                // TODO: Fix metric rollup issue. Currently, the rollup incorrectly uses metric name
+                //       If SQL involves two tables with the same metric and rolls up this metric, it results in incorrect behavior.
                 return new Table(QualifiedName.of(analysis.getMetricRollups().get(NodeRef.of(node)).getMetric().getName()));
             }
             // this should not happen, every MetricRollup node should be captured and syntax checked in StatementAnalyzer
@@ -190,5 +227,10 @@ public class AccioSqlRewrite
         {
             return new Table(QualifiedName.of(table.getName().getSuffix()));
         }
+    }
+
+    private static WithQuery getWithQuery(QueryDescriptor queryDescriptor)
+    {
+        return new WithQuery(new Identifier(queryDescriptor.getName()), queryDescriptor.getQuery(), Optional.empty());
     }
 }

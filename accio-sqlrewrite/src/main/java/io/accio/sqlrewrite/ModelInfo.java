@@ -23,6 +23,7 @@ import io.accio.sqlrewrite.analyzer.ExpressionRelationshipInfo;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.Query;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
+import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -42,10 +44,11 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class ModelInfo
+        implements QueryDescriptor
 {
     private final Model model;
     private final Set<String> requiredModels;
-    private final String sql;
+    private final Query query;
 
     public static ModelInfo get(Model model, AccioMDL mdl)
     {
@@ -55,26 +58,29 @@ public class ModelInfo
     private ModelInfo(
             Model model,
             Set<String> requiredModels,
-            String sql)
+            Query query)
     {
         this.model = requireNonNull(model);
         this.requiredModels = requireNonNull(requiredModels);
-        this.sql = requireNonNull(sql);
+        this.query = requireNonNull(query);
     }
 
-    public Model getModel()
+    @Override
+    public String getName()
     {
-        return model;
+        return model.getName();
     }
 
-    public Set<String> getRequiredModels()
+    @Override
+    public Set<String> getRequiredObjects()
     {
         return requiredModels;
     }
 
-    public String getSql()
+    @Override
+    public Query getQuery()
     {
-        return sql;
+        return query;
     }
 
     @Override
@@ -89,13 +95,13 @@ public class ModelInfo
         ModelInfo modelInfo = (ModelInfo) o;
         return Objects.equals(model, modelInfo.model)
                 && Objects.equals(requiredModels, modelInfo.requiredModels)
-                && Objects.equals(sql, modelInfo.sql);
+                && Objects.equals(query, modelInfo.query);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(model, requiredModels, sql);
+        return Objects.hash(model, requiredModels, query);
     }
 
     private static class Analyzer
@@ -130,7 +136,7 @@ public class ModelInfo
         {
             requireNonNull(model, "model is null");
             if (model.getColumns().isEmpty()) {
-                return new ModelInfo(model, Set.of(), refSql);
+                return new ModelInfo(model, Set.of(), parseQuery(refSql));
             }
 
             // key is alias_name.column_name, value is column name, this map is used to compose select items in model sql
@@ -211,7 +217,7 @@ public class ModelInfo
             return new ModelInfo(
                     model,
                     requiredModels,
-                    format("SELECT %s FROM %s", selectItemsSql, tableJoinsSql));
+                    parseQuery(format("SELECT %s FROM %s", selectItemsSql, tableJoinsSql)));
         }
 
         private String getSubquerySql(Model model, List<Relationship> relationships, AccioMDL mdl)
