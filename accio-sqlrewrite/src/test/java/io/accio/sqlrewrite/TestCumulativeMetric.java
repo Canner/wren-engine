@@ -27,6 +27,7 @@ import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
+import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Window.window;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
@@ -56,19 +57,19 @@ public class TestCumulativeMetric
                                         column("comment", VARCHAR, null, true)))))
                 .setCumulativeMetrics(List.of(
                         cumulativeMetric("DailyRevenue",
-                                "Orders", column("totalprice", INTEGER, null, true),
+                                "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31")),
                         cumulativeMetric("WeeklyRevenue",
-                                "Orders", column("totalprice", INTEGER, null, true),
+                                "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.WEEK, "1994-01-01", "1994-12-31")),
                         cumulativeMetric("MonthlyRevenue",
-                                "Orders", column("totalprice", INTEGER, null, true),
+                                "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.MONTH, "1994-01-01", "1994-12-31")),
                         cumulativeMetric("QuarterlyRevenue",
-                                "Orders", column("totalprice", INTEGER, null, true),
+                                "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.QUARTER, "1994-01-01", "1995-12-31")),
                         cumulativeMetric("YearlyRevenue",
-                                "Orders", column("totalprice", INTEGER, null, true),
+                                "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.YEAR, "1994-01-01", "1998-12-31"))))
                 .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31"))
                 .build());

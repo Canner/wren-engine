@@ -150,7 +150,7 @@ public final class Utils
         String pattern =
                 "select \n" +
                         "  metric_time as %s,\n" +
-                        "  sum(distinct measure_field) as %s\n" +
+                        "  %s(distinct measure_field) as %s\n" +
                         "from \n" +
                         "  (\n" +
                         "    select \n" +
@@ -180,12 +180,13 @@ public final class Utils
         String castingDateSpine = format("select cast(metric_time as %s) as metric_time from date_spine", windowType);
         String windowRange = format("d.metric_time - %s", cumulativeMetric.getWindow().getTimeUnit().getIntervalExpression());
         String selectFromModel = format("select %s as measure_field, %s as metric_time from %s",
-                cumulativeMetric.getMeasure().getName(),
+                cumulativeMetric.getMeasure().getRefColumn(),
                 cumulativeMetric.getWindow().getRefColumn(),
                 cumulativeMetric.getBaseModel());
 
         return format(pattern,
                 cumulativeMetric.getWindow().getName(),
+                cumulativeMetric.getMeasure().getOperator(),
                 cumulativeMetric.getMeasure().getName(),
                 cumulativeMetric.getWindow().getTimeUnit().name(),
                 castingDateSpine,

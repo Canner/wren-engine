@@ -26,7 +26,7 @@ public class CumulativeMetric
     public static CumulativeMetric cumulativeMetric(
             String name,
             String baseModel,
-            Column measure,
+            Measure measure,
             Window window)
     {
         return new CumulativeMetric(name, baseModel, measure, window, false, null, null);
@@ -34,7 +34,7 @@ public class CumulativeMetric
 
     private final String name;
     private final String baseModel;
-    private final Column measure;
+    private final Measure measure;
     private final Window window;
     private final boolean preAggregated;
     private final Duration refreshTime;
@@ -44,7 +44,7 @@ public class CumulativeMetric
     public CumulativeMetric(
             @JsonProperty("name") String name,
             @JsonProperty("baseModel") String baseModel,
-            @JsonProperty("measure") Column measure,
+            @JsonProperty("measure") Measure measure,
             @JsonProperty("window") Window window,
             @JsonProperty("preAggregated") boolean preAggregated,
             @JsonProperty("refreshTime") Duration refreshTime,
@@ -72,7 +72,7 @@ public class CumulativeMetric
     }
 
     @JsonProperty
-    public Column getMeasure()
+    public Measure getMeasure()
     {
         return measure;
     }

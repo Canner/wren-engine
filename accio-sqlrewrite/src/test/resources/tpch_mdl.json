@@ -298,7 +298,8 @@
       "measure": {
         "name": "totalprice",
         "type": "int4",
-        "expression": "sum(totalprice)"
+        "operator": "sum",
+        "refColumn": "totalprice"
       },
       "window": {
         "name": "orderdate",
