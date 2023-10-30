@@ -21,6 +21,7 @@ import io.airlift.units.Duration;
 import java.util.Objects;
 
 public class CumulativeMetric
+        implements PreAggregationInfo
 {
     public static CumulativeMetric cumulativeMetric(
             String name,

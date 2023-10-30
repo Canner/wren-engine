@@ -123,7 +123,7 @@ public final class StatementAnalyzer
                 cumulativeMetrics.stream()
                         .map(CumulativeMetric::getBaseModel)
                         .distinct()
-                        .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
+                        .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("cumulative metric model %s not exists", model))))
                         .collect(toUnmodifiableSet()));
         analysis.addCumulativeMetrics(cumulativeMetrics);
 
