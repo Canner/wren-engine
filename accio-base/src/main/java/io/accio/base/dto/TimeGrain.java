@@ -20,25 +20,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
 
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
 public class TimeGrain
 {
-    public enum TimeUnit
-    {
-        YEAR,
-        QUARTER,
-        MONTH,
-        WEEK,
-        DAY;
-
-        public static TimeUnit timeUnit(String name)
-        {
-            return valueOf(name.toUpperCase(ENGLISH));
-        }
-    }
-
     private final String name;
 
     private final String refColumn;

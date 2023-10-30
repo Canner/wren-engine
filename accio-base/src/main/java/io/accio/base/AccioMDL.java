@@ -17,6 +17,8 @@ package io.accio.base;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.accio.base.dto.Column;
+import io.accio.base.dto.CumulativeMetric;
+import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.EnumDefinition;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
@@ -143,6 +145,21 @@ public class AccioMDL
         return Optional.empty();
     }
 
+    public Optional<CumulativeMetric> getCumulativeMetric(String name)
+    {
+        return manifest.getCumulativeMetrics().stream()
+                .filter(metric -> metric.getName().equals(name))
+                .findAny();
+    }
+
+    public Optional<CumulativeMetric> getCumulativeMetric(CatalogSchemaTableName name)
+    {
+        if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
+            return getCumulativeMetric(name.getSchemaTableName().getTableName());
+        }
+        return Optional.empty();
+    }
+
     public Optional<View> getView(String name)
     {
         return manifest.getViews().stream()
@@ -171,5 +188,10 @@ public class AccioMDL
         return model.getColumns().stream()
                 .filter(column -> column.getName().equals(name))
                 .findAny();
+    }
+
+    public DateSpine getDateSpine()
+    {
+        return manifest.getDateSpine();
     }
 }

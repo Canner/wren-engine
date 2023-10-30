@@ -20,6 +20,8 @@ import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Column;
+import io.accio.base.dto.CumulativeMetric;
+import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.Metric;
 import io.accio.sqlrewrite.analyzer.Field;
 import io.accio.sqlrewrite.analyzer.MetricRollupInfo;
@@ -40,6 +42,7 @@ import io.trino.sql.tree.SubscriptExpression;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -122,6 +125,81 @@ public final class Utils
                 .map(Column::getSqlExpression).collect(joining(","));
         String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
         return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseModel(), groupByItems);
+    }
+
+    public static Query parseCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
+    {
+        String sql = getCumulativeMetricSql(cumulativeMetric, accioMDL);
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        if (statement instanceof Query) {
+            return (Query) statement;
+        }
+        throw new IllegalArgumentException(format("metric %s is not a query, sql %s", cumulativeMetric.getName(), sql));
+    }
+
+    public static String getCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
+    {
+        requireNonNull(cumulativeMetric, "cumulativeMetric is null");
+
+        String windowType = accioMDL.getModel(cumulativeMetric.getBaseModel())
+                .map(model -> model.getColumns().stream()
+                        .filter(column -> column.getName().equals(cumulativeMetric.getWindow().getRefColumn()))
+                        .map(Column::getType).findAny().orElseThrow(() -> new NoSuchElementException(format("Column %s not found in model %s", cumulativeMetric.getWindow().getRefColumn(), cumulativeMetric.getBaseModel()))))
+                .orElseThrow(() -> new NoSuchElementException(format("Model %s not found", cumulativeMetric.getBaseModel())));
+
+        String pattern =
+                "select \n" +
+                        "  metric_time as %s,\n" +
+                        "  %s(distinct measure_field) as %s\n" +
+                        "from \n" +
+                        "  (\n" +
+                        "    select \n" +
+                        "      date_trunc('%s', d.metric_time) as metric_time,\n" +
+                        "      measure_field\n" +
+                        "    from \n" +
+                        "      (%s) d \n" +
+                        "      left join (\n" +
+                        "        select \n" +
+                        "          measure_field,\n" +
+                        "          metric_time\n" +
+                        "        from (%s) sub1\n" +
+                        "        where \n" +
+                        "          metric_time >= cast('%s' as %s) \n" +
+                        "          and metric_time <= cast('%s' as %s)\n" +
+                        "      ) sub2 on (\n" +
+                        "        sub2.metric_time <= d.metric_time \n" +
+                        "        and sub2.metric_time > %s\n" +
+                        "      )\n" +
+                        "    where \n" +
+                        "      d.metric_time >= cast('%s' as %s)  \n" +
+                        "      and d.metric_time <= cast('%s' as %s)   \n" +
+                        "  ) sub3 \n" +
+                        "group by 1\n" +
+                        "order by 1\n";
+
+        String castingDateSpine = format("select cast(metric_time as %s) as metric_time from date_spine", windowType);
+        String windowRange = format("d.metric_time - %s", cumulativeMetric.getWindow().getTimeUnit().getIntervalExpression());
+        String selectFromModel = format("select %s as measure_field, %s as metric_time from %s",
+                cumulativeMetric.getMeasure().getRefColumn(),
+                cumulativeMetric.getWindow().getRefColumn(),
+                cumulativeMetric.getBaseModel());
+
+        return format(pattern,
+                cumulativeMetric.getWindow().getName(),
+                cumulativeMetric.getMeasure().getOperator(),
+                cumulativeMetric.getMeasure().getName(),
+                cumulativeMetric.getWindow().getTimeUnit().name(),
+                castingDateSpine,
+                selectFromModel,
+                cumulativeMetric.getWindow().getStart(),
+                windowType,
+                cumulativeMetric.getWindow().getEnd(),
+                windowType,
+                windowRange,
+                cumulativeMetric.getWindow().getStart(),
+                windowType,
+                cumulativeMetric.getWindow().getEnd(),
+                windowType);
     }
 
     private static String getMetricRollupSql(MetricRollupInfo metricRollupInfo)
@@ -233,5 +311,16 @@ public final class Utils
                 .relationship(column.getRelationship().flatMap(accioMDL::getRelationship))
                 .type(column.getType())
                 .build();
+    }
+
+    public static Query createDateSpineQuery(DateSpine dateSpine)
+    {
+        // TODO: `GENERATE_TIMESTAMP_ARRAY` is a bigquery function. We may need to consider the SQL dialect when Accio planning.
+        String sql = format("SELECT * FROM UNNEST(GENERATE_TIMESTAMP_ARRAY(TIMESTAMP '%s', TIMESTAMP '%s', %s)) t(metric_time)", dateSpine.getStart(), dateSpine.getEnd(), dateSpine.getUnit().getIntervalExpression());
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        if (statement instanceof Query) {
+            return (Query) statement;
+        }
+        throw new IllegalArgumentException(format("Failed to parse date spine query: %s", sql));
     }
 }

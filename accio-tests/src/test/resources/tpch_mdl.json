@@ -260,6 +260,28 @@
       ]
     }
   ],
+  "cumulativeMetrics": [
+    {
+      "name": "WeeklyRevenue",
+      "baseModel": "Orders",
+      "measure": {
+        "name": "totalprice",
+        "type": "int4",
+        "operator": "sum",
+        "refColumn": "totalprice"
+      },
+      "window": {
+        "name": "orderdate",
+        "refColumn": "orderdate",
+        "timeUnit": "WEEK",
+        "start": "1993-01-01",
+        "end": "1993-12-31"
+      },
+      "preAggregated": false,
+      "refreshTime": "30m",
+      "description": ""
+    }
+  ],
   "enumDefinitions": [
     {
       "name": "Status",
