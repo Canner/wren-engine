@@ -124,7 +124,7 @@ public final class Utils
         String selectItems = Stream.concat(metric.getDimension().stream(), metric.getMeasure().stream())
                 .map(Column::getSqlExpression).collect(joining(","));
         String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
-        return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseModel(), groupByItems);
+        return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseObject(), groupByItems);
     }
 
     public static Query parseCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
@@ -141,11 +141,11 @@ public final class Utils
     {
         requireNonNull(cumulativeMetric, "cumulativeMetric is null");
 
-        String windowType = accioMDL.getModel(cumulativeMetric.getBaseModel())
+        String windowType = accioMDL.getModel(cumulativeMetric.getBaseObject())
                 .map(model -> model.getColumns().stream()
                         .filter(column -> column.getName().equals(cumulativeMetric.getWindow().getRefColumn()))
-                        .map(Column::getType).findAny().orElseThrow(() -> new NoSuchElementException(format("Column %s not found in model %s", cumulativeMetric.getWindow().getRefColumn(), cumulativeMetric.getBaseModel()))))
-                .orElseThrow(() -> new NoSuchElementException(format("Model %s not found", cumulativeMetric.getBaseModel())));
+                        .map(Column::getType).findAny().orElseThrow(() -> new NoSuchElementException(format("Column %s not found in model %s", cumulativeMetric.getWindow().getRefColumn(), cumulativeMetric.getBaseObject()))))
+                .orElseThrow(() -> new NoSuchElementException(format("Model %s not found", cumulativeMetric.getBaseObject())));
 
         String pattern =
                 "select \n" +
@@ -182,7 +182,7 @@ public final class Utils
         String selectFromModel = format("select %s as measure_field, %s as metric_time from %s",
                 cumulativeMetric.getMeasure().getRefColumn(),
                 cumulativeMetric.getWindow().getRefColumn(),
-                cumulativeMetric.getBaseModel());
+                cumulativeMetric.getBaseObject());
 
         return format(pattern,
                 cumulativeMetric.getWindow().getName(),
@@ -228,7 +228,7 @@ public final class Utils
 
         return format("SELECT %s FROM %s GROUP BY %s",
                 String.join(",", selectItems),
-                metric.getBaseModel(),
+                metric.getBaseObject(),
                 groupByColumnOrdinals);
     }
 

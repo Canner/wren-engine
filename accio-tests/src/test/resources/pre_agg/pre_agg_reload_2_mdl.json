@@ -39,7 +39,7 @@
     {
       "preAggregated": "true",
       "name": "Revenue_After",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",

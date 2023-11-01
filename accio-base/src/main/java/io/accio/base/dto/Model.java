@@ -30,7 +30,7 @@ public class Model
 {
     private final String name;
     private final String refSql;
-    private final String baseModel;
+    private final String baseObject;
     private final List<Column> columns;
     private final String primaryKey;
     private final boolean preAggregated;
@@ -57,16 +57,16 @@ public class Model
         return new Model(name, refSql, null, columns, primaryKey, false, null, description);
     }
 
-    public static Model onModel(String name, String baseModel, List<Column> columns, String primaryKey)
+    public static Model onModel(String name, String baseObject, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, baseModel, columns, primaryKey, false, null, null);
+        return new Model(name, null, baseObject, columns, primaryKey, false, null, null);
     }
 
     @JsonCreator
     public Model(
             @JsonProperty("name") String name,
             @JsonProperty("refSql") String refSql,
-            @JsonProperty("baseModel") String baseModel,
+            @JsonProperty("baseObject") String baseObject,
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("primaryKey") String primaryKey,
             @JsonProperty("preAggregated") boolean preAggregated,
@@ -74,10 +74,10 @@ public class Model
             @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
-        checkArgument(Stream.of(refSql, baseModel).filter(Objects::nonNull).count() == 1,
-                "either none or more than one of (refSql, baseModel) are set");
+        checkArgument(Stream.of(refSql, baseObject).filter(Objects::nonNull).count() == 1,
+                "either none or more than one of (refSql, baseObject) are set");
         this.refSql = refSql;
-        this.baseModel = baseModel;
+        this.baseObject = baseObject;
         this.columns = columns == null ? List.of() : columns;
         this.primaryKey = primaryKey;
         this.preAggregated = preAggregated;
@@ -98,9 +98,9 @@ public class Model
     }
 
     @JsonProperty
-    public String getBaseModel()
+    public String getBaseObject()
     {
-        return baseModel;
+        return baseObject;
     }
 
     @JsonProperty
@@ -148,7 +148,7 @@ public class Model
         return preAggregated == that.preAggregated
                 && Objects.equals(name, that.name)
                 && Objects.equals(refSql, that.refSql)
-                && Objects.equals(baseModel, that.baseModel)
+                && Objects.equals(baseObject, that.baseObject)
                 && Objects.equals(columns, that.columns)
                 && Objects.equals(primaryKey, that.primaryKey)
                 && Objects.equals(refreshTime, that.refreshTime)
@@ -158,7 +158,7 @@ public class Model
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, baseModel, columns, primaryKey, description);
+        return Objects.hash(name, refSql, baseObject, columns, primaryKey, description);
     }
 
     @Override
@@ -167,7 +167,7 @@ public class Model
         return "Model{" +
                 "name='" + name + '\'' +
                 ", refSql='" + refSql + '\'' +
-                ", baseModel='" + baseModel + '\'' +
+                ", baseObject='" + baseObject + '\'' +
                 ", columns=" + columns +
                 ", primaryKey='" + primaryKey + '\'' +
                 ", preAggregated=" + preAggregated +

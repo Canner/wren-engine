@@ -25,15 +25,15 @@ public class CumulativeMetric
 {
     public static CumulativeMetric cumulativeMetric(
             String name,
-            String baseModel,
+            String baseObject,
             Measure measure,
             Window window)
     {
-        return new CumulativeMetric(name, baseModel, measure, window, false, null, null);
+        return new CumulativeMetric(name, baseObject, measure, window, false, null, null);
     }
 
     private final String name;
-    private final String baseModel;
+    private final String baseObject;
     private final Measure measure;
     private final Window window;
     private final boolean preAggregated;
@@ -43,7 +43,7 @@ public class CumulativeMetric
     @JsonCreator
     public CumulativeMetric(
             @JsonProperty("name") String name,
-            @JsonProperty("baseModel") String baseModel,
+            @JsonProperty("baseObject") String baseObject,
             @JsonProperty("measure") Measure measure,
             @JsonProperty("window") Window window,
             @JsonProperty("preAggregated") boolean preAggregated,
@@ -51,7 +51,7 @@ public class CumulativeMetric
             @JsonProperty("description") String description)
     {
         this.name = name;
-        this.baseModel = baseModel;
+        this.baseObject = baseObject;
         this.measure = measure;
         this.window = window;
         this.preAggregated = preAggregated;
@@ -66,9 +66,9 @@ public class CumulativeMetric
     }
 
     @JsonProperty
-    public String getBaseModel()
+    public String getBaseObject()
     {
-        return baseModel;
+        return baseObject;
     }
 
     @JsonProperty
@@ -104,7 +104,7 @@ public class CumulativeMetric
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseModel, measure, window, preAggregated, refreshTime, description);
+        return Objects.hash(name, baseObject, measure, window, preAggregated, refreshTime, description);
     }
 
     @Override
@@ -121,7 +121,7 @@ public class CumulativeMetric
         CumulativeMetric that = (CumulativeMetric) o;
         return preAggregated == that.preAggregated &&
                 Objects.equals(name, that.name) &&
-                Objects.equals(baseModel, that.baseModel) &&
+                Objects.equals(baseObject, that.baseObject) &&
                 Objects.equals(measure, that.measure) &&
                 Objects.equals(window, that.window) &&
                 Objects.equals(refreshTime, that.refreshTime) &&
@@ -133,7 +133,7 @@ public class CumulativeMetric
     {
         return "CumulativeMetric{" +
                 "name='" + name + '\'' +
-                ", baseModel='" + baseModel + '\'' +
+                ", baseObject='" + baseObject + '\'' +
                 ", measure=" + measure +
                 ", window=" + window +
                 ", preAggregated=" + preAggregated +
