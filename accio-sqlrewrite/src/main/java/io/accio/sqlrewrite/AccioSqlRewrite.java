@@ -20,7 +20,6 @@ import io.accio.base.SessionContext;
 import io.accio.sqlrewrite.analyzer.Analysis;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
-import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
@@ -208,18 +207,6 @@ public class AccioSqlRewrite
                 }
             }
             return dereferenceExpression;
-        }
-
-        @Override
-        protected Node visitFunctionRelation(FunctionRelation node, Void context)
-        {
-            if (analysis.getMetricRollups().containsKey(NodeRef.of(node))) {
-                // TODO: Fix metric rollup issue. Currently, the rollup incorrectly uses metric name
-                //       If SQL involves two tables with the same metric and rolls up this metric, it results in incorrect behavior.
-                return new Table(QualifiedName.of(analysis.getMetricRollups().get(NodeRef.of(node)).getMetric().getName()));
-            }
-            // this should not happen, every MetricRollup node should be captured and syntax checked in StatementAnalyzer
-            throw new IllegalArgumentException("MetricRollup node is not replaced");
         }
 
         // the model is added in with query, and the catalog and schema should be removed

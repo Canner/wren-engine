@@ -23,6 +23,7 @@ import io.trino.sql.tree.Query;
 
 import java.util.Set;
 
+import static io.accio.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
 import static io.accio.sqlrewrite.Utils.parseView;
 import static java.util.Objects.requireNonNull;
 
@@ -37,6 +38,8 @@ public class ViewInfo
     {
         Query query = parseView(view.getStatement());
         Analysis analysis = StatementAnalyzer.analyze(query, sessionContext, mdl);
+        // sql in view can use metric rollup syntax
+        query = (Query) METRIC_ROLLUP_REWRITE.apply(query, sessionContext, analysis, mdl);
         return new ViewInfo(view.getName(), analysis.getAccioObjectNames(), query);
     }
 
