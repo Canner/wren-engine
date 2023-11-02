@@ -113,16 +113,16 @@ public class ModelInfo
             if (model.getRefSql() != null) {
                 this.refSql = model.getRefSql();
             }
-            else if (model.getBaseModel() != null) {
-                this.refSql = "SELECT * FROM " + model.getBaseModel();
+            else if (model.getBaseObject() != null) {
+                this.refSql = "SELECT * FROM " + model.getBaseObject();
             }
             else {
                 throw new IllegalArgumentException("cannot get reference sql from model");
             }
 
             this.requiredModels = new HashSet<>();
-            if (model.getBaseModel() != null) {
-                requiredModels.add(model.getBaseModel());
+            if (model.getBaseObject() != null) {
+                requiredModels.add(model.getBaseObject());
             }
         }
 

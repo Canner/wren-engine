@@ -106,7 +106,7 @@ public final class StatementAnalyzer
         analysis.addModels(
                 Stream.of(metrics, metricInMetricRollups)
                         .flatMap(Collection::stream)
-                        .map(Metric::getBaseModel)
+                        .map(Metric::getBaseObject)
                         .distinct()
                         .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
                         .collect(toUnmodifiableSet()));
@@ -121,7 +121,7 @@ public final class StatementAnalyzer
 
         analysis.addModels(
                 cumulativeMetrics.stream()
-                        .map(CumulativeMetric::getBaseModel)
+                        .map(CumulativeMetric::getBaseObject)
                         .distinct()
                         .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("cumulative metric model %s not exists", model))))
                         .collect(toUnmodifiableSet()));

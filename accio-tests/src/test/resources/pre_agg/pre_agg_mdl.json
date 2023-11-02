@@ -78,7 +78,7 @@
     {
       "preAggregated": "true",
       "name": "Revenue",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",
@@ -107,7 +107,7 @@
     {
       "preAggregated": "true",
       "name": "unqualified",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",
@@ -138,7 +138,7 @@
     },
     {
       "name": "AvgRevenue",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",
@@ -166,7 +166,7 @@
     {
       "preAggregated": "true",
       "name": "ForDropTable",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",

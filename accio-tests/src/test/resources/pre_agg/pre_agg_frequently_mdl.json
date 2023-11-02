@@ -77,7 +77,7 @@
     {
       "preAggregated": "true",
       "name": "RefreshFrequently",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",

@@ -234,7 +234,7 @@
   "metrics": [
     {
       "name": "Revenue",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "dimension": [
         {
           "name": "custkey",
@@ -263,7 +263,7 @@
   "cumulativeMetrics": [
     {
       "name": "WeeklyRevenue",
-      "baseModel": "Orders",
+      "baseObject": "Orders",
       "measure": {
         "name": "totalprice",
         "type": "int4",

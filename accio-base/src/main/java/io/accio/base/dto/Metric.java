@@ -29,7 +29,7 @@ public class Metric
         implements PreAggregationInfo
 {
     private final String name;
-    private final String baseModel;
+    private final String baseObject;
     private final List<Column> dimension;
     private final List<Column> measure;
     private final List<TimeGrain> timeGrain;
@@ -37,25 +37,25 @@ public class Metric
     private final Duration refreshTime;
     private final String description;
 
-    public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
-        return metric(name, baseModel, dimension, measure, timeGrain, false);
+        return metric(name, baseObject, dimension, measure, timeGrain, false);
     }
 
-    public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
     {
-        return metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null);
+        return metric(name, baseObject, dimension, measure, timeGrain, preAggregated, null);
     }
 
-    public static Metric metric(String name, String baseModel, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated, String description)
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated, String description)
     {
-        return new Metric(name, baseModel, dimension, measure, timeGrain, preAggregated, null, description);
+        return new Metric(name, baseObject, dimension, measure, timeGrain, preAggregated, null, description);
     }
 
     @JsonCreator
     public Metric(
             @JsonProperty("name") String name,
-            @JsonProperty("baseModel") String baseModel,
+            @JsonProperty("baseObject") String baseObject,
             @JsonProperty("dimension") List<Column> dimension,
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
@@ -64,7 +64,7 @@ public class Metric
             @JsonProperty("description") String description)
     {
         this.name = requireNonNull(name, "name is null");
-        this.baseModel = requireNonNull(baseModel, "baseModel is null");
+        this.baseObject = requireNonNull(baseObject, "baseObject is null");
         this.dimension = requireNonNull(dimension, "dimension is null");
         this.measure = requireNonNull(measure, "measure is null");
         this.preAggregated = preAggregated;
@@ -82,9 +82,9 @@ public class Metric
     }
 
     @JsonProperty
-    public String getBaseModel()
+    public String getBaseObject()
     {
-        return baseModel;
+        return baseObject;
     }
 
     @JsonProperty
@@ -144,7 +144,7 @@ public class Metric
         Metric that = (Metric) obj;
         return preAggregated == that.preAggregated
                 && Objects.equals(name, that.name)
-                && Objects.equals(baseModel, that.baseModel)
+                && Objects.equals(baseObject, that.baseObject)
                 && Objects.equals(dimension, that.dimension)
                 && Objects.equals(measure, that.measure)
                 && Objects.equals(timeGrain, that.timeGrain)
@@ -157,7 +157,7 @@ public class Metric
     {
         return Objects.hash(
                 name,
-                baseModel,
+                baseObject,
                 dimension,
                 measure,
                 timeGrain,
@@ -171,7 +171,7 @@ public class Metric
     {
         return "Metric{" +
                 "name='" + name + '\'' +
-                ", baseModel='" + baseModel + '\'' +
+                ", baseObject='" + baseObject + '\'' +
                 ", dimension=" + dimension +
                 ", measure=" + measure +
                 ", timeGrain=" + timeGrain +
