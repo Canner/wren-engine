@@ -37,7 +37,7 @@ import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.TimeUnit.YEAR;
 import static io.accio.base.dto.View.view;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
-import static io.accio.sqlrewrite.MetricViewSqlRewrite.METRIC_VIEW_SQL_REWRITE;
+import static io.accio.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
 import static io.accio.sqlrewrite.Utils.SQL_PARSER;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static java.lang.String.format;
@@ -126,8 +126,8 @@ public class TestMetricViewSqlRewrite
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))))))
                 .setViews(List.of(
                         view("UseModel", "select * from Album"),
-                        view("useMetric", "select * from Collection"),
-                        view("useView", "select * from useMetric")))
+                        view("useView", "select * from useMetric"),
+                        view("useMetric", "select * from Collection")))
                 .build());
 
         invalidAccioMDL = AccioMDL.fromManifest(withDefaultCatalogSchema()
@@ -160,7 +160,11 @@ public class TestMetricViewSqlRewrite
                         "SELECT author, price FROM roll_up(Collection, p_date, YEAR)",
                         "WITH\n" +
                                 MODEL_CTES +
-                                ", Collection AS (\n" +
+                                "SELECT\n" +
+                                "  author\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  (\n" +
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('YEAR', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
@@ -169,18 +173,17 @@ public class TestMetricViewSqlRewrite
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
-                                ") \n" +
-                                "SELECT\n" +
-                                "  author\n" +
-                                ", price\n" +
-                                "FROM\n" +
-                                "  Collection"
+                                ")  Collection"
                 },
                 {
                         "SELECT author, price FROM roll_up(accio.test.Collection, p_date, DAY)",
                         "WITH\n" +
                                 MODEL_CTES +
-                                ", Collection AS (\n" +
+                                "SELECT\n" +
+                                "  author\n" +
+                                ", price\n" +
+                                "FROM\n" +
+                                "  (\n" +
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('DAY', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
@@ -189,12 +192,7 @@ public class TestMetricViewSqlRewrite
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
-                                ") \n" +
-                                "SELECT\n" +
-                                "  author\n" +
-                                ", price\n" +
-                                "FROM\n" +
-                                "  Collection"
+                                ")  Collection"
                 },
                 {
                         "SELECT author, price FROM UseModel",
@@ -291,6 +289,6 @@ public class TestMetricViewSqlRewrite
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(METRIC_VIEW_SQL_REWRITE, ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
     }
 }

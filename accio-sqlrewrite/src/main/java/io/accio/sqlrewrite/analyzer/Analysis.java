@@ -14,6 +14,7 @@
 
 package io.accio.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableSet;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 public class Analysis
 {
@@ -128,5 +130,15 @@ public class Analysis
     void addViews(Set<View> views)
     {
         this.views.addAll(views);
+    }
+
+    public Set<String> getAccioObjectNames()
+    {
+        return ImmutableSet.<String>builder()
+                .addAll(getModels().stream().map(Model::getName).collect(toSet()))
+                .addAll(getMetrics().stream().map(Metric::getName).collect(toSet()))
+                .addAll(getCumulativeMetrics().stream().map(CumulativeMetric::getName).collect(toSet()))
+                .addAll(getViews().stream().map(View::getName).collect(toSet()))
+                .build();
     }
 }

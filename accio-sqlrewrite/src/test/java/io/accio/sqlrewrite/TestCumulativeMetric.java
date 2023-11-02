@@ -31,7 +31,6 @@ import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Window.window;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
-import static io.accio.sqlrewrite.MetricViewSqlRewrite.METRIC_VIEW_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCumulativeMetric
@@ -99,6 +98,6 @@ public class TestCumulativeMetric
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(METRIC_VIEW_SQL_REWRITE, ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
     }
 }
