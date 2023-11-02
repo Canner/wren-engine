@@ -176,8 +176,8 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('YEAR', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "   , name \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
@@ -195,8 +195,8 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('DAY', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "   , name \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
