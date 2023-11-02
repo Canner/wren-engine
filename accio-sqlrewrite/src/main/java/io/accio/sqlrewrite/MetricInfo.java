@@ -16,7 +16,6 @@ package io.accio.sqlrewrite;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.CumulativeMetric;
-import io.accio.base.dto.Metric;
 import io.trino.sql.tree.Query;
 
 import java.util.Set;
@@ -30,19 +29,11 @@ public class MetricInfo
     private final Set<String> requiredObjects;
     private final Query query;
 
-    public static MetricInfo get(Metric metric)
-    {
-        return new MetricInfo(
-                metric.getName(),
-                Set.of(metric.getBaseModel()),
-                Utils.parseMetricSql(metric));
-    }
-
     public static MetricInfo get(CumulativeMetric metric, AccioMDL mdl)
     {
         return new MetricInfo(
                 metric.getName(),
-                Set.of(metric.getBaseModel()),
+                Set.of(metric.getBaseObject()),
                 Utils.parseCumulativeMetricSql(metric, mdl));
     }
 
