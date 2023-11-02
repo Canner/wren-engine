@@ -125,7 +125,6 @@ public class TestModelSqlRewrite
             "        ((\n" +
             "         SELECT\n" +
             "           id \"id\"\n" +
-            "         , id \"id\"\n" +
             "         FROM\n" +
             "           (\n" +
             "            SELECT *\n" +
@@ -332,18 +331,18 @@ public class TestModelSqlRewrite
         String bookReplica = "" +
                 ", BookReplica AS (\n" +
                 "   SELECT\n" +
-                "     \"BookReplica\".\"id\" \"id\"\n" +
-                "   , \"BookReplica\".\"authorId\" \"authorId\"\n" +
-                "   , \"BookReplica\".\"publish_year\" \"publish_year\"\n" +
+                "     \"BookReplica\".\"authorId\" \"authorId\"\n" +
                 "   , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
+                "   , \"BookReplica\".\"id\" \"id\"\n" +
+                "   , \"BookReplica\".\"publish_year\" \"publish_year\"\n" +
                 "   , \"wishlist_id\".\"wishlist_id\" \"wishlist_id\"\n" +
                 "   FROM\n" +
                 "     ((\n" +
                 "      SELECT\n" +
-                "        bookId \"id\"\n" +
-                "      , \"BookReplica\".\"authorId\" \"authorId\"\n" +
-                "      , date_trunc('year', publish_date) \"publish_year\"\n" +
+                "        \"BookReplica\".\"authorId\" \"authorId\"\n" +
                 "      , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
+                "      , bookId \"id\"\n" +
+                "      , date_trunc('year', publish_date) \"publish_year\"\n" +
                 "      FROM\n" +
                 "        (\n" +
                 "         SELECT *\n" +
@@ -357,9 +356,7 @@ public class TestModelSqlRewrite
                 "      , \"WishList\".\"id\" \"wishlist_id\"\n" +
                 "      FROM\n" +
                 "        ((\n" +
-                "         SELECT\n" +
-                "           bookId \"id\"\n" +
-                "         , bookId \"id\"\n" +
+                "         SELECT bookId \"id\"\n" +
                 "         FROM\n" +
                 "           (\n" +
                 "            SELECT *\n" +

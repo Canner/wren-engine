@@ -237,8 +237,9 @@
       "baseObject": "Orders",
       "dimension": [
         {
-          "name": "custkey",
-          "type": "int4"
+          "name": "customer",
+          "type": "int4",
+          "expression": "customer.name"
         }
       ],
       "measure": [
@@ -246,6 +247,34 @@
           "name": "totalprice",
           "type": "int4",
           "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CustomerRevenue",
+      "baseObject": "Customer",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "int4",
+          "expression": "custkey"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(orders.totalprice)"
         }
       ],
       "timeGrain": [
