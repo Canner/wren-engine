@@ -32,15 +32,12 @@ import io.accio.sqlrewrite.analyzer.ScopeAnalyzer;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DataType;
-import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.Statement;
-import io.trino.sql.tree.SubscriptExpression;
 
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -49,9 +46,6 @@ import java.util.stream.Stream;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
-import static java.lang.Character.MAX_RADIX;
-import static java.lang.Math.abs;
-import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -61,8 +55,6 @@ public final class Utils
 {
     public static final SqlParser SQL_PARSER = new SqlParser();
     private static final ParsingOptions PARSING_OPTIONS = new ParsingOptions(AS_DECIMAL);
-    private static final SecureRandom random = new SecureRandom();
-    private static final int RANDOM_SUFFIX_LENGTH = 10;
 
     private Utils() {}
 
@@ -98,16 +90,6 @@ public final class Utils
         throw new IllegalArgumentException("model sql is not a query");
     }
 
-    public static Query parseMetricSql(Metric metric)
-    {
-        String sql = getMetricSql(metric);
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
-        }
-        throw new IllegalArgumentException(format("metric %s is not a query, sql %s", metric.getName(), sql));
-    }
-
     public static Query parseMetricRollupSql(MetricRollupInfo metricRollupInfo)
     {
         String sql = getMetricRollupSql(metricRollupInfo);
@@ -116,15 +98,6 @@ public final class Utils
             return (Query) statement;
         }
         throw new IllegalArgumentException(format("metric %s is not a query, sql %s", metricRollupInfo.getMetric().getName(), sql));
-    }
-
-    private static String getMetricSql(Metric metric)
-    {
-        requireNonNull(metric, "metric is null");
-        String selectItems = Stream.concat(metric.getDimension().stream(), metric.getMeasure().stream())
-                .map(Column::getSqlExpression).collect(joining(","));
-        String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
-        return format("SELECT %s FROM %s GROUP BY %s", selectItems, metric.getBaseObject(), groupByItems);
     }
 
     public static Query parseCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
@@ -232,12 +205,6 @@ public final class Utils
                 groupByColumnOrdinals);
     }
 
-    public static String randomTableSuffix()
-    {
-        String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
-        return randomSuffix.substring(0, min(RANDOM_SUFFIX_LENGTH, randomSuffix.length()));
-    }
-
     public static CatalogSchemaTableName toCatalogSchemaTableName(SessionContext sessionContext, QualifiedName name)
     {
         requireNonNull(sessionContext, "sessionContext is null");
@@ -260,15 +227,6 @@ public final class Utils
     {
         requireNonNull(name, "name is null");
         return QualifiedName.of(name.getCatalogName(), name.getSchemaTableName().getSchemaName(), name.getSchemaTableName().getTableName());
-    }
-
-    public static Expression getNextPart(SubscriptExpression subscriptExpression)
-    {
-        Expression base = subscriptExpression.getBase();
-        if (base instanceof DereferenceExpression) {
-            return ((DereferenceExpression) base).getBase();
-        }
-        return base;
     }
 
     // TODO: handle accio view scope https://github.com/Canner/accio/issues/338

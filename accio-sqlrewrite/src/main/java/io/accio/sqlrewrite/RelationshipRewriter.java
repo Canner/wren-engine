@@ -43,6 +43,14 @@ public class RelationshipRewriter
                 .process(expression);
     }
 
+    public static Node relationshipAware(List<ExpressionRelationshipInfo> relationshipInfos, String relationshipPrefix, Expression expression)
+    {
+        requireNonNull(relationshipInfos);
+        return new RelationshipRewriter(relationshipInfos.stream()
+                .collect(toUnmodifiableMap(ExpressionRelationshipInfo::getQualifiedName, info -> toDereferenceExpressionWithRelationshipPrefix(info, relationshipPrefix))))
+                .process(expression);
+    }
+
     public RelationshipRewriter(Map<QualifiedName, DereferenceExpression> replacements)
     {
         this.replacements = requireNonNull(replacements);
@@ -60,11 +68,21 @@ public class RelationshipRewriter
         return node;
     }
 
-    private static DereferenceExpression toDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo)
+    protected static DereferenceExpression toDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo)
     {
         String base = expressionRelationshipInfo.getRelationships().get(expressionRelationshipInfo.getRelationships().size() - 1).getModels().get(1);
         List<Identifier> parts = new ArrayList<>();
         parts.add(new Identifier(base, true));
+        expressionRelationshipInfo.getRemainingParts().stream()
+                .map(part -> new Identifier(part, true))
+                .forEach(parts::add);
+        return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
+    }
+
+    protected static DereferenceExpression toDereferenceExpressionWithRelationshipPrefix(ExpressionRelationshipInfo expressionRelationshipInfo, String prefix)
+    {
+        List<Identifier> parts = new ArrayList<>();
+        parts.add(new Identifier(prefix, true));
         expressionRelationshipInfo.getRemainingParts().stream()
                 .map(part -> new Identifier(part, true))
                 .forEach(parts::add);
