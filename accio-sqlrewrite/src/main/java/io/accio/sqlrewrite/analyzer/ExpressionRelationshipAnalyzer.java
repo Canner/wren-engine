@@ -47,7 +47,8 @@ public class ExpressionRelationshipAnalyzer
 
     public static List<ExpressionRelationshipInfo> getRelationshipsForMetric(Expression expression, AccioMDL mdl, Model model)
     {
-        RelationshipCollector collector = new RelationshipCollector(mdl, model, true);
+        // TODO: support to-many relationship
+        RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
         collector.process(expression);
         return collector.getExpressionRelationshipInfo();
     }
