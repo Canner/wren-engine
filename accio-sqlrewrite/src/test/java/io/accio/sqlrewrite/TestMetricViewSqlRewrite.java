@@ -86,8 +86,8 @@ public class TestMetricViewSqlRewrite
             MODEL_CTES +
                     ", Collection AS (\n" +
                     "   SELECT\n" +
-                    "     \"Album\".\"author\" author\n" +
-                    "   , \"Album\".\"name\" album_name\n" +
+                    "     \"Album\".\"author\" \"author\"\n" +
+                    "   , \"Album\".\"name\" \"album_name\"\n" +
                     "   , sum(price) \"price\"\n" +
                     "   FROM\n" +
                     "     (\n" +
@@ -221,8 +221,8 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" + MODEL_CTES +
                                 ", Collection AS (\n" +
                                 "   SELECT\n" +
-                                "     \"Album\".\"author\" author\n" +
-                                "   , \"Album\".\"name\" album_name\n" +
+                                "     \"Album\".\"author\" \"author\"\n" +
+                                "   , \"Album\".\"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     (\n" +
@@ -252,8 +252,8 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" + MODEL_CTES +
                                 ", Collection AS (\n" +
                                 "   SELECT\n" +
-                                "     \"Album\".\"author\" author\n" +
-                                "   , \"Album\".\"name\" album_name\n" +
+                                "     \"Album\".\"author\" \"author\"\n" +
+                                "   , \"Album\".\"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     (\n" +
