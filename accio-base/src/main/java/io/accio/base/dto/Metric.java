@@ -16,6 +16,7 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import io.airlift.units.Duration;
 
 import java.util.List;
@@ -26,7 +27,7 @@ import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class Metric
-        implements PreAggregationInfo
+        implements PreAggregationInfo, Relationable
 {
     private final String name;
     private final String baseObject;
@@ -81,6 +82,7 @@ public class Metric
         return name;
     }
 
+    @Override
     @JsonProperty
     public String getBaseObject()
     {
@@ -110,6 +112,12 @@ public class Metric
         return timeGrain.stream()
                 .filter(timeGrain -> timeGrain.getName().equals(timeGrainName))
                 .findFirst();
+    }
+
+    @Override
+    public List<Column> getColumns()
+    {
+        return ImmutableList.<Column>builder().addAll(dimension).addAll(measure).build();
     }
 
     @Override

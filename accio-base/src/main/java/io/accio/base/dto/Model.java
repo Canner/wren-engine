@@ -26,7 +26,7 @@ import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class Model
-        implements PreAggregationInfo
+        implements PreAggregationInfo, Relationable
 {
     private final String name;
     private final String refSql;
@@ -98,11 +98,13 @@ public class Model
     }
 
     @JsonProperty
+    @Override
     public String getBaseObject()
     {
         return baseObject;
     }
 
+    @Override
     @JsonProperty
     public List<Column> getColumns()
     {

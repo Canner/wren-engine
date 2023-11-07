@@ -57,8 +57,8 @@ public class AccioSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
     {
-        Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> ModelInfo.get(model, accioMDL)).collect(toSet());
-        Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(MetricInfo::get).collect(toSet());
+        Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, accioMDL)).collect(toSet());
+        Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, accioMDL)).collect(toSet());
         Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> MetricInfo.get(metric, accioMDL)).collect(toSet());
         Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, accioMDL, sessionContext)).collect(toSet());
         Set<QueryDescriptor> allDescriptors = ImmutableSet.<QueryDescriptor>builder()

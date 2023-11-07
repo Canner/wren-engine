@@ -43,6 +43,14 @@ public class RelationshipRewriter
                 .process(expression);
     }
 
+    public static Node relationshipAware(List<ExpressionRelationshipInfo> relationshipInfos, String relationshipPrefix, Expression expression)
+    {
+        requireNonNull(relationshipInfos);
+        return new RelationshipRewriter(relationshipInfos.stream()
+                .collect(toUnmodifiableMap(ExpressionRelationshipInfo::getQualifiedName, info -> getRelationshipResultAsDereferenceExpression(relationshipPrefix))))
+                .process(expression);
+    }
+
     public RelationshipRewriter(Map<QualifiedName, DereferenceExpression> replacements)
     {
         this.replacements = requireNonNull(replacements);
@@ -60,7 +68,7 @@ public class RelationshipRewriter
         return node;
     }
 
-    private static DereferenceExpression toDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo)
+    protected static DereferenceExpression toDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo)
     {
         String base = expressionRelationshipInfo.getRelationships().get(expressionRelationshipInfo.getRelationships().size() - 1).getModels().get(1);
         List<Identifier> parts = new ArrayList<>();
@@ -68,6 +76,15 @@ public class RelationshipRewriter
         expressionRelationshipInfo.getRemainingParts().stream()
                 .map(part -> new Identifier(part, true))
                 .forEach(parts::add);
+        return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
+    }
+
+    protected static DereferenceExpression getRelationshipResultAsDereferenceExpression(String relationshipFieldName)
+    {
+        // The result of relationship will be a sub-query named as relationshipFieldName, so the final result is relationshipFieldName.relationshipFieldName"
+        List<Identifier> parts = new ArrayList<>();
+        parts.add(new Identifier(relationshipFieldName, true));
+        parts.add(new Identifier(relationshipFieldName, true));
         return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
     }
 }

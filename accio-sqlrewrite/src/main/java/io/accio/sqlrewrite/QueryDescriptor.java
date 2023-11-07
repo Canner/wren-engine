@@ -37,11 +37,11 @@ public interface QueryDescriptor
     {
         Optional<Model> model = mdl.getModel(name);
         if (model.isPresent()) {
-            return ModelInfo.get(model.get(), mdl);
+            return RelationInfo.get(model.get(), mdl);
         }
         Optional<Metric> metric = mdl.getMetric(name);
         if (metric.isPresent()) {
-            return MetricInfo.get(metric.get());
+            return RelationInfo.get(metric.get(), mdl);
         }
         Optional<CumulativeMetric> cumulativeMetric = mdl.getCumulativeMetric(name);
         if (cumulativeMetric.isPresent()) {

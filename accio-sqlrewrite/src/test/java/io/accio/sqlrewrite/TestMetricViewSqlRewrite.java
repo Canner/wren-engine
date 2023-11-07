@@ -86,12 +86,20 @@ public class TestMetricViewSqlRewrite
             MODEL_CTES +
                     ", Collection AS (\n" +
                     "   SELECT\n" +
-                    "     \"author\"\n" +
-                    "   , Album.name \"album_name\"\n" +
-                    "   , sum(Album.price) \"price\"\n" +
+                    "     \"Album\".\"author\" \"author\"\n" +
+                    "   , \"Album\".\"name\" \"album_name\"\n" +
+                    "   , sum(price) \"price\"\n" +
                     "   FROM\n" +
-                    "     Album\n" +
-                    "   GROUP BY 1, 2\n" +
+                    "     (\n" +
+                    "      SELECT *\n" +
+                    "      FROM\n" +
+                    "        (\n" +
+                    "         SELECT *\n" +
+                    "         FROM\n" +
+                    "           Album\n" +
+                    "      )  \"Album\"\n" +
+                    "   )  \"Album\"\n" +
+                    "   GROUP BY 1, 2" +
                     ") \n";
 
     private final AccioMDL accioMDL;
@@ -119,8 +127,8 @@ public class TestMetricViewSqlRewrite
                                 "Album",
                                 List.of(
                                         column("author", VARCHAR, null, true),
-                                        column("album_name", VARCHAR, null, true, "Album.name")),
-                                List.of(Column.column("price", INTEGER, null, true, "sum(Album.price)")),
+                                        column("album_name", VARCHAR, null, true, "name")),
+                                List.of(Column.column("price", INTEGER, null, true, "sum(price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))))))
@@ -168,8 +176,8 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('YEAR', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "   , name \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
@@ -187,8 +195,8 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('DAY', Album.publish_date) \"p_date\"\n" +
                                 "   , \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "   , name \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
                                 "   GROUP BY 1, 2, 3\n" +
@@ -213,12 +221,20 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" + MODEL_CTES +
                                 ", Collection AS (\n" +
                                 "   SELECT\n" +
-                                "     \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "     \"Album\".\"author\" \"author\"\n" +
+                                "   , \"Album\".\"name\" \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
-                                "     Album\n" +
-                                "   GROUP BY 1, 2\n" +
+                                "     (\n" +
+                                "      SELECT *\n" +
+                                "      FROM\n" +
+                                "        (\n" +
+                                "         SELECT *\n" +
+                                "         FROM\n" +
+                                "           Album\n" +
+                                "      )  \"Album\"\n" +
+                                "   )  \"Album\"\n" +
+                                "   GROUP BY 1, 2" +
                                 ") \n" +
                                 ", useMetric AS (\n" +
                                 "   SELECT *\n" +
@@ -236,11 +252,19 @@ public class TestMetricViewSqlRewrite
                         "WITH\n" + MODEL_CTES +
                                 ", Collection AS (\n" +
                                 "   SELECT\n" +
-                                "     \"author\"\n" +
-                                "   , Album.name \"album_name\"\n" +
-                                "   , sum(Album.price) \"price\"\n" +
+                                "     \"Album\".\"author\" \"author\"\n" +
+                                "   , \"Album\".\"name\" \"album_name\"\n" +
+                                "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
-                                "     Album\n" +
+                                "     (\n" +
+                                "      SELECT *\n" +
+                                "      FROM\n" +
+                                "        (\n" +
+                                "         SELECT *\n" +
+                                "         FROM\n" +
+                                "           Album\n" +
+                                "      )  \"Album\"\n" +
+                                "   )  \"Album\"\n" +
                                 "   GROUP BY 1, 2\n" +
                                 ") \n" +
                                 ", useMetric AS (\n" +

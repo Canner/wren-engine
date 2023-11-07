@@ -40,7 +40,15 @@ public class ExpressionRelationshipAnalyzer
 
     public static List<ExpressionRelationshipInfo> getRelationships(Expression expression, AccioMDL mdl, Model model)
     {
-        RelationshipCollector collector = new RelationshipCollector(mdl, model);
+        RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
+        collector.process(expression);
+        return collector.getExpressionRelationshipInfo();
+    }
+
+    public static List<ExpressionRelationshipInfo> getRelationshipsForMetric(Expression expression, AccioMDL mdl, Model model)
+    {
+        // TODO: support to-many relationship
+        RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
         collector.process(expression);
         return collector.getExpressionRelationshipInfo();
     }
@@ -50,12 +58,14 @@ public class ExpressionRelationshipAnalyzer
     {
         private final AccioMDL accioMDL;
         private final Model model;
+        private final boolean allowToManyRelationship;
         private final List<ExpressionRelationshipInfo> relationships = new ArrayList<>();
 
-        public RelationshipCollector(AccioMDL accioMDL, Model model)
+        public RelationshipCollector(AccioMDL accioMDL, Model model, boolean allowToManyRelationship)
         {
             this.accioMDL = requireNonNull(accioMDL);
             this.model = requireNonNull(model);
+            this.allowToManyRelationship = allowToManyRelationship;
         }
 
         public List<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
@@ -71,7 +81,9 @@ public class ExpressionRelationshipAnalyzer
                 if (qualifiedName != null) {
                     Optional<ExpressionRelationshipInfo> expressionRelationshipInfo = createRelationshipInfo(qualifiedName, model, accioMDL);
                     if (expressionRelationshipInfo.isPresent()) {
-                        validateToOne(expressionRelationshipInfo.get());
+                        if (!allowToManyRelationship) {
+                            validateToOne(expressionRelationshipInfo.get());
+                        }
                         relationships.add(expressionRelationshipInfo.get());
                     }
                 }

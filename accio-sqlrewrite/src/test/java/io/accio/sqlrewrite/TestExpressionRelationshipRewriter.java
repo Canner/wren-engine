@@ -20,6 +20,7 @@ import io.accio.base.dto.Relationship;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipInfo;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -102,5 +103,22 @@ public class TestExpressionRelationshipRewriter
     {
         assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getRelationships(parseExpression("region.nation"), mdl, nation))
                 .hasMessage("found cycle in expression");
+    }
+
+    @Test
+    public void testMetricMeasureRelationship()
+    {
+        List<ExpressionRelationshipInfo> infos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(parseExpression("sum(customer.name)"), mdl, orders);
+        assertThat(infos)
+                .containsExactlyInAnyOrder(
+                        new ExpressionRelationshipInfo(
+                                QualifiedName.of("customer", "name"),
+                                List.of("customer"),
+                                List.of("name"),
+                                List.of(ordersCustomer),
+                                ordersCustomer));
+
+        assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())
+                .isEqualTo("sum(\"count_of_customer\".\"count_of_customer\")");
     }
 }

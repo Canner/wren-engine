@@ -18,6 +18,7 @@ import io.accio.base.dto.Relationship;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
@@ -77,5 +78,33 @@ public class ExpressionRelationshipInfo
                 .add("relationships", relationships)
                 .add("baseModelRelationship", baseModelRelationship)
                 .toString();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        ExpressionRelationshipInfo that = (ExpressionRelationshipInfo) o;
+        return Objects.equals(qualifiedName, that.qualifiedName) &&
+                Objects.equals(relationshipParts, that.relationshipParts) &&
+                Objects.equals(remainingParts, that.remainingParts) &&
+                Objects.equals(relationships, that.relationships) &&
+                Objects.equals(baseModelRelationship, that.baseModelRelationship);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(
+                qualifiedName,
+                relationshipParts,
+                remainingParts,
+                relationships,
+                baseModelRelationship);
     }
 }
