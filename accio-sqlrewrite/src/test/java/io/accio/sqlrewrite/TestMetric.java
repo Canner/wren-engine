@@ -92,7 +92,11 @@ public class TestMetric
                                 List.of(
                                         column("totalprice", INTEGER, null, true, "sum(totalprice)")),
                                 List.of(
-                                        timeGrain("orderdata", "orderdate", List.of(DAY, MONTH, YEAR))))))
+                                        timeGrain("orderdata", "orderdate", List.of(DAY, MONTH, YEAR)))),
+                        metric("NumberCustomerByDate", "Orders",
+                                List.of(column("orderdate", DATE, null, true)),
+                                List.of(column("count_of_customer", INTEGER, null, true, "count(distinct customer.name)")),
+                                List.of())))
                 .build());
     }
 
@@ -114,6 +118,10 @@ public class TestMetric
 
         assertThatNoException()
                 .isThrownBy(() -> query(rewrite("select name, orderdate, totalprice from RevenueByCustomerBaseOrders")));
+
+        List<List<Object>> measureRelationship = query(rewrite("select * from NumberCustomerByDate"));
+        assertThat(measureRelationship.get(0).size()).isEqualTo(2);
+        assertThat(measureRelationship.size()).isEqualTo(2401);
     }
 
     private String rewrite(String sql)

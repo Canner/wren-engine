@@ -289,6 +289,24 @@
           ]
         }
       ]
+    },
+    {
+      "name": "NumberCustomerByDate",
+      "baseObject": "Orders",
+      "dimension": [
+        {
+          "name": "orderdate",
+          "type": "date"
+        }
+      ],
+      "measure": [
+        {
+          "name": "count_of_customer",
+          "type": "int4",
+          "expression": "count(distinct customer.name)"
+        }
+      ],
+      "timeGrain": []
     }
   ],
   "cumulativeMetrics": [
