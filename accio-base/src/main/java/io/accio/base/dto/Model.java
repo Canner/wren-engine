@@ -57,7 +57,7 @@ public class Model
         return new Model(name, refSql, null, columns, primaryKey, false, null, description);
     }
 
-    public static Model onModel(String name, String baseObject, List<Column> columns, String primaryKey)
+    public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
         return new Model(name, null, baseObject, columns, primaryKey, false, null, null);
     }

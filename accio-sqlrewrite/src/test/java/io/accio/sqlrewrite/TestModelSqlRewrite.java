@@ -33,7 +33,7 @@ import static io.accio.base.dto.Column.relationshipColumn;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.JoinType.ONE_TO_ONE;
 import static io.accio.base.dto.Model.model;
-import static io.accio.base.dto.Model.onModel;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static io.trino.sql.SqlFormatter.formatSql;
@@ -305,7 +305,7 @@ public class TestModelSqlRewrite
         List<Model> models = ImmutableList.<Model>builder()
                 .addAll(DEFAULT_MANIFEST.getModels())
                 .add(
-                        onModel(
+                        onBaseObject(
                                 "BookReplica",
                                 "Book",
                                 List.of(
