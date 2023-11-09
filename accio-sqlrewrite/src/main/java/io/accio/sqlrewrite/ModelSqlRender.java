@@ -115,7 +115,7 @@ public class ModelSqlRender
                             column.getName(),
                             tableJoins));
             // collect all required models in relationships
-            requiredModels.addAll(
+            requiredObjects.addAll(
                     relationshipInfos.stream()
                             .map(ExpressionRelationshipInfo::getRelationships)
                             .flatMap(List::stream)

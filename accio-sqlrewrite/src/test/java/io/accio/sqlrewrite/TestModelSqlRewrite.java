@@ -394,18 +394,6 @@ public class TestModelSqlRewrite
                 .isEqualTo(formatSql(expectedStmt));
     }
 
-    private static Manifest.Builder copyOf(Manifest manifest)
-    {
-        return Manifest.builder()
-                .setCatalog(manifest.getCatalog())
-                .setSchema(manifest.getSchema())
-                .setModels(manifest.getModels())
-                .setRelationships(manifest.getRelationships())
-                .setMetrics(manifest.getMetrics())
-                .setViews(manifest.getViews())
-                .setEnumDefinitions(manifest.getEnumDefinitions());
-    }
-
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)
     {
         assertSqlEquals(actual, expected);

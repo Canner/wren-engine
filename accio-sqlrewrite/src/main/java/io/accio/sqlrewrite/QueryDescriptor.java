@@ -51,6 +51,9 @@ public interface QueryDescriptor
         if (view.isPresent()) {
             return ViewInfo.get(view.get(), mdl, sessionContext);
         }
+        if (name.equals(DateSpineInfo.NAME)) {
+            return DateSpineInfo.get(mdl.getDateSpine());
+        }
         throw new IllegalArgumentException(name + " not found in accio mdl");
     }
 }
