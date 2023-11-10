@@ -46,7 +46,7 @@ public abstract class RelationableSqlRender
     protected final AccioMDL mdl;
     private final String refSql;
     // collect dependent models
-    protected final Set<String> requiredModels;
+    protected final Set<String> requiredObjects;
     // key is alias_name.column_name, value is column name, this map is used to compose select items in model sql
     protected final List<String> selectItems = new ArrayList<>();
 
@@ -60,9 +60,9 @@ public abstract class RelationableSqlRender
         this.relationable = requireNonNull(relationable);
         this.mdl = requireNonNull(mdl);
         this.refSql = initRefSql(relationable);
-        this.requiredModels = new HashSet<>();
+        this.requiredObjects = new HashSet<>();
         if (relationable.getBaseObject() != null) {
-            requiredModels.add(relationable.getBaseObject());
+            requiredObjects.add(relationable.getBaseObject());
         }
     }
 
@@ -72,7 +72,7 @@ public abstract class RelationableSqlRender
     {
         requireNonNull(relationable, "model is null");
         if (relationable.getColumns().isEmpty() && relationable instanceof Model) {
-            return new RelationInfo((Model) relationable, Set.of(), parseQuery(refSql));
+            return new RelationInfo(relationable, Set.of(), parseQuery(refSql));
         }
 
         Model baseModel;
@@ -108,7 +108,7 @@ public abstract class RelationableSqlRender
 
         return new RelationInfo(
                 relationable,
-                requiredModels,
+                requiredObjects,
                 parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql)));
     }
 

@@ -14,7 +14,10 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Model;
 import io.accio.testing.AbstractTestFramework;
 import org.testng.annotations.Test;
 
@@ -27,6 +30,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.TimeUnit.DAY;
@@ -39,11 +43,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException
 public class TestMetric
         extends AbstractTestFramework
 {
-    private static AccioMDL accioMDL;
+    private final Manifest manifest;
+    private final AccioMDL accioMDL;
 
     public TestMetric()
     {
-        accioMDL = AccioMDL.fromManifest(withDefaultCatalogSchema()
+        manifest = withDefaultCatalogSchema()
                 .setModels(List.of(
                         model("Orders",
                                 "select * from main.orders",
@@ -97,7 +102,8 @@ public class TestMetric
                                 List.of(column("orderdate", DATE, null, true)),
                                 List.of(column("count_of_customer", INTEGER, null, true, "count(distinct customer.name)")),
                                 List.of())))
-                .build());
+                .build();
+        accioMDL = AccioMDL.fromManifest(manifest);
     }
 
     @Override
@@ -122,6 +128,29 @@ public class TestMetric
         List<List<Object>> measureRelationship = query(rewrite("select * from NumberCustomerByDate"));
         assertThat(measureRelationship.get(0).size()).isEqualTo(2);
         assertThat(measureRelationship.size()).isEqualTo(2401);
+    }
+
+    @Test
+    public void testModelOnMetric()
+    {
+        List<Model> models = ImmutableList.<Model>builder()
+                .addAll(manifest.getModels())
+                .add(onBaseObject(
+                        "testModelOnMetric",
+                        "RevenueByCustomerBaseOrders",
+                        List.of(
+                                column("name", VARCHAR, null, true),
+                                column("revenue", INTEGER, null, true, "totalprice")),
+                        "name"))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setModels(models)
+                        .build());
+
+        List<List<Object>> result = query(rewrite("select * from testModelOnMetric", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(14958);
     }
 
     private String rewrite(String sql)

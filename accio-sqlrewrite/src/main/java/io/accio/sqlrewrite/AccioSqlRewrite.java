@@ -67,13 +67,7 @@ public class AccioSqlRewrite
                 .addAll(viewDescriptors)
                 .addAll(cumulativeMetricDescriptors)
                 .build();
-
-        // initDescriptors gathers queries that need to be placed at the beginning of a Common Table Expression (CTE).
-        Set<QueryDescriptor> initDescriptors = new HashSet<>();
-        if (cumulativeMetricDescriptors.size() > 0) {
-            initDescriptors.add(DateSpineInfo.get(accioMDL.getDateSpine()));
-        }
-        return apply(root, sessionContext, analysis, accioMDL, allDescriptors, initDescriptors);
+        return apply(root, sessionContext, analysis, accioMDL, allDescriptors);
     }
 
     private Statement apply(
@@ -81,8 +75,7 @@ public class AccioSqlRewrite
             SessionContext sessionContext,
             Analysis analysis,
             AccioMDL accioMDL,
-            Set<QueryDescriptor> allDescriptors,
-            Set<QueryDescriptor> initDescriptors)
+            Set<QueryDescriptor> allDescriptors)
     {
         DirectedAcyclicGraph<String, Object> graph = new DirectedAcyclicGraph<>(Object.class);
         Set<QueryDescriptor> requiredQueryDescriptors = new HashSet<>();
@@ -94,7 +87,6 @@ public class AccioSqlRewrite
         requiredQueryDescriptors.forEach(queryDescriptor -> descriptorMap.put(queryDescriptor.getName(), queryDescriptor));
 
         List<WithQuery> withQueries = new ArrayList<>();
-        initDescriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
         graph.iterator().forEachRemaining(objectName -> {
             QueryDescriptor queryDescriptor = descriptorMap.get(objectName);
             checkArgument(queryDescriptor != null, objectName + " not found in query descriptors");

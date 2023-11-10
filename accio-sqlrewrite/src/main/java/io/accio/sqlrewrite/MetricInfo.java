@@ -33,7 +33,7 @@ public class MetricInfo
     {
         return new MetricInfo(
                 metric.getName(),
-                Set.of(metric.getBaseObject()),
+                Set.of(metric.getBaseObject(), DateSpineInfo.NAME),
                 Utils.parseCumulativeMetricSql(metric, mdl));
     }
 

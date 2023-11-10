@@ -14,8 +14,11 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.DateSpine;
+import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Model;
 import io.accio.base.dto.TimeUnit;
 import io.accio.testing.AbstractTestFramework;
 import org.testng.annotations.Test;
@@ -29,6 +32,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Window.window;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,11 +40,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestCumulativeMetric
         extends AbstractTestFramework
 {
-    private static AccioMDL accioMDL;
+    private final Manifest manifest;
+    private final AccioMDL accioMDL;
 
     public TestCumulativeMetric()
     {
-        accioMDL = AccioMDL.fromManifest(withDefaultCatalogSchema()
+        manifest = withDefaultCatalogSchema()
                 .setModels(List.of(
                         model("Orders",
                                 "select * from main.orders",
@@ -71,7 +76,8 @@ public class TestCumulativeMetric
                                 "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.YEAR, "1994-01-01", "1998-12-31"))))
                 .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31"))
-                .build());
+                .build();
+        accioMDL = AccioMDL.fromManifest(manifest);
     }
 
     @Override
@@ -89,6 +95,29 @@ public class TestCumulativeMetric
         assertThat(query(rewrite("select * from MonthlyRevenue")).size()).isEqualTo(12);
         assertThat(query(rewrite("select * from QuarterlyRevenue")).size()).isEqualTo(8);
         assertThat(query(rewrite("select * from YearlyRevenue")).size()).isEqualTo(5);
+    }
+
+    @Test
+    public void testModelOnCumulativeMetric()
+    {
+        List<Model> models = ImmutableList.<Model>builder()
+                .addAll(manifest.getModels())
+                .add(onBaseObject(
+                        "testModelOnCumulativeMetric",
+                        "WeeklyRevenue",
+                        List.of(
+                                column("totalprice", INTEGER, null, false),
+                                column("orderdate", "DATE", null, false)),
+                        "orderdate"))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setModels(models)
+                        .build());
+
+        List<List<Object>> result = query(rewrite("select * from testModelOnCumulativeMetric", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(53);
     }
 
     private String rewrite(String sql)

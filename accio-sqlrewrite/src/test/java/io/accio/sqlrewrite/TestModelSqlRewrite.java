@@ -33,7 +33,7 @@ import static io.accio.base.dto.Column.relationshipColumn;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.JoinType.ONE_TO_ONE;
 import static io.accio.base.dto.Model.model;
-import static io.accio.base.dto.Model.onModel;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static io.trino.sql.SqlFormatter.formatSql;
@@ -305,7 +305,7 @@ public class TestModelSqlRewrite
         List<Model> models = ImmutableList.<Model>builder()
                 .addAll(DEFAULT_MANIFEST.getModels())
                 .add(
-                        onModel(
+                        onBaseObject(
                                 "BookReplica",
                                 "Book",
                                 List.of(
@@ -392,18 +392,6 @@ public class TestModelSqlRewrite
         Statement expectedStmt = sqlParser.createStatement(expected, parsingOptions);
         assertThat(formatSql(actualStmt))
                 .isEqualTo(formatSql(expectedStmt));
-    }
-
-    private static Manifest.Builder copyOf(Manifest manifest)
-    {
-        return Manifest.builder()
-                .setCatalog(manifest.getCatalog())
-                .setSchema(manifest.getSchema())
-                .setModels(manifest.getModels())
-                .setRelationships(manifest.getRelationships())
-                .setMetrics(manifest.getMetrics())
-                .setViews(manifest.getViews())
-                .setEnumDefinitions(manifest.getEnumDefinitions());
     }
 
     private void assertSqlEqualsAndValid(@Language("SQL") String actual, @Language("SQL") String expected)

@@ -82,4 +82,17 @@ public abstract class AbstractTestFramework
     {
         duckdbClient.executeDDL(sql);
     }
+
+    protected static Manifest.Builder copyOf(Manifest manifest)
+    {
+        return Manifest.builder()
+                .setCatalog(manifest.getCatalog())
+                .setSchema(manifest.getSchema())
+                .setModels(manifest.getModels())
+                .setRelationships(manifest.getRelationships())
+                .setMetrics(manifest.getMetrics())
+                .setCumulativeMetrics(manifest.getCumulativeMetrics())
+                .setViews(manifest.getViews())
+                .setEnumDefinitions(manifest.getEnumDefinitions());
+    }
 }
