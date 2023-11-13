@@ -14,8 +14,10 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.base.Joiner;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationable;
@@ -26,11 +28,14 @@ import io.trino.sql.tree.Expression;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
+import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -48,6 +53,47 @@ public class MetricSqlRender
     protected String initRefSql(Relationable relationable)
     {
         return "SELECT * FROM " + relationable.getBaseObject();
+    }
+
+    @Override
+    public RelationInfo render()
+    {
+        Optional<Model> metricBaseModel = mdl.getModel(relationable.getBaseObject());
+        // metric on model
+        if (metricBaseModel.isPresent()) {
+            return render(metricBaseModel.orElseThrow(() -> new IllegalArgumentException("model not found")));
+        }
+        // metric on metric
+        Optional<Metric> metricBaseMetric = mdl.getMetric(relationable.getBaseObject());
+        if (metricBaseMetric.isPresent()) {
+            return renderBasedOnMetric(metricBaseMetric.orElseThrow(() -> new IllegalArgumentException("metric not found")).getName());
+        }
+        // metric on cumulative metric
+        Optional<CumulativeMetric> metricBaseCumulativeMetric = mdl.getCumulativeMetric(relationable.getBaseObject());
+        if (metricBaseCumulativeMetric.isPresent()) {
+            return renderBasedOnMetric(metricBaseCumulativeMetric.orElseThrow(() -> new IllegalArgumentException("metric not found")).getName());
+        }
+        throw new IllegalArgumentException("invalid metric, cannot render metric sql");
+    }
+
+    // TODO: Refactor this out of MetricSqlRender since Metric currently can't be used in relationship in MDL
+    //  thus no need to take care relations in column expression.
+    private RelationInfo renderBasedOnMetric(String metricName)
+    {
+        Metric metric = (Metric) relationable;
+        List<String> selectItems = metric.getColumns().stream()
+                .filter(column -> column.getRelationship().isEmpty())
+                .map(column -> format("%s AS %s", column.getExpression().orElse(column.getName()), column.getName()))
+                .collect(toList());
+        String sql = format("SELECT %s FROM %s GROUP BY %s",
+                Joiner.on(",").join(selectItems),
+                metricName,
+                IntStream.rangeClosed(1, selectItems.size() - metric.getMeasure().size()).mapToObj(String::valueOf).collect(joining(",")));
+
+        return new RelationInfo(
+                relationable,
+                Set.of(metricName),
+                parseQuery(sql));
     }
 
     @Override
