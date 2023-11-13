@@ -21,6 +21,7 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.accio.cache.CacheModule;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
 import io.accio.main.pgcatalog.PgCatalogManager;
@@ -30,7 +31,6 @@ import io.accio.main.server.module.PostgresWireProtocolModule;
 import io.accio.main.server.module.WebModule;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
-import io.accio.preaggregation.PreAggregationModule;
 import io.airlift.bootstrap.Bootstrap;
 import io.airlift.bootstrap.LifeCycleManager;
 import io.airlift.event.client.EventModule;
@@ -85,7 +85,7 @@ public class TestingAccioServer
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(BIGQUERY), new BigQueryConnectorModule()),
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
                 new AccioModule(),
-                new PreAggregationModule(),
+                new CacheModule(),
                 new WebModule()));
 
         injector = app

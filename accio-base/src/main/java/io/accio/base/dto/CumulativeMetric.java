@@ -14,6 +14,7 @@
 
 package io.accio.base.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.airlift.units.Duration;
@@ -21,7 +22,7 @@ import io.airlift.units.Duration;
 import java.util.Objects;
 
 public class CumulativeMetric
-        implements PreAggregationInfo
+        implements CacheInfo
 {
     public static CumulativeMetric cumulativeMetric(
             String name,
@@ -36,7 +37,7 @@ public class CumulativeMetric
     private final String baseObject;
     private final Measure measure;
     private final Window window;
-    private final boolean preAggregated;
+    private final boolean cached;
     private final Duration refreshTime;
     private final String description;
 
@@ -46,7 +47,8 @@ public class CumulativeMetric
             @JsonProperty("baseObject") String baseObject,
             @JsonProperty("measure") Measure measure,
             @JsonProperty("window") Window window,
-            @JsonProperty("preAggregated") boolean preAggregated,
+            // preAggregated is deprecated, use cached instead.
+            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
             @JsonProperty("description") String description)
     {
@@ -54,7 +56,7 @@ public class CumulativeMetric
         this.baseObject = baseObject;
         this.measure = measure;
         this.window = window;
-        this.preAggregated = preAggregated;
+        this.cached = cached;
         this.refreshTime = refreshTime;
         this.description = description;
     }
@@ -84,9 +86,9 @@ public class CumulativeMetric
     }
 
     @JsonProperty
-    public boolean isPreAggregated()
+    public boolean isCached()
     {
-        return preAggregated;
+        return cached;
     }
 
     @JsonProperty
@@ -104,7 +106,7 @@ public class CumulativeMetric
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseObject, measure, window, preAggregated, refreshTime, description);
+        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, description);
     }
 
     @Override
@@ -119,7 +121,7 @@ public class CumulativeMetric
         }
 
         CumulativeMetric that = (CumulativeMetric) o;
-        return preAggregated == that.preAggregated &&
+        return cached == that.cached &&
                 Objects.equals(name, that.name) &&
                 Objects.equals(baseObject, that.baseObject) &&
                 Objects.equals(measure, that.measure) &&
@@ -136,7 +138,7 @@ public class CumulativeMetric
                 ", baseObject='" + baseObject + '\'' +
                 ", measure=" + measure +
                 ", window=" + window +
-                ", preAggregated=" + preAggregated +
+                ", cached=" + cached +
                 ", refreshTime=" + refreshTime +
                 ", description='" + description + '\'' +
                 '}';

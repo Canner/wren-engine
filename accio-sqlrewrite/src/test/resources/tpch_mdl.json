@@ -326,7 +326,7 @@
         "start": "1993-01-01",
         "end": "1993-12-31"
       },
-      "preAggregated": false,
+      "cached": false,
       "refreshTime": "30m",
       "description": ""
     }

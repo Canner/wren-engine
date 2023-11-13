@@ -70,9 +70,9 @@
 
     <modules>
         <module>accio-base</module>
+        <module>accio-cache</module>
         <module>accio-connector-client</module>
         <module>accio-main</module>
-        <module>accio-pre-aggregation</module>
         <module>accio-server</module>
         <module>accio-shaded</module>
         <module>accio-sqlrewrite</module>
@@ -259,6 +259,12 @@
 
             <dependency>
                 <groupId>io.accio</groupId>
+                <artifactId>accio-cache</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.accio</groupId>
                 <artifactId>accio-connector-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -266,12 +272,6 @@
             <dependency>
                 <groupId>io.accio</groupId>
                 <artifactId>accio-main</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-pre-aggregation</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

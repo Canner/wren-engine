@@ -14,6 +14,7 @@
 
 package io.accio.base.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -27,14 +28,14 @@ import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class Metric
-        implements PreAggregationInfo, Relationable
+        implements CacheInfo, Relationable
 {
     private final String name;
     private final String baseObject;
     private final List<Column> dimension;
     private final List<Column> measure;
     private final List<TimeGrain> timeGrain;
-    private final boolean preAggregated;
+    private final boolean cached;
     private final Duration refreshTime;
     private final String description;
 
@@ -43,14 +44,14 @@ public class Metric
         return metric(name, baseObject, dimension, measure, timeGrain, false);
     }
 
-    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated)
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached)
     {
-        return metric(name, baseObject, dimension, measure, timeGrain, preAggregated, null);
+        return metric(name, baseObject, dimension, measure, timeGrain, cached, null);
     }
 
-    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean preAggregated, String description)
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached, String description)
     {
-        return new Metric(name, baseObject, dimension, measure, timeGrain, preAggregated, null, description);
+        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, description);
     }
 
     @JsonCreator
@@ -60,7 +61,8 @@ public class Metric
             @JsonProperty("dimension") List<Column> dimension,
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
-            @JsonProperty("preAggregated") boolean preAggregated,
+            // preAggregated is deprecated, use cached instead.
+            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
             @JsonProperty("description") String description)
     {
@@ -68,7 +70,7 @@ public class Metric
         this.baseObject = requireNonNull(baseObject, "baseObject is null");
         this.dimension = requireNonNull(dimension, "dimension is null");
         this.measure = requireNonNull(measure, "measure is null");
-        this.preAggregated = preAggregated;
+        this.cached = cached;
         checkArgument(measure.size() > 0, "the number of measures should be one at least");
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
@@ -122,9 +124,9 @@ public class Metric
 
     @Override
     @JsonProperty
-    public boolean isPreAggregated()
+    public boolean isCached()
     {
-        return preAggregated;
+        return cached;
     }
 
     @Override
@@ -150,7 +152,7 @@ public class Metric
             return false;
         }
         Metric that = (Metric) obj;
-        return preAggregated == that.preAggregated
+        return cached == that.cached
                 && Objects.equals(name, that.name)
                 && Objects.equals(baseObject, that.baseObject)
                 && Objects.equals(dimension, that.dimension)
@@ -169,7 +171,7 @@ public class Metric
                 dimension,
                 measure,
                 timeGrain,
-                preAggregated,
+                cached,
                 refreshTime,
                 description);
     }
@@ -183,7 +185,7 @@ public class Metric
                 ", dimension=" + dimension +
                 ", measure=" + measure +
                 ", timeGrain=" + timeGrain +
-                ", preAggregated=" + preAggregated +
+                ", cached=" + cached +
                 ", refreshTime=" + refreshTime +
                 ", description='" + description + '\'' +
                 '}';

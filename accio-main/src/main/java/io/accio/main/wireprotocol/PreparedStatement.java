@@ -23,7 +23,7 @@ public class PreparedStatement
 
     private final String name;
     private final String statement;
-    private final Optional<String> preAggregationStatement;
+    private final Optional<String> cacheStatement;
     private final List<Integer> paramTypeOids;
     private final String originalStatement;
     private final boolean isSessionCommand;
@@ -41,14 +41,14 @@ public class PreparedStatement
     public PreparedStatement(
             String name,
             String statement,
-            Optional<String> preAggregationStatement,
+            Optional<String> cacheStatement,
             List<Integer> paramTypeOids,
             String originalStatement,
             boolean isSessionCommand)
     {
         this.name = name.isEmpty() ? CANNERFLOW_RESERVED_PREPARE_NAME : name;
         this.statement = statement;
-        this.preAggregationStatement = preAggregationStatement;
+        this.cacheStatement = cacheStatement;
         this.paramTypeOids = paramTypeOids;
         this.originalStatement = originalStatement;
         this.isSessionCommand = isSessionCommand;
@@ -79,8 +79,8 @@ public class PreparedStatement
         return isSessionCommand;
     }
 
-    public Optional<String> getPreAggregationStatement()
+    public Optional<String> getCacheStatement()
     {
-        return preAggregationStatement;
+        return cacheStatement;
     }
 }

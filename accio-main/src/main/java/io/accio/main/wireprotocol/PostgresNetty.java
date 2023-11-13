@@ -18,6 +18,8 @@ import com.carrotsearch.hppc.IntHashSet;
 import com.carrotsearch.hppc.IntSet;
 import com.google.common.net.HostAndPort;
 import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheManager;
+import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;
 import io.accio.main.PostgresWireProtocolConfig;
 import io.accio.main.metadata.Metadata;
@@ -25,8 +27,6 @@ import io.accio.main.netty.ChannelBootstrapFactory;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.wireprotocol.ssl.SslContextProvider;
 import io.accio.main.wireprotocol.ssl.SslReqHandler;
-import io.accio.preaggregation.PreAggregationManager;
-import io.accio.preaggregation.PreAggregationTableMapping;
 import io.airlift.log.Logger;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -88,8 +88,8 @@ public class PostgresNetty
     private final SqlConverter sqlConverter;
     private BoundTransportAddress boundAddress;
     private final AccioMetastore accioMetastore;
-    private final PreAggregationManager preAggregationManager;
-    private final PreAggregationTableMapping preAggregationTableMapping;
+    private final CacheManager cacheManager;
+    private final CachedTableMapping cachedTableMapping;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -99,8 +99,8 @@ public class PostgresNetty
             Metadata connector,
             SqlConverter sqlConverter,
             AccioMetastore accioMetastore,
-            PreAggregationManager preAggregationManager,
-            PreAggregationTableMapping preAggregationTableMapping)
+            CacheManager cacheManager,
+            CachedTableMapping cachedTableMapping)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -113,8 +113,8 @@ public class PostgresNetty
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
-        this.preAggregationTableMapping = requireNonNull(preAggregationTableMapping, "preAggregationTableMapping is null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
+        this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
     }
 
     public void start()
@@ -130,7 +130,7 @@ public class PostgresNetty
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
                 WireProtocolSession wireProtocolSession =
-                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioMetastore, preAggregationManager, preAggregationTableMapping);
+                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioMetastore, cacheManager, cachedTableMapping);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

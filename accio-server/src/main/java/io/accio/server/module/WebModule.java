@@ -16,7 +16,7 @@ package io.accio.main.server.module;
 
 import com.google.inject.Binder;
 import io.accio.main.web.AccioExceptionMapper;
-import io.accio.main.web.PreAggregationResource;
+import io.accio.main.web.CacheResource;
 import io.accio.main.web.ReloadResource;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
@@ -29,7 +29,7 @@ public class WebModule
     protected void setup(Binder binder)
     {
         jaxrsBinder(binder).bind(ReloadResource.class);
-        jaxrsBinder(binder).bind(PreAggregationResource.class);
+        jaxrsBinder(binder).bind(CacheResource.class);
         jaxrsBinder(binder).bindInstance(new AccioExceptionMapper());
     }
 }

@@ -17,10 +17,11 @@ package io.accio.main.server.module;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheService;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresConfig;
+import io.accio.main.connector.postgres.PostgresCacheService;
 import io.accio.main.connector.postgres.PostgresMetadata;
-import io.accio.main.connector.postgres.PostgresPreAggregationService;
 import io.accio.main.connector.postgres.PostgresSqlConverter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.PgCatalogTableBuilder;
@@ -29,7 +30,6 @@ import io.accio.main.pgcatalog.builder.PostgresPgCatalogTableBuilder;
 import io.accio.main.pgcatalog.builder.PostgresPgFunctionBuilder;
 import io.accio.main.pgcatalog.regtype.PgMetadata;
 import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
-import io.accio.preaggregation.PreAggregationService;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -46,7 +46,7 @@ public class PostgresConnectorModule
         binder.bind(PgCatalogTableBuilder.class).to(PostgresPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgFunctionBuilder.class).to(PostgresPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(PreAggregationService.class).to(PostgresPreAggregationService.class).in(Scopes.SINGLETON);
+        binder.bind(CacheService.class).to(PostgresCacheService.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(PostgresConfig.class);
     }
 }
