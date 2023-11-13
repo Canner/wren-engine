@@ -16,7 +16,7 @@ package io.accio.main;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.accio.base.AccioMDL;
-import io.accio.preaggregation.PreAggregationManager;
+import io.accio.cache.CacheManager;
 import io.airlift.log.Logger;
 
 import javax.inject.Inject;
@@ -35,17 +35,17 @@ public class AccioManager
     private static final Logger LOG = Logger.get(AccioManager.class);
     private final AtomicReference<AccioMDL> accioMDL = new AtomicReference<>(EMPTY);
     private final File accioMDLFile;
-    private final PreAggregationManager preAggregationManager;
+    private final CacheManager cacheManager;
 
     @Inject
-    public AccioManager(AccioConfig accioConfig, PreAggregationManager preAggregationManager)
+    public AccioManager(AccioConfig accioConfig, CacheManager cacheManager)
             throws IOException
     {
         this.accioMDLFile = requireNonNull(accioConfig.getAccioMDLFile(), "accioMDLFile is null");
-        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         if (accioMDLFile.exists()) {
             loadAccioMDLFromFile();
-            preAggregationManager.createTaskUtilDone(getAccioMDL());
+            cacheManager.createTaskUtilDone(getAccioMDL());
         }
         else {
             LOG.warn("AccioMDL file %s does not exist", accioMDLFile);
@@ -62,7 +62,7 @@ public class AccioManager
             throws JsonProcessingException
     {
         AccioMDL oldAccioMDL = accioMDL.get();
-        preAggregationManager.removePreAggregation(oldAccioMDL.getCatalog(), oldAccioMDL.getSchema());
+        cacheManager.removeCache(oldAccioMDL.getCatalog(), oldAccioMDL.getSchema());
         accioMDL.set(AccioMDL.fromJson(json));
     }
 

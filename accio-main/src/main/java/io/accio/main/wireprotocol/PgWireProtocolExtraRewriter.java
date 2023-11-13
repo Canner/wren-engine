@@ -13,10 +13,10 @@
  */
 package io.accio.main.wireprotocol;
 
+import io.accio.cache.ExtraRewriter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.sql.PostgreSqlRewrite;
-import io.accio.preaggregation.ExtraRewriter;
 import io.trino.sql.tree.Statement;
 
 import javax.inject.Inject;

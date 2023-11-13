@@ -106,7 +106,7 @@ public class BigQueryConfig
     }
 
     @Config("bigquery.bucket-name")
-    @ConfigDescription("The Google Cloud bucket name used to temporarily store the metric pre-aggregation results")
+    @ConfigDescription("The Google Cloud bucket name used to temporarily store the metric cached results")
     public BigQueryConfig setBucketName(String bucketName)
     {
         this.bucketName = Optional.of(bucketName);

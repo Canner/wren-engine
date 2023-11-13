@@ -14,6 +14,7 @@
 
 package io.accio.base.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.airlift.units.Duration;
@@ -26,14 +27,14 @@ import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class Model
-        implements PreAggregationInfo, Relationable
+        implements CacheInfo, Relationable
 {
     private final String name;
     private final String refSql;
     private final String baseObject;
     private final List<Column> columns;
     private final String primaryKey;
-    private final boolean preAggregated;
+    private final boolean cached;
     private final Duration refreshTime;
     private final String description;
 
@@ -42,9 +43,9 @@ public class Model
         return model(name, refSql, columns, null);
     }
 
-    public static Model model(String name, String refSql, List<Column> columns, boolean preAggregated)
+    public static Model model(String name, String refSql, List<Column> columns, boolean cached)
     {
-        return new Model(name, refSql, null, columns, null, preAggregated, null, null);
+        return new Model(name, refSql, null, columns, null, cached, null, null);
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
@@ -69,7 +70,8 @@ public class Model
             @JsonProperty("baseObject") String baseObject,
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("primaryKey") String primaryKey,
-            @JsonProperty("preAggregated") boolean preAggregated,
+            // preAggregated is deprecated, use cached instead.
+            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
             @JsonProperty("description") String description)
     {
@@ -80,7 +82,7 @@ public class Model
         this.baseObject = baseObject;
         this.columns = columns == null ? List.of() : columns;
         this.primaryKey = primaryKey;
-        this.preAggregated = preAggregated;
+        this.cached = cached;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
         this.description = description;
     }
@@ -119,9 +121,9 @@ public class Model
 
     @Override
     @JsonProperty
-    public boolean isPreAggregated()
+    public boolean isCached()
     {
-        return preAggregated;
+        return cached;
     }
 
     @Override
@@ -147,7 +149,7 @@ public class Model
             return false;
         }
         Model that = (Model) obj;
-        return preAggregated == that.preAggregated
+        return cached == that.cached
                 && Objects.equals(name, that.name)
                 && Objects.equals(refSql, that.refSql)
                 && Objects.equals(baseObject, that.baseObject)
@@ -172,7 +174,7 @@ public class Model
                 ", baseObject='" + baseObject + '\'' +
                 ", columns=" + columns +
                 ", primaryKey='" + primaryKey + '\'' +
-                ", preAggregated=" + preAggregated +
+                ", cached=" + cached +
                 ", refreshTime='" + refreshTime + '\'' +
                 ", description='" + description + '\'' +
                 '}';

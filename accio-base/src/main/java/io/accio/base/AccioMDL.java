@@ -16,6 +16,7 @@ package io.accio.base;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.accio.base.dto.CacheInfo;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.DateSpine;
@@ -23,7 +24,6 @@ import io.accio.base.dto.EnumDefinition;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
-import io.accio.base.dto.PreAggregationInfo;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 
@@ -113,18 +113,18 @@ public class AccioMDL
         return manifest.getMetrics();
     }
 
-    public List<PreAggregationInfo> listPreAggregated()
+    public List<CacheInfo> listCached()
     {
         return Stream.concat(manifest.getMetrics().stream(), manifest.getModels().stream())
-                .filter(PreAggregationInfo::isPreAggregated)
+                .filter(CacheInfo::isCached)
                 .collect(toImmutableList());
     }
 
-    public Optional<PreAggregationInfo> getPreAggregationInfo(CatalogSchemaTableName name)
+    public Optional<CacheInfo> getCacheInfo(CatalogSchemaTableName name)
     {
         if (catalog.equals(name.getCatalogName()) && schema.equals(name.getSchemaTableName().getSchemaName())) {
-            return listPreAggregated().stream()
-                    .filter(preAggregationInfo -> preAggregationInfo.getName().equals(name.getSchemaTableName().getTableName()))
+            return listCached().stream()
+                    .filter(cacheInfo -> cacheInfo.getName().equals(name.getSchemaTableName().getTableName()))
                     .findAny();
         }
         return Optional.empty();

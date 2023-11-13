@@ -16,12 +16,12 @@ package io.accio.main;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheManager;
+import io.accio.cache.CachedTableMapping;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.SslContextProvider;
-import io.accio.preaggregation.PreAggregationManager;
-import io.accio.preaggregation.PreAggregationTableMapping;
 import org.elasticsearch.common.network.NetworkService;
 
 import javax.inject.Inject;
@@ -39,8 +39,8 @@ public class PostgresNettyProvider
     private final Metadata connector;
     private final SqlConverter sqlConverter;
     private final AccioMetastore accioMetastore;
-    private final PreAggregationManager preAggregationManager;
-    private final PreAggregationTableMapping preAggregationTableMapping;
+    private final CacheManager cacheManager;
+    private final CachedTableMapping cachedTableMapping;
 
     @Inject
     public PostgresNettyProvider(
@@ -50,8 +50,8 @@ public class PostgresNettyProvider
             Metadata connector,
             SqlConverter sqlConverter,
             AccioMetastore accioMetastore,
-            PreAggregationManager preAggregationManager,
-            PreAggregationTableMapping preAggregationTableMapping)
+            CacheManager cacheManager,
+            CachedTableMapping cachedTableMapping)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
@@ -59,8 +59,8 @@ public class PostgresNettyProvider
         this.connector = requireNonNull(connector, "connector is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
-        this.preAggregationTableMapping = requireNonNull(preAggregationTableMapping, "preAggregationTableMapping is null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
+        this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
     }
 
     @Override
@@ -75,8 +75,8 @@ public class PostgresNettyProvider
                 connector,
                 sqlConverter,
                 accioMetastore,
-                preAggregationManager,
-                preAggregationTableMapping);
+                cacheManager,
+                cachedTableMapping);
         postgresNetty.start();
         return postgresNetty;
     }

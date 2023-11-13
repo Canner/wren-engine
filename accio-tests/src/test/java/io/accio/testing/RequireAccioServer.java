@@ -16,8 +16,8 @@ package io.accio.testing;
 
 import com.google.common.io.Closer;
 import com.google.inject.Key;
+import io.accio.cache.TaskInfo;
 import io.accio.main.web.dto.ErrorMessageDto;
-import io.accio.preaggregation.TaskInfo;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
 import io.airlift.http.client.Request;
@@ -100,10 +100,10 @@ public abstract class RequireAccioServer
         }
     }
 
-    protected void reloadPreAggregation()
+    protected void reloadCache()
     {
         Request request = preparePut()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/preAggregation/reload"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/cache/reload"))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
@@ -113,10 +113,10 @@ public abstract class RequireAccioServer
         }
     }
 
-    protected TaskInfo reloadPreAggregationAsync()
+    protected TaskInfo reloadCacheAsync()
     {
         Request request = preparePost()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/preAggregation/reload/async"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/cache/reload/async"))
                 .build();
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
         if (response.getStatusCode() != 200) {
@@ -128,7 +128,7 @@ public abstract class RequireAccioServer
     protected TaskInfo getTaskInfoByTaskId(String taskId)
     {
         Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/preAggregation/reload/async/" + taskId))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/cache/reload/async/" + taskId))
                 .build();
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
         if (response.getStatusCode() != 200) {

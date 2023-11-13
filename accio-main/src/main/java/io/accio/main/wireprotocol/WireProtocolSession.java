@@ -20,15 +20,15 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheManager;
+import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.sql.PostgreSqlRewrite;
 import io.accio.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
-import io.accio.preaggregation.PreAggregationManager;
-import io.accio.preaggregation.PreAggregationTableMapping;
 import io.accio.sqlrewrite.AccioPlanner;
-import io.accio.sqlrewrite.PreAggregationRewrite;
+import io.accio.sqlrewrite.CacheRewrite;
 import io.airlift.log.Logger;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -83,24 +83,24 @@ public class WireProtocolSession
 
     private final SqlConverter sqlConverter;
     private final AccioMetastore accioMetastore;
-    private final PreAggregationManager preAggregationManager;
-    private final PreAggregationTableMapping preAggregationTableMapping;
+    private final CacheManager cacheManager;
+    private final CachedTableMapping cachedTableMapping;
 
     public WireProtocolSession(
             RegObjectFactory regObjectFactory,
             Metadata metadata,
             SqlConverter sqlConverter,
             AccioMetastore accioMetastore,
-            PreAggregationManager preAggregationManager,
-            PreAggregationTableMapping preAggregationTableMapping)
+            CacheManager cacheManager,
+            CachedTableMapping cachedTableMapping)
     {
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        this.preAggregationManager = requireNonNull(preAggregationManager, "preAggregationManager is null");
-        this.preAggregationTableMapping = requireNonNull(preAggregationTableMapping, "preAggregationTableMapping is null");
+        this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
+        this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -239,7 +239,7 @@ public class WireProtocolSession
                     new PreparedStatement(
                             statementName,
                             getFormattedSql(rewrittenStatement, sqlParser),
-                            PreAggregationRewrite.rewrite(sessionContext, statementPreRewritten, preAggregationTableMapping::convertToAggregationTable, accioMetastore.getAccioMDL()),
+                            CacheRewrite.rewrite(sessionContext, statementPreRewritten, cachedTableMapping::convertToCachedTable, accioMetastore.getAccioMDL()),
                             rewrittenParamTypes,
                             statementTrimmed,
                             isSessionCommand(rewrittenStatement)));
@@ -279,7 +279,7 @@ public class WireProtocolSession
     private CompletableFuture<Optional<ConnectorRecordIterator>> execute(Portal portal)
     {
         String execStmt = portal.getPreparedStatement().getStatement();
-        return CompletableFuture.supplyAsync(() -> executePreAggregation(portal).or(() -> {
+        return CompletableFuture.supplyAsync(() -> executeCache(portal).or(() -> {
             String sql = sqlConverter.convert(execStmt,
                     SessionContext.builder()
                             .setCatalog(getDefaultDatabase())
@@ -289,14 +289,14 @@ public class WireProtocolSession
         }));
     }
 
-    private Optional<ConnectorRecordIterator> executePreAggregation(Portal portal)
+    private Optional<ConnectorRecordIterator> executeCache(Portal portal)
     {
-        return portal.getPreparedStatement().getPreAggregationStatement().map(statement -> {
+        return portal.getPreparedStatement().getCacheStatement().map(statement -> {
             try {
-                return preAggregationManager.query(statement, portal.getParameters());
+                return cacheManager.query(statement, portal.getParameters());
             }
             catch (Exception e) {
-                LOG.warn(e, "Failed to execute pre-aggregation query: %s", statement);
+                LOG.warn(e, "Failed to execute cache query: %s", statement);
                 return null;
             }
         });

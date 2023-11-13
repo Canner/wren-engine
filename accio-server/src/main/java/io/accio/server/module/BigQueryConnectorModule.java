@@ -25,12 +25,13 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheService;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.GcsStorageClient;
+import io.accio.main.connector.bigquery.BigQueryCacheService;
 import io.accio.main.connector.bigquery.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryCredentialsSupplier;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
-import io.accio.main.connector.bigquery.BigQueryPreAggregationService;
 import io.accio.main.connector.bigquery.BigQuerySqlConverter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.BigQueryPgCatalogTableBuilder;
@@ -39,7 +40,6 @@ import io.accio.main.pgcatalog.builder.PgCatalogTableBuilder;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.accio.main.pgcatalog.regtype.BigQueryPgMetadata;
 import io.accio.main.pgcatalog.regtype.PgMetadata;
-import io.accio.preaggregation.PreAggregationService;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import java.util.Optional;
@@ -59,7 +59,7 @@ public class BigQueryConnectorModule
         binder.bind(SqlConverter.class).to(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
 
-        binder.bind(PreAggregationService.class).to(BigQueryPreAggregationService.class).in(Scopes.SINGLETON);
+        binder.bind(CacheService.class).to(BigQueryCacheService.class).in(Scopes.SINGLETON);
     }
 
     @Provides
