@@ -37,7 +37,8 @@
           "type": "date"
         }
       ],
-      "primaryKey": "orderkey"
+      "primaryKey": "orderkey",
+      "cached": "true"
     },
     {
       "name": "Customer",
@@ -59,7 +60,8 @@
           "relationship": "OrdersCustomer"
         }
       ],
-      "primaryKey": "custkey"
+      "primaryKey": "custkey",
+      "cached": "true"
     }
   ],
   "relationships": [
@@ -101,7 +103,7 @@
           ]
         }
       ],
-      "refreshTime": "100ms"
+      "refreshTime": "5s"
     }
   ]
 }
