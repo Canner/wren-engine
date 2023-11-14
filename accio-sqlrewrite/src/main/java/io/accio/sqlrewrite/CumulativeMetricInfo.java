@@ -22,22 +22,22 @@ import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
-public class MetricInfo
+public class CumulativeMetricInfo
         implements QueryDescriptor
 {
     private final String name;
     private final Set<String> requiredObjects;
     private final Query query;
 
-    public static MetricInfo get(CumulativeMetric metric, AccioMDL mdl)
+    public static CumulativeMetricInfo get(CumulativeMetric metric, AccioMDL mdl)
     {
-        return new MetricInfo(
+        return new CumulativeMetricInfo(
                 metric.getName(),
                 Set.of(metric.getBaseObject(), DateSpineInfo.NAME),
                 Utils.parseCumulativeMetricSql(metric, mdl));
     }
 
-    private MetricInfo(String name, Set<String> requiredObjects, Query query)
+    private CumulativeMetricInfo(String name, Set<String> requiredObjects, Query query)
     {
         this.name = requireNonNull(name);
         this.requiredObjects = requireNonNull(requiredObjects);

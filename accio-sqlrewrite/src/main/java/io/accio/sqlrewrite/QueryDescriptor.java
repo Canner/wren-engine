@@ -45,7 +45,7 @@ public interface QueryDescriptor
         }
         Optional<CumulativeMetric> cumulativeMetric = mdl.getCumulativeMetric(name);
         if (cumulativeMetric.isPresent()) {
-            return MetricInfo.get(cumulativeMetric.get(), mdl);
+            return CumulativeMetricInfo.get(cumulativeMetric.get(), mdl);
         }
         Optional<View> view = mdl.getView(name);
         if (view.isPresent()) {
