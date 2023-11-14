@@ -14,6 +14,7 @@
 
 package io.accio.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
@@ -23,6 +24,7 @@ import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
+import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.dto.CachedTable;
 import io.accio.sqlrewrite.AccioPlanner;
@@ -80,7 +82,7 @@ public class CacheManager
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("cache-refresh-%s"));
 
     private final ExecutorService executorService = newCachedThreadPool(threadsNamed("cache-manager-%s"));
-    private final ConcurrentHashMap<String, Task> tasks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
 
     @Inject
     public CacheManager(
@@ -101,38 +103,33 @@ public class CacheManager
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl)
+    private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl, CacheInfo cacheInfo)
     {
         String catalogName = mdl.getCatalog();
         String schemaName = mdl.getSchema();
-        List<TaskInfo> taskInfoList = listTaskInfo(catalogName, schemaName, Optional.of(true)).join();
-        if (!taskInfoList.isEmpty()) {
-            throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s", mdl.getCatalog(), mdl.getSchema()));
+        String tableName = cacheInfo.getName();
+        Optional<Task> taskOptional = Optional.ofNullable(tasks.get(new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName))));
+        if (taskOptional.isPresent() && taskOptional.get().getTaskInfo().inProgress()) {
+            throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s, tableName: %s", mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()));
         }
-        removeCache(catalogName, schemaName);
-        return doCache(mdl);
+        removeCacheIfExist(catalogName, schemaName, tableName);
+        return handleCache(mdl, cacheInfo);
     }
 
-    private CompletableFuture<Void> doCache(AccioMDL mdl)
+    private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo)
     {
-        List<CompletableFuture<Void>> futures = mdl.listCached()
-                .stream()
-                .map(cacheInfo ->
-                        doSingleCache(mdl, cacheInfo)
-                                .thenRun(() -> cacheScheduledFutures.put(
-                                        new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()),
-                                        refreshExecutor.scheduleWithFixedDelay(
-                                                () -> doSingleCache(mdl, cacheInfo).join(),
-                                                cacheInfo.getRefreshTime().toMillis(),
-                                                cacheInfo.getRefreshTime().toMillis(),
-                                                MILLISECONDS))))
-                .collect(toImmutableList());
-        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-        return allFutures.whenComplete((v, e) -> {
-            if (e != null) {
-                LOG.error(e, "Failed to do cache");
-            }
-        });
+        return doCache(mdl, cacheInfo)
+                .thenRun(() -> {
+                    if (cacheInfo.getRefreshTime().toMillis() > 0) {
+                        cacheScheduledFutures.put(
+                                new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()),
+                                refreshExecutor.scheduleWithFixedDelay(
+                                        () -> doCache(mdl, cacheInfo).join(),
+                                        cacheInfo.getRefreshTime().toMillis(),
+                                        cacheInfo.getRefreshTime().toMillis(),
+                                        MILLISECONDS));
+                    }
+                });
     }
 
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
@@ -141,7 +138,7 @@ public class CacheManager
         return DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList()));
     }
 
-    private CompletableFuture<Void> doSingleCache(AccioMDL mdl, CacheInfo cacheInfo)
+    private CompletableFuture<Void> doCache(AccioMDL mdl, CacheInfo cacheInfo)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
@@ -197,7 +194,7 @@ public class CacheManager
         duckdbClient.executeDDL(cacheStorageConfig.generateDuckdbParquetStatement(path, tableName));
     }
 
-    public void removeCache(String catalogName, String schemaName)
+    public void removeCacheIfExist(String catalogName, String schemaName)
     {
         requireNonNull(catalogName, "catalogName is null");
         requireNonNull(schemaName, "schemaName is null");
@@ -217,6 +214,24 @@ public class CacheManager
                     entry.getValue().getTableName().ifPresent(duckdbClient::dropTableQuietly);
                     cachedTableMapping.remove(entry.getKey());
                 });
+    }
+
+    public void removeCacheIfExist(String catalogName, String schemaName, String tableName)
+    {
+        requireNonNull(catalogName, "catalogName is null");
+        requireNonNull(schemaName, "schemaName is null");
+        requireNonNull(tableName, "tableName is null");
+
+        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName));
+        if (cacheScheduledFutures.containsKey(catalogSchemaTableName)) {
+            cacheScheduledFutures.get(catalogSchemaTableName).cancel(true);
+            cacheScheduledFutures.remove(catalogSchemaTableName);
+        }
+
+        Optional.ofNullable(cachedTableMapping.get(catalogSchemaTableName)).ifPresent(cacheInfoPair -> {
+            cacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
+            cachedTableMapping.remove(catalogSchemaTableName);
+        });
     }
 
     public boolean cacheScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
@@ -250,29 +265,38 @@ public class CacheManager
         }
     }
 
-    public TaskInfo createTaskUtilDone(AccioMDL mdl)
+    public List<TaskInfo> createTaskUtilDone(AccioMDL mdl)
     {
-        Optional<TaskInfo> taskInfoOptional = createTask(mdl)
-                .thenCompose(taskInfo -> {
-                    tasks.get(taskInfo.getTaskId()).waitUntilDone();
-                    return getTaskInfo(taskInfo.getTaskId());
-                })
-                .join();
-        return taskInfoOptional.orElseThrow(() -> new RuntimeException("Failed to create task"));
+        return createTask(mdl)
+                .thenApply(taskInfos -> taskInfos.stream()
+                        .map(taskInfo -> {
+                            tasks.get(taskInfo.getCatalogSchemaTableName()).waitUntilDone();
+                            return getTaskInfo(taskInfo.getCatalogSchemaTableName()).join();
+                        })
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(toList())).join();
     }
 
-    public CompletableFuture<TaskInfo> createTask(AccioMDL mdl)
+    public CompletableFuture<List<TaskInfo>> createTask(AccioMDL mdl)
+    {
+        return supplyAsync(() ->
+                mdl.listCached().stream().map(cacheInfo -> createTask(mdl, cacheInfo).join()).collect(toList()));
+    }
+
+    public CompletableFuture<TaskInfo> createTask(AccioMDL mdl, CacheInfo cacheInfo)
     {
         return supplyAsync(() -> {
-            String taskId = randomUUID().toString();
-            TaskInfo taskInfo = new TaskInfo(taskId, mdl.getCatalog(), mdl.getSchema(), RUNNING, Instant.now());
-            Task task = new Task(taskInfo, refreshCache(mdl));
-            tasks.put(taskId, task);
+            CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
+            TaskInfo taskInfo = new TaskInfo(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName(), RUNNING, Instant.now());
+            // To fix flaky test, we pass value to tasks instead of a reference;
+            Task task = new Task(TaskInfo.copyFrom(taskInfo), refreshCache(mdl, cacheInfo));
+            tasks.put(catalogSchemaTableName, task);
             return taskInfo;
         });
     }
 
-    public CompletableFuture<List<TaskInfo>> listTaskInfo(String catalogName, String schemaName, Optional<Boolean> inProgress)
+    public CompletableFuture<List<TaskInfo>> listTaskInfo(String catalogName, String schemaName)
     {
         Predicate<TaskInfo> catalogNamePred = catalogName.isEmpty() ?
                 (t) -> true :
@@ -282,26 +306,26 @@ public class CacheManager
                 (t) -> true :
                 (t) -> schemaName.equals(t.getSchemaName());
 
-        Predicate<TaskInfo> inProgressPred = inProgress.isEmpty() ?
-                (t) -> true :
-                (t) -> t.inProgress() == inProgress.get();
-
         return supplyAsync(
                 () -> tasks.values().stream()
                         .map(Task::getTaskInfo)
-                        .filter(TaskInfo::inProgress)
+                        .filter(catalogNamePred.and(schemaNamePred))
                         .collect(toList()),
                 executorService);
     }
 
-    public CompletableFuture<Optional<TaskInfo>> getTaskInfo(String taskId)
+    public CompletableFuture<Optional<TaskInfo>> getTaskInfo(CatalogSchemaTableName catalogSchemaTableName)
     {
-        requireNonNull(taskId);
+        requireNonNull(catalogSchemaTableName);
         return supplyAsync(
-                () -> tasks.containsKey(taskId) ?
-                        Optional.of(tasks.get(taskId).getTaskInfo()) :
-                        Optional.empty(),
+                () -> Optional.ofNullable(tasks.get(catalogSchemaTableName)).map(Task::getTaskInfo),
                 executorService);
+    }
+
+    @VisibleForTesting
+    public void untilTaskDone(CatalogSchemaTableName name)
+    {
+        Optional.ofNullable(tasks.get(name)).ifPresent(Task::waitUntilDone);
     }
 
     private class Task
@@ -315,17 +339,14 @@ public class CacheManager
             this.completableFuture =
                     completableFuture
                             .thenRun(() -> {
-                                taskInfo.setCachedTables(
-                                        cachedTableMapping.getCacheInfoPairs(
-                                                        taskInfo.getCatalogName(),
-                                                        taskInfo.getSchemaName())
-                                                .stream()
-                                                .map(cacheInfoPair -> new CachedTable(
-                                                        cacheInfoPair.getCacheInfo().getName(),
-                                                        cacheInfoPair.getErrorMessage(),
-                                                        cacheInfoPair.getCacheInfo().getRefreshTime(),
-                                                        Instant.ofEpochMilli(cacheInfoPair.getCreateTime())))
-                                                .collect(toImmutableList()));
+                                CacheInfoPair cacheInfoPair = cachedTableMapping.getCacheInfoPair(
+                                        taskInfo.getCatalogName(),
+                                        taskInfo.getSchemaName(), taskInfo.getTableName());
+                                taskInfo.setCachedTable(new CachedTable(
+                                        cacheInfoPair.getCacheInfo().getName(),
+                                        cacheInfoPair.getErrorMessage(),
+                                        cacheInfoPair.getCacheInfo().getRefreshTime(),
+                                        Instant.ofEpochMilli(cacheInfoPair.getCreateTime())));
                                 taskInfo.setTaskStatus(DONE);
                             });
         }

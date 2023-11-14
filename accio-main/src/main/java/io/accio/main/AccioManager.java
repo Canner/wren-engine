@@ -62,7 +62,7 @@ public class AccioManager
             throws JsonProcessingException
     {
         AccioMDL oldAccioMDL = accioMDL.get();
-        cacheManager.removeCache(oldAccioMDL.getCatalog(), oldAccioMDL.getSchema());
+        cacheManager.removeCacheIfExist(oldAccioMDL.getCatalog(), oldAccioMDL.getSchema());
         accioMDL.set(AccioMDL.fromJson(json));
     }
 

@@ -25,6 +25,11 @@ import static java.util.Objects.requireNonNull;
 
 public final class CatalogSchemaTableName
 {
+    public static CatalogSchemaTableName catalogSchemaTableName(String catalogName, String schemaName, String tableName)
+    {
+        return new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName));
+    }
+
     private final String catalogName;
     private final SchemaTableName schemaTableName;
 
