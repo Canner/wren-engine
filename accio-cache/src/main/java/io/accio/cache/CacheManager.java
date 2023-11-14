@@ -113,18 +113,18 @@ public class CacheManager
             throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s, tableName: %s", mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()));
         }
         removeCacheIfExist(catalogName, schemaName, tableName);
-        return handleCache(mdl, cacheInfo);
+        return doCache(mdl, cacheInfo);
     }
 
     private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo)
     {
-        return doCache(mdl, cacheInfo)
+        return refreshCache(mdl, cacheInfo)
                 .thenRun(() -> {
                     if (cacheInfo.getRefreshTime().toMillis() > 0) {
                         cacheScheduledFutures.put(
                                 new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()),
                                 refreshExecutor.scheduleWithFixedDelay(
-                                        () -> doCache(mdl, cacheInfo).join(),
+                                        () -> createTask(mdl, cacheInfo).join(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         MILLISECONDS));
@@ -290,7 +290,7 @@ public class CacheManager
             CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
             TaskInfo taskInfo = new TaskInfo(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName(), RUNNING, Instant.now());
             // To fix flaky test, we pass value to tasks instead of a reference;
-            Task task = new Task(TaskInfo.copyFrom(taskInfo), refreshCache(mdl, cacheInfo));
+            Task task = new Task(TaskInfo.copyFrom(taskInfo), handleCache(mdl, cacheInfo));
             tasks.put(catalogSchemaTableName, task);
             return taskInfo;
         });
