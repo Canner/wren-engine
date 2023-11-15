@@ -17,6 +17,7 @@ package io.accio.sqlrewrite;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.testing.AbstractTestFramework;
 import org.testng.annotations.Test;
@@ -151,6 +152,25 @@ public class TestMetric
         List<List<Object>> result = query(rewrite("select * from testModelOnMetric", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(14958);
+    }
+
+    @Test
+    public void testMetricOnMetric()
+    {
+        List<Metric> metrics = ImmutableList.<Metric>builder()
+                .addAll(manifest.getMetrics())
+                .add(metric(
+                        "testMetricOnMetric",
+                        "RevenueByCustomerBaseOrders",
+                        List.of(column("orderyear", VARCHAR, null, true, "DATE_TRUNC('YEAR', orderdate)")),
+                        List.of(column("revenue", INTEGER, null, true, "sum(totalprice)")),
+                        List.of()))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(copyOf(manifest).setMetrics(metrics).build());
+
+        List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnMetric ORDER BY orderyear", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(7);
     }
 
     private String rewrite(String sql)

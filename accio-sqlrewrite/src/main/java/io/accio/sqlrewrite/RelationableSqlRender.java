@@ -44,7 +44,7 @@ public abstract class RelationableSqlRender
 {
     protected final Relationable relationable;
     protected final AccioMDL mdl;
-    private final String refSql;
+    protected final String refSql;
     // collect dependent models
     protected final Set<String> requiredObjects;
     // key is alias_name.column_name, value is column name, this map is used to compose select items in model sql
@@ -68,21 +68,11 @@ public abstract class RelationableSqlRender
 
     protected abstract String initRefSql(Relationable relationable);
 
-    public RelationInfo render()
+    public abstract RelationInfo render();
+
+    protected RelationInfo render(Model baseModel)
     {
-        requireNonNull(relationable, "model is null");
-        if (relationable.getColumns().isEmpty() && relationable instanceof Model) {
-            return new RelationInfo(relationable, Set.of(), parseQuery(refSql));
-        }
-
-        Model baseModel;
-        if (relationable instanceof Model) {
-            baseModel = (Model) relationable;
-        }
-        else {
-            baseModel = mdl.getModel(relationable.getBaseObject()).orElseThrow(() -> new IllegalArgumentException("model not found"));
-        }
-
+        requireNonNull(baseModel, "baseModel is null");
         relationable.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
                 .forEach(column -> {

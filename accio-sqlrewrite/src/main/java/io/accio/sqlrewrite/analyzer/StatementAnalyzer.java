@@ -20,7 +20,6 @@ import io.accio.base.SessionContext;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
-import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AstVisitor;
@@ -42,11 +41,9 @@ import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
@@ -78,17 +75,6 @@ public final class StatementAnalyzer
                                 .anyMatch(table -> table.getSchemaTableName().getTableName().equals(model.getName())))
                         .collect(toUnmodifiableSet()));
 
-        // add models required for relationships
-        analysis.addModels(
-                analysis.getRelationships().stream()
-                        .map(Relationship::getModels)
-                        .flatMap(List::stream)
-                        .distinct()
-                        .map(modelName ->
-                                accioMDL.getModel(modelName)
-                                        .orElseThrow(() -> new IllegalArgumentException(format("relationship model %s not exists", modelName))))
-                        .collect(toUnmodifiableSet()));
-
         Set<Metric> metrics = analysis.getTables().stream()
                 .map(accioMDL::getMetric)
                 .filter(Optional::isPresent)
@@ -101,16 +87,6 @@ public final class StatementAnalyzer
 
         // TODO: remove this check
         checkArgument(metrics.stream().noneMatch(metricInMetricRollups::contains), "duplicate metrics in metrics and metric rollups");
-
-        // add models required for metrics
-        analysis.addModels(
-                Stream.of(metrics, metricInMetricRollups)
-                        .flatMap(Collection::stream)
-                        .map(Metric::getBaseObject)
-                        .distinct()
-                        .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("metric model %s not exists", model))))
-                        .collect(toUnmodifiableSet()));
-
         analysis.addMetrics(metrics);
 
         Set<CumulativeMetric> cumulativeMetrics = analysis.getTables().stream()
@@ -118,13 +94,6 @@ public final class StatementAnalyzer
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toUnmodifiableSet());
-
-        analysis.addModels(
-                cumulativeMetrics.stream()
-                        .map(CumulativeMetric::getBaseObject)
-                        .distinct()
-                        .map(model -> accioMDL.getModel(model).orElseThrow(() -> new IllegalArgumentException(format("cumulative metric model %s not exists", model))))
-                        .collect(toUnmodifiableSet()));
         analysis.addCumulativeMetrics(cumulativeMetrics);
 
         Set<View> views = analysis.getTables().stream()

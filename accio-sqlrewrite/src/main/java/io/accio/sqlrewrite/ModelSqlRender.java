@@ -25,11 +25,14 @@ import io.trino.sql.tree.Expression;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
+import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -56,6 +59,17 @@ public class ModelSqlRender
         else {
             throw new IllegalArgumentException("cannot get reference sql from model");
         }
+    }
+
+    @Override
+    public RelationInfo render()
+    {
+        requireNonNull(relationable, "model is null");
+        if (relationable.getColumns().isEmpty()) {
+            return new RelationInfo(relationable, Set.of(), parseQuery(refSql));
+        }
+
+        return render((Model) relationable);
     }
 
     @Override

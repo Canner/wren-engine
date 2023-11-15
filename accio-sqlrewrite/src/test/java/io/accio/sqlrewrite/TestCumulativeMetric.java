@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.TimeUnit;
 import io.accio.testing.AbstractTestFramework;
@@ -31,6 +32,7 @@ import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.Measure.measure;
+import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Window.window;
@@ -118,6 +120,28 @@ public class TestCumulativeMetric
         List<List<Object>> result = query(rewrite("select * from testModelOnCumulativeMetric", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(53);
+    }
+
+    @Test
+    public void testMetricOnCumulativeMetric()
+    {
+        List<Metric> metrics = ImmutableList.<Metric>builder()
+                .addAll(manifest.getMetrics())
+                .add(metric(
+                        "testMetricOnCumulativeMetric",
+                        "DailyRevenue",
+                        List.of(column("ordermonth", "DATE", null, false, "date_trunc('month', orderdate)")),
+                        List.of(column("totalprice", INTEGER, null, false, "sum(totalprice)")),
+                        List.of()))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setMetrics(metrics)
+                        .build());
+
+        List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnCumulativeMetric ORDER BY ordermonth", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(12);
     }
 
     private String rewrite(String sql)
