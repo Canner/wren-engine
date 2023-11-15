@@ -116,7 +116,7 @@ public final class Utils
         requireNonNull(cumulativeMetric, "cumulativeMetric is null");
 
         String windowType = getWindowType(cumulativeMetric, accioMDL)
-                .orElseThrow(() -> new NoSuchElementException("window type now found in " + cumulativeMetric.getBaseObject()));
+                .orElseThrow(() -> new NoSuchElementException("window type not found in " + cumulativeMetric.getBaseObject()));
 
         String pattern =
                 "select \n" +
