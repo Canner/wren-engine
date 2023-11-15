@@ -52,13 +52,25 @@ public class TestRefreshCache
         TaskInfo original = cacheManager.get().listTaskInfo(mdl.getCatalog(), mdl.getSchema()).join().stream()
                 .filter(taskInfo -> taskInfo.getCatalogSchemaTableName().equals(revenueName))
                 .findAny().orElseThrow(AssertionError::new);
-
         Thread.sleep(6000);
-        TaskInfo refreshed = cacheManager.get().listTaskInfo(mdl.getCatalog(), mdl.getSchema()).join().stream()
-                .filter(taskInfo -> taskInfo.getCatalogSchemaTableName().equals(revenueName))
-                .findAny().orElseThrow(AssertionError::new);
-
+        // make sure the end time will be changed.
+        TaskInfo refreshed = getTaskInfoUntilDifferent(original);
         assertThat(original.getEndTime()).isBefore(refreshed.getEndTime());
+    }
+
+    private TaskInfo getTaskInfoUntilDifferent(TaskInfo taskInfo)
+            throws InterruptedException
+    {
+        TaskInfo refreshed = null;
+        while (refreshed == null ||
+                refreshed.getEndTime() == null ||
+                refreshed.getEndTime() == taskInfo.getEndTime()) {
+            refreshed = cacheManager.get().listTaskInfo(taskInfo.getCatalogName(), taskInfo.getSchemaName()).join().stream()
+                    .filter(t -> t.getTableName().equals(taskInfo.getTableName()))
+                    .findAny().orElseThrow(AssertionError::new);
+            Thread.sleep(100);
+        }
+        return refreshed;
     }
 
     // todo need a proper test
