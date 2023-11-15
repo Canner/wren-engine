@@ -85,11 +85,7 @@ public class MetricSqlRender
                 .filter(column -> column.getRelationship().isEmpty())
                 .map(column -> format("%s AS %s", column.getExpression().orElse(column.getName()), column.getName()))
                 .collect(toList());
-        String sql = format("SELECT %s FROM %s GROUP BY %s",
-                Joiner.on(",").join(selectItems),
-                metricName,
-                IntStream.rangeClosed(1, selectItems.size() - metric.getMeasure().size()).mapToObj(String::valueOf).collect(joining(",")));
-
+        String sql = getQuerySql(metric, Joiner.on(", ").join(selectItems), metricName);
         return new RelationInfo(
                 relationable,
                 Set.of(metricName),
