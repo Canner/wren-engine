@@ -23,6 +23,7 @@ import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.Metric;
+import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Field;
 import io.accio.sqlrewrite.analyzer.MetricRollupInfo;
 import io.accio.sqlrewrite.analyzer.RelationType;
@@ -114,11 +115,8 @@ public final class Utils
     {
         requireNonNull(cumulativeMetric, "cumulativeMetric is null");
 
-        String windowType = accioMDL.getModel(cumulativeMetric.getBaseObject())
-                .map(model -> model.getColumns().stream()
-                        .filter(column -> column.getName().equals(cumulativeMetric.getWindow().getRefColumn()))
-                        .map(Column::getType).findAny().orElseThrow(() -> new NoSuchElementException(format("Column %s not found in model %s", cumulativeMetric.getWindow().getRefColumn(), cumulativeMetric.getBaseObject()))))
-                .orElseThrow(() -> new NoSuchElementException(format("Model %s not found", cumulativeMetric.getBaseObject())));
+        String windowType = getWindowType(cumulativeMetric, accioMDL)
+                .orElseThrow(() -> new NoSuchElementException("window type not found in " + cumulativeMetric.getBaseObject()));
 
         String pattern =
                 "select \n" +
@@ -173,6 +171,39 @@ public final class Utils
                 windowType,
                 cumulativeMetric.getWindow().getEnd(),
                 windowType);
+    }
+
+    private static Optional<String> getWindowType(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
+    {
+        Optional<Model> baseModel = accioMDL.getModel(cumulativeMetric.getBaseObject());
+        if (baseModel.isPresent()) {
+            return baseModel.get().getColumns().stream()
+                    .filter(column -> column.getName().equals(cumulativeMetric.getWindow().getRefColumn()))
+                    .map(Column::getType)
+                    .findAny();
+        }
+
+        Optional<Metric> baseMetric = accioMDL.getMetric(cumulativeMetric.getBaseObject());
+        if (baseMetric.isPresent()) {
+            return baseMetric.get().getColumns().stream()
+                    .filter(column -> column.getName().equals(cumulativeMetric.getWindow().getRefColumn()))
+                    .map(Column::getType)
+                    .findAny();
+        }
+
+        Optional<CumulativeMetric> baseCumulativeMetric = accioMDL.getCumulativeMetric(cumulativeMetric.getBaseObject());
+        if (baseCumulativeMetric.isPresent()) {
+            if (baseCumulativeMetric.get().getWindow().getName().equals(cumulativeMetric.getWindow().getRefColumn())) {
+                // TODO: potential stackoverflow issue since base object might use child object and
+                //  this recursive call happen before cyclic DAG check in AccioSqlRewrite
+                return getWindowType(baseCumulativeMetric.get(), accioMDL);
+            }
+            else {
+                throw new IllegalArgumentException("CumulativeMetric measure cannot be window as it is not date/timestamp type");
+            }
+        }
+
+        return Optional.empty();
     }
 
     private static String getMetricRollupSql(MetricRollupInfo metricRollupInfo)

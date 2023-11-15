@@ -16,6 +16,7 @@ package io.accio.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
@@ -38,6 +39,7 @@ import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Window.window;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestCumulativeMetric
         extends AbstractTestFramework
@@ -142,6 +144,69 @@ public class TestCumulativeMetric
         List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnCumulativeMetric ORDER BY ordermonth", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(12);
+    }
+
+    @Test
+    public void testCumulativeMetricOnCumulativeMetric()
+    {
+        List<CumulativeMetric> cumulativeMetrics = ImmutableList.<CumulativeMetric>builder()
+                .addAll(manifest.getCumulativeMetrics())
+                .add(cumulativeMetric("testCumulativeMetricOnCumulativeMetric",
+                        "YearlyRevenue", measure("totalprice", INTEGER, "sum", "totalprice"),
+                        window("orderyear", "orderdate", TimeUnit.YEAR, "1994-01-01", "1998-12-31")))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setCumulativeMetrics(cumulativeMetrics)
+                        .build());
+
+        List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnCumulativeMetric ORDER BY orderyear", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(5);
+    }
+
+    @Test
+    public void testInvalidCumulativeMetricOnCumulativeMetric()
+    {
+        List<CumulativeMetric> cumulativeMetrics = ImmutableList.<CumulativeMetric>builder()
+                .addAll(manifest.getCumulativeMetrics())
+                .add(cumulativeMetric("testInvalidCumulativeMetricOnCumulativeMetric",
+                        "YearlyRevenue", measure("totalprice", INTEGER, "sum", "totalprice"),
+                        // window refColumn is a measure that belongs to cumulative metric
+                        window("foo", "totalprice", TimeUnit.YEAR, "1994-01-01", "1998-12-31")))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setCumulativeMetrics(cumulativeMetrics)
+                        .build());
+
+        assertThatThrownBy(() -> rewrite("SELECT * FROM testInvalidCumulativeMetricOnCumulativeMetric", mdl))
+                .hasMessage("CumulativeMetric measure cannot be window as it is not date/timestamp type");
+    }
+
+    @Test
+    public void testCumulativeMetricOnMetric()
+    {
+        List<Metric> metrics = ImmutableList.of(
+                metric("RevenueByOrderdate", "Orders",
+                        List.of(column("orderdate", DATE, null, true, "orderdate")),
+                        List.of(column("totalprice", INTEGER, null, true, "sum(totalprice)")),
+                        List.of()));
+        List<CumulativeMetric> cumulativeMetrics = ImmutableList.<CumulativeMetric>builder()
+                .addAll(manifest.getCumulativeMetrics())
+                .add(cumulativeMetric("testCumulativeMetricOnMetric",
+                        "RevenueByOrderdate", measure("totalprice", INTEGER, "sum", "totalprice"),
+                        window("orderyear", "orderdate", TimeUnit.YEAR, "1994-01-01", "1998-12-31")))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(
+                copyOf(manifest)
+                        .setMetrics(metrics)
+                        .setCumulativeMetrics(cumulativeMetrics)
+                        .build());
+
+        List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnMetric ORDER BY orderyear", mdl));
+        assertThat(result.get(0).size()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(5);
     }
 
     private String rewrite(String sql)
