@@ -20,25 +20,30 @@ import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationable;
 import io.accio.base.dto.Relationship;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
+import io.accio.sqlrewrite.analyzer.ExpressionRelationshipInfo;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.sqlrewrite.RelationshipRewriter.toDereferenceExpression;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public abstract class RelationableSqlRender
 {
@@ -51,7 +56,7 @@ public abstract class RelationableSqlRender
     protected final List<String> selectItems = new ArrayList<>();
 
     // key is alias name, value is query contains join condition, this map is used to compose join conditions in model sql
-    protected final Map<String, String> tableJoinSqls = new LinkedHashMap<>();
+    protected final List<ColumnAliasExpressionRelationshipInfo> requiredRelationshipInfos = new ArrayList<>();
     // key is column name in model, value is column expression, this map store columns not use relationships
     protected final Map<String, String> columnWithoutRelationships = new LinkedHashMap<>();
 
@@ -76,7 +81,7 @@ public abstract class RelationableSqlRender
         relationable.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
                 .forEach(column -> {
-                    selectItems.add(getSelectItemsExpression(column, false));
+                    selectItems.add(getSelectItemsExpression(column, Optional.empty()));
                     columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", relationable.getName(), column.getName()));
                 });
 
@@ -91,15 +96,48 @@ public abstract class RelationableSqlRender
                 baseModel.getName(),
                 baseModel.getName());
         Function<String, String> tableJoinCondition = (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
-        String tableJoinsSql = modelSubQuery +
-                tableJoinSqls.entrySet().stream()
-                        .map(e -> format(" LEFT JOIN (%s) AS \"%s\" ON %s", e.getValue(), e.getKey(), tableJoinCondition.apply(e.getKey())))
-                        .collect(joining());
+        String tableJoinsSql = modelSubQuery;
+        if (!requiredRelationshipInfos.isEmpty()) {
+            tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s", getRelationshipSubQuery(baseModel, requiredRelationshipInfos), getRelationableAlias(baseModel.getName()), tableJoinCondition.apply(getRelationableAlias(baseModel.getName())));
+        }
 
         return new RelationInfo(
                 relationable,
                 requiredObjects,
                 parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql)));
+    }
+
+    protected static String getRelationableAlias(String baseModelName)
+    {
+        return baseModelName + "_relationsub";
+    }
+
+    private String getRelationshipSubQuery(Model baseModel, Collection<ColumnAliasExpressionRelationshipInfo> relationshipInfos)
+    {
+        String requiredExpressions = relationshipInfos.stream()
+                .map(info -> format("%s AS \"%s\"", toDereferenceExpression(info.getExpressionRelationshipInfo()).toString(), info.getAlias()))
+                .collect(joining(", "));
+
+        String tableJoins = format("(%s) AS \"%s\" %s",
+                getSqlForBaseModelKey(baseModel, relationshipInfos.stream()
+                        .map(ColumnAliasExpressionRelationshipInfo::getExpressionRelationshipInfo)
+                        .map(ExpressionRelationshipInfo::getBaseModelRelationship)
+                        .collect(toList()), mdl),
+                baseModel.getName(),
+                relationshipInfos.stream()
+                        .map(ColumnAliasExpressionRelationshipInfo::getExpressionRelationshipInfo)
+                        .map(ExpressionRelationshipInfo::getRelationships)
+                        .flatMap(List::stream)
+                        .distinct()
+                        .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
+                        .collect(joining()));
+
+        checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
+        return format("SELECT \"%s\".\"%s\", %s FROM (%s)",
+                baseModel.getName(),
+                baseModel.getPrimaryKey(),
+                requiredExpressions,
+                tableJoins);
     }
 
     protected abstract void collectRelationship(Column column, Model baseModel);
@@ -108,9 +146,13 @@ public abstract class RelationableSqlRender
 
     protected abstract String getModelSubQuerySelectItemsExpression(Map<String, String> columnWithoutRelationships);
 
-    protected abstract String getSelectItemsExpression(Column column, boolean isRelationship);
+    protected abstract String getSelectItemsExpression(Column column, Optional<String> relationalBase);
 
-    protected String getSubquerySql(Model model, List<Relationship> relationships, AccioMDL mdl)
+    /**
+     * Get sql for base model key (primary key and join key), this sql will be used to join with other models.
+     * To avoid cycle reference for base model, we must use subquery to get base model key.
+     */
+    private String getSqlForBaseModelKey(Model model, List<Relationship> relationships, AccioMDL mdl)
     {
         Column primaryKey = model.getColumns().stream()
                 .filter(column -> column.getName().equals(model.getPrimaryKey()))
@@ -134,6 +176,7 @@ public abstract class RelationableSqlRender
                                     format("found relation in relation join condition in %s.%s", model.getName(), joinColumn.getName())));
                     return getModelExpression(joinColumn);
                 })
+                .distinct()
                 .collect(joining(","));
 
         String primaryKeyExpression = getModelExpression(primaryKey);
@@ -164,5 +207,27 @@ public abstract class RelationableSqlRender
             return right.getField().orElseThrow().getValue();
         }
         throw new IllegalArgumentException(format("join column in relationship %s not found in model %s", relationship.getName(), model.getName()));
+    }
+
+    public static class ColumnAliasExpressionRelationshipInfo
+    {
+        private final String alias;
+        private final ExpressionRelationshipInfo expressionRelationshipInfo;
+
+        public ColumnAliasExpressionRelationshipInfo(String alias, ExpressionRelationshipInfo expressionRelationshipInfo)
+        {
+            this.alias = alias;
+            this.expressionRelationshipInfo = expressionRelationshipInfo;
+        }
+
+        public String getAlias()
+        {
+            return alias;
+        }
+
+        public ExpressionRelationshipInfo getExpressionRelationshipInfo()
+        {
+            return expressionRelationshipInfo;
+        }
     }
 }

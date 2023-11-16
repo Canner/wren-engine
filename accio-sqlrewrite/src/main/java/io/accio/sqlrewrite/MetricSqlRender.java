@@ -30,10 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
@@ -114,7 +112,7 @@ public class MetricSqlRender
     }
 
     @Override
-    protected String getSelectItemsExpression(Column column, boolean isRelationship)
+    protected String getSelectItemsExpression(Column column, Optional<String> relationalBase)
     {
         Metric metric = (Metric) relationable;
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
@@ -123,16 +121,16 @@ public class MetricSqlRender
         if (isMeasure) {
             Expression measure = parseExpression(column.getExpression().orElse(column.getName()));
             List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(measure, mdl, baseModel);
-            if (!relationshipInfos.isEmpty()) {
+            if (!relationshipInfos.isEmpty() && relationalBase.isPresent()) {
                 // output from column use relationship will use another subquery which use column name from model as alias name
-                Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, column.getName(), measure);
+                Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationalBase.get(), measure);
                 return format("%s AS \"%s\"", newExpression, column.getName());
             }
             return column.getSqlExpression();
         }
 
-        if (isRelationship) {
-            return format("\"%s\".\"%s\" AS \"%s\"", column.getName(), column.getName(), column.getName());
+        if (relationalBase.isPresent()) {
+            return format("\"%s\".\"%s\" AS \"%s\"", relationalBase.get(), column.getName(), column.getName());
         }
         return format("\"%s\".\"%s\" AS \"%s\"", relationable.getBaseObject(), column.getExpression().orElse(column.getName()), column.getName());
     }
@@ -140,37 +138,13 @@ public class MetricSqlRender
     @Override
     protected void collectRelationship(Column column, Model baseModel)
     {
+        // TODO: There're some issue about sql keyword as expression, e.g. column named as "order"
         Expression expression = parseExpression(column.getExpression().get());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
-            // TODO: If expression is an aggregation function call, we should separate the all required columns.
-            // TODO: Support if an expression include both relationship and non-relationship column.
-            checkArgument(relationshipInfos.size() == 1, "only one relationship is allowed in metric expression");
-            String requiredExpressions = relationshipInfos.stream()
-                    .map(RelationshipRewriter::toDereferenceExpression)
-                    .map(Expression::toString)
-                    .map(e -> format("%s AS \"%s\"", e, column.getName()))
-                    .collect(joining(", "));
-
-            String tableJoins = format("(%s) AS \"%s\" %s",
-                    getSubquerySql(baseModel, relationshipInfos.stream().map(ExpressionRelationshipInfo::getBaseModelRelationship).collect(toList()), mdl),
-                    baseModel.getName(),
-                    relationshipInfos.stream()
-                            .map(ExpressionRelationshipInfo::getRelationships)
-                            .flatMap(List::stream)
-                            .distinct()
-                            .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
-                            .collect(Collectors.joining()));
-
-            checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
-
-            tableJoinSqls.put(
-                    column.getName(),
-                    format("SELECT \"%s\".\"%s\", %s FROM (%s)",
-                            baseModel.getName(),
-                            baseModel.getPrimaryKey(),
-                            requiredExpressions,
-                            tableJoins));
+            for (ExpressionRelationshipInfo relationshipInfo : relationshipInfos) {
+                requiredRelationshipInfos.add(new ColumnAliasExpressionRelationshipInfo(relationshipInfo.getRemainingParts().get(0), relationshipInfo));
+            }
             // collect all required models in relationships
             requiredObjects.addAll(
                     relationshipInfos.stream()
@@ -182,10 +156,10 @@ public class MetricSqlRender
                             .collect(toSet()));
 
             // output from column use relationship will use another subquery which use column name from model as alias name
-            selectItems.add(getSelectItemsExpression(column, true));
+            selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
         }
         else {
-            selectItems.add(getSelectItemsExpression(column, false));
+            selectItems.add(getSelectItemsExpression(column, Optional.empty()));
             columnWithoutRelationships.put(column.getName(), column.getExpression().get());
         }
     }

@@ -47,7 +47,7 @@ public class RelationshipRewriter
     {
         requireNonNull(relationshipInfos);
         return new RelationshipRewriter(relationshipInfos.stream()
-                .collect(toUnmodifiableMap(ExpressionRelationshipInfo::getQualifiedName, info -> getRelationshipResultAsDereferenceExpression(relationshipPrefix))))
+                .collect(toUnmodifiableMap(ExpressionRelationshipInfo::getQualifiedName, info -> getRelationshipResultAsDereferenceExpression(info, relationshipPrefix))))
                 .process(expression);
     }
 
@@ -79,12 +79,14 @@ public class RelationshipRewriter
         return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
     }
 
-    protected static DereferenceExpression getRelationshipResultAsDereferenceExpression(String relationshipFieldName)
+    protected static DereferenceExpression getRelationshipResultAsDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo, String relationshipFieldName)
     {
         // The result of relationship will be a sub-query named as relationshipFieldName, so the final result is relationshipFieldName.relationshipFieldName"
         List<Identifier> parts = new ArrayList<>();
         parts.add(new Identifier(relationshipFieldName, true));
-        parts.add(new Identifier(relationshipFieldName, true));
+        expressionRelationshipInfo.getRemainingParts().stream()
+                .map(part -> new Identifier(part, true))
+                .forEach(parts::add);
         return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
     }
 }
