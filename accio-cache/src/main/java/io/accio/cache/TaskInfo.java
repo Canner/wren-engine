@@ -17,17 +17,28 @@ package io.accio.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.metadata.SchemaTableName;
 import io.accio.cache.dto.CachedTable;
 
 import java.time.Instant;
-import java.util.List;
 
-import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TaskInfo
 {
+    public static TaskInfo copyFrom(TaskInfo taskInfo)
+    {
+        return new TaskInfo(taskInfo.getCatalogName(),
+                taskInfo.getSchemaName(),
+                taskInfo.getTableName(),
+                taskInfo.getTaskStatus(),
+                taskInfo.getCachedTable(),
+                taskInfo.getStartTime(),
+                taskInfo.getEndTime());
+    }
+
     public enum TaskStatus
     {
         RUNNING(false),
@@ -51,36 +62,34 @@ public class TaskInfo
         }
     }
 
-    private final String taskId;
-    private final String catalogName;
-    private final String schemaName;
-    private List<CachedTable> cachedTables;
+    private final CatalogSchemaTableName catalogSchemaTableName;
+    private CachedTable cachedTable;
 
     private TaskStatus taskStatus;
     private final Instant startTime;
     private Instant endTime;
 
-    public TaskInfo(String taskId, String catalogName, String schemaName, TaskStatus taskStatus, Instant startTime)
+    public TaskInfo(String catalogName, String schemaName, String tableName, TaskStatus taskStatus, Instant startTime)
     {
-        this(taskId, catalogName, schemaName, taskStatus, emptyList(), startTime, null);
+        this(catalogName, schemaName, tableName, taskStatus, null, startTime, null);
     }
 
     @JsonCreator
     public TaskInfo(
-            @JsonProperty("taskId") String taskId,
             @JsonProperty("catalogName") String catalogName,
             @JsonProperty("schemaName") String schemaName,
+            @JsonProperty("tableName") String tableName,
             @JsonProperty("taskStatus") TaskStatus taskStatus,
-            @JsonProperty("cachedTables") List<CachedTable> cachedTables,
+            @JsonProperty("cachedTable") CachedTable cachedTable,
             @JsonProperty("startTime") Instant startTime,
             @JsonProperty("endTime") Instant endTime)
 
     {
-        this.taskId = requireNonNull(taskId, "taskId is null");
-        this.catalogName = requireNonNull(catalogName, "catalogName is null");
-        this.schemaName = requireNonNull(schemaName, "schemaName is null");
+        this.catalogSchemaTableName = new CatalogSchemaTableName(requireNonNull(catalogName, "catalogName is null"),
+                new SchemaTableName(requireNonNull(schemaName, "schemaName is null"),
+                        requireNonNull(tableName, "tableName is null")));
         this.taskStatus = requireNonNull(taskStatus, "taskStatus is null");
-        this.cachedTables = cachedTables == null ? emptyList() : cachedTables;
+        this.cachedTable = cachedTable;
         this.startTime = requireNonNull(startTime, "startTime is null");
         this.endTime = endTime;
     }
@@ -88,12 +97,6 @@ public class TaskInfo
     public boolean inProgress()
     {
         return taskStatus.inProgress();
-    }
-
-    @JsonProperty
-    public String getTaskId()
-    {
-        return taskId;
     }
 
     public synchronized void setTaskStatus(TaskStatus taskStatus)
@@ -111,19 +114,30 @@ public class TaskInfo
     @JsonProperty
     public String getCatalogName()
     {
-        return catalogName;
+        return catalogSchemaTableName.getCatalogName();
     }
 
     @JsonProperty
     public String getSchemaName()
     {
-        return schemaName;
+        return catalogSchemaTableName.getSchemaTableName().getSchemaName();
     }
 
     @JsonProperty
-    public List<CachedTable> getCachedTables()
+    public String getTableName()
     {
-        return cachedTables;
+        return catalogSchemaTableName.getSchemaTableName().getTableName();
+    }
+
+    public CatalogSchemaTableName getCatalogSchemaTableName()
+    {
+        return catalogSchemaTableName;
+    }
+
+    @JsonProperty
+    public CachedTable getCachedTable()
+    {
+        return cachedTable;
     }
 
     @JsonProperty
@@ -138,9 +152,9 @@ public class TaskInfo
         return endTime;
     }
 
-    public TaskInfo setCachedTables(List<CachedTable> cachedTables)
+    public TaskInfo setCachedTable(CachedTable cachedTable)
     {
-        this.cachedTables = cachedTables;
+        this.cachedTable = cachedTable;
         return this;
     }
 }

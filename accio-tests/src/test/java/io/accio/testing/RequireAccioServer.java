@@ -16,6 +16,7 @@ package io.accio.testing;
 
 import com.google.common.io.Closer;
 import com.google.inject.Key;
+import io.accio.base.CatalogSchemaTableName;
 import io.accio.cache.TaskInfo;
 import io.accio.main.web.dto.ErrorMessageDto;
 import io.airlift.http.client.HttpClient;
@@ -33,12 +34,14 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import java.io.IOException;
+import java.util.List;
 
 import static io.airlift.http.client.Request.Builder.prepareGet;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.Request.Builder.preparePut;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
+import static io.airlift.json.JsonCodec.listJsonCodec;
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -50,6 +53,7 @@ public abstract class RequireAccioServer
     protected HttpClient client;
 
     public static final JsonCodec<TaskInfo> TASK_INFO_CODEC = jsonCodec(TaskInfo.class);
+    public static final JsonCodec<List<TaskInfo>> TASK_INFO_LIST_CODEC = listJsonCodec(TaskInfo.class);
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
 
     public RequireAccioServer() {}
@@ -113,7 +117,7 @@ public abstract class RequireAccioServer
         }
     }
 
-    protected TaskInfo reloadCacheAsync()
+    protected List<TaskInfo> reloadCacheAsync()
     {
         Request request = preparePost()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/cache/reload/async"))
@@ -122,13 +126,14 @@ public abstract class RequireAccioServer
         if (response.getStatusCode() != 200) {
             getWebApplicationException(response);
         }
-        return TASK_INFO_CODEC.fromJson(response.getBody());
+        return TASK_INFO_LIST_CODEC.fromJson(response.getBody());
     }
 
-    protected TaskInfo getTaskInfoByTaskId(String taskId)
+    protected TaskInfo getTaskInfo(CatalogSchemaTableName name)
     {
         Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/cache/reload/async/" + taskId))
+                .setUri(server().getHttpServerBasedUrl().resolve(format("/v1/cache/info/%s/%s/%s",
+                        name.getCatalogName(), name.getSchemaTableName().getSchemaName(), name.getSchemaTableName().getTableName())))
                 .build();
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
         if (response.getStatusCode() != 200) {

@@ -14,6 +14,8 @@
 package io.accio.main.web;
 
 import io.accio.base.AccioException;
+import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.metadata.SchemaTableName;
 import io.accio.cache.CacheManager;
 import io.accio.main.AccioManager;
 
@@ -49,7 +51,7 @@ public class CacheResource
     @Path("reload")
     public void reload(@Suspended AsyncResponse asyncResponse)
     {
-        cacheManager.createTaskUtilDone(accioManager.getAccioMDL());
+        cacheManager.createTaskUntilDone(accioManager.getAccioMDL());
         asyncResponse.resume(Response.ok().build());
     }
 
@@ -63,14 +65,29 @@ public class CacheResource
     }
 
     @GET
-    @Path("reload/async/{taskId}")
-    public void getTaskInfoByTaskId(
-            @PathParam("taskId") String taskId,
+    @Path("info/{catalogName}/{schemaName}/{tableName}")
+    public void getTaskInfo(
+            @PathParam("catalogName") String catalogName,
+            @PathParam("schemaName") String schemaName,
+            @PathParam("tableName") String tableName,
+            @Suspended AsyncResponse asyncResponse)
+    {
+        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName));
+        cacheManager
+                .getTaskInfo(catalogSchemaTableName)
+                .thenApply(v -> v.orElseThrow(() -> new AccioException(NOT_FOUND, String.format("Task %s not found.", catalogSchemaTableName))))
+                .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    @GET
+    @Path("info/{catalogName}/{schemaName}")
+    public void getTaskInfos(
+            @PathParam("catalogName") String catalogName,
+            @PathParam("schemaName") String schemaName,
             @Suspended AsyncResponse asyncResponse)
     {
         cacheManager
-                .getTaskInfo(taskId)
-                .thenApply(v -> v.orElseThrow(() -> new AccioException(NOT_FOUND, String.format("Task %s not found.", taskId))))
+                .listTaskInfo(catalogName, schemaName)
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }

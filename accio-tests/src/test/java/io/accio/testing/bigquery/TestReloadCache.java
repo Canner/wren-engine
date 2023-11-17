@@ -30,13 +30,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
 import static io.accio.testing.WebApplicationExceptionAssert.assertWebApplicationException;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.requireNonNull;
-import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,9 +84,12 @@ public class TestReloadCache
 
         rewriteFile("cache/cache_reload_1_mdl.json");
         reloadAccioMDL();
-        TaskInfo taskInfo = reloadCacheAsync();
+
+        List<TaskInfo> taskInfos = reloadCacheAsync();
+        assertThat(taskInfos.size()).isEqualTo(1);
+        TaskInfo taskInfo = taskInfos.get(0);
         assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
-        taskInfo = waitUntilFinished(taskInfo.getTaskId());
+        taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
         assertCache("Revenue");
         assertThat(taskInfo.getCatalogName()).isEqualTo("canner-cml");
         assertThat(taskInfo.getSchemaName()).isEqualTo("tpch_tiny");
@@ -95,7 +98,7 @@ public class TestReloadCache
         assertThat(taskInfo.getEndTime()).isNotNull();
         assertThat(taskInfo.getEndTime()).isAfter(taskInfo.getStartTime());
 
-        CachedTable cachedTable = taskInfo.getCachedTables().get(0);
+        CachedTable cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isEmpty();
         assertThat(cachedTable.getName()).isEqualTo("Revenue");
         assertThat(cachedTable.getRefreshTime()).isEqualTo(Duration.valueOf("5m"));
@@ -103,14 +106,16 @@ public class TestReloadCache
 
         rewriteFile("cache/cache_reload_3_mdl.json");
         reloadAccioMDL();
-        taskInfo = reloadCacheAsync();
+        List<TaskInfo> taskInfos3 = reloadCacheAsync();
+        assertThat(taskInfos3.size()).isEqualTo(1);
+        taskInfo = taskInfos3.get(0);
         assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
-        taskInfo = waitUntilFinished(taskInfo.getTaskId());
-        cachedTable = taskInfo.getCachedTables().get(0);
+        taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
+        cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();
         assertThat(taskInfo.getEndTime()).isAfter(taskInfo.getStartTime());
 
-        assertWebApplicationException(() -> getTaskInfoByTaskId(randomUUID().toString()))
+        assertWebApplicationException(() -> getTaskInfo(catalogSchemaTableName("fake", "fake", "fake")))
                 .hasHTTPStatus(404)
                 .hasErrorCode(NOT_FOUND)
                 .hasErrorMessageMatches("Task .* not found.");
@@ -132,13 +137,13 @@ public class TestReloadCache
         Files.copy(Path.of(requireNonNull(getClass().getClassLoader().getResource(resourcePath)).getPath()), accioMDLFilePath, REPLACE_EXISTING);
     }
 
-    private TaskInfo waitUntilFinished(String taskId)
+    private TaskInfo waitUntilFinished(CatalogSchemaTableName name)
             throws InterruptedException, ExecutionException, TimeoutException
     {
         return supplyAsync(() -> {
             TaskInfo taskInfo;
             do {
-                taskInfo = getTaskInfoByTaskId(taskId);
+                taskInfo = getTaskInfo(name);
                 try {
                     SECONDS.sleep(1L);
                 }
