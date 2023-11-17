@@ -127,7 +127,6 @@ public class MetricSqlRender
         }
 
         if (isMeasure) {
-
             return column.getSqlExpression();
         }
 
