@@ -119,6 +119,6 @@ public class TestExpressionRelationshipRewriter
                                 ordersCustomer));
 
         assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())
-                .isEqualTo("sum(\"count_of_customer\".\"count_of_customer\")");
+                .isEqualTo("sum(\"count_of_customer\".\"name\")");
     }
 }

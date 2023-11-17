@@ -117,21 +117,20 @@ public class MetricSqlRender
         Metric metric = (Metric) relationable;
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
         Model baseModel = mdl.getModel(metric.getBaseObject()).orElseThrow(() -> new IllegalArgumentException(format("cannot find model %s", metric.getBaseObject())));
+        Expression expression = parseExpression(column.getExpression().orElse(column.getName()));
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(expression, mdl, baseModel);
+
+        if (!relationshipInfos.isEmpty() && relationalBase.isPresent()) {
+            // output from column use relationship will use another subquery which use column name from model as alias name
+            Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationalBase.get(), expression);
+            return format("%s AS \"%s\"", newExpression, column.getName());
+        }
 
         if (isMeasure) {
-            Expression measure = parseExpression(column.getExpression().orElse(column.getName()));
-            List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(measure, mdl, baseModel);
-            if (!relationshipInfos.isEmpty() && relationalBase.isPresent()) {
-                // output from column use relationship will use another subquery which use column name from model as alias name
-                Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationalBase.get(), measure);
-                return format("%s AS \"%s\"", newExpression, column.getName());
-            }
+
             return column.getSqlExpression();
         }
 
-        if (relationalBase.isPresent()) {
-            return format("\"%s\".\"%s\" AS \"%s\"", relationalBase.get(), column.getName(), column.getName());
-        }
         return format("\"%s\".\"%s\" AS \"%s\"", relationable.getBaseObject(), column.getExpression().orElse(column.getName()), column.getName());
     }
 
