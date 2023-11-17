@@ -29,7 +29,7 @@ import java.util.function.Supplier;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
@@ -53,7 +53,6 @@ public class TestRefreshCache
         TaskInfo original = cacheManager.get().listTaskInfo(mdl.getCatalog(), mdl.getSchema()).join().stream()
                 .filter(taskInfo -> taskInfo.getCatalogSchemaTableName().equals(revenueName))
                 .findAny().orElseThrow(AssertionError::new);
-        Thread.sleep(6000);
         // make sure the end time will be changed.
         TaskInfo refreshed = getTaskInfoUntilDifferent(original);
         assertThat(original.getEndTime()).isBefore(refreshed.getEndTime());
@@ -71,7 +70,7 @@ public class TestRefreshCache
                     .filter(t -> t.getTableName().equals(taskInfo.getTableName()))
                     .findAny().orElseThrow(AssertionError::new);
             try {
-                SECONDS.sleep(1);
+                MILLISECONDS.sleep(100);
             }
             catch (InterruptedException ignored) {
             }
