@@ -24,16 +24,11 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,24 +60,28 @@ public class TestRefreshCache
     }
 
     private TaskInfo getTaskInfoUntilDifferent(TaskInfo taskInfo)
-            throws InterruptedException, ExecutionException, TimeoutException
     {
-        return supplyAsync(() -> {
-            TaskInfo refreshed = null;
-            while (refreshed == null ||
-                    refreshed.getEndTime() == null ||
-                    refreshed.getEndTime() == taskInfo.getEndTime()) {
-                refreshed = cacheManager.get().listTaskInfo(taskInfo.getCatalogName(), taskInfo.getSchemaName()).join().stream()
-                        .filter(t -> t.getTableName().equals(taskInfo.getTableName()))
-                        .findAny().orElseThrow(AssertionError::new);
-                try {
-                    MILLISECONDS.sleep(100);
-                }
-                catch (InterruptedException ignored) {
-                }
+        TaskInfo refreshed = null;
+        long start = System.currentTimeMillis();
+        long timeout = 10000;
+        while (refreshed == null ||
+                refreshed.getEndTime() == null ||
+                refreshed.getEndTime() == taskInfo.getEndTime()) {
+            refreshed = cacheManager.get().listTaskInfo(taskInfo.getCatalogName(), taskInfo.getSchemaName()).join().stream()
+                    .filter(t -> t.getTableName().equals(taskInfo.getTableName()))
+                    .findAny().orElseThrow(AssertionError::new);
+            try {
+                SECONDS.sleep(1);
             }
-            return refreshed;
-        }, Executors.newSingleThreadExecutor()).get(10, SECONDS);
+            catch (InterruptedException ignored) {
+            }
+
+            if (System.currentTimeMillis() - start > timeout) {
+                throw new RuntimeException("Wail until task info different timeout");
+            }
+            start = System.currentTimeMillis();
+        }
+        return refreshed;
     }
 
     // todo need a proper test

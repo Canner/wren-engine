@@ -66,7 +66,7 @@ public class CacheResource
 
     @GET
     @Path("info/{catalogName}/{schemaName}/{tableName}")
-    public void getTaskInfos(
+    public void getTaskInfo(
             @PathParam("catalogName") String catalogName,
             @PathParam("schemaName") String schemaName,
             @PathParam("tableName") String tableName,
