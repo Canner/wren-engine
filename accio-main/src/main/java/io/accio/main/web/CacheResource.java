@@ -51,7 +51,7 @@ public class CacheResource
     @Path("reload")
     public void reload(@Suspended AsyncResponse asyncResponse)
     {
-        cacheManager.createTaskUtilDone(accioManager.getAccioMDL());
+        cacheManager.createTaskUntilDone(accioManager.getAccioMDL());
         asyncResponse.resume(Response.ok().build());
     }
 
@@ -66,7 +66,7 @@ public class CacheResource
 
     @GET
     @Path("info/{catalogName}/{schemaName}/{tableName}")
-    public void getTaskInfo(
+    public void getTaskInfos(
             @PathParam("catalogName") String catalogName,
             @PathParam("schemaName") String schemaName,
             @PathParam("tableName") String tableName,
@@ -81,7 +81,7 @@ public class CacheResource
 
     @GET
     @Path("info/{catalogName}/{schemaName}")
-    public void getTaskInfo(
+    public void getTaskInfos(
             @PathParam("catalogName") String catalogName,
             @PathParam("schemaName") String schemaName,
             @Suspended AsyncResponse asyncResponse)

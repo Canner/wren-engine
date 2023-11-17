@@ -109,7 +109,7 @@ public class TestReloadCache
         List<TaskInfo> taskInfos3 = reloadCacheAsync();
         assertThat(taskInfos3.size()).isEqualTo(1);
         taskInfo = taskInfos3.get(0);
-        // assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
+        assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
         taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
         cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();

@@ -24,7 +24,6 @@ import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
-import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.dto.CachedTable;
 import io.accio.sqlrewrite.AccioPlanner;
@@ -50,6 +49,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
@@ -105,14 +105,12 @@ public class CacheManager
 
     private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl, CacheInfo cacheInfo)
     {
-        String catalogName = mdl.getCatalog();
-        String schemaName = mdl.getSchema();
-        String tableName = cacheInfo.getName();
-        Optional<Task> taskOptional = Optional.ofNullable(tasks.get(new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName))));
+        CatalogSchemaTableName catalogSchemaTableName = catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
+        Optional<Task> taskOptional = Optional.ofNullable(tasks.get(catalogSchemaTableName));
         if (taskOptional.isPresent() && taskOptional.get().getTaskInfo().inProgress()) {
             throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s, tableName: %s", mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()));
         }
-        removeCacheIfExist(catalogName, schemaName, tableName);
+        removeCacheIfExist(catalogSchemaTableName);
         return doCache(mdl, cacheInfo);
     }
 
@@ -216,13 +214,8 @@ public class CacheManager
                 });
     }
 
-    public void removeCacheIfExist(String catalogName, String schemaName, String tableName)
+    public void removeCacheIfExist(CatalogSchemaTableName catalogSchemaTableName)
     {
-        requireNonNull(catalogName, "catalogName is null");
-        requireNonNull(schemaName, "schemaName is null");
-        requireNonNull(tableName, "tableName is null");
-
-        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(catalogName, new SchemaTableName(schemaName, tableName));
         if (cacheScheduledFutures.containsKey(catalogSchemaTableName)) {
             cacheScheduledFutures.get(catalogSchemaTableName).cancel(true);
             cacheScheduledFutures.remove(catalogSchemaTableName);
@@ -265,7 +258,7 @@ public class CacheManager
         }
     }
 
-    public List<TaskInfo> createTaskUtilDone(AccioMDL mdl)
+    public List<TaskInfo> createTaskUntilDone(AccioMDL mdl)
     {
         return createTask(mdl)
                 .thenApply(taskInfos -> taskInfos.stream()
@@ -275,7 +268,8 @@ public class CacheManager
                         })
                         .filter(Optional::isPresent)
                         .map(Optional::get)
-                        .collect(toList())).join();
+                        .collect(toList()))
+                .join();
     }
 
     public CompletableFuture<List<TaskInfo>> createTask(AccioMDL mdl)

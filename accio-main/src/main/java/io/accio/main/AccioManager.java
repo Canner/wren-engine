@@ -45,7 +45,7 @@ public class AccioManager
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         if (accioMDLFile.exists()) {
             loadAccioMDLFromFile();
-            cacheManager.createTaskUtilDone(getAccioMDL());
+            cacheManager.createTaskUntilDone(getAccioMDL());
         }
         else {
             LOG.warn("AccioMDL file %s does not exist", accioMDLFile);
