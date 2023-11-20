@@ -55,7 +55,8 @@ public abstract class RelationableSqlRender
     // key is alias_name.column_name, value is column name, this map is used to compose select items in model sql
     protected final List<String> selectItems = new ArrayList<>();
 
-    // key is alias name, value is query contains join condition, this map is used to compose join conditions in model sql
+    // `requiredRelationshipInfos` collects all join condition and the original column name.
+    // It is used to compose join conditions in relationable sql.
     protected final List<ColumnAliasExpressionRelationshipInfo> requiredRelationshipInfos = new ArrayList<>();
     // key is column name in model, value is column expression, this map store columns not use relationships
     protected final Map<String, String> columnWithoutRelationships = new LinkedHashMap<>();
@@ -95,10 +96,14 @@ public abstract class RelationableSqlRender
                 refSql,
                 baseModel.getName(),
                 baseModel.getName());
-        Function<String, String> tableJoinCondition = (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
+        Function<String, String> tableJoinCondition =
+                (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
         String tableJoinsSql = modelSubQuery;
         if (!requiredRelationshipInfos.isEmpty()) {
-            tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s", getRelationshipSubQuery(baseModel, requiredRelationshipInfos), getRelationableAlias(baseModel.getName()), tableJoinCondition.apply(getRelationableAlias(baseModel.getName())));
+            tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s",
+                    getRelationshipSubQuery(baseModel, requiredRelationshipInfos),
+                    getRelationableAlias(baseModel.getName()),
+                    tableJoinCondition.apply(getRelationableAlias(baseModel.getName())));
         }
 
         return new RelationInfo(

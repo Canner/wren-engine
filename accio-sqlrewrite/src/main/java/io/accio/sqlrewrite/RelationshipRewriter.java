@@ -79,11 +79,11 @@ public class RelationshipRewriter
         return (DereferenceExpression) DereferenceExpression.from(QualifiedName.of(parts));
     }
 
-    protected static DereferenceExpression getRelationshipResultAsDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo, String relationshipFieldName)
+    protected static DereferenceExpression getRelationshipResultAsDereferenceExpression(ExpressionRelationshipInfo expressionRelationshipInfo, String relationablePrefix)
     {
-        // The result of relationship will be a sub-query named as relationshipFieldName, so the final result is relationshipFieldName.relationshipFieldName"
+        // The relationshipFieldName is the name of the relationship field in the relationship model with `relationablePrefix`.
         List<Identifier> parts = new ArrayList<>();
-        parts.add(new Identifier(relationshipFieldName, true));
+        parts.add(new Identifier(relationablePrefix, true));
         expressionRelationshipInfo.getRemainingParts().stream()
                 .map(part -> new Identifier(part, true))
                 .forEach(parts::add);

@@ -112,7 +112,7 @@ public class MetricSqlRender
     }
 
     @Override
-    protected String getSelectItemsExpression(Column column, Optional<String> relationalBase)
+    protected String getSelectItemsExpression(Column column, Optional<String> relationableBase)
     {
         Metric metric = (Metric) relationable;
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
@@ -120,9 +120,8 @@ public class MetricSqlRender
         Expression expression = parseExpression(column.getExpression().orElse(column.getName()));
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(expression, mdl, baseModel);
 
-        if (!relationshipInfos.isEmpty() && relationalBase.isPresent()) {
-            // output from column use relationship will use another subquery which use column name from model as alias name
-            Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationalBase.get(), expression);
+        if (!relationshipInfos.isEmpty() && relationableBase.isPresent()) {
+            Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationableBase.get(), expression);
             return format("%s AS \"%s\"", newExpression, column.getName());
         }
 
