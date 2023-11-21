@@ -65,7 +65,8 @@ public class TestMetric
                                         column("comment", VARCHAR, null, true),
                                         column("customer_name", VARCHAR, null, true, "customer.name"),
                                         column("cumstomer_address", VARCHAR, null, true, "customer.address"),
-                                        column("customer", "Customer", "OrdersCustomer", true)),
+                                        column("customer", "Customer", "OrdersCustomer", true),
+                                        column("lineitem", "Lineitem", "OrdersLineitem", true)),
                                 "orderkey"),
                         model("Customer",
                                 "select * from main.customer",
@@ -79,11 +80,34 @@ public class TestMetric
                                         column("mktsegment", VARCHAR, null, true),
                                         column("comment", VARCHAR, null, true),
                                         column("orders", "Orders", "OrdersCustomer", true)),
-                                "custkey")))
+                                "custkey"),
+                        model("Lineitem",
+                                "select * from main.lineitem",
+                                List.of(
+                                        column("orderkey", INTEGER, null, true),
+                                        column("partkey", INTEGER, null, true),
+                                        column("suppkey", INTEGER, null, true),
+                                        column("linenumber", INTEGER, null, true),
+                                        column("quantity", INTEGER, null, true),
+                                        column("extendedprice", INTEGER, null, true),
+                                        column("discount", INTEGER, null, true),
+                                        column("tax", INTEGER, null, true),
+                                        column("returnflag", VARCHAR, null, true),
+                                        column("linestatus", VARCHAR, null, true),
+                                        column("shipdate", DATE, null, true),
+                                        column("commitdate", DATE, null, true),
+                                        column("receiptdate", DATE, null, true),
+                                        column("shipinstruct", VARCHAR, null, true),
+                                        column("shipmode", VARCHAR, null, true),
+                                        column("comment", VARCHAR, null, true),
+                                        column("orderkey_linenumber", VARCHAR, null, true, "concat(orderkey, '-', linenumber)"),
+                                        column("order_record", "Orders", "OrdersLineitem", true)),
+                                "orderkey_linenumber")))
                 .setRelationships(List.of(
-                        relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey")))
+                        relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey"),
+                        relationship("OrdersLineitem", List.of("Orders", "Lineitem"), MANY_TO_ONE, "Orders.orderkey = Lineitem.orderkey")))
                 .setMetrics(List.of(
-                        metric("RevenueByCustomer", "Customer",
+                        metric("TotalpriceByCustomer", "Customer",
                                 List.of(
                                         column("name", VARCHAR, null, true),
                                         column("orderdate", DATE, null, true, "orders.orderdate")),
@@ -91,7 +115,7 @@ public class TestMetric
                                         column("totalprice", INTEGER, null, true, "sum(orders.totalprice)")),
                                 List.of(
                                         timeGrain("orderdata", "orderdate", List.of(DAY, MONTH, YEAR)))),
-                        metric("RevenueByCustomerBaseOrders", "Orders",
+                        metric("TotalpriceByCustomerBaseOrders", "Orders",
                                 List.of(
                                         column("name", VARCHAR, null, true, "customer.name"),
                                         column("orderdate", DATE, null, true)),
@@ -102,6 +126,36 @@ public class TestMetric
                         metric("NumberCustomerByDate", "Orders",
                                 List.of(column("orderdate", DATE, null, true)),
                                 List.of(column("count_of_customer", INTEGER, null, true, "count(distinct customer.name)")),
+                                List.of()),
+                        metric("SumExtendedPriceByCustomer", "Customer",
+                                List.of(column("name", VARCHAR, null, true),
+                                        column("orderdate", DATE, null, true, "orders.orderdate")),
+                                List.of(column("sum_extendprice", INTEGER, null, true, "sum(orders.lineitem.extendedprice)")),
+                                List.of()),
+                        metric("SumExtendedPriceByCustomerBaseLineitem", "Lineitem",
+                                List.of(column("name", VARCHAR, null, true, "order_record.customer.name"),
+                                        column("orderdate", DATE, null, true, "order_record.orderdate")),
+                                List.of(column("sum_extendprice", INTEGER, null, true, "sum(extendedprice)")),
+                                List.of()),
+                        metric("RevenueByCustomer", "Customer",
+                                List.of(column("name", VARCHAR, null, true),
+                                        column("orderdate", DATE, null, true, "orders.orderdate")),
+                                List.of(column("revenue", INTEGER, null, true, "sum(orders.lineitem.extendedprice * (1 - orders.lineitem.discount))")),
+                                List.of()),
+                        metric("RevenueByCustomerBaseLineitem", "Lineitem",
+                                List.of(column("name", VARCHAR, null, true, "order_record.customer.name"),
+                                        column("orderdate", DATE, null, true, "order_record.orderdate")),
+                                List.of(column("revenue", INTEGER, null, true, "sum(extendedprice * (1 - discount))")),
+                                List.of()),
+                        metric("SumExtendedpriceAddTotalpriceByCustomerBaseOrders", "Orders",
+                                List.of(column("name", VARCHAR, null, true, "customer.name"),
+                                        column("orderdate", DATE, null, true, "orderdate")),
+                                List.of(column("extAddTotalprice", INTEGER, null, true, "sum(totalprice + lineitem.extendedprice)")),
+                                List.of()),
+                        metric("SumExtendedpriceAddTotalpriceByCustomerBaseLineitem", "Lineitem",
+                                List.of(column("name", VARCHAR, null, true, "order_record.customer.name"),
+                                        column("orderdate", DATE, null, true, "order_record.orderdate")),
+                                List.of(column("extAddTotalprice", INTEGER, null, true, "sum(order_record.totalprice + extendedprice)")),
                                 List.of())))
                 .build();
         accioMDL = AccioMDL.fromManifest(manifest);
@@ -114,21 +168,71 @@ public class TestMetric
         exec("create table orders as select * from '" + orders + "'");
         String customer = getClass().getClassLoader().getResource("tiny-customer.parquet").getPath();
         exec("create table customer as select * from '" + customer + "'");
+        String lineitem = getClass().getClassLoader().getResource("tiny-lineitem.parquet").getPath();
+        exec("create table lineitem as select * from '" + lineitem + "'");
     }
 
     @Test
     public void testMetricUseToOneRelationship()
     {
-        List<List<Object>> result = query(rewrite("select * from RevenueByCustomerBaseOrders"));
+        List<List<Object>> result = query(rewrite("select * from TotalpriceByCustomerBaseOrders"));
         assertThat(result.get(0).size()).isEqualTo(3);
         assertThat(result.size()).isEqualTo(14958);
 
         assertThatNoException()
-                .isThrownBy(() -> query(rewrite("select name, orderdate, totalprice from RevenueByCustomerBaseOrders")));
+                .isThrownBy(() -> query(rewrite("select name, orderdate, totalprice from TotalpriceByCustomerBaseOrders")));
 
         List<List<Object>> measureRelationship = query(rewrite("select * from NumberCustomerByDate"));
         assertThat(measureRelationship.get(0).size()).isEqualTo(2);
         assertThat(measureRelationship.size()).isEqualTo(2401);
+    }
+
+    @Test
+    public void testMetricUseToManyRelationship()
+    {
+        List<List<Object>> result = query(rewrite("select * from TotalpriceByCustomer"));
+        assertThat(result.get(0).size()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(15458);
+
+        assertThat(query(rewrite("SELECT totalprice FROM TotalpriceByCustomer " +
+                "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0))
+                .isEqualTo(query(rewrite("SELECT totalprice FROM TotalpriceByCustomerBaseOrders " +
+                        "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0));
+    }
+
+    @Test
+    public void testMetricUseThreeLevelRelationship()
+    {
+        List<List<Object>> result = query(rewrite("select * from SumExtendedPriceByCustomer"));
+        assertThat(result.get(0).size()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(15458);
+
+        assertThat(query(rewrite("SELECT sum_extendprice FROM SumExtendedPriceByCustomer " +
+                "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0))
+                .isEqualTo(query(rewrite("SELECT sum_extendprice FROM SumExtendedPriceByCustomerBaseLineitem " +
+                        "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0));
+    }
+
+    @Test
+    public void testMultipleRelationshipFieldInExpression()
+    {
+        List<List<Object>> result = query(rewrite("select * from RevenueByCustomer"));
+        assertThat(result.get(0).size()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(15458);
+
+        assertThat(query(rewrite("SELECT revenue FROM RevenueByCustomer " +
+                "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0))
+                .isEqualTo(query(rewrite("SELECT revenue FROM RevenueByCustomerBaseLineitem " +
+                        "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0));
+    }
+
+    @Test
+    public void testExpressionIncludeRelationshipAndNonRelatinonship()
+    {
+        assertThat(query(rewrite("SELECT extAddTotalprice FROM SumExtendedpriceAddTotalpriceByCustomerBaseOrders " +
+                "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0))
+                .isEqualTo(query(rewrite("SELECT extAddTotalprice FROM SumExtendedpriceAddTotalpriceByCustomerBaseLineitem " +
+                        "WHERE \"name\" = 'Customer#000000392' and orderdate = DATE '1996-01-10'")).get(0).get(0));
     }
 
     @Test
@@ -138,7 +242,7 @@ public class TestMetric
                 .addAll(manifest.getModels())
                 .add(onBaseObject(
                         "testModelOnMetric",
-                        "RevenueByCustomerBaseOrders",
+                        "TotalpriceByCustomerBaseOrders",
                         List.of(
                                 column("name", VARCHAR, null, true),
                                 column("revenue", INTEGER, null, true, "totalprice")),
@@ -161,7 +265,7 @@ public class TestMetric
                 .addAll(manifest.getMetrics())
                 .add(metric(
                         "testMetricOnMetric",
-                        "RevenueByCustomerBaseOrders",
+                        "TotalpriceByCustomerBaseOrders",
                         List.of(column("orderyear", VARCHAR, null, true, "DATE_TRUNC('YEAR', orderdate)")),
                         List.of(column("revenue", INTEGER, null, true, "sum(totalprice)")),
                         List.of()))

@@ -25,8 +25,8 @@ import io.trino.sql.tree.Expression;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
@@ -34,7 +34,6 @@ import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class ModelSqlRender
@@ -93,10 +92,10 @@ public class ModelSqlRender
     }
 
     @Override
-    protected String getSelectItemsExpression(Column column, boolean isRelationship)
+    protected String getSelectItemsExpression(Column column, Optional<String> relationalBase)
     {
-        if (isRelationship) {
-            return format("\"%s\".\"%s\" AS \"%s\"", column.getName(), column.getName(), column.getName());
+        if (relationalBase.isPresent()) {
+            return format("\"%s\".\"%s\" AS \"%s\"", relationalBase.get(), column.getName(), column.getName());
         }
         return format("\"%s\".\"%s\" AS \"%s\"", relationable.getName(), column.getName(), column.getName());
     }
@@ -107,27 +106,9 @@ public class ModelSqlRender
         Expression expression = parseExpression(column.getExpression().get());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
-            Expression newExpression = (Expression) RelationshipRewriter.rewrite(relationshipInfos, expression);
-            String tableJoins = format("(%s) AS \"%s\" %s",
-                    getSubquerySql(baseModel, relationshipInfos.stream().map(ExpressionRelationshipInfo::getBaseModelRelationship).collect(toList()), mdl),
-                    baseModel.getName(),
-                    relationshipInfos.stream()
-                            .map(ExpressionRelationshipInfo::getRelationships)
-                            .flatMap(List::stream)
-                            .distinct()
-                            .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
-                            .collect(Collectors.joining()));
-
-            checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
-
-            tableJoinSqls.put(
-                    column.getName(),
-                    format("SELECT \"%s\".\"%s\", %s AS \"%s\" FROM (%s)",
-                            baseModel.getName(),
-                            baseModel.getPrimaryKey(),
-                            newExpression,
-                            column.getName(),
-                            tableJoins));
+            requiredRelationshipInfos.addAll(relationshipInfos.stream()
+                    .map(info -> new ColumnAliasExpressionRelationshipInfo(column.getName(), info))
+                    .collect(toSet()));
             // collect all required models in relationships
             requiredObjects.addAll(
                     relationshipInfos.stream()
@@ -139,10 +120,10 @@ public class ModelSqlRender
                             .collect(toSet()));
 
             // output from column use relationship will use another subquery which use column name from model as alias name
-            selectItems.add(getSelectItemsExpression(column, true));
+            selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
         }
         else {
-            selectItems.add(getSelectItemsExpression(column, false));
+            selectItems.add(getSelectItemsExpression(column, Optional.empty()));
             columnWithoutRelationships.put(column.getName(), column.getExpression().get());
         }
     }

@@ -81,6 +81,12 @@ public class TestModelSqlRewrite
                             "id")))
             .build();
     private static final AccioMDL ACCIOMDL = AccioMDL.fromManifest(DEFAULT_MANIFEST);
+
+    /**
+     * TODO: Refactor the test. Currently we assert the SQL string is fully equal to the expected.
+     *  It's hard to maintain and meaningless. We should assert the generated SQL contains the specific
+     *  pattern and the result is correct.
+     */
     @Language("SQL")
     private static final String WITH_PEOPLE_QUERY = "" +
             "  WishList AS (\n" +
@@ -104,7 +110,7 @@ public class TestModelSqlRewrite
             "   SELECT\n" +
             "     \"People\".\"id\" \"id\"\n" +
             "   , \"People\".\"email\" \"email\"\n" +
-            "   , \"gift\".\"gift\" \"gift\"\n" +
+            "   , \"People_relationsub\".\"gift\" \"gift\"\n" +
             "   FROM\n" +
             "     ((\n" +
             "      SELECT\n" +
@@ -133,7 +139,7 @@ public class TestModelSqlRewrite
             "         )  \"People\"\n" +
             "      )  \"People\"\n" +
             "      LEFT JOIN \"WishList\" ON (WishList.id = People.id))\n" +
-            "   )  \"gift\" ON (\"People\".\"id\" = \"gift\".\"id\"))\n" +
+            "   )  \"People_relationsub\" ON (\"People\".\"id\" = \"People_relationsub\".\"id\"))\n" +
             ")\n";
 
     @Language("SQL")
@@ -144,7 +150,7 @@ public class TestModelSqlRewrite
             "   , \"Book\".\"authorId\" \"authorId\"\n" +
             "   , \"Book\".\"publish_date\" \"publish_date\"\n" +
             "   , \"Book\".\"publish_year\" \"publish_year\"\n" +
-            "   , \"author_gift_id\".\"author_gift_id\" \"author_gift_id\"\n" +
+            "   , \"Book_relationsub\".\"author_gift_id\" \"author_gift_id\"\n" +
             "   FROM\n" +
             "     ((\n" +
             "      SELECT\n" +
@@ -177,7 +183,7 @@ public class TestModelSqlRewrite
             "      )  \"Book\"\n" +
             "      LEFT JOIN \"People\" ON (People.id = Book.authorId))\n" +
             "      LEFT JOIN \"WishList\" ON (WishList.id = People.id))\n" +
-            "   )  \"author_gift_id\" ON (\"Book\".\"bookId\" = \"author_gift_id\".\"bookId\"))\n" +
+            "   )  \"Book_relationsub\" ON (\"Book\".\"bookId\" = \"Book_relationsub\".\"bookId\"))\n" +
             ")\n";
 
     @Override
@@ -335,7 +341,7 @@ public class TestModelSqlRewrite
                 "   , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
                 "   , \"BookReplica\".\"id\" \"id\"\n" +
                 "   , \"BookReplica\".\"publish_year\" \"publish_year\"\n" +
-                "   , \"wishlist_id\".\"wishlist_id\" \"wishlist_id\"\n" +
+                "   , \"BookReplica_relationsub\".\"wishlist_id\" \"wishlist_id\"\n" +
                 "   FROM\n" +
                 "     ((\n" +
                 "      SELECT\n" +
@@ -365,7 +371,7 @@ public class TestModelSqlRewrite
                 "         )  \"BookReplica\"\n" +
                 "      )  \"BookReplica\"\n" +
                 "      LEFT JOIN \"WishList\" ON (BookReplica.id = WishList.bookId))\n" +
-                "   )  \"wishlist_id\" ON (\"BookReplica\".\"id\" = \"wishlist_id\".\"id\"))\n" +
+                "   )  \"BookReplica_relationsub\" ON (\"BookReplica\".\"id\" = \"BookReplica_relationsub\".\"id\"))\n" +
                 ") ";
 
         assertSqlEqualsAndValid(rewrite("SELECT * FROM BookReplica", mdl),
