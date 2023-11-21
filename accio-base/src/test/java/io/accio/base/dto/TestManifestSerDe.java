@@ -20,6 +20,8 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.accio.base.AccioTypes.INTEGER;
+import static io.accio.base.AccioTypes.VARCHAR;
+import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
@@ -87,7 +89,8 @@ public class TestManifestSerDe
                                         column("acctbal", "double", null, true),
                                         column("mktsegment", "string", null, true),
                                         column("comment", "string", null, true),
-                                        column("orders", "OrdersModel", "OrdersCustomer", true)),
+                                        column("orders", "OrdersModel", "OrdersCustomer", true),
+                                        caluclatedColumn("orders_totalprice", VARCHAR, "SUM(orders.totalprice)")),
                                 "custkey")))
                 .setRelationships(List.of(
                         relationship("OrdersCustomer",

@@ -31,6 +31,7 @@ public class Column
     private final String relationship;
     private final String expression;
     private final String description;
+    private final boolean isCalculated;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
@@ -44,12 +45,17 @@ public class Column
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression, String description)
     {
-        return new Column(name, type, relationship, notNull, expression, description);
+        return new Column(name, type, relationship, false, notNull, expression, description);
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, null, null);
+        return new Column(name, type, relationship, false, false, null, null);
+    }
+
+    public static Column caluclatedColumn(String name, String type, String expression)
+    {
+        return new Column(name, type, null, true, false, expression, null);
     }
 
     @JsonCreator
@@ -57,6 +63,7 @@ public class Column
             @JsonProperty("name") String name,
             @JsonProperty("type") String type,
             @JsonProperty("relationship") String relationship,
+            @JsonProperty("isCalculated") boolean isCalculated,
             @JsonProperty("notNull") boolean notNull,
             @JsonProperty("expression") String expression,
             @JsonProperty("description") String description)
@@ -64,6 +71,7 @@ public class Column
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
         this.relationship = relationship;
+        this.isCalculated = isCalculated;
         this.notNull = notNull;
         this.expression = expression;
         this.description = description;
@@ -105,6 +113,12 @@ public class Column
         return Optional.ofNullable(expression);
     }
 
+    @JsonProperty("isCalculated")
+    public boolean isCalculated()
+    {
+        return isCalculated;
+    }
+
     public String getSqlExpression()
     {
         if (getExpression().isEmpty()) {
@@ -125,6 +139,7 @@ public class Column
         }
         Column that = (Column) obj;
         return notNull == that.notNull
+                && isCalculated == that.isCalculated
                 && Objects.equals(name, that.name)
                 && Objects.equals(type, that.type)
                 && Objects.equals(relationship, that.relationship)
@@ -135,7 +150,7 @@ public class Column
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, notNull, relationship, expression);
+        return Objects.hash(name, type, isCalculated, notNull, relationship, expression);
     }
 
     @Override
@@ -145,6 +160,7 @@ public class Column
                 "name='" + name + '\'' +
                 ", type='" + type + '\'' +
                 ", notNull=" + notNull +
+                ", isCalculated=" + isCalculated +
                 ", relationship='" + relationship + '\'' +
                 ", expression='" + expression + '\'' +
                 ", description='" + description + '\'' +
