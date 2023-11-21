@@ -118,7 +118,7 @@ public class MetricSqlRender
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
         Model baseModel = mdl.getModel(metric.getBaseObject()).orElseThrow(() -> new IllegalArgumentException(format("cannot find model %s", metric.getBaseObject())));
         Expression expression = parseExpression(column.getExpression().orElse(column.getName()));
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(expression, mdl, baseModel);
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
 
         if (!relationshipInfos.isEmpty() && relationableBase.isPresent()) {
             Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationableBase.get(), expression);
@@ -137,7 +137,7 @@ public class MetricSqlRender
     {
         // TODO: There're some issue about sql keyword as expression, e.g. column named as "order"
         Expression expression = parseExpression(column.getExpression().get());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(expression, mdl, baseModel);
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
             for (ExpressionRelationshipInfo relationshipInfo : relationshipInfos) {
                 requiredRelationshipInfos.add(new ColumnAliasExpressionRelationshipInfo(relationshipInfo.getRemainingParts().get(0), relationshipInfo));

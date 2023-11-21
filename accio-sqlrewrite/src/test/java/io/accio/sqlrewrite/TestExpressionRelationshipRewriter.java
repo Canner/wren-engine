@@ -108,7 +108,7 @@ public class TestExpressionRelationshipRewriter
     @Test
     public void testMetricMeasureRelationship()
     {
-        List<ExpressionRelationshipInfo> infos = ExpressionRelationshipAnalyzer.getRelationshipsForMetric(parseExpression("sum(customer.name)"), mdl, orders);
+        List<ExpressionRelationshipInfo> infos = ExpressionRelationshipAnalyzer.getRelationships(parseExpression("sum(customer.name)"), mdl, orders);
         assertThat(infos)
                 .containsExactlyInAnyOrder(
                         new ExpressionRelationshipInfo(
