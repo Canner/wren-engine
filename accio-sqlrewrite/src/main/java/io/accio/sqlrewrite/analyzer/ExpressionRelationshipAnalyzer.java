@@ -38,7 +38,7 @@ public class ExpressionRelationshipAnalyzer
 {
     private ExpressionRelationshipAnalyzer() {}
 
-    public static List<ExpressionRelationshipInfo> getRelationships(Expression expression, AccioMDL mdl, Model model)
+    public static List<ExpressionRelationshipInfo> getToOneRelationships(Expression expression, AccioMDL mdl, Model model)
     {
         RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
         collector.process(expression);

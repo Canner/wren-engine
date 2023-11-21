@@ -165,7 +165,7 @@ public abstract class RelationableSqlRender
                 .orElseThrow(() -> new IllegalArgumentException("primary key not found in model " + model.getName()));
         // TODO: this should be checked in validator too
         primaryKey.getExpression().ifPresent(expression ->
-                checkArgument(ExpressionRelationshipAnalyzer.getRelationships(parseExpression(expression), mdl, model).isEmpty(),
+                checkArgument(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression(expression), mdl, model).isEmpty(),
                         format("found relation in model %s primary key expression", model.getName())));
 
         String joinKeys = relationships.stream()
@@ -177,7 +177,7 @@ public abstract class RelationableSqlRender
                             .orElseThrow(() -> new IllegalArgumentException(format("join column %s not found in model %s", joinColumnName, model.getName())));
                     // TODO: this should be checked in validator too
                     joinColumn.getExpression().ifPresent(expression ->
-                            checkArgument(ExpressionRelationshipAnalyzer.getRelationships(parseExpression(expression), mdl, model).isEmpty(),
+                            checkArgument(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression(expression), mdl, model).isEmpty(),
                                     format("found relation in relation join condition in %s.%s", model.getName(), joinColumn.getName())));
                     return getModelExpression(joinColumn);
                 })

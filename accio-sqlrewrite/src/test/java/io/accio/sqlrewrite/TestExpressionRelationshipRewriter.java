@@ -71,7 +71,7 @@ public class TestExpressionRelationshipRewriter
     public void testRewrite(String actual, String expected, List<Relationship> relationships)
     {
         Expression expression = parseExpression(actual);
-        List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, orders);
+        List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, orders);
         assertThat(expressionRelationshipInfos.stream().map(ExpressionRelationshipInfo::getRelationships).flatMap(List::stream).collect(toImmutableList()))
                 .containsExactlyInAnyOrderElementsOf(relationships);
         assertThat(RelationshipRewriter.rewrite(expressionRelationshipInfos, expression).toString()).isEqualTo(expected);
@@ -80,9 +80,9 @@ public class TestExpressionRelationshipRewriter
     @Test
     public void testToMany()
     {
-        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getRelationships(parseExpression("customer.custkey"), mdl, nation))
+        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("customer.custkey"), mdl, nation))
                 .hasMessage("expr in model only accept to-one relation");
-        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getRelationships(parseExpression("customer.nation.customer.custkey"), mdl, orders))
+        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("customer.nation.customer.custkey"), mdl, orders))
                 .hasMessage("expr in model only accept to-one relation");
     }
 
@@ -90,18 +90,18 @@ public class TestExpressionRelationshipRewriter
     public void testNoRelationshipFound()
     {
         // won't collect relationship if direct access relationship column
-        assertThat(ExpressionRelationshipAnalyzer.getRelationships(parseExpression("customer"), mdl, nation)).isEmpty();
-        assertThat(ExpressionRelationshipAnalyzer.getRelationships(parseExpression("customer.nation"), mdl, orders)).isEmpty();
+        assertThat(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("customer"), mdl, nation)).isEmpty();
+        assertThat(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("customer.nation"), mdl, orders)).isEmpty();
         // won't collect relationship if column not found in model
-        assertThat(ExpressionRelationshipAnalyzer.getRelationships(parseExpression("foo"), mdl, orders)).isEmpty();
+        assertThat(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("foo"), mdl, orders)).isEmpty();
         // won't collect relationship since "Orders" is not a column in orders model
-        assertThat(ExpressionRelationshipAnalyzer.getRelationships(parseExpression("Orders.customer.custkey"), mdl, orders)).isEmpty();
+        assertThat(ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("Orders.customer.custkey"), mdl, orders)).isEmpty();
     }
 
     @Test
     public void testCycle()
     {
-        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getRelationships(parseExpression("region.nation"), mdl, nation))
+        assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("region.nation"), mdl, nation))
                 .hasMessage("found cycle in expression");
     }
 

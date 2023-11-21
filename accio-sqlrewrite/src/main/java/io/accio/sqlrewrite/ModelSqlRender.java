@@ -104,7 +104,7 @@ public class ModelSqlRender
     protected void collectRelationship(Column column, Model baseModel)
     {
         Expression expression = parseExpression(column.getExpression().get());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
             requiredRelationshipInfos.addAll(relationshipInfos.stream()
                     .map(info -> new ColumnAliasExpressionRelationshipInfo(column.getName(), info))
