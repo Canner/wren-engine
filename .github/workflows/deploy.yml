@@ -2,8 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '**'
 
 jobs:
   deploy:
