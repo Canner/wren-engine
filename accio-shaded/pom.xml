@@ -40,6 +40,12 @@
             <artifactId>accio-validation</artifactId>
             <scope>runtime</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -73,12 +79,17 @@
                             <artifactSet>
                                 <includes>
                                     <include>io.accio:*</include>
+                                    <include>org.jgrapht:*</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
                                 <relocation>
                                     <pattern>io.trino</pattern>
                                     <shadedPattern>${shadeBase}.io.trino</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jgrapht</pattern>
+                                    <shadedPattern>${shadeBase}.org.jgrapht</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
