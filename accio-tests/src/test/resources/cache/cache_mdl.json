@@ -61,6 +61,29 @@
         }
       ],
       "primaryKey": "custkey"
+    },
+    {
+      "name": "RemoveCustomer",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "columns": [
+        {
+          "name": "custkey",
+          "expression": "c_custkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "c_name",
+          "type": "string"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersCustomer"
+        }
+      ],
+      "primaryKey": "custkey",
+      "cached": "true"
     }
   ],
   "relationships": [

@@ -21,6 +21,7 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
 import io.accio.sqlrewrite.CacheRewrite;
 import org.testng.annotations.Test;
@@ -37,6 +38,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -197,5 +199,19 @@ public class TestCache
                 " from `canner-cml`.tpch_tiny.orders");
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
+    }
+
+    @Test
+    public void testRemoveCache()
+    {
+        AccioMDL mdl = accioMDL.get();
+        Optional<TaskInfo> taskInfoOptional = cacheManager.get()
+                .getTaskInfo(catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), "RemoveCustomer")).join();
+        assertThat(taskInfoOptional).isPresent();
+
+        cacheManager.get().removeCacheIfExist(catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), "RemoveCustomer"));
+        Optional<TaskInfo> removedOptional = cacheManager.get()
+                .getTaskInfo(catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), "RemoveCustomer")).join();
+        assertThat(removedOptional).isEmpty();
     }
 }
