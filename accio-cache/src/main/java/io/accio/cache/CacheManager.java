@@ -212,6 +212,11 @@ public class CacheManager
                     entry.getValue().getTableName().ifPresent(duckdbClient::dropTableQuietly);
                     cachedTableMapping.remove(entry.getKey());
                 });
+
+        tasks.keySet().stream()
+                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(catalogName)
+                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(schemaName))
+                .forEach(tasks::remove);
     }
 
     public void removeCacheIfExist(CatalogSchemaTableName catalogSchemaTableName)
@@ -225,6 +230,8 @@ public class CacheManager
             cacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
             cachedTableMapping.remove(catalogSchemaTableName);
         });
+
+        tasks.remove(catalogSchemaTableName);
     }
 
     public boolean cacheScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
