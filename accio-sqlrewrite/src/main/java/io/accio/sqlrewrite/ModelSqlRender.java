@@ -104,42 +104,50 @@ public class ModelSqlRender
     @Override
     protected void collectRelationship(Column column, Model baseModel)
     {
-        Expression expression = parseExpression(column.getExpression().get());
-        List<ExpressionRelationshipInfo> relationshipInfos;
-
+        Expression expression = parseExpression(column.getExpression().orElseThrow(() -> new IllegalArgumentException("expression not found in column")));
         if (column.isCalculated()) {
-            relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
-            calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
+            processCalculatedField(column, baseModel, expression);
         }
         else {
-            relationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, baseModel);
-            requiredRelationshipInfos.addAll(relationshipInfos.stream()
-                    .map(info -> new ColumnAliasExpressionRelationshipInfo(column.getName(), info))
-                    .collect(toSet()));
+            processRegularField(column, baseModel, expression);
         }
+    }
 
-        if (!relationshipInfos.isEmpty()) {
-            // collect all required models in relationships
-            requiredObjects.addAll(
-                    relationshipInfos.stream()
-                            .map(ExpressionRelationshipInfo::getRelationships)
-                            .flatMap(List::stream)
-                            .map(Relationship::getModels)
-                            .flatMap(List::stream)
-                            .filter(modelName -> !modelName.equals(baseModel.getName()))
-                            .collect(toSet()));
-            if (column.isCalculated()) {
-                // the subquery that output calculated result will use calculated field name as alias name
-                selectItems.add(getSelectItemsExpression(column, Optional.of(column.getName())));
-            }
-            else {
-                // output from column use relationship will use another subquery which use column name from model as alias name
-                selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
-            }
-        }
-        else {
+    private void processCalculatedField(Column column, Model baseModel, Expression expression)
+    {
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+        calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
+        processRelationshipInfos(column, baseModel, relationshipInfos, Optional.of(column.getName()));
+    }
+
+    private void processRegularField(Column column, Model baseModel, Expression expression)
+    {
+        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, baseModel);
+        requiredRelationshipInfos.addAll(relationshipInfos.stream()
+                .map(info -> new ColumnAliasExpressionRelationshipInfo(column.getName(), info))
+                .collect(toSet()));
+        processRelationshipInfos(column, baseModel, relationshipInfos, Optional.of(getRelationableAlias(baseModel.getName())));
+    }
+
+    private void processRelationshipInfos(Column column, Model baseModel, List<ExpressionRelationshipInfo> relationshipInfos, Optional<String> alias)
+    {
+        if (relationshipInfos.isEmpty()) {
+            // No relationships, add select item with no alias
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
             columnWithoutRelationships.put(column.getName(), column.getExpression().get());
+        }
+        else {
+            // Collect all required models in relationships
+            requiredObjects.addAll(relationshipInfos.stream()
+                    .map(ExpressionRelationshipInfo::getRelationships)
+                    .flatMap(List::stream)
+                    .map(Relationship::getModels)
+                    .flatMap(List::stream)
+                    .filter(modelName -> !modelName.equals(baseModel.getName()))
+                    .collect(toSet()));
+
+            // Add select items based on the type of column
+            selectItems.add(getSelectItemsExpression(column, alias));
         }
     }
 

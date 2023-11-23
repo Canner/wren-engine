@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.dto.Relationship.reverse;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,7 +69,7 @@ public class TestExpressionRelationshipRewriter
     }
 
     @Test(dataProvider = "rewriteTests")
-    public void testRewrite(String actual, String expected, List<Relationship> relationships)
+    public void testGetToOneRelationshipsRewrite(String actual, String expected, List<Relationship> relationships)
     {
         Expression expression = parseExpression(actual);
         List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, orders);
@@ -77,8 +78,30 @@ public class TestExpressionRelationshipRewriter
         assertThat(RelationshipRewriter.rewrite(expressionRelationshipInfos, expression).toString()).isEqualTo(expected);
     }
 
+    @DataProvider
+    public Object[][] testGetRelationshipsRewrite()
+    {
+        return new Object[][] {
+                {"customer.custkey", "\"Customer\".\"custkey\"", List.of(reverse(customerNation))},
+                {"customer.orders.totalprice", "\"Orders\".\"totalprice\"", List.of(reverse(customerNation), reverse(ordersCustomer))},
+                {"customer.orders.totalprice + 1", "(\"Orders\".\"totalprice\" + 1)", List.of(reverse(customerNation), reverse(ordersCustomer))},
+                {"sum(customer.custkey, customer.orders.orderkey)", "sum(\"Customer\".\"custkey\", \"Orders\".\"orderkey\")",
+                        List.of(reverse(customerNation), reverse(customerNation), reverse(ordersCustomer))},
+        };
+    }
+
+    @Test(dataProvider = "testGetRelationshipsRewrite")
+    public void testGetRelationshipsRewrite(String actual, String expected, List<Relationship> relationships)
+    {
+        Expression expression = parseExpression(actual);
+        List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, nation);
+        assertThat(expressionRelationshipInfos.stream().map(ExpressionRelationshipInfo::getRelationships).flatMap(List::stream).collect(toImmutableList()))
+                .containsExactlyInAnyOrderElementsOf(relationships);
+        assertThat(RelationshipRewriter.rewrite(expressionRelationshipInfos, expression).toString()).isEqualTo(expected);
+    }
+
     @Test
-    public void testToMany()
+    public void testInvalidGetToOneRelationships()
     {
         assertThatThrownBy(() -> ExpressionRelationshipAnalyzer.getToOneRelationships(parseExpression("customer.custkey"), mdl, nation))
                 .hasMessage("expr in model only accept to-one relation");
