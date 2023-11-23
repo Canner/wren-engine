@@ -34,6 +34,7 @@ import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
 public class ModelSqlRender
@@ -104,11 +105,20 @@ public class ModelSqlRender
     protected void collectRelationship(Column column, Model baseModel)
     {
         Expression expression = parseExpression(column.getExpression().get());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, baseModel);
-        if (!relationshipInfos.isEmpty()) {
+        List<ExpressionRelationshipInfo> relationshipInfos;
+
+        if (column.isCalculated()) {
+            relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+            calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
+        }
+        else {
+            relationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, baseModel);
             requiredRelationshipInfos.addAll(relationshipInfos.stream()
                     .map(info -> new ColumnAliasExpressionRelationshipInfo(column.getName(), info))
                     .collect(toSet()));
+        }
+
+        if (!relationshipInfos.isEmpty()) {
             // collect all required models in relationships
             requiredObjects.addAll(
                     relationshipInfos.stream()
@@ -118,13 +128,46 @@ public class ModelSqlRender
                             .flatMap(List::stream)
                             .filter(modelName -> !modelName.equals(baseModel.getName()))
                             .collect(toSet()));
-
-            // output from column use relationship will use another subquery which use column name from model as alias name
-            selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
+            if (column.isCalculated()) {
+                // the subquery that output calculated result will use calculated field name as alias name
+                selectItems.add(getSelectItemsExpression(column, Optional.of(column.getName())));
+            }
+            else {
+                // output from column use relationship will use another subquery which use column name from model as alias name
+                selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
+            }
         }
         else {
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
             columnWithoutRelationships.put(column.getName(), column.getExpression().get());
         }
+    }
+
+    @Override
+    protected String getCalculatedSubQuery(Model baseModel, CalculatedFieldRelationshipInfo relationshipInfo)
+    {
+        String requiredExpressions = format("%s AS \"%s\"",
+                RelationshipRewriter.rewrite(relationshipInfo.getExpressionRelationshipInfo(), parseExpression(relationshipInfo.getColumn().getExpression().get())),
+                relationshipInfo.getAlias());
+
+        String tableJoins = format("(%s) AS \"%s\" %s",
+                getSqlForBaseModelKey(
+                        baseModel,
+                        relationshipInfo.getExpressionRelationshipInfo().stream()
+                                .map(ExpressionRelationshipInfo::getBaseModelRelationship)
+                                .collect(toList()), mdl),
+                baseModel.getName(),
+                relationshipInfo.getExpressionRelationshipInfo().stream()
+                        .map(ExpressionRelationshipInfo::getRelationships)
+                        .flatMap(List::stream)
+                        .distinct()
+                        .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
+                        .collect(joining()));
+
+        checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
+        return format("SELECT %s, %s FROM (%s) GROUP BY 1",
+                format("\"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey()),
+                requiredExpressions,
+                tableJoins);
     }
 }

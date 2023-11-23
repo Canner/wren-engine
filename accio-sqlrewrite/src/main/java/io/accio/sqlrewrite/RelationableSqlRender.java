@@ -58,6 +58,9 @@ public abstract class RelationableSqlRender
     // `requiredRelationshipInfos` collects all join condition and the original column name.
     // It is used to compose join conditions in relationable sql.
     protected final List<ColumnAliasExpressionRelationshipInfo> requiredRelationshipInfos = new ArrayList<>();
+    // calculatedRequiredRelationshipInfos collects all join condition needed in model calculated field and the original column name.
+    // It is used to compose join conditions in model sql.
+    protected final List<CalculatedFieldRelationshipInfo> calculatedRequiredRelationshipInfos = new ArrayList<>();
     // key is column name in model, value is column expression, this map store columns not use relationships
     protected final Map<String, String> columnWithoutRelationships = new LinkedHashMap<>();
 
@@ -105,6 +108,14 @@ public abstract class RelationableSqlRender
                     getRelationableAlias(baseModel.getName()),
                     tableJoinCondition.apply(getRelationableAlias(baseModel.getName())));
         }
+        if (!calculatedRequiredRelationshipInfos.isEmpty()) {
+            for (CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo : calculatedRequiredRelationshipInfos) {
+                tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s",
+                        getCalculatedSubQuery(baseModel, calculatedFieldRelationshipInfo),
+                        calculatedFieldRelationshipInfo.getAlias(),
+                        tableJoinCondition.apply(calculatedFieldRelationshipInfo.getAlias()));
+            }
+        }
 
         return new RelationInfo(
                 relationable,
@@ -115,6 +126,11 @@ public abstract class RelationableSqlRender
     protected static String getRelationableAlias(String baseModelName)
     {
         return baseModelName + "_relationsub";
+    }
+
+    protected String getCalculatedSubQuery(Model baseModel, CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo)
+    {
+        throw new UnsupportedOperationException();
     }
 
     private String getRelationshipSubQuery(Model baseModel, Collection<ColumnAliasExpressionRelationshipInfo> relationshipInfos)
@@ -157,7 +173,7 @@ public abstract class RelationableSqlRender
      * Get sql for base model key (primary key and join key), this sql will be used to join with other models.
      * To avoid cycle reference for base model, we must use subquery to get base model key.
      */
-    private String getSqlForBaseModelKey(Model model, List<Relationship> relationships, AccioMDL mdl)
+    protected String getSqlForBaseModelKey(Model model, List<Relationship> relationships, AccioMDL mdl)
     {
         Column primaryKey = model.getColumns().stream()
                 .filter(column -> column.getName().equals(model.getPrimaryKey()))
@@ -231,6 +247,33 @@ public abstract class RelationableSqlRender
         }
 
         public ExpressionRelationshipInfo getExpressionRelationshipInfo()
+        {
+            return expressionRelationshipInfo;
+        }
+    }
+
+    public static class CalculatedFieldRelationshipInfo
+    {
+        private final Column column;
+        private final List<ExpressionRelationshipInfo> expressionRelationshipInfo;
+
+        public CalculatedFieldRelationshipInfo(Column column, List<ExpressionRelationshipInfo> expressionRelationshipInfo)
+        {
+            this.column = requireNonNull(column);
+            this.expressionRelationshipInfo = requireNonNull(expressionRelationshipInfo);
+        }
+
+        public String getAlias()
+        {
+            return column.getName();
+        }
+
+        public Column getColumn()
+        {
+            return column;
+        }
+
+        public List<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
         {
             return expressionRelationshipInfo;
         }
