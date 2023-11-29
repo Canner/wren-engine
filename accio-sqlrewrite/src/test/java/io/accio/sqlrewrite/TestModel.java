@@ -28,6 +28,7 @@ import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
+import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
@@ -97,7 +98,7 @@ public class TestModel
                                 "orderkey_linenumber")))
                 .setRelationships(List.of(
                         relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey"),
-                        relationship("OrdersLineitem", List.of("Orders", "Lineitem"), MANY_TO_ONE, "Orders.orderkey = Lineitem.orderkey")))
+                        relationship("OrdersLineitem", List.of("Orders", "Lineitem"), ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey")))
                 .build();
         accioMDL = AccioMDL.fromManifest(manifest);
     }

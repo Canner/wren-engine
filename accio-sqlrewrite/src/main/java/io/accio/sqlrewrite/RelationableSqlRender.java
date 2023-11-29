@@ -101,26 +101,26 @@ public abstract class RelationableSqlRender
                 baseModel.getName());
         Function<String, String> tableJoinCondition =
                 (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
-        String tableJoinsSql = modelSubQuery;
+        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
         if (!requiredRelationshipInfos.isEmpty()) {
-            tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s",
+            tableJoinsSql.append(format(" LEFT JOIN (%s) AS \"%s\" ON %s",
                     getRelationshipSubQuery(baseModel, requiredRelationshipInfos),
                     getRelationableAlias(baseModel.getName()),
-                    tableJoinCondition.apply(getRelationableAlias(baseModel.getName())));
+                    tableJoinCondition.apply(getRelationableAlias(baseModel.getName()))));
         }
         if (!calculatedRequiredRelationshipInfos.isEmpty()) {
             for (CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo : calculatedRequiredRelationshipInfos) {
-                tableJoinsSql += format(" LEFT JOIN (%s) AS \"%s\" ON %s",
+                tableJoinsSql.append(format(" LEFT JOIN (%s) AS \"%s\" ON %s",
                         getCalculatedSubQuery(baseModel, calculatedFieldRelationshipInfo),
                         calculatedFieldRelationshipInfo.getAlias(),
-                        tableJoinCondition.apply(calculatedFieldRelationshipInfo.getAlias()));
+                        tableJoinCondition.apply(calculatedFieldRelationshipInfo.getAlias())));
             }
         }
 
         return new RelationInfo(
                 relationable,
                 requiredObjects,
-                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql)));
+                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
     }
 
     protected static String getRelationableAlias(String baseModelName)
