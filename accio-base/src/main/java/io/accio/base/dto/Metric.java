@@ -39,6 +39,11 @@ public class Metric
     private final Duration refreshTime;
     private final String description;
 
+    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure)
+    {
+        return metric(name, baseObject, dimension, measure, List.of(), false);
+    }
+
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain)
     {
         return metric(name, baseObject, dimension, measure, timeGrain, false);

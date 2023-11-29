@@ -38,14 +38,30 @@ public class ExpressionRelationshipAnalyzer
 {
     private ExpressionRelationshipAnalyzer() {}
 
-    public static List<ExpressionRelationshipInfo> getRelationships(Expression expression, AccioMDL mdl, Model model)
+    /**
+     * Collect to-1 relationships in model field expression, will throw error if to-N relationship(s) exist in expression.
+     *
+     * @param expression model field expression
+     * @param mdl accio mdl
+     * @param model the model that expression belongs to
+     * @return ExpressionRelationshipInfo
+     */
+    public static List<ExpressionRelationshipInfo> getToOneRelationships(Expression expression, AccioMDL mdl, Model model)
     {
         RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
         collector.process(expression);
         return collector.getExpressionRelationshipInfo();
     }
 
-    public static List<ExpressionRelationshipInfo> getRelationshipsForMetric(Expression expression, AccioMDL mdl, Model model)
+    /**
+     * Collect relationships (to-1 and to-N) in model field expression.
+     *
+     * @param expression model field expression
+     * @param mdl accio mdl
+     * @param model the model that expression belongs to
+     * @return ExpressionRelationshipInfo
+     */
+    public static List<ExpressionRelationshipInfo> getRelationships(Expression expression, AccioMDL mdl, Model model)
     {
         RelationshipCollector collector = new RelationshipCollector(mdl, model, true);
         collector.process(expression);
