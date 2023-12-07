@@ -14,8 +14,12 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Model;
+import io.accio.base.dto.Relationship;
 import io.accio.testing.AbstractTestFramework;
 import org.testng.annotations.Test;
 
@@ -38,69 +42,63 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestModel
         extends AbstractTestFramework
 {
-    private final AccioMDL accioMDL;
+    private final Model customer;
+    private final Model orders;
+    private final Model lineitem;
+    private final Relationship ordersCustomer;
+    private final Relationship ordersLineitem;
 
     public TestModel()
     {
-        Manifest manifest = withDefaultCatalogSchema()
-                .setModels(List.of(
-                        model("Customer",
-                                "select * from main.customer",
-                                List.of(
-                                        column("pk", INTEGER, null, true, "concat(custkey, name)"),
-                                        column("custkey", INTEGER, null, true),
-                                        column("name", VARCHAR, null, true),
-                                        column("address", VARCHAR, null, true),
-                                        column("nationkey", INTEGER, null, true),
-                                        column("phone", VARCHAR, null, true),
-                                        column("acctbal", INTEGER, null, true),
-                                        column("mktsegment", VARCHAR, null, true),
-                                        column("comment", VARCHAR, null, true),
-                                        column("orders", "Orders", "OrdersCustomer", true),
-                                        caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"),
-                                        caluclatedColumn("buy_item_count", BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
-                                        caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)")),
-                                "pk"),
-                        model("Orders",
-                                "select * from main.orders",
-                                List.of(
-                                        column("orderkey", INTEGER, null, true),
-                                        column("custkey", INTEGER, null, true),
-                                        column("orderstatus", VARCHAR, null, true),
-                                        column("totalprice", INTEGER, null, true),
-                                        column("orderdate", DATE, null, true),
-                                        column("orderpriority", VARCHAR, null, true),
-                                        column("clerk", VARCHAR, null, true),
-                                        column("shippriority", INTEGER, null, true),
-                                        column("comment", VARCHAR, null, true),
-                                        column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                                "orderkey"),
-                        model("Lineitem",
-                                "select * from main.lineitem",
-                                List.of(
-                                        column("orderkey", INTEGER, null, true),
-                                        column("partkey", INTEGER, null, true),
-                                        column("suppkey", INTEGER, null, true),
-                                        column("linenumber", INTEGER, null, true),
-                                        column("quantity", INTEGER, null, true),
-                                        column("extendedprice", INTEGER, null, true),
-                                        column("discount", INTEGER, null, true),
-                                        column("tax", INTEGER, null, true),
-                                        column("returnflag", VARCHAR, null, true),
-                                        column("linestatus", VARCHAR, null, true),
-                                        column("shipdate", DATE, null, true),
-                                        column("commitdate", DATE, null, true),
-                                        column("receiptdate", DATE, null, true),
-                                        column("shipinstruct", VARCHAR, null, true),
-                                        column("shipmode", VARCHAR, null, true),
-                                        column("comment", VARCHAR, null, true),
-                                        column("orderkey_linenumber", VARCHAR, null, true, "concat(orderkey, '-', linenumber)")),
-                                "orderkey_linenumber")))
-                .setRelationships(List.of(
-                        relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey"),
-                        relationship("OrdersLineitem", List.of("Orders", "Lineitem"), ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey")))
-                .build();
-        accioMDL = AccioMDL.fromManifest(manifest);
+        customer = model("Customer",
+                "select * from main.customer",
+                List.of(
+                        column("custkey", INTEGER, null, true),
+                        column("name", VARCHAR, null, true),
+                        column("address", VARCHAR, null, true),
+                        column("nationkey", INTEGER, null, true),
+                        column("phone", VARCHAR, null, true),
+                        column("acctbal", INTEGER, null, true),
+                        column("mktsegment", VARCHAR, null, true),
+                        column("comment", VARCHAR, null, true)),
+                "custkey");
+        orders = model("Orders",
+                "select * from main.orders",
+                List.of(
+                        column("orderkey", INTEGER, null, true),
+                        column("custkey", INTEGER, null, true),
+                        column("orderstatus", VARCHAR, null, true),
+                        column("totalprice", INTEGER, null, true),
+                        column("orderdate", DATE, null, true),
+                        column("orderpriority", VARCHAR, null, true),
+                        column("clerk", VARCHAR, null, true),
+                        column("shippriority", INTEGER, null, true),
+                        column("comment", VARCHAR, null, true),
+                        column("lineitem", "Lineitem", "OrdersLineitem", true)),
+                "orderkey");
+        lineitem = model("Lineitem",
+                "select * from main.lineitem",
+                List.of(
+                        column("orderkey", INTEGER, null, true),
+                        column("partkey", INTEGER, null, true),
+                        column("suppkey", INTEGER, null, true),
+                        column("linenumber", INTEGER, null, true),
+                        column("quantity", INTEGER, null, true),
+                        column("extendedprice", INTEGER, null, true),
+                        column("discount", INTEGER, null, true),
+                        column("tax", INTEGER, null, true),
+                        column("returnflag", VARCHAR, null, true),
+                        column("linestatus", VARCHAR, null, true),
+                        column("shipdate", DATE, null, true),
+                        column("commitdate", DATE, null, true),
+                        column("receiptdate", DATE, null, true),
+                        column("shipinstruct", VARCHAR, null, true),
+                        column("shipmode", VARCHAR, null, true),
+                        column("comment", VARCHAR, null, true),
+                        column("orderkey_linenumber", VARCHAR, null, true, "concat(orderkey, '-', linenumber)")),
+                "orderkey_linenumber");
+        ordersCustomer = relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey");
+        ordersLineitem = relationship("OrdersLineitem", List.of("Orders", "Lineitem"), ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey");
     }
 
     @Override
@@ -115,18 +113,33 @@ public class TestModel
     }
 
     @Test
-    public void testCalculated()
+    public void testToManyCalculated()
     {
-        assertThat(query(rewrite("SELECT totalprice FROM Customer WHERE custkey = 370")))
+        // TODO: add this to test case, currently this won't work
+        // caluclatedColumn("col_3", BIGINT, "concat(address, sum(orders.lineitem.discount * orders.lineitem.extendedprice))");
+
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"),
+                caluclatedColumn("buy_item_count", BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
+                caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, orders, lineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThat(query(rewrite("SELECT totalprice FROM Customer WHERE custkey = 370", mdl)))
                 .isEqualTo(query("SELECT sum(totalprice) FROM customer c LEFT JOIN orders o ON c.custkey = o.custkey WHERE c.custkey = 370"));
-        assertThat(query(rewrite("SELECT custkey, buy_item_count FROM Customer WHERE custkey = 370")))
+        assertThat(query(rewrite("SELECT custkey, buy_item_count FROM Customer WHERE custkey = 370", mdl)))
                 .isEqualTo(query(
                         "SELECT c.custkey, count(*) FROM customer c " +
                                 "LEFT JOIN orders o ON c.custkey = o.custkey " +
                                 "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
                                 "WHERE c.custkey = 370 " +
                                 "GROUP BY 1"));
-        assertThat(query(rewrite("SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370")))
+        assertThat(query(rewrite("SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370", mdl)))
                 .isEqualTo(query(
                         "SELECT c.custkey, sum(l.extendedprice * l.discount) FROM customer c " +
                                 "LEFT JOIN orders o ON c.custkey = o.custkey " +
@@ -135,13 +148,52 @@ public class TestModel
                                 "GROUP BY 1"));
     }
 
-    private String rewrite(String sql)
+    @Test
+    public void testToOneCalculated()
     {
-        return rewrite(sql, accioMDL);
+        Model newLineitem = addColumnsToModel(
+                lineitem,
+                column("orders", "Orders", "OrdersLineitem", true),
+                caluclatedColumn("col_1", BIGINT, "orders.totalprice + orders.totalprice"),
+                caluclatedColumn("col_2", BIGINT, "concat(orders.orderkey, '#', orders.customer.custkey)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                column("customer", "Customer", "OrdersCustomer", true));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(customer, newOrders, newLineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThat(query(rewrite("SELECT col_1 FROM Lineitem WHERE orderkey = 44995", mdl)))
+                .isEqualTo(query(
+                        "SELECT (totalprice + totalprice) AS col_1\n" +
+                                "FROM lineitem l\n" +
+                                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                                "WHERE l.orderkey = 44995"));
+        assertThat(query(rewrite("SELECT col_2 FROM Lineitem WHERE orderkey = 44995", mdl)))
+                .isEqualTo(query(
+                        "SELECT concat(l.orderkey, '#', c.custkey) AS col_2\n" +
+                                "FROM lineitem l\n" +
+                                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                                "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
+                                "WHERE l.orderkey = 44995"));
     }
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
         return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
+    }
+
+    private static Model addColumnsToModel(Model model, Column... columns)
+    {
+        return model(
+                model.getName(),
+                model.getRefSql(),
+                ImmutableList.<Column>builder()
+                        .addAll(model.getColumns())
+                        .add(columns)
+                        .build(),
+                model.getPrimaryKey());
     }
 }

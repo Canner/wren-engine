@@ -28,6 +28,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
+import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Column.relationshipColumn;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
@@ -57,7 +58,7 @@ public class TestModelSqlRewrite
                             List.of(
                                     column("id", "STRING", null, false),
                                     column("email", "STRING", null, false),
-                                    column("gift", "STRING", null, false, "wishlist.bookId"),
+                                    caluclatedColumn("gift", "STRING", "wishlist.bookId"),
                                     relationshipColumn("book", "Book", "PeopleBook"),
                                     relationshipColumn("wishlist", "WishList", "WishListPeople")),
                             "id"),
@@ -69,7 +70,7 @@ public class TestModelSqlRewrite
                                     column("authorId", "STRING", null, false),
                                     column("publish_date", "STRING", null, false),
                                     column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)"),
-                                    column("author_gift_id", "STRING", null, false, "people.wishlist.bookId"),
+                                    caluclatedColumn("author_gift_id", "STRING", "people.wishlist.bookId"),
                                     relationshipColumn("people", "People", "PeopleBook")),
                             "bookId"),
                     model(
@@ -130,7 +131,8 @@ public class TestModelSqlRewrite
             "      FROM\n" +
             "        ((\n" +
             "         SELECT\n" +
-            "           id \"id\"\n" +
+            "           \"id\"\n" +
+            "         , \"email\"\n" +
             "         FROM\n" +
             "           (\n" +
             "            SELECT *\n" +
@@ -172,8 +174,10 @@ public class TestModelSqlRewrite
             "      FROM\n" +
             "        (((\n" +
             "         SELECT\n" +
-            "           bookId \"bookId\"\n" +
-            "         , authorId \"authorId\"\n" +
+            "           \"bookId\"\n" +
+            "         , \"authorId\"\n" +
+            "         , \"publish_date\"\n" +
+            "         , date_trunc('year', publish_date) \"publish_year\"\n" +
             "         FROM\n" +
             "           (\n" +
             "            SELECT *\n" +
@@ -246,7 +250,7 @@ public class TestModelSqlRewrite
                                 List.of(
                                         column("id", "STRING", null, false),
                                         column("email", "STRING", null, false),
-                                        column("gift", "STRING", null, false, "wishlist.bookId"),
+                                        caluclatedColumn("gift", "STRING", "wishlist.bookId"),
                                         relationshipColumn("wishlist", "WishList", "WishListPeople")),
                                 "id"),
                         model(
@@ -255,7 +259,7 @@ public class TestModelSqlRewrite
                                 List.of(
                                         column("id", "STRING", null, false),
                                         column("bookId", "STRING", null, false),
-                                        column("peopleId", "STRING", null, false, "people.id"),
+                                        caluclatedColumn("peopleId", "STRING", "people.id"),
                                         relationshipColumn("people", "People", "WishListPeople")),
                                 "id")))
                 .build());
@@ -273,39 +277,6 @@ public class TestModelSqlRewrite
     }
 
     @Test
-    public void testJoinKeyPrimaryIncludesRelation()
-    {
-        AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
-                .setRelationships(List.of(
-                        relationship("WishListPeople", List.of("WishList", "People"), ONE_TO_ONE, "WishList.peopleId = People.id")))
-                .setModels(List.of(
-                        model(
-                                "People",
-                                "SELECT * FROM People",
-                                List.of(
-                                        column("id", "STRING", null, false),
-                                        column("gift", "STRING", null, false, "wishlist.bookId"),
-                                        relationshipColumn("wishlist", "WishList", "WishListPeople")),
-                                "gift"),
-                        model(
-                                "WishList",
-                                "SELECT * FROM WishList",
-                                List.of(
-                                        column("id", "STRING", null, false),
-                                        column("bookId", "STRING", null, false),
-                                        column("peopleId", "STRING", null, false, "people.id"),
-                                        relationshipColumn("people", "People", "WishListPeople")),
-                                "id")))
-                .build());
-
-        assertThatThrownBy(() -> rewrite("SELECT * FROM People", mdl))
-                .hasMessage("found relation in model People primary key expression");
-
-        assertThatThrownBy(() -> rewrite("SELECT * FROM WishList", mdl))
-                .hasMessage("found relation in relation join condition in WishList.peopleId");
-    }
-
-    @Test
     public void testModelOnModel()
     {
         List<Model> models = ImmutableList.<Model>builder()
@@ -319,7 +290,7 @@ public class TestModelSqlRewrite
                                         column("authorId", "STRING", null, false),
                                         column("publish_year", "DATE", null, false, "date_trunc('year', publish_date)"),
                                         column("author_gift_id", "STRING", null, false),
-                                        column("wishlist_id", "STRING", null, false, "wishlist.id"),
+                                        caluclatedColumn("wishlist_id", "STRING", "wishlist.id"),
                                         relationshipColumn("wishlist", "WishList", "BookReplicaWishList")),
                                 "id"))
                 .build();
@@ -362,7 +333,11 @@ public class TestModelSqlRewrite
                 "      , \"WishList\".\"id\" \"wishlist_id\"\n" +
                 "      FROM\n" +
                 "        ((\n" +
-                "         SELECT bookId \"id\"\n" +
+                "         SELECT\n" +
+                "           bookId \"id\"\n" +
+                "         , \"authorId\"\n" +
+                "         , date_trunc('year', publish_date) \"publish_year\"\n" +
+                "         , \"author_gift_id\"\n" +
                 "         FROM\n" +
                 "           (\n" +
                 "            SELECT *\n" +

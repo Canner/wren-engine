@@ -28,6 +28,7 @@
         },
         {
           "name": "nation_name",
+          "isCalculated": true,
           "expression": "customer.nation.name",
           "type": "varchar"
         },
