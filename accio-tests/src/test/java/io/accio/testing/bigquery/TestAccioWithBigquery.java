@@ -252,4 +252,22 @@ public class TestAccioWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @Test
+    public void testQueryMacro()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select custkey_name, custkey_call_concat from Customer limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
 }

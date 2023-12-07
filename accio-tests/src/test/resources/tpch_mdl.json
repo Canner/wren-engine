@@ -77,6 +77,16 @@
           "name": "nation",
           "type": "Nation",
           "relationship": "CustomerNation"
+        },
+        {
+          "name": "custkey_name",
+          "type": "varchar",
+          "expression": "{{ concat('c_custkey', 'c_name') }} "
+        },
+        {
+          "name": "custkey_call_concat",
+          "type": "varchar",
+          "expression": "{{ callConcat('c_custkey', concat) }} "
         }
       ],
       "primaryKey": "custkey"
@@ -343,6 +353,16 @@
     {
       "name": "useUseMetric",
       "statement": "select * from useMetric"
+    }
+  ],
+  "macros": [
+    {
+      "name": "concat",
+      "definition": "(arg1: Expression, arg2: Expression) => concat({{ arg1 }}, {{ arg2 }})"
+    },
+    {
+      "name": "callConcat",
+      "definition": "(arg1: Expression, func: Macro) => {{ func(arg1, arg1) }}"
     }
   ]
 }
