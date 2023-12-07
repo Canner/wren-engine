@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.accio.base.jinjava;
 
 import io.accio.base.dto.Macro;
@@ -32,13 +46,10 @@ public class TestJinjavaExpressionProcessor
                 {"{{ pass4Macro(1, 2, addOne, addTwo) }}", "{{addOne(1)}} + {{addTwo(2)}}"},
                 // TODO: trim the redundant space character
                 {"{{ passMacro(1, addOne) }} + {{ passMacro(2, addTwo) }}", "{{addOne(1)}} + 4  +  {{addTwo(2)}} + 4"},
-                {"{{ passMacro(1, addOne) }} + {{ addOne(1) }}", "{{addOne(1)}} + 4  + {{ addOne(1) }}"},
-        };
-
+                {"{{ passMacro(1, addOne) }} + {{ addOne(1) }}", "{{addOne(1)}} + 4  + {{ addOne(1) }}"}};
         // TODO: unsupported cases: A jinjava expression includes multiple macro calls
         // {"{{ passMacro(1, addOne) + addOne(1) }}", "{{addOne(1)}} + 4 + {{addOne(1)}}"}
         // {"{{ passMacro(1, addOne) + passMacro(2, addTwo) }}", "{{addOne(1)}} + 4 + {{addTwo(2)}} + 4"}
-
     }
 
     @Test(dataProvider = "macroCall")

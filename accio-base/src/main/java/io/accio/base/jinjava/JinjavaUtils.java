@@ -22,6 +22,8 @@ import static java.util.stream.Collectors.joining;
 
 public class JinjavaUtils
 {
+    private JinjavaUtils() {}
+
     public static String getMacroTag(Macro macro)
     {
         StringBuilder builder = new StringBuilder();

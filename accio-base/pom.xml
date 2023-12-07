@@ -31,11 +31,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.accio</groupId>
-            <artifactId>trino-parser</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>log</artifactId>
         </dependency>
@@ -79,6 +74,11 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.accio</groupId>
+            <artifactId>trino-parser</artifactId>
         </dependency>
 
         <dependency>

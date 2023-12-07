@@ -50,9 +50,9 @@ public class JinjavaExpressionProcessor
         return new JinjavaExpressionProcessor(source, caller, macros).processInternal();
     }
 
-    private final Pattern FUNCTION_CALL_PATTERN = Pattern.compile("([a-zA-Z_][a-zA-Z0-9_]*)\\(([^)]*)\\)(\\.[^)]*\\))?");
+    private static final Pattern FUNCTION_CALL_PATTERN = Pattern.compile("([a-zA-Z_][a-zA-Z0-9_]*)\\(([^)]*)\\)(\\.[^)]*\\))?");
 
-    private final SqlParser SQL_PARSER = new SqlParser();
+    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private final String source;
     private final StringBuilder resultBuffer;
