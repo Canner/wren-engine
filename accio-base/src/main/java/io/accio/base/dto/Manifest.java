@@ -35,10 +35,16 @@ public class Manifest
     private final List<CumulativeMetric> cumulativeMetrics;
 
     private final List<View> views;
+    private final List<Macro> macros;
 
     public static Builder builder()
     {
         return new Builder();
+    }
+
+    public static Builder builder(Manifest manifest)
+    {
+        return new Builder(manifest);
     }
 
     @JsonCreator
@@ -51,6 +57,7 @@ public class Manifest
             @JsonProperty("metrics") List<Metric> metrics,
             @JsonProperty("cumulativeMetrics") List<CumulativeMetric> cumulativeMetrics,
             @JsonProperty("views") List<View> views,
+            @JsonProperty("macros") List<Macro> macros,
             @JsonProperty("dateSpine") DateSpine dateSpine)
     {
         this.catalog = requireNonNull(catalog, "catalog is null");
@@ -61,6 +68,7 @@ public class Manifest
         this.metrics = metrics == null ? List.of() : metrics;
         this.cumulativeMetrics = cumulativeMetrics == null ? List.of() : cumulativeMetrics;
         this.views = views == null ? List.of() : views;
+        this.macros = macros == null ? List.of() : macros;
         this.dateSpine = dateSpine == null ? DEFAULT : dateSpine;
     }
 
@@ -118,6 +126,12 @@ public class Manifest
         return views;
     }
 
+    @JsonProperty
+    public List<Macro> getMacros()
+    {
+        return macros;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -138,6 +152,7 @@ public class Manifest
                 Objects.equals(metrics, manifest.metrics) &&
                 Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics) &&
                 Objects.equals(views, manifest.views) &&
+                Objects.equals(macros, manifest.macros) &&
                 Objects.equals(dateSpine, manifest.dateSpine);
     }
 
@@ -153,6 +168,7 @@ public class Manifest
                 metrics,
                 cumulativeMetrics,
                 views,
+                macros,
                 dateSpine);
     }
 
@@ -168,6 +184,7 @@ public class Manifest
                 ", metrics=" + metrics +
                 ", cumulativeMetrics=" + cumulativeMetrics +
                 ", views=" + views +
+                ", macros=" + macros +
                 ", dateSpine=" + dateSpine +
                 '}';
     }
@@ -183,10 +200,24 @@ public class Manifest
         private List<CumulativeMetric> cumulativeMetrics;
 
         private List<View> views;
-
+        private List<Macro> macros;
         private DateSpine dateSpine;
 
         private Builder() {}
+
+        private Builder(Manifest manifest)
+        {
+            this.catalog = manifest.catalog;
+            this.schema = manifest.schema;
+            this.models = manifest.models;
+            this.relationships = manifest.relationships;
+            this.enumDefinitions = manifest.enumDefinitions;
+            this.metrics = manifest.metrics;
+            this.cumulativeMetrics = manifest.cumulativeMetrics;
+            this.views = manifest.views;
+            this.macros = manifest.macros;
+            this.dateSpine = manifest.dateSpine;
+        }
 
         public Builder setCatalog(String catalog)
         {
@@ -236,6 +267,12 @@ public class Manifest
             return this;
         }
 
+        public Builder setMacros(List<Macro> macros)
+        {
+            this.macros = macros;
+            return this;
+        }
+
         public Builder setDateSpine(DateSpine dateSpine)
         {
             this.dateSpine = dateSpine;
@@ -244,7 +281,17 @@ public class Manifest
 
         public Manifest build()
         {
-            return new Manifest(catalog, schema, models, relationships, enumDefinitions, metrics, cumulativeMetrics, views, dateSpine);
+            return new Manifest(
+                    catalog,
+                    schema,
+                    models,
+                    relationships,
+                    enumDefinitions,
+                    metrics,
+                    cumulativeMetrics,
+                    views,
+                    macros,
+                    dateSpine);
         }
     }
 }
