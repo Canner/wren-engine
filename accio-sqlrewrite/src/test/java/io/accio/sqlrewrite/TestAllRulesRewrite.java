@@ -26,6 +26,7 @@ import java.util.List;
 
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
+import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Column.relationshipColumn;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
@@ -59,7 +60,7 @@ public class TestAllRulesRewrite
                                         relationshipColumn("band", "Band", "AlbumBand"),
                                         column("price", INTEGER, null, true),
                                         column("bandId", INTEGER, null, true),
-                                        column("bandName", VARCHAR, null, true, "band.name"),
+                                        caluclatedColumn("bandName", VARCHAR, "band.name"),
                                         column("status", "Inventory", null, true),
                                         column("statusA", "InventoryA", null, true),
                                         relationshipColumn("orders", "Order", "AlbumOrder")),

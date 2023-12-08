@@ -102,20 +102,19 @@ public class TestAccioWithBigquery
         }
 
         // test the TO_MANY relationship
-        // TODO: support TO_MANY relationship in metric
-        // try (Connection connection = createConnection()) {
-        //     PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from CustomerRevenue limit 100");
-        //     ResultSet resultSet = stmt.executeQuery();
-        //     resultSet.next();
-        //     assertThatNoException().isThrownBy(() -> resultSet.getString("custkey"));
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-        //     int count = 1;
-        //
-        //     while (resultSet.next()) {
-        //         count++;
-        //     }
-        //     assertThat(count).isEqualTo(100);
-        // }
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from CustomerRevenue limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("custkey"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     // TODO: support metric roll up relationship

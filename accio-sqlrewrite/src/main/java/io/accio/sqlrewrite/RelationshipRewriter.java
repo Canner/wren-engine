@@ -22,6 +22,7 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,9 +38,9 @@ public class RelationshipRewriter
     public static Node rewrite(List<ExpressionRelationshipInfo> relationshipInfos, Expression expression)
     {
         requireNonNull(relationshipInfos);
-        return new RelationshipRewriter(
-                relationshipInfos.stream()
-                        .collect(toUnmodifiableMap(ExpressionRelationshipInfo::getQualifiedName, RelationshipRewriter::toDereferenceExpression)))
+        HashMap<QualifiedName, DereferenceExpression> replacements = new HashMap<>();
+        relationshipInfos.forEach(info -> replacements.put(info.getQualifiedName(), toDereferenceExpression(info)));
+        return new RelationshipRewriter(replacements)
                 .process(expression);
     }
 

@@ -27,6 +27,7 @@ import java.util.List;
 import static io.accio.base.AccioTypes.DATE;
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
+import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
@@ -64,8 +65,8 @@ public class TestMetric
                                         column("clerk", VARCHAR, null, true),
                                         column("shippriority", INTEGER, null, true),
                                         column("comment", VARCHAR, null, true),
-                                        column("customer_name", VARCHAR, null, true, "customer.name"),
-                                        column("cumstomer_address", VARCHAR, null, true, "customer.address"),
+                                        caluclatedColumn("customer_name", VARCHAR, "customer.name"),
+                                        caluclatedColumn("cumstomer_address", VARCHAR, "customer.address"),
                                         column("customer", "Customer", "OrdersCustomer", true),
                                         column("lineitem", "Lineitem", "OrdersLineitem", true)),
                                 "orderkey"),

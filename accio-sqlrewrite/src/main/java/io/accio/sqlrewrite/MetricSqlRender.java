@@ -15,6 +15,7 @@
 package io.accio.sqlrewrite;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
@@ -30,8 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
@@ -99,12 +102,6 @@ public class MetricSqlRender
     }
 
     @Override
-    protected String getModelExpression(Column column)
-    {
-        return column.getName();
-    }
-
-    @Override
     protected String getModelSubQuerySelectItemsExpression(Map<String, String> columnWithoutRelationships)
     {
         // TODO: consider column projection
@@ -139,9 +136,7 @@ public class MetricSqlRender
         Expression expression = parseExpression(column.getExpression().get());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
-            for (ExpressionRelationshipInfo relationshipInfo : relationshipInfos) {
-                requiredRelationshipInfos.add(new ColumnAliasExpressionRelationshipInfo(relationshipInfo.getRemainingParts().get(0), relationshipInfo));
-            }
+            calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
             // collect all required models in relationships
             requiredObjects.addAll(
                     relationshipInfos.stream()
@@ -159,5 +154,46 @@ public class MetricSqlRender
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
             columnWithoutRelationships.put(column.getName(), column.getExpression().get());
         }
+    }
+
+    @Override
+    protected List<SubQueryJoinInfo> getCalculatedSubQuery(Model baseModel, List<CalculatedFieldRelationshipInfo> relationshipInfos)
+    {
+        if (relationshipInfos.isEmpty()) {
+            return ImmutableList.of();
+        }
+
+        String requiredExpressions = relationshipInfos.stream()
+                .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
+                .flatMap(List::stream)
+                .map(RelationshipRewriter::toDereferenceExpression)
+                .map(Expression::toString)
+                .distinct()
+                .collect(joining(", "));
+
+        List<Relationship> requiredRelationships = relationshipInfos.stream()
+                .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
+                .flatMap(List::stream)
+                .map(ExpressionRelationshipInfo::getRelationships)
+                .flatMap(List::stream)
+                .distinct()
+                .collect(toImmutableList());
+        String tableJoins = format("%s\n%s",
+                baseModel.getName(),
+                requiredRelationships.stream()
+                        .map(relationship -> format("LEFT JOIN \"%s\" ON %s\n", relationship.getModels().get(1), relationship.getCondition()))
+                        .collect(joining()));
+
+        Function<String, String> tableJoinCondition =
+                (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
+        return ImmutableList.of(
+                new SubQueryJoinInfo(
+                        format("SELECT \"%s\".\"%s\", %s FROM (%s)",
+                                baseModel.getName(),
+                                baseModel.getPrimaryKey(),
+                                requiredExpressions,
+                                tableJoins),
+                        getRelationableAlias(baseModel.getName()),
+                        tableJoinCondition.apply(getRelationableAlias(baseModel.getName()))));
     }
 }
