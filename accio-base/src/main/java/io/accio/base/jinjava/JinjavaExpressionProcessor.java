@@ -166,6 +166,8 @@ public class JinjavaExpressionProcessor
         if (matcher.find()) {
             String functionName = matcher.group(1);
             List<Expression> arguments = Arrays.stream(matcher.group(2).split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
                     .map(this::createExpression)
                     .collect(toList());
             Optional<Macro> callee = macros.stream()
