@@ -27,6 +27,8 @@ public interface Metadata
 
     boolean isSchemaExist(String name);
 
+    void dropSchemaIfExists(String name);
+
     List<String> listSchemas();
 
     List<TableMetadata> listTables(String schemaName);

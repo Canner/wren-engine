@@ -54,6 +54,12 @@ public class PostgresMetadata
     }
 
     @Override
+    public void dropSchemaIfExists(String name)
+    {
+        postgresClient.executeDDL("DROP SCHEMA IF NOT EXISTS " + name);
+    }
+
+    @Override
     public boolean isSchemaExist(String name)
     {
         try (PostgresRecordIterator iterator = PostgresRecordIterator.of(postgresClient, format("select count(*) = 1 from pg_catalog.pg_namespace where nspname = '%s'", name))) {

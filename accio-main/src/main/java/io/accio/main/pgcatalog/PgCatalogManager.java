@@ -16,7 +16,6 @@ package io.accio.main.pgcatalog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.accio.base.metadata.TableMetadata;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.PgCatalogTableBuilder;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
@@ -108,12 +107,10 @@ public class PgCatalogManager
             return;
         }
 
-        createCatalogIfNotExist(metadataSchemaName);
-        createCatalogIfNotExist(pgCatalogName);
-        if (!isPgCatalogValid()) {
-            initPgTables();
-            initPgFunctions();
-        }
+        createOrReplaceSchema(metadataSchemaName);
+        createOrReplaceSchema(pgCatalogName);
+        initPgTables();
+        initPgFunctions();
     }
 
     public void initPgTables()
@@ -140,22 +137,10 @@ public class PgCatalogManager
         }
     }
 
-    private void createCatalogIfNotExist(String name)
+    private void createOrReplaceSchema(String name)
     {
-        if (!connector.isSchemaExist(name)) {
-            connector.createSchema(name);
-        }
-    }
-
-    private boolean isPgCatalogValid()
-    {
-        List<TableMetadata> remoteTables = connector.listTables(pgCatalogName);
-        if (remoteTables.size() != tables.values().size()) {
-            return false;
-        }
-
-        List<String> remoteFunctions = connector.listFunctionNames(pgCatalogName);
-        return pgFunctionRegistry.getPgFunctions().size() == remoteFunctions.size();
+        connector.dropSchemaIfExists(name);
+        connector.createSchema(name);
     }
 
     private void createPgCatalogTable(PgCatalogTable pgCatalogTable)

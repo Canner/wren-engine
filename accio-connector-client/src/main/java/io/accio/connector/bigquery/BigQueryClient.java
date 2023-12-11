@@ -94,6 +94,11 @@ public class BigQueryClient
         bigQuery.create(datasetInfo);
     }
 
+    public void deleteSchema(DatasetId datasetId)
+    {
+        bigQuery.delete(datasetId, deleteContents());
+    }
+
     public Table getTable(CatalogSchemaTableName catalogSchemaTableName)
     {
         return getTable(TableId.of(

@@ -16,6 +16,7 @@ package io.accio.main.connector.bigquery;
 
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
+import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
@@ -96,6 +97,12 @@ public class BigQueryMetadata
     public void createSchema(String name)
     {
         bigQueryClient.createSchema(DatasetInfo.newBuilder(name).setLocation(location).build());
+    }
+
+    @Override
+    public void dropSchemaIfExists(String name)
+    {
+        bigQueryClient.deleteSchema(DatasetId.of(name));
     }
 
     @Override
