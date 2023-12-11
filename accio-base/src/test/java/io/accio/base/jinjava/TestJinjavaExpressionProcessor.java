@@ -26,6 +26,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 public class TestJinjavaExpressionProcessor
 {
     List<Macro> macros = List.of(
+            macro("standardTime", "() => standardTime"),
+            macro("callStandardTime", "() => {{ standardTime() }}"),
+            macro("passMacroWithoutParam", "(rule: Macro) => {{ rule() }}"),
             macro("addOne", "(a: Expression) => {{ a }} + 1"),
             macro("addTwo", "(a: Expression) => {{ a }} + 2"),
             macro("callAddOne", "(a: Expression) => {{ addOne(a) }} + 3"),
@@ -46,7 +49,10 @@ public class TestJinjavaExpressionProcessor
                 {"{{ pass4Macro(1, 2, addOne, addTwo) }}", "{{addOne(1)}} + {{addTwo(2)}}"},
                 // TODO: trim the redundant space character
                 {"{{ passMacro(1, addOne) }} + {{ passMacro(2, addTwo) }}", "{{addOne(1)}} + 4  +  {{addTwo(2)}} + 4"},
-                {"{{ passMacro(1, addOne) }} + {{ addOne(1) }}", "{{addOne(1)}} + 4  + {{ addOne(1) }}"}};
+                {"{{ passMacro(1, addOne) }} + {{ addOne(1) }}", "{{addOne(1)}} + 4  + {{ addOne(1) }}"},
+                {"{{ standardTime() }}", "{{ standardTime() }}"},
+                {"{{ callStandardTime() }}", "{{ callStandardTime() }}"},
+                {"{{ passMacroWithoutParam(standardTime) }}", "{{standardTime()}}"}};
         // TODO: unsupported cases: A jinjava expression includes multiple macro calls
         // {"{{ passMacro(1, addOne) + addOne(1) }}", "{{addOne(1)}} + 4 + {{addOne(1)}}"}
         // {"{{ passMacro(1, addOne) + passMacro(2, addTwo) }}", "{{addOne(1)}} + 4 + {{addTwo(2)}} + 4"}

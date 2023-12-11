@@ -134,4 +134,34 @@ public class TestMacro
         assertThat(modelOptional.get().getColumns().get(3).getExpression().get()).isEqualTo("'1' || custkey");
         assertThat(modelOptional.get().getColumns().get(4).getExpression().get()).isEqualTo("custkey || name");
     }
+
+    @Test
+    public void testZeroPArameterCall()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(List.of(
+                        model("Customer",
+                                "select * from main.customer",
+                                List.of(
+                                        column("custkey", INTEGER, null, true),
+                                        column("name", VARCHAR, null, true),
+                                        column("standardTime", INTEGER, null, true, "{{standardTime()}}"),
+                                        column("callStandardTime", INTEGER, null, true, "{{callStandardTime()}}"),
+                                        column("passStandardTime", INTEGER, null, true, "{{passStandardTime(standardTime)}}")),
+                                "pk")))
+                .setMacros(List.of(
+                        macro("standardTime", "() => standardTime"),
+                        macro("callStandardTime", "() => {{callStandardTime()}}"),
+                        macro("passStandardTime", "(cf: Macro) => {{cf()}}")))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        Optional<Model> modelOptional = mdl.getModel("Customer");
+        assertThat(modelOptional).isPresent();
+        assertThat(modelOptional.get().getColumns().get(2).getExpression().get()).isEqualTo("standardTime");
+        assertThat(modelOptional.get().getColumns().get(2).getExpression().get()).isEqualTo("standardTime");
+        assertThat(modelOptional.get().getColumns().get(2).getExpression().get()).isEqualTo("standardTime");
+    }
 }
