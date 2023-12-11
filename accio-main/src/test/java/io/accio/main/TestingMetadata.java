@@ -36,6 +36,12 @@ public class TestingMetadata
     }
 
     @Override
+    public void dropSchemaIfExists(String name)
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
+    }
+
+    @Override
     public boolean isSchemaExist(String name)
     {
         throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
