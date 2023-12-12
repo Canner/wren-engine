@@ -25,7 +25,13 @@ import io.accio.base.dto.Relationable;
 import io.accio.base.dto.Relationship;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipInfo;
+import io.trino.sql.SqlFormatter;
+import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.ExpressionRewriter;
+import io.trino.sql.tree.ExpressionTreeRewriter;
+import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
 import java.util.Map;
@@ -123,7 +129,18 @@ public class MetricSqlRender
         }
 
         if (isMeasure) {
-            return column.getSqlExpression();
+            return SqlFormatter.formatSql(ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
+            {
+                @Override
+                public Expression rewriteIdentifier(Identifier node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
+                {
+                    if (baseModel.getColumns().stream().anyMatch(c -> c.getName().equalsIgnoreCase(node.getValue()))) {
+                        return DereferenceExpression.from(QualifiedName.of(baseModel.getName(), node.getValue()));
+                    }
+                    return node;
+                }
+            }, Utils.parseExpression(column.getExpression()
+                    .orElseThrow(() -> new IllegalArgumentException("measure column must have expression")))));
         }
 
         return format("\"%s\".\"%s\" AS \"%s\"", relationable.getBaseObject(), column.getExpression().orElse(column.getName()), column.getName());
