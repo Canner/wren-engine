@@ -974,6 +974,34 @@ public class TestWireProtocolWithBigquery
         }
     }
 
+    @Test
+    public void testCountif()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT count_if(orderkey > 100) FROM Lineitem");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(60065L);
+        }
+    }
+
+    @Test
+    public void testArrayAgg()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT array_agg(distinct if(orderkey < 2, orderkey, null)) FROM Lineitem");
+            result.next();
+            assertThat(result.getArray(1).getArray()).isEqualTo(new Long[] {1L});
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT array_agg(if(orderkey < 3, orderkey, null) order by orderkey asc) FROM Lineitem");
+            result.next();
+            assertThat(result.getArray(1).getArray()).isEqualTo(new Long[] {1L, 1L, 1L, 1L, 1L, 1L, 2L});
+        }
+    }
+
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)
             throws IOException
     {
