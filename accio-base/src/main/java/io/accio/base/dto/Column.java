@@ -16,6 +16,7 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -32,6 +33,12 @@ public class Column
     private final String expression;
     private final String description;
     private final boolean isCalculated;
+
+    @VisibleForTesting
+    public static Column column(String name)
+    {
+        return column(name, "VARCHAR", null, false, null, null);
+    }
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {

@@ -14,13 +14,13 @@
 
 package io.accio.sqlrewrite;
 
-import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
-import io.accio.base.dto.Column;
+import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.testing.AbstractTestFramework;
+import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -38,6 +38,7 @@ import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestModel
         extends AbstractTestFramework
@@ -130,22 +131,23 @@ public class TestModel
                 .build();
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
 
-        assertThat(query(rewrite("SELECT totalprice FROM Customer WHERE custkey = 370", mdl)))
-                .isEqualTo(query("SELECT sum(totalprice) FROM customer c LEFT JOIN orders o ON c.custkey = o.custkey WHERE c.custkey = 370"));
-        assertThat(query(rewrite("SELECT custkey, buy_item_count FROM Customer WHERE custkey = 370", mdl)))
-                .isEqualTo(query(
-                        "SELECT c.custkey, count(*) FROM customer c " +
-                                "LEFT JOIN orders o ON c.custkey = o.custkey " +
-                                "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
-                                "WHERE c.custkey = 370 " +
-                                "GROUP BY 1"));
-        assertThat(query(rewrite("SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370", mdl)))
-                .isEqualTo(query(
-                        "SELECT c.custkey, sum(l.extendedprice * l.discount) FROM customer c " +
-                                "LEFT JOIN orders o ON c.custkey = o.custkey " +
-                                "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
-                                "WHERE c.custkey = 370 " +
-                                "GROUP BY 1"));
+        assertQuery(mdl,
+                "SELECT totalprice FROM Customer WHERE custkey = 370",
+                "SELECT sum(totalprice) FROM customer c LEFT JOIN orders o ON c.custkey = o.custkey WHERE c.custkey = 370");
+        assertQuery(mdl,
+                "SELECT custkey, buy_item_count FROM Customer WHERE custkey = 370",
+                "SELECT c.custkey, count(*) FROM customer c " +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey " +
+                        "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
+                        "WHERE c.custkey = 370 " +
+                        "GROUP BY 1");
+        assertQuery(mdl,
+                "SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370",
+                "SELECT c.custkey, sum(l.extendedprice * l.discount) FROM customer c " +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey " +
+                        "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
+                        "WHERE c.custkey = 370 " +
+                        "GROUP BY 1");
     }
 
     @Test
@@ -165,35 +167,71 @@ public class TestModel
                 .build();
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
 
-        assertThat(query(rewrite("SELECT col_1 FROM Lineitem WHERE orderkey = 44995", mdl)))
-                .isEqualTo(query(
-                        "SELECT (totalprice + totalprice) AS col_1\n" +
-                                "FROM lineitem l\n" +
-                                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
-                                "WHERE l.orderkey = 44995"));
-        assertThat(query(rewrite("SELECT col_2 FROM Lineitem WHERE orderkey = 44995", mdl)))
-                .isEqualTo(query(
-                        "SELECT concat(l.orderkey, '#', c.custkey) AS col_2\n" +
-                                "FROM lineitem l\n" +
-                                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
-                                "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
-                                "WHERE l.orderkey = 44995"));
+        assertQuery(mdl,
+                "SELECT col_1 FROM Lineitem WHERE orderkey = 44995",
+                "SELECT (totalprice + totalprice) AS col_1\n" +
+                        "FROM lineitem l\n" +
+                        "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                        "WHERE l.orderkey = 44995");
+        assertQuery(mdl,
+                "SELECT col_1 FROM Lineitem WHERE orderkey = 44995",
+                "SELECT (totalprice + totalprice) AS col_1\n" +
+                        "FROM lineitem l\n" +
+                        "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                        "WHERE l.orderkey = 44995");
+        assertQuery(mdl,
+                "SELECT col_2 FROM Lineitem WHERE orderkey = 44995",
+                "SELECT concat(l.orderkey, '#', c.custkey) AS col_2\n" +
+                        "FROM lineitem l\n" +
+                        "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                        "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
+                        "WHERE l.orderkey = 44995");
     }
 
-    private String rewrite(String sql, AccioMDL accioMDL)
+    @Test
+    public void testModelWithCycle()
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("total_price", BIGINT, "sum(orders.totalprice)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                column("customer", "Customer", "OrdersCustomer", true),
+                caluclatedColumn("customer_name", BIGINT, "customer.name"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, newOrders))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThatCode(() -> query(rewrite("SELECT * FROM Orders", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("SELECT customer_name FROM Orders WHERE orderkey = 44995", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("SELECT total_price FROM Customer", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("SELECT total_price FROM Customer c LEFT JOIN Orders o ON c.custkey = o.custkey", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("SELECT o.custkey, total_price FROM Customer c LEFT JOIN Orders o ON c.custkey = o.custkey", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("SELECT customer_name, total_price FROM Customer c LEFT JOIN Orders o ON c.custkey = o.custkey", mdl, true)))
+                .hasMessageMatching("found cycle in .*");
     }
 
-    private static Model addColumnsToModel(Model model, Column... columns)
+    private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)
     {
-        return model(
-                model.getName(),
-                model.getRefSql(),
-                ImmutableList.<Column>builder()
-                        .addAll(model.getColumns())
-                        .add(columns)
-                        .build(),
-                model.getPrimaryKey());
+        assertThat(query(rewrite(accioSql, mdl, true))).isEqualTo(query(duckDBSql));
+        assertThat(query(rewrite(accioSql, mdl, false))).isEqualTo(query(duckDBSql));
+    }
+
+    private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicCalculatedField)
+    {
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog("accio")
+                .setSchema("test")
+                .setEnableDynamicCalculated(enableDynamicCalculatedField)
+                .build();
+        return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
     }
 }

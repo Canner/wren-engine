@@ -26,6 +26,11 @@ public class RelationType
 {
     private final List<Field> fields;
 
+    public RelationType()
+    {
+        this.fields = ImmutableList.of();
+    }
+
     public RelationType(List<Field> fields)
     {
         this.fields = ImmutableList.copyOf(fields);
@@ -51,5 +56,19 @@ public class RelationType
         return fields.stream()
                 .filter(input -> input.canResolve(name))
                 .findAny();
+    }
+
+    /**
+     * Creates a new tuple descriptor containing all fields from this tuple descriptor
+     * and all fields from the specified tuple descriptor.
+     */
+    public RelationType joinWith(RelationType other)
+    {
+        List<Field> fields = ImmutableList.<Field>builder()
+                .addAll(this.fields)
+                .addAll(other.fields)
+                .build();
+
+        return new RelationType(fields);
     }
 }

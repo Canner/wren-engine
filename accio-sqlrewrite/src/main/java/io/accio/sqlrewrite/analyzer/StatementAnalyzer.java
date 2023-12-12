@@ -14,6 +14,7 @@
 
 package io.accio.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
@@ -22,16 +23,21 @@ import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.View;
 import io.trino.sql.tree.AliasedRelation;
+import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
+import io.trino.sql.tree.JoinCriteria;
+import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.SelectItem;
+import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
@@ -121,6 +127,11 @@ public final class StatementAnalyzer
             this.accioMDL = requireNonNull(accioMDL, "accioMDL is null");
         }
 
+        public Scope process(Node node)
+        {
+            return process(node, Optional.empty());
+        }
+
         @Override
         protected Scope visitNode(Node node, Optional<Scope> context)
         {
@@ -139,35 +150,34 @@ public final class StatementAnalyzer
                     return Scope.builder()
                             .parent(scope)
                             .relationType(new RelationType(List.of()))
-                            .isTableScope(true)
                             .build();
                 }
             }
 
             CatalogSchemaTableName tableName = toCatalogSchemaTableName(sessionContext, node.getName());
             analysis.addTable(tableName);
-            // only record model fields here, others are ignored
-            List<Field> modelFields = List.of();
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
-                modelFields = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
+                // only record model fields here, others are ignored
+                List<Field> modelFields = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
                         .map(Model::getColumns)
-                        .orElseGet(List::of)
+                        .orElseGet(ImmutableList::of)
                         .stream()
                         .map(column ->
                                 Field.builder()
                                         .modelName(tableName)
                                         .columnName(column.getName())
                                         .name(column.getName())
-                                        .relationship(column.getRelationship().flatMap(accioMDL::getRelationship))
-                                        .type(column.getType())
                                         .build())
                         .collect(toImmutableList());
+                return Scope.builder()
+                        .parent(scope)
+                        .relationType(new RelationType(modelFields))
+                        .build();
             }
             return Scope.builder()
                     .parent(scope)
-                    .relationType(new RelationType(modelFields))
-                    .isTableScope(true)
+                    .relationType(new RelationType())
                     .build();
         }
 
@@ -176,22 +186,57 @@ public final class StatementAnalyzer
         {
             Optional<Scope> withScope = analyzeWith(node, scope);
             Scope queryBodyScope = process(node.getQueryBody(), withScope);
-
-            Scope queryScope = Scope.builder()
-                    .parent(withScope)
-                    .relationType(queryBodyScope.getRelationType().orElse(null))
-                    .build();
-
-            return queryScope;
+            return createAndAssignScope(scope, queryBodyScope.getRelationType());
         }
 
         @Override
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
+            Scope sourceScope = analyzeFrom(node, scope);
+            analyzeSelect(node, sourceScope);
+            node.getHaving().map(having -> ExpressionAnalyzer.analyze(sourceScope, having));
+            return createAndAssignScope(scope, sourceScope.getRelationType());
+        }
+
+        private void analyzeSelect(QuerySpecification node, Scope scope)
+        {
+            for (SelectItem item : node.getSelect().getSelectItems()) {
+                if (item instanceof AllColumns) {
+                    analyzeSelectAllColumns((AllColumns) item, scope);
+                }
+                else if (item instanceof SingleColumn) {
+                    analyzeSelectSingleColumn((SingleColumn) item, scope);
+                }
+                else {
+                    throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
+                }
+            }
+        }
+
+        private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope)
+        {
+            if (allColumns.getTarget().isPresent()) {
+                // TODO handle target.*
+            }
+            else {
+                analysis.addCollectedColumns(scope.getRelationType().getFields());
+            }
+        }
+
+        private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
+        {
+            // TODO: handle when singleColumn is a subquery
+            scope.getRelationType().getFields().forEach(field -> {
+                ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
+                analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            });
+        }
+
+        private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
+        {
             if (node.getFrom().isPresent()) {
                 return process(node.getFrom().get(), scope);
             }
-            // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
 
@@ -246,10 +291,19 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitJoin(Join node, Optional<Scope> scope)
         {
-            process(node.getLeft(), scope);
-            process(node.getRight(), scope);
+            Scope leftScope = process(node.getLeft(), scope);
+            Scope rightScope = process(node.getRight(), scope);
+            RelationType relationType = leftScope.getRelationType().joinWith(rightScope.getRelationType());
+            Scope outputScope = createAndAssignScope(scope, relationType);
+
+            JoinCriteria criteria = node.getCriteria().orElse(null);
+            // TODO: handle other join types
+            if (criteria instanceof JoinOn) {
+                Expression expression = ((JoinOn) criteria).getExpression();
+                analysis.addCollectedColumns(ExpressionAnalyzer.analyze(outputScope, expression).getCollectedFields());
+            }
             // TODO: output scope here isn't right
-            return Scope.builder().parent(scope).build();
+            return createAndAssignScope(scope, relationType);
         }
 
         @Override
@@ -257,20 +311,16 @@ public final class StatementAnalyzer
         {
             Scope relationScope = process(relation.getRelation(), scope);
 
-            if (!relationScope.isTableScope()) {
-                return relationScope;
-            }
-
-            checkArgument(relationScope.getRelationType().isPresent(), "relationType is missing");
-            List<Field> fieldsWithRelationAlias = relationScope.getRelationType().get().getFields().stream()
-                    .map(field -> Field.builder().like(field)
-                            .relationAlias(QualifiedName.of(relation.getAlias().getValue())).build())
+            List<Field> fieldsWithRelationAlias = relationScope.getRelationType().getFields().stream()
+                    .map(field -> Field.builder()
+                            .like(field)
+                            .relationAlias(QualifiedName.of(relation.getAlias().getValue()))
+                            .build())
                     .collect(toImmutableList());
 
             return Scope.builder()
                     .parent(scope)
                     .relationType(new RelationType(fieldsWithRelationAlias))
-                    .isTableScope(true)
                     .build();
         }
 
@@ -307,6 +357,14 @@ public final class StatementAnalyzer
         private Scope process(Node node, Scope scope)
         {
             return process(node, Optional.of(scope));
+        }
+
+        private Scope createAndAssignScope(Optional<Scope> parentScope, RelationType relationType)
+        {
+            return Scope.builder()
+                    .parent(parentScope)
+                    .relationType(relationType)
+                    .build();
         }
     }
 }

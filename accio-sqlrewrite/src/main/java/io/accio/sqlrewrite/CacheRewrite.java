@@ -139,7 +139,7 @@ public class CacheRewrite
         {
             Expression base = node.getBase();
             if (scope.isPresent()) {
-                List<Field> field = scope.get().getRelationType().get().resolveFields(getQualifiedName(node));
+                List<Field> field = scope.get().getRelationType().resolveFields(getQualifiedName(node));
                 if (field.size() == 1) {
                     QualifiedName qualifiedName = getQualifiedName(base);
                     if (field.get(0).getRelationAlias().isEmpty()

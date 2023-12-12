@@ -14,7 +14,9 @@
 
 package io.accio.sqlrewrite.analyzer;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
@@ -28,6 +30,7 @@ import io.trino.sql.tree.Table;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,6 +49,7 @@ public class Analysis
 
     private final Set<CumulativeMetric> cumulativeMetrics = new HashSet<>();
     private final Set<View> views = new HashSet<>();
+    private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
 
     Analysis(Statement statement)
     {
@@ -140,5 +144,15 @@ public class Analysis
                 .addAll(getCumulativeMetrics().stream().map(CumulativeMetric::getName).collect(toSet()))
                 .addAll(getViews().stream().map(View::getName).collect(toSet()))
                 .build();
+    }
+
+    void addCollectedColumns(List<Field> fields)
+    {
+        fields.forEach(field -> collectedColumns.put(field.getTableName(), field.getColumnName()));
+    }
+
+    public Multimap<CatalogSchemaTableName, String> getCollectedColumns()
+    {
+        return collectedColumns;
     }
 }

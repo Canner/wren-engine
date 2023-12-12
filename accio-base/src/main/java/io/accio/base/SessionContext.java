@@ -25,11 +25,13 @@ public final class SessionContext
 
     private final String catalog;
     private final String schema;
+    private final boolean enableDynamicCalculatedField;
 
-    private SessionContext(String catalog, String schema)
+    private SessionContext(String catalog, String schema, boolean enableDynamicCalculatedField)
     {
         this.catalog = catalog;
         this.schema = schema;
+        this.enableDynamicCalculatedField = enableDynamicCalculatedField;
     }
 
     public Optional<String> getCatalog()
@@ -42,10 +44,16 @@ public final class SessionContext
         return Optional.ofNullable(schema);
     }
 
+    public boolean isEnableDynamicCalculatedField()
+    {
+        return enableDynamicCalculatedField;
+    }
+
     public static class Builder
     {
         private String catalog;
         private String schema;
+        private boolean enableDynamicCalculated;
 
         public Builder setCatalog(String catalog)
         {
@@ -59,9 +67,15 @@ public final class SessionContext
             return this;
         }
 
+        public Builder setEnableDynamicCalculated(boolean enableDynamicCalculated)
+        {
+            this.enableDynamicCalculated = enableDynamicCalculated;
+            return this;
+        }
+
         public SessionContext build()
         {
-            return new SessionContext(catalog, schema);
+            return new SessionContext(catalog, schema, enableDynamicCalculated);
         }
     }
 }

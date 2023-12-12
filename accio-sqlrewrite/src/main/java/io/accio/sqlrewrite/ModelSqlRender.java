@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
@@ -43,9 +44,18 @@ import static java.util.stream.Collectors.toSet;
 public class ModelSqlRender
         extends RelationableSqlRender
 {
+    private final Set<String> requiredFields;
+
+    public ModelSqlRender(Relationable relationable, AccioMDL mdl, Set<String> requiredFields)
+    {
+        super(relationable, mdl);
+        this.requiredFields = requireNonNull(requiredFields);
+    }
+
     public ModelSqlRender(Relationable relationable, AccioMDL mdl)
     {
         super(relationable, mdl);
+        this.requiredFields = relationable.getColumns().stream().map(Column::getName).collect(toImmutableSet());
     }
 
     @Override
@@ -104,6 +114,9 @@ public class ModelSqlRender
         Expression expression = parseExpression(column.getExpression().orElseThrow(() -> new IllegalArgumentException("expression not found in column")));
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (column.isCalculated() && relationshipInfos.size() > 0) {
+            if (!requiredFields.contains(column.getName())) {
+                return;
+            }
             CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo = new CalculatedFieldRelationshipInfo(column, relationshipInfos);
             calculatedRequiredRelationshipInfos.add(calculatedFieldRelationshipInfo);
             // Collect all required models in relationships

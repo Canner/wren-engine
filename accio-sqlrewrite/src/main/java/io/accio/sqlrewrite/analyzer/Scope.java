@@ -26,14 +26,14 @@ import static java.util.Objects.requireNonNull;
 public class Scope
 {
     private final Optional<Scope> parent;
-    private final Optional<RelationType> relationType;
+    private final RelationType relationType;
     private final boolean isTableScope;
     private final Map<String, WithQuery> namedQueries;
 
     private Scope(Scope parent, RelationType relationType, boolean isTableScope, Map<String, WithQuery> namedQueries)
     {
         this.parent = Optional.ofNullable(parent);
-        this.relationType = Optional.ofNullable(relationType);
+        this.relationType = requireNonNull(relationType, "relationType is null");
         this.isTableScope = isTableScope;
         this.namedQueries = requireNonNull(namedQueries, "namedQueries is null");
     }
@@ -43,7 +43,7 @@ public class Scope
         return parent;
     }
 
-    public Optional<RelationType> getRelationType()
+    public RelationType getRelationType()
     {
         return relationType;
     }
@@ -74,7 +74,7 @@ public class Scope
     public static final class Builder
     {
         private Optional<Scope> parent = Optional.empty();
-        private RelationType relationType;
+        private RelationType relationType = new RelationType();
         private boolean isTableScope;
         private final Map<String, WithQuery> namedQueries = new HashMap<>();
 

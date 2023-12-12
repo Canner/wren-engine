@@ -16,6 +16,7 @@ package io.accio.base;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.hubspot.jinjava.Jinjava;
 import io.accio.base.dto.CacheInfo;
@@ -252,5 +253,15 @@ public class AccioMDL
     public DateSpine getDateSpine()
     {
         return manifest.getDateSpine();
+    }
+
+    // TODO: handle other data objects (metric, cumulative metric, view)
+    public List<String> getColumnNames(String name)
+    {
+        Optional<Model> model = getModel(name);
+        if (model.isPresent()) {
+            return model.get().getColumns().stream().map(Column::getName).collect(toImmutableList());
+        }
+        return ImmutableList.of();
     }
 }
