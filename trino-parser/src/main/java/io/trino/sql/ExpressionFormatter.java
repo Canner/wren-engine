@@ -75,6 +75,7 @@ import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.Parameter;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuantifiedComparisonExpression;
 import io.trino.sql.tree.Rollup;
 import io.trino.sql.tree.Row;
@@ -453,6 +454,19 @@ public final class ExpressionFormatter
                 return processGenerateTimestampArrayInDuckDB(node);
             }
 
+            if (dialect.equals(BIGQUERY) && "COUNT_IF".equalsIgnoreCase(node.getName().toString())) {
+                return visitFunctionCall(new FunctionCall(
+                        node.getLocation(),
+                        QualifiedName.of("COUNTIF"),
+                        node.getWindow(),
+                        node.getFilter(),
+                        node.getOrderBy(),
+                        node.isDistinct(),
+                        node.getNullTreatment(),
+                        node.getProcessingMode(),
+                        node.getArguments()), context);
+            }
+
             StringBuilder builder = new StringBuilder();
 
             if (node.getProcessingMode().isPresent()) {
@@ -471,10 +485,9 @@ public final class ExpressionFormatter
             builder.append(formatName(node.getName(), dialect))
                     .append('(').append(arguments);
 
+            // BigQuery doesn't allow null element in an array. Add IGNORE NULLS to ignore null element always.
             if (dialect.equals(BIGQUERY) &&
-                    node.getFilter().isPresent() &&
-                    node.getFilter().get() instanceof IsNotNullPredicate &&
-                    ((IsNotNullPredicate) node.getFilter().get()).getValue().toString().equals(node.getArguments().get(0).toString())) {
+                    "ARRAY_AGG".equalsIgnoreCase(node.getName().toString())) {
                 builder.append(" IGNORE NULLS");
             }
 
