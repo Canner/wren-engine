@@ -467,6 +467,10 @@ public final class ExpressionFormatter
                         node.getArguments()), context);
             }
 
+            if (dialect.equals(BIGQUERY) && "DATE_DIFF".equalsIgnoreCase(node.getName().toString())) {
+                return processDateDiffInBigQuery(node, context);
+            }
+
             StringBuilder builder = new StringBuilder();
 
             if (node.getProcessingMode().isPresent()) {
@@ -983,6 +987,20 @@ public final class ExpressionFormatter
             return format("GENERATE_SERIES(%s, %s, INTERVAL 1 DAY)",
                     start,
                     end);
+        }
+
+        private String processDateDiffInBigQuery(FunctionCall node, Void context)
+        {
+            checkArgument(node.getArguments().size() == 3, "DATE_DIFF function should have 3 arguments");
+            List<Expression> arguments = node.getArguments();
+            StringLiteral datePart = (StringLiteral) arguments.get(0);
+            Expression start = arguments.get(1);
+            Expression end = arguments.get(2);
+            // In BigQuery, the formula is `start - end` but it's `end - start` in trino.
+            return format("TIMESTAMP_DIFF(%s, %s, %s)",
+                    process(end, context),
+                    process(start, context),
+                    datePart.getValue());
         }
     }
 
