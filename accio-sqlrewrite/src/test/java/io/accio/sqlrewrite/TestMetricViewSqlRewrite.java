@@ -88,7 +88,7 @@ public class TestMetricViewSqlRewrite
                     "   SELECT\n" +
                     "     \"Album\".\"author\" \"author\"\n" +
                     "   , \"Album\".\"name\" \"album_name\"\n" +
-                    "   , sum(price) \"price\"\n" +
+                    "   , sum(\"Album\".\"price\") \"price\"\n" +
                     "   FROM\n" +
                     "     (\n" +
                     "      SELECT *\n" +
@@ -223,7 +223,7 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     \"Album\".\"author\" \"author\"\n" +
                                 "   , \"Album\".\"name\" \"album_name\"\n" +
-                                "   , sum(price) \"price\"\n" +
+                                "   , sum(\"Album\".\"price\") \"price\"\n" +
                                 "   FROM\n" +
                                 "     (\n" +
                                 "      SELECT *\n" +
@@ -254,7 +254,7 @@ public class TestMetricViewSqlRewrite
                                 "   SELECT\n" +
                                 "     \"Album\".\"author\" \"author\"\n" +
                                 "   , \"Album\".\"name\" \"album_name\"\n" +
-                                "   , sum(price) \"price\"\n" +
+                                "   , sum(\"Album\".\"price\") \"price\"\n" +
                                 "   FROM\n" +
                                 "     (\n" +
                                 "      SELECT *\n" +

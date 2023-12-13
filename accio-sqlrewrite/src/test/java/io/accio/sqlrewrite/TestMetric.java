@@ -158,6 +158,11 @@ public class TestMetric
                                 List.of(column("name", VARCHAR, null, true, "order_record.customer.name"),
                                         column("orderdate", DATE, null, true, "order_record.orderdate")),
                                 List.of(column("extAddTotalprice", INTEGER, null, true, "sum(order_record.totalprice + extendedprice)")),
+                                List.of()),
+                        metric("CountOrderkey", "Orders",
+                                List.of(column("orderkey", INTEGER, null, true),
+                                        column("orderdate", DATE, null, true)),
+                                List.of(column("count", INTEGER, null, true, "count(orderkey)")),
                                 List.of())))
                 .build();
         accioMDL = AccioMDL.fromManifest(manifest);
@@ -277,6 +282,14 @@ public class TestMetric
         List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnMetric ORDER BY orderyear", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(7);
+    }
+
+    @Test
+    public void testAggregatePrimaryKey()
+    {
+        List<List<Object>> result = query(rewrite("select * from CountOrderkey limit 10"));
+        assertThat(result.get(0).size()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(10);
     }
 
     private String rewrite(String sql)
