@@ -1002,6 +1002,47 @@ public class TestWireProtocolWithBigquery
         }
     }
 
+    @Test
+    public void testDateDiff()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('second', TIMESTAMP '2020-03-01 00:00:00', TIMESTAMP '2020-03-02 00:00:00')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(86400L);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('hour', TIMESTAMP '2020-03-01 00:00:00 UTC', TIMESTAMP '2020-03-02 00:00:00 UTC')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(24L);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('millisecond', TIMESTAMP '2020-06-01 12:30:45.000000', TIMESTAMP '2020-06-02 12:30:45.123456')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(86400123L);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('microsecond', TIMESTAMP '2020-06-01 12:30:45.000000', TIMESTAMP '2020-06-02 12:30:45.123456')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(86400123456L);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('day', DATE '2019-01-01', DATE '2019-01-02')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(1L);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT date_diff('day', '2019-01-01', '2019-01-02')");
+            result.next();
+            assertThat(result.getLong(1)).isEqualTo(1L);
+        }
+    }
+
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)
             throws IOException
     {
