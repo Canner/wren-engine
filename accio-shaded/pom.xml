@@ -18,6 +18,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.hubspot.jinjava</groupId>
+            <artifactId>jinjava</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.accio</groupId>
             <artifactId>accio-base</artifactId>
             <scope>runtime</scope>
@@ -90,6 +96,10 @@
                                 <relocation>
                                     <pattern>org.jgrapht</pattern>
                                     <shadedPattern>${shadeBase}.org.jgrapht</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.hubspot</pattern>
+                                    <shadedPattern>${shadeBase}.com.hubspot</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
