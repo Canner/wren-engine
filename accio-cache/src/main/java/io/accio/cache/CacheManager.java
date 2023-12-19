@@ -51,6 +51,8 @@ import java.util.function.Predicate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.accio.cache.EventLogger.Level.ERROR;
+import static io.accio.cache.EventLogger.Level.INFO;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
@@ -83,6 +85,7 @@ public class CacheManager
 
     private final ExecutorService executorService = newCachedThreadPool(threadsNamed("cache-manager-%s"));
     private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
+    private final EventLogger eventLogger;
 
     @Inject
     public CacheManager(
@@ -91,7 +94,8 @@ public class CacheManager
             ExtraRewriter extraRewriter,
             DuckdbClient duckdbClient,
             CacheStorageConfig cacheStorageConfig,
-            CachedTableMapping cachedTableMapping)
+            CachedTableMapping cachedTableMapping,
+            EventLogger eventLogger)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
@@ -100,6 +104,7 @@ public class CacheManager
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.cacheStorageConfig = requireNonNull(cacheStorageConfig, "cacheStorageConfig is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
+        this.eventLogger = requireNonNull(eventLogger, "eventLogger is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
@@ -231,7 +236,10 @@ public class CacheManager
             cachedTableMapping.remove(catalogSchemaTableName);
         });
 
-        tasks.remove(catalogSchemaTableName);
+        Task task = tasks.remove(catalogSchemaTableName);
+        if (task != null) {
+            eventLogger.logEvent(INFO, "REMOVE_TASK", "Remove cache: " + catalogSchemaTableName);
+        }
     }
 
     public boolean cacheScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
@@ -349,6 +357,12 @@ public class CacheManager
                                         cacheInfoPair.getCacheInfo().getRefreshTime(),
                                         Instant.ofEpochMilli(cacheInfoPair.getCreateTime())));
                                 taskInfo.setTaskStatus(DONE);
+                                if (cacheInfoPair.getErrorMessage().isPresent()) {
+                                    eventLogger.logEvent(ERROR, "CREATE_TASK", taskInfo);
+                                }
+                                else {
+                                    eventLogger.logEvent(INFO, "CREATE_TASK", taskInfo);
+                                }
                             });
         }
 

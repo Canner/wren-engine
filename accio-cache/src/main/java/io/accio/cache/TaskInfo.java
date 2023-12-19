@@ -157,4 +157,16 @@ public class TaskInfo
         this.cachedTable = cachedTable;
         return this;
     }
+
+    @Override
+    public String toString()
+    {
+        return "TaskInfo{" +
+                "catalogSchemaTableName=" + catalogSchemaTableName +
+                ", cachedTable=" + cachedTable +
+                ", taskStatus=" + taskStatus +
+                ", startTime=" + startTime +
+                ", endTime=" + endTime +
+                '}';
+    }
 }
