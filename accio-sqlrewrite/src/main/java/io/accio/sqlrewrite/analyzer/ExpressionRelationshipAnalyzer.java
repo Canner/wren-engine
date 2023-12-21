@@ -107,7 +107,7 @@ public class ExpressionRelationshipAnalyzer
         }
     }
 
-    private static Optional<ExpressionRelationshipInfo> createRelationshipInfo(QualifiedName qualifiedName, Model model, AccioMDL mdl)
+    public static Optional<ExpressionRelationshipInfo> createRelationshipInfo(QualifiedName qualifiedName, Model model, AccioMDL mdl)
     {
         List<Relationship> relationships = new ArrayList<>();
         Model current = model;

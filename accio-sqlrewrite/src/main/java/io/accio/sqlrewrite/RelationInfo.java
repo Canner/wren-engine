@@ -33,6 +33,16 @@ public class RelationInfo
     private final Set<String> requiredObjects;
     private final Query query;
 
+    public static RelationInfo get(Relationable relationable, AccioMDL mdl, Set<String> requiredFields)
+    {
+        if (relationable instanceof Model) {
+            return new ModelSqlRender(relationable, mdl, requiredFields).render();
+        }
+        else {
+            throw new IllegalArgumentException(format("cannot get relation info from relationable %s", relationable));
+        }
+    }
+
     public static RelationInfo get(Relationable relationable, AccioMDL mdl)
     {
         if (relationable instanceof Model) {

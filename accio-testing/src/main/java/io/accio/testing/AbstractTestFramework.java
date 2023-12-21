@@ -18,7 +18,9 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Model;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import org.intellij.lang.annotations.Language;
@@ -28,6 +30,7 @@ import org.testng.annotations.BeforeClass;
 import java.util.Arrays;
 import java.util.List;
 
+import static io.accio.base.dto.Model.model;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -44,6 +47,18 @@ public abstract class AbstractTestFramework
         return Manifest.builder()
                 .setCatalog(DEFAULT_SESSION_CONTEXT.getCatalog().orElseThrow())
                 .setSchema(DEFAULT_SESSION_CONTEXT.getSchema().orElseThrow());
+    }
+
+    public static Model addColumnsToModel(Model model, Column... columns)
+    {
+        return model(
+                model.getName(),
+                model.getRefSql(),
+                ImmutableList.<Column>builder()
+                        .addAll(model.getColumns())
+                        .add(columns)
+                        .build(),
+                model.getPrimaryKey());
     }
 
     @BeforeClass
@@ -74,7 +89,7 @@ public abstract class AbstractTestFramework
             return builder.build();
         }
         catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed SQL: " + sql, e);
         }
     }
 

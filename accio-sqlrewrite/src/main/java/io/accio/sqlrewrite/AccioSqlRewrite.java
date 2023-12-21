@@ -17,6 +17,7 @@ package io.accio.sqlrewrite;
 import com.google.common.collect.ImmutableSet;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Analysis;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
@@ -35,6 +36,7 @@ import org.jgrapht.graph.GraphCycleProhibitedException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +44,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Strings.nullToEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -54,20 +57,55 @@ public class AccioSqlRewrite
 
     private AccioSqlRewrite() {}
 
+    private LinkedHashMap<String, Set<String>> getRequiredFields(AccioDataLineage dataLineage, Analysis analysis)
+    {
+        List<QualifiedName> collectedColumns = analysis.getCollectedColumns().asMap().entrySet().stream()
+                .map(e ->
+                        e.getValue().stream()
+                                .map(columnName -> QualifiedName.of(e.getKey().getSchemaTableName().getTableName(), columnName))
+                                .collect(toImmutableList()))
+                .flatMap(List::stream)
+                .collect(toImmutableList());
+        return dataLineage.getRequiredFields(collectedColumns);
+    }
+
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
     {
-        Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, accioMDL)).collect(toSet());
-        Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, accioMDL)).collect(toSet());
-        Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> CumulativeMetricInfo.get(metric, accioMDL)).collect(toSet());
-        Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, accioMDL, sessionContext)).collect(toSet());
-        Set<QueryDescriptor> allDescriptors = ImmutableSet.<QueryDescriptor>builder()
-                .addAll(modelDescriptors)
-                .addAll(metricDescriptors)
-                .addAll(viewDescriptors)
-                .addAll(cumulativeMetricDescriptors)
-                .build();
-        return apply(root, sessionContext, analysis, accioMDL, allDescriptors);
+        Set<QueryDescriptor> allDescriptors;
+        // TODO: Currently DynamicCalculatedField is a experimental feature, and buggy. After all issues are solved,
+        //  we should always enable this setting.
+        if (sessionContext.isEnableDynamicCalculatedField()) {
+            // TODO: make AccioDataLineage static instead of create a new one everytime as it will change only when accio mdl changed.
+            AccioDataLineage dataLineage = AccioDataLineage.analyze(accioMDL);
+            LinkedHashMap<String, Set<String>> modelRequiredFields = getRequiredFields(dataLineage, analysis);
+            List<QueryDescriptor> modelDescriptors = modelRequiredFields.entrySet().stream()
+                    .map(e -> {
+                        String modelName = e.getKey();
+                        Model model = accioMDL.getModel(modelName).orElseThrow();
+                        return RelationInfo.get(model, accioMDL, e.getValue());
+                    })
+                    .collect(toImmutableList());
+
+            List<WithQuery> withQueries = new ArrayList<>();
+            modelDescriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
+
+            Node rewriteWith = new WithRewriter(withQueries).process(root);
+            return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);
+        }
+        else {
+            Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, accioMDL)).collect(toSet());
+            Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, accioMDL)).collect(toSet());
+            Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> CumulativeMetricInfo.get(metric, accioMDL)).collect(toSet());
+            Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, accioMDL, sessionContext)).collect(toSet());
+            allDescriptors = ImmutableSet.<QueryDescriptor>builder()
+                    .addAll(modelDescriptors)
+                    .addAll(metricDescriptors)
+                    .addAll(viewDescriptors)
+                    .addAll(cumulativeMetricDescriptors)
+                    .build();
+            return apply(root, sessionContext, analysis, accioMDL, allDescriptors);
+        }
     }
 
     private Statement apply(
