@@ -29,7 +29,7 @@ import java.util.function.Function;
 import static io.accio.base.AccioMDL.EMPTY;
 import static io.accio.base.AccioMDL.fromManifest;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
-import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.Column.varcharColumn;
 import static io.accio.base.dto.Model.model;
 import static io.accio.sqlrewrite.analyzer.StatementAnalyzer.analyze;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -67,8 +67,8 @@ public class TestStatementAnalyzer
                 .setCatalog("test")
                 .setSchema("test")
                 .setModels(ImmutableList.of(
-                        model("table_1", "SELECT * FROM foo", ImmutableList.of(column("c1"), column("c2"))),
-                        model("table_2", "SELECT * FROM bar", ImmutableList.of(column("c1"), column("c2")))))
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
                 .build();
         Function<String, Analysis> analyzeSql = (sql) -> analyze(
                 sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL)),

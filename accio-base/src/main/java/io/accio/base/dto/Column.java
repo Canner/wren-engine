@@ -35,7 +35,7 @@ public class Column
     private final boolean isCalculated;
 
     @VisibleForTesting
-    public static Column column(String name)
+    public static Column varcharColumn(String name)
     {
         return column(name, "VARCHAR", null, false, null, null);
     }

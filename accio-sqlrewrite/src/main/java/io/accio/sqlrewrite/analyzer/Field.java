@@ -33,20 +33,17 @@ public class Field
     private final CatalogSchemaTableName tableName;
     private final String columnName;
     private final Optional<String> name;
-    private final boolean aliased;
 
     private Field(
             QualifiedName relationAlias,
             CatalogSchemaTableName tableName,
             String columnName,
-            String name,
-            boolean aliased)
+            String name)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.tableName = requireNonNull(tableName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
-        this.aliased = aliased;
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -116,7 +113,6 @@ public class Field
         private CatalogSchemaTableName tableName;
         private String columnName;
         private String name;
-        private boolean aliased;
 
         public Builder() {}
 
@@ -153,15 +149,9 @@ public class Field
             return this;
         }
 
-        public Builder aliased(boolean aliased)
-        {
-            this.aliased = aliased;
-            return this;
-        }
-
         public Field build()
         {
-            return new Field(relationAlias, tableName, columnName, name, aliased);
+            return new Field(relationAlias, tableName, columnName, name);
         }
     }
 }

@@ -67,7 +67,8 @@ public class AccioDataLineage
         this.requiredFieldsByColumn = collectRequiredFieldsByColumn();
     }
 
-    public LinkedHashMap<String, Set<String>> getRequiredFields(QualifiedName columnNames)
+    @VisibleForTesting
+    LinkedHashMap<String, Set<String>> getRequiredFields(QualifiedName columnNames)
     {
         return getRequiredFields(ImmutableList.of(columnNames));
     }
@@ -202,7 +203,17 @@ public class AccioDataLineage
         }
     }
 
-    public static SetMultimap<String, String> getSourceColumns(AccioMDL mdl, Model model, Expression expression)
+    /**
+     * Collect the required source columns in given expression. Note that this method will only trace
+     * the columns currently utilized in the expression, without further tracking to identify the columns required
+     * behind those used in the expression.
+     *
+     * @param mdl AccioMDL
+     * @param model the model that column expression belongs to.
+     * @param expression expression in the column
+     * @return A SetMultimap which key is model name and value is a set of column names.
+     */
+    private static SetMultimap<String, String> getSourceColumns(AccioMDL mdl, Model model, Expression expression)
     {
         Analyzer analyzer = new Analyzer(mdl, model);
         analyzer.process(expression);
