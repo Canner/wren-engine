@@ -27,6 +27,7 @@ import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
 import io.accio.base.type.RecordType;
 import io.accio.base.type.TimestampType;
+import io.accio.base.type.TimestampWithTimeZoneType;
 import org.joda.time.Period;
 
 import java.time.LocalDate;
@@ -99,6 +100,7 @@ public final class BigQueryType
                 .put(NumericType.NUMERIC, BIGNUMERIC)
                 .put(DateType.DATE, DATE)
                 .put(TimestampType.TIMESTAMP, TIMESTAMP)
+                .put(TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP)
                 .put(BYTEA, BYTES)
                 .put(IntervalType.INTERVAL, INTERVAL)
                 .put(JsonType.JSON, JSON)
