@@ -38,6 +38,8 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,7 @@ import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -902,15 +905,14 @@ public class TestWireProtocolWithBigquery
                 {"date", LocalDate.of(1900, 1, 3)},
                 // TODO support time
                 // {"time", LocalTime.of(12, 10, 16)},
-                {"timestamp", LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000)},
-                // TODO support timestamptz
-                // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
+                {"timestamp", Timestamp.valueOf(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000))},
+                {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
                 {"bytea", "test1".getBytes(UTF_8)},
                 {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
                 {"array", new Boolean[] {true, false}},
                 {"array", new Double[] {1.0, 2.0, 3.0}},
-                {"array", new String[] {"hello", "world"}}
+                {"array", new String[] {"hello", "world"}},
 
                 // TODO: type support
                 // {"any", new Object[] {1, "test", new BigDecimal(10)}}
@@ -923,7 +925,17 @@ public class TestWireProtocolWithBigquery
     {
         try (Connection conn = createConnection()) {
             PreparedStatement stmt = conn.prepareStatement("SELECT ? as col;");
-            stmt.setObject(1, obj);
+            if (name.equals("timestamptz")) {
+                ZonedDateTime zdt = (ZonedDateTime) obj;
+                stmt.setObject(1, zdt.toOffsetDateTime());
+            }
+            else if (name.equals("timestamp")) {
+                Timestamp timestamp = (Timestamp) obj;
+                stmt.setObject(1, timestamp.toLocalDateTime());
+            }
+            else {
+                stmt.setObject(1, obj);
+            }
             ResultSet result = stmt.executeQuery();
             result.next();
             Object expected = obj;
@@ -940,8 +952,13 @@ public class TestWireProtocolWithBigquery
             else if (name.equals("date")) {
                 expected = Date.valueOf((LocalDate) obj);
             }
-            else if (name.equals("timestamp")) {
-                expected = Timestamp.valueOf((LocalDateTime) obj);
+            // bigquery always return utc time
+            else if (name.equals("timestamptz")) {
+                ZonedDateTime zdt = (ZonedDateTime) obj;
+                Timestamp timestamp = (Timestamp) result.getObject(1);
+                LocalDateTime utcTime = timestamp.toLocalDateTime();
+                AssertionsForClassTypes.assertThat(utcTime.atZone(UTC)).isEqualTo(zdt);
+                return;
             }
 
             if (name.equals("array")) {
