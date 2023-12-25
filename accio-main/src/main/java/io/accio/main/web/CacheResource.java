@@ -90,4 +90,11 @@ public class CacheResource
                 .listTaskInfo(catalogName, schemaName)
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
+
+    @GET
+    @Path("duckdb/settings")
+    public void getDuckDBSettings(@Suspended AsyncResponse asyncResponse)
+    {
+        asyncResponse.resume(Response.ok(cacheManager.getDuckDBSettings()).build());
+    }
 }

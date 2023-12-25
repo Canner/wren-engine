@@ -16,6 +16,7 @@ package io.accio.cache;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
+import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
@@ -28,6 +29,7 @@ public class CacheModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(DuckdbS3StyleStorageConfig.class);
+        configBinder(binder).bindConfig(DuckDBConfig.class);
         binder.bind(CacheStorageConfig.class).to(DuckdbS3StyleStorageConfig.class).in(Scopes.SINGLETON);
         binder.bind(CacheManager.class).in(Scopes.SINGLETON);
         binder.bind(EventLogger.class).to(Log4jEventLogger.class).in(Scopes.SINGLETON);

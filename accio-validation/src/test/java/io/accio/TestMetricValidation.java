@@ -17,6 +17,7 @@ package io.accio;
 import io.accio.base.AccioMDL;
 import io.accio.base.AccioTypes;
 import io.accio.base.client.Client;
+import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.EnumDefinition;
@@ -50,7 +51,7 @@ public class TestMetricValidation
 
     public TestMetricValidation()
     {
-        client = new DuckdbClient();
+        client = new DuckdbClient(new DuckDBConfig());
         sample = AccioMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Flight",
