@@ -32,6 +32,7 @@ public class CacheModule
         configBinder(binder).bindConfig(DuckDBConfig.class);
         binder.bind(CacheStorageConfig.class).to(DuckdbS3StyleStorageConfig.class).in(Scopes.SINGLETON);
         binder.bind(CacheManager.class).in(Scopes.SINGLETON);
+        binder.bind(DuckdbTaskManager.class).in(Scopes.SINGLETON);
         binder.bind(EventLogger.class).to(Log4jEventLogger.class).in(Scopes.SINGLETON);
         binder.bind(DuckdbClient.class).in(Scopes.SINGLETON);
         binder.bind(CachedTableMapping.class).to(DefaultCachedTableMapping.class).in(Scopes.SINGLETON);

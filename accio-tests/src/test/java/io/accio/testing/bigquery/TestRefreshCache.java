@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
-import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
+import static io.accio.cache.TaskInfo.TaskStatus.QUEUED;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -111,7 +111,7 @@ public class TestRefreshCache
                 .findAny().orElseThrow(AssertionError::new);
 
         TaskInfo start = cacheManager.get().createTask(mdl, orders).join();
-        assertThat(start.getTaskStatus()).isEqualTo(RUNNING);
+        assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
         assertThat(start.getEndTime()).isNull();
         cacheManager.get().untilTaskDone(ordersName);
 

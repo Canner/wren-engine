@@ -35,7 +35,6 @@ import io.trino.sql.tree.Statement;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -56,6 +55,7 @@ import static io.accio.cache.EventLogger.Level.ERROR;
 import static io.accio.cache.EventLogger.Level.INFO;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
 import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
+import static io.accio.cache.TaskInfo.TaskStatus.QUEUED;
 import static io.airlift.concurrent.Threads.daemonThreadsNamed;
 import static io.airlift.concurrent.Threads.threadsNamed;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
@@ -63,7 +63,6 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
-import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -83,10 +82,10 @@ public class CacheManager
     private final CachedTableMapping cachedTableMapping;
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> cacheScheduledFutures = new ConcurrentHashMap<>();
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("cache-refresh-%s"));
-
     private final ExecutorService executorService = newCachedThreadPool(threadsNamed("cache-manager-%s"));
     private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
     private final EventLogger eventLogger;
+    private final DuckdbTaskManager duckdbTaskManager;
 
     @Inject
     public CacheManager(
@@ -96,20 +95,22 @@ public class CacheManager
             DuckdbClient duckdbClient,
             CacheStorageConfig cacheStorageConfig,
             CachedTableMapping cachedTableMapping,
-            EventLogger eventLogger)
+            EventLogger eventLogger,
+            DuckdbTaskManager duckdbTaskManager)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.cacheService = requireNonNull(cacheService, "cacheService is null");
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
+        this.duckdbTaskManager = requireNonNull(duckdbTaskManager, "duckdbTaskManager is null");
         this.cacheStorageConfig = requireNonNull(cacheStorageConfig, "cacheStorageConfig is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.eventLogger = requireNonNull(eventLogger, "eventLogger is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl, CacheInfo cacheInfo)
+    private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
         CatalogSchemaTableName catalogSchemaTableName = catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         Optional<Task> taskOptional = Optional.ofNullable(tasks.get(catalogSchemaTableName));
@@ -117,12 +118,12 @@ public class CacheManager
             throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s, tableName: %s", mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()));
         }
         removeCacheIfExist(catalogSchemaTableName);
-        return doCache(mdl, cacheInfo);
+        return doCache(mdl, cacheInfo, taskInfo);
     }
 
-    private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo)
+    private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
-        return refreshCache(mdl, cacheInfo)
+        return refreshCache(mdl, cacheInfo, taskInfo)
                 .thenRun(() -> {
                     if (cacheInfo.getRefreshTime().toMillis() > 0) {
                         cacheScheduledFutures.put(
@@ -137,17 +138,17 @@ public class CacheManager
     }
 
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
-            throws SQLException
     {
-        return DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList()));
+        return duckdbTaskManager.addQueryTask(() -> DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList())));
     }
 
-    private CompletableFuture<Void> doCache(AccioMDL mdl, CacheInfo cacheInfo)
+    private CompletableFuture<Void> doCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
-        return runAsync(() -> {
+        return duckdbTaskManager.addCacheTask(() -> {
+            taskInfo.setTaskStatus(RUNNING);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
                     .setSchema(mdl.getSchema())
@@ -298,9 +299,9 @@ public class CacheManager
     {
         return supplyAsync(() -> {
             CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
-            TaskInfo taskInfo = new TaskInfo(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName(), RUNNING, Instant.now());
+            TaskInfo taskInfo = new TaskInfo(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName(), QUEUED, Instant.now());
             // To fix flaky test, we pass value to tasks instead of a reference;
-            Task task = new Task(TaskInfo.copyFrom(taskInfo), handleCache(mdl, cacheInfo));
+            Task task = new Task(TaskInfo.copyFrom(taskInfo), mdl, cacheInfo);
             tasks.put(catalogSchemaTableName, task);
             return taskInfo;
         });
@@ -355,28 +356,27 @@ public class CacheManager
         private final TaskInfo taskInfo;
         private final CompletableFuture<?> completableFuture;
 
-        public Task(TaskInfo taskInfo, CompletableFuture<?> completableFuture)
+        public Task(TaskInfo taskInfo, AccioMDL mdl, CacheInfo cacheInfo)
         {
             this.taskInfo = taskInfo;
-            this.completableFuture =
-                    completableFuture
-                            .thenRun(() -> {
-                                CacheInfoPair cacheInfoPair = cachedTableMapping.getCacheInfoPair(
-                                        taskInfo.getCatalogName(),
-                                        taskInfo.getSchemaName(), taskInfo.getTableName());
-                                taskInfo.setCachedTable(new CachedTable(
-                                        cacheInfoPair.getCacheInfo().getName(),
-                                        cacheInfoPair.getErrorMessage(),
-                                        cacheInfoPair.getCacheInfo().getRefreshTime(),
-                                        Instant.ofEpochMilli(cacheInfoPair.getCreateTime())));
-                                taskInfo.setTaskStatus(DONE);
-                                if (cacheInfoPair.getErrorMessage().isPresent()) {
-                                    eventLogger.logEvent(ERROR, "CREATE_TASK", taskInfo);
-                                }
-                                else {
-                                    eventLogger.logEvent(INFO, "CREATE_TASK", taskInfo);
-                                }
-                            });
+            this.completableFuture = handleCache(mdl, cacheInfo, taskInfo)
+                    .thenRun(() -> {
+                        CacheInfoPair cacheInfoPair = cachedTableMapping.getCacheInfoPair(
+                                taskInfo.getCatalogName(),
+                                taskInfo.getSchemaName(), taskInfo.getTableName());
+                        taskInfo.setCachedTable(new CachedTable(
+                                cacheInfoPair.getCacheInfo().getName(),
+                                cacheInfoPair.getErrorMessage(),
+                                cacheInfoPair.getCacheInfo().getRefreshTime(),
+                                Instant.ofEpochMilli(cacheInfoPair.getCreateTime())));
+                        taskInfo.setTaskStatus(DONE);
+                        if (cacheInfoPair.getErrorMessage().isPresent()) {
+                            eventLogger.logEvent(ERROR, "CREATE_TASK", taskInfo);
+                        }
+                        else {
+                            eventLogger.logEvent(INFO, "CREATE_TASK", taskInfo);
+                        }
+                    });
         }
 
         public TaskInfo getTaskInfo()

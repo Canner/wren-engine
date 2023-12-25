@@ -22,6 +22,7 @@ public class DuckDBConfig
     private DataSize memoryLimit = DataSize.of(Runtime.getRuntime().maxMemory() / 2, DataSize.Unit.BYTE);
     private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
+    private int maxConcurrentTasks = 10;
 
     public DataSize getMemoryLimit()
     {
@@ -54,5 +55,16 @@ public class DuckDBConfig
     public void setTempDirectory(String tempDirectory)
     {
         this.tempDirectory = tempDirectory;
+    }
+
+    public int getMaxConcurrentTasks()
+    {
+        return maxConcurrentTasks;
+    }
+
+    @Config("duckdb.max-concurrent-tasks")
+    public void setMaxConcurrentTasks(int maxConcurrentTasks)
+    {
+        this.maxConcurrentTasks = maxConcurrentTasks;
     }
 }
