@@ -37,7 +37,7 @@ public class TimestampWithTimeZoneType
         extends BaseTimestampType
 {
     public static final PGType TIMESTAMP_WITH_TIMEZONE = new TimestampWithTimeZoneType();
-    static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
+    public static final DateTimeFormatter PG_TIMESTAMP = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
             .append(ISO_LOCAL_DATE)
             .optionalStart()
@@ -49,8 +49,8 @@ public class TimestampWithTimeZoneType
             .appendPattern("[VV][x][xx][xxx][z]")
             .toFormatter(Locale.ENGLISH).withResolverStyle(ResolverStyle.STRICT);
 
-    private static final org.joda.time.format.DateTimeFormatter ISO_FORMATTER =
-            DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss.SSS+00").withZoneUTC().withLocale(Locale.ENGLISH);
+    public static final org.joda.time.format.DateTimeFormatter ISO_FORMATTER =
+            DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss.SSSZ").withLocale(Locale.ENGLISH);
 
     private static final int OID = 1184;
     private static final String NAME = "timestamptz";
@@ -81,7 +81,8 @@ public class TimestampWithTimeZoneType
     public Object decodeUTF8Text(byte[] bytes)
     {
         String dtString = new String(bytes, UTF_8);
-        return PG_TIMESTAMP.format(tryParse(dtString));
+        ZonedDateTime zonedDateTime = tryParse(dtString);
+        return ISO_FORMATTER.print(Instant.from(zonedDateTime).toEpochMilli());
     }
 
     @VisibleForTesting

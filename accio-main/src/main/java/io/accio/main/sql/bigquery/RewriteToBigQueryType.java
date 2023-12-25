@@ -194,6 +194,8 @@ public class RewriteToBigQueryType
                     return new GenericDataType(nodeLocation, new Identifier("DATE"), parameters);
                 case "INTERVAL":
                     return new GenericDataType(nodeLocation, new Identifier("INTERVAL"), parameters);
+                case "TIMESTAMP":
+                    return new GenericDataType(nodeLocation, new Identifier("TIMESTAMP"), parameters);
                 default:
                     if (typeName.startsWith("_")) {
                         PGArray pgArray = getPgArrayType(typeName);
