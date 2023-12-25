@@ -95,11 +95,6 @@ public class CacheResource
     @Path("duckdb/settings")
     public void getDuckDBSettings(@Suspended AsyncResponse asyncResponse)
     {
-        try {
-            asyncResponse.resume(Response.ok(cacheManager.getDuckDBSettings()).build());
-        }
-        catch (Exception e) {
-            asyncResponse.resume(asyncResponse.resume(e));
-        }
+        asyncResponse.resume(Response.ok(cacheManager.getDuckDBSettings()).build());
     }
 }

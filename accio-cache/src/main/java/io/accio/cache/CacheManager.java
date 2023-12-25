@@ -50,6 +50,7 @@ import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
+import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.cache.EventLogger.Level.ERROR;
 import static io.accio.cache.EventLogger.Level.INFO;
@@ -338,10 +339,15 @@ public class CacheManager
     }
 
     public List<Object> getDuckDBSettings()
-            throws SQLException
     {
-        ConnectorRecordIterator iter = query("SELECT * FROM duckdb_settings()", List.of());
-        return ImmutableList.copyOf(iter);
+        try {
+            ConnectorRecordIterator iter = query("SELECT * FROM duckdb_settings()", List.of());
+            return ImmutableList.copyOf(iter);
+        }
+        catch (Exception e) {
+            LOG.error(e, "Failed to get duckdb settings");
+            throw new AccioException(GENERIC_INTERNAL_ERROR, e);
+        }
     }
 
     private class Task
