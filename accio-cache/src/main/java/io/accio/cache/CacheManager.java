@@ -337,6 +337,13 @@ public class CacheManager
         Optional.ofNullable(tasks.get(name)).ifPresent(Task::waitUntilDone);
     }
 
+    public List<Object> getDuckDBSettings()
+            throws SQLException
+    {
+        ConnectorRecordIterator iter = query("SELECT * FROM duckdb_settings()", List.of());
+        return ImmutableList.copyOf(iter);
+    }
+
     private class Task
     {
         private final TaskInfo taskInfo;
