@@ -66,7 +66,7 @@ public final class DuckdbClient
 
     private void init()
     {
-        DataSize memoryLimit = DataSize.valueOf(duckDBConfig.getMemoryLimit());
+        DataSize memoryLimit = duckDBConfig.getMemoryLimit();
         executeDDL(format("SET memory_limit='%s'", memoryLimit.toBytesValueString()));
         LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
         executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));

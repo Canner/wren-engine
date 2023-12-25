@@ -15,20 +15,21 @@
 package io.accio.base.client.duckdb;
 
 import io.airlift.configuration.Config;
+import io.airlift.units.DataSize;
 
 public class DuckDBConfig
 {
-    private String memoryLimit = Runtime.getRuntime().maxMemory() / 2 + "B";
-    private String homeDirectory = "/tmp/duckdb";
+    private DataSize memoryLimit = DataSize.of(Runtime.getRuntime().maxMemory() / 2, DataSize.Unit.BYTE);
+    private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
 
-    public String getMemoryLimit()
+    public DataSize getMemoryLimit()
     {
         return memoryLimit;
     }
 
     @Config("duckdb.memory-limit")
-    public void setMemoryLimit(String memoryLimit)
+    public void setMemoryLimit(DataSize memoryLimit)
     {
         this.memoryLimit = memoryLimit;
     }

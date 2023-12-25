@@ -99,7 +99,7 @@ public class CacheResource
             asyncResponse.resume(Response.ok(cacheManager.getDuckDBSettings()).build());
         }
         catch (Exception e) {
-            asyncResponse.resume(Response.serverError().build());
+            asyncResponse.resume(asyncResponse.resume(e));
         }
     }
 }
