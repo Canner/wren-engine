@@ -14,4 +14,4 @@ target/
 .mvn/timing.properties
 .mvn/maven.config
 accio-server/etc
-accio-server/var/log
+/**/var/
