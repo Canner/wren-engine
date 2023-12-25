@@ -31,15 +31,20 @@ import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 import io.accio.base.jinjava.JinjavaExpressionProcessor;
 import io.accio.base.jinjava.JinjavaUtils;
+import io.trino.sql.tree.QualifiedName;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.accio.base.macro.Parameter.TYPE.MACRO;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.UnaryOperator.identity;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
@@ -52,6 +57,8 @@ public class AccioMDL
     private final String catalog;
     private final String schema;
     private final Manifest manifest;
+    private final Map<String, Model> models;
+    private final Map<QualifiedName, Column> modelColumns;
 
     public static AccioMDL fromJson(String manifest)
             throws JsonProcessingException
@@ -70,6 +77,13 @@ public class AccioMDL
         this.manifest = renderManifest(manifest);
         this.catalog = manifest.getCatalog();
         this.schema = manifest.getSchema();
+        this.models = listModels().stream().collect(toImmutableMap(Model::getName, identity()));
+        this.modelColumns = new HashMap<>();
+        for (Model model : listModels()) {
+            for (Column column : model.getColumns()) {
+                modelColumns.put(QualifiedName.of(model.getName(), column.getName()), column);
+            }
+        }
     }
 
     private Manifest renderManifest(Manifest original)
@@ -139,9 +153,7 @@ public class AccioMDL
 
     public Optional<Model> getModel(String name)
     {
-        return manifest.getModels().stream()
-                .filter(model -> model.getName().equals(name))
-                .findAny();
+        return Optional.ofNullable(models.get(name));
     }
 
     public List<Relationship> listRelationships()
@@ -263,5 +275,10 @@ public class AccioMDL
             return model.get().getColumns().stream().map(Column::getName).collect(toImmutableList());
         }
         return ImmutableList.of();
+    }
+
+    public Optional<Column> getColumn(QualifiedName qualifiedName)
+    {
+        return Optional.ofNullable(modelColumns.get(qualifiedName));
     }
 }

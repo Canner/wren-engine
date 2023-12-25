@@ -116,31 +116,38 @@ public class TestAccioDataLineage
                 column("customer", "Customer", "OrdersCustomer", true),
                 column("lineitem", "Lineitem", "OrdersLineitem", true),
                 caluclatedColumn("customer_name", BIGINT, "customer.name"),
-                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"));
+                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"),
+                caluclatedColumn("extended_price_2", BIGINT, "sum(lineitem.extendedprice + totalprice)"));
+        Model newLineitem = addColumnsToModel(
+                lineitem,
+                column("orders", "Orders", "OrdersLineitem", true),
+                caluclatedColumn("test_column", BIGINT, "orders.customer.total_price + extendedprice"));
         Manifest manifest = withDefaultCatalogSchema()
-                .setModels(List.of(newCustomer, newOrders, lineitem))
+                .setModels(List.of(newCustomer, newOrders, newLineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
                 .build();
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
 
         AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
-        LinkedHashMap<String, Set<String>> actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "total_price"));
-        LinkedHashMap<String, Set<String>> expected = new LinkedHashMap<>();
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+        actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "total_price"));
+        expected = new LinkedHashMap<>();
         expected.put("Orders", Set.of("totalprice", "custkey"));
-        expected.put("Customer", Set.of("total_price"));
+        expected.put("Customer", Set.of("custkey"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Orders", "customer_name"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("customer_name"));
+        expected.put("Orders", Set.of("custkey"));
         expected.put("Customer", Set.of("name", "custkey"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "discount_extended_price"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("extended_price", "custkey"));
+        expected.put("Orders", Set.of("extended_price", "custkey", "orderkey"));
         expected.put("Lineitem", Set.of("discount", "extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("discount_extended_price"));
+        expected.put("Customer", Set.of("custkey"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(
@@ -148,9 +155,9 @@ public class TestAccioDataLineage
                         QualifiedName.of("Customer", "total_price"),
                         QualifiedName.of("Customer", "discount_extended_price")));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("extended_price", "totalprice", "custkey"));
+        expected.put("Orders", Set.of("extended_price", "orderkey", "custkey", "totalprice"));
         expected.put("Lineitem", Set.of("discount", "extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("discount_extended_price", "total_price"));
+        expected.put("Customer", Set.of("custkey"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(
@@ -158,21 +165,35 @@ public class TestAccioDataLineage
                         QualifiedName.of("Customer", "total_price"),
                         QualifiedName.of("Orders", "extended_price")));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("extended_price", "totalprice", "custkey"));
+        expected.put("Orders", Set.of("custkey", "orderkey", "totalprice"));
         expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("total_price"));
+        expected.put("Customer", Set.of("custkey"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "lineitem_price"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey"));
+        expected.put("Orders", Set.of("custkey", "orderkey"));
         expected.put("Lineitem", Set.of("extendedprice", "discount", "orderkey"));
-        expected.put("Customer", Set.of("lineitem_price"));
+        expected.put("Customer", Set.of("custkey"));
         assertThat(actual).isEqualTo(expected);
 
+        // assert cycle
         assertThatThrownBy(
                 () -> dataLineage.getRequiredFields(
                         ImmutableList.of(QualifiedName.of("Customer", "total_price"), QualifiedName.of("Orders", "customer_name"))))
                 .hasMessage("found cycle in Customer.total_price");
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("Orders", "extended_price_2"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("orderkey", "totalprice"));
+        expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("Lineitem", "test_column"));
+        expected = new LinkedHashMap<>();
+        expected.put("Customer", Set.of("custkey", "total_price"));
+        expected.put("Orders", Set.of("custkey", "orderkey", "totalprice"));
+        expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
+        assertThat(actual).isEqualTo(expected);
     }
 }
