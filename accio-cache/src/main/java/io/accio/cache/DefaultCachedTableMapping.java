@@ -77,7 +77,8 @@ public class DefaultCachedTableMapping
     @Override
     public Optional<String> convertToCachedTable(CatalogSchemaTableName catalogSchemaTableName)
     {
-        return cachedTableMapping.get(catalogSchemaTableName).getTableName();
+        return Optional.ofNullable(cachedTableMapping.get(catalogSchemaTableName))
+                .flatMap(CacheInfoPair::getTableName);
     }
 
     @Override
