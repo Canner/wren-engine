@@ -250,8 +250,11 @@ public class TestModel
                 .build();
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
 
-        assertThatCode(() -> query(rewrite("SELECT * FROM OnCustomer", mdl, true)))
-                .doesNotThrowAnyException();
+        assertQuery(mdl, "SELECT mom_custkey, mom_totalprice FROM OnCustomer WHERE mom_custkey = 370",
+                "SELECT c.custkey, sum(o.totalprice) FROM customer c\n" +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey\n" +
+                        "WHERE c.custkey = 370\n" +
+                        "GROUP BY 1");
     }
 
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)
