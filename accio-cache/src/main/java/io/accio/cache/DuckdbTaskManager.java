@@ -56,6 +56,7 @@ public class DuckdbTaskManager
     public <T> T addQueryTask(Callable<T> callable)
     {
         try {
+            checkMemoryLimit();
             return taskExecutorService.submit(callable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
@@ -70,6 +71,7 @@ public class DuckdbTaskManager
     public void addQueryDDLTask(Runnable runnable)
     {
         try {
+            checkMemoryLimit();
             taskExecutorService.submit(runnable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
@@ -88,6 +90,13 @@ public class DuckdbTaskManager
         }
         catch (Exception e) {
             throw new AccioException(GENERIC_INTERNAL_ERROR, "Failed to get memory usage", e);
+        }
+    }
+
+    private void checkMemoryLimit()
+    {
+        if (getMemoryUsageBytes() > duckDBConfig.getMemoryLimit().toBytes()) {
+            throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Duckdb memory limit exceeded");
         }
     }
 

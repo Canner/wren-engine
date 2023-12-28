@@ -9,7 +9,7 @@ import java.util.Map;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.util.Locale.ENGLISH;
 
-public class DuckdbUtil
+public final class DuckdbUtil
 {
     private static final Map<String, DataSize.Unit> UNIT_MAP = new HashMap<>();
 
@@ -28,6 +28,8 @@ public class DuckdbUtil
         UNIT_MAP.put("PB", DataSize.Unit.PETABYTE);
         UNIT_MAP.put("PIB", DataSize.Unit.PETABYTE);
     }
+
+    private DuckdbUtil() {}
 
     public static DataSize convertDuckDBUnits(String valueWithUnit)
     {
