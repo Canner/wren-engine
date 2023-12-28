@@ -46,6 +46,8 @@ import java.util.stream.Stream;
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.sqlrewrite.AccioDataLineage.getColumn;
+import static io.accio.sqlrewrite.AccioDataLineage.getModel;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -66,7 +68,15 @@ public class AccioSqlRewrite
                                 .collect(toImmutableList()))
                 .flatMap(List::stream)
                 .collect(toImmutableList());
-        return dataLineage.getRequiredFields(collectedColumns);
+
+        LinkedHashMap<String, Set<String>> requiredFields = dataLineage.getRequiredFields(collectedColumns);
+        collectedColumns.forEach(columnName -> {
+            Set<String> columnNames = requiredFields.get(getModel(columnName));
+            columnNames.add(getColumn(columnName));
+            requiredFields.put(getModel(columnName), columnNames);
+        });
+
+        return requiredFields;
     }
 
     @Override

@@ -14,6 +14,7 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
@@ -34,6 +35,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static java.util.Objects.requireNonNull;
@@ -124,7 +126,8 @@ public class TestModel
                 column("orders", "Orders", "OrdersCustomer", true),
                 caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"),
                 caluclatedColumn("buy_item_count", BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
-                caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
+                caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"),
+                caluclatedColumn("test_col", BIGINT, "sum(orders.lineitem.discount * nationkey)"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, orders, lineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -144,6 +147,14 @@ public class TestModel
         assertQuery(mdl,
                 "SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370",
                 "SELECT c.custkey, sum(l.extendedprice * l.discount) FROM customer c " +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey " +
+                        "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
+                        "WHERE c.custkey = 370 " +
+                        "GROUP BY 1");
+
+        assertQuery(mdl,
+                "SELECT custkey, test_col FROM Customer WHERE custkey = 370",
+                "SELECT c.custkey, sum(l.discount * c.nationkey) FROM customer c " +
                         "LEFT JOIN orders o ON c.custkey = o.custkey " +
                         "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
                         "WHERE c.custkey = 370 " +
@@ -217,6 +228,60 @@ public class TestModel
                 .doesNotThrowAnyException();
         assertThatCode(() -> query(rewrite("SELECT customer_name, total_price FROM Customer c LEFT JOIN Orders o ON c.custkey = o.custkey", mdl, true)))
                 .hasMessageMatching("found cycle in .*");
+    }
+
+    @Test
+    public void testModelOnModel()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"));
+        Model onCustomer = onBaseObject(
+                "OnCustomer",
+                "Customer",
+                ImmutableList.of(
+                        column("mom_custkey", "VARCHAR", null, true, "custkey"),
+                        column("mom_totalprice", "VARCHAR", null, true, "totalprice")),
+                "mom_custkey");
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, onCustomer, orders))
+                .setRelationships(List.of(ordersCustomer))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertQuery(mdl, "SELECT mom_custkey, mom_totalprice FROM OnCustomer WHERE mom_custkey = 370",
+                "SELECT c.custkey, sum(o.totalprice) FROM customer c\n" +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey\n" +
+                        "WHERE c.custkey = 370\n" +
+                        "GROUP BY 1");
+    }
+
+    @Test
+    public void testCalculatedUseAnotherCalculated()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("total_price", BIGINT, "sum(orders.totalprice)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                column("customer", "Customer", "OrdersCustomer", true),
+                column("lineitem", "Lineitem", "OrdersLineitem", true),
+                caluclatedColumn("customer_name", BIGINT, "customer.name"),
+                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"));
+        Model newLineitem = addColumnsToModel(
+                lineitem,
+                column("orders", "Orders", "OrdersLineitem", true),
+                caluclatedColumn("test_column", BIGINT, "orders.customer.total_price + extendedprice"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, newOrders, newLineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThatCode(() -> query(rewrite("SELECT test_column FROM Lineitem", mdl, true)))
+                .doesNotThrowAnyException();
     }
 
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)
