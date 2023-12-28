@@ -257,6 +257,33 @@ public class TestModel
                         "GROUP BY 1");
     }
 
+    @Test
+    public void testCalculatedUseAnotherCalculated()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("total_price", BIGINT, "sum(orders.totalprice)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                column("customer", "Customer", "OrdersCustomer", true),
+                column("lineitem", "Lineitem", "OrdersLineitem", true),
+                caluclatedColumn("customer_name", BIGINT, "customer.name"),
+                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"));
+        Model newLineitem = addColumnsToModel(
+                lineitem,
+                column("orders", "Orders", "OrdersLineitem", true),
+                caluclatedColumn("test_column", BIGINT, "orders.customer.total_price + extendedprice"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, newOrders, newLineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThatCode(() -> query(rewrite("SELECT test_column FROM Lineitem", mdl, true)))
+                .doesNotThrowAnyException();
+    }
+
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)
     {
         assertThat(query(rewrite(accioSql, mdl, true))).isEqualTo(query(duckDBSql));

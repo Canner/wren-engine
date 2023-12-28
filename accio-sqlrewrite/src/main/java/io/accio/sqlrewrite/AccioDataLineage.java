@@ -268,8 +268,9 @@ public class AccioDataLineage
                         Relationship relationship = info.getRelationships().get(i);
                         String left = relationship.getModels().get(0);
                         String right = relationship.getModels().get(1);
-                        String leftKey = getJoinKey(parseExpression(relationship.getCondition()), left).orElseThrow();
-                        String rightKey = getJoinKey(parseExpression(relationship.getCondition()), right).orElseThrow();
+                        Expression joinCondition = parseExpression(relationship.getCondition());
+                        String leftKey = getJoinKey(joinCondition, left).orElseThrow();
+                        String rightKey = getJoinKey(joinCondition, right).orElseThrow();
                         sourceColumns.put(left, leftKey);
                         sourceColumns.put(right, rightKey);
                     }
