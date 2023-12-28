@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.IntegerType.INTEGER;
+import static io.accio.base.type.VarcharType.NameType.NAME;
+import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
@@ -130,6 +132,46 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
             protocolClient.assertCommandComplete("SELECT 2");
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    @Test
+    public void testPreparedStatementTextNameType()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            List<PGType> paramTypes = ImmutableList.of(TEXT, NAME);
+            protocolClient.sendParse("teststmt", "select * from (values ('rows1', 'rows11'), ('rows2', 'rows22')) as t(col1, col2) where col1 = ? and col2 = ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "teststmt");
+            protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter("rows1", TEXT), textParameter("rows11", NAME)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec1");
+            protocolClient.sendExecute("exec1", 0);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
+
+            protocolClient.assertDataRow("rows1,rows11");
+            protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
         }
     }
