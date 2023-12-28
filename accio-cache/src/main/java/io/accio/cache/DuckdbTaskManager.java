@@ -13,25 +13,30 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 
 import static io.accio.base.client.duckdb.DuckdbUtil.convertDuckDBUnits;
 import static io.accio.base.metadata.StandardErrorCode.EXCEEDED_GLOBAL_MEMORY_LIMIT;
+import static io.accio.base.metadata.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.airlift.concurrent.Threads.threadsNamed;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.Executors.newFixedThreadPool;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class DuckdbTaskManager
         implements Closeable
 {
     private final DuckdbClient duckdbClient;
     private final ExecutorService taskExecutorService;
+    private final DuckDBConfig duckDBConfig;
     private final double cacheMemoryLimit;
 
     @Inject
     public DuckdbTaskManager(DuckDBConfig duckDBConfig, DuckdbClient duckdbClient)
     {
+        this.duckDBConfig = requireNonNull(duckDBConfig, "duckDBConfig is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.taskExecutorService = newFixedThreadPool(duckDBConfig.getMaxConcurrentTasks(), threadsNamed("duckdb-task-%s"));
         this.cacheMemoryLimit = duckDBConfig.getMaxCacheTableSizeRatio() * duckDBConfig.getMemoryLimit().toBytes();
@@ -51,7 +56,10 @@ public class DuckdbTaskManager
     public <T> T addQueryTask(Callable<T> callable)
     {
         try {
-            return taskExecutorService.submit(callable).get();
+            return taskExecutorService.submit(callable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
+        }
+        catch (TimeoutException e) {
+            throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);
         }
         catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
@@ -62,7 +70,10 @@ public class DuckdbTaskManager
     public void addQueryDDLTask(Runnable runnable)
     {
         try {
-            taskExecutorService.submit(runnable).get();
+            taskExecutorService.submit(runnable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
+        }
+        catch (TimeoutException e) {
+            throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);
         }
         catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
