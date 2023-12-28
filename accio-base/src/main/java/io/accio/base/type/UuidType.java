@@ -80,4 +80,10 @@ public class UuidType
     {
         return new String(bytes, UTF_8);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "";
+    }
 }

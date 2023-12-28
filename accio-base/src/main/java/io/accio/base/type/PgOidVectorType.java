@@ -93,4 +93,10 @@ public class PgOidVectorType
         }
         return oids;
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return List.of();
+    }
 }

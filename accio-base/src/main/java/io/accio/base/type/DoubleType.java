@@ -81,4 +81,10 @@ public class DoubleType
     {
         return Double.parseDouble(new String(bytes, StandardCharsets.UTF_8));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0.0;
+    }
 }

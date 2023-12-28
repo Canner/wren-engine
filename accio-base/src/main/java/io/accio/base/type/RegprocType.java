@@ -87,4 +87,10 @@ public class RegprocType
     {
         return new String(bytes, UTF_8);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "";
+    }
 }

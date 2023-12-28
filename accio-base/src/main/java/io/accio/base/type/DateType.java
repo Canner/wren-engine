@@ -95,4 +95,11 @@ public class DateType
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        // TODO: give more suitable empty value for time related types
+        return "";
+    }
 }

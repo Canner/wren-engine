@@ -75,4 +75,10 @@ public class InetType
     {
         return new String(bytes, UTF_8);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "";
+    }
 }

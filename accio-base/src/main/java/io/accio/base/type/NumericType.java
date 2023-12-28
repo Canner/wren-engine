@@ -184,4 +184,10 @@ public class NumericType
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return BigDecimal.ZERO;
+    }
 }

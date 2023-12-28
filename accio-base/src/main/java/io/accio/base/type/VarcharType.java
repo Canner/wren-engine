@@ -97,6 +97,12 @@ public class VarcharType
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
+    @Override
+    public Object getEmptyValue()
+    {
+        return "";
+    }
+
     public static class NameType
     {
         static final int OID = 19;

@@ -206,4 +206,6 @@ public abstract class PGType<T>
      * Convert a UTF8 encoded text representation into the actual value
      */
     public abstract T decodeUTF8Text(byte[] bytes);
+
+    public abstract Object getEmptyValue();
 }
