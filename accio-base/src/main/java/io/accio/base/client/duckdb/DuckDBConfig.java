@@ -17,12 +17,16 @@ package io.accio.base.client.duckdb;
 import io.airlift.configuration.Config;
 import io.airlift.units.DataSize;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
 public class DuckDBConfig
 {
     private DataSize memoryLimit = DataSize.of(Runtime.getRuntime().maxMemory() / 2, DataSize.Unit.BYTE);
     private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
     private int maxConcurrentTasks = 10;
+    private double maxCacheTableSizeRatio = 0.5;
 
     public DataSize getMemoryLimit()
     {
@@ -66,5 +70,18 @@ public class DuckDBConfig
     public void setMaxConcurrentTasks(int maxConcurrentTasks)
     {
         this.maxConcurrentTasks = maxConcurrentTasks;
+    }
+
+    @Min(0)
+    @Max(1)
+    public double getMaxCacheTableSizeRatio()
+    {
+        return maxCacheTableSizeRatio;
+    }
+
+    @Config("duckdb.max-cache-table-size-ratio")
+    public void setMaxCacheTableSizeRatio(double maxCacheTableSizeRatio)
+    {
+        this.maxCacheTableSizeRatio = maxCacheTableSizeRatio;
     }
 }
