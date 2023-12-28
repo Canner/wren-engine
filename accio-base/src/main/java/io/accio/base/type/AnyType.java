@@ -77,4 +77,10 @@ public class AnyType
     {
         return Integer.parseInt(new String(bytes, StandardCharsets.UTF_8));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0;
+    }
 }

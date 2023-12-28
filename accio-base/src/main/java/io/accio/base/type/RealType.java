@@ -81,4 +81,10 @@ public class RealType
     {
         return Float.parseFloat(new String(bytes, StandardCharsets.UTF_8));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0.0f;
+    }
 }

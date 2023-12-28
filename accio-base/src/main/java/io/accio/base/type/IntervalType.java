@@ -171,4 +171,10 @@ public class IntervalType
     {
         return PG_INTERVAL_FORMATTER.parsePeriod(new String(bytes, StandardCharsets.UTF_8));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return Period.ZERO;
+    }
 }

@@ -81,4 +81,10 @@ public class BigIntType
     {
         return Long.parseLong(new String(bytes, StandardCharsets.UTF_8));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0;
+    }
 }

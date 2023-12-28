@@ -397,4 +397,10 @@ public class PGArray
         }
         return false;
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return ImmutableList.of();
+    }
 }

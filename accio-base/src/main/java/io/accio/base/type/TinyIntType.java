@@ -84,4 +84,10 @@ public class TinyIntType
     {
         throw new AccioException(GENERIC_INTERNAL_ERROR, new IllegalAccessException("PostgreSQL doesn't have TinyIntType. We never read TinyInt from client."));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0;
+    }
 }

@@ -134,4 +134,10 @@ public class RecordType
     {
         throw new UnsupportedOperationException("Input of record type values is not implemented");
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return Map.of();
+    }
 }

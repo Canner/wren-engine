@@ -122,4 +122,10 @@ public class HstoreType
     {
         throw new UnsupportedOperationException("Input of anonymous hstore type values is not implemented");
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return Map.of();
+    }
 }

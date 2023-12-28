@@ -95,4 +95,10 @@ public class ByteaType
     {
         return "\\x" + Hex.encodeHexString(decimalValue);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return new byte[0];
+    }
 }

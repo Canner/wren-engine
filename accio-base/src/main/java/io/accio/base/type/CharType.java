@@ -76,4 +76,10 @@ public class CharType
     {
         return new String(bytes, UTF_8);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "";
+    }
 }

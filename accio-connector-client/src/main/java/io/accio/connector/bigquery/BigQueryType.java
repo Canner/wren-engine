@@ -62,6 +62,8 @@ import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RecordType.EMPTY_RECORD;
 import static io.accio.base.type.SmallIntType.SMALLINT;
 import static io.accio.base.type.TinyIntType.TINYINT;
+import static io.accio.base.type.VarcharType.NameType.NAME;
+import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
 
 public final class BigQueryType
@@ -95,6 +97,8 @@ public final class BigQueryType
                 .put(TINYINT, INT64)
                 .put(CHAR, STRING)
                 .put(VARCHAR, STRING)
+                .put(TEXT, STRING)
+                .put(NAME, STRING)
                 .put(DOUBLE, FLOAT64)
                 .put(REAL, FLOAT64)
                 .put(NumericType.NUMERIC, BIGNUMERIC)

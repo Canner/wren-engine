@@ -85,4 +85,10 @@ public class BpCharType
     {
         return new String(bytes, UTF_8);
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return 0;
+    }
 }

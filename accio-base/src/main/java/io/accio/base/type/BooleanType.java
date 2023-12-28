@@ -102,4 +102,10 @@ public class BooleanType
     {
         return TRUTH_VALUES.contains(ByteBuffer.wrap(bytes));
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return false;
+    }
 }
