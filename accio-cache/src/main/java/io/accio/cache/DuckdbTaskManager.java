@@ -45,11 +45,11 @@ public class DuckdbTaskManager
     public CompletableFuture<Void> addCacheTask(Runnable runnable)
     {
         return runAsync(() -> {
-                    if (getMemoryUsageBytes() > cacheMemoryLimit) {
-                        addCacheTask(runnable);
-                        throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Cache memory limit exceeded");
-                    }
-                }, taskExecutorService)
+            if (getMemoryUsageBytes() > cacheMemoryLimit) {
+                addCacheTask(runnable);
+                throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Cache memory limit exceeded");
+            }
+        }, taskExecutorService)
                 .thenRun(runnable);
     }
 
