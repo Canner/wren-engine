@@ -148,6 +148,7 @@ public class CacheManager
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
         return duckdbTaskManager.addCacheTask(() -> {
+            duckdbTaskManager.checkCacheMemoryLimit();
             taskInfo.setTaskStatus(RUNNING);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
