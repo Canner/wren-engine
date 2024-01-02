@@ -37,6 +37,7 @@ import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
@@ -197,6 +198,42 @@ public class ModelSqlRender
                                 tableJoins),
                         getRelationableAlias(baseModel.getName()),
                         tableJoinCondition.apply(getRelationableAlias(baseModel.getName()))));
+    }
+
+    private RelationInfo render(Model baseModel)
+    {
+        requireNonNull(baseModel, "baseModel is null");
+        relationable.getColumns().stream()
+                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
+                .forEach(column -> {
+                    selectItems.add(getSelectItemsExpression(column, Optional.empty()));
+                    columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", relationable.getName(), column.getName()));
+                });
+
+        relationable.getColumns().stream()
+                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
+                .forEach(column -> collectRelationship(column, baseModel));
+        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
+
+        String modelSubQuery = format("(SELECT %s FROM (%s) AS \"%s\") AS \"%s\"",
+                modelSubQuerySelectItemsExpression,
+                refSql,
+                baseModel.getName(),
+                baseModel.getName());
+
+        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
+        if (!calculatedRequiredRelationshipInfos.isEmpty()) {
+            tableJoinsSql.append(
+                    getCalculatedSubQuery(baseModel, calculatedRequiredRelationshipInfos).stream()
+                            .map(info -> format("\nLEFT JOIN (%s) AS \"%s\" ON %s", info.getSql(), info.getSubqueryAlias(), info.getJoinCriteria()))
+                            .collect(joining("")));
+        }
+        tableJoinsSql.append("\n");
+
+        return new RelationInfo(
+                relationable,
+                requiredObjects,
+                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
     }
 
     // accept to-one relationship(s) and at least one to-many relationship in this method, and use group by model primary key

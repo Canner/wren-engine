@@ -38,6 +38,9 @@ public class RelationInfo
         if (relationable instanceof Model) {
             return new ModelSqlRender(relationable, mdl, requiredFields).render();
         }
+        else if (relationable instanceof Metric) {
+            return new MetricSqlRender(relationable, mdl, requiredFields).render();
+        }
         else {
             throw new IllegalArgumentException(format("cannot get relation info from relationable %s", relationable));
         }

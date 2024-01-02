@@ -16,6 +16,7 @@ package io.accio.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
@@ -40,8 +41,8 @@ import static io.accio.base.dto.TimeUnit.DAY;
 import static io.accio.base.dto.TimeUnit.MONTH;
 import static io.accio.base.dto.TimeUnit.YEAR;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestMetric
         extends AbstractTestFramework
@@ -163,6 +164,15 @@ public class TestMetric
                                 List.of(column("orderkey", INTEGER, null, true),
                                         column("orderdate", DATE, null, true)),
                                 List.of(column("count", INTEGER, null, true, "count(orderkey)")),
+                                List.of()),
+                        metric("CountOrders", "Orders",
+                                List.of(column("custkey", INTEGER, null, true),
+                                        column("orderstatus", DATE, null, true)),
+                                List.of(column("count", INTEGER, null, true, "count(*)")),
+                                List.of()),
+                        metric("CountOrders2", "CountOrders",
+                                List.of(column("orderstatus", DATE, null, true)),
+                                List.of(column("sum_count", INTEGER, null, true, "sum(count)")),
                                 List.of())))
                 .build();
         accioMDL = AccioMDL.fromManifest(manifest);
@@ -182,7 +192,7 @@ public class TestMetric
     @Test
     public void testMetricUseToOneRelationship()
     {
-        List<List<Object>> result = query(rewrite("select * from TotalpriceByCustomerBaseOrders"));
+        List<List<Object>> result = query(rewrite("select * from TotalpriceByCustomerBaseOrders", true));
         assertThat(result.get(0).size()).isEqualTo(3);
         assertThat(result.size()).isEqualTo(14958);
 
@@ -292,13 +302,70 @@ public class TestMetric
         assertThat(result.size()).isEqualTo(10);
     }
 
+    @Test
+    public void testDynamicMetricOnModel()
+    {
+        // select all in CountOrders
+        assertThat(query(rewrite("SELECT * FROM CountOrders WHERE custkey = 370", true)))
+                .isEqualTo(query("SELECT custkey, orderstatus, count(*) FROM orders WHERE custkey = 370 GROUP BY 1, 2"));
+        assertThat(query(rewrite("SELECT * FROM CountOrders WHERE custkey = 370", true)))
+                .isEqualTo(query(rewrite("SELECT * FROM CountOrders WHERE custkey = 370", false)));
+
+        // select dim in CountOrders
+        assertThat(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", true)))
+                .isEqualTo(query("WITH output AS (SELECT custkey, count(*) FROM orders WHERE custkey = 370 GROUP BY 1) SELECT custkey FROM output"));
+
+        // select measure in CountOrders
+        assertThat(query(rewrite("SELECT count FROM CountOrders WHERE custkey = 370", true)))
+                .isEqualTo(query("WITH output AS (SELECT custkey, orderstatus, count(*) AS count FROM orders WHERE custkey = 370 GROUP BY 1, 2) SELECT count FROM output"));
+
+        // select dim custkey and measure count in CountOrders
+        assertThat(query(rewrite("SELECT custkey, count FROM CountOrders WHERE custkey = 370", true)))
+                .isEqualTo(query("SELECT custkey, count(*) FROM orders WHERE custkey = 370 GROUP BY 1"));
+    }
+
+    @Test
+    public void testDynamicMetricOnMetric()
+    {
+        // select all in CountOrders2
+        assertThat(query(rewrite("SELECT * FROM CountOrders2 WHERE orderstatus = 'F'", true)))
+                .isEqualTo(query("SELECT orderstatus, CAST(count(*) AS HUGEINT) FROM orders WHERE orderstatus = 'F' GROUP BY 1"));
+        assertThat(query(rewrite("SELECT * FROM CountOrders2 WHERE orderstatus = 'F'", true)))
+                .isEqualTo(query(rewrite("SELECT * FROM CountOrders2 WHERE orderstatus = 'F'", false)));
+
+        // select dim in CountOrders2
+        assertThat(query(rewrite("SELECT orderstatus FROM CountOrders2 WHERE orderstatus = 'F'", true)))
+                .isEqualTo(query("WITH output AS (SELECT orderstatus, CAST(count(*) AS HUGEINT) FROM orders WHERE orderstatus = 'F' GROUP BY 1)\n" +
+                        "SELECT orderstatus FROM output"));
+
+        // select measure in CountOrders2
+        assertThat(query(rewrite("SELECT sum_count FROM CountOrders2 WHERE orderstatus = 'F'", true)))
+                .isEqualTo(query("WITH output AS (SELECT orderstatus, CAST(count(*) AS HUGEINT) AS sum_count FROM orders WHERE orderstatus = 'F' GROUP BY 1)\n" +
+                        "SELECT sum_count FROM output"));
+    }
+
     private String rewrite(String sql)
     {
         return rewrite(sql, accioMDL);
     }
 
+    private String rewrite(String sql, boolean enableDynamicField)
+    {
+        return rewrite(sql, accioMDL, enableDynamicField);
+    }
+
     private String rewrite(String sql, AccioMDL accioMDL)
     {
         return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
+    }
+
+    private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicField)
+    {
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog("accio")
+                .setSchema("test")
+                .setEnableDynamic(enableDynamicField)
+                .build();
+        return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
     }
 }

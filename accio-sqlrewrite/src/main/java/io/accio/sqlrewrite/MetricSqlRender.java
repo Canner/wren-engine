@@ -40,9 +40,12 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
+import static java.lang.String.join;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -50,9 +53,32 @@ import static java.util.stream.Collectors.toSet;
 public class MetricSqlRender
         extends RelationableSqlRender
 {
+    private final Set<String> requiredDims;
+    private final Set<String> requiredMeasures;
+
     public MetricSqlRender(Relationable relationable, AccioMDL mdl)
     {
         super(relationable, mdl);
+        this.requiredDims = ((Metric) relationable).getDimension().stream().map(Column::getName).collect(toImmutableSet());
+        this.requiredMeasures = ((Metric) relationable).getMeasure().stream().map(Column::getName).collect(toImmutableSet());
+    }
+
+    public MetricSqlRender(Relationable relationable, AccioMDL mdl, Set<String> requiredFields)
+    {
+        super(relationable, mdl);
+        requireNonNull(requiredFields);
+        Set<String> requiredDims = ((Metric) relationable).getDimension().stream()
+                .map(Column::getName)
+                .filter(requiredFields::contains)
+                .collect(toImmutableSet());
+        // if there is no dimensions specified in requiredFields, still apply all dimensions in metric. This is required since
+        // aggregation is involved in metric CTE generation, and there should at least one group by item (i.e. Dimension in metric)
+        // while user didn't specify any dimension in sql, here fallback to select all dimensions.
+        this.requiredDims = requiredDims.isEmpty() ? ((Metric) relationable).getDimension().stream().map(Column::getName).collect(toImmutableSet()) : requiredDims;
+        this.requiredMeasures = ((Metric) relationable).getMeasure().stream()
+                .map(Column::getName)
+                .filter(requiredFields::contains)
+                .collect(toImmutableSet());
     }
 
     @Override
@@ -82,15 +108,14 @@ public class MetricSqlRender
         throw new IllegalArgumentException("invalid metric, cannot render metric sql");
     }
 
-    // TODO: Refactor this out of MetricSqlRender since Metric currently can't be used in relationship in MDL
-    //  thus no need to take care relations in column expression.
     private RelationInfo renderBasedOnMetric(String metricName)
     {
         Metric metric = (Metric) relationable;
         List<String> selectItems = metric.getColumns().stream()
-                .filter(column -> column.getRelationship().isEmpty())
+                .filter(column -> isRequiredColumn(column.getName()))
                 .map(column -> format("%s AS %s", column.getExpression().orElse(column.getName()), column.getName()))
                 .collect(toList());
+        addCountAllIfNeeded();
         String sql = getQuerySql(metric, Joiner.on(", ").join(selectItems), metricName);
         return new RelationInfo(
                 relationable,
@@ -101,8 +126,7 @@ public class MetricSqlRender
     @Override
     protected String getQuerySql(Relationable relationable, String selectItemsSql, String tableJoinsSql)
     {
-        Metric metric = (Metric) relationable;
-        String groupByItems = IntStream.rangeClosed(1, metric.getDimension().size()).mapToObj(String::valueOf).collect(joining(","));
+        String groupByItems = IntStream.rangeClosed(1, requiredDims.size()).mapToObj(String::valueOf).collect(joining(","));
         return format("SELECT %s FROM %s GROUP BY %s", selectItemsSql, tableJoinsSql, groupByItems);
     }
 
@@ -148,6 +172,9 @@ public class MetricSqlRender
     @Override
     protected void collectRelationship(Column column, Model baseModel)
     {
+        if (!isRequiredColumn(column.getName())) {
+            return;
+        }
         // TODO: There're some issue about sql keyword as expression, e.g. column named as "order"
         Expression expression = parseExpression(column.getExpression().get());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
@@ -211,5 +238,54 @@ public class MetricSqlRender
                                 tableJoins),
                         getRelationableAlias(baseModel.getName()),
                         tableJoinCondition.apply(getRelationableAlias(baseModel.getName()))));
+    }
+
+    private RelationInfo render(Model baseModel)
+    {
+        requireNonNull(baseModel, "baseModel is null");
+        relationable.getColumns().stream()
+                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
+                .filter(column -> isRequiredColumn(column.getName()))
+                .forEach(column -> selectItems.add(getSelectItemsExpression(column, Optional.empty())));
+        relationable.getColumns().stream()
+                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
+                .forEach(column -> collectRelationship(column, baseModel));
+        addCountAllIfNeeded();
+
+        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
+
+        String modelSubQuery = format("(SELECT %s FROM (%s) AS \"%s\") AS \"%s\"",
+                modelSubQuerySelectItemsExpression,
+                refSql,
+                baseModel.getName(),
+                baseModel.getName());
+
+        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
+        if (!calculatedRequiredRelationshipInfos.isEmpty()) {
+            tableJoinsSql.append(
+                    getCalculatedSubQuery(baseModel, calculatedRequiredRelationshipInfos).stream()
+                            .map(info -> format("\nLEFT JOIN (%s) AS \"%s\" ON %s", info.getSql(), info.getSubqueryAlias(), info.getJoinCriteria()))
+                            .collect(joining("")));
+        }
+        tableJoinsSql.append("\n");
+
+        return new RelationInfo(
+                relationable,
+                requiredObjects,
+                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
+    }
+
+    private boolean isRequiredColumn(String name)
+    {
+        return requiredDims.contains(name) || requiredMeasures.contains(name);
+    }
+
+    // dynamic metric may not contain measure, while metric will use group by clause, so we still need at least one aggregate function
+    // in metric CTE, that's why added a filler column count(*) here
+    private void addCountAllIfNeeded()
+    {
+        if (requiredMeasures.isEmpty()) {
+            selectItems.add("COUNT(*) AS _count_filler");
+        }
     }
 }

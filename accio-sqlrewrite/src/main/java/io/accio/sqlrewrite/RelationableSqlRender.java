@@ -30,12 +30,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static io.accio.sqlrewrite.Utils.parseQuery;
-import static java.lang.String.format;
-import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 
+// TODO: Turn this into interface
 public abstract class RelationableSqlRender
 {
     protected final Relationable relationable;
@@ -64,43 +61,7 @@ public abstract class RelationableSqlRender
 
     protected abstract String initRefSql(Relationable relationable);
 
-    public abstract RelationInfo render();
-
-    protected RelationInfo render(Model baseModel)
-    {
-        requireNonNull(baseModel, "baseModel is null");
-        relationable.getColumns().stream()
-                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
-                .forEach(column -> {
-                    selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-                    columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", relationable.getName(), column.getName()));
-                });
-
-        relationable.getColumns().stream()
-                .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
-                .forEach(column -> collectRelationship(column, baseModel));
-        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
-
-        String modelSubQuery = format("(SELECT %s FROM (%s) AS \"%s\") AS \"%s\"",
-                modelSubQuerySelectItemsExpression,
-                refSql,
-                baseModel.getName(),
-                baseModel.getName());
-
-        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
-        if (!calculatedRequiredRelationshipInfos.isEmpty()) {
-            tableJoinsSql.append(
-                    getCalculatedSubQuery(baseModel, calculatedRequiredRelationshipInfos).stream()
-                            .map(info -> format("\nLEFT JOIN (%s) AS \"%s\" ON %s", info.getSql(), info.getSubqueryAlias(), info.getJoinCriteria()))
-                            .collect(joining("")));
-        }
-        tableJoinsSql.append("\n");
-
-        return new RelationInfo(
-                relationable,
-                requiredObjects,
-                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
-    }
+    protected abstract RelationInfo render();
 
     protected static String getRelationableAlias(String baseModelName)
     {

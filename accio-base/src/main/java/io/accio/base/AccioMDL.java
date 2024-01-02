@@ -58,7 +58,9 @@ public class AccioMDL
     private final String schema;
     private final Manifest manifest;
     private final Map<String, Model> models;
+    private final Map<String, Metric> metrics;
     private final Map<QualifiedName, Column> modelColumns;
+    private final Map<QualifiedName, Column> metricColumns;
 
     public static AccioMDL fromJson(String manifest)
             throws JsonProcessingException
@@ -78,10 +80,17 @@ public class AccioMDL
         this.catalog = manifest.getCatalog();
         this.schema = manifest.getSchema();
         this.models = listModels().stream().collect(toImmutableMap(Model::getName, identity()));
+        this.metrics = listMetrics().stream().collect(toImmutableMap(Metric::getName, identity()));
         this.modelColumns = new HashMap<>();
         for (Model model : listModels()) {
             for (Column column : model.getColumns()) {
                 modelColumns.put(QualifiedName.of(model.getName(), column.getName()), column);
+            }
+        }
+        this.metricColumns = new HashMap<>();
+        for (Metric metric : listMetrics()) {
+            for (Column column : metric.getColumns()) {
+                metricColumns.put(QualifiedName.of(metric.getName(), column.getName()), column);
             }
         }
     }
@@ -204,9 +213,7 @@ public class AccioMDL
 
     public Optional<Metric> getMetric(String name)
     {
-        return manifest.getMetrics().stream()
-                .filter(metric -> metric.getName().equals(name))
-                .findAny();
+        return Optional.ofNullable(metrics.get(name));
     }
 
     public Optional<Metric> getMetric(CatalogSchemaTableName name)
@@ -279,6 +286,27 @@ public class AccioMDL
 
     public Optional<Column> getColumn(QualifiedName qualifiedName)
     {
-        return Optional.ofNullable(modelColumns.get(qualifiedName));
+        return Optional.ofNullable(modelColumns.get(qualifiedName))
+                .or(() -> Optional.ofNullable(metricColumns.get(qualifiedName)));
+    }
+
+    public Optional<String> getBaseObject(String name)
+    {
+        Optional<Model> model = getModel(name);
+        if (model.isPresent()) {
+            return Optional.ofNullable(model.get().getBaseObject());
+        }
+
+        Optional<Metric> metric = getMetric(name);
+        if (metric.isPresent()) {
+            return Optional.ofNullable(metric.get().getBaseObject());
+        }
+
+        Optional<CumulativeMetric> cumulativeMetric = getCumulativeMetric(name);
+        if (cumulativeMetric.isPresent()) {
+            return Optional.ofNullable(cumulativeMetric.get().getBaseObject());
+        }
+
+        return Optional.empty();
     }
 }

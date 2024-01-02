@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.SetMultimap;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
+import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.sqlrewrite.analyzer.ExpressionRelationshipInfo;
@@ -53,7 +54,7 @@ public class AccioDataLineage
     private final AccioMDL mdl;
     // key: column name, value: source columns name. format in QualifiedName is modelName.columnName
     private final Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap;
-    private final Map<QualifiedName, List<ModelVertex>> requiredFields;
+    private final Map<QualifiedName, List<Vertex>> requiredFields;
 
     public static AccioDataLineage analyze(AccioMDL mdl)
     {
@@ -76,17 +77,17 @@ public class AccioDataLineage
     public LinkedHashMap<String, Set<String>> getRequiredFields(List<QualifiedName> columnNames)
     {
         // make sure there is no model dependency cycle in given columnNames.
-        DirectedAcyclicGraph<ModelVertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
-        Map<String, ModelVertex> vertexes = new HashMap<>();
+        DirectedAcyclicGraph<Vertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
+        Map<String, Vertex> vertexes = new HashMap<>();
         requiredFields.entrySet().stream()
                 .filter(e -> columnNames.contains(e.getKey()))
                 .forEach(e -> {
-                    List<ModelVertex> nodes = ImmutableList.copyOf(e.getValue());
+                    List<Vertex> nodes = ImmutableList.copyOf(e.getValue());
                     for (int i = 1; i < nodes.size(); i++) {
                         String from = nodes.get(i - 1).getName();
                         String to = nodes.get(i).getName();
-                        ModelVertex vertexFrom = vertexes.computeIfAbsent(from, (ignored) -> new ModelVertex(from));
-                        ModelVertex vertexTo = vertexes.computeIfAbsent(to, (ignored) -> new ModelVertex(to));
+                        Vertex vertexFrom = vertexes.computeIfAbsent(from, (ignored) -> new Vertex(from));
+                        Vertex vertexTo = vertexes.computeIfAbsent(to, (ignored) -> new Vertex(to));
                         graph.addVertex(vertexFrom);
                         graph.addVertex(vertexTo);
                         try {
@@ -102,6 +103,12 @@ public class AccioDataLineage
 
         LinkedHashMap<String, Set<String>> result = new LinkedHashMap<>();
         graph.iterator().forEachRemaining(vertex -> result.put(vertex.getName(), vertex.getColumnNames()));
+        // add back column names to requiredFields
+        columnNames.forEach(fullColumnName -> {
+            Set<String> names = Optional.ofNullable(result.get(getTable(fullColumnName))).orElseGet(HashSet::new);
+            names.add(getColumn(fullColumnName));
+            result.put(getTable(fullColumnName), names);
+        });
         return result;
     }
 
@@ -123,15 +130,30 @@ public class AccioDataLineage
                                 .collect(toImmutableSet()));
             }
         }
+        for (Metric metric : mdl.listMetrics()) {
+            for (Column column : metric.getColumns()) {
+                SetMultimap<String, String> sourceColumns = getSourceColumns(mdl, metric, column);
+                sourceColumnsMap.put(
+                        QualifiedName.of(metric.getName(), column.getName()),
+                        // TODO: maybe we can make getSourceColumns return Set<QualifiedName>
+                        sourceColumns.asMap().entrySet().stream()
+                                .map(e ->
+                                        e.getValue().stream()
+                                                .map(name -> QualifiedName.of(e.getKey(), name))
+                                                .collect(toImmutableSet()))
+                                .flatMap(Set::stream)
+                                .collect(toImmutableSet()));
+            }
+        }
         return sourceColumnsMap;
     }
 
-    private Map<QualifiedName, List<ModelVertex>> collectRequiredFieldsByColumn()
+    private Map<QualifiedName, List<Vertex>> collectRequiredFieldsByColumn()
     {
-        Map<QualifiedName, List<ModelVertex>> columnLineages = new HashMap<>();
+        Map<QualifiedName, List<Vertex>> columnLineages = new HashMap<>();
         sourceColumnsMap.forEach(((column, sourceColumns) -> {
-            DirectedAcyclicGraph<ModelVertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
-            Map<String, ModelVertex> vertexes = new HashMap<>();
+            DirectedAcyclicGraph<Vertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
+            Map<String, Vertex> vertexes = new HashMap<>();
             collectRequiredFields(column, graph, vertexes);
             columnLineages.put(column, ImmutableList.copyOf(graph.iterator()));
         }));
@@ -141,39 +163,56 @@ public class AccioDataLineage
 
     private void collectRequiredFields(
             QualifiedName qualifiedName,
-            DirectedAcyclicGraph<ModelVertex, Object> graph,
-            Map<String, ModelVertex> vertexes)
+            DirectedAcyclicGraph<Vertex, Object> graph,
+            Map<String, Vertex> vertexes)
     {
         Column targetColumn = mdl.getColumn(qualifiedName).orElseThrow(() -> new NoSuchElementException(qualifiedName + " not found"));
-        String modelName = getModel(qualifiedName);
+        String tableName = getTable(qualifiedName);
         String columnName = getColumn(qualifiedName);
-        ModelVertex targetVertex = vertexes.computeIfAbsent(modelName, (ignored) -> new ModelVertex(modelName));
+        Vertex targetVertex = vertexes.computeIfAbsent(tableName, (ignored) -> new Vertex(tableName));
         graph.addVertex(targetVertex);
         if (sourceColumnsMap.containsKey(qualifiedName)) {
             Set<QualifiedName> sourceColumns = sourceColumnsMap.get(qualifiedName);
-            sourceColumns.forEach(fullColumnName -> {
-                Column sourceColumn = mdl.getColumn(fullColumnName).orElseThrow(() -> new NoSuchElementException(fullColumnName + " not found"));
-                String sourceModelName = getModel(fullColumnName);
-                String sourceColumnName = getColumn(fullColumnName);
-                ModelVertex sourceVertex = vertexes.computeIfAbsent(sourceModelName, (ignored) -> new ModelVertex(sourceModelName));
-                graph.addVertex(sourceVertex);
-                if (!skipAddEdge(sourceVertex, sourceColumn, targetVertex, targetColumn)) {
+            // sometimes we can't analyze lineage from column expression e.g. count(*), while the column itself may depend on another object (e.g. metric/model...)
+            // so we still need detect baseObject here.
+            if (sourceColumns.isEmpty()) {
+                Optional<String> baseObject = mdl.getBaseObject(tableName);
+                if (baseObject.isPresent()) {
+                    Vertex sourceVertex = vertexes.computeIfAbsent(baseObject.get(), (ignored) -> new Vertex(baseObject.get()));
+                    mdl.getBaseObject(tableName).ifPresent(sourceTable -> graph.addVertex(sourceVertex));
                     try {
                         graph.addEdge(sourceVertex, targetVertex);
                     }
                     catch (GraphCycleProhibitedException ex) {
-                        throw new IllegalArgumentException(format("found cycle in model: %s column: %s", modelName, columnName));
+                        throw new IllegalArgumentException(format("found cycle: %s column: %s", tableName, columnName));
                     }
                 }
-                sourceVertex.columnNames.add(sourceColumnName);
+            }
+            else {
+                sourceColumns.forEach(fullColumnName -> {
+                    Column sourceColumn = mdl.getColumn(fullColumnName).orElseThrow(() -> new NoSuchElementException(fullColumnName + " not found"));
+                    String sourceTableName = getTable(fullColumnName);
+                    String sourceColumnName = getColumn(fullColumnName);
+                    Vertex sourceVertex = vertexes.computeIfAbsent(sourceTableName, (ignored) -> new Vertex(sourceTableName));
+                    graph.addVertex(sourceVertex);
+                    if (!skipAddEdge(sourceVertex, sourceColumn, targetVertex, targetColumn)) {
+                        try {
+                            graph.addEdge(sourceVertex, targetVertex);
+                        }
+                        catch (GraphCycleProhibitedException ex) {
+                            throw new IllegalArgumentException(format("found cycle: %s column: %s", tableName, columnName));
+                        }
+                    }
+                    sourceVertex.columnNames.add(sourceColumnName);
 
-                // recursively create column lineage
-                collectRequiredFields(fullColumnName, graph, vertexes);
-            });
+                    // recursively create column lineage
+                    collectRequiredFields(fullColumnName, graph, vertexes);
+                });
+            }
         }
     }
 
-    private static boolean skipAddEdge(ModelVertex sourceVertex, Column sourceColumn, ModelVertex targetVertex, Column targetColumn)
+    private static boolean skipAddEdge(Vertex sourceVertex, Column sourceColumn, Vertex targetVertex, Column targetColumn)
     {
         // calculated field could be dependent on non-calculated field in the same model
         return sourceVertex.getName().equals(targetVertex.getName())
@@ -181,18 +220,18 @@ public class AccioDataLineage
                 && !sourceColumn.isCalculated();
     }
 
-    public static class ModelVertex
+    public static class Vertex
     {
         private final String name;
         private final Set<String> columnNames;
 
-        public ModelVertex(String name)
+        public Vertex(String name)
         {
             this(name, new HashSet<>());
         }
 
         @VisibleForTesting
-        public ModelVertex(String name, Set<String> columnNames)
+        public Vertex(String name, Set<String> columnNames)
         {
             this.name = requireNonNull(name);
             this.columnNames = requireNonNull(columnNames);
@@ -233,6 +272,101 @@ public class AccioDataLineage
         Analyzer analyzer = new Analyzer(mdl, model, column);
         analyzer.process(expression);
         return analyzer.getSourceColumns();
+    }
+
+    private static SetMultimap<String, String> getSourceColumns(AccioMDL mdl, Metric metric, Column column)
+    {
+        Expression expression;
+        // TODO: current column expression allow not empty (i.e. its expression is the same as column name)
+        //  we should not directly use dto object, instead, we should convert them into another object. and fill the expression in every column.
+        if (column.getExpression().isEmpty()) {
+            expression = parseExpression(column.getName());
+        }
+        else {
+            expression = parseExpression(column.getExpression().get());
+        }
+        MetricAnalyzer analyzer = new MetricAnalyzer(mdl, metric, column);
+        analyzer.process(expression);
+        return analyzer.getSourceColumns();
+    }
+
+    private static class MetricAnalyzer
+            extends DefaultTraversalVisitor<Void>
+    {
+        private final AccioMDL mdl;
+        private final Metric metric;
+        private final SetMultimap<String, String> sourceColumns = HashMultimap.create();
+
+        private MetricAnalyzer(AccioMDL mdl, Metric metric, Column column)
+        {
+            this.mdl = requireNonNull(mdl);
+            this.metric = requireNonNull(metric);
+        }
+
+        @Override
+        protected Void visitDereferenceExpression(DereferenceExpression node, Void ignored)
+        {
+            QualifiedName qualifiedName = getQualifiedName(node);
+            if (qualifiedName == null) {
+                return null;
+            }
+            Optional<Model> parentModel = mdl.getModel(metric.getBaseObject());
+            if (parentModel.isPresent()) {
+                Optional<ExpressionRelationshipInfo> relationshipInfo = createRelationshipInfo(qualifiedName, parentModel.get(), mdl).stream()
+                        .filter(info -> info.getRelationships().size() > 0)
+                        .filter(info -> info.getRemainingParts().size() > 0)
+                        .findAny();
+                relationshipInfo.ifPresent(info -> {
+                    // collect join keys
+                    for (int i = 0; i < info.getRelationships().size(); i++) {
+                        Relationship relationship = info.getRelationships().get(i);
+                        String left = relationship.getModels().get(0);
+                        String right = relationship.getModels().get(1);
+                        Expression joinCondition = parseExpression(relationship.getCondition());
+                        String leftKey = getJoinKey(joinCondition, left).orElseThrow();
+                        String rightKey = getJoinKey(joinCondition, right).orElseThrow();
+                        sourceColumns.put(left, leftKey);
+                        sourceColumns.put(right, rightKey);
+                    }
+                    // collect last relationship output column
+                    Relationship relationship = info.getRelationships().get(info.getRelationships().size() - 1);
+                    String columnName = info.getRemainingParts().get(info.getRemainingParts().size() - 1);
+                    String modelName = relationship.getModels().get(1);
+                    sourceColumns.put(modelName, columnName);
+                });
+            }
+            return null;
+        }
+
+        @Override
+        protected Void visitIdentifier(Identifier node, Void ignored)
+        {
+            // TODO: exclude sql reserved words
+            // handle metric on model
+            Optional<Model> parentModel = mdl.getModel(metric.getBaseObject());
+            if (parentModel.isPresent()) {
+                parentModel.get().getColumns().stream()
+                        .filter(column -> node.getValue().equals(column.getName()))
+                        .findAny()
+                        .ifPresent(column -> sourceColumns.put(parentModel.get().getName(), column.getName()));
+                return null;
+            }
+            // handle metric on metric
+            Optional<Metric> parentMetric = mdl.getMetric(metric.getBaseObject());
+            if (parentMetric.isPresent()) {
+                parentMetric.get().getColumns().stream()
+                        .filter(column -> node.getValue().equals(column.getName()))
+                        .findAny()
+                        .ifPresent(column -> sourceColumns.put(parentMetric.get().getName(), column.getName()));
+                return null;
+            }
+            return null;
+        }
+
+        public SetMultimap<String, String> getSourceColumns()
+        {
+            return sourceColumns;
+        }
     }
 
     private static class Analyzer
@@ -344,7 +478,7 @@ public class AccioDataLineage
         }
     }
 
-    public static String getModel(QualifiedName qualifiedName)
+    public static String getTable(QualifiedName qualifiedName)
     {
         return qualifiedName.getParts().get(0);
     }

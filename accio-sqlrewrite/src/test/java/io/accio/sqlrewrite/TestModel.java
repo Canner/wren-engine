@@ -290,12 +290,12 @@ public class TestModel
         assertThat(query(rewrite(accioSql, mdl, false))).isEqualTo(query(duckDBSql));
     }
 
-    private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicCalculatedField)
+    private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicField)
     {
         SessionContext sessionContext = SessionContext.builder()
                 .setCatalog("accio")
                 .setSchema("test")
-                .setEnableDynamicCalculated(enableDynamicCalculatedField)
+                .setEnableDynamic(enableDynamicField)
                 .build();
         return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
     }
