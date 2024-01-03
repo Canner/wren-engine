@@ -50,7 +50,6 @@ public class DuckdbTaskManager
     public <T> T addCacheQueryTask(Callable<T> callable)
     {
         try {
-            checkMemoryLimit();
             return taskExecutorService.submit(callable).get(duckDBConfig.getMaxCacheQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
@@ -65,7 +64,6 @@ public class DuckdbTaskManager
     public void addCacheQueryDDLTask(Runnable runnable)
     {
         try {
-            checkMemoryLimit();
             taskExecutorService.submit(runnable).get(duckDBConfig.getMaxCacheQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
@@ -92,13 +90,6 @@ public class DuckdbTaskManager
         long usage = getMemoryUsageBytes();
         if (usage >= cacheMemoryLimit) {
             throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Cache memory limit exceeded. Usage: " + usage + " bytes, Limit: " + cacheMemoryLimit + " bytes");
-        }
-    }
-
-    private void checkMemoryLimit()
-    {
-        if (getMemoryUsageBytes() >= duckDBConfig.getMemoryLimit().toBytes()) {
-            throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Duckdb memory limit exceeded");
         }
     }
 
