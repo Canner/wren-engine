@@ -56,7 +56,7 @@ public class DuckdbTaskManager
             throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);
         }
         catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            throw new AccioException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 
@@ -70,7 +70,7 @@ public class DuckdbTaskManager
             throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);
         }
         catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+            throw new AccioException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 
