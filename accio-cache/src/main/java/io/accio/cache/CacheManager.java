@@ -139,7 +139,7 @@ public class CacheManager
 
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
     {
-        return duckdbTaskManager.addQueryTask(() -> DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList())));
+        return duckdbTaskManager.addCacheQueryTask(() -> DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList())));
     }
 
     private CompletableFuture<Void> doCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)

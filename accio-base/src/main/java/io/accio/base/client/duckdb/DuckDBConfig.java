@@ -27,7 +27,7 @@ public class DuckDBConfig
     private String tempDirectory = "/tmp/duck";
     private int maxConcurrentTasks = 10;
     private double maxCacheTableSizeRatio = 0.5;
-    private long maxQueryTimeout = 20;
+    private long maxCacheQueryTimeout = 20;
 
     public DataSize getMemoryLimit()
     {
@@ -86,14 +86,14 @@ public class DuckDBConfig
         this.maxCacheTableSizeRatio = maxCacheTableSizeRatio;
     }
 
-    public long getMaxQueryTimeout()
+    public long getMaxCacheQueryTimeout()
     {
-        return maxQueryTimeout;
+        return maxCacheQueryTimeout;
     }
 
-    @Config("duckdb.max-query-timeout")
-    public void setMaxQueryTimeout(long maxQueryTimeout)
+    @Config("duckdb.max-cache-query-timeout")
+    public void setMaxCacheQueryTimeout(long maxCacheQueryTimeout)
     {
-        this.maxQueryTimeout = maxQueryTimeout;
+        this.maxCacheQueryTimeout = maxCacheQueryTimeout;
     }
 }

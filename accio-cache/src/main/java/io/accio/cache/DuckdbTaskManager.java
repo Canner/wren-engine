@@ -47,11 +47,11 @@ public class DuckdbTaskManager
         return runAsync(runnable, taskExecutorService);
     }
 
-    public <T> T addQueryTask(Callable<T> callable)
+    public <T> T addCacheQueryTask(Callable<T> callable)
     {
         try {
             checkMemoryLimit();
-            return taskExecutorService.submit(callable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
+            return taskExecutorService.submit(callable).get(duckDBConfig.getMaxCacheQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
             throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);
@@ -62,11 +62,11 @@ public class DuckdbTaskManager
     }
 
     // for canner use
-    public void addQueryDDLTask(Runnable runnable)
+    public void addCacheQueryDDLTask(Runnable runnable)
     {
         try {
             checkMemoryLimit();
-            taskExecutorService.submit(runnable).get(duckDBConfig.getMaxQueryTimeout(), SECONDS);
+            taskExecutorService.submit(runnable).get(duckDBConfig.getMaxCacheQueryTimeout(), SECONDS);
         }
         catch (TimeoutException e) {
             throw new AccioException(EXCEEDED_TIME_LIMIT, "Query time limit exceeded", e);

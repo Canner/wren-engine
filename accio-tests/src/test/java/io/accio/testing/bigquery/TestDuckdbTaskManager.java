@@ -122,14 +122,14 @@ public class TestDuckdbTaskManager
     }
 
     @Test
-    public void testAddQueryTask()
+    public void testAddCacheQueryTask()
             throws IOException
     {
-        assertThat(duckdbTaskManager.addQueryTask(() -> 1)).isEqualTo(1);
+        assertThat(duckdbTaskManager.addCacheQueryTask(() -> 1)).isEqualTo(1);
 
         // test timeout
-        long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxQueryTimeout();
-        assertThatCode(() -> duckdbTaskManager.addQueryTask(() -> {
+        long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxCacheQueryTimeout();
+        assertThatCode(() -> duckdbTaskManager.addCacheQueryTask(() -> {
             SECONDS.sleep(maxQueryTimeout + 1);
             return 1;
         })).hasMessageContaining("Query time limit exceeded");
@@ -138,26 +138,26 @@ public class TestDuckdbTaskManager
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMemoryLimit(DataSize.of(0, BYTE));
         try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig))) {
-            assertThatCode(() -> taskManager.addQueryTask(() -> 1)).hasMessageContaining("Duckdb memory limit exceeded");
+            assertThatCode(() -> taskManager.addCacheQueryTask(() -> 1)).hasMessageContaining("Duckdb memory limit exceeded");
         }
     }
 
     @Test
-    public void testAddQueryDDLTask()
+    public void testAddCacheQueryDDLTask()
             throws IOException
     {
-        assertThatCode(() -> duckdbTaskManager.addQueryDDLTask(() -> sleepSeconds(1))).doesNotThrowAnyException();
+        assertThatCode(() -> duckdbTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(1))).doesNotThrowAnyException();
 
         // test timeout
-        long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxQueryTimeout();
-        assertThatCode(() -> duckdbTaskManager.addQueryDDLTask(() -> sleepSeconds(maxQueryTimeout + 1)))
+        long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxCacheQueryTimeout();
+        assertThatCode(() -> duckdbTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(maxQueryTimeout + 1)))
                 .hasMessageContaining("Query time limit exceeded");
 
         // test query memory limit
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMemoryLimit(DataSize.of(0, BYTE));
         try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig))) {
-            assertThatCode(() -> taskManager.addQueryDDLTask(() -> sleepSeconds(1)))
+            assertThatCode(() -> taskManager.addCacheQueryDDLTask(() -> sleepSeconds(1)))
                     .hasMessageContaining("Duckdb memory limit exceeded");
         }
     }
