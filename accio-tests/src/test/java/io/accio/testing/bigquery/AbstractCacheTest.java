@@ -45,6 +45,13 @@ public abstract class AbstractCacheTest
     @Override
     protected TestingAccioServer createAccioServer()
     {
+        return TestingAccioServer.builder()
+                .setRequiredConfigs(getProperties().build())
+                .build();
+    }
+
+    protected ImmutableMap.Builder<String, String> getProperties()
+    {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .put("bigquery.location", "asia-east1")
@@ -58,10 +65,7 @@ public abstract class AbstractCacheTest
         if (getAccioMDLPath().isPresent()) {
             properties.put("accio.file", getAccioMDLPath().get());
         }
-
-        return TestingAccioServer.builder()
-                .setRequiredConfigs(properties.build())
-                .build();
+        return properties;
     }
 
     protected CacheInfoPair getDefaultCacheInfoPair(String name)

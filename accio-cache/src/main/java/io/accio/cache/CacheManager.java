@@ -22,6 +22,7 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
+import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
 import io.accio.base.sql.SqlConverter;
@@ -39,6 +40,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -49,6 +51,8 @@ import java.util.function.Predicate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
+import static io.accio.base.metadata.StandardErrorCode.EXCEEDED_GLOBAL_MEMORY_LIMIT;
+import static io.accio.base.metadata.StandardErrorCode.EXCEEDED_TIME_LIMIT;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.cache.EventLogger.Level.ERROR;
@@ -66,6 +70,7 @@ import static java.util.UUID.randomUUID;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
 public class CacheManager
@@ -81,11 +86,14 @@ public class CacheManager
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final CachedTableMapping cachedTableMapping;
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> cacheScheduledFutures = new ConcurrentHashMap<>();
+    private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> retryScheduledFutures = new ConcurrentHashMap<>();
     private final ScheduledThreadPoolExecutor refreshExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("cache-refresh-%s"));
+    private final ScheduledThreadPoolExecutor retryExecutor = new ScheduledThreadPoolExecutor(5, daemonThreadsNamed("cache-retry-%s"));
     private final ExecutorService executorService = newCachedThreadPool(threadsNamed("cache-manager-%s"));
     private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
     private final EventLogger eventLogger;
     private final DuckdbTaskManager duckdbTaskManager;
+    private final DuckDBConfig duckdbConfig;
 
     @Inject
     public CacheManager(
@@ -96,7 +104,8 @@ public class CacheManager
             CacheStorageConfig cacheStorageConfig,
             CachedTableMapping cachedTableMapping,
             EventLogger eventLogger,
-            DuckdbTaskManager duckdbTaskManager)
+            DuckdbTaskManager duckdbTaskManager,
+            DuckDBConfig duckDBConfig)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
@@ -107,6 +116,7 @@ public class CacheManager
         this.cacheStorageConfig = requireNonNull(cacheStorageConfig, "cacheStorageConfig is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.eventLogger = requireNonNull(eventLogger, "eventLogger is null");
+        this.duckdbConfig = requireNonNull(duckDBConfig, "duckDBConfig is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
@@ -123,17 +133,36 @@ public class CacheManager
 
     private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
+        CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
+        String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
+        long createTime = currentTimeMillis();
         return refreshCache(mdl, cacheInfo, taskInfo)
                 .thenRun(() -> {
                     if (cacheInfo.getRefreshTime().toMillis() > 0) {
                         cacheScheduledFutures.put(
-                                new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()),
+                                catalogSchemaTableName,
                                 refreshExecutor.scheduleWithFixedDelay(
                                         () -> createTask(mdl, cacheInfo).join(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         MILLISECONDS));
                     }
+                })
+                .exceptionally(e -> {
+                    // If the cache fails because DuckDB doesn't have sufficient memory, we'll attempt to retry it later.
+                    if (e.getCause() instanceof AccioException && EXCEEDED_GLOBAL_MEMORY_LIMIT.toErrorCode().equals(((AccioException) e.getCause()).getErrorCode())) {
+                        retryScheduledFutures.put(
+                                catalogSchemaTableName,
+                                retryExecutor.schedule(
+                                        () -> createTask(mdl, cacheInfo).join(),
+                                        duckdbConfig.getCacheTaskRetryDelay(),
+                                        SECONDS));
+                    }
+                    duckdbClient.dropTableQuietly(duckdbTableName);
+                    String errMsg = format("Failed to do cache for cacheInfo %s; caused by %s", cacheInfo.getName(), e.getMessage());
+                    LOG.error(e, errMsg);
+                    cachedTableMapping.putCachedTableMapping(catalogSchemaTableName, new CacheInfoPair(cacheInfo, Optional.empty(), Optional.of(errMsg), createTime));
+                    return null;
                 });
     }
 
@@ -163,12 +192,6 @@ public class CacheManager
 
             createCache(mdl, cacheInfo, sessionContext, rewrittenStatement, duckdbTableName);
             cachedTableMapping.putCachedTableMapping(catalogSchemaTableName, new CacheInfoPair(cacheInfo, duckdbTableName, createTime));
-        }).exceptionally(e -> {
-            duckdbClient.dropTableQuietly(duckdbTableName);
-            String errMsg = format("Failed to do cache for cacheInfo %s; caused by %s", cacheInfo.getName(), e.getMessage());
-            LOG.error(e, errMsg);
-            cachedTableMapping.putCachedTableMapping(catalogSchemaTableName, new CacheInfoPair(cacheInfo, Optional.empty(), Optional.of(errMsg), createTime));
-            return null;
         });
     }
 
@@ -213,6 +236,14 @@ public class CacheManager
                     cacheScheduledFutures.remove(catalogSchemaTableName);
                 });
 
+        retryScheduledFutures.keySet().stream()
+                .filter(catalogSchemaTableName -> catalogSchemaTableName.getCatalogName().equals(catalogName)
+                        && catalogSchemaTableName.getSchemaTableName().getSchemaName().equals(schemaName))
+                .forEach(catalogSchemaTableName -> {
+                    retryScheduledFutures.get(catalogSchemaTableName).cancel(true);
+                    retryScheduledFutures.remove(catalogSchemaTableName);
+                });
+
         cachedTableMapping.entrySet().stream()
                 .filter(entry -> entry.getKey().getCatalogName().equals(catalogName)
                         && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
@@ -234,6 +265,11 @@ public class CacheManager
             cacheScheduledFutures.remove(catalogSchemaTableName);
         }
 
+        if (retryScheduledFutures.containsKey(catalogSchemaTableName)) {
+            retryScheduledFutures.get(catalogSchemaTableName).cancel(true);
+            retryScheduledFutures.remove(catalogSchemaTableName);
+        }
+
         Optional.ofNullable(cachedTableMapping.get(catalogSchemaTableName)).ifPresent(cacheInfoPair -> {
             cacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
             cachedTableMapping.remove(catalogSchemaTableName);
@@ -248,6 +284,12 @@ public class CacheManager
     public boolean cacheScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
     {
         return cacheScheduledFutures.containsKey(catalogSchemaTableName);
+    }
+
+    @VisibleForTesting
+    public boolean retryScheduledFutureExists(CatalogSchemaTableName catalogSchemaTableName)
+    {
+        return retryScheduledFutures.containsKey(catalogSchemaTableName);
     }
 
     @PreDestroy

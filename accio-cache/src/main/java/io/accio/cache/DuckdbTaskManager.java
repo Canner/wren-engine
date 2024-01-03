@@ -89,8 +89,9 @@ public class DuckdbTaskManager
 
     public void checkCacheMemoryLimit()
     {
-        if (getMemoryUsageBytes() >= cacheMemoryLimit) {
-            throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Cache memory limit exceeded");
+        long usage = getMemoryUsageBytes();
+        if (usage >= cacheMemoryLimit) {
+            throw new AccioException(EXCEEDED_GLOBAL_MEMORY_LIMIT, "Cache memory limit exceeded. Usage: " + usage + " bytes, Limit: " + cacheMemoryLimit + " bytes");
         }
     }
 

@@ -28,6 +28,7 @@ public class DuckDBConfig
     private int maxConcurrentTasks = 10;
     private double maxCacheTableSizeRatio = 0.5;
     private long maxCacheQueryTimeout = 20;
+    private long cacheTaskRetryDelay = 60;
 
     public DataSize getMemoryLimit()
     {
@@ -95,5 +96,16 @@ public class DuckDBConfig
     public void setMaxCacheQueryTimeout(long maxCacheQueryTimeout)
     {
         this.maxCacheQueryTimeout = maxCacheQueryTimeout;
+    }
+
+    public long getCacheTaskRetryDelay()
+    {
+        return cacheTaskRetryDelay;
+    }
+
+    @Config("duckdb.cache-task-retry-delay")
+    public void setCacheTaskRetryDelay(long cacheTaskRetryDelay)
+    {
+        this.cacheTaskRetryDelay = cacheTaskRetryDelay;
     }
 }

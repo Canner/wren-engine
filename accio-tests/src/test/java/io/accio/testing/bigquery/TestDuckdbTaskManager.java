@@ -80,7 +80,7 @@ public class TestDuckdbTaskManager
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMaxCacheTableSizeRatio(0);
         try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig))) {
-            assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageContaining("Cache memory limit exceeded");
+            assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageMatching("Cache memory limit exceeded. Usage: .* bytes, Limit: 0.0 bytes");
         }
     }
 
@@ -118,7 +118,7 @@ public class TestDuckdbTaskManager
 
         CatalogSchemaTableName wrongOrdersName = catalogSchemaTableName(mdlWithWrongSql.getCatalog(), mdlWithWrongSql.getSchema(), "WrongOrders");
         cacheManager.get().untilTaskDone(wrongOrdersName);
-        assertThat(cacheManager.get().cacheScheduledFutureExists(wrongOrdersName)).isTrue();
+        assertThat(cacheManager.get().cacheScheduledFutureExists(wrongOrdersName)).isFalse();
     }
 
     @Test
