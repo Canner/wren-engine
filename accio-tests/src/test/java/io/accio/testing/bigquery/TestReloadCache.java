@@ -33,7 +33,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
-import static io.accio.cache.TaskInfo.TaskStatus.RUNNING;
+import static io.accio.cache.TaskInfo.TaskStatus.QUEUED;
 import static io.accio.testing.WebApplicationExceptionAssert.assertWebApplicationException;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.requireNonNull;
@@ -88,7 +88,7 @@ public class TestReloadCache
         List<TaskInfo> taskInfos = reloadCacheAsync();
         assertThat(taskInfos.size()).isEqualTo(1);
         TaskInfo taskInfo = taskInfos.get(0);
-        assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
+        assertThat(taskInfo.getTaskStatus()).isEqualTo(QUEUED);
         taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
         assertCache("Revenue");
         assertThat(taskInfo.getCatalogName()).isEqualTo("canner-cml");
@@ -109,7 +109,7 @@ public class TestReloadCache
         List<TaskInfo> taskInfos3 = reloadCacheAsync();
         assertThat(taskInfos3.size()).isEqualTo(1);
         taskInfo = taskInfos3.get(0);
-        assertThat(taskInfo.getTaskStatus()).isEqualTo(RUNNING);
+        assertThat(taskInfo.getTaskStatus()).isEqualTo(QUEUED);
         taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
         cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();

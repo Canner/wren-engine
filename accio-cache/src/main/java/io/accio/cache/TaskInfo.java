@@ -41,6 +41,7 @@ public class TaskInfo
 
     public enum TaskStatus
     {
+        QUEUED(false),
         RUNNING(false),
         DONE(true);
 
