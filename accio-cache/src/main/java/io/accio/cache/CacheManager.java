@@ -147,6 +147,7 @@ public class CacheManager
                     }
                 })
                 .exceptionally(e -> {
+                    String errMsg = format("Failed to do cache for cacheInfo %s; caused by %s", cacheInfo.getName(), e.getMessage());
                     // If the cache fails because DuckDB doesn't have sufficient memory, we'll attempt to retry it later.
                     if (e.getCause() instanceof AccioException && EXCEEDED_GLOBAL_MEMORY_LIMIT.toErrorCode().equals(((AccioException) e.getCause()).getErrorCode())) {
                         retryScheduledFutures.put(
@@ -155,9 +156,9 @@ public class CacheManager
                                         () -> createTask(mdl, cacheInfo).join(),
                                         duckdbConfig.getCacheTaskRetryDelay(),
                                         SECONDS));
+                        errMsg += "; will retry after " + duckdbConfig.getCacheTaskRetryDelay() + " seconds";
                     }
                     duckdbClient.dropTableQuietly(duckdbTableName);
-                    String errMsg = format("Failed to do cache for cacheInfo %s; caused by %s", cacheInfo.getName(), e.getMessage());
                     LOG.error(e, errMsg);
                     cachedTableMapping.putCachedTableMapping(catalogSchemaTableName, new CacheInfoPair(cacheInfo, Optional.empty(), Optional.of(errMsg), createTime));
                     return null;
