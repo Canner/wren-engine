@@ -16,6 +16,8 @@ package io.accio.testing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
+import io.accio.base.type.ByteaType;
+import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
 import io.accio.base.type.UuidType;
@@ -1129,6 +1131,22 @@ public class TestingWireProtocolClient
         public byte[] getFormattedBytes()
         {
             if (formatCode == TEXT) {
+                if (type instanceof PGArray) {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append("{");
+                    for (Object element : (Object[]) value) {
+                        if (element == null) {
+                            stringBuilder.append("NULL");
+                        }
+                        else {
+                            stringBuilder.append(element);
+                        }
+                        stringBuilder.append(',');
+                    }
+                    stringBuilder.setLength(stringBuilder.length() - 1);
+                    stringBuilder.append("}");
+                    return stringBuilder.toString().getBytes(UTF_8);
+                }
                 return value.toString().getBytes(UTF_8);
             }
             return getBinary();
@@ -1142,6 +1160,9 @@ public class TestingWireProtocolClient
                 buffer.putLong(uuid.getMostSignificantBits());
                 buffer.putLong(uuid.getLeastSignificantBits());
                 return buffer.array();
+            }
+            else if (type.equals(ByteaType.BYTEA)) {
+                return (byte[]) value;
             }
             throw new RuntimeException("Unsupported write binary type: " + type);
         }
