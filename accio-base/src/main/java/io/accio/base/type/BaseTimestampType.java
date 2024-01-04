@@ -59,11 +59,4 @@ abstract class BaseTimestampType
         long microSecondsSince2K = buffer.readLong();
         return PgDatetimeUtils.toTrinoTimestamp(microSecondsSince2K);
     }
-
-    @Override
-    public Object getEmptyValue()
-    {
-        // TODO: give more suitable empty value for time related types
-        return "";
-    }
 }

@@ -22,6 +22,7 @@ import io.accio.base.type.DateType;
 import io.accio.base.type.IntervalType;
 import io.accio.base.type.JsonType;
 import io.accio.base.type.NumericType;
+import io.accio.base.type.OidType;
 import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
@@ -95,6 +96,7 @@ public final class BigQueryType
                 .put(INTEGER, INT64)
                 .put(SMALLINT, INT64)
                 .put(TINYINT, INT64)
+                .put(OidType.OID_INSTANCE, INT64)
                 .put(CHAR, STRING)
                 .put(VARCHAR, STRING)
                 .put(TEXT, STRING)
