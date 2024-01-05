@@ -88,6 +88,7 @@ public class TimestampWithTimeZoneType
     @VisibleForTesting
     ZonedDateTime tryParse(String timeString)
     {
+        // Postgres TimestampTz format
         return ZonedDateTime.parse(timeString, PG_TIMESTAMP);
     }
 
@@ -95,5 +96,11 @@ public class TimestampWithTimeZoneType
     public int writeAsBinary(ByteBuf buffer, @Nonnull Object value)
     {
         throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "1970-01-01 00:00:00.000000+01:00";
     }
 }

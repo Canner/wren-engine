@@ -89,4 +89,10 @@ public class TimestampType
     {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public Object getEmptyValue()
+    {
+        return "1970-01-01 00:00:00";
+    }
 }

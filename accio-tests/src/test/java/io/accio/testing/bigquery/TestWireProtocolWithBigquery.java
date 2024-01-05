@@ -15,6 +15,7 @@
 package io.accio.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
 import io.accio.main.wireprotocol.PostgresWireProtocol;
@@ -48,12 +49,26 @@ import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.type.BigIntType.BIGINT;
+import static io.accio.base.type.BooleanType.BOOLEAN;
+import static io.accio.base.type.ByteaType.BYTEA;
+import static io.accio.base.type.CharType.CHAR;
+import static io.accio.base.type.DateType.DATE;
+import static io.accio.base.type.DoubleType.DOUBLE;
 import static io.accio.base.type.IntegerType.INTEGER;
+import static io.accio.base.type.IntervalType.INTERVAL;
+import static io.accio.base.type.JsonType.JSON;
+import static io.accio.base.type.NumericType.NUMERIC;
+import static io.accio.base.type.OidType.OID_INSTANCE;
+import static io.accio.base.type.RealType.REAL;
+import static io.accio.base.type.SmallIntType.SMALLINT;
+import static io.accio.base.type.TimestampType.TIMESTAMP;
+import static io.accio.base.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
 import static io.accio.base.type.VarcharType.NameType.NAME;
 import static io.accio.base.type.VarcharType.TextType.TEXT;
 import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
+import static io.accio.testing.TestingWireProtocolClient.Parameter.binaryParameter;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
@@ -174,6 +189,72 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
         }
+    }
+
+    @Test(dataProvider = "paramTypes")
+    public void testPreparedStatementParameterType(String ignored, PGType pgType, Object value, String expected)
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendParse("teststmt", "select ?", ImmutableList.of(pgType.oid()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "teststmt");
+            if (pgType.equals(BYTEA)) {
+                protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(binaryParameter(value, pgType)));
+            }
+            else {
+                protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter(value, pgType)));
+            }
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec1");
+            protocolClient.sendExecute("exec1", 0);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+
+            PGType expectedType = getDescriptionExpectedType(pgType);
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(ImmutableList.of(pgType));
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(expectedType));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(expectedType));
+
+            protocolClient.assertDataRow(expected);
+            protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    private PGType getDescriptionExpectedType(PGType pgType)
+    {
+        if (pgType.equals(CHAR) ||
+                pgType.equals(TEXT) ||
+                pgType.equals(NAME) ||
+                pgType.equals(JSON)) {
+            return VARCHAR;
+        }
+        if (pgType.equals(INTEGER) || pgType.equals(SMALLINT) ||
+                pgType.equals(OID_INSTANCE)) {
+            return BIGINT;
+        }
+        if (pgType.equals(REAL)) {
+            return DOUBLE;
+        }
+        if (pgType.equals(TIMESTAMP_WITH_TIMEZONE)) {
+            return TIMESTAMP;
+        }
+        return pgType;
     }
 
     @Test
@@ -926,35 +1007,38 @@ public class TestWireProtocolWithBigquery
     public Object[][] paramTypes()
     {
         return new Object[][] {
-                {"bool", true},
-                {"bool", false},
-                {"int8", Long.MIN_VALUE},
-                {"int8", Long.MAX_VALUE},
-                {"float8", Double.MIN_VALUE},
-                {"float8", Double.MAX_VALUE},
-                {"char", "c"},
-                {"varchar", "Bag full of 💰"},
-                {"text", "Bag full of 💰"},
-                {"name", "Piękna łąka w 東京都"},
-                {"int4", Integer.MIN_VALUE},
-                {"int4", Integer.MAX_VALUE},
-                {"int2", Short.MIN_VALUE},
-                {"int2", Short.MAX_VALUE},
-                {"float4", Float.MIN_VALUE},
-                {"float4", Float.MAX_VALUE},
-                {"oid", 1L},
-                {"numeric", new BigDecimal("30.123")},
-                {"date", LocalDate.of(1900, 1, 3)},
+                {"bool", BOOLEAN, true, "t"},
+                {"bool", BOOLEAN, false, "f"},
+                {"int8", BIGINT, Long.MIN_VALUE, Long.toString(Long.MIN_VALUE)},
+                {"int8", BIGINT, Long.MAX_VALUE, Long.toString(Long.MAX_VALUE)},
+                {"float8", DOUBLE, Double.MIN_VALUE, Double.toString(Double.MIN_VALUE)},
+                {"float8", DOUBLE, Double.MAX_VALUE, Double.toString(Double.MAX_VALUE)},
+                {"char", CHAR, "c", "c"},
+                {"varchar", VARCHAR, "Bag full of 💰", "Bag full of 💰"},
+                {"text", TEXT, "Bag full of 💰", "Bag full of 💰"},
+                {"name", NAME, "Piękna łąka w 東京都", "Piękna łąka w 東京都"},
+                {"int4", INTEGER, Integer.MIN_VALUE, Integer.toString(Integer.MIN_VALUE)},
+                {"int4", INTEGER, Integer.MAX_VALUE, Integer.toString(Integer.MAX_VALUE)},
+                {"int2", SMALLINT, Short.MIN_VALUE, Short.toString(Short.MIN_VALUE)},
+                {"int2", SMALLINT, Short.MAX_VALUE, Short.toString(Short.MAX_VALUE)},
+                {"float4", REAL, Float.MIN_VALUE, Float.toString(Float.MIN_VALUE)},
+                {"float4", REAL, Float.MAX_VALUE, Float.toString(Float.MAX_VALUE)},
+                {"oid", OID_INSTANCE, 1L, "1"},
+                {"numeric", NUMERIC, new BigDecimal("30.123"), "30.123"},
+                {"date", DATE, LocalDate.of(1900, 1, 3), "1900-01-03"},
                 // TODO support time
                 // {"time", LocalTime.of(12, 10, 16)},
-                {"timestamp", Timestamp.valueOf(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000))},
-                {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
-                {"json", "{\"test\":3, \"test2\":4}"},
-                {"bytea", "test1".getBytes(UTF_8)},
-                {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
-                {"array", new Boolean[] {true, false}},
-                {"array", new Double[] {1.0, 2.0, 3.0}},
-                {"array", new String[] {"hello", "world"}},
+                {"timestamp", TIMESTAMP, Timestamp.valueOf(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000)), "1900-01-03 12:10:16.123000"},
+                {"timestamptz", TIMESTAMP_WITH_TIMEZONE,
+                        ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles")),
+                        // BigQuery will transform the timestamp to UTC time
+                        "1900-01-03 20:10:16.123000"},
+                {"json", JSON, "{\"test\":3, \"test2\":4}", "{\"test\":3,\"test2\":4}"},
+                {"bytea", BYTEA, "test1".getBytes(UTF_8), "\\x7465737431"},
+                {"interval", INTERVAL, new PGInterval(1, 5, -3, 7, 55, 20), "1 year 5 mons -3 days 07:55:20"},
+                {"array", PGArray.BOOL_ARRAY, new Boolean[] {true, false}, "{t,f}"},
+                {"array", PGArray.FLOAT8_ARRAY, new Double[] {1.0, 2.0, 3.0}, "{1.0,2.0,3.0}"},
+                {"array", PGArray.VARCHAR_ARRAY, new String[] {"hello", "world"}, "{hello,world}"},
 
                 // TODO: type support
                 // {"any", new Object[] {1, "test", new BigDecimal(10)}}
@@ -962,7 +1046,7 @@ public class TestWireProtocolWithBigquery
     }
 
     @Test(dataProvider = "paramTypes")
-    public void testJdbcParamTypes(String name, Object obj)
+    public void testJdbcParamTypes(String name, PGType ignored, Object obj, String ignored2)
             throws SQLException
     {
         try (Connection conn = createConnection()) {

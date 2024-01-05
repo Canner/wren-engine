@@ -99,7 +99,6 @@ public class DateType
     @Override
     public Object getEmptyValue()
     {
-        // TODO: give more suitable empty value for time related types
-        return "";
+        return "1970-01-01";
     }
 }

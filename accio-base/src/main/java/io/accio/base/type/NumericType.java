@@ -182,7 +182,7 @@ public class NumericType
     @Override
     public BigDecimal decodeUTF8Text(byte[] bytes)
     {
-        throw new UnsupportedOperationException();
+        return new BigDecimal(new String(bytes, StandardCharsets.UTF_8));
     }
 
     @Override

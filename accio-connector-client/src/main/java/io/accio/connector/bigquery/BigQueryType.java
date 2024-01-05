@@ -57,6 +57,7 @@ import static io.accio.base.type.ByteaType.BYTEA;
 import static io.accio.base.type.CharType.CHAR;
 import static io.accio.base.type.DoubleType.DOUBLE;
 import static io.accio.base.type.IntegerType.INTEGER;
+import static io.accio.base.type.OidType.OID_INSTANCE;
 import static io.accio.base.type.PGTypes.toPgRecordArray;
 import static io.accio.base.type.RealType.REAL;
 import static io.accio.base.type.RecordType.EMPTY_RECORD;
@@ -95,6 +96,7 @@ public final class BigQueryType
                 .put(INTEGER, INT64)
                 .put(SMALLINT, INT64)
                 .put(TINYINT, INT64)
+                .put(OID_INSTANCE, INT64)
                 .put(CHAR, STRING)
                 .put(VARCHAR, STRING)
                 .put(TEXT, STRING)
