@@ -1045,6 +1045,29 @@ public class TestWireProtocolWithBigquery
     }
 
     @Test
+    public void testLimitOffset()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT orderkey FROM Lineitem LIMIT 100");
+            int count = 0;
+            while (result.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            ResultSet result = stmt.executeQuery("SELECT orderkey FROM Lineitem LIMIT 100 OFFSET 50");
+            int count = 0;
+            while (result.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
+    }
+
+    @Test
     public void testArrayAgg()
             throws Exception
     {
