@@ -36,6 +36,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +46,7 @@ import static io.accio.base.type.DateType.DATE;
 import static io.accio.base.type.InetType.INET;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static io.accio.base.type.TimestampType.TIMESTAMP;
+import static io.accio.base.type.TimestampWithTimeZoneType.PG_TIMESTAMP;
 import static io.accio.base.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE;
 import static io.accio.main.wireprotocol.FormatCodes.FormatCode.BINARY;
 import static io.accio.main.wireprotocol.FormatCodes.FormatCode.TEXT;
@@ -1146,6 +1148,9 @@ public class TestingWireProtocolClient
                     stringBuilder.setLength(stringBuilder.length() - 1);
                     stringBuilder.append("}");
                     return stringBuilder.toString().getBytes(UTF_8);
+                }
+                else if (type.equals(TIMESTAMP_WITH_TIMEZONE)) {
+                    return PG_TIMESTAMP.format((ZonedDateTime) value).getBytes(UTF_8);
                 }
                 return value.toString().getBytes(UTF_8);
             }

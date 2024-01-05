@@ -31,7 +31,6 @@ import java.util.Locale;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_TIME;
-import static java.time.format.DateTimeFormatter.ISO_ZONED_DATE_TIME;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 
 public class TimestampWithTimeZoneType
@@ -89,14 +88,8 @@ public class TimestampWithTimeZoneType
     @VisibleForTesting
     ZonedDateTime tryParse(String timeString)
     {
-        try {
-            // Postgres TimestampTz format
-            return ZonedDateTime.parse(timeString, PG_TIMESTAMP);
-        }
-        catch (Exception e) {
-            // JDBC transform ZonedDateTime to String
-            return ZonedDateTime.parse(timeString, ISO_ZONED_DATE_TIME);
-        }
+        // Postgres TimestampTz format
+        return ZonedDateTime.parse(timeString, PG_TIMESTAMP);
     }
 
     @Override
