@@ -81,11 +81,14 @@ public class BigQuerySqlConverter
         LOG.info("[Input sql]: %s", sql);
 
         for (SqlRewrite rewrite : sqlRewrites) {
-            LOG.debug("Before %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Before %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
             rewrittenNode = rewrite.rewrite(rewrittenNode, metadata);
-            LOG.debug("After %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("After %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
         }
-
         String dialectSql = formatSql(rewrittenNode, BIGQUERY);
         LOG.info("[Dialect sql]: %s", dialectSql);
         return dialectSql;

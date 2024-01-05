@@ -154,6 +154,7 @@ import static io.trino.sql.ExpressionFormatter.formatSkipTo;
 import static io.trino.sql.ExpressionFormatter.formatStringLiteral;
 import static io.trino.sql.ExpressionFormatter.formatWindowSpecification;
 import static io.trino.sql.RowPatternFormatter.formatPattern;
+import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
 import static io.trino.sql.SqlFormatter.Dialect.POSTGRES;
 import static java.lang.String.format;
@@ -378,8 +379,14 @@ public final class SqlFormatter
 
             processRelation(node.getQueryBody(), indent);
             node.getOrderBy().ifPresent(orderBy -> process(orderBy, indent));
-            node.getOffset().ifPresent(offset -> process(offset, indent));
-            node.getLimit().ifPresent(limit -> process(limit, indent));
+            if (dialect.equals(BIGQUERY)) {
+                node.getLimit().ifPresent(limit -> process(limit, indent));
+                node.getOffset().ifPresent(offset -> process(offset, indent));
+            }
+            else {
+                node.getOffset().ifPresent(offset -> process(offset, indent));
+                node.getLimit().ifPresent(limit -> process(limit, indent));
+            }
             return null;
         }
 
@@ -414,8 +421,14 @@ public final class SqlFormatter
             }
 
             node.getOrderBy().ifPresent(orderBy -> process(orderBy, indent));
-            node.getOffset().ifPresent(offset -> process(offset, indent));
-            node.getLimit().ifPresent(limit -> process(limit, indent));
+            if (dialect.equals(BIGQUERY)) {
+                node.getLimit().ifPresent(limit -> process(limit, indent));
+                node.getOffset().ifPresent(offset -> process(offset, indent));
+            }
+            else {
+                node.getOffset().ifPresent(offset -> process(offset, indent));
+                node.getLimit().ifPresent(limit -> process(limit, indent));
+            }
             return null;
         }
 
@@ -432,7 +445,10 @@ public final class SqlFormatter
         {
             append(indent, "OFFSET ")
                     .append(formatExpression(node.getRowCount(), dialect))
-                    .append(" ROWS\n");
+                    .append("\n");
+            if (!dialect.equals(BIGQUERY)) {
+                append(indent, "ROWS\n");
+            }
             return null;
         }
 
