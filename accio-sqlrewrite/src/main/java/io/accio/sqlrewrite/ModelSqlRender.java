@@ -87,7 +87,7 @@ public class ModelSqlRender
     }
 
     @Override
-    protected String getQuerySql(Relationable relationable, String selectItemsSql, String tableJoinsSql)
+    protected String getQuerySql(String selectItemsSql, String tableJoinsSql)
     {
         return format("SELECT %s FROM %s", selectItemsSql, tableJoinsSql);
     }
@@ -233,7 +233,7 @@ public class ModelSqlRender
         return new RelationInfo(
                 relationable,
                 requiredObjects,
-                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
+                parseQuery(getQuerySql(join(", ", selectItems), tableJoinsSql.toString())));
     }
 
     // accept to-one relationship(s) and at least one to-many relationship in this method, and use group by model primary key

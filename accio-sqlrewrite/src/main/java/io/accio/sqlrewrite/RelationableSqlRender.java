@@ -72,7 +72,7 @@ public abstract class RelationableSqlRender
 
     protected abstract void collectRelationship(Column column, Model baseModel);
 
-    protected abstract String getQuerySql(Relationable relationable, String selectItemsSql, String tableJoinsSql);
+    protected abstract String getQuerySql(String selectItemsSql, String tableJoinsSql);
 
     protected abstract String getModelSubQuerySelectItemsExpression(Map<String, String> columnWithoutRelationships);
 

@@ -48,7 +48,6 @@ import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -160,7 +159,7 @@ public final class StatementAnalyzer
             analysis.addTable(tableName);
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
-                List<Column> columns = new ArrayList<>();
+                List<Column> columns = ImmutableList.of();
                 if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
                     columns = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
                             .map(Model::getColumns)

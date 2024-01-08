@@ -56,26 +56,26 @@ public class MetricSqlRender
     private final Set<String> requiredDims;
     private final Set<String> requiredMeasures;
 
-    public MetricSqlRender(Relationable relationable, AccioMDL mdl)
+    public MetricSqlRender(Metric metric, AccioMDL mdl)
     {
-        super(relationable, mdl);
-        this.requiredDims = ((Metric) relationable).getDimension().stream().map(Column::getName).collect(toImmutableSet());
-        this.requiredMeasures = ((Metric) relationable).getMeasure().stream().map(Column::getName).collect(toImmutableSet());
+        super(metric, mdl);
+        this.requiredDims = metric.getDimension().stream().map(Column::getName).collect(toImmutableSet());
+        this.requiredMeasures = metric.getMeasure().stream().map(Column::getName).collect(toImmutableSet());
     }
 
-    public MetricSqlRender(Relationable relationable, AccioMDL mdl, Set<String> requiredFields)
+    public MetricSqlRender(Metric metric, AccioMDL mdl, Set<String> requiredFields)
     {
-        super(relationable, mdl);
+        super(metric, mdl);
         requireNonNull(requiredFields);
-        Set<String> requiredDims = ((Metric) relationable).getDimension().stream()
+        Set<String> requiredDims = metric.getDimension().stream()
                 .map(Column::getName)
                 .filter(requiredFields::contains)
                 .collect(toImmutableSet());
         // if there is no dimensions specified in requiredFields, still apply all dimensions in metric. This is required since
         // aggregation is involved in metric CTE generation, and there should at least one group by item (i.e. Dimension in metric)
         // while user didn't specify any dimension in sql, here fallback to select all dimensions.
-        this.requiredDims = requiredDims.isEmpty() ? ((Metric) relationable).getDimension().stream().map(Column::getName).collect(toImmutableSet()) : requiredDims;
-        this.requiredMeasures = ((Metric) relationable).getMeasure().stream()
+        this.requiredDims = requiredDims.isEmpty() ? metric.getDimension().stream().map(Column::getName).collect(toImmutableSet()) : requiredDims;
+        this.requiredMeasures = metric.getMeasure().stream()
                 .map(Column::getName)
                 .filter(requiredFields::contains)
                 .collect(toImmutableSet());
@@ -116,7 +116,7 @@ public class MetricSqlRender
                 .map(column -> format("%s AS %s", column.getExpression().orElse(column.getName()), column.getName()))
                 .collect(toList());
         addCountAllIfNeeded();
-        String sql = getQuerySql(metric, Joiner.on(", ").join(selectItems), metricName);
+        String sql = getQuerySql(Joiner.on(", ").join(selectItems), metricName);
         return new RelationInfo(
                 relationable,
                 Set.of(metricName),
@@ -124,7 +124,7 @@ public class MetricSqlRender
     }
 
     @Override
-    protected String getQuerySql(Relationable relationable, String selectItemsSql, String tableJoinsSql)
+    protected String getQuerySql(String selectItemsSql, String tableJoinsSql)
     {
         String groupByItems = IntStream.rangeClosed(1, requiredDims.size()).mapToObj(String::valueOf).collect(joining(","));
         return format("SELECT %s FROM %s GROUP BY %s", selectItemsSql, tableJoinsSql, groupByItems);
@@ -272,7 +272,7 @@ public class MetricSqlRender
         return new RelationInfo(
                 relationable,
                 requiredObjects,
-                parseQuery(getQuerySql(relationable, join(", ", selectItems), tableJoinsSql.toString())));
+                parseQuery(getQuerySql(join(", ", selectItems), tableJoinsSql.toString())));
     }
 
     private boolean isRequiredColumn(String name)
