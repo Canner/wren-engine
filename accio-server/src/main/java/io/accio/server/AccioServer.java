@@ -5,11 +5,11 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ *  Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 package io.accio.server;
@@ -22,11 +22,11 @@ import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.server.Server;
-import io.accio.main.server.module.BigQueryConnectorModule;
-import io.accio.main.server.module.PostgresConnectorModule;
-import io.accio.main.server.module.PostgresWireProtocolModule;
-import io.accio.main.server.module.WebModule;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
+import io.accio.server.module.BigQueryConnectorModule;
+import io.accio.server.module.PostgresConnectorModule;
+import io.accio.server.module.PostgresWireProtocolModule;
+import io.accio.server.module.WebModule;
 import io.airlift.event.client.EventModule;
 import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;

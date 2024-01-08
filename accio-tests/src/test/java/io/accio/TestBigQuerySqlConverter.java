@@ -19,7 +19,7 @@ import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.connector.bigquery.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
 import io.accio.main.connector.bigquery.BigQuerySqlConverter;
-import io.accio.main.server.module.BigQueryConnectorModule;
+import io.accio.server.module.BigQueryConnectorModule;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
