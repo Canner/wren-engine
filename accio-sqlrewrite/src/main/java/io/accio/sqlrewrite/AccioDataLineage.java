@@ -17,9 +17,11 @@ package io.accio.sqlrewrite;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
@@ -37,18 +39,18 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.Utils.parseExpression;
 import static io.accio.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer.createRelationshipInfo;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-// TODO: take care metric/cumulative metric/view, and model on model/metric, metric on model/metric etc.
+// TODO: take care view
 public class AccioDataLineage
 {
     public static final AccioDataLineage EMPTY = new AccioDataLineage(AccioMDL.EMPTY);
@@ -146,6 +148,17 @@ public class AccioDataLineage
                                 .collect(toImmutableSet()));
             }
         }
+        for (CumulativeMetric cumulativeMetric : mdl.listCumulativeMetrics()) {
+            checkArgument(mdl.isObjectExist(cumulativeMetric.getBaseObject()), format("cumulative metric base object %s not exist", cumulativeMetric.getBaseObject()));
+            // handle measure
+            sourceColumnsMap.put(
+                    QualifiedName.of(cumulativeMetric.getName(), cumulativeMetric.getMeasure().getName()),
+                    ImmutableSet.of(QualifiedName.of(cumulativeMetric.getBaseObject(), cumulativeMetric.getMeasure().getRefColumn())));
+            // handle window
+            sourceColumnsMap.put(
+                    QualifiedName.of(cumulativeMetric.getName(), cumulativeMetric.getWindow().getName()),
+                    ImmutableSet.of(QualifiedName.of(cumulativeMetric.getBaseObject(), cumulativeMetric.getWindow().getRefColumn())));
+        }
         return sourceColumnsMap;
     }
 
@@ -167,58 +180,65 @@ public class AccioDataLineage
             DirectedAcyclicGraph<Vertex, Object> graph,
             Map<String, Vertex> vertexes)
     {
-        Column targetColumn = mdl.getColumn(qualifiedName).orElseThrow(() -> new NoSuchElementException(qualifiedName + " not found"));
-        String tableName = getTable(qualifiedName);
-        String columnName = getColumn(qualifiedName);
-        Vertex targetVertex = vertexes.computeIfAbsent(tableName, (ignored) -> new Vertex(tableName));
+        if (!sourceColumnsMap.containsKey(qualifiedName)) {
+            return;
+        }
+
+        String targetTable = getTable(qualifiedName);
+        String targetColumn = getColumn(qualifiedName);
+        Set<QualifiedName> sourceColumns = sourceColumnsMap.get(qualifiedName);
+        Vertex targetVertex = vertexes.computeIfAbsent(targetTable, (ignored) -> new Vertex(targetTable));
         graph.addVertex(targetVertex);
-        if (sourceColumnsMap.containsKey(qualifiedName)) {
-            Set<QualifiedName> sourceColumns = sourceColumnsMap.get(qualifiedName);
-            // sometimes we can't analyze lineage from column expression e.g. count(*), while the column itself may depend on another object (e.g. metric/model...)
-            // so we still need detect baseObject here.
-            if (sourceColumns.isEmpty()) {
-                Optional<String> baseObject = mdl.getBaseObject(tableName);
-                if (baseObject.isPresent()) {
-                    Vertex sourceVertex = vertexes.computeIfAbsent(baseObject.get(), (ignored) -> new Vertex(baseObject.get()));
-                    mdl.getBaseObject(tableName).ifPresent(sourceTable -> graph.addVertex(sourceVertex));
-                    try {
-                        graph.addEdge(sourceVertex, targetVertex);
-                    }
-                    catch (GraphCycleProhibitedException ex) {
-                        throw new IllegalArgumentException(format("found cycle: %s column: %s", tableName, columnName));
-                    }
+        // sometimes we can't analyze lineage from column expression e.g. count(*), while the column itself may depend on another object (e.g. metric/model...)
+        // so we still need detect baseObject here.
+        if (sourceColumns.isEmpty()) {
+            String baseObject = getBaseObject(mdl, targetTable);
+            if (mdl.isObjectExist(baseObject)) {
+                Vertex sourceVertex = vertexes.computeIfAbsent(baseObject, (ignored) -> new Vertex(baseObject));
+                graph.addVertex(sourceVertex);
+                try {
+                    graph.addEdge(sourceVertex, targetVertex);
+                }
+                catch (GraphCycleProhibitedException ex) {
+                    throw new IllegalArgumentException(format("found cycle: %s column: %s", targetTable, targetColumn));
                 }
             }
-            else {
-                sourceColumns.forEach(fullColumnName -> {
-                    Column sourceColumn = mdl.getColumn(fullColumnName).orElseThrow(() -> new NoSuchElementException(fullColumnName + " not found"));
-                    String sourceTableName = getTable(fullColumnName);
-                    String sourceColumnName = getColumn(fullColumnName);
-                    Vertex sourceVertex = vertexes.computeIfAbsent(sourceTableName, (ignored) -> new Vertex(sourceTableName));
-                    graph.addVertex(sourceVertex);
-                    if (!skipAddEdge(sourceVertex, sourceColumn, targetVertex, targetColumn)) {
-                        try {
-                            graph.addEdge(sourceVertex, targetVertex);
-                        }
-                        catch (GraphCycleProhibitedException ex) {
-                            throw new IllegalArgumentException(format("found cycle: %s column: %s", tableName, columnName));
-                        }
-                    }
-                    sourceVertex.columnNames.add(sourceColumnName);
-
-                    // recursively create column lineage
-                    collectRequiredFields(fullColumnName, graph, vertexes);
-                });
-            }
         }
+        sourceColumns.forEach(fullSourceColumnName -> {
+            String sourceTableName = getTable(fullSourceColumnName);
+            String sourceColumnName = getColumn(fullSourceColumnName);
+            Vertex sourceVertex = vertexes.computeIfAbsent(sourceTableName, (ignored) -> new Vertex(sourceTableName));
+            graph.addVertex(sourceVertex);
+            if (!skipAddEdge(fullSourceColumnName, qualifiedName)) {
+                try {
+                    graph.addEdge(sourceVertex, targetVertex);
+                }
+                catch (GraphCycleProhibitedException ex) {
+                    throw new IllegalArgumentException(format("found cycle: %s column: %s", targetTable, targetColumn));
+                }
+            }
+            sourceVertex.columnNames.add(sourceColumnName);
+            // recursively create column lineage
+            collectRequiredFields(fullSourceColumnName, graph, vertexes);
+        });
     }
 
-    private static boolean skipAddEdge(Vertex sourceVertex, Column sourceColumn, Vertex targetVertex, Column targetColumn)
+    private boolean skipAddEdge(QualifiedName sourceColumn, QualifiedName targetColumn)
     {
         // calculated field could be dependent on non-calculated field in the same model
-        return sourceVertex.getName().equals(targetVertex.getName())
-                && targetColumn.isCalculated()
-                && !sourceColumn.isCalculated();
+        return getTable(sourceColumn).equals(getTable(targetColumn))
+                && isCalculated(targetColumn)
+                && !isCalculated(sourceColumn);
+    }
+
+    private boolean isCalculated(QualifiedName fullColumnName)
+    {
+        return mdl.getModel(getTable(fullColumnName))
+                .map(Model::getColumns)
+                .orElseGet(ImmutableList::of)
+                .stream()
+                .filter(column -> column.getName().equals(getColumn(fullColumnName)))
+                .anyMatch(Column::isCalculated);
     }
 
     public static class Vertex
@@ -343,23 +363,8 @@ public class AccioDataLineage
         protected Void visitIdentifier(Identifier node, Void ignored)
         {
             // TODO: exclude sql reserved words
-            // handle metric on model
-            Optional<Model> parentModel = mdl.getModel(metric.getBaseObject());
-            if (parentModel.isPresent()) {
-                parentModel.get().getColumns().stream()
-                        .filter(column -> node.getValue().equals(column.getName()))
-                        .findAny()
-                        .ifPresent(column -> sourceColumns.put(parentModel.get().getName(), column.getName()));
-                return null;
-            }
-            // handle metric on metric
-            Optional<Metric> parentMetric = mdl.getMetric(metric.getBaseObject());
-            if (parentMetric.isPresent()) {
-                parentMetric.get().getColumns().stream()
-                        .filter(column -> node.getValue().equals(column.getName()))
-                        .findAny()
-                        .ifPresent(column -> sourceColumns.put(parentMetric.get().getName(), column.getName()));
-                return null;
+            if (isColumnExist(mdl, metric.getBaseObject(), node.getValue())) {
+                sourceColumns.put(metric.getBaseObject(), node.getValue());
             }
             return null;
         }
@@ -433,13 +438,11 @@ public class AccioDataLineage
             }
             // handle non-calculated column
             else {
-                // handle model on model
-                if (model.getBaseObject() != null) {
-                    Model parent = mdl.getModel(model.getBaseObject()).orElseThrow();
-                    parent.getColumns().stream()
-                            .filter(column -> node.getValue().equals(column.getName()))
-                            .findAny()
-                            .ifPresent(column -> sourceColumns.put(parent.getName(), column.getName()));
+                if (model.getBaseObject() == null) {
+                    return null;
+                }
+                if (isColumnExist(mdl, model.getBaseObject(), node.getValue())) {
+                    sourceColumns.put(model.getBaseObject(), node.getValue());
                 }
             }
             return null;
@@ -487,5 +490,37 @@ public class AccioDataLineage
     public static String getColumn(QualifiedName qualifiedName)
     {
         return qualifiedName.getParts().get(1);
+    }
+
+    private static boolean isColumnExist(AccioMDL mdl, String objectName, String columnName)
+    {
+        if (mdl.getModel(objectName).isPresent()) {
+            return mdl.getModel(objectName).get().getColumns().stream()
+                    .anyMatch(column -> columnName.equals(column.getName()));
+        }
+        else if (mdl.getMetric(objectName).isPresent()) {
+            return mdl.getMetric(objectName).get().getColumns().stream()
+                    .anyMatch(column -> columnName.equals(column.getName()));
+        }
+        else if (mdl.getCumulativeMetric(objectName).isPresent()) {
+            CumulativeMetric cumulativeMetric = mdl.getCumulativeMetric(objectName).get();
+            return cumulativeMetric.getMeasure().getName().equals(columnName)
+                    || cumulativeMetric.getWindow().getName().equals(columnName);
+        }
+        return false;
+    }
+
+    private static String getBaseObject(AccioMDL mdl, String objectName)
+    {
+        if (mdl.getModel(objectName).isPresent()) {
+            return mdl.getModel(objectName).get().getBaseObject();
+        }
+        else if (mdl.getMetric(objectName).isPresent()) {
+            return mdl.getMetric(objectName).get().getBaseObject();
+        }
+        else if (mdl.getCumulativeMetric(objectName).isPresent()) {
+            return mdl.getCumulativeMetric(objectName).get().getBaseObject();
+        }
+        return null;
     }
 }

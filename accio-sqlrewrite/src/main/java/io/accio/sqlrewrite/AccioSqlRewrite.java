@@ -17,6 +17,7 @@ package io.accio.sqlrewrite;
 import com.google.common.collect.ImmutableSet;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Analysis;
@@ -47,8 +48,6 @@ import java.util.stream.Stream;
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
-import static io.accio.sqlrewrite.AccioDataLineage.getColumn;
-import static io.accio.sqlrewrite.AccioDataLineage.getTable;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -60,7 +59,7 @@ public class AccioSqlRewrite
 
     private AccioSqlRewrite() {}
 
-    private LinkedHashMap<String, Set<String>> getRequiredFields(AccioDataLineage dataLineage, Analysis analysis)
+    private static LinkedHashMap<String, Set<String>> getTableRequiredFields(AccioDataLineage dataLineage, Analysis analysis)
     {
         List<QualifiedName> collectedColumns = analysis.getCollectedColumns().asMap().entrySet().stream()
                 .map(e ->
@@ -70,14 +69,7 @@ public class AccioSqlRewrite
                 .flatMap(List::stream)
                 .collect(toImmutableList());
 
-        LinkedHashMap<String, Set<String>> requiredFields = dataLineage.getRequiredFields(collectedColumns);
-        collectedColumns.forEach(fullColumnName -> {
-            Set<String> columnNames = Optional.ofNullable(requiredFields.get(getTable(fullColumnName))).orElseGet(HashSet::new);
-            columnNames.add(getColumn(fullColumnName));
-            requiredFields.put(getTable(fullColumnName), columnNames);
-        });
-
-        return requiredFields;
+        return dataLineage.getRequiredFields(collectedColumns);
     }
 
     @Override
@@ -89,8 +81,8 @@ public class AccioSqlRewrite
         if (sessionContext.isEnableDynamicField()) {
             // TODO: make AccioDataLineage static instead of create a new one everytime as it will change only when accio mdl changed.
             AccioDataLineage dataLineage = AccioDataLineage.analyze(accioMDL);
-            LinkedHashMap<String, Set<String>> requiredFields = getRequiredFields(dataLineage, analysis);
-            List<QueryDescriptor> descriptors = requiredFields.entrySet().stream()
+            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(dataLineage, analysis);
+            List<QueryDescriptor> descriptors = tableRequiredFields.entrySet().stream()
                     .map(e -> {
                         String name = e.getKey();
                         if (accioMDL.getModel(name).isPresent()) {
@@ -101,11 +93,21 @@ public class AccioSqlRewrite
                             Metric metric = accioMDL.getMetric(name).get();
                             return RelationInfo.get(metric, accioMDL, e.getValue());
                         }
+                        if (accioMDL.getCumulativeMetric(name).isPresent()) {
+                            CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(name).get();
+                            return CumulativeMetricInfo.get(cumulativeMetric, accioMDL);
+                        }
                         throw new IllegalArgumentException(name + " not found in mdl");
                     })
                     .collect(toImmutableList());
 
             List<WithQuery> withQueries = new ArrayList<>();
+            // add date spine if needed
+            if (tableRequiredFields.keySet().stream()
+                    .map(accioMDL::getCumulativeMetric)
+                    .anyMatch(Optional::isPresent)) {
+                withQueries.add(getWithQuery(DateSpineInfo.get(accioMDL.getDateSpine())));
+            }
             descriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
 
             Node rewriteWith = new WithRewriter(withQueries).process(root);

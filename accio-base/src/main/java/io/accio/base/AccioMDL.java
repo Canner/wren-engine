@@ -16,7 +16,6 @@ package io.accio.base;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.hubspot.jinjava.Jinjava;
 import io.accio.base.dto.CacheInfo;
@@ -31,9 +30,7 @@ import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 import io.accio.base.jinjava.JinjavaExpressionProcessor;
 import io.accio.base.jinjava.JinjavaUtils;
-import io.trino.sql.tree.QualifiedName;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,8 +56,7 @@ public class AccioMDL
     private final Manifest manifest;
     private final Map<String, Model> models;
     private final Map<String, Metric> metrics;
-    private final Map<QualifiedName, Column> modelColumns;
-    private final Map<QualifiedName, Column> metricColumns;
+    private final Map<String, CumulativeMetric> cumulativeMetrics;
 
     public static AccioMDL fromJson(String manifest)
             throws JsonProcessingException
@@ -81,18 +77,7 @@ public class AccioMDL
         this.schema = manifest.getSchema();
         this.models = listModels().stream().collect(toImmutableMap(Model::getName, identity()));
         this.metrics = listMetrics().stream().collect(toImmutableMap(Metric::getName, identity()));
-        this.modelColumns = new HashMap<>();
-        for (Model model : listModels()) {
-            for (Column column : model.getColumns()) {
-                modelColumns.put(QualifiedName.of(model.getName(), column.getName()), column);
-            }
-        }
-        this.metricColumns = new HashMap<>();
-        for (Metric metric : listMetrics()) {
-            for (Column column : metric.getColumns()) {
-                metricColumns.put(QualifiedName.of(metric.getName(), column.getName()), column);
-            }
-        }
+        this.cumulativeMetrics = listCumulativeMetrics().stream().collect(toImmutableMap(CumulativeMetric::getName, identity()));
     }
 
     private Manifest renderManifest(Manifest original)
@@ -229,11 +214,14 @@ public class AccioMDL
         return Optional.empty();
     }
 
+    public List<CumulativeMetric> listCumulativeMetrics()
+    {
+        return manifest.getCumulativeMetrics();
+    }
+
     public Optional<CumulativeMetric> getCumulativeMetric(String name)
     {
-        return manifest.getCumulativeMetrics().stream()
-                .filter(metric -> metric.getName().equals(name))
-                .findAny();
+        return Optional.ofNullable(cumulativeMetrics.get(name));
     }
 
     public Optional<CumulativeMetric> getCumulativeMetric(CatalogSchemaTableName name)
@@ -279,39 +267,14 @@ public class AccioMDL
         return manifest.getDateSpine();
     }
 
-    // TODO: handle other data objects (metric, cumulative metric, view)
-    public List<String> getColumnNames(String name)
+    public boolean isObjectExist(String name)
     {
-        Optional<Model> model = getModel(name);
-        if (model.isPresent()) {
-            return model.get().getColumns().stream().map(Column::getName).collect(toImmutableList());
+        if (name == null) {
+            return false;
         }
-        return ImmutableList.of();
-    }
-
-    public Optional<Column> getColumn(QualifiedName qualifiedName)
-    {
-        return Optional.ofNullable(modelColumns.get(qualifiedName))
-                .or(() -> Optional.ofNullable(metricColumns.get(qualifiedName)));
-    }
-
-    public Optional<String> getBaseObject(String name)
-    {
-        Optional<Model> model = getModel(name);
-        if (model.isPresent()) {
-            return Optional.ofNullable(model.get().getBaseObject());
-        }
-
-        Optional<Metric> metric = getMetric(name);
-        if (metric.isPresent()) {
-            return Optional.ofNullable(metric.get().getBaseObject());
-        }
-
-        Optional<CumulativeMetric> cumulativeMetric = getCumulativeMetric(name);
-        if (cumulativeMetric.isPresent()) {
-            return Optional.ofNullable(cumulativeMetric.get().getBaseObject());
-        }
-
-        return Optional.empty();
+        return getModel(name).isPresent()
+                || getMetric(name).isPresent()
+                || getCumulativeMetric(name).isPresent()
+                || getView(name).isPresent();
     }
 }

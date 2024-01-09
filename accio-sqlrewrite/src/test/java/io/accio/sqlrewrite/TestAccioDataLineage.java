@@ -16,10 +16,12 @@ package io.accio.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
+import io.accio.base.dto.TimeUnit;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
 
@@ -33,12 +35,15 @@ import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
+import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
+import static io.accio.base.dto.Window.window;
 import static io.accio.testing.AbstractTestFramework.addColumnsToModel;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -336,6 +341,180 @@ public class TestAccioDataLineage
         expected.put("Orders", Set.of("custkey", "totalprice"));
         expected.put("CustomerSpending", Set.of("address", "spending"));
         expected.put("Derived", Set.of("address", "spending"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeCumulativeMetricOnModel()
+    {
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "Orders",
+                measure("c_totalprice", INTEGER, "sum", "totalprice"),
+                window("c_orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setCumulativeMetrics(List.of(dailyRevenue))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("DailyRevenue", "c_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("DailyRevenue", Set.of("c_totalprice"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("DailyRevenue", "c_totalprice"), QualifiedName.of("DailyRevenue", "c_orderdate")));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue", Set.of("c_totalprice", "c_orderdate"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeCumulativeMetricOnMetric()
+    {
+        Metric totalpriceByDate = metric("TotalpriceByDate", "Orders",
+                List.of(column("orderdate", DATE, null, true)),
+                List.of(column("totalprice", INTEGER, null, true, "sum(totalprice)")));
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "TotalpriceByDate",
+                measure("c_totalprice", INTEGER, "sum", "totalprice"),
+                window("c_orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setMetrics(List.of(totalpriceByDate))
+                .setCumulativeMetrics(List.of(dailyRevenue))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("DailyRevenue", "c_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("TotalpriceByDate", Set.of("totalprice"));
+        expected.put("DailyRevenue", Set.of("c_totalprice"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("DailyRevenue", "c_totalprice"), QualifiedName.of("DailyRevenue", "c_orderdate")));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice", "orderdate"));
+        expected.put("TotalpriceByDate", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue", Set.of("c_totalprice", "c_orderdate"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeCumulativeMetricOnCumulativeMetric()
+    {
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "Orders",
+                measure("totalprice", INTEGER, "sum", "totalprice"),
+                window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+        CumulativeMetric dailyRevenue2 = cumulativeMetric("DailyRevenue2", "DailyRevenue",
+                measure("c_totalprice", INTEGER, "sum", "totalprice"),
+                window("c_orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setCumulativeMetrics(List.of(dailyRevenue, dailyRevenue2))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("DailyRevenue2", "c_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("DailyRevenue", Set.of("totalprice"));
+        expected.put("DailyRevenue2", Set.of("c_totalprice"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("DailyRevenue2", "c_totalprice"), QualifiedName.of("DailyRevenue2", "c_orderdate")));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue2", Set.of("c_totalprice", "c_orderdate"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeModelOnCumulativeMetric()
+    {
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "Orders",
+                measure("totalprice", INTEGER, "sum", "totalprice"),
+                window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+        Model onDailyRevenue = onBaseObject("OnDailyRevenue", "DailyRevenue",
+                ImmutableList.of(
+                        column("c_totalprice", INTEGER, null, true, "totalprice"),
+                        column("c_orderdate", DATE, null, true, "orderdate")),
+                "orderdate");
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(onDailyRevenue, orders))
+                .setCumulativeMetrics(List.of(dailyRevenue))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("OnDailyRevenue", "c_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("DailyRevenue", Set.of("totalprice"));
+        expected.put("OnDailyRevenue", Set.of("c_totalprice"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("OnDailyRevenue", "c_totalprice"), QualifiedName.of("OnDailyRevenue", "c_orderdate")));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue", Set.of("totalprice", "orderdate"));
+        expected.put("OnDailyRevenue", Set.of("c_totalprice", "c_orderdate"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeMetricOnCumulativeMetric()
+    {
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "Orders",
+                measure("totalprice", INTEGER, "sum", "totalprice"),
+                window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+        Metric onDailyRevenue = metric("OnDailyRevenue", "DailyRevenue",
+                ImmutableList.of(column("c_orderdate", DATE, null, true, "orderdate")),
+                ImmutableList.of(column("c_totalprice", INTEGER, null, true, "sum(totalprice)")));
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setMetrics(List.of(onDailyRevenue))
+                .setCumulativeMetrics(List.of(dailyRevenue))
+                .build();
+
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("OnDailyRevenue", "c_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("DailyRevenue", Set.of("totalprice"));
+        expected.put("OnDailyRevenue", Set.of("c_totalprice"));
+        assertThat(actual).isEqualTo(expected);
+
+        actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("OnDailyRevenue", "c_totalprice"), QualifiedName.of("OnDailyRevenue", "c_orderdate")));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("totalprice", "orderdate"));
+        expected.put("DailyRevenue", Set.of("totalprice", "orderdate"));
+        expected.put("OnDailyRevenue", Set.of("c_totalprice", "c_orderdate"));
         assertThat(actual).isEqualTo(expected);
     }
 }
