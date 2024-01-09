@@ -17,6 +17,7 @@ package io.accio.sqlrewrite;
 import com.google.common.collect.ImmutableSet;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.sqlrewrite.analyzer.Analysis;
 import io.accio.sqlrewrite.analyzer.StatementAnalyzer;
@@ -47,7 +48,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.sqlrewrite.AccioDataLineage.getColumn;
-import static io.accio.sqlrewrite.AccioDataLineage.getModel;
+import static io.accio.sqlrewrite.AccioDataLineage.getTable;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -70,10 +71,10 @@ public class AccioSqlRewrite
                 .collect(toImmutableList());
 
         LinkedHashMap<String, Set<String>> requiredFields = dataLineage.getRequiredFields(collectedColumns);
-        collectedColumns.forEach(columnName -> {
-            Set<String> columnNames = requiredFields.get(getModel(columnName));
-            columnNames.add(getColumn(columnName));
-            requiredFields.put(getModel(columnName), columnNames);
+        collectedColumns.forEach(fullColumnName -> {
+            Set<String> columnNames = Optional.ofNullable(requiredFields.get(getTable(fullColumnName))).orElseGet(HashSet::new);
+            columnNames.add(getColumn(fullColumnName));
+            requiredFields.put(getTable(fullColumnName), columnNames);
         });
 
         return requiredFields;
@@ -85,20 +86,27 @@ public class AccioSqlRewrite
         Set<QueryDescriptor> allDescriptors;
         // TODO: Currently DynamicCalculatedField is a experimental feature, and buggy. After all issues are solved,
         //  we should always enable this setting.
-        if (sessionContext.isEnableDynamicCalculatedField()) {
+        if (sessionContext.isEnableDynamicField()) {
             // TODO: make AccioDataLineage static instead of create a new one everytime as it will change only when accio mdl changed.
             AccioDataLineage dataLineage = AccioDataLineage.analyze(accioMDL);
-            LinkedHashMap<String, Set<String>> modelRequiredFields = getRequiredFields(dataLineage, analysis);
-            List<QueryDescriptor> modelDescriptors = modelRequiredFields.entrySet().stream()
+            LinkedHashMap<String, Set<String>> requiredFields = getRequiredFields(dataLineage, analysis);
+            List<QueryDescriptor> descriptors = requiredFields.entrySet().stream()
                     .map(e -> {
-                        String modelName = e.getKey();
-                        Model model = accioMDL.getModel(modelName).orElseThrow();
-                        return RelationInfo.get(model, accioMDL, e.getValue());
+                        String name = e.getKey();
+                        if (accioMDL.getModel(name).isPresent()) {
+                            Model model = accioMDL.getModel(name).get();
+                            return RelationInfo.get(model, accioMDL, e.getValue());
+                        }
+                        if (accioMDL.getMetric(name).isPresent()) {
+                            Metric metric = accioMDL.getMetric(name).get();
+                            return RelationInfo.get(metric, accioMDL, e.getValue());
+                        }
+                        throw new IllegalArgumentException(name + " not found in mdl");
                     })
                     .collect(toImmutableList());
 
             List<WithQuery> withQueries = new ArrayList<>();
-            modelDescriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
+            descriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
 
             Node rewriteWith = new WithRewriter(withQueries).process(root);
             return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);

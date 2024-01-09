@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
@@ -158,21 +159,28 @@ public final class StatementAnalyzer
             analysis.addTable(tableName);
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
-                // only record model fields here, others are ignored
-                List<Field> modelFields = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
-                        .map(Model::getColumns)
-                        .orElseGet(ImmutableList::of)
-                        .stream()
-                        .map(column ->
-                                Field.builder()
-                                        .modelName(tableName)
-                                        .columnName(column.getName())
-                                        .name(column.getName())
-                                        .build())
-                        .collect(toImmutableList());
+                List<Column> columns = ImmutableList.of();
+                if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                    columns = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
+                            .map(Model::getColumns)
+                            .orElseGet(ImmutableList::of);
+                }
+                else if (accioMDL.getMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                    columns = accioMDL.getMetric(tableName.getSchemaTableName().getTableName())
+                            .map(Metric::getColumns)
+                            .orElseGet(ImmutableList::of);
+                }
                 return Scope.builder()
                         .parent(scope)
-                        .relationType(new RelationType(modelFields))
+                        .relationType(
+                                new RelationType(columns.stream()
+                                        .map(column ->
+                                                Field.builder()
+                                                        .modelName(tableName)
+                                                        .columnName(column.getName())
+                                                        .name(column.getName())
+                                                        .build())
+                                        .collect(toImmutableList())))
                         .build();
             }
             return Scope.builder()
