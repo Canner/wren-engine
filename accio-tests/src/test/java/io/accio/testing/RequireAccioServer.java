@@ -20,7 +20,9 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Manifest;
 import io.accio.cache.TaskInfo;
 import io.accio.main.web.dto.CheckOutputDto;
+import io.accio.main.web.dto.ColumnLineageInputDto;
 import io.accio.main.web.dto.ErrorMessageDto;
+import io.accio.main.web.dto.LineageResult;
 import io.accio.main.web.dto.PreviewDto;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
@@ -66,6 +68,8 @@ public abstract class RequireAccioServer
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
     private static final JsonCodec<CheckOutputDto> CHECK_OUTPUT_DTO_CODEC = jsonCodec(CheckOutputDto.class);
     private static final JsonCodec<PreviewDto> PREVIEW_DTO_CODEC = jsonCodec(PreviewDto.class);
+    private static final JsonCodec<ColumnLineageInputDto> COLUMN_LINEAGE_INPUT_DTO_CODEC = jsonCodec(ColumnLineageInputDto.class);
+    private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
 
     public RequireAccioServer() {}
 
@@ -193,6 +197,21 @@ public abstract class RequireAccioServer
                 }
             }
         }).get(60, TimeUnit.SECONDS);
+    }
+
+    protected List<LineageResult> getColumnLineage(ColumnLineageInputDto inputDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/lineage/column"))
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(COLUMN_LINEAGE_INPUT_DTO_CODEC, inputDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return MODEL_LINEAGE_RESULT_LIST_CODEC.fromJson(response.getBody());
     }
 
     public static void getWebApplicationException(StringResponseHandler.StringResponse response)
