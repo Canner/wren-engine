@@ -49,9 +49,11 @@ import io.airlift.log.Logger;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 public class PgCatalogManager
 {
@@ -160,24 +162,24 @@ public class PgCatalogManager
             return false;
         }
         try {
-            List<String> createdPgTable = connector.listTables(pgCatalogName).stream()
+            Set<String> createdPgTable = connector.listTables(pgCatalogName).stream()
                     .map(TableMetadata::getTable)
                     .map(SchemaTableName::getTableName)
-                    .collect(toImmutableList());
+                    .collect(toSet());
 
-            List<String> createdFunctions = connector.listFunctionNames(pgCatalogName);
-            if (!new HashSet<>(createdPgTable).containsAll(tables.keySet())) {
+            Set<String> createdFunctions = new HashSet<>(connector.listFunctionNames(pgCatalogName));
+            if (!createdPgTable.containsAll(tables.keySet())) {
                 LOG.warn("PgCatalog tables are not initialized");
                 return false;
             }
 
-            if (!new HashSet<>(createdFunctions).containsAll(pgFunctionRegistry.getPgFunctions().stream().map(PgFunction::getRemoteName).collect(toImmutableList()))) {
+            if (!createdFunctions.containsAll(pgFunctionRegistry.getPgFunctions().stream().map(PgFunction::getRemoteName).collect(toImmutableList()))) {
                 LOG.warn("PgCatalog functions are not initialized");
                 return false;
             }
         }
         catch (Exception e) {
-            LOG.warn("PgCatalog is not initialized");
+            LOG.error("PgCatalog is not initialized");
             return false;
         }
         return true;

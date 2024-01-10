@@ -27,13 +27,13 @@ public class CheckOutputDto
 
     public static CheckOutputDto prepare(Manifest manifest)
     {
-        return new CheckOutputDto(Status.PREPARE, manifest);
+        return new CheckOutputDto(Status.PREPARING, manifest);
     }
 
     public enum Status
     {
         READY,
-        PREPARE
+        PREPARING
     }
 
     private final Status status;

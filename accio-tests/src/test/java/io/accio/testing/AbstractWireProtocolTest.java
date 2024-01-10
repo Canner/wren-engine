@@ -38,7 +38,7 @@ public abstract class AbstractWireProtocolTest
 
     protected String getAccioDirectory()
     {
-        return "acciowireprotocoltest";
+        return "accio_wireprotocol_test";
     }
 
     protected abstract String getDefaultCatalog();

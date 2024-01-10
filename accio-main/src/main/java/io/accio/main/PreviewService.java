@@ -20,7 +20,6 @@ import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
 import io.accio.main.metadata.Metadata;
 import io.accio.sqlrewrite.AccioPlanner;
-import io.airlift.log.Logger;
 
 import javax.inject.Inject;
 
@@ -32,7 +31,6 @@ import static java.util.stream.Collectors.toList;
 
 public class PreviewService
 {
-    private static final Logger LOG = Logger.get(PreviewService.class);
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;

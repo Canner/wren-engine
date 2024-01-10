@@ -60,10 +60,9 @@ public class AccioManager
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.pgCatalogManager = requireNonNull(pgCatalogManager, "pgCatalogManager is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        if (accioMDLDirectory.exists() &&
-                accioMDLDirectory.isDirectory() &&
-                requireNonNull(accioMDLDirectory.listFiles()).length > 0) {
-            deployAccioMDLFromDir();
+        File[] mdlFiles = accioMDLDirectory.listFiles();
+        if (mdlFiles != null && mdlFiles.length > 0) {
+            deployAccioMDLFromDir(mdlFiles);
         }
         else if (accioConfig.getAccioMDLFile().isPresent()) {
             this.accioMDLFile = accioConfig.getAccioMDLFile().get();
@@ -74,10 +73,10 @@ public class AccioManager
         }
     }
 
-    private void deployAccioMDLFromDir()
+    private void deployAccioMDLFromDir(File[] mdlFiles)
             throws IOException
     {
-        List<File> mdls = Arrays.stream(requireNonNull(accioMDLDirectory.listFiles()))
+        List<File> mdls = Arrays.stream(mdlFiles)
                 .filter(file -> file.getName().endsWith(".json"))
                 .collect(toList());
         checkArgument(mdls.size() == 1, "There should be only one mdl file in the directory");
@@ -128,7 +127,7 @@ public class AccioManager
                 throw new IOException("Cannot create archive folder");
             }
         }
-        Files.move(accioMDLFile.toPath(),
+        Files.copy(accioMDLFile.toPath(),
                 archived.toPath().resolve(accioMDLFile.getName() + "." + LocalDateTime.now().format(DateTimeFormatter.ofPattern("uuuuMMddHHmmss"))));
     }
 

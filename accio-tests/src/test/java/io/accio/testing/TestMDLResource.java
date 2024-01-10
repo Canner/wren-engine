@@ -24,10 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
@@ -92,13 +88,11 @@ public class TestMDLResource
         assertThat(startUp.getManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         assertThatNoException().isThrownBy(() -> deployMDL(updated));
         CheckOutputDto afterDeploy = getDeployStatus();
-        waitUntilPrepare();
         assertThat(afterDeploy.getManifest().getModels().get(0).getColumns().size()).isEqualTo(2);
         waitUntilReady();
 
         assertThatNoException().isThrownBy(() -> deployMDL(initial));
         CheckOutputDto afterDeploy2 = getDeployStatus();
-        waitUntilPrepare();
         assertThat(afterDeploy2.getManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         waitUntilReady();
 
@@ -133,24 +127,5 @@ public class TestMDLResource
 
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
                 .hasErrorMessageMatches(".*Table \"Orders\" must be qualified with a dataset.*");
-    }
-
-    private void waitUntilPrepare()
-            throws ExecutionException, InterruptedException, TimeoutException
-    {
-        CompletableFuture.runAsync(() -> {
-            while (true) {
-                CheckOutputDto checkOutputDto = getDeployStatus();
-                if (checkOutputDto.getStatus() == CheckOutputDto.Status.PREPARE) {
-                    break;
-                }
-                try {
-                    Thread.sleep(1000);
-                }
-                catch (InterruptedException e) {
-                    throw new AssertionError("Status doesn't change to PREPARE", e);
-                }
-            }
-        }).get(30, TimeUnit.SECONDS);
     }
 }

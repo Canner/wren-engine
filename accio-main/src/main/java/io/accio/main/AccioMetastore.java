@@ -20,6 +20,7 @@ import io.accio.sqlrewrite.AccioDataLineage;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.accio.base.AccioMDL.EMPTY;
+import static java.util.Objects.requireNonNull;
 
 public class AccioMetastore
 {
@@ -40,15 +41,15 @@ public class AccioMetastore
         this.analyzed.set(new AnalyzedMDL(accioMDL, AccioDataLineage.analyze(accioMDL)));
     }
 
-    static class AnalyzedMDL
+    private static class AnalyzedMDL
     {
         private final AccioMDL accioMDL;
         private final AccioDataLineage accioDataLineage;
 
         public AnalyzedMDL(AccioMDL accioMDL, AccioDataLineage accioDataLineage)
         {
-            this.accioMDL = accioMDL;
-            this.accioDataLineage = accioDataLineage;
+            this.accioMDL = requireNonNull(accioMDL);
+            this.accioDataLineage = requireNonNull(accioDataLineage);
         }
 
         public AccioMDL getAccioMDL()
