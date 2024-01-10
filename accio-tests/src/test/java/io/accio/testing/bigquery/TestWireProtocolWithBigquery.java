@@ -985,7 +985,8 @@ public class TestWireProtocolWithBigquery
                         "GROUP BY (CAST(extract(dow from \"tpch_tiny\".\"Lineitem\".\"shipdate\") AS integer) + 1) " +
                         "ORDER BY (CAST(extract(dow from \"tpch_tiny\".\"Lineitem\".\"shipdate\") AS integer) + 1) ASC LIMIT 10\n"},
                 {"SELECT DATE_TRUNC('year', (NOW() + INTERVAL '-30 year'))"},
-                {"SELECT 'array_in'::regproc"}
+                {"SELECT 'array_in'::regproc"},
+                {"SELECT * FROM \"tpch_tiny\".\"Lineitem\" LIMIT '100'::integer OFFSET '50'::integer"}
         };
     }
 

@@ -224,7 +224,7 @@ queryNoWith
       |
       // for wire protocol to support limit xx offset xx
       (LIMIT limit=limitRowCount pgCast?)?
-      (OFFSET offset=rowCount (ROW | ROWS)?)?
+      (OFFSET offset=rowCount pgCast? (ROW | ROWS)?)?
       )
     ;
 
@@ -236,12 +236,12 @@ pgCast
 limitRowCount
     : ALL
     | rowCount
-    | string // for pg syntax
     ;
 
 rowCount
     : INTEGER_VALUE
     | QUESTION_MARK
+    | string // for pg syntax
     ;
 
 queryTerm

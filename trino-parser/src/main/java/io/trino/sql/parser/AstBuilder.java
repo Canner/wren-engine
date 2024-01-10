@@ -946,6 +946,11 @@ class AstBuilder
             if (context.offset.INTEGER_VALUE() != null) {
                 rowCount = new LongLiteral(getLocation(context.offset.INTEGER_VALUE()), context.offset.getText());
             }
+            else if (context.offset.string() != null) {
+                // for pg style offset clause
+                StringLiteral literal = (StringLiteral) visit(context.offset.string());
+                rowCount = new LongLiteral(literal.getLocation().get(), literal.getValue());
+            }
             else {
                 rowCount = new Parameter(getLocation(context.offset.QUESTION_MARK()), parameterPosition);
                 parameterPosition++;
@@ -975,9 +980,9 @@ class AstBuilder
             if (context.limit.ALL() != null) {
                 rowCount = new AllRows(getLocation(context.limit.ALL()));
             }
-            else if (context.limit.string() != null) {
+            else if (context.limit.rowCount().string() != null) {
                 // for pg style limit clause
-                StringLiteral literal = (StringLiteral) visit(context.limit.string());
+                StringLiteral literal = (StringLiteral) visit(context.limit.rowCount().string());
                 rowCount = new LongLiteral(literal.getLocation().get(), literal.getValue());
             }
             else if (context.limit.rowCount().INTEGER_VALUE() != null) {
