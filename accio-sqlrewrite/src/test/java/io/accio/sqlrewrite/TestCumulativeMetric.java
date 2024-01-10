@@ -16,6 +16,7 @@ package io.accio.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.SessionContext;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.DateSpine;
 import io.accio.base.dto.Manifest;
@@ -94,11 +95,13 @@ public class TestCumulativeMetric
     @Test
     public void testCumulativeMetric()
     {
-        assertThat(query(rewrite("select * from DailyRevenue")).size()).isEqualTo(365);
-        assertThat(query(rewrite("select * from WeeklyRevenue")).size()).isEqualTo(53);
-        assertThat(query(rewrite("select * from MonthlyRevenue")).size()).isEqualTo(12);
-        assertThat(query(rewrite("select * from QuarterlyRevenue")).size()).isEqualTo(8);
-        assertThat(query(rewrite("select * from YearlyRevenue")).size()).isEqualTo(5);
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThat(query(rewrite("select * from DailyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(365);
+            assertThat(query(rewrite("select * from WeeklyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(53);
+            assertThat(query(rewrite("select * from MonthlyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(12);
+            assertThat(query(rewrite("select * from QuarterlyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(8);
+            assertThat(query(rewrite("select * from YearlyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(5);
+        });
     }
 
     @Test
@@ -119,9 +122,11 @@ public class TestCumulativeMetric
                         .setModels(models)
                         .build());
 
-        List<List<Object>> result = query(rewrite("select * from testModelOnCumulativeMetric", mdl));
-        assertThat(result.get(0).size()).isEqualTo(2);
-        assertThat(result.size()).isEqualTo(53);
+        List.of(true, false).forEach(enableDynamic -> {
+            List<List<Object>> result = query(rewrite("select * from testModelOnCumulativeMetric", mdl, enableDynamic));
+            assertThat(result.get(0).size()).isEqualTo(2);
+            assertThat(result.size()).isEqualTo(53);
+        });
     }
 
     @Test
@@ -141,9 +146,11 @@ public class TestCumulativeMetric
                         .setMetrics(metrics)
                         .build());
 
-        List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnCumulativeMetric ORDER BY ordermonth", mdl));
-        assertThat(result.get(0).size()).isEqualTo(2);
-        assertThat(result.size()).isEqualTo(12);
+        List.of(true, false).forEach(enableDynamic -> {
+            List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnCumulativeMetric ORDER BY ordermonth", mdl, enableDynamic));
+            assertThat(result.get(0).size()).isEqualTo(2);
+            assertThat(result.size()).isEqualTo(12);
+        });
     }
 
     @Test
@@ -160,9 +167,11 @@ public class TestCumulativeMetric
                         .setCumulativeMetrics(cumulativeMetrics)
                         .build());
 
-        List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnCumulativeMetric ORDER BY orderyear", mdl));
-        assertThat(result.get(0).size()).isEqualTo(2);
-        assertThat(result.size()).isEqualTo(5);
+        List.of(true, false).forEach(enableDynamic -> {
+            List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnCumulativeMetric ORDER BY orderyear", mdl, enableDynamic));
+            assertThat(result.get(0).size()).isEqualTo(2);
+            assertThat(result.size()).isEqualTo(5);
+        });
     }
 
     @Test
@@ -180,8 +189,10 @@ public class TestCumulativeMetric
                         .setCumulativeMetrics(cumulativeMetrics)
                         .build());
 
-        assertThatThrownBy(() -> rewrite("SELECT * FROM testInvalidCumulativeMetricOnCumulativeMetric", mdl))
-                .hasMessage("CumulativeMetric measure cannot be window as it is not date/timestamp type");
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatThrownBy(() -> rewrite("SELECT * FROM testInvalidCumulativeMetricOnCumulativeMetric", mdl, enableDynamic))
+                    .hasMessage("CumulativeMetric measure cannot be window as it is not date/timestamp type");
+        });
     }
 
     @Test
@@ -204,18 +215,20 @@ public class TestCumulativeMetric
                         .setCumulativeMetrics(cumulativeMetrics)
                         .build());
 
-        List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnMetric ORDER BY orderyear", mdl));
-        assertThat(result.get(0).size()).isEqualTo(2);
-        assertThat(result.size()).isEqualTo(5);
+        List.of(true, false).forEach(enableDynamic -> {
+            List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnMetric ORDER BY orderyear", mdl, enableDynamic));
+            assertThat(result.get(0).size()).isEqualTo(2);
+            assertThat(result.size()).isEqualTo(5);
+        });
     }
 
-    private String rewrite(String sql)
+    private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamic)
     {
-        return rewrite(sql, accioMDL);
-    }
-
-    private String rewrite(String sql, AccioMDL accioMDL)
-    {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
+        SessionContext sessionContext = SessionContext.builder()
+                .setCatalog("accio")
+                .setSchema("test")
+                .setEnableDynamic(enableDynamic)
+                .build();
+        return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
     }
 }

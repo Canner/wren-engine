@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
-import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
@@ -159,28 +158,48 @@ public final class StatementAnalyzer
             analysis.addTable(tableName);
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
-                List<Column> columns = ImmutableList.of();
+                List<Field> fields = ImmutableList.of();
                 if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
-                    columns = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
+                    fields = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
                             .map(Model::getColumns)
-                            .orElseGet(ImmutableList::of);
+                            .orElseGet(ImmutableList::of)
+                            .stream()
+                            .map(column -> Field.builder()
+                                    .modelName(tableName)
+                                    .columnName(column.getName())
+                                    .name(column.getName())
+                                    .build())
+                            .collect(toImmutableList());
                 }
                 else if (accioMDL.getMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
-                    columns = accioMDL.getMetric(tableName.getSchemaTableName().getTableName())
+                    fields = accioMDL.getMetric(tableName.getSchemaTableName().getTableName())
                             .map(Metric::getColumns)
-                            .orElseGet(ImmutableList::of);
+                            .orElseGet(ImmutableList::of)
+                            .stream()
+                            .map(column -> Field.builder()
+                                    .modelName(tableName)
+                                    .columnName(column.getName())
+                                    .name(column.getName())
+                                    .build())
+                            .collect(toImmutableList());
+                }
+                else if (accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                    CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).get();
+                    fields = ImmutableList.of(
+                            Field.builder()
+                                    .modelName(tableName)
+                                    .columnName(cumulativeMetric.getWindow().getName())
+                                    .name(cumulativeMetric.getWindow().getName())
+                                    .build(),
+                            Field.builder()
+                                    .modelName(tableName)
+                                    .columnName(cumulativeMetric.getMeasure().getName())
+                                    .name(cumulativeMetric.getMeasure().getName())
+                                    .build());
                 }
                 return Scope.builder()
                         .parent(scope)
-                        .relationType(
-                                new RelationType(columns.stream()
-                                        .map(column ->
-                                                Field.builder()
-                                                        .modelName(tableName)
-                                                        .columnName(column.getName())
-                                                        .name(column.getName())
-                                                        .build())
-                                        .collect(toImmutableList())))
+                        .relationType(new RelationType(fields))
                         .build();
             }
             return Scope.builder()
