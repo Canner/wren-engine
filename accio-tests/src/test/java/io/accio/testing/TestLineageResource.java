@@ -16,10 +16,12 @@ package io.accio.testing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
+import io.accio.base.dto.TimeUnit;
 import io.accio.main.web.dto.ColumnLineageInputDto;
 import io.accio.main.web.dto.LineageResult;
 import org.testng.annotations.Test;
@@ -38,12 +40,15 @@ import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
+import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Relationship.relationship;
+import static io.accio.base.dto.Window.window;
 import static io.accio.main.web.dto.LineageResult.columnWithType;
 import static io.accio.main.web.dto.LineageResult.lineageResult;
 import static io.accio.testing.AbstractTestFramework.addColumnsToModel;
@@ -224,6 +229,33 @@ public class TestLineageResource
                 .add(lineageResult("Orders", List.of(columnWithType("custkey", INTEGER), columnWithType("totalprice", INTEGER))))
                 .build();
 
+        assertIgnoreOrder(results, expected);
+    }
+
+    @Test
+    public void testCumulativeMetricOnModel()
+    {
+        CumulativeMetric dailyRevenue = cumulativeMetric("DailyRevenue", "Orders",
+                measure("c_totalprice", INTEGER, "sum", "totalprice"),
+                window("c_orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"));
+
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setCumulativeMetrics(List.of(dailyRevenue))
+                .build();
+
+        List<LineageResult> results = getColumnLineage(new ColumnLineageInputDto(manifest, "DailyRevenue", "c_totalprice"));
+        List<LineageResult> expected = ImmutableList.<LineageResult>builder()
+                .add(lineageResult("DailyRevenue", List.of(columnWithType("c_totalprice", INTEGER))))
+                .add(lineageResult("Orders", List.of(columnWithType("totalprice", INTEGER))))
+                .build();
+        assertIgnoreOrder(results, expected);
+
+        results = getColumnLineage(new ColumnLineageInputDto(manifest, "DailyRevenue", "c_orderdate"));
+        expected = ImmutableList.<LineageResult>builder()
+                .add(lineageResult("DailyRevenue", List.of(columnWithType("c_orderdate", DATE))))
+                .add(lineageResult("Orders", List.of(columnWithType("orderdate", DATE))))
+                .build();
         assertIgnoreOrder(results, expected);
     }
 
