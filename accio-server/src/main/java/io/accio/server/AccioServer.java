@@ -15,18 +15,16 @@
 package io.accio.server;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
-import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.server.Server;
-import io.accio.main.server.module.BigQueryConnectorModule;
-import io.accio.main.server.module.PostgresConnectorModule;
-import io.accio.main.server.module.PostgresWireProtocolModule;
-import io.accio.main.server.module.WebModule;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
+import io.accio.server.module.BigQueryConnectorModule;
+import io.accio.server.module.PostgresConnectorModule;
+import io.accio.server.module.PostgresWireProtocolModule;
+import io.accio.server.module.WebModule;
 import io.airlift.event.client.EventModule;
 import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
@@ -43,13 +41,6 @@ public class AccioServer
     public static void main(String[] args)
     {
         new AccioServer().start();
-    }
-
-    @Override
-    protected void configure(Injector injector)
-    {
-        PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
-        pgCatalogManager.initPgCatalog();
     }
 
     @Override

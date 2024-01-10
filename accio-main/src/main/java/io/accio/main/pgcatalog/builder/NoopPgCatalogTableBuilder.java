@@ -26,11 +26,11 @@ import java.util.Map;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 
-public class PostgresPgCatalogTableBuilder
+public class NoopPgCatalogTableBuilder
         extends PgCatalogTableBuilder
 {
     @Inject
-    public PostgresPgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
+    public NoopPgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
     {
         super(metadata, accioMetastore);
     }

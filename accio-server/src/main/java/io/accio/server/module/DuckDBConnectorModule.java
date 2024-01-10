@@ -18,11 +18,10 @@ import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheService;
-import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresConfig;
+import io.accio.main.connector.duckdb.DuckDBMetadata;
+import io.accio.main.connector.duckdb.DuckDBSqlConverter;
 import io.accio.main.connector.postgres.PostgresCacheService;
-import io.accio.main.connector.postgres.PostgresMetadata;
-import io.accio.main.connector.postgres.PostgresSqlConverter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.NoopPgCatalogTableBuilder;
 import io.accio.main.pgcatalog.builder.NoopPgFunctionBuilder;
@@ -34,15 +33,14 @@ import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
-public class PostgresConnectorModule
+public class DuckDBConnectorModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        binder.bind(PostgresClient.class).in(Scopes.SINGLETON);
-        binder.bind(Metadata.class).to(PostgresMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(SqlConverter.class).to(PostgresSqlConverter.class).in(Scopes.SINGLETON);
+        binder.bind(Metadata.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
+        binder.bind(SqlConverter.class).to(DuckDBSqlConverter.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogTableBuilder.class).to(NoopPgCatalogTableBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgFunctionBuilder.class).to(NoopPgFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);

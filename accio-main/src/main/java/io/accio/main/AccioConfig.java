@@ -19,6 +19,7 @@ import io.airlift.configuration.Config;
 import javax.validation.constraints.NotNull;
 
 import java.io.File;
+import java.util.Optional;
 
 public class AccioConfig
 {
@@ -26,21 +27,38 @@ public class AccioConfig
     {
         BIGQUERY,
         POSTGRES,
+        DUCKDB,
     }
 
-    private File accioMDLFile = new File("etc/acciomdl.json");
+    @Deprecated
+    private File accioMDLFile;
+    private File accioMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType;
 
-    @NotNull
-    public File getAccioMDLFile()
+    @Deprecated
+    public Optional<File> getAccioMDLFile()
     {
-        return accioMDLFile;
+        return Optional.ofNullable(accioMDLFile);
     }
 
+    @Deprecated
     @Config("accio.file")
     public AccioConfig setAccioMDLFile(File accioMDLFile)
     {
         this.accioMDLFile = accioMDLFile;
+        return this;
+    }
+
+    @NotNull
+    public File getAccioMDLDirectory()
+    {
+        return accioMDLDirectory;
+    }
+
+    @Config("accio.directory")
+    public AccioConfig setAccioMDLDirectory(File accioMDLDirectory)
+    {
+        this.accioMDLDirectory = accioMDLDirectory;
         return this;
     }
 

@@ -26,10 +26,10 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static io.accio.main.connector.bigquery.BigQueryCacheService.getTableLocationPrefix;
-import static io.accio.main.server.module.BigQueryConnectorModule.createHeaderProvider;
-import static io.accio.main.server.module.BigQueryConnectorModule.provideBigQuery;
-import static io.accio.main.server.module.BigQueryConnectorModule.provideBigQueryCredentialsSupplier;
-import static io.accio.main.server.module.BigQueryConnectorModule.provideGcsStorageClient;
+import static io.accio.server.module.BigQueryConnectorModule.createHeaderProvider;
+import static io.accio.server.module.BigQueryConnectorModule.provideBigQuery;
+import static io.accio.server.module.BigQueryConnectorModule.provideBigQueryCredentialsSupplier;
+import static io.accio.server.module.BigQueryConnectorModule.provideGcsStorageClient;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 

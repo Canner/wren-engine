@@ -12,22 +12,17 @@
  * limitations under the License.
  */
 
-package io.accio.main;
+package io.accio.main.connector.duckdb;
 
-import com.google.inject.Binder;
-import com.google.inject.Scopes;
-import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.accio.base.SessionContext;
+import io.accio.base.sql.SqlConverter;
 
-import static io.airlift.configuration.ConfigBinder.configBinder;
-
-public class AccioModule
-        extends AbstractConfigurationAwareModule
+public class DuckDBSqlConverter
+        implements SqlConverter
 {
     @Override
-    protected void setup(Binder binder)
+    public String convert(String sql, SessionContext sessionContext)
     {
-        configBinder(binder).bindConfig(AccioConfig.class);
-        binder.bind(AccioManager.class).in(Scopes.SINGLETON);
-        binder.bind(AccioMetastore.class).in(Scopes.SINGLETON);
+        return sql;
     }
 }

@@ -16,6 +16,8 @@ package io.accio.main.pgcatalog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import io.accio.base.metadata.SchemaTableName;
+import io.accio.base.metadata.TableMetadata;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.PgCatalogTableBuilder;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
@@ -42,15 +44,20 @@ import io.accio.main.pgcatalog.table.PgTablespaceTable;
 import io.accio.main.pgcatalog.table.PgTypeTable;
 import io.accio.main.pgcatalog.table.ReferentialConstraints;
 import io.accio.main.pgcatalog.table.TableConstraints;
+import io.airlift.log.Logger;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 public class PgCatalogManager
 {
+    private static final Logger LOG = Logger.get(PgCatalogManager.class);
     private final Map<String, PgCatalogTable> tables;
 
     protected final String metadataSchemaName;
@@ -146,5 +153,35 @@ public class PgCatalogManager
     private void createPgCatalogTable(PgCatalogTable pgCatalogTable)
     {
         pgCatalogTableBuilder.createPgTable(pgCatalogTable);
+    }
+
+    public boolean checkRequired()
+    {
+        if (!(connector.isSchemaExist(metadataSchemaName) && connector.isSchemaExist(pgCatalogName))) {
+            LOG.warn("PgCatalog is not initialized");
+            return false;
+        }
+        try {
+            Set<String> createdPgTable = connector.listTables(pgCatalogName).stream()
+                    .map(TableMetadata::getTable)
+                    .map(SchemaTableName::getTableName)
+                    .collect(toSet());
+
+            Set<String> createdFunctions = new HashSet<>(connector.listFunctionNames(pgCatalogName));
+            if (!createdPgTable.containsAll(tables.keySet())) {
+                LOG.warn("PgCatalog tables are not initialized");
+                return false;
+            }
+
+            if (!createdFunctions.containsAll(pgFunctionRegistry.getPgFunctions().stream().map(PgFunction::getRemoteName).collect(toImmutableList()))) {
+                LOG.warn("PgCatalog functions are not initialized");
+                return false;
+            }
+        }
+        catch (Exception e) {
+            LOG.error("PgCatalog is not initialized");
+            return false;
+        }
+        return true;
     }
 }

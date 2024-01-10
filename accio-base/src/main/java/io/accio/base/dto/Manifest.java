@@ -16,6 +16,7 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.airlift.json.JsonCodec;
 
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 public class Manifest
 {
+    public static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = JsonCodec.jsonCodec(Manifest.class);
     private final String catalog;
     private final String schema;
     private final DateSpine dateSpine;

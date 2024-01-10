@@ -43,14 +43,12 @@ import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.accio.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -155,13 +153,7 @@ public class BigQueryMetadata
         if (routines == null) {
             throw new AccioException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
         }
-        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).map(routine -> {
-            Matcher matcher = PG_FUNCTION_PATTERN.matcher(routine);
-            if (matcher.find()) {
-                return matcher.group("functionName");
-            }
-            throw new IllegalArgumentException(format("The name pattern of %s doesn't match PG_FUNCTION_PATTERN", routine));
-        }).collect(toImmutableList());
+        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
     }
 
     @Override

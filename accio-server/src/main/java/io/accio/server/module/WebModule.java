@@ -12,12 +12,15 @@
  * limitations under the License.
  */
 
-package io.accio.main.server.module;
+package io.accio.server.module;
 
 import com.google.inject.Binder;
+import com.google.inject.Scopes;
+import io.accio.main.PreviewService;
+import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.web.AccioExceptionMapper;
 import io.accio.main.web.CacheResource;
-import io.accio.main.web.ReloadResource;
+import io.accio.main.web.MDLResource;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
@@ -28,8 +31,10 @@ public class WebModule
     @Override
     protected void setup(Binder binder)
     {
-        jaxrsBinder(binder).bind(ReloadResource.class);
+        jaxrsBinder(binder).bind(MDLResource.class);
         jaxrsBinder(binder).bind(CacheResource.class);
         jaxrsBinder(binder).bindInstance(new AccioExceptionMapper());
+        binder.bind(PreviewService.class).in(Scopes.SINGLETON);
+        binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
     }
 }

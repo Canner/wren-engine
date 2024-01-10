@@ -14,6 +14,7 @@
 package io.accio.testing.bigquery;
 
 import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.dto.Manifest;
 import io.accio.cache.TaskInfo;
 import io.accio.cache.dto.CachedTable;
 import io.airlift.units.Duration;
@@ -33,7 +34,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.cache.TaskInfo.TaskStatus.DONE;
-import static io.accio.cache.TaskInfo.TaskStatus.QUEUED;
 import static io.accio.testing.WebApplicationExceptionAssert.assertWebApplicationException;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Objects.requireNonNull;
@@ -70,10 +70,9 @@ public class TestReloadCache
         String beforeMappingName = getDefaultCacheInfoPair(beforeName).getRequiredTableName();
         assertCache(beforeName);
 
-        rewriteFile("cache/cache_reload_2_mdl.json");
-        reloadAccioMDL();
-        reloadCache();
-
+        deployMDL("cache/cache_reload_2_mdl.json");
+        waitUntilReady();
+        waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue_After"));
         assertCache("Revenue_After");
 
         List<Object[]> tables = queryDuckdb("show tables");
@@ -82,14 +81,13 @@ public class TestReloadCache
         assertThat(cacheManager.get().cacheScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
         assertThatThrownBy(() -> getDefaultCacheInfoPair(beforeMappingName).getRequiredTableName()).isInstanceOf(NullPointerException.class);
 
-        rewriteFile("cache/cache_reload_1_mdl.json");
-        reloadAccioMDL();
+        deployMDL("cache/cache_reload_1_mdl.json");
+        waitUntilReady();
+        waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue"));
 
-        List<TaskInfo> taskInfos = reloadCacheAsync();
+        List<TaskInfo> taskInfos = getTaskInfo("canner-cml", "tpch_tiny");
         assertThat(taskInfos.size()).isEqualTo(1);
         TaskInfo taskInfo = taskInfos.get(0);
-        assertThat(taskInfo.getTaskStatus()).isEqualTo(QUEUED);
-        taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
         assertCache("Revenue");
         assertThat(taskInfo.getCatalogName()).isEqualTo("canner-cml");
         assertThat(taskInfo.getSchemaName()).isEqualTo("tpch_tiny");
@@ -104,13 +102,9 @@ public class TestReloadCache
         assertThat(cachedTable.getRefreshTime()).isEqualTo(Duration.valueOf("5m"));
         assertThat(cachedTable.getCreateDate()).isNotNull();
 
-        rewriteFile("cache/cache_reload_3_mdl.json");
-        reloadAccioMDL();
-        List<TaskInfo> taskInfos3 = reloadCacheAsync();
-        assertThat(taskInfos3.size()).isEqualTo(1);
-        taskInfo = taskInfos3.get(0);
-        assertThat(taskInfo.getTaskStatus()).isEqualTo(QUEUED);
-        taskInfo = waitUntilFinished(taskInfo.getCatalogSchemaTableName());
+        deployMDL("cache/cache_reload_3_mdl.json");
+        waitUntilReady();
+        taskInfo = waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue_Fake"));
         cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();
         assertThat(taskInfo.getEndTime()).isAfter(taskInfo.getStartTime());
@@ -119,6 +113,12 @@ public class TestReloadCache
                 .hasHTTPStatus(404)
                 .hasErrorCode(NOT_FOUND)
                 .hasErrorMessageMatches("Task .* not found.");
+    }
+
+    private void deployMDL(String resourcePath)
+            throws IOException
+    {
+        deployMDL(Manifest.MANIFEST_JSON_CODEC.fromJson(Files.readString(Path.of(getClass().getClassLoader().getResource(resourcePath).getPath()))));
     }
 
     private void assertCache(String name)

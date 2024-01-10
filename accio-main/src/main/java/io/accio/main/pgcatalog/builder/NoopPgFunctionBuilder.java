@@ -22,11 +22,11 @@ import javax.inject.Inject;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 
-public class PostgresPgFunctionBuilder
+public class NoopPgFunctionBuilder
         extends PgFunctionBuilder
 {
     @Inject
-    public PostgresPgFunctionBuilder(Metadata connector)
+    public NoopPgFunctionBuilder(Metadata connector)
     {
         super(connector);
     }

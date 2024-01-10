@@ -14,7 +14,6 @@
 
 package io.accio.base.dto;
 
-import io.airlift.json.JsonCodec;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -26,6 +25,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.CumulativeMetric.cumulativeMetric;
 import static io.accio.base.dto.EnumDefinition.enumDefinition;
 import static io.accio.base.dto.EnumValue.enumValue;
+import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.base.dto.Measure.measure;
 import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
@@ -40,8 +40,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class TestManifestSerDe
 {
-    private static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = JsonCodec.jsonCodec(Manifest.class);
-
     @Test
     public void testSerDeRoundTrip()
     {

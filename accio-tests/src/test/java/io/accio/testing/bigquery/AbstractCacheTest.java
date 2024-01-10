@@ -16,9 +16,11 @@ package io.accio.testing.bigquery;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
+import io.accio.base.AccioMDL;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.dto.Manifest;
 import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.cache.CacheInfoPair;
@@ -27,6 +29,8 @@ import io.accio.cache.CachedTableMapping;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.TestingAccioServer;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
@@ -45,9 +49,21 @@ public abstract class AbstractCacheTest
     @Override
     protected TestingAccioServer createAccioServer()
     {
-        return TestingAccioServer.builder()
-                .setRequiredConfigs(getProperties().build())
-                .build();
+        try {
+            Path dir = Files.createTempDirectory(getAccioDirectory());
+            if (getAccioMDLPath().isPresent()) {
+                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
+            }
+            else {
+                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
+            }
+            return TestingAccioServer.builder()
+                    .setRequiredConfigs(getProperties().put("accio.directory", dir.toString()).build())
+                    .build();
+        }
+        catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     protected ImmutableMap.Builder<String, String> getProperties()
@@ -62,9 +78,6 @@ public abstract class AbstractCacheTest
                 .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"))
                 .put("accio.datasource.type", "bigquery");
 
-        if (getAccioMDLPath().isPresent()) {
-            properties.put("accio.file", getAccioMDLPath().get());
-        }
         return properties;
     }
 
