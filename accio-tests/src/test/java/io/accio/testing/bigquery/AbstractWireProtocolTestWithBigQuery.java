@@ -17,11 +17,16 @@ package io.accio.testing.bigquery;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
+import io.accio.base.AccioMDL;
+import io.accio.base.dto.Manifest;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
 import io.airlift.log.Logger;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
@@ -42,8 +47,18 @@ public abstract class AbstractWireProtocolTestWithBigQuery
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("accio.datasource.type", "bigquery");
 
-        if (getAccioMDLPath().isPresent()) {
-            properties.put("accio.file", getAccioMDLPath().get());
+        try {
+            Path dir = Files.createTempDirectory(getAccioDirectory());
+            if (getAccioMDLPath().isPresent()) {
+                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
+            }
+            else {
+                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
+            }
+            properties.put("accio.directory", dir.toString());
+        }
+        catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
 
         return TestingAccioServer.builder()

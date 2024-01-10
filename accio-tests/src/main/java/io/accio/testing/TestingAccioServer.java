@@ -24,10 +24,10 @@ import com.google.inject.Module;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
-import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
+import io.accio.server.module.DuckDBConnectorModule;
 import io.accio.server.module.PostgresConnectorModule;
 import io.accio.server.module.PostgresWireProtocolModule;
 import io.accio.server.module.WebModule;
@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static io.accio.main.AccioConfig.DataSourceType.BIGQUERY;
+import static io.accio.main.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.main.AccioConfig.DataSourceType.POSTGRES;
 import static io.accio.main.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
@@ -84,6 +85,7 @@ public class TestingAccioServer
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(BIGQUERY), new BigQueryConnectorModule()),
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
+                conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(DUCKDB), new DuckDBConnectorModule()),
                 new AccioModule(),
                 new CacheModule(),
                 new WebModule()));
@@ -93,9 +95,6 @@ public class TestingAccioServer
                 .setRequiredConfigurationProperties(requiredConfigProps)
                 .quiet()
                 .initialize();
-
-        PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
-        pgCatalogManager.initPgCatalog();
 
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }

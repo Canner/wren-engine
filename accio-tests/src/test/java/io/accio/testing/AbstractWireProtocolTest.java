@@ -36,6 +36,11 @@ public abstract class AbstractWireProtocolTest
         return Optional.empty();
     }
 
+    protected String getAccioDirectory()
+    {
+        return "acciowireprotocoltest";
+    }
+
     protected abstract String getDefaultCatalog();
 
     protected abstract String getDefaultSchema();
