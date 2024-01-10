@@ -51,6 +51,7 @@ import static java.util.Objects.requireNonNull;
 // TODO: take care metric/cumulative metric/view, and model on model/metric, metric on model/metric etc.
 public class AccioDataLineage
 {
+    public static final AccioDataLineage EMPTY = new AccioDataLineage(AccioMDL.EMPTY);
     private final AccioMDL mdl;
     // key: column name, value: source columns name. format in QualifiedName is modelName.columnName
     private final Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap;
