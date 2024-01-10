@@ -28,6 +28,6 @@ public class AccioModule
     {
         configBinder(binder).bindConfig(AccioConfig.class);
         binder.bind(AccioManager.class).in(Scopes.SINGLETON);
-        binder.bind(AccioMetastore.class).to(AccioManager.class);
+        binder.bind(AccioMetastore.class).in(Scopes.SINGLETON);
     }
 }

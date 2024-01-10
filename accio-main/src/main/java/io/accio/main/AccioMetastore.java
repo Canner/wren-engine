@@ -15,8 +15,50 @@
 package io.accio.main;
 
 import io.accio.base.AccioMDL;
+import io.accio.sqlrewrite.AccioDataLineage;
 
-public interface AccioMetastore
+import java.util.concurrent.atomic.AtomicReference;
+
+import static io.accio.base.AccioMDL.EMPTY;
+
+public class AccioMetastore
 {
-    AccioMDL getAccioMDL();
+    private final AtomicReference<AnalyzedMDL> analyzed = new AtomicReference<>(new AnalyzedMDL(EMPTY, AccioDataLineage.EMPTY));
+
+    public AccioMDL getAccioMDL()
+    {
+        return analyzed.get().getAccioMDL();
+    }
+
+    public AccioDataLineage getAccioDataLineage()
+    {
+        return analyzed.get().getAccioDataLineage();
+    }
+
+    public synchronized void setAccioMDL(AccioMDL accioMDL)
+    {
+        this.analyzed.set(new AnalyzedMDL(accioMDL, AccioDataLineage.analyze(accioMDL)));
+    }
+
+    static class AnalyzedMDL
+    {
+        private final AccioMDL accioMDL;
+        private final AccioDataLineage accioDataLineage;
+
+        public AnalyzedMDL(AccioMDL accioMDL, AccioDataLineage accioDataLineage)
+        {
+            this.accioMDL = accioMDL;
+            this.accioDataLineage = accioDataLineage;
+        }
+
+        public AccioMDL getAccioMDL()
+        {
+            return accioMDL;
+        }
+
+        public AccioDataLineage getAccioDataLineage()
+        {
+            return accioDataLineage;
+        }
+    }
 }

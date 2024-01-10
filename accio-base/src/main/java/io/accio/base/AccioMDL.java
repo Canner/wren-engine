@@ -155,6 +155,11 @@ public class AccioMDL
         return schema;
     }
 
+    public Manifest getManifest()
+    {
+        return manifest;
+    }
+
     public List<Model> listModels()
     {
         return manifest.getModels();

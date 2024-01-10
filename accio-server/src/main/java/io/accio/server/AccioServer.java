@@ -5,22 +5,20 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.accio.server;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
-import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.server.Server;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
@@ -43,13 +41,6 @@ public class AccioServer
     public static void main(String[] args)
     {
         new AccioServer().start();
-    }
-
-    @Override
-    protected void configure(Injector injector)
-    {
-        PgCatalogManager pgCatalogManager = injector.getInstance(PgCatalogManager.class);
-        pgCatalogManager.initPgCatalog();
     }
 
     @Override

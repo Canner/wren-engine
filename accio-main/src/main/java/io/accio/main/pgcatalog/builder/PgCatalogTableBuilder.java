@@ -54,14 +54,14 @@ public abstract class PgCatalogTableBuilder
     private final Metadata metadata;
     private final Map<String, String> replaceMap;
     private final StrSubstitutor strSubstitutor;
-    private final AccioMDL accioMDL;
+    private final AccioMetastore accioMetastore;
 
     public PgCatalogTableBuilder(Metadata metadata, AccioMetastore accioMetastore)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.replaceMap = initReplaceMap();
         this.strSubstitutor = new StrSubstitutor(getReplaceMap());
-        this.accioMDL = requireNonNull(accioMetastore.getAccioMDL(), "accioMDL is null");
+        this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
     }
 
     public void createPgTable(PgCatalogTable pgCatalogTable)
@@ -145,7 +145,7 @@ public abstract class PgCatalogTableBuilder
 
     protected AccioMDL getAccioMDL()
     {
-        return accioMDL;
+        return accioMetastore.getAccioMDL();
     }
 
     public Map<String, String> getReplaceMap()

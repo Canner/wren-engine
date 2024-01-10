@@ -17,12 +17,9 @@ import io.accio.base.AccioException;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.cache.CacheManager;
-import io.accio.main.AccioManager;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.container.AsyncResponse;
@@ -37,31 +34,11 @@ import static java.util.Objects.requireNonNull;
 public class CacheResource
 {
     private final CacheManager cacheManager;
-    private final AccioManager accioManager;
 
     @Inject
-    public CacheResource(CacheManager cacheManager, AccioManager accioManager)
+    public CacheResource(CacheManager cacheManager)
     {
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
-        this.accioManager = requireNonNull(accioManager, "accioManager is null");
-    }
-
-    @Deprecated
-    @PUT
-    @Path("reload")
-    public void reload(@Suspended AsyncResponse asyncResponse)
-    {
-        cacheManager.createTaskUntilDone(accioManager.getAccioMDL());
-        asyncResponse.resume(Response.ok().build());
-    }
-
-    @POST
-    @Path("reload/async")
-    public void reloadAsync(@Suspended AsyncResponse asyncResponse)
-    {
-        cacheManager
-                .createTask(accioManager.getAccioMDL())
-                .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
     @GET
