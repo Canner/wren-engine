@@ -37,12 +37,6 @@
 
         <dependency>
             <groupId>io.accio</groupId>
-            <artifactId>accio-sqlrewrite</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.accio</groupId>
             <artifactId>accio-validation</artifactId>
             <scope>runtime</scope>
         </dependency>

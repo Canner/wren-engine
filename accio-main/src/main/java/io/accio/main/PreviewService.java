@@ -18,8 +18,8 @@ import com.google.common.collect.Streams;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.sqlrewrite.AccioPlanner;
 import io.accio.main.metadata.Metadata;
-import io.accio.sqlrewrite.AccioPlanner;
 
 import javax.inject.Inject;
 

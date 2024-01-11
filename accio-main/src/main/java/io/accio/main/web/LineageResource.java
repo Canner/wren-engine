@@ -17,11 +17,11 @@ package io.accio.main.web;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
+import io.accio.base.sqlrewrite.AccioDataLineage;
 import io.accio.main.AccioMetastore;
 import io.accio.main.web.dto.ColumnLineageInputDto;
 import io.accio.main.web.dto.LineageResult;
 import io.accio.main.web.dto.SqlLineageInputDto;
-import io.accio.sqlrewrite.AccioDataLineage;
 import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;

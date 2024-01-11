@@ -37,7 +37,7 @@ import javax.inject.Inject;
 
 import java.util.List;
 
-import static io.accio.sqlrewrite.Utils.parseSql;
+import static io.accio.base.sqlrewrite.Utils.parseSql;
 import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static java.util.Objects.requireNonNull;

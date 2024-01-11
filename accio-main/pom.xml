@@ -110,11 +110,6 @@
 
         <dependency>
             <groupId>io.accio</groupId>
-            <artifactId>accio-sqlrewrite</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.accio</groupId>
             <artifactId>trino-parser</artifactId>
         </dependency>
 

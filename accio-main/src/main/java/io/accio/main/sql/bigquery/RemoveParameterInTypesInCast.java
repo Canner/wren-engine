@@ -15,9 +15,9 @@
 package io.accio.main.sql.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.sqlrewrite.BaseRewriter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
-import io.accio.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DataType;
 import io.trino.sql.tree.DateTimeDataType;

@@ -75,7 +75,6 @@
         <module>accio-main</module>
         <module>accio-server</module>
         <module>accio-shaded</module>
-        <module>accio-sqlrewrite</module>
         <module>accio-testing</module>
         <module>accio-tests</module>
         <module>accio-validation</module>
@@ -320,12 +319,6 @@
             <dependency>
                 <groupId>io.accio</groupId>
                 <artifactId>accio-shaded</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-sqlrewrite</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

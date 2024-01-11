@@ -14,9 +14,9 @@
 
 package io.accio.main.sql.bigquery;
 
+import io.accio.base.sqlrewrite.BaseRewriter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
-import io.accio.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Identifier;

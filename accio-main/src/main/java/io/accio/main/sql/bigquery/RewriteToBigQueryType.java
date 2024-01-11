@@ -14,10 +14,10 @@
 
 package io.accio.main.sql.bigquery;
 
+import io.accio.base.sqlrewrite.BaseRewriter;
 import io.accio.base.type.PGArray;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
-import io.accio.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
@@ -40,9 +40,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static io.accio.base.sqlrewrite.Utils.parseType;
 import static io.accio.base.type.PGArray.allArray;
 import static io.accio.connector.bigquery.BigQueryType.toBqType;
-import static io.accio.sqlrewrite.Utils.parseType;
 import static java.lang.Integer.parseInt;
 
 public class RewriteToBigQueryType

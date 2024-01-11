@@ -14,9 +14,9 @@
 
 package io.accio.main.sql.bigquery;
 
+import io.accio.base.sqlrewrite.BaseRewriter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
-import io.accio.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.GenericDataType;
@@ -31,7 +31,7 @@ import java.util.Optional;
 /**
  * RewriteArithmetic is a class that rewrites arithmetic expressions to be compatible with BigQuery.
  * Because in BigQuery, TIMESTAMP +/- INTERVAL is not supported for intervals with non-zero MONTH or YEAR part, so we need to cast the TIMESTAMP to DATETIME as utc timezone.
- *
+ * <p>
  * select timestamp '2023-07-04 09:41:43.805201' + interval '1 year';
  * ->
  * select cast(timestamp '2023-07-04 09:41:43.805201' as datetime) + interval '1 year';

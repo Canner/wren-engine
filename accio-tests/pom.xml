@@ -131,11 +131,6 @@
         </dependency>
 
         <dependency>
-            <groupId>io.accio</groupId>
-            <artifactId>accio-sqlrewrite</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
         </dependency>
