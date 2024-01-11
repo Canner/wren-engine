@@ -21,9 +21,9 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.sqlrewrite.CacheRewrite;
 import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
-import io.accio.sqlrewrite.CacheRewrite;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;

@@ -15,7 +15,7 @@
 package io.accio.main;
 
 import io.accio.base.AccioMDL;
-import io.accio.sqlrewrite.AccioDataLineage;
+import io.accio.base.sqlrewrite.AccioDataLineage;
 
 import java.util.concurrent.atomic.AtomicReference;
 

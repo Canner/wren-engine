@@ -14,9 +14,9 @@
 
 package io.accio.main.sql.postgres;
 
+import io.accio.base.sqlrewrite.BaseRewriter;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
-import io.accio.sqlrewrite.BaseRewriter;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.GenericDataType;
