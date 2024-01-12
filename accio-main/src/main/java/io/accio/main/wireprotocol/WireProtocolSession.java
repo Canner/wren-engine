@@ -16,6 +16,7 @@ package io.accio.main.wireprotocol;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioException;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.SessionContext;
@@ -222,6 +223,7 @@ public class WireProtocolSession
             preparedStatements.put(statementName, new PreparedStatement(statementName, "", paramTypes, statementTrimmed, false));
         }
         else {
+            AnalyzedMDL analyzedMDL = accioMetastore.getAnalyzedMDL();
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(getDefaultDatabase())
                     .setSchema(getDefaultSchema())
@@ -230,7 +232,7 @@ public class WireProtocolSession
             String accioRewritten = AccioPlanner.rewrite(
                     statementPreRewritten,
                     sessionContext,
-                    accioMetastore.getAccioMDL());
+                    analyzedMDL);
             // validateSetSessionProperty(statementPreRewritten);
             Statement parsedStatement = sqlParser.createStatement(accioRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), metadata.getPgCatalogName(), parsedStatement);
@@ -239,7 +241,7 @@ public class WireProtocolSession
                     new PreparedStatement(
                             statementName,
                             getFormattedSql(rewrittenStatement, sqlParser),
-                            CacheRewrite.rewrite(sessionContext, statementPreRewritten, cachedTableMapping::convertToCachedTable, accioMetastore.getAccioMDL()),
+                            CacheRewrite.rewrite(sessionContext, statementPreRewritten, cachedTableMapping::convertToCachedTable, analyzedMDL.getAccioMDL()),
                             rewrittenParamTypes,
                             statementTrimmed,
                             isSessionCommand(rewrittenStatement)));

@@ -50,7 +50,7 @@ public class TestCache
         extends AbstractCacheTest
 {
     private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
-    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
+    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
     private final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
             .setCatalog("canner-cml")

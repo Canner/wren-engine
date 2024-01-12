@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.DateSpine;
@@ -228,6 +229,6 @@ public class TestCumulativeMetric
                 .setSchema("test")
                 .setEnableDynamic(enableDynamic)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
     }
 }

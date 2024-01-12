@@ -15,6 +15,7 @@
 package io.accio.main.web;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.sqlrewrite.AccioDataLineage;
@@ -68,8 +69,9 @@ public class LineageResource
                     AccioDataLineage lineage;
                     AccioMDL mdl;
                     if (inputDto.getManifest() == null) {
-                        lineage = accioMetastore.getAccioDataLineage();
-                        mdl = accioMetastore.getAccioMDL();
+                        AnalyzedMDL analyzedMDL = accioMetastore.getAnalyzedMDL();
+                        lineage = analyzedMDL.getAccioDataLineage();
+                        mdl = analyzedMDL.getAccioMDL();
                     }
                     else {
                         mdl = AccioMDL.fromManifest(inputDto.getManifest());

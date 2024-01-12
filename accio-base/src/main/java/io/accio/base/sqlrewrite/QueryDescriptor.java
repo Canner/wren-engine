@@ -15,6 +15,7 @@
 package io.accio.base.sqlrewrite;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
@@ -33,8 +34,9 @@ public interface QueryDescriptor
 
     Query getQuery();
 
-    static QueryDescriptor of(String name, AccioMDL mdl, SessionContext sessionContext)
+    static QueryDescriptor of(String name, AnalyzedMDL analyzedMDL, SessionContext sessionContext)
     {
+        AccioMDL mdl = analyzedMDL.getAccioMDL();
         Optional<Model> model = mdl.getModel(name);
         if (model.isPresent()) {
             return RelationInfo.get(model.get(), mdl);
@@ -49,7 +51,7 @@ public interface QueryDescriptor
         }
         Optional<View> view = mdl.getView(name);
         if (view.isPresent()) {
-            return ViewInfo.get(view.get(), mdl, sessionContext);
+            return ViewInfo.get(view.get(), analyzedMDL, sessionContext);
         }
         if (name.equals(DateSpineInfo.NAME)) {
             return DateSpineInfo.get(mdl.getDateSpine());

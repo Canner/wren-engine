@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
@@ -361,7 +362,7 @@ public class TestModelSqlRewrite
 
     private static String rewrite(String sql, AccioMDL mdl)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, mdl, List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(mdl), List.of(ACCIO_SQL_REWRITE));
     }
 
     private static void assertSqlEquals(String actual, String expected)

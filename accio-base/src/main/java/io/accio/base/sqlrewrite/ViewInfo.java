@@ -14,7 +14,7 @@
 
 package io.accio.base.sqlrewrite;
 
-import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.View;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
@@ -33,12 +33,12 @@ public class ViewInfo
     private final Set<String> requiredObjects;
     private final Query query;
 
-    public static ViewInfo get(View view, AccioMDL mdl, SessionContext sessionContext)
+    public static ViewInfo get(View view, AnalyzedMDL analyzedMDL, SessionContext sessionContext)
     {
         Query query = parseView(view.getStatement());
-        Analysis analysis = StatementAnalyzer.analyze(query, sessionContext, mdl);
+        Analysis analysis = StatementAnalyzer.analyze(query, sessionContext, analyzedMDL.getAccioMDL());
         // sql in view can use metric rollup syntax
-        query = (Query) MetricRollupRewrite.METRIC_ROLLUP_REWRITE.apply(query, sessionContext, analysis, mdl);
+        query = (Query) MetricRollupRewrite.METRIC_ROLLUP_REWRITE.apply(query, sessionContext, analysis, analyzedMDL);
         return new ViewInfo(view.getName(), analysis.getAccioObjectNames(), query);
     }
 

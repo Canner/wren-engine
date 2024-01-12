@@ -16,6 +16,7 @@ package io.accio.main;
 
 import com.google.common.collect.Streams;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.sqlrewrite.AccioPlanner;
@@ -52,7 +53,7 @@ public class PreviewService
                     .setSchema(mdl.getSchema())
                     .build();
 
-            String planned = AccioPlanner.rewrite(sql, sessionContext, mdl);
+            String planned = AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl));
             String converted = sqlConverter.convert(planned, sessionContext);
             return Streams.stream(metadata.directQuery(converted, List.of()))
                     .limit(limit)

@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.AccioTypes;
+import io.accio.base.AnalyzedMDL;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
@@ -91,7 +92,7 @@ public class TestEnumRewrite
 
     private Statement rewrite(String sql)
     {
-        return ENUM_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, accioMDL);
+        return ENUM_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL));
     }
 
     private Statement parse(String sql)

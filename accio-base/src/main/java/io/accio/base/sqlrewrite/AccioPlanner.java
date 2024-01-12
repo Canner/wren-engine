@@ -14,7 +14,7 @@
 
 package io.accio.base.sqlrewrite;
 
-import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -37,17 +37,17 @@ public class AccioPlanner
 
     private AccioPlanner() {}
 
-    public static String rewrite(String sql, SessionContext sessionContext, AccioMDL accioMDL)
+    public static String rewrite(String sql, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
-        return rewrite(sql, sessionContext, accioMDL, ALL_RULES);
+        return rewrite(sql, sessionContext, analyzedMDL, ALL_RULES);
     }
 
-    public static String rewrite(String sql, SessionContext sessionContext, AccioMDL accioMDL, List<AccioRule> rules)
+    public static String rewrite(String sql, SessionContext sessionContext, AnalyzedMDL analyzedMDL, List<AccioRule> rules)
     {
         Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
         for (AccioRule rule : rules) {
             // we will replace or rewrite sql node in sql rewrite, to avoid rewrite rules affect each other, format and parse sql before each rewrite
-            statement = rule.apply(SQL_PARSER.createStatement(SqlFormatter.formatSql(statement), new ParsingOptions(AS_DECIMAL)), sessionContext, accioMDL);
+            statement = rule.apply(SQL_PARSER.createStatement(SqlFormatter.formatSql(statement), new ParsingOptions(AS_DECIMAL)), sessionContext, analyzedMDL);
         }
         return SqlFormatter.formatSql(statement);
     }

@@ -73,9 +73,9 @@ public class MDLResource
         CompletableFuture
                 .supplyAsync(() -> {
                     if (accioManager.checkStatus()) {
-                        return ready(accioManager.getAccioMDL().getManifest());
+                        return ready(accioManager.getAnalyzedMDL().getAccioMDL().getManifest());
                     }
-                    return prepare(accioManager.getAccioMDL().getManifest());
+                    return prepare(accioManager.getAnalyzedMDL().getAccioMDL().getManifest());
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }

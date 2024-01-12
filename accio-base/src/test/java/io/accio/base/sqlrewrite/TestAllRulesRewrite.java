@@ -15,6 +15,7 @@
 package io.accio.base.sqlrewrite;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.dto.JoinType;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
@@ -153,6 +154,6 @@ public class TestAllRulesRewrite
 
     private String rewrite(String sql)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL);
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL));
     }
 }
