@@ -16,6 +16,7 @@ package io.accio.testing.bigquery;
 
 import com.google.inject.Key;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.CacheInfo;
 import io.accio.cache.TaskInfo;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestRefreshCache
         extends AbstractCacheTest
 {
-    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAccioMDL();
+    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
 
     @Override
     protected Optional<String> getAccioMDLPath()
@@ -110,7 +111,7 @@ public class TestRefreshCache
                 .filter(taskInfo -> taskInfo.getCatalogSchemaTableName().equals(ordersName))
                 .findAny().orElseThrow(AssertionError::new);
 
-        TaskInfo start = cacheManager.get().createTask(mdl, orders).join();
+        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl), orders).join();
         assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
         assertThat(start.getEndTime()).isNull();
         cacheManager.get().untilTaskDone(ordersName);

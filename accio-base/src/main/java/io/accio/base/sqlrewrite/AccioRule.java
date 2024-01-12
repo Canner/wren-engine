@@ -14,14 +14,14 @@
 
 package io.accio.base.sqlrewrite;
 
-import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
 import io.trino.sql.tree.Statement;
 
 public interface AccioRule
 {
-    Statement apply(Statement root, SessionContext sessionContext, AccioMDL accioMDL);
+    Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL);
 
-    Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL);
+    Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AnalyzedMDL analyzedMDL);
 }

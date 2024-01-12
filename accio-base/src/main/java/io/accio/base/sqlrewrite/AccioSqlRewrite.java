@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableSet;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.dto.Metric;
@@ -73,15 +74,21 @@ public class AccioSqlRewrite
     }
 
     @Override
-    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
+        Analysis analysis = StatementAnalyzer.analyze(root, sessionContext, analyzedMDL.getAccioMDL());
+        return apply(root, sessionContext, analysis, analyzedMDL);
+    }
+
+    @Override
+    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AnalyzedMDL analyzedMDL)
+    {
+        AccioMDL accioMDL = analyzedMDL.getAccioMDL();
         Set<QueryDescriptor> allDescriptors;
         // TODO: Currently DynamicCalculatedField is a experimental feature, and buggy. After all issues are solved,
         //  we should always enable this setting.
         if (sessionContext.isEnableDynamicField()) {
-            // TODO: make AccioDataLineage static instead of create a new one everytime as it will change only when accio mdl changed.
-            AccioDataLineage dataLineage = AccioDataLineage.analyze(accioMDL);
-            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(dataLineage, analysis);
+            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getAccioDataLineage(), analysis);
             List<QueryDescriptor> descriptors = tableRequiredFields.entrySet().stream()
                     .map(e -> {
                         String name = e.getKey();
@@ -117,14 +124,14 @@ public class AccioSqlRewrite
             Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, accioMDL)).collect(toSet());
             Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, accioMDL)).collect(toSet());
             Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> CumulativeMetricInfo.get(metric, accioMDL)).collect(toSet());
-            Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, accioMDL, sessionContext)).collect(toSet());
+            Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, analyzedMDL, sessionContext)).collect(toSet());
             allDescriptors = ImmutableSet.<QueryDescriptor>builder()
                     .addAll(modelDescriptors)
                     .addAll(metricDescriptors)
                     .addAll(viewDescriptors)
                     .addAll(cumulativeMetricDescriptors)
                     .build();
-            return apply(root, sessionContext, analysis, accioMDL, allDescriptors);
+            return apply(root, sessionContext, analysis, analyzedMDL, allDescriptors);
         }
     }
 
@@ -132,13 +139,13 @@ public class AccioSqlRewrite
             Statement root,
             SessionContext sessionContext,
             Analysis analysis,
-            AccioMDL accioMDL,
+            AnalyzedMDL analyzedMDL,
             Set<QueryDescriptor> allDescriptors)
     {
         DirectedAcyclicGraph<String, Object> graph = new DirectedAcyclicGraph<>(Object.class);
         Set<QueryDescriptor> requiredQueryDescriptors = new HashSet<>();
         // add to graph
-        allDescriptors.forEach(queryDescriptor -> addSqlDescriptorToGraph(queryDescriptor, graph, accioMDL, requiredQueryDescriptors, sessionContext));
+        allDescriptors.forEach(queryDescriptor -> addSqlDescriptorToGraph(queryDescriptor, graph, analyzedMDL, requiredQueryDescriptors, sessionContext));
 
         Map<String, QueryDescriptor> descriptorMap = new HashMap<>();
         allDescriptors.forEach(queryDescriptor -> descriptorMap.put(queryDescriptor.getName(), queryDescriptor));
@@ -152,13 +159,13 @@ public class AccioSqlRewrite
         });
 
         Node rewriteWith = new WithRewriter(withQueries).process(root);
-        return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);
+        return (Statement) new Rewriter(analyzedMDL.getAccioMDL(), analysis).process(rewriteWith);
     }
 
     private static void addSqlDescriptorToGraph(
             QueryDescriptor queryDescriptor,
             DirectedAcyclicGraph<String, Object> graph,
-            AccioMDL mdl,
+            AnalyzedMDL analyzedMDL,
             Set<QueryDescriptor> queryDescriptors,
             SessionContext sessionContext)
     {
@@ -177,17 +184,10 @@ public class AccioSqlRewrite
 
         // add required models to graph
         for (String objectName : queryDescriptor.getRequiredObjects()) {
-            QueryDescriptor descriptor = QueryDescriptor.of(objectName, mdl, sessionContext);
+            QueryDescriptor descriptor = QueryDescriptor.of(objectName, analyzedMDL, sessionContext);
             queryDescriptors.add(descriptor);
-            addSqlDescriptorToGraph(descriptor, graph, mdl, queryDescriptors, sessionContext);
+            addSqlDescriptorToGraph(descriptor, graph, analyzedMDL, queryDescriptors, sessionContext);
         }
-    }
-
-    @Override
-    public Statement apply(Statement root, SessionContext sessionContext, AccioMDL accioMDL)
-    {
-        Analysis analysis = StatementAnalyzer.analyze(root, sessionContext, accioMDL);
-        return apply(root, sessionContext, analysis, accioMDL);
     }
 
     private static class WithRewriter

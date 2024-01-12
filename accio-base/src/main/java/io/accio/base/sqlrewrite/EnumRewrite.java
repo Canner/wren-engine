@@ -15,6 +15,7 @@
 package io.accio.base.sqlrewrite;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.EnumDefinition;
 import io.accio.base.dto.EnumValue;
@@ -38,15 +39,15 @@ public class EnumRewrite
     private EnumRewrite() {}
 
     @Override
-    public Statement apply(Statement root, SessionContext sessionContext, AccioMDL accioMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
-        return apply(root, sessionContext, null, accioMDL);
+        return apply(root, sessionContext, null, analyzedMDL);
     }
 
     @Override
-    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AnalyzedMDL analyzedMDL)
     {
-        return (Statement) new Rewriter(accioMDL).process(root);
+        return (Statement) new Rewriter(analyzedMDL.getAccioMDL()).process(root);
     }
 
     private static class Rewriter

@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Metric;
@@ -355,7 +356,7 @@ public class TestMetric
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
     }
 
     private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicField)
@@ -365,6 +366,6 @@ public class TestMetric
                 .setSchema("test")
                 .setEnableDynamic(enableDynamicField)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, accioMDL, List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
     }
 }

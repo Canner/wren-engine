@@ -16,6 +16,7 @@ package io.accio.main;
 
 import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.dto.Manifest;
 import io.accio.cache.CacheManager;
 import io.accio.main.pgcatalog.PgCatalogManager;
@@ -99,10 +100,10 @@ public class AccioManager
                 accioMDLDirectory.isDirectory() &&
                 requireNonNull(accioMDLDirectory.listFiles()).length > 0, "AccioMDL directory does not exist or is empty");
         try {
-            AccioMDL oldAccioMDL = accioMetastore.getAccioMDL();
+            AccioMDL oldAccioMDL = accioMetastore.getAnalyzedMDL().getAccioMDL();
             accioMetastore.setAccioMDL(AccioMDL.fromManifest(manifest));
             archiveAccioMDL(oldAccioMDL);
-            Files.write(accioMDLFile.toPath(), MANIFEST_JSON_CODEC.toJson(accioMetastore.getAccioMDL().getManifest()).getBytes(UTF_8));
+            Files.write(accioMDLFile.toPath(), MANIFEST_JSON_CODEC.toJson(accioMetastore.getAnalyzedMDL().getAccioMDL().getManifest()).getBytes(UTF_8));
             deploy();
         }
         catch (IOException e) {
@@ -113,7 +114,7 @@ public class AccioManager
 
     private void deploy()
     {
-        cacheManager.createTask(getAccioMDL());
+        cacheManager.createTask(getAnalyzedMDL());
         pgCatalogManager.initPgCatalog();
     }
 
@@ -136,8 +137,8 @@ public class AccioManager
         return pgCatalogManager.checkRequired();
     }
 
-    public AccioMDL getAccioMDL()
+    public AnalyzedMDL getAnalyzedMDL()
     {
-        return accioMetastore.getAccioMDL();
+        return accioMetastore.getAnalyzedMDL();
     }
 }

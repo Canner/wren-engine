@@ -18,6 +18,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
@@ -118,29 +119,31 @@ public class CacheManager
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
-    private synchronized CompletableFuture<Void> refreshCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
+    private synchronized CompletableFuture<Void> refreshCache(AnalyzedMDL analyzedMDL, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
+        AccioMDL mdl = analyzedMDL.getAccioMDL();
         CatalogSchemaTableName catalogSchemaTableName = catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         Optional<Task> taskOptional = Optional.ofNullable(tasks.get(catalogSchemaTableName));
         if (taskOptional.isPresent() && taskOptional.get().getTaskInfo().inProgress()) {
             throw new AccioException(GENERIC_USER_ERROR, format("cache is already running; catalogName: %s, schemaName: %s, tableName: %s", mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName()));
         }
         removeCacheIfExist(catalogSchemaTableName);
-        return doCache(mdl, cacheInfo, taskInfo);
+        return doCache(analyzedMDL, cacheInfo, taskInfo);
     }
 
-    private CompletableFuture<Void> handleCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
+    private CompletableFuture<Void> handleCache(AnalyzedMDL analyzedMDL, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
+        AccioMDL mdl = analyzedMDL.getAccioMDL();
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
-        return refreshCache(mdl, cacheInfo, taskInfo)
+        return refreshCache(analyzedMDL, cacheInfo, taskInfo)
                 .thenRun(() -> {
                     if (cacheInfo.getRefreshTime().toMillis() > 0) {
                         cacheScheduledFutures.put(
                                 catalogSchemaTableName,
                                 refreshExecutor.scheduleWithFixedDelay(
-                                        () -> createTask(mdl, cacheInfo).join(),
+                                        () -> createTask(analyzedMDL, cacheInfo).join(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         cacheInfo.getRefreshTime().toMillis(),
                                         MILLISECONDS));
@@ -153,7 +156,7 @@ public class CacheManager
                         retryScheduledFutures.put(
                                 catalogSchemaTableName,
                                 retryExecutor.schedule(
-                                        () -> createTask(mdl, cacheInfo).join(),
+                                        () -> createTask(analyzedMDL, cacheInfo).join(),
                                         duckdbConfig.getCacheTaskRetryDelay(),
                                         SECONDS));
                         errMsg += "; will retry after " + duckdbConfig.getCacheTaskRetryDelay() + " seconds";
@@ -170,8 +173,9 @@ public class CacheManager
         return duckdbTaskManager.addCacheQueryTask(() -> DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList())));
     }
 
-    private CompletableFuture<Void> doCache(AccioMDL mdl, CacheInfo cacheInfo, TaskInfo taskInfo)
+    private CompletableFuture<Void> doCache(AnalyzedMDL analyzedMDL, CacheInfo cacheInfo, TaskInfo taskInfo)
     {
+        AccioMDL mdl = analyzedMDL.getAccioMDL();
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
@@ -185,7 +189,7 @@ public class CacheManager
             String accioRewritten = AccioPlanner.rewrite(
                     format("select * from %s", cacheInfo.getName()),
                     sessionContext,
-                    mdl);
+                    analyzedMDL);
             Statement parsedStatement = sqlParser.createStatement(accioRewritten, PARSE_AS_DECIMAL);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
 
@@ -317,9 +321,9 @@ public class CacheManager
         }
     }
 
-    public List<TaskInfo> createTaskUntilDone(AccioMDL mdl)
+    public List<TaskInfo> createTaskUntilDone(AnalyzedMDL analyzedMDL)
     {
-        return createTask(mdl)
+        return createTask(analyzedMDL)
                 .thenApply(taskInfos -> taskInfos.stream()
                         .map(taskInfo -> {
                             tasks.get(taskInfo.getCatalogSchemaTableName()).waitUntilDone();
@@ -331,19 +335,20 @@ public class CacheManager
                 .join();
     }
 
-    public CompletableFuture<List<TaskInfo>> createTask(AccioMDL mdl)
+    public CompletableFuture<List<TaskInfo>> createTask(AnalyzedMDL analyzedMDL)
     {
         return supplyAsync(() ->
-                mdl.listCached().stream().map(cacheInfo -> createTask(mdl, cacheInfo).join()).collect(toList()));
+                analyzedMDL.getAccioMDL().listCached().stream().map(cacheInfo -> createTask(analyzedMDL, cacheInfo).join()).collect(toList()));
     }
 
-    public CompletableFuture<TaskInfo> createTask(AccioMDL mdl, CacheInfo cacheInfo)
+    public CompletableFuture<TaskInfo> createTask(AnalyzedMDL analyzedMDL, CacheInfo cacheInfo)
     {
         return supplyAsync(() -> {
+            AccioMDL mdl = analyzedMDL.getAccioMDL();
             CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
             TaskInfo taskInfo = new TaskInfo(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName(), QUEUED, Instant.now());
             // To fix flaky test, we pass value to tasks instead of a reference;
-            Task task = new Task(TaskInfo.copyFrom(taskInfo), mdl, cacheInfo);
+            Task task = new Task(TaskInfo.copyFrom(taskInfo), analyzedMDL, cacheInfo);
             tasks.put(catalogSchemaTableName, task);
             return taskInfo;
         });
@@ -398,10 +403,10 @@ public class CacheManager
         private final TaskInfo taskInfo;
         private final CompletableFuture<?> completableFuture;
 
-        public Task(TaskInfo taskInfo, AccioMDL mdl, CacheInfo cacheInfo)
+        public Task(TaskInfo taskInfo, AnalyzedMDL analyzedMDL, CacheInfo cacheInfo)
         {
             this.taskInfo = taskInfo;
-            this.completableFuture = handleCache(mdl, cacheInfo, taskInfo)
+            this.completableFuture = handleCache(analyzedMDL, cacheInfo, taskInfo)
                     .thenRun(() -> {
                         CacheInfoPair cacheInfoPair = cachedTableMapping.getCacheInfoPair(
                                 taskInfo.getCatalogName(),

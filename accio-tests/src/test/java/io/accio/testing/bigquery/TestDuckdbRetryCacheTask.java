@@ -3,6 +3,7 @@ package io.accio.testing.bigquery;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioMDL;
 import io.accio.base.AccioTypes;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Model;
@@ -54,7 +55,7 @@ public class TestDuckdbRetryCacheTask
         Optional<Model> model = mdl.getModel("Orders");
         assertThat(model).isPresent();
 
-        TaskInfo start = cacheManager.get().createTask(mdl, model.get()).join();
+        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl), model.get()).join();
         assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
         assertThat(start.getEndTime()).isNull();
         cacheManager.get().untilTaskDone(ordersName);

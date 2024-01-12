@@ -15,6 +15,7 @@
 package io.accio.base.sqlrewrite;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.dto.Column;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.parser.ParsingOptions;
@@ -312,6 +313,6 @@ public class TestMetricViewSqlRewrite
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, accioMDL, List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL), List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
     }
 }

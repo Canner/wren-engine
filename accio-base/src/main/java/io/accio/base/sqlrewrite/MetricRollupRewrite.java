@@ -14,7 +14,7 @@
 
 package io.accio.base.sqlrewrite;
 
-import io.accio.base.AccioMDL;
+import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
 import io.accio.base.sqlrewrite.analyzer.MetricRollupInfo;
@@ -38,13 +38,13 @@ public class MetricRollupRewrite
     public static final MetricRollupRewrite METRIC_ROLLUP_REWRITE = new MetricRollupRewrite();
 
     @Override
-    public Statement apply(Statement root, SessionContext sessionContext, AccioMDL accioMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
-        return apply(root, sessionContext, StatementAnalyzer.analyze(root, sessionContext, accioMDL), accioMDL);
+        return apply(root, sessionContext, StatementAnalyzer.analyze(root, sessionContext, analyzedMDL.getAccioMDL()), analyzedMDL);
     }
 
     @Override
-    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
+    public Statement apply(Statement root, SessionContext sessionContext, Analysis analysis, AnalyzedMDL analyzedMDL)
     {
         return (Statement) new Rewriter(analysis).process(root);
     }

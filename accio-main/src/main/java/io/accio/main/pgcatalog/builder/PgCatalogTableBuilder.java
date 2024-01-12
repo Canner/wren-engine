@@ -145,7 +145,7 @@ public abstract class PgCatalogTableBuilder
 
     protected AccioMDL getAccioMDL()
     {
-        return accioMetastore.getAccioMDL();
+        return accioMetastore.getAnalyzedMDL().getAccioMDL();
     }
 
     public Map<String, String> getReplaceMap()
