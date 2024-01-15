@@ -87,7 +87,8 @@ public class AccioSqlRewrite
         Set<QueryDescriptor> allDescriptors;
         // TODO: Currently DynamicCalculatedField is a experimental feature, and buggy. After all issues are solved,
         //  we should always enable this setting.
-        if (sessionContext.isEnableDynamicField()) {
+        // currently dynamic fields not support views
+        if (sessionContext.isEnableDynamicField() && analysis.getViews().isEmpty()) {
             LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getAccioDataLineage(), analysis);
             List<QueryDescriptor> descriptors = tableRequiredFields.entrySet().stream()
                     .map(e -> {
