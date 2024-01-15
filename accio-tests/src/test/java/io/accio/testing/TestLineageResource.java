@@ -165,9 +165,9 @@ public class TestLineageResource
         assertThat(results.size()).isEqualTo(3);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("Customer", List.of(columnWithType("custkey", INTEGER), columnWithType("lineitem_price", BIGINT))))
-                .add(lineageResult("Orders", List.of(columnWithType("orderkey", INTEGER), columnWithType("custkey", INTEGER))))
-                .add(lineageResult("Lineitem", List.of(columnWithType("orderkey", INTEGER), columnWithType("extendedprice", INTEGER), columnWithType("discount", INTEGER))))
+                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"), columnWithType("lineitem_price", BIGINT))))
+                .add(lineageResult("Orders", List.of(columnWithType("lineitem", "Lineitem"))))
+                .add(lineageResult("Lineitem", List.of(columnWithType("extendedprice", INTEGER), columnWithType("discount", INTEGER))))
                 .build();
 
         assertIgnoreOrder(results, expected);
@@ -196,9 +196,9 @@ public class TestLineageResource
         assertThat(results.size()).isEqualTo(3);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("Customer", List.of(columnWithType("custkey", INTEGER), columnWithType("sum_lineitem_price", BIGINT))))
-                .add(lineageResult("Orders", List.of(columnWithType("orderkey", INTEGER), columnWithType("custkey", INTEGER))))
-                .add(lineageResult("Lineitem", List.of(columnWithType("orderkey", INTEGER), columnWithType("extendedprice", INTEGER))))
+                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"), columnWithType("sum_lineitem_price", BIGINT))))
+                .add(lineageResult("Orders", List.of(columnWithType("lineitem", "Lineitem"))))
+                .add(lineageResult("Lineitem", List.of(columnWithType("extendedprice", INTEGER))))
                 .build();
 
         assertIgnoreOrder(results, expected);
@@ -224,9 +224,9 @@ public class TestLineageResource
         assertThat(results.size()).isEqualTo(3);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("Customer", List.of(columnWithType("custkey", INTEGER))))
+                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"))))
                 .add(lineageResult("CustomerSpending", List.of(columnWithType("spending", BIGINT))))
-                .add(lineageResult("Orders", List.of(columnWithType("custkey", INTEGER), columnWithType("totalprice", INTEGER))))
+                .add(lineageResult("Orders", List.of(columnWithType("totalprice", INTEGER))))
                 .build();
 
         assertIgnoreOrder(results, expected);

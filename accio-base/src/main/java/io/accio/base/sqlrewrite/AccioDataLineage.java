@@ -27,6 +27,7 @@ import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.accio.base.sqlrewrite.analyzer.ExpressionRelationshipInfo;
+import io.accio.base.sqlrewrite.analyzer.RelationshipColumnInfo;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -338,19 +339,12 @@ public class AccioDataLineage
                         .filter(info -> info.getRemainingParts().size() > 0)
                         .findAny();
                 relationshipInfo.ifPresent(info -> {
-                    // collect join keys
-                    for (int i = 0; i < info.getRelationships().size(); i++) {
-                        Relationship relationship = info.getRelationships().get(i);
-                        String left = relationship.getModels().get(0);
-                        String right = relationship.getModels().get(1);
-                        Expression joinCondition = parseExpression(relationship.getCondition());
-                        String leftKey = getJoinKey(joinCondition, left).orElseThrow();
-                        String rightKey = getJoinKey(joinCondition, right).orElseThrow();
-                        sourceColumns.put(left, leftKey);
-                        sourceColumns.put(right, rightKey);
+                    // collect relationship columns
+                    for (RelationshipColumnInfo rsInfo : info.getRelationshipColumnInfos()) {
+                        sourceColumns.put(rsInfo.getModel().getName(), rsInfo.getColumn().getName());
                     }
                     // collect last relationship output column
-                    Relationship relationship = info.getRelationships().get(info.getRelationships().size() - 1);
+                    Relationship relationship = info.getRelationshipColumnInfos().get(info.getRelationshipColumnInfos().size() - 1).getNormalizedRelationship();
                     String columnName = info.getRemainingParts().get(info.getRemainingParts().size() - 1);
                     String modelName = relationship.getModels().get(1);
                     sourceColumns.put(modelName, columnName);
@@ -403,19 +397,12 @@ public class AccioDataLineage
                         .filter(info -> info.getRemainingParts().size() > 0)
                         .findAny();
                 relationshipInfo.ifPresent(info -> {
-                    // collect join keys
-                    for (int i = 0; i < info.getRelationships().size(); i++) {
-                        Relationship relationship = info.getRelationships().get(i);
-                        String left = relationship.getModels().get(0);
-                        String right = relationship.getModels().get(1);
-                        Expression joinCondition = parseExpression(relationship.getCondition());
-                        String leftKey = getJoinKey(joinCondition, left).orElseThrow();
-                        String rightKey = getJoinKey(joinCondition, right).orElseThrow();
-                        sourceColumns.put(left, leftKey);
-                        sourceColumns.put(right, rightKey);
+                    // collect relationship columns
+                    for (RelationshipColumnInfo rsInfo : info.getRelationshipColumnInfos()) {
+                        sourceColumns.put(rsInfo.getModel().getName(), rsInfo.getColumn().getName());
                     }
                     // collect last relationship output column
-                    Relationship relationship = info.getRelationships().get(info.getRelationships().size() - 1);
+                    Relationship relationship = info.getRelationshipColumnInfos().get(info.getRelationshipColumnInfos().size() - 1).getNormalizedRelationship();
                     String columnName = info.getRemainingParts().get(info.getRemainingParts().size() - 1);
                     String modelName = relationship.getModels().get(1);
                     sourceColumns.put(modelName, columnName);

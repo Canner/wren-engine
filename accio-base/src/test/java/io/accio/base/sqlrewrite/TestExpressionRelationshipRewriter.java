@@ -19,6 +19,7 @@ import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.accio.base.sqlrewrite.analyzer.ExpressionRelationshipInfo;
+import io.accio.base.sqlrewrite.analyzer.RelationshipColumnInfo;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.BeforeClass;
@@ -138,7 +139,10 @@ public class TestExpressionRelationshipRewriter
                                 QualifiedName.of("customer", "name"),
                                 List.of("customer"),
                                 List.of("name"),
-                                List.of(ordersCustomer),
+                                List.of(new RelationshipColumnInfo(
+                                        orders,
+                                        orders.getColumns().stream().filter(c -> c.getName().equals("customer")).findAny().orElseThrow(),
+                                        ordersCustomer)),
                                 ordersCustomer));
 
         assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())

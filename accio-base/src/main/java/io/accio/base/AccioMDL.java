@@ -57,6 +57,7 @@ public class AccioMDL
     private final Map<String, Model> models;
     private final Map<String, Metric> metrics;
     private final Map<String, CumulativeMetric> cumulativeMetrics;
+    private final Map<String, Relationship> relationships;
 
     public static AccioMDL fromJson(String manifest)
             throws JsonProcessingException
@@ -78,6 +79,7 @@ public class AccioMDL
         this.models = listModels().stream().collect(toImmutableMap(Model::getName, identity()));
         this.metrics = listMetrics().stream().collect(toImmutableMap(Metric::getName, identity()));
         this.cumulativeMetrics = listCumulativeMetrics().stream().collect(toImmutableMap(CumulativeMetric::getName, identity()));
+        this.relationships = listRelationships().stream().collect(toImmutableMap(Relationship::getName, identity()));
     }
 
     private Manifest renderManifest(Manifest original)
@@ -162,9 +164,7 @@ public class AccioMDL
 
     public Optional<Relationship> getRelationship(String name)
     {
-        return manifest.getRelationships().stream()
-                .filter(relationship -> relationship.getName().equals(name))
-                .findAny();
+        return Optional.ofNullable(relationships.get(name));
     }
 
     public List<EnumDefinition> listEnums()

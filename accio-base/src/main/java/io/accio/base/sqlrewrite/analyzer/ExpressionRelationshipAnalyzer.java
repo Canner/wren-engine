@@ -109,7 +109,7 @@ public class ExpressionRelationshipAnalyzer
 
     public static Optional<ExpressionRelationshipInfo> createRelationshipInfo(QualifiedName qualifiedName, Model model, AccioMDL mdl)
     {
-        List<Relationship> relationships = new ArrayList<>();
+        List<RelationshipColumnInfo> relationshipColumnInfos = new ArrayList<>();
         Model current = model;
         Relationship baseModelRelationship = null;
 
@@ -121,14 +121,12 @@ public class ExpressionRelationshipAnalyzer
                 if (i == 0) {
                     return Optional.empty();
                 }
-                return buildExpressionRelationshipInfo(qualifiedName, relationships, baseModelRelationship, i);
+                return buildExpressionRelationshipInfo(qualifiedName, relationshipColumnInfos, baseModelRelationship, i);
             }
 
             Column relationshipColumn = relationshipColumnOpt.get();
             Relationship relationship = getRelationshipFromMDL(relationshipColumn, mdl);
-            relationship = reverseIfNeeded(relationship, relationshipColumn.getType());
-
-            relationships.add(relationship);
+            relationshipColumnInfos.add(new RelationshipColumnInfo(current, relationshipColumn, relationship));
             if (current == model) {
                 baseModelRelationship = relationship;
             }
@@ -160,7 +158,7 @@ public class ExpressionRelationshipAnalyzer
 
     private static Optional<ExpressionRelationshipInfo> buildExpressionRelationshipInfo(
             QualifiedName qualifiedName,
-            List<Relationship> relationships,
+            List<RelationshipColumnInfo> relationshipColumnInfos,
             Relationship baseModelRelationship,
             int index)
     {
@@ -168,16 +166,8 @@ public class ExpressionRelationshipAnalyzer
                 qualifiedName,
                 qualifiedName.getParts().subList(0, index),
                 qualifiedName.getParts().subList(index, qualifiedName.getParts().size()),
-                relationships,
+                relationshipColumnInfos,
                 baseModelRelationship));
-    }
-
-    private static Relationship reverseIfNeeded(Relationship relationship, String firstModelName)
-    {
-        if (relationship.getModels().get(1).equals(firstModelName)) {
-            return relationship;
-        }
-        return Relationship.reverse(relationship);
     }
 
     private static void validateToOne(ExpressionRelationshipInfo expressionRelationshipInfo)
