@@ -18,12 +18,15 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -38,6 +41,7 @@ public class Metric
     private final boolean cached;
     private final Duration refreshTime;
     private final String description;
+    private final Map<String, String> properties;
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure)
     {
@@ -56,7 +60,7 @@ public class Metric
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached, String description)
     {
-        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, description);
+        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, description, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -69,7 +73,8 @@ public class Metric
             // preAggregated is deprecated, use cached instead.
             @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("description") String description)
+            @Deprecated @JsonProperty("description") String description,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNull(name, "name is null");
         this.baseObject = requireNonNull(baseObject, "baseObject is null");
@@ -80,6 +85,7 @@ public class Metric
         this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
         this.description = description;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @Override
@@ -141,10 +147,17 @@ public class Metric
         return refreshTime;
     }
 
+    @Deprecated
     @JsonProperty
     public String getDescription()
     {
         return description;
+    }
+
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
     }
 
     @Override
@@ -164,7 +177,8 @@ public class Metric
                 && Objects.equals(measure, that.measure)
                 && Objects.equals(timeGrain, that.timeGrain)
                 && Objects.equals(refreshTime, that.refreshTime)
-                && Objects.equals(description, that.description);
+                && Objects.equals(description, that.description)
+                && Objects.equals(properties, that.properties);
     }
 
     @Override
@@ -178,21 +192,23 @@ public class Metric
                 timeGrain,
                 cached,
                 refreshTime,
-                description);
+                description,
+                properties);
     }
 
     @Override
     public String toString()
     {
-        return "Metric{" +
-                "name='" + name + '\'' +
-                ", baseObject='" + baseObject + '\'' +
-                ", dimension=" + dimension +
-                ", measure=" + measure +
-                ", timeGrain=" + timeGrain +
-                ", cached=" + cached +
-                ", refreshTime=" + refreshTime +
-                ", description='" + description + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("baseObject", baseObject)
+                .add("dimension", dimension)
+                .add("measure", measure)
+                .add("timeGrain", timeGrain)
+                .add("cached", cached)
+                .add("refreshTime", refreshTime)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 }

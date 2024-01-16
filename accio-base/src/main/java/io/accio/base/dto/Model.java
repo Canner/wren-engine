@@ -17,12 +17,15 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -37,6 +40,7 @@ public class Model
     private final boolean cached;
     private final Duration refreshTime;
     private final String description;
+    private final Map<String, String> properties;
 
     public static Model model(String name, String refSql, List<Column> columns)
     {
@@ -45,7 +49,7 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, boolean cached)
     {
-        return new Model(name, refSql, null, columns, null, cached, null, null);
+        return new Model(name, refSql, null, columns, null, cached, null, null, ImmutableMap.of());
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
@@ -55,12 +59,12 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey, String description)
     {
-        return new Model(name, refSql, null, columns, primaryKey, false, null, description);
+        return new Model(name, refSql, null, columns, primaryKey, false, null, description, ImmutableMap.of());
     }
 
     public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, baseObject, columns, primaryKey, false, null, null);
+        return new Model(name, null, baseObject, columns, primaryKey, false, null, null, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -73,7 +77,8 @@ public class Model
             // preAggregated is deprecated, use cached instead.
             @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("description") String description)
+            @Deprecated @JsonProperty("description") String description,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNull(name, "name is null");
         checkArgument(Stream.of(refSql, baseObject).filter(Objects::nonNull).count() == 1,
@@ -85,6 +90,7 @@ public class Model
         this.cached = cached;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
         this.description = description;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -133,10 +139,17 @@ public class Model
         return refreshTime;
     }
 
+    @Deprecated
     @JsonProperty
     public String getDescription()
     {
         return description;
+    }
+
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
     }
 
     @Override
@@ -156,27 +169,28 @@ public class Model
                 && Objects.equals(columns, that.columns)
                 && Objects.equals(primaryKey, that.primaryKey)
                 && Objects.equals(refreshTime, that.refreshTime)
-                && Objects.equals(description, that.description);
+                && Objects.equals(description, that.description)
+                && Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, baseObject, columns, primaryKey, description);
+        return Objects.hash(name, refSql, baseObject, columns, primaryKey, description, properties);
     }
 
     @Override
     public String toString()
     {
-        return "Model{" +
-                "name='" + name + '\'' +
-                ", refSql='" + refSql + '\'' +
-                ", baseObject='" + baseObject + '\'' +
-                ", columns=" + columns +
-                ", primaryKey='" + primaryKey + '\'' +
-                ", cached=" + cached +
-                ", refreshTime='" + refreshTime + '\'' +
-                ", description='" + description + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("refSql", refSql)
+                .add("baseObject", baseObject)
+                .add("columns", columns)
+                .add("cached", cached)
+                .add("refreshTime", refreshTime)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 }

@@ -21,6 +21,7 @@ import io.airlift.json.JsonCodec;
 import java.util.List;
 import java.util.Objects;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.dto.DateSpine.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
@@ -146,16 +147,16 @@ public class Manifest
         }
 
         Manifest manifest = (Manifest) o;
-        return Objects.equals(catalog, manifest.catalog) &&
-                Objects.equals(schema, manifest.schema) &&
-                Objects.equals(models, manifest.models) &&
-                Objects.equals(relationships, manifest.relationships) &&
-                Objects.equals(enumDefinitions, manifest.enumDefinitions) &&
-                Objects.equals(metrics, manifest.metrics) &&
-                Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics) &&
-                Objects.equals(views, manifest.views) &&
-                Objects.equals(macros, manifest.macros) &&
-                Objects.equals(dateSpine, manifest.dateSpine);
+        return Objects.equals(catalog, manifest.catalog)
+                && Objects.equals(schema, manifest.schema)
+                && Objects.equals(models, manifest.models)
+                && Objects.equals(relationships, manifest.relationships)
+                && Objects.equals(enumDefinitions, manifest.enumDefinitions)
+                && Objects.equals(metrics, manifest.metrics)
+                && Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics)
+                && Objects.equals(views, manifest.views)
+                && Objects.equals(macros, manifest.macros)
+                && Objects.equals(dateSpine, manifest.dateSpine);
     }
 
     @Override
@@ -177,18 +178,18 @@ public class Manifest
     @Override
     public String toString()
     {
-        return "Manifest{" +
-                "catalog='" + catalog + '\'' +
-                ", schema='" + schema + '\'' +
-                ", models=" + models +
-                ", relationships=" + relationships +
-                ", enumDefinitions=" + enumDefinitions +
-                ", metrics=" + metrics +
-                ", cumulativeMetrics=" + cumulativeMetrics +
-                ", views=" + views +
-                ", macros=" + macros +
-                ", dateSpine=" + dateSpine +
-                '}';
+        return toStringHelper(this)
+                .add("catalog", catalog)
+                .add("schema", schema)
+                .add("models", models)
+                .add("relationships", relationships)
+                .add("enumDefinitions", enumDefinitions)
+                .add("metrics", metrics)
+                .add("cumulativeMetrics", cumulativeMetrics)
+                .add("views", views)
+                .add("macros", macros)
+                .add("dateSpine", dateSpine)
+                .toString();
     }
 
     public static class Builder

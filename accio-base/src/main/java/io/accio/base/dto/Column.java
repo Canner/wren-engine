@@ -17,10 +17,13 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
 public class Column
@@ -33,6 +36,7 @@ public class Column
     private final String expression;
     private final String description;
     private final boolean isCalculated;
+    private final Map<String, String> properties;
 
     @VisibleForTesting
     public static Column varcharColumn(String name)
@@ -52,17 +56,17 @@ public class Column
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression, String description)
     {
-        return new Column(name, type, relationship, false, notNull, expression, description);
+        return new Column(name, type, relationship, false, notNull, expression, description, ImmutableMap.of());
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, false, null, null);
+        return new Column(name, type, relationship, false, false, null, null, ImmutableMap.of());
     }
 
     public static Column caluclatedColumn(String name, String type, String expression)
     {
-        return new Column(name, type, null, true, false, expression, null);
+        return new Column(name, type, null, true, false, expression, null, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -73,7 +77,8 @@ public class Column
             @JsonProperty("isCalculated") boolean isCalculated,
             @JsonProperty("notNull") boolean notNull,
             @JsonProperty("expression") String expression,
-            @JsonProperty("description") String description)
+            @Deprecated @JsonProperty("description") String description,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNull(name, "name is null");
         this.type = requireNonNull(type, "type is null");
@@ -82,6 +87,7 @@ public class Column
         this.notNull = notNull;
         this.expression = expression;
         this.description = description;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -108,6 +114,7 @@ public class Column
         return notNull;
     }
 
+    @Deprecated
     @JsonProperty
     public String getDescription()
     {
@@ -124,6 +131,12 @@ public class Column
     public boolean isCalculated()
     {
         return isCalculated;
+    }
+
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
     }
 
     public String getSqlExpression()
@@ -151,27 +164,29 @@ public class Column
                 && Objects.equals(type, that.type)
                 && Objects.equals(relationship, that.relationship)
                 && Objects.equals(expression, that.expression)
-                && Objects.equals(description, that.description);
+                && Objects.equals(description, that.description)
+                && Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, isCalculated, notNull, relationship, expression);
+        return Objects.hash(name, type, isCalculated, notNull, relationship, expression, description, properties);
     }
 
     @Override
     public String toString()
     {
-        return "Column{" +
-                "name='" + name + '\'' +
-                ", type='" + type + '\'' +
-                ", notNull=" + notNull +
-                ", isCalculated=" + isCalculated +
-                ", relationship='" + relationship + '\'' +
-                ", expression='" + expression + '\'' +
-                ", description='" + description + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("type", type)
+                .add("notNull", notNull)
+                .add("isCalculated", isCalculated)
+                .add("relationship", relationship)
+                .add("expression", relationship)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 
     private static String quote(String name)

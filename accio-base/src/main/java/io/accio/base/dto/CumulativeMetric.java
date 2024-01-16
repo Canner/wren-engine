@@ -17,9 +17,13 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
+import java.util.Map;
 import java.util.Objects;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 public class CumulativeMetric
         implements CacheInfo
@@ -30,7 +34,7 @@ public class CumulativeMetric
             Measure measure,
             Window window)
     {
-        return new CumulativeMetric(name, baseObject, measure, window, false, null, null);
+        return new CumulativeMetric(name, baseObject, measure, window, false, null, null, ImmutableMap.of());
     }
 
     private final String name;
@@ -40,6 +44,7 @@ public class CumulativeMetric
     private final boolean cached;
     private final Duration refreshTime;
     private final String description;
+    private final Map<String, String> properties;
 
     @JsonCreator
     public CumulativeMetric(
@@ -50,7 +55,8 @@ public class CumulativeMetric
             // preAggregated is deprecated, use cached instead.
             @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("description") String description)
+            @Deprecated @JsonProperty("description") String description,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = name;
         this.baseObject = baseObject;
@@ -59,6 +65,7 @@ public class CumulativeMetric
         this.cached = cached;
         this.refreshTime = refreshTime;
         this.description = description;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -97,16 +104,23 @@ public class CumulativeMetric
         return refreshTime;
     }
 
+    @Deprecated
     @JsonProperty
     public String getDescription()
     {
         return description;
     }
 
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
+    }
+
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, description);
+        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, description, properties);
     }
 
     @Override
@@ -121,26 +135,28 @@ public class CumulativeMetric
         }
 
         CumulativeMetric that = (CumulativeMetric) o;
-        return cached == that.cached &&
-                Objects.equals(name, that.name) &&
-                Objects.equals(baseObject, that.baseObject) &&
-                Objects.equals(measure, that.measure) &&
-                Objects.equals(window, that.window) &&
-                Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(description, that.description);
+        return cached == that.cached
+                && Objects.equals(name, that.name)
+                && Objects.equals(baseObject, that.baseObject)
+                && Objects.equals(measure, that.measure)
+                && Objects.equals(window, that.window)
+                && Objects.equals(refreshTime, that.refreshTime)
+                && Objects.equals(description, that.description)
+                && Objects.equals(properties, that.properties);
     }
 
     @Override
     public String toString()
     {
-        return "CumulativeMetric{" +
-                "name='" + name + '\'' +
-                ", baseObject='" + baseObject + '\'' +
-                ", measure=" + measure +
-                ", window=" + window +
-                ", cached=" + cached +
-                ", refreshTime=" + refreshTime +
-                ", description='" + description + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("baseObject", baseObject)
+                .add("measure", measure)
+                .add("window", window)
+                .add("cached", cached)
+                .add("refreshTime", refreshTime)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 }
