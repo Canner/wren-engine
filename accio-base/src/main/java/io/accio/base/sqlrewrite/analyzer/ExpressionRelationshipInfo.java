@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -32,19 +33,21 @@ public class ExpressionRelationshipInfo
     private final List<String> remainingParts;
     private final List<Relationship> relationships;
     private final Relationship baseModelRelationship;
+    private final List<RelationshipColumnInfo> relationshipColumnInfos;
 
     public ExpressionRelationshipInfo(
             QualifiedName qualifiedName,
             List<String> relationshipParts,
             List<String> remainingParts,
-            List<Relationship> relationships,
+            List<RelationshipColumnInfo> relationshipColumnInfos,
             Relationship baseModelRelationship)
     {
         this.qualifiedName = requireNonNull(qualifiedName);
         this.relationshipParts = requireNonNull(relationshipParts);
         this.remainingParts = requireNonNull(remainingParts);
-        this.relationships = requireNonNull(relationships);
         this.baseModelRelationship = requireNonNull(baseModelRelationship);
+        this.relationshipColumnInfos = requireNonNull(relationshipColumnInfos);
+        this.relationships = relationshipColumnInfos.stream().map(RelationshipColumnInfo::getNormalizedRelationship).collect(toImmutableList());
         checkArgument(relationshipParts.size() + remainingParts.size() == qualifiedName.getParts().size(), "mismatch part size");
     }
 
@@ -61,6 +64,11 @@ public class ExpressionRelationshipInfo
     public List<Relationship> getRelationships()
     {
         return relationships;
+    }
+
+    public List<RelationshipColumnInfo> getRelationshipColumnInfos()
+    {
+        return relationshipColumnInfos;
     }
 
     public Relationship getBaseModelRelationship()

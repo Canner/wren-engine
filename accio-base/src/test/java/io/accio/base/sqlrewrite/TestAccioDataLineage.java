@@ -141,21 +141,21 @@ public class TestAccioDataLineage
         LinkedHashMap<String, Set<String>> expected;
         actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "total_price"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("totalprice", "custkey"));
-        expected.put("Customer", Set.of("custkey", "total_price"));
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("Customer", Set.of("orders", "total_price"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Orders", "customer_name"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey", "customer_name"));
-        expected.put("Customer", Set.of("name", "custkey"));
+        expected.put("Orders", Set.of("customer_name", "customer"));
+        expected.put("Customer", Set.of("name"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "discount_extended_price"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("extended_price", "custkey", "orderkey"));
-        expected.put("Lineitem", Set.of("discount", "extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("custkey", "discount_extended_price"));
+        expected.put("Orders", Set.of("extended_price", "lineitem"));
+        expected.put("Lineitem", Set.of("discount", "extendedprice"));
+        expected.put("Customer", Set.of("orders", "discount_extended_price"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(
@@ -163,9 +163,9 @@ public class TestAccioDataLineage
                         QualifiedName.of("Customer", "total_price"),
                         QualifiedName.of("Customer", "discount_extended_price")));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("extended_price", "orderkey", "custkey", "totalprice"));
-        expected.put("Lineitem", Set.of("discount", "extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("custkey", "total_price", "discount_extended_price"));
+        expected.put("Orders", Set.of("extended_price", "lineitem", "totalprice"));
+        expected.put("Lineitem", Set.of("discount", "extendedprice"));
+        expected.put("Customer", Set.of("orders", "total_price", "discount_extended_price"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(
@@ -173,16 +173,16 @@ public class TestAccioDataLineage
                         QualifiedName.of("Customer", "total_price"),
                         QualifiedName.of("Orders", "extended_price")));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey", "orderkey", "totalprice", "extended_price"));
-        expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
-        expected.put("Customer", Set.of("custkey", "total_price"));
+        expected.put("Orders", Set.of("lineitem", "totalprice", "extended_price"));
+        expected.put("Lineitem", Set.of("extendedprice"));
+        expected.put("Customer", Set.of("orders", "total_price"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Customer", "lineitem_price"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey", "orderkey"));
-        expected.put("Lineitem", Set.of("extendedprice", "discount", "orderkey"));
-        expected.put("Customer", Set.of("custkey", "lineitem_price"));
+        expected.put("Orders", Set.of("lineitem"));
+        expected.put("Lineitem", Set.of("extendedprice", "discount"));
+        expected.put("Customer", Set.of("orders", "lineitem_price"));
         assertThat(actual).isEqualTo(expected);
 
         // assert cycle
@@ -193,15 +193,15 @@ public class TestAccioDataLineage
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Orders", "extended_price_2"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("orderkey", "totalprice", "extended_price_2"));
-        expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
+        expected.put("Orders", Set.of("lineitem", "totalprice", "extended_price_2"));
+        expected.put("Lineitem", Set.of("extendedprice"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Lineitem", "test_column"));
         expected = new LinkedHashMap<>();
-        expected.put("Customer", Set.of("custkey", "total_price"));
-        expected.put("Orders", Set.of("custkey", "orderkey", "totalprice"));
-        expected.put("Lineitem", Set.of("extendedprice", "orderkey", "test_column"));
+        expected.put("Customer", Set.of("orders", "total_price"));
+        expected.put("Orders", Set.of("customer", "totalprice"));
+        expected.put("Lineitem", Set.of("extendedprice", "orders", "test_column"));
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -237,16 +237,16 @@ public class TestAccioDataLineage
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("OnCustomer", "mom_totalprice"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey", "totalprice"));
-        expected.put("Customer", Set.of("custkey", "total_price"));
+        expected.put("Orders", Set.of("totalprice"));
+        expected.put("Customer", Set.of("orders", "total_price"));
         expected.put("OnCustomer", Set.of("mom_totalprice"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Orders", "customer_name"));
         expected = new LinkedHashMap<>();
-        expected.put("Orders", Set.of("custkey", "customer_name"));
-        expected.put("Customer", Set.of("custkey", "name"));
-        expected.put("OnCustomer", Set.of("mom_custkey", "mom_name"));
+        expected.put("Orders", Set.of("on_customer", "customer_name"));
+        expected.put("Customer", Set.of("name"));
+        expected.put("OnCustomer", Set.of("mom_name"));
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -284,15 +284,15 @@ public class TestAccioDataLineage
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("CustomerSpending", "spending"));
         expected = new LinkedHashMap<>();
-        expected.put("Customer", Set.of("custkey"));
-        expected.put("Orders", Set.of("custkey", "totalprice"));
+        expected.put("Customer", Set.of("orders"));
+        expected.put("Orders", Set.of("totalprice"));
         expected.put("CustomerSpending", Set.of("spending"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("CustomerSpending", "name"), QualifiedName.of("CustomerSpending", "spending")));
         expected = new LinkedHashMap<>();
-        expected.put("Customer", Set.of("custkey", "name"));
-        expected.put("Orders", Set.of("custkey", "totalprice"));
+        expected.put("Customer", Set.of("orders", "name"));
+        expected.put("Orders", Set.of("totalprice"));
         expected.put("CustomerSpending", Set.of("name", "spending"));
         assertThat(actual).isEqualTo(expected);
     }
@@ -329,16 +329,16 @@ public class TestAccioDataLineage
 
         actual = dataLineage.getRequiredFields(QualifiedName.of("Derived", "spending"));
         expected = new LinkedHashMap<>();
-        expected.put("Customer", Set.of("custkey"));
-        expected.put("Orders", Set.of("custkey", "totalprice"));
+        expected.put("Customer", Set.of("orders"));
+        expected.put("Orders", Set.of("totalprice"));
         expected.put("CustomerSpending", Set.of("spending"));
         expected.put("Derived", Set.of("spending"));
         assertThat(actual).isEqualTo(expected);
 
         actual = dataLineage.getRequiredFields(List.of(QualifiedName.of("Derived", "address"), QualifiedName.of("Derived", "spending")));
         expected = new LinkedHashMap<>();
-        expected.put("Customer", Set.of("custkey", "address"));
-        expected.put("Orders", Set.of("custkey", "totalprice"));
+        expected.put("Customer", Set.of("orders", "address"));
+        expected.put("Orders", Set.of("totalprice"));
         expected.put("CustomerSpending", Set.of("address", "spending"));
         expected.put("Derived", Set.of("address", "spending"));
         assertThat(actual).isEqualTo(expected);
