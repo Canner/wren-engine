@@ -50,6 +50,9 @@ import static io.accio.base.sqlrewrite.Utils.parseExpression;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toSet;
 
 // TODO: take care view
 public class AccioDataLineage
@@ -72,12 +75,33 @@ public class AccioDataLineage
         this.requiredFields = collectRequiredFieldsByColumn();
     }
 
-    @VisibleForTesting
-    LinkedHashMap<String, Set<String>> getRequiredFields(QualifiedName columnNames)
+    /**
+     * Retrieve source columns used in the given column. Note that this won't delve deep into the root
+     * but will only return the columns utilized directly in the specified column.
+     *
+     * @param columnName QualifiedName that should only have two elements, first element is table name, second element is column name.
+     * @return a map of source columns which map key is table name, and map value is column names.
+     */
+    public Map<String, Set<String>> getSourceColumns(QualifiedName columnName)
     {
-        return getRequiredFields(ImmutableList.of(columnNames));
+        return Optional.ofNullable(sourceColumnsMap.get(columnName))
+                .orElseGet(ImmutableSet::of)
+                .stream()
+                .collect(groupingBy(AccioDataLineage::getTable, mapping(AccioDataLineage::getColumn, toSet())));
     }
 
+    @VisibleForTesting
+    LinkedHashMap<String, Set<String>> getRequiredFields(QualifiedName columnName)
+    {
+        return getRequiredFields(ImmutableList.of(columnName));
+    }
+
+    /**
+     * Retrieve tables in the order of CTE generation and their respective required columns for the given column.
+     *
+     * @param columnNames list of QualifiedName, the qualified name should only have two elements, first element is table name, second element is column name.
+     * @return {@code LinkedHashMap<String, Set<String>>} which key is table name, value is a set of column names
+     */
     public LinkedHashMap<String, Set<String>> getRequiredFields(List<QualifiedName> columnNames)
     {
         // make sure there is no model dependency cycle in given columnNames.
