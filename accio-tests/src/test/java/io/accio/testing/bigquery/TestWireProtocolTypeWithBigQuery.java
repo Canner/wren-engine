@@ -14,18 +14,28 @@
 
 package io.accio.testing.bigquery;
 
+import com.google.cloud.bigquery.DatasetId;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Key;
+import io.accio.base.AccioMDL;
+import io.accio.base.dto.Manifest;
+import io.accio.connector.bigquery.BigQueryClient;
+import io.accio.main.metadata.Metadata;
 import io.accio.testing.AbstractWireProtocolTypeTest;
 import io.accio.testing.TestingAccioServer;
+import io.airlift.log.Logger;
 import jdk.jfr.Description;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.function.Function;
 
+import static io.accio.base.Utils.randomIntString;
 import static io.accio.base.type.PGArray.BOOL_ARRAY;
 import static io.accio.base.type.PGArray.BYTEA_ARRAY;
 import static io.accio.base.type.PGArray.CHAR_ARRAY;
@@ -52,6 +62,7 @@ import static io.accio.testing.DataType.realDataType;
 import static io.accio.testing.DataType.smallintDataType;
 import static io.accio.testing.DataType.timestampDataType;
 import static io.accio.testing.DataType.varcharDataType;
+import static java.lang.String.format;
 import static java.lang.System.getenv;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
@@ -59,6 +70,8 @@ import static java.util.stream.Collectors.toList;
 public class TestWireProtocolTypeWithBigQuery
         extends AbstractWireProtocolTypeTest
 {
+    private static final Logger LOG = Logger.get(TestWireProtocolTypeWithBigQuery.class);
+
     @Override
     protected TestingAccioServer createAccioServer()
     {
@@ -66,15 +79,40 @@ public class TestWireProtocolTypeWithBigQuery
                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .put("bigquery.location", "asia-east1")
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
+                .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("accio.datasource.type", "bigquery");
 
-        if (getAccioMDLPath().isPresent()) {
-            properties.put("accio.file", getAccioMDLPath().get());
+        try {
+            Path dir = Files.createTempDirectory(getAccioDirectory());
+            if (getAccioMDLPath().isPresent()) {
+                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
+            }
+            else {
+                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
+            }
+            properties.put("accio.directory", dir.toString());
+        }
+        catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
 
         return TestingAccioServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();
+    }
+
+    @Override
+    protected void cleanup()
+    {
+        try {
+            Metadata metadata = getInstance(Key.get(Metadata.class));
+            BigQueryClient bigQueryClient = getInstance(Key.get(BigQueryClient.class));
+            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
+            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
+        }
+        catch (Exception ex) {
+            LOG.error(ex, "cleanup bigquery schema failed");
+        }
     }
 
     @Override

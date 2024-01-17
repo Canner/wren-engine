@@ -70,7 +70,7 @@ public class AccioManager
             deployAccioMDLFromFile();
         }
         else {
-            LOG.warn("No AccioMDL file found. AccioMDL will not be deployed.");
+            LOG.warn("No AccioMDL file found. AccioMDL will not be deployed, and no pg table will be generated.");
         }
     }
 
