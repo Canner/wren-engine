@@ -25,8 +25,10 @@ import io.accio.base.dto.TimeUnit;
 import io.trino.sql.tree.QualifiedName;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static io.accio.base.AccioTypes.BIGINT;
@@ -516,5 +518,32 @@ public class TestAccioDataLineage
         expected.put("DailyRevenue", Set.of("totalprice", "orderdate"));
         expected.put("OnDailyRevenue", Set.of("c_totalprice", "c_orderdate"));
         assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testGetSourceColumns()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("discount_extended_price", BIGINT, "sum(orders.lineitem.discount + orders.lineitem.extendedprice)"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, orders, lineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+        Map<String, Set<String>> actual;
+        Map<String, Set<String>> expected;
+        actual = dataLineage.getSourceColumns(QualifiedName.of("Customer", "discount_extended_price"));
+        expected = new HashMap<>();
+        expected.put("Customer", Set.of("orders"));
+        expected.put("Orders", Set.of("lineitem"));
+        expected.put("Lineitem", Set.of("extendedprice", "discount"));
+        assertThat(actual).isEqualTo(expected);
+
+        // assert not exist
+        assertThat(dataLineage.getSourceColumns(QualifiedName.of("foo", "bar")).size()).isEqualTo(0);
     }
 }

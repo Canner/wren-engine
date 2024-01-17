@@ -33,7 +33,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -81,7 +80,7 @@ public class LineageResource
                             "modelName must be specified");
                     checkArgument(inputDto.getColumnName() != null && !inputDto.getColumnName().isEmpty(),
                             "columnName must be specified");
-                    return lineage.getRequiredFields(List.of(QualifiedName.of(inputDto.getModelName(), inputDto.getColumnName())))
+                    return lineage.getSourceColumns(QualifiedName.of(inputDto.getModelName(), inputDto.getColumnName()))
                             .entrySet()
                             .stream()
                             .map(entry -> new LineageResult(

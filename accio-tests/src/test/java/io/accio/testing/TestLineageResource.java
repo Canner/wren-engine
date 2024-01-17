@@ -165,7 +165,7 @@ public class TestLineageResource
         assertThat(results.size()).isEqualTo(3);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"), columnWithType("lineitem_price", BIGINT))))
+                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"))))
                 .add(lineageResult("Orders", List.of(columnWithType("lineitem", "Lineitem"))))
                 .add(lineageResult("Lineitem", List.of(columnWithType("extendedprice", INTEGER), columnWithType("discount", INTEGER))))
                 .build();
@@ -196,7 +196,7 @@ public class TestLineageResource
         assertThat(results.size()).isEqualTo(3);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"), columnWithType("sum_lineitem_price", BIGINT))))
+                .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"))))
                 .add(lineageResult("Orders", List.of(columnWithType("lineitem", "Lineitem"))))
                 .add(lineageResult("Lineitem", List.of(columnWithType("extendedprice", INTEGER))))
                 .build();
@@ -221,11 +221,10 @@ public class TestLineageResource
                 .build();
 
         List<LineageResult> results = getColumnLineage(new ColumnLineageInputDto(manifest, "CustomerSpending", "spending"));
-        assertThat(results.size()).isEqualTo(3);
+        assertThat(results.size()).isEqualTo(2);
 
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
                 .add(lineageResult("Customer", List.of(columnWithType("orders", "Orders"))))
-                .add(lineageResult("CustomerSpending", List.of(columnWithType("spending", BIGINT))))
                 .add(lineageResult("Orders", List.of(columnWithType("totalprice", INTEGER))))
                 .build();
 
@@ -246,14 +245,12 @@ public class TestLineageResource
 
         List<LineageResult> results = getColumnLineage(new ColumnLineageInputDto(manifest, "DailyRevenue", "c_totalprice"));
         List<LineageResult> expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("DailyRevenue", List.of(columnWithType("c_totalprice", INTEGER))))
                 .add(lineageResult("Orders", List.of(columnWithType("totalprice", INTEGER))))
                 .build();
         assertIgnoreOrder(results, expected);
 
         results = getColumnLineage(new ColumnLineageInputDto(manifest, "DailyRevenue", "c_orderdate"));
         expected = ImmutableList.<LineageResult>builder()
-                .add(lineageResult("DailyRevenue", List.of(columnWithType("c_orderdate", DATE))))
                 .add(lineageResult("Orders", List.of(columnWithType("orderdate", DATE))))
                 .build();
         assertIgnoreOrder(results, expected);
@@ -268,12 +265,20 @@ public class TestLineageResource
                 .hasErrorMessageMatches(".*columnName must be specified.*");
     }
 
+    @Test
+    public void testNonExist()
+    {
+        Manifest manifest = withDefaultCatalogSchema().build();
+        List<LineageResult> results = getColumnLineage(new ColumnLineageInputDto(manifest, "foo", "bar"));
+        assertThat(results.size()).isEqualTo(0);
+    }
+
     private void assertIgnoreOrder(List<LineageResult> results, List<LineageResult> expecteds)
     {
-        Map<String, Set<?>> resultMap = results.stream().collect(toMap(LineageResult::getDatasetName, m -> new HashSet(m.getColumns())));
+        Map<String, Set<?>> resultMap = results.stream().collect(toMap(LineageResult::getDatasetName, m -> new HashSet<>(m.getColumns())));
         expecteds.forEach(expected -> {
             assertThat(resultMap.containsKey(expected.getDatasetName())).isTrue();
-            assertThat(resultMap.get(expected.getDatasetName())).isEqualTo(new HashSet(expected.getColumns()));
+            assertThat(resultMap.get(expected.getDatasetName())).isEqualTo(new HashSet<>(expected.getColumns()));
         });
     }
 }
