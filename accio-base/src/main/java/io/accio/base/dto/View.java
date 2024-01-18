@@ -89,10 +89,10 @@ public class View
             return false;
         }
         View view = (View) o;
-        return Objects.equals(name, view.name)
-                && Objects.equals(statement, view.statement)
-                && Objects.equals(description, view.description)
-                && Objects.equals(properties, view.properties);
+        return Objects.equals(name, view.name) &&
+                Objects.equals(statement, view.statement) &&
+                Objects.equals(description, view.description) &&
+                Objects.equals(properties, view.properties);
     }
 
     @Override

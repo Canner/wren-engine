@@ -170,15 +170,15 @@ public class Metric
             return false;
         }
         Metric that = (Metric) obj;
-        return cached == that.cached
-                && Objects.equals(name, that.name)
-                && Objects.equals(baseObject, that.baseObject)
-                && Objects.equals(dimension, that.dimension)
-                && Objects.equals(measure, that.measure)
-                && Objects.equals(timeGrain, that.timeGrain)
-                && Objects.equals(refreshTime, that.refreshTime)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return cached == that.cached &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(baseObject, that.baseObject) &&
+                Objects.equals(dimension, that.dimension) &&
+                Objects.equals(measure, that.measure) &&
+                Objects.equals(timeGrain, that.timeGrain) &&
+                Objects.equals(refreshTime, that.refreshTime) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override

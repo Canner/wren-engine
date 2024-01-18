@@ -162,15 +162,15 @@ public class Model
             return false;
         }
         Model that = (Model) obj;
-        return cached == that.cached
-                && Objects.equals(name, that.name)
-                && Objects.equals(refSql, that.refSql)
-                && Objects.equals(baseObject, that.baseObject)
-                && Objects.equals(columns, that.columns)
-                && Objects.equals(primaryKey, that.primaryKey)
-                && Objects.equals(refreshTime, that.refreshTime)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return cached == that.cached &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(refSql, that.refSql) &&
+                Objects.equals(baseObject, that.baseObject) &&
+                Objects.equals(columns, that.columns) &&
+                Objects.equals(primaryKey, that.primaryKey) &&
+                Objects.equals(refreshTime, that.refreshTime) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override

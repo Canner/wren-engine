@@ -80,9 +80,9 @@ public class EnumValue
             return false;
         }
         EnumValue enumValue = (EnumValue) o;
-        return Objects.equals(name, enumValue.name)
-                && Objects.equals(value, enumValue.value)
-                && Objects.equals(properties, enumValue.properties);
+        return Objects.equals(name, enumValue.name) &&
+                Objects.equals(value, enumValue.value) &&
+                Objects.equals(properties, enumValue.properties);
     }
 
     @Override

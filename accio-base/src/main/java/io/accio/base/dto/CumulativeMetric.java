@@ -135,14 +135,14 @@ public class CumulativeMetric
         }
 
         CumulativeMetric that = (CumulativeMetric) o;
-        return cached == that.cached
-                && Objects.equals(name, that.name)
-                && Objects.equals(baseObject, that.baseObject)
-                && Objects.equals(measure, that.measure)
-                && Objects.equals(window, that.window)
-                && Objects.equals(refreshTime, that.refreshTime)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return cached == that.cached &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(baseObject, that.baseObject) &&
+                Objects.equals(measure, that.measure) &&
+                Objects.equals(window, that.window) &&
+                Objects.equals(refreshTime, that.refreshTime) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override

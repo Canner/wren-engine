@@ -117,12 +117,12 @@ public class Window
         }
 
         Window window = (Window) o;
-        return Objects.equals(name, window.name)
-                && Objects.equals(refColumn, window.refColumn)
-                && timeUnit == window.timeUnit
-                && Objects.equals(start, window.start)
-                && Objects.equals(end, window.end)
-                && Objects.equals(properties, window.properties);
+        return Objects.equals(name, window.name) &&
+                Objects.equals(refColumn, window.refColumn) &&
+                timeUnit == window.timeUnit &&
+                Objects.equals(start, window.start) &&
+                Objects.equals(end, window.end) &&
+                Objects.equals(properties, window.properties);
     }
 
     @Override

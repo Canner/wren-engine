@@ -90,10 +90,10 @@ public class DateSpine
             return false;
         }
         DateSpine dateSpine = (DateSpine) o;
-        return unit == dateSpine.unit
-                && Objects.equals(start, dateSpine.start)
-                && Objects.equals(end, dateSpine.end)
-                && Objects.equals(properties, dateSpine.properties);
+        return unit == dateSpine.unit &&
+                Objects.equals(start, dateSpine.start) &&
+                Objects.equals(end, dateSpine.end) &&
+                Objects.equals(properties, dateSpine.properties);
     }
 
     @Override

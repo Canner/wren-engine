@@ -74,9 +74,9 @@ public class TimeGrain
             return false;
         }
         TimeGrain that = (TimeGrain) obj;
-        return Objects.equals(name, that.name)
-                && Objects.equals(refColumn, that.refColumn)
-                && Objects.equals(timeUnits, that.timeUnits);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(refColumn, that.refColumn) &&
+                Objects.equals(timeUnits, that.timeUnits);
     }
 
     @Override

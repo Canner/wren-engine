@@ -97,10 +97,10 @@ public class Macro
             return false;
         }
         Macro macro = (Macro) o;
-        return Objects.equals(name, macro.name)
-                && Objects.equals(parameters, macro.parameters)
-                && Objects.equals(body, macro.body)
-                && Objects.equals(properties, macro.properties);
+        return Objects.equals(name, macro.name) &&
+                Objects.equals(parameters, macro.parameters) &&
+                Objects.equals(body, macro.body) &&
+                Objects.equals(properties, macro.properties);
     }
 
     @Override

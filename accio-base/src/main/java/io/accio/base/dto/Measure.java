@@ -20,6 +20,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 public class Measure
 {
     public static Measure measure(String name, String type, String operator, String refColumn)
@@ -88,16 +90,28 @@ public class Measure
             return false;
         }
         Measure measure = (Measure) o;
-        return Objects.equals(name, measure.name)
-                && Objects.equals(type, measure.type)
-                && Objects.equals(operator, measure.operator)
-                && Objects.equals(refColumn, measure.refColumn)
-                && Objects.equals(properties, measure.properties);
+        return Objects.equals(name, measure.name) &&
+                Objects.equals(type, measure.type) &&
+                Objects.equals(operator, measure.operator) &&
+                Objects.equals(refColumn, measure.refColumn) &&
+                Objects.equals(properties, measure.properties);
     }
 
     @Override
     public int hashCode()
     {
         return Objects.hash(name, type, operator, refColumn, properties);
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("type", type)
+                .add("operator", operator)
+                .add("refColumn", refColumn)
+                .add("properties", properties)
+                .toString();
     }
 }

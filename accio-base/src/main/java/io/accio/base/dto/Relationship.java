@@ -161,14 +161,14 @@ public class Relationship
             return false;
         }
         Relationship that = (Relationship) obj;
-        return Objects.equals(name, that.name)
-                && Objects.equals(models, that.models)
-                && joinType == that.joinType
-                && Objects.equals(condition, that.condition)
-                && isReverse == that.isReverse
-                && Objects.equals(manySideSortKeys, that.manySideSortKeys)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(models, that.models) &&
+                joinType == that.joinType &&
+                Objects.equals(condition, that.condition) &&
+                isReverse == that.isReverse &&
+                Objects.equals(manySideSortKeys, that.manySideSortKeys) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override

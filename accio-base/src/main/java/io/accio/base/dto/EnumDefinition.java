@@ -98,10 +98,10 @@ public class EnumDefinition
             return false;
         }
         EnumDefinition that = (EnumDefinition) obj;
-        return Objects.equals(name, that.name)
-                && Objects.equals(values, that.values)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(values, that.values) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override

@@ -147,16 +147,16 @@ public class Manifest
         }
 
         Manifest manifest = (Manifest) o;
-        return Objects.equals(catalog, manifest.catalog)
-                && Objects.equals(schema, manifest.schema)
-                && Objects.equals(models, manifest.models)
-                && Objects.equals(relationships, manifest.relationships)
-                && Objects.equals(enumDefinitions, manifest.enumDefinitions)
-                && Objects.equals(metrics, manifest.metrics)
-                && Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics)
-                && Objects.equals(views, manifest.views)
-                && Objects.equals(macros, manifest.macros)
-                && Objects.equals(dateSpine, manifest.dateSpine);
+        return Objects.equals(catalog, manifest.catalog) &&
+                Objects.equals(schema, manifest.schema) &&
+                Objects.equals(models, manifest.models) &&
+                Objects.equals(relationships, manifest.relationships) &&
+                Objects.equals(enumDefinitions, manifest.enumDefinitions) &&
+                Objects.equals(metrics, manifest.metrics) &&
+                Objects.equals(cumulativeMetrics, manifest.cumulativeMetrics) &&
+                Objects.equals(views, manifest.views) &&
+                Objects.equals(macros, manifest.macros) &&
+                Objects.equals(dateSpine, manifest.dateSpine);
     }
 
     @Override

@@ -158,14 +158,14 @@ public class Column
             return false;
         }
         Column that = (Column) obj;
-        return notNull == that.notNull
-                && isCalculated == that.isCalculated
-                && Objects.equals(name, that.name)
-                && Objects.equals(type, that.type)
-                && Objects.equals(relationship, that.relationship)
-                && Objects.equals(expression, that.expression)
-                && Objects.equals(description, that.description)
-                && Objects.equals(properties, that.properties);
+        return notNull == that.notNull &&
+                isCalculated == that.isCalculated &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(type, that.type) &&
+                Objects.equals(relationship, that.relationship) &&
+                Objects.equals(expression, that.expression) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override
