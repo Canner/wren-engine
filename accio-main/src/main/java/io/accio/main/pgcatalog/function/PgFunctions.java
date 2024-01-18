@@ -51,7 +51,8 @@ public final class PgFunctions
     public static final PgFunction CURRENT_SCHEMAS = builder()
             .setName("current_schemas")
             .setLanguage(SQL)
-            .setDefinition("SELECT ARRAY(SELECT DISTINCT schema_name FROM INFORMATION_SCHEMA.SCHEMATA)")
+            // 'pg_catalog' is required since pg catalog schema might not be named with 'pg_catalog' due to config bigquery.metadata.schema.prefix
+            .setDefinition("SELECT ARRAY(SELECT DISTINCT schema_name FROM (SELECT schema_name FROM INFORMATION_SCHEMA.SCHEMATA UNION ALL SELECT 'pg_catalog' AS schema_name))")
             .setArguments(ImmutableList.of(argument("include_implicit", BOOLEAN)))
             .setReturnType(VARCHAR_ARRAY)
             .build();
