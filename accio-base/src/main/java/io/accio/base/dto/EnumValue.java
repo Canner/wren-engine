@@ -16,10 +16,13 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
 public class EnumValue
@@ -31,19 +34,22 @@ public class EnumValue
 
     public static EnumValue enumValue(String name, String value)
     {
-        return new EnumValue(name, value);
+        return new EnumValue(name, value, null);
     }
 
     private final String name;
     private final String value;
+    private final Map<String, String> properties;
 
     @JsonCreator
     public EnumValue(
             @JsonProperty("name") String name,
-            @JsonProperty("value") String value)
+            @JsonProperty("value") String value,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNull(name, "name is null");
         this.value = value;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -58,6 +64,12 @@ public class EnumValue
         return Optional.ofNullable(value).orElse(name);
     }
 
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -68,21 +80,24 @@ public class EnumValue
             return false;
         }
         EnumValue enumValue = (EnumValue) o;
-        return Objects.equals(name, enumValue.name) && Objects.equals(value, enumValue.value);
+        return Objects.equals(name, enumValue.name) &&
+                Objects.equals(value, enumValue.value) &&
+                Objects.equals(properties, enumValue.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, value);
+        return Objects.hash(name, value, properties);
     }
 
     @Override
     public String toString()
     {
-        return "EnumValue{" +
-                "name='" + name + '\'' +
-                ", value='" + value + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("value", value)
+                .add("properties", properties)
+                .toString();
     }
 }

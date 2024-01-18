@@ -17,31 +17,37 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Map;
 import java.util.Objects;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 public class Measure
 {
     public static Measure measure(String name, String type, String operator, String refColumn)
     {
-        return new Measure(name, type, operator, refColumn);
+        return new Measure(name, type, operator, refColumn, null);
     }
 
     private final String name;
     private final String type;
     private final String operator;
     private final String refColumn;
+    private final Map<String, String> properties;
 
     @JsonCreator
     public Measure(
             @JsonProperty("name") String name,
             @JsonProperty("type") String type,
             @JsonProperty("operator") String operator,
-            @JsonProperty("refColumn") String refColumn)
+            @JsonProperty("refColumn") String refColumn,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = name;
         this.type = type;
         this.operator = operator;
         this.refColumn = refColumn;
+        this.properties = properties;
     }
 
     @JsonProperty
@@ -68,6 +74,12 @@ public class Measure
         return refColumn;
     }
 
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -81,12 +93,25 @@ public class Measure
         return Objects.equals(name, measure.name) &&
                 Objects.equals(type, measure.type) &&
                 Objects.equals(operator, measure.operator) &&
-                Objects.equals(refColumn, measure.refColumn);
+                Objects.equals(refColumn, measure.refColumn) &&
+                Objects.equals(properties, measure.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, operator, refColumn);
+        return Objects.hash(name, type, operator, refColumn, properties);
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("type", type)
+                .add("operator", operator)
+                .add("refColumn", refColumn)
+                .add("properties", properties)
+                .toString();
     }
 }

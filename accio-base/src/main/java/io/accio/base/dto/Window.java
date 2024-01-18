@@ -16,8 +16,12 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
+import java.util.Map;
 import java.util.Objects;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 public class Window
 {
@@ -29,10 +33,11 @@ public class Window
 
     private final String start;
     private final String end;
+    private final Map<String, String> properties;
 
     public static Window window(String name, String refColumn, TimeUnit timeUnit, String start, String end)
     {
-        return new Window(name, refColumn, timeUnit, start, end);
+        return new Window(name, refColumn, timeUnit, start, end, null);
     }
 
     @JsonCreator
@@ -41,13 +46,15 @@ public class Window
             @JsonProperty("refColumn") String refColumn,
             @JsonProperty("timeUnit") TimeUnit timeUnit,
             @JsonProperty("start") String start,
-            @JsonProperty("end") String end)
+            @JsonProperty("end") String end,
+            @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = name;
         this.refColumn = refColumn;
         this.timeUnit = timeUnit;
         this.start = start;
         this.end = end;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -80,16 +87,23 @@ public class Window
         return end;
     }
 
+    @JsonProperty
+    public Map<String, String> getProperties()
+    {
+        return properties;
+    }
+
     @Override
     public String toString()
     {
-        return "Window{" +
-                "name='" + name + '\'' +
-                ", refColumn='" + refColumn + '\'' +
-                ", timeUnit=" + timeUnit +
-                ", start='" + start + '\'' +
-                ", end='" + end + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("refColumn", refColumn)
+                .add("timeUnit", timeUnit)
+                .add("start", start)
+                .add("end", end)
+                .add("properties", properties)
+                .toString();
     }
 
     @Override
@@ -107,12 +121,13 @@ public class Window
                 Objects.equals(refColumn, window.refColumn) &&
                 timeUnit == window.timeUnit &&
                 Objects.equals(start, window.start) &&
-                Objects.equals(end, window.end);
+                Objects.equals(end, window.end) &&
+                Objects.equals(properties, window.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refColumn, timeUnit, start, end);
+        return Objects.hash(name, refColumn, timeUnit, start, end, properties);
     }
 }

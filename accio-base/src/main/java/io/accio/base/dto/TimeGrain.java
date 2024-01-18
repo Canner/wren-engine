@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
 public class TimeGrain
@@ -73,9 +74,9 @@ public class TimeGrain
             return false;
         }
         TimeGrain that = (TimeGrain) obj;
-        return Objects.equals(name, that.name)
-                && Objects.equals(refColumn, that.refColumn)
-                && Objects.equals(timeUnits, that.timeUnits);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(refColumn, that.refColumn) &&
+                Objects.equals(timeUnits, that.timeUnits);
     }
 
     @Override
@@ -87,10 +88,10 @@ public class TimeGrain
     @Override
     public String toString()
     {
-        return "TimeGrain{" +
-                "name='" + name + '\'' +
-                ", refColumn='" + refColumn + '\'' +
-                ", timeUnits=" + timeUnits +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("refColumn", refColumn)
+                .add("timeUnits", timeUnits)
+                .toString();
     }
 }

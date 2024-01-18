@@ -12,12 +12,9 @@
  * limitations under the License.
  */
 
-package io.accio.base.dto.macro;
+package io.accio.base.dto;
 
 import io.accio.base.AccioMDL;
-import io.accio.base.dto.Macro;
-import io.accio.base.dto.Manifest;
-import io.accio.base.dto.Model;
 import io.accio.base.macro.ParsingException;
 import org.testng.annotations.Test;
 
@@ -39,32 +36,32 @@ public class TestMacro
     @Test
     public void testParseParameter()
     {
-        Macro singleParameter = new Macro("test", "(a: Expression) => a + 1");
+        Macro singleParameter = macro("test", "(a: Expression) => a + 1");
         assertThat(singleParameter.getParameters()).isEqualTo(List.of(expressionType("a")));
 
-        Macro multipleParameters = new Macro("test", "(a: Expression, b: Macro) => a + b");
+        Macro multipleParameters = macro("test", "(a: Expression, b: Macro) => a + b");
         assertThat(multipleParameters.getParameters()).isEqualTo(List.of(expressionType("a"), macroType("b")));
 
-        Macro noParameter = new Macro("test", "() => 1");
+        Macro noParameter = macro("test", "() => 1");
         assertThat(noParameter.getParameters()).isEqualTo(List.of());
     }
 
     @Test
     public void testErrorHandle()
     {
-        assertThatThrownBy(() -> new Macro("test", "xxxxx"))
+        assertThatThrownBy(() -> macro("test", "xxxxx"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("definition is invalid");
 
-        assertThatThrownBy(() -> new Macro("test", "(xxxxx) => a + b"))
+        assertThatThrownBy(() -> macro("test", "(xxxxx) => a + b"))
                 .isInstanceOf(ParsingException.class)
                 .hasMessageContaining("typeName is null");
 
-        assertThatThrownBy(() -> new Macro("test", "(a: Expression, xxxxx) => a + b"))
+        assertThatThrownBy(() -> macro("test", "(a: Expression, xxxxx) => a + b"))
                 .isInstanceOf(ParsingException.class)
                 .hasMessageContaining("typeName is null");
 
-        assertThatThrownBy(() -> new Macro("test", "(a: Expression, b: UnDefined) => a + b"))
+        assertThatThrownBy(() -> macro("test", "(a: Expression, b: UnDefined) => a + b"))
                 .isInstanceOf(ParsingException.class)
                 .hasMessageContaining("typeName is invalid: b:UnDefined");
     }
@@ -136,7 +133,7 @@ public class TestMacro
     }
 
     @Test
-    public void testZeroPArameterCall()
+    public void testZeroParameterCall()
     {
         Manifest manifest = Manifest.builder()
                 .setCatalog("test")

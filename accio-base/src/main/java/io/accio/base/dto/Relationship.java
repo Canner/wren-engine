@@ -16,12 +16,15 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +39,7 @@ public class Relationship
     private final boolean isReverse;
     private final List<SortKey> manySideSortKeys;
     private final String description;
+    private final Map<String, String> properties;
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys)
     {
@@ -49,7 +53,7 @@ public class Relationship
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys, String description)
     {
-        return new Relationship(name, models, joinType, condition, manySideSortKeys, description);
+        return new Relationship(name, models, joinType, condition, manySideSortKeys, description, ImmutableMap.of());
     }
 
     public static Relationship reverse(Relationship relationship)
@@ -61,7 +65,8 @@ public class Relationship
                 relationship.getCondition(),
                 true,
                 relationship.getManySideSortKeys(),
-                relationship.getDescription());
+                relationship.getDescription(),
+                ImmutableMap.of());
     }
 
     @JsonCreator
@@ -71,9 +76,10 @@ public class Relationship
             @JsonProperty("joinType") JoinType joinType,
             @JsonProperty("condition") String condition,
             @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys,
-            @JsonProperty("description") String description)
+            @Deprecated @JsonProperty("description") String description,
+            @JsonProperty("properties") Map<String, String> properties)
     {
-        this(name, models, joinType, condition, false, manySideSortKeys, description);
+        this(name, models, joinType, condition, false, manySideSortKeys, description, properties);
     }
 
     public Relationship(
@@ -83,7 +89,8 @@ public class Relationship
             String condition,
             boolean isReverse,
             List<SortKey> manySideSortKeys,
-            String description)
+            String description,
+            Map<String, String> properties)
     {
         this.name = requireNonNull(name, "name is null");
         checkArgument(models != null && models.size() >= 2, "relationship should contain at least 2 models");
@@ -93,6 +100,7 @@ public class Relationship
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
         this.description = description;
+        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -130,10 +138,17 @@ public class Relationship
         return isReverse;
     }
 
+    @Deprecated
     @JsonProperty
     public String getDescription()
     {
         return description;
+    }
+
+    @JsonProperty("properties")
+    public Map<String, String> getProperties()
+    {
+        return properties;
     }
 
     @Override
@@ -146,33 +161,35 @@ public class Relationship
             return false;
         }
         Relationship that = (Relationship) obj;
-        return Objects.equals(name, that.name)
-                && Objects.equals(models, that.models)
-                && joinType == that.joinType
-                && Objects.equals(condition, that.condition)
-                && isReverse == that.isReverse
-                && Objects.equals(manySideSortKeys, that.manySideSortKeys)
-                && Objects.equals(description, that.description);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(models, that.models) &&
+                joinType == that.joinType &&
+                Objects.equals(condition, that.condition) &&
+                isReverse == that.isReverse &&
+                Objects.equals(manySideSortKeys, that.manySideSortKeys) &&
+                Objects.equals(description, that.description) &&
+                Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, models, joinType, condition, isReverse, manySideSortKeys);
+        return Objects.hash(name, models, joinType, condition, isReverse, manySideSortKeys, properties);
     }
 
     @Override
     public String toString()
     {
-        return "Relationship{" +
-                "name='" + name + '\'' +
-                ", models=" + models +
-                ", joinType=" + joinType +
-                ", condition='" + condition + '\'' +
-                ", isReverse=" + isReverse +
-                ", manySideSortKeys=" + manySideSortKeys +
-                ", description='" + description + '\'' +
-                '}';
+        return toStringHelper(this)
+                .add("name", name)
+                .add("models", models)
+                .add("joinType", joinType)
+                .add("condition", condition)
+                .add("isReverse", isReverse)
+                .add("manySideSortKeys", manySideSortKeys)
+                .add("description", description)
+                .add("properties", properties)
+                .toString();
     }
 
     public static class SortKey
@@ -243,10 +260,10 @@ public class Relationship
         @Override
         public String toString()
         {
-            return "SortKey{" +
-                    "name='" + name + '\'' +
-                    ", isDescending=" + isDescending +
-                    '}';
+            return toStringHelper(this)
+                    .add("name", name)
+                    .add("isDescending", isDescending)
+                    .toString();
         }
     }
 }

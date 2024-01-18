@@ -80,7 +80,7 @@ public class TestCumulativeMetric
                         cumulativeMetric("YearlyRevenue",
                                 "Orders", measure("totalprice", INTEGER, "sum", "totalprice"),
                                 window("orderdate", "orderdate", TimeUnit.YEAR, "1994-01-01", "1998-12-31"))))
-                .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31"))
+                .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31", null))
                 .build();
         accioMDL = AccioMDL.fromManifest(manifest);
     }

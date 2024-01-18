@@ -97,7 +97,8 @@ public class AccioMDL
                     model.getPrimaryKey(),
                     model.isCached(),
                     model.getRefreshTime(),
-                    model.getDescription());
+                    model.getDescription(),
+                    model.getProperties());
         }).collect(toList());
 
         List<Metric> renderedMetrics = original.getMetrics().stream().map(metric ->
@@ -106,7 +107,10 @@ public class AccioMDL
                         metric.getDimension().stream().map(column -> renderExpression(column, macroTags, original)).collect(toList()),
                         metric.getMeasure().stream().map(column -> renderExpression(column, macroTags, original)).collect(toList()),
                         metric.getTimeGrain(),
-                        metric.isCached(), metric.getRefreshTime(), metric.getDescription())
+                        metric.isCached(),
+                        metric.getRefreshTime(),
+                        metric.getDescription(),
+                        metric.getProperties())
         ).collect(toList());
 
         return Manifest.builder(original)
@@ -129,7 +133,8 @@ public class AccioMDL
                 original.isCalculated(),
                 original.isNotNull(),
                 expression,
-                original.getDescription());
+                original.getDescription(),
+                original.getProperties());
     }
 
     public String getCatalog()
