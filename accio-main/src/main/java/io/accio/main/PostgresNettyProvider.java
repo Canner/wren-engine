@@ -33,6 +33,7 @@ public class PostgresNettyProvider
         implements Provider<PostgresNetty>
 {
     private final PostgresWireProtocolConfig postgresWireProtocolConfig;
+    private final AccioConfig accioConfig;
     private final SslContextProvider sslContextProvider;
     private final RegObjectFactory regObjectFactory;
 
@@ -45,6 +46,7 @@ public class PostgresNettyProvider
     @Inject
     public PostgresNettyProvider(
             PostgresWireProtocolConfig postgresWireProtocolConfig,
+            AccioConfig accioConfig,
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
             Metadata connector,
@@ -54,6 +56,7 @@ public class PostgresNettyProvider
             CachedTableMapping cachedTableMapping)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
+        this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
@@ -70,6 +73,7 @@ public class PostgresNettyProvider
         PostgresNetty postgresNetty = new PostgresNetty(
                 networkService,
                 postgresWireProtocolConfig,
+                accioConfig,
                 sslContextProvider,
                 regObjectFactory,
                 connector,

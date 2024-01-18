@@ -34,6 +34,7 @@ public class AccioConfig
     private File accioMDLFile;
     private File accioMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType;
+    private boolean enableDynamicFields;
 
     @Deprecated
     public Optional<File> getAccioMDLFile()
@@ -72,6 +73,18 @@ public class AccioConfig
     public AccioConfig setDataSourceType(DataSourceType dataSourceType)
     {
         this.dataSourceType = dataSourceType;
+        return this;
+    }
+
+    public boolean getEnableDynamicFields()
+    {
+        return enableDynamicFields;
+    }
+
+    @Config("accio.experimental-enable-dynamic-fields")
+    public AccioConfig setEnableDynamicFields(boolean enableDynamicFields)
+    {
+        this.enableDynamicFields = enableDynamicFields;
         return this;
     }
 }

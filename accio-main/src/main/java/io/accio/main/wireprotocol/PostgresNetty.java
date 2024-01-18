@@ -20,6 +20,7 @@ import com.google.common.net.HostAndPort;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
+import io.accio.main.AccioConfig;
 import io.accio.main.AccioMetastore;
 import io.accio.main.PostgresWireProtocolConfig;
 import io.accio.main.metadata.Metadata;
@@ -90,10 +91,12 @@ public class PostgresNetty
     private final AccioMetastore accioMetastore;
     private final CacheManager cacheManager;
     private final CachedTableMapping cachedTableMapping;
+    private final AccioConfig accioConfig;
 
     public PostgresNetty(
             NetworkService networkService,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
+            AccioConfig accioConfig,
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
             Metadata connector,
@@ -108,6 +111,7 @@ public class PostgresNetty
         bindHosts = GLOBAL_NETWORK_BIND_HOST_SETTING.get(settings).toArray(new String[0]);
         publishHosts = GLOBAL_NETWORK_PUBLISH_HOST_SETTING.get(settings).toArray(new String[0]);
         this.networkService = networkService;
+        this.accioConfig = accioConfig;
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
@@ -130,7 +134,7 @@ public class PostgresNetty
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
                 WireProtocolSession wireProtocolSession =
-                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioMetastore, cacheManager, cachedTableMapping);
+                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioConfig, accioMetastore, cacheManager, cachedTableMapping);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

@@ -298,6 +298,30 @@
           ]
         }
       ]
+    },
+    {
+      "name": "CustomerDailyRevenue",
+      "baseObject": "Orders",
+      "dimension": [
+        {
+          "name": "customer",
+          "type": "int4",
+          "expression": "customer.name"
+        },
+        {
+          "name": "date",
+          "type": "int4",
+          "expression": "orderdate"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": []
     }
   ],
   "cumulativeMetrics": [
