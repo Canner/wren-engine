@@ -14,14 +14,6 @@
 
 package io.accio.main.pgcatalog.regtype;
 
-import io.accio.base.AccioException;
-
-import java.util.regex.Matcher;
-
-import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
-import static io.accio.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
-import static java.lang.String.format;
-
 public class RegProc
         implements RegObject
 {
@@ -31,13 +23,7 @@ public class RegProc
     public RegProc(long oid, String signature)
     {
         this.oid = oid;
-        Matcher matcher = PG_FUNCTION_PATTERN.matcher(signature);
-        if (matcher.find()) {
-            this.name = matcher.group("functionName");
-        }
-        else {
-            throw new AccioException(NOT_FOUND, format("%s doensn't match PG_FUNCTION_PATTERN", signature));
-        }
+        this.name = signature;
     }
 
     @Override

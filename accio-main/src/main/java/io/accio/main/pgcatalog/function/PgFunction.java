@@ -48,14 +48,26 @@ public class PgFunction
     private final PGType returnType;
 
     private final String definition;
+    private final boolean subquery;
+    // if the function is implemented in the database
+    private final boolean implemented;
 
-    public PgFunction(String name, Language language, List<Argument> arguments, PGType returnType, String definition)
+    public PgFunction(
+            String name,
+            Language language,
+            List<Argument> arguments,
+            PGType returnType,
+            String definition,
+            boolean subquery,
+            boolean implemented)
     {
         this.name = name;
         this.language = language;
         this.arguments = arguments;
         this.returnType = returnType;
         this.definition = definition;
+        this.subquery = subquery;
+        this.implemented = implemented;
     }
 
     public String getName()
@@ -96,6 +108,16 @@ public class PgFunction
     public String getDefinition()
     {
         return definition;
+    }
+
+    public boolean isSubquery()
+    {
+        return subquery;
+    }
+
+    public boolean isImplemented()
+    {
+        return implemented;
     }
 
     @Override
@@ -151,6 +173,8 @@ public class PgFunction
         private List<Argument> arguments;
 
         private PGType returnType;
+        private boolean subquery;
+        private boolean implemented;
 
         public Builder setName(String name)
         {
@@ -182,12 +206,23 @@ public class PgFunction
             return this;
         }
 
+        public Builder setSubquery(boolean subquery)
+        {
+            this.subquery = subquery;
+            return this;
+        }
+
+        public Builder setImplemented(boolean implemented)
+        {
+            this.implemented = implemented;
+            return this;
+        }
+
         public PgFunction build()
         {
             requireNonNull(name, "name is null");
             requireNonNull(language, "language is null");
-            requireNonNull(definition, "definition is null");
-            return new PgFunction(name, language, arguments, returnType, definition);
+            return new PgFunction(name, language, arguments, returnType, definition, subquery, implemented);
         }
     }
 }

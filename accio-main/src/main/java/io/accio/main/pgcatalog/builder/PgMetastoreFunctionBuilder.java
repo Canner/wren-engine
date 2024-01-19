@@ -12,14 +12,11 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.main.pgcatalog.builder;
 
-import java.util.List;
-import java.util.Optional;
+import io.accio.main.pgcatalog.function.PgFunction;
 
-public interface PgFunctionRegistry
+public interface PgMetastoreFunctionBuilder
 {
-    List<PgFunction> getPgFunctions();
-
-    Optional<PgFunction> getPgFunction(String name, int numArgument);
+    void createPgFunction(PgFunction pgFunction);
 }
