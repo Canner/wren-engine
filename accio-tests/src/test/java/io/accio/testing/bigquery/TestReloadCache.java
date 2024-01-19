@@ -83,6 +83,8 @@ public class TestReloadCache
 
         deployMDL("cache/cache_reload_1_mdl.json");
         waitUntilReady();
+        // A few delay for create task.
+        SECONDS.sleep(1L);
         waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue"));
 
         List<TaskInfo> taskInfos = getTaskInfo("canner-cml", "tpch_tiny");
@@ -104,6 +106,8 @@ public class TestReloadCache
 
         deployMDL("cache/cache_reload_3_mdl.json");
         waitUntilReady();
+        // A few delay for create task.
+        SECONDS.sleep(1L);
         taskInfo = waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue_Fake"));
         cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();

@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.accio.base.AccioMDL;
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckdbClient;
@@ -35,6 +36,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
@@ -104,7 +106,7 @@ public abstract class AbstractCacheTest
     {
         Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
         try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
-            List<PGType> pgTypes = iterator.getTypes();
+            List<PGType> pgTypes = iterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
                 Object[] bqResults = iterator.next();
