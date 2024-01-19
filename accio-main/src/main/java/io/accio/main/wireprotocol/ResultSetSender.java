@@ -14,6 +14,7 @@
 
 package io.accio.main.wireprotocol;
 
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.type.PGType;
 import io.netty.channel.Channel;
@@ -23,6 +24,8 @@ import javax.annotation.Nullable;
 
 import java.util.Iterator;
 import java.util.List;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 class ResultSetSender
         extends BaseResultSender
@@ -49,7 +52,7 @@ class ResultSetSender
         this.query = query;
         this.channel = channel;
         this.connectorRecordIterator = connectorRecordIterator;
-        this.schema = connectorRecordIterator.getTypes();
+        this.schema = connectorRecordIterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
         this.maxRows = maxRows;
         this.totalRowCount = previousCount;
         this.formatCodes = formatCodes;

@@ -12,32 +12,16 @@
  * limitations under the License.
  */
 
-package io.accio.base.client.duckdb;
+package io.accio.main.wireprotocol;
 
-public class DuckdbType
+public enum QueryLevel
 {
-    private final int jdbcType;
-    private final String name;
-
-    public DuckdbType(int jdbcType, String name)
-    {
-        this.jdbcType = jdbcType;
-        this.name = name;
-    }
-
-    public int getJdbcType()
-    {
-        return jdbcType;
-    }
-
-    public String getName()
-    {
-        return name;
-    }
-
-    @Override
-    public String toString()
-    {
-        return name;
-    }
+    // The metadata query is related to PG metadata and fully supported by Metastore,
+    // it will pass to Metastore without any modification and executed by Metastore.
+    METASTORE_FULL,
+    // The metadata query is related to PG metadata and partially supported by Metastore,
+    // it will be rewritten by Accio and executed by Metastore.
+    METASTORE_SEMI,
+    // The query is related to real data, it will be rewritten by Accio and executed by Data Source.
+    DATASOURCE
 }

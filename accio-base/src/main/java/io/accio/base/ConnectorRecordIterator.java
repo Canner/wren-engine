@@ -14,13 +14,11 @@
 
 package io.accio.base;
 
-import io.accio.base.type.PGType;
-
 import java.util.Iterator;
 import java.util.List;
 
 public interface ConnectorRecordIterator
         extends Iterator<Object[]>, AutoCloseable
 {
-    List<PGType> getTypes();
+    List<Column> getColumns();
 }

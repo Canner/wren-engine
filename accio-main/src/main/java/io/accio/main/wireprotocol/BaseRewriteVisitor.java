@@ -1724,8 +1724,8 @@ public class BaseRewriteVisitor<C>
     {
         return new DereferenceExpression(
                 node.getLocation(),
-                node.getBase(),
-                node.getField());
+                visitAndCast(node.getBase()),
+                node.getField().map(this::visitAndCast));
     }
 
     @Override

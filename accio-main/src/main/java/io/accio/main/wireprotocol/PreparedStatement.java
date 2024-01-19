@@ -19,7 +19,7 @@ import java.util.Optional;
 
 public class PreparedStatement
 {
-    public static final String CANNERFLOW_RESERVED_PREPARE_NAME = "canner_f1ow";
+    public static final String RESERVED_PREPARE_NAME = "acc1o";
 
     private final String name;
     private final String statement;
@@ -27,15 +27,17 @@ public class PreparedStatement
     private final List<Integer> paramTypeOids;
     private final String originalStatement;
     private final boolean isSessionCommand;
+    private final QueryLevel queryLevel;
 
     public PreparedStatement(
             String name,
             String statement,
             List<Integer> paramTypeOids,
             String originalStatement,
-            boolean isSessionCommand)
+            boolean isSessionCommand,
+            QueryLevel queryLevel)
     {
-        this(name, statement, Optional.empty(), paramTypeOids, originalStatement, isSessionCommand);
+        this(name, statement, Optional.empty(), paramTypeOids, originalStatement, isSessionCommand, queryLevel);
     }
 
     public PreparedStatement(
@@ -44,14 +46,16 @@ public class PreparedStatement
             Optional<String> cacheStatement,
             List<Integer> paramTypeOids,
             String originalStatement,
-            boolean isSessionCommand)
+            boolean isSessionCommand,
+            QueryLevel queryLevel)
     {
-        this.name = name.isEmpty() ? CANNERFLOW_RESERVED_PREPARE_NAME : name;
+        this.name = name.isEmpty() ? RESERVED_PREPARE_NAME : name;
         this.statement = statement;
         this.cacheStatement = cacheStatement;
         this.paramTypeOids = paramTypeOids;
         this.originalStatement = originalStatement;
         this.isSessionCommand = isSessionCommand;
+        this.queryLevel = queryLevel;
     }
 
     public String getName()
@@ -82,5 +86,10 @@ public class PreparedStatement
     public Optional<String> getCacheStatement()
     {
         return cacheStatement;
+    }
+
+    public QueryLevel getQueryLevel()
+    {
+        return queryLevel;
     }
 }

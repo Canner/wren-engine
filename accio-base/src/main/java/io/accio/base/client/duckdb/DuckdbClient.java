@@ -37,7 +37,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.accio.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
+import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
 
@@ -117,7 +117,7 @@ public final class DuckdbClient
             for (int i = 1; i <= columnCount; i++) {
                 builder.add(ColumnMetadata.builder()
                         .setName(metaData.getColumnName(i))
-                        .setType(DUCKDB_TYPE.toPGType(metaData.getColumnType(i)))
+                        .setType(toPGType(metaData.getColumnType(i)))
                         .build());
             }
             return builder.build();
@@ -189,8 +189,10 @@ public final class DuckdbClient
         // Refer to the official doc, if we want to create multiple read-write connections,
         // to the same database in-memory database instance, we can use the custom `duplicate()` method.
         // https://duckdb.org/docs/api/java
-
-        return ((DuckDBConnection) duckDBConnection).duplicate();
+        Connection connection = ((DuckDBConnection) duckDBConnection).duplicate();
+        Statement statement = connection.createStatement();
+        statement.execute("set search_path = 'main'");
+        return connection;
     }
 
     public DuckDBConfig getDuckDBConfig()
