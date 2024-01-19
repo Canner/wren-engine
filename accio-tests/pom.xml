@@ -166,6 +166,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.duckdb</groupId>
+            <artifactId>duckdb_jdbc</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.accio</groupId>
             <artifactId>accio-testing</artifactId>
             <scope>test</scope>
