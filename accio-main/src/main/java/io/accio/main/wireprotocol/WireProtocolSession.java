@@ -25,6 +25,7 @@ import io.accio.base.sqlrewrite.AccioPlanner;
 import io.accio.base.sqlrewrite.CacheRewrite;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
+import io.accio.main.AccioConfig;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
@@ -83,6 +84,7 @@ public class WireProtocolSession
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
+    private final AccioConfig accioConfig;
     private final AccioMetastore accioMetastore;
     private final CacheManager cacheManager;
     private final CachedTableMapping cachedTableMapping;
@@ -91,6 +93,7 @@ public class WireProtocolSession
             RegObjectFactory regObjectFactory,
             Metadata metadata,
             SqlConverter sqlConverter,
+            AccioConfig accioConfig,
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
             CachedTableMapping cachedTableMapping)
@@ -99,6 +102,7 @@ public class WireProtocolSession
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = sqlConverter;
+        this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
@@ -204,6 +208,7 @@ public class WireProtocolSession
                 SessionContext.builder()
                         .setCatalog(getDefaultDatabase())
                         .setSchema(getDefaultSchema())
+                        .setEnableDynamic(accioConfig.getEnableDynamicFields())
                         .build());
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
@@ -227,6 +232,7 @@ public class WireProtocolSession
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(getDefaultDatabase())
                     .setSchema(getDefaultSchema())
+                    .setEnableDynamic(accioConfig.getEnableDynamicFields())
                     .build();
             String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
             String accioRewritten = AccioPlanner.rewrite(
@@ -286,6 +292,7 @@ public class WireProtocolSession
                     SessionContext.builder()
                             .setCatalog(getDefaultDatabase())
                             .setSchema(getDefaultSchema())
+                            .setEnableDynamic(accioConfig.getEnableDynamicFields())
                             .build());
             return Optional.of(metadata.directQuery(sql, portal.getParameters()));
         }));
