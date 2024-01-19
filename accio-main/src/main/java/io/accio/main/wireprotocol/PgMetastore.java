@@ -12,14 +12,28 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.main.wireprotocol;
+
+import io.accio.base.Column;
+import io.accio.base.ConnectorRecordIterator;
+import io.accio.base.Parameter;
+import io.accio.base.sql.SqlConverter;
 
 import java.util.List;
-import java.util.Optional;
 
-public interface PgFunctionRegistry
+public interface PgMetastore
 {
-    List<PgFunction> getPgFunctions();
+    void directDDL(String sql);
 
-    Optional<PgFunction> getPgFunction(String name, int numArgument);
+    ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
+
+    List<Column> describeQuery(String sql, List<Parameter> parameters);
+
+    String handlePgType(String type);
+
+    SqlConverter getSqlConverter();
+
+    String getPgCatalogName();
+
+    boolean isSchemaExist(String schemaName);
 }

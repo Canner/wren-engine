@@ -23,8 +23,10 @@ import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
@@ -59,7 +61,9 @@ public class RegObjectInterpreter
         protected Object visitGenericLiteral(GenericLiteral node, Object context)
         {
             if (node.getType().startsWith("reg")) {
-                RegObject regObject = regObjectFactory.of(node.getType(), node.getValue());
+                // to support value carry a schema prefix
+                QualifiedName name = QualifiedName.of(Arrays.asList(node.getValue().split("\\.")));
+                RegObject regObject = regObjectFactory.of(node.getType(), name.getSuffix());
                 if (showObjectAsName) {
                     return new StringLiteral(regObject.getName());
                 }

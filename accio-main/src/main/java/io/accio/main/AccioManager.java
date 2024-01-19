@@ -104,6 +104,8 @@ public class AccioManager
             accioMetastore.setAccioMDL(AccioMDL.fromManifest(manifest));
             archiveAccioMDL(oldAccioMDL);
             Files.write(accioMDLFile.toPath(), MANIFEST_JSON_CODEC.toJson(accioMetastore.getAnalyzedMDL().getAccioMDL().getManifest()).getBytes(UTF_8));
+            // pre drop if the schema name is changed.
+            pgCatalogManager.dropSchema(oldAccioMDL.getSchema());
             deploy();
         }
         catch (IOException e) {
