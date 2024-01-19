@@ -611,7 +611,7 @@ public class PostgresWireProtocol
 
         private void dispatchState(ByteBuf buffer, Channel channel)
         {
-            LOG.info("channel dispatch state: %s", state);
+            LOG.debug("channel dispatch state: %s", state);
             switch (state) {
                 case STARTUP_HEADER:
                 case MSG_HEADER:
@@ -642,7 +642,7 @@ public class PostgresWireProtocol
          */
         private void dispatchMessage(ByteBuf buffer, Channel channel)
         {
-            LOG.info("channel dispatch message. msgType: %s", msgType);
+            LOG.debug("channel dispatch message. msgType: %s", msgType);
             switch (msgType) {
                 case 'Q': // Query (simple)
                     handleSimpleQuery(buffer, channel);

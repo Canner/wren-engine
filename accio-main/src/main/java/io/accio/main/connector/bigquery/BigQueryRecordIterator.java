@@ -19,9 +19,8 @@ import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.bigquery.TableResult;
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
-import io.accio.base.type.PGType;
-import io.accio.connector.bigquery.BigQueryType;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Period;
 
@@ -36,6 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.connector.bigquery.BigQueryType.toPGType;
 import static java.lang.String.format;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.unmodifiableMap;
@@ -45,7 +45,7 @@ import static java.util.Objects.requireNonNull;
 public class BigQueryRecordIterator
         implements ConnectorRecordIterator
 {
-    private final List<PGType> types;
+    private final List<Column> columns;
     private final List<Field> bqFields;
 
     private final Iterator<FieldValueList> resultIterator;
@@ -60,8 +60,8 @@ public class BigQueryRecordIterator
         requireNonNull(tableResult, "tableResult is null");
         this.resultIterator = tableResult.iterateAll().iterator();
 
-        this.types = tableResult.getSchema().getFields().stream()
-                .map(BigQueryType::toPGType)
+        this.columns = tableResult.getSchema().getFields().stream()
+                .map(field -> new Column(field.getName(), toPGType(field)))
                 .collect(toImmutableList());
 
         this.bqFields = tableResult.getSchema().getFields();
@@ -140,9 +140,9 @@ public class BigQueryRecordIterator
         }
     }
 
-    public List<PGType> getTypes()
+    public List<Column> getColumns()
     {
-        return types;
+        return columns;
     }
 
     private static Period convertBigQueryIntervalToPeriod(String value)

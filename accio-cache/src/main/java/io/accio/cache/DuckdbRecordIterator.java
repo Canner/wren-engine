@@ -14,27 +14,32 @@
 package io.accio.cache;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.Client;
 import io.accio.base.client.jdbc.JdbcRecordIterator;
+import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.base.type.TimestampType;
+import org.duckdb.DuckDBArray;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static io.accio.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
+import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class DuckdbRecordIterator
         implements ConnectorRecordIterator
 {
-    private final List<PGType> types;
+    private final List<Column> columns;
     private final AutoCloseableIterator<Object[]> recordIterator;
 
     public static DuckdbRecordIterator of(Client client, String sql, List<Parameter> parameters)
@@ -53,19 +58,19 @@ public class DuckdbRecordIterator
         this.recordIterator = jdbcRecordIterator;
 
         ResultSetMetaData resultSetMetaData = jdbcRecordIterator.getResultSetMetaData();
-        ImmutableList.Builder<PGType> typeBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Column> columnBuilder = ImmutableList.builder();
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             int columnType = resultSetMetaData.getColumnType(i);
-            PGType<?> pgType = DUCKDB_TYPE.toPGType(columnType);
-            typeBuilder.add(pgType);
+            PGType<?> pgType = toPGType(columnType);
+            columnBuilder.add(new Column(resultSetMetaData.getColumnName(i), pgType));
         }
-        this.types = typeBuilder.build();
+        this.columns = columnBuilder.build();
     }
 
     @Override
-    public List<PGType> getTypes()
+    public List<Column> getColumns()
     {
-        return types;
+        return columns;
     }
 
     @Override
@@ -86,7 +91,7 @@ public class DuckdbRecordIterator
     {
         Object[] record = recordIterator.next();
         return IntStream.range(0, record.length)
-                .mapToObj(index -> convertValue(types.get(index), record[index]))
+                .mapToObj(index -> convertValue(columns.get(index).getType(), record[index]))
                 .toArray();
     }
 
@@ -95,6 +100,9 @@ public class DuckdbRecordIterator
         try {
             if (pgType instanceof TimestampType) {
                 return ((Timestamp) value).toLocalDateTime();
+            }
+            if (pgType.equals(PGArray.VARCHAR_ARRAY)) {
+                return Arrays.asList((Object[]) ((DuckDBArray) value).getArray()).stream().map(Object::toString).collect(toList());
             }
             return value;
         }
