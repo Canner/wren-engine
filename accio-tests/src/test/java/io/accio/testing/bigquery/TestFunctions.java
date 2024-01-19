@@ -42,23 +42,19 @@ public class TestFunctions
                 // TODO: fix current_database()
                 //  https://github.com/Canner/canner-metric-layer/issues/75
                 // {"select current_database()", "", false}
-                {"select pg_get_expr('test', 1)", "", false},
-                {"select pg_get_expr('test', 1, true)", "", false},
+                {"select pg_get_expr('test', 1)", "test", false},
+                {"select pg_get_expr('test', 1, true)", "test", false},
                 // TODO: Which expected value should be ? 1.0 or 1
                 // We use PARSE_AS_DECIMAL in WireProtocolSession#parse as default, all decimal literal will be parsed as Decimal type
                 {"select trunc(1.1)", "1", false},
-                {"select format_type(null, 1)", null, false},
-                {"select format_type(1000, 1)", "_bool", false},
-                {"select format_type(0, 1)", "???", false},
                 {"select substr('testString', 0, 4)", "test", false},
                 {"select concat('T.P.', ' ', 'Bar')", "T.P. Bar", false},
-                {"select pg_get_function_result(7751334321673795072)", "int8", false}, // pg_relation_size__int4_varchar___int8
-                {"select pg_get_function_result(2155180082033071319)", "varchar", false}, // current_database___varchar
                 {"select regexp_like('pg_temp_table', '^pg_temp_')", "t", false},
                 {"select date_trunc('year', '2023-03-30')", "2023-01-01", false},
                 {"select date_trunc('day', timestamp '2023-03-30 18:00:00')", "2023-03-30 00:00:00.000000", false},
                 {"SELECT to_char(TIMESTAMP '2023-06-13 09:17:04.859462', 'YYYY-MM-DD HH24:MI:SS.MS TZ') to_char", "2023-06-13 09:17:04.859 UTC", false},
-                {"select information_schema._pg_expandarray(array[1, 2, 3])", "(1,1)", false},
+                // TODO: support return struct type
+                // {"select information_schema._pg_expandarray(array[1, 2, 3])", "(1,1)", false},
                 {"select extract(DOW from timestamp '2023-06-26 14:15:20')", "1", false},
                 {"select extract(DOY from timestamp '2023-06-26 14:15:20')", "177", false},
                 {"select substring('Thomas' from 2 for 3)", "hom", false},

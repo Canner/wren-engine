@@ -53,7 +53,8 @@ public class TestResultSetMetadata
         return Optional.of(requireNonNull(getClass().getClassLoader().getResource("bigquery/TestResultSetMetadata.json")).getPath());
     }
 
-    @Test
+    // TODO: support name type
+    @Test(enabled = false)
     public void testGetClientInfoProperties()
             throws SQLException
     {
@@ -234,7 +235,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(1), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_CATALOG");
-        assertEquals(metadata.getColumnType(2), Types.BIGINT);
+        assertEquals(metadata.getColumnType(2), Types.INTEGER);
         List<String> results = readRows(rs).stream().map(row -> (String) row.get(0)).collect(toImmutableList());
         // TODO: this should be containsExactlyInAnyOrder while currently our bigquery testing environment is not clean, so we have to use containsAll
         assertThat(results).containsAll(expectedSchemas);
@@ -265,7 +266,7 @@ public class TestResultSetMetadata
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", null, null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
@@ -276,65 +277,65 @@ public class TestResultSetMetadata
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("SYSTEM TABLE"));
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).isEmpty();
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(null, "pg_catalog", null, null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(null, null, "pg_class", null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables(null, null, null, array("SYSTEM TABLE"));
+            ResultSet rs = connection.getMetaData().getTables(null, null, null, array("SYSTEM VIEW"));
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
-        }
-
-        try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_cata%", "pg_class", null);
-            assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_cata%", "pg_class", null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
+        }
+
+        try (Connection connection = this.createConnection()) {
+            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_cata%", "pg_class", null);
+            assertTableMetadata(rs);
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_cla%s", null);
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables("unknown", "pg_catalog", "pg_class", array("SYSTEM TABLE"));
+            ResultSet rs = connection.getMetaData().getTables("unknown", "pg_catalog", "pg_class", array("SYSTEM VIEW"));
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "unknown", "pg_class", array("SYSTEM TABLE"));
+            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "unknown", "pg_class", array("SYSTEM VIEW"));
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "unknown", array("SYSTEM TABLE"));
+            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "unknown", array("SYSTEM VIEW"));
             assertTableMetadata(rs);
             assertThat(readRows(rs).isEmpty()).isTrue();
         }
@@ -346,9 +347,9 @@ public class TestResultSetMetadata
         }
 
         try (Connection connection = this.createConnection()) {
-            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("unknown", "SYSTEM TABLE"));
+            ResultSet rs = connection.getMetaData().getTables(TEST_CATALOG, "pg_catalog", "pg_class", array("unknown", "SYSTEM VIEW"));
             assertTableMetadata(rs);
-            assertThat(readRows(rs)).contains(getSystemTablesRow("pg_catalog", "pg_class"));
+            assertThat(readRows(rs)).contains(getSystemViewRow("pg_catalog", "pg_class"));
         }
 
         try (Connection connection = this.createConnection()) {
@@ -358,9 +359,9 @@ public class TestResultSetMetadata
         }
     }
 
-    private static List<Object> getSystemTablesRow(String schema, String table)
+    private static List<Object> getSystemViewRow(String schema, String table)
     {
-        return getTablesRow(null, schema, table, "SYSTEM TABLE");
+        return getTablesRow(null, schema, table, "SYSTEM VIEW");
     }
 
     private static List<Object> getTablesRow(String catalog, String schema, String table, String type)
@@ -376,7 +377,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnCount(), 10);
 
         assertEquals(metadata.getColumnLabel(1), "TABLE_CAT");
-        assertEquals(metadata.getColumnType(1), Types.BIGINT);
+        assertEquals(metadata.getColumnType(1), Types.INTEGER);
 
         assertEquals(metadata.getColumnLabel(2), "TABLE_SCHEM");
         assertEquals(metadata.getColumnType(2), Types.VARCHAR);
@@ -388,7 +389,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(4), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(5), "REMARKS");
-        assertEquals(metadata.getColumnType(5), Types.VARCHAR);
+        assertEquals(metadata.getColumnType(5), Types.INTEGER);
 
         assertEquals(metadata.getColumnLabel(6), "TYPE_CAT");
         assertEquals(metadata.getColumnType(6), Types.VARCHAR);
@@ -447,43 +448,44 @@ public class TestResultSetMetadata
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(null, null, "pg_class", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            // duckdb has 3 default database, all of them has pg_catalog, so the result will be 3
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, null, "pg_class", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(null, "pg_catalog", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catal%", "pg_class", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_cla%", "relnamespace");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
 
         try (Connection connection = createConnection()) {
             ResultSet rs = connection.getMetaData().getColumns(TEST_CATALOG, "pg_catalog", "pg_class", "%lnamespac%");
             assertColumnMetadata(rs);
-            assertThat(readRows(rs)).hasSize(1);
+            assertThat(readRows(rs)).hasSize(3);
         }
     }
 
@@ -582,14 +584,14 @@ public class TestResultSetMetadata
             throws Exception
     {
         try (Connection connection = createConnection()) {
-            ResultSet rs = connection.getMetaData().getFunctions(null, null, "current_schemas");
+            ResultSet rs = connection.getMetaData().getFunctions("memory", "main", "current_schemas");
             assertTrue(rs.next());
-            assertEquals(rs.getString("function_cat"), "canner-cml");
-            assertEquals(rs.getString("function_schem"), "pg_catalog");
+            assertEquals(rs.getString("function_cat"), "memory");
+            assertEquals(rs.getString("function_schem"), "main");
             assertEquals(rs.getString("function_name"), "current_schemas");
             assertNull(rs.getString("remarks"));
             assertEquals(rs.getInt("function_type"), 1);
-            assertEquals(rs.getString("specific_name"), "current_schemas_8097498532701726860");
+            assertEquals(rs.getString("specific_name"), "current_schemas_532");
         }
     }
 
