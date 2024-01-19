@@ -15,6 +15,11 @@
 package io.accio.main.wireprotocol.patterns;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.Parameter;
+import io.accio.base.type.PGArray;
+import io.accio.base.type.RecordType;
+import io.accio.main.wireprotocol.Portal;
+import io.accio.main.wireprotocol.PreparedStatement;
 
 import java.util.List;
 
@@ -33,6 +38,18 @@ public final class PostgreSqlRewriteUtil
             .add(ArraySelectPattern.INSTANCE)
             .add(ShowDateStylePattern.INSTANCE)
             .add(ShowStandardConformingPattern.INSTANCE)
+            .add(MetabaseTablePrivileges.INSTANCE)
+            .add(ShowTimezonePattern.INSTANCE)
+            .add(JdbcGetProcedureColumnsPattern.INSTANCE)
+            .build();
+
+    private static final List<QueryWithParamPattern> WITH_PARAMS_PATTERNS = ImmutableList.<QueryWithParamPattern>builder()
+            .add(new JdbcQueryUnkownTypeQueryPattern(PGArray.EMPTY_RECORD_ARRAY))
+            .add(new JdbcQueryUnkownTypeQueryPattern(RecordType.EMPTY_RECORD))
+            .add(new JdbcGetSQLTypeQueryPattern(PGArray.EMPTY_RECORD_ARRAY))
+            .add(new JdbcGetSQLTypeQueryPattern(RecordType.EMPTY_RECORD))
+            .add(new JdbcGetArrayDelimiterPattern(PGArray.EMPTY_RECORD_ARRAY))
+            .add(new JdbcGetArrayElementOidPattern(PGArray.EMPTY_RECORD_ARRAY))
             .build();
 
     public static String rewrite(String statement)
@@ -42,5 +59,26 @@ public final class PostgreSqlRewriteUtil
                 .findFirst()
                 .map(pattern -> pattern.rewrite(statement))
                 .orElse(statement);
+    }
+
+    public static Portal rewriteWithParameters(Portal portal)
+    {
+        String statement = portal.getPreparedStatement().getStatement();
+        List<Parameter> parameters = portal.getParameters();
+        String rewrittenSql = WITH_PARAMS_PATTERNS.stream()
+                .filter(pattern -> pattern.matcher(statement).find() && pattern.matchParams(parameters))
+                .findFirst()
+                .map(pattern -> pattern.rewrite(statement))
+                .orElse(statement);
+
+        PreparedStatement preparedStatement = new PreparedStatement(portal.getPreparedStatement().getName(),
+                rewrittenSql,
+                portal.getPreparedStatement().getCacheStatement(),
+                List.of(),
+                portal.getPreparedStatement().getOriginalStatement(),
+                portal.getPreparedStatement().isSessionCommand(),
+                portal.getPreparedStatement().getQueryLevel());
+
+        return new Portal(portal.getName(), preparedStatement, List.of(), portal.getResultFormatCodes(), preparedStatement.getQueryLevel());
     }
 }
