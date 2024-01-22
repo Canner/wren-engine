@@ -60,8 +60,7 @@ public class MDLResource
             Manifest manifest,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .runAsync(() -> accioManager.deployAndArchive(manifest));
+        accioManager.deployAndArchive(manifest);
         asyncResponse.resume(Response.accepted().build());
     }
 

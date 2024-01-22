@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
@@ -117,7 +118,7 @@ public class AccioManager
     private void deploy()
     {
         cacheManager.createTask(getAnalyzedMDL());
-        pgCatalogManager.initPgCatalog();
+        CompletableFuture.runAsync(pgCatalogManager::initPgCatalog);
     }
 
     private void archiveAccioMDL(AccioMDL oldAccioMDL)
