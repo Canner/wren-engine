@@ -159,6 +159,9 @@ public class PostgresNetty
             LOGGER.info("Postgre wire protocol server start. Bound Address: %s", boundAddress);
             success = true;
         }
+        catch (Exception e) {
+            LOGGER.error(e, "Failed to bind to address");
+        }
         finally {
             if (!success) {
                 // stop
