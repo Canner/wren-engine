@@ -95,11 +95,11 @@ public class TestBigQueryType
         super.cleanup();
         try {
             pgConnection.close();
+            bigQueryClient.dropTable(testSchemaTableName);
         }
-        catch (SQLException e) {
-            throw new RuntimeException(e);
+        catch (Exception e) {
+            LOG.error(e);
         }
-        bigQueryClient.dropTable(testSchemaTableName);
     }
 
     private Multimap<DataType, TypeCase> initTestcases()

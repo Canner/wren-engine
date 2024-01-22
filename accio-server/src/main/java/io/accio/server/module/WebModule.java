@@ -17,14 +17,12 @@ package io.accio.server.module;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.accio.main.PreviewService;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.web.AccioExceptionMapper;
 import io.accio.main.web.AnalysisResource;
 import io.accio.main.web.CacheResource;
 import io.accio.main.web.LineageResource;
 import io.accio.main.web.MDLResource;
-import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
@@ -42,6 +40,5 @@ public class WebModule
         jaxrsBinder(binder).bindInstance(new AccioExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
     }
 }

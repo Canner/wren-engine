@@ -19,10 +19,8 @@ import com.google.inject.Scopes;
 import io.accio.cache.ExtraRewriter;
 import io.accio.main.PostgresNettyProvider;
 import io.accio.main.PostgresWireProtocolConfig;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
-import io.accio.main.wireprotocol.PgMetastore;
 import io.accio.main.wireprotocol.PgWireProtocolExtraRewriter;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.auth.Authentication;
@@ -53,7 +51,6 @@ public class PostgresWireProtocolModule
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
         binder.bind(RegObjectFactory.class).in((Scopes.SINGLETON));
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
         // for cache extra rewrite
         binder.bind(ExtraRewriter.class).to(PgWireProtocolExtraRewriter.class).in(Scopes.SINGLETON);
     }

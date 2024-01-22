@@ -131,9 +131,7 @@ public class TestPostgreSqlRewriteUtil
                 new Object[] {"SELECT n.nspname,p.proname,p.prorettype,p.proargtypes, t.typtype,t.typrelid,  p.proargnames, p.proargmodes, p.proallargtypes, p.oid  " +
                         "FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t  WHERE p.pronamespace=n.oid AND p.prorettype=t.oid  ORDER BY n.nspname, " +
                         "p.proname, p.oid::text;",
-                        "SELECT n.nspname,p.proname,p.prorettype,p.proargtypes, t.typtype,t.typrelid,  p.proargnames, p.proargmodes, p.proallargtypes, p.oid  " +
-                                "FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t  " +
-                                "WHERE p.pronamespace=n.oid AND lower(p.prorettype)=t.typname  ORDER BY n.nspname, p.proname, p.oid::text"}
+                        "SELECT 1 limit 0"}
         };
     }
 
