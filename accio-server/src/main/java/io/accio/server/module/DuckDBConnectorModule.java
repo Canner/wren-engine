@@ -30,6 +30,7 @@ import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
 import io.accio.main.pgcatalog.regtype.PgMetadata;
 import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
+import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -47,6 +48,7 @@ public class DuckDBConnectorModule
         binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
         binder.bind(CacheService.class).to(PostgresCacheService.class).in(Scopes.SINGLETON);
+        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(PostgresConfig.class);
     }
 }
