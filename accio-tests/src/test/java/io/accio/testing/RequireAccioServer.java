@@ -24,6 +24,8 @@ import io.accio.main.web.dto.ColumnLineageInputDto;
 import io.accio.main.web.dto.ErrorMessageDto;
 import io.accio.main.web.dto.LineageResult;
 import io.accio.main.web.dto.PreviewDto;
+import io.accio.main.web.dto.SqlAnalysisInputDto;
+import io.accio.main.web.dto.SqlAnalysisOutputDto;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
 import io.airlift.http.client.Request;
@@ -70,6 +72,8 @@ public abstract class RequireAccioServer
     private static final JsonCodec<PreviewDto> PREVIEW_DTO_CODEC = jsonCodec(PreviewDto.class);
     private static final JsonCodec<ColumnLineageInputDto> COLUMN_LINEAGE_INPUT_DTO_CODEC = jsonCodec(ColumnLineageInputDto.class);
     private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
+    private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
+    private static final JsonCodec<List<SqlAnalysisOutputDto>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(SqlAnalysisOutputDto.class);
 
     public RequireAccioServer() {}
 
@@ -212,6 +216,21 @@ public abstract class RequireAccioServer
             getWebApplicationException(response);
         }
         return MODEL_LINEAGE_RESULT_LIST_CODEC.fromJson(response.getBody());
+    }
+
+    protected List<SqlAnalysisOutputDto> getSqlAnalysis(SqlAnalysisInputDto inputDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/analysis/sql"))
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(SQL_ANALYSIS_INPUT_DTO_CODEC, inputDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return SQL_ANALYSIS_OUTPUT_LIST_CODEC.fromJson(response.getBody());
     }
 
     public static void getWebApplicationException(StringResponseHandler.StringResponse response)

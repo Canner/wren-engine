@@ -24,16 +24,21 @@ import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 import io.trino.sql.tree.FunctionRelation;
+import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.trino.sql.tree.ComparisonExpression.Operator;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -50,6 +55,7 @@ public class Analysis
     private final Set<CumulativeMetric> cumulativeMetrics = new HashSet<>();
     private final Set<View> views = new HashSet<>();
     private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
+    private final List<SimplePredicate> simplePredicates = new ArrayList<>();
 
     Analysis(Statement statement)
     {
@@ -151,8 +157,94 @@ public class Analysis
         fields.forEach(field -> collectedColumns.put(field.getTableName(), field.getColumnName()));
     }
 
+    void addSimplePredicate(SimplePredicate simplePredicate)
+    {
+        simplePredicates.add(simplePredicate);
+    }
+
+    public List<SimplePredicate> getSimplePredicates()
+    {
+        return simplePredicates;
+    }
+
     public Multimap<CatalogSchemaTableName, String> getCollectedColumns()
     {
         return collectedColumns;
+    }
+
+    /**
+     * A placeholder to record predicates like c1 = 'foo', c2 >= 1
+     */
+    public static class SimplePredicate
+    {
+        CatalogSchemaTableName tableName;
+        String columnName;
+        String operator;
+        String value;
+
+        public SimplePredicate(
+                CatalogSchemaTableName tableName,
+                String columnName,
+                Operator operator,
+                Literal value)
+        {
+            this.tableName = requireNonNull(tableName);
+            this.columnName = requireNonNull(columnName);
+            this.operator = requireNonNull(operator).getValue();
+            this.value = requireNonNull(value).toString();
+        }
+
+        public CatalogSchemaTableName getTableName()
+        {
+            return tableName;
+        }
+
+        public String getColumnName()
+        {
+            return columnName;
+        }
+
+        public String getOperator()
+        {
+            return operator;
+        }
+
+        public String getValue()
+        {
+            return value;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SimplePredicate that = (SimplePredicate) o;
+            return Objects.equals(tableName, that.tableName) &&
+                    Objects.equals(columnName, that.columnName) &&
+                    Objects.equals(operator, that.operator) &&
+                    Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(tableName, columnName, operator, value);
+        }
+
+        @Override
+        public String toString()
+        {
+            return toStringHelper(this)
+                    .add("tableName", tableName)
+                    .add("columnName", columnName)
+                    .add("operator", operator)
+                    .add("value", value)
+                    .toString();
+        }
     }
 }

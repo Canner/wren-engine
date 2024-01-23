@@ -19,6 +19,7 @@ import com.google.inject.Scopes;
 import io.accio.main.PreviewService;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.web.AccioExceptionMapper;
+import io.accio.main.web.AnalysisResource;
 import io.accio.main.web.CacheResource;
 import io.accio.main.web.LineageResource;
 import io.accio.main.web.MDLResource;
@@ -35,6 +36,7 @@ public class WebModule
         jaxrsBinder(binder).bind(MDLResource.class);
         jaxrsBinder(binder).bind(LineageResource.class);
         jaxrsBinder(binder).bind(CacheResource.class);
+        jaxrsBinder(binder).bind(AnalysisResource.class);
         jaxrsBinder(binder).bindInstance(new AccioExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);

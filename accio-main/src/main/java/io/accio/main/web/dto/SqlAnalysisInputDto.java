@@ -18,13 +18,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.accio.base.dto.Manifest;
 
-public class SqlLineageInputDto
+public class SqlAnalysisInputDto
 {
     private final Manifest manifest;
     private final String sql;
 
     @JsonCreator
-    public SqlLineageInputDto(
+    public SqlAnalysisInputDto(
             @JsonProperty("manifest") Manifest manifest,
             @JsonProperty("sql") String sql)
     {
