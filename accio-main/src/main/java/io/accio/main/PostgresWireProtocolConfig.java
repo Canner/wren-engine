@@ -17,15 +17,16 @@ import io.airlift.configuration.Config;
 
 import javax.validation.constraints.NotNull;
 
+import java.io.File;
+
 public class PostgresWireProtocolConfig
 {
     public static final String PG_WIRE_PROTOCOL_PORT = "pg-wire-protocol.port";
-    public static final String PG_WIRE_PROTOCOL_SSL_ENABLED = "pg-wire-protocol.ssl.enabled";
-    public static final String PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT = "pg-wire-protocol.netty.thread.count";
 
     private String port = "7432";
     private boolean sslEnable;
     private int nettyThreadCount;
+    private File authFile = new File("etc/accounts");
 
     @NotNull
     public String getPort()
@@ -46,7 +47,7 @@ public class PostgresWireProtocolConfig
         return sslEnable;
     }
 
-    @Config(PG_WIRE_PROTOCOL_SSL_ENABLED)
+    @Config("pg-wire-protocol.ssl.enabled")
     public PostgresWireProtocolConfig setSslEnable(boolean sslEnable)
     {
         this.sslEnable = sslEnable;
@@ -59,10 +60,22 @@ public class PostgresWireProtocolConfig
         return nettyThreadCount;
     }
 
-    @Config(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)
+    @Config("pg-wire-protocol.netty.thread.count")
     public PostgresWireProtocolConfig setNettyThreadCount(int nettyThreadCount)
     {
         this.nettyThreadCount = nettyThreadCount;
+        return this;
+    }
+
+    public File getAuthFile()
+    {
+        return authFile;
+    }
+
+    @Config("pg-wire-protocol.auth.file")
+    public PostgresWireProtocolConfig setAuthFile(File authFile)
+    {
+        this.authFile = authFile;
         return this;
     }
 }

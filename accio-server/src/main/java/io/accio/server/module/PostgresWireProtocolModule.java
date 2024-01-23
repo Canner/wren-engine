@@ -23,12 +23,12 @@ import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.wireprotocol.PgWireProtocolExtraRewriter;
 import io.accio.main.wireprotocol.PostgresNetty;
+import io.accio.main.wireprotocol.auth.Authentication;
+import io.accio.main.wireprotocol.auth.FileAuthentication;
 import io.accio.main.wireprotocol.ssl.SslContextProvider;
 import io.accio.main.wireprotocol.ssl.TlsDataProvider;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.trino.sql.parser.SqlParser;
-
-import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class PostgresWireProtocolModule
         extends AbstractConfigurationAwareModule
@@ -43,7 +43,8 @@ public class PostgresWireProtocolModule
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(PostgresWireProtocolConfig.class);
+        PostgresWireProtocolConfig config = buildConfigObject(PostgresWireProtocolConfig.class);
+        binder.bind(Authentication.class).toInstance(new FileAuthentication(config.getAuthFile()));
         binder.bind(SqlParser.class).in(Scopes.SINGLETON);
         binder.bind(TlsDataProvider.class).toInstance(tlsDataProvider);
         binder.bind(SslContextProvider.class).in(Scopes.SINGLETON);
