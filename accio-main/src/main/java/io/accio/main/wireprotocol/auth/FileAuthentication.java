@@ -29,14 +29,16 @@ public class FileAuthentication
 
     public FileAuthentication(File authFile)
     {
-        this.accounts = authFile.exists() && authFile.isFile() ? parseAuthFile(authFile) : null;
+        this.accounts = authFile.isFile() ? parseAuthFile(authFile) : ImmutableMap.of();
+        if (accounts.isEmpty()) {
+            LOG.warn("No accounts found in auth file, disable the authentication");
+        }
     }
 
     @Override
     public boolean authenticate(String username, String password)
     {
-        if (accounts == null || accounts.isEmpty()) {
-            LOG.warn("No accounts found in auth file, disable the authentication");
+        if (accounts.isEmpty()) {
             return true;
         }
 
@@ -44,18 +46,17 @@ public class FileAuthentication
                 accounts.get(username).equals(password);
     }
 
-    private Map<String, String> parseAuthFile(File authFile)
+    private static Map<String, String> parseAuthFile(File authFile)
     {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
         try {
             Files.readAllLines(authFile.toPath()).forEach(line -> {
-                try {
-                    String[] parts = line.split(" ");
-                    builder.put(parts[0], parts[1]);
+                String[] parts = line.split(" ");
+                if (parts.length != 2) {
+                    LOG.warn("Invalid line %s in auth file %s", line, authFile);
+                    return;
                 }
-                catch (Exception e) {
-                    LOG.error("Failed to parse line %s", line);
-                }
+                builder.put(parts[0], parts[1]);
             });
         }
         catch (Exception e) {

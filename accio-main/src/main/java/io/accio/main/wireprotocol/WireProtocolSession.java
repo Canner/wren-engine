@@ -157,10 +157,9 @@ public class WireProtocolSession
         return Optional.ofNullable(properties.getProperty("password"));
     }
 
-    @Nullable
-    public String getClientUser()
+    public Optional<String> getClientUser()
     {
-        return properties.getProperty("user");
+        return Optional.ofNullable(properties.getProperty("user"));
     }
 
     public String getDefaultDatabase()
@@ -195,11 +194,9 @@ public class WireProtocolSession
 
     public boolean doAuthentication(String password)
     {
-        String username = getClientUser();
-        if (username == null) {
-            return false;
-        }
-        return authentication.authenticate(username, password);
+        return getClientUser()
+                .filter(name -> authentication.authenticate(name, password))
+                .isPresent();
     }
 
     public Optional<List<Column>> describePortal(String name)

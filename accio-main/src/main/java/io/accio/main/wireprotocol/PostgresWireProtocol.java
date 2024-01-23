@@ -51,7 +51,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
-import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 public class PostgresWireProtocol
@@ -205,8 +204,8 @@ public class PostgresWireProtocol
     private void finishAuthentication(Channel channel, String password)
     {
         try {
-            String clientUser = wireProtocolSession.getClientUser();
-            if (isNull(clientUser) || clientUser.isEmpty()) {
+            Optional<String> clientUser = wireProtocolSession.getClientUser();
+            if (clientUser.isEmpty() || clientUser.get().isEmpty()) {
                 Messages.sendAuthenticationError(channel, "user is empty");
             }
             if (wireProtocolSession.doAuthentication(password)) {
