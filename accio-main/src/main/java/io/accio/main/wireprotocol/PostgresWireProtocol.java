@@ -187,16 +187,13 @@ public class PostgresWireProtocol
 
     private void initAuthentication(Channel channel)
     {
-        finishAuthentication(channel, "");
-
-        // TODO: support auth
-        // Optional<String> password = wireProtocolSession.getPassword();
-        // if (password.isPresent()) {
-        //     finishAuthentication(channel, password.get());
-        // }
-        // else {
-        //     Messages.sendAuthenticationCleartextPassword(channel);
-        // }
+        Optional<String> password = wireProtocolSession.getPassword();
+        if (password.isPresent()) {
+            finishAuthentication(channel, password.get());
+        }
+        else {
+            Messages.sendAuthenticationCleartextPassword(channel);
+        }
     }
 
     private void handlePassword(ByteBuf buffer, final Channel channel)
@@ -209,8 +206,8 @@ public class PostgresWireProtocol
     {
         try {
             String clientUser = wireProtocolSession.getClientUser();
-            if (isNull(clientUser)) {
-                Messages.sendAuthenticationError(channel, format("User %s does not exist", clientUser));
+            if (isNull(clientUser) || clientUser.isEmpty()) {
+                Messages.sendAuthenticationError(channel, "user is empty");
             }
             if (wireProtocolSession.doAuthentication(password)) {
                 Messages.sendAuthenticationOK(channel)

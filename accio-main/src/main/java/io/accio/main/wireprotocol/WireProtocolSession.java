@@ -30,6 +30,7 @@ import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.sql.PostgreSqlRewrite;
+import io.accio.main.wireprotocol.auth.Authentication;
 import io.accio.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
 import io.airlift.log.Logger;
 import io.trino.sql.parser.ParsingOptions;
@@ -88,6 +89,7 @@ public class WireProtocolSession
     private final AccioMetastore accioMetastore;
     private final CacheManager cacheManager;
     private final CachedTableMapping cachedTableMapping;
+    private final Authentication authentication;
 
     public WireProtocolSession(
             RegObjectFactory regObjectFactory,
@@ -96,7 +98,8 @@ public class WireProtocolSession
             AccioConfig accioConfig,
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
-            CachedTableMapping cachedTableMapping)
+            CachedTableMapping cachedTableMapping,
+            Authentication authentication)
     {
         this.sqlParser = new SqlParser();
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
@@ -106,6 +109,7 @@ public class WireProtocolSession
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
+        this.authentication = requireNonNull(authentication, "authentication is null");
     }
 
     public int getParamTypeOid(String statementName, int fieldPosition)
@@ -191,7 +195,11 @@ public class WireProtocolSession
 
     public boolean doAuthentication(String password)
     {
-        return true;
+        String username = getClientUser();
+        if (username == null) {
+            return false;
+        }
+        return authentication.authenticate(username, password);
     }
 
     public Optional<List<Column>> describePortal(String name)

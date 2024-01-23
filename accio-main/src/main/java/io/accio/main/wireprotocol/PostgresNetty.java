@@ -26,6 +26,7 @@ import io.accio.main.PostgresWireProtocolConfig;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.netty.ChannelBootstrapFactory;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
+import io.accio.main.wireprotocol.auth.Authentication;
 import io.accio.main.wireprotocol.ssl.SslContextProvider;
 import io.accio.main.wireprotocol.ssl.SslReqHandler;
 import io.airlift.log.Logger;
@@ -92,6 +93,7 @@ public class PostgresNetty
     private final CacheManager cacheManager;
     private final CachedTableMapping cachedTableMapping;
     private final AccioConfig accioConfig;
+    private final Authentication authentication;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -103,7 +105,8 @@ public class PostgresNetty
             SqlConverter sqlConverter,
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
-            CachedTableMapping cachedTableMapping)
+            CachedTableMapping cachedTableMapping,
+            Authentication authentication)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -119,6 +122,7 @@ public class PostgresNetty
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
+        this.authentication = requireNonNull(authentication, "authentication is null");
     }
 
     public void start()
@@ -134,7 +138,7 @@ public class PostgresNetty
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
                 WireProtocolSession wireProtocolSession =
-                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioConfig, accioMetastore, cacheManager, cachedTableMapping);
+                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioConfig, accioMetastore, cacheManager, cachedTableMapping, authentication);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

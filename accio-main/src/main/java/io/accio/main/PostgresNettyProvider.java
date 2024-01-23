@@ -21,6 +21,7 @@ import io.accio.cache.CachedTableMapping;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.wireprotocol.PostgresNetty;
+import io.accio.main.wireprotocol.auth.Authentication;
 import io.accio.main.wireprotocol.ssl.SslContextProvider;
 import org.elasticsearch.common.network.NetworkService;
 
@@ -42,6 +43,7 @@ public class PostgresNettyProvider
     private final AccioMetastore accioMetastore;
     private final CacheManager cacheManager;
     private final CachedTableMapping cachedTableMapping;
+    private final Authentication authentication;
 
     @Inject
     public PostgresNettyProvider(
@@ -53,7 +55,8 @@ public class PostgresNettyProvider
             SqlConverter sqlConverter,
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
-            CachedTableMapping cachedTableMapping)
+            CachedTableMapping cachedTableMapping,
+            Authentication authentication)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
         this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
@@ -64,6 +67,7 @@ public class PostgresNettyProvider
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
+        this.authentication = requireNonNull(authentication, "authentication is null");
     }
 
     @Override
@@ -80,7 +84,8 @@ public class PostgresNettyProvider
                 sqlConverter,
                 accioMetastore,
                 cacheManager,
-                cachedTableMapping);
+                cachedTableMapping,
+                authentication);
         postgresNetty.start();
         return postgresNetty;
     }
