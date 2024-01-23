@@ -29,6 +29,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.intellij.lang.annotations.Language;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -94,10 +96,10 @@ public class TestingWireProtocolClient
      *
      * @see <a href="https://www.postgresql.org/docs/9.3/protocol-message-formats.html">protocol-message-formats</a>
      */
-    public void sendStartUpMessage(int version, String password, String database, String user)
+    public void sendStartUpMessage(int version, @Nullable String password, String database, String user)
             throws IOException
     {
-        byte[] startup = getStartUpByteArray(password, database, user);
+        byte[] startup = password == null || password.isEmpty() ? getStartUpByteArray(database, user) : getStartUpByteArray(password, database, user);
         int len = 4 + startup.length + 4;
         ByteBuf buffer = Unpooled.buffer();
         buffer.writeInt(len);
@@ -110,6 +112,11 @@ public class TestingWireProtocolClient
     private byte[] getStartUpByteArray(String password, String database, String user)
     {
         return String.format("password\0%s\0database\0%s\0user\0%s\0", password, database, user).getBytes(UTF_8);
+    }
+
+    private byte[] getStartUpByteArray(String database, String user)
+    {
+        return String.format("database\0%s\0user\0%s\0", database, user).getBytes(UTF_8);
     }
 
     /**
@@ -200,6 +207,19 @@ public class TestingWireProtocolClient
         ByteBuf buffer = Unpooled.buffer();
         buffer.writeByte('P');
         byte[] nameBytes = toCStringBytes(name);
+        int len = 4 + nameBytes.length;
+        buffer.writeInt(len);
+        buffer.writeBytes(nameBytes);
+        out.write(buffer.array(), 0, len + 1);
+        out.flush();
+    }
+
+    public void sendPasswordMessage(String password)
+            throws IOException
+    {
+        ByteBuf buffer = Unpooled.buffer();
+        buffer.writeByte('p');
+        byte[] nameBytes = toCStringBytes(password);
         int len = 4 + nameBytes.length;
         buffer.writeInt(len);
         buffer.writeBytes(nameBytes);
@@ -694,6 +714,13 @@ public class TestingWireProtocolClient
     {
         byte[] authOkResponse = readBytes(9);
         assertThat(authOkResponse).isEqualTo(new byte[] {'R', 0, 0, 0, 8, 0, 0, 0, 0});
+    }
+
+    public void assertAuthenticationCleartextPassword()
+            throws IOException
+    {
+        byte[] response = readBytes(12);
+        assertThat(response).isEqualTo(new byte[] {'R', 0, 0, 0, 8, 0, 0, 0, 3, 0, 0, 0});
     }
 
     public void assertAuthError(String expectedMessage)

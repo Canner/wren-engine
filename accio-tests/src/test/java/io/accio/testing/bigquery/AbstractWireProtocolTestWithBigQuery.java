@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
+import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractWireProtocolTestWithBigQuery
         extends AbstractWireProtocolTest
@@ -45,6 +46,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
                 .put("bigquery.location", "asia-east1")
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
+                .put("pg-wire-protocol.auth.file", requireNonNull(getClass().getClassLoader().getResource("accounts")).getPath())
                 .put("accio.datasource.type", "bigquery");
 
         try {
