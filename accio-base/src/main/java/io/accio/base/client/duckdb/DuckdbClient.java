@@ -71,7 +71,6 @@ public final class DuckdbClient
         LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
         executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
         LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
-
         // TODO: Known issue: https://github.com/duckdb/duckdb/issues/10062
         // executeDDL(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
         // LOG.info("Set home directory to %s", duckDBConfig.getHomeDirectory());
@@ -192,6 +191,8 @@ public final class DuckdbClient
         Connection connection = ((DuckDBConnection) duckDBConnection).duplicate();
         Statement statement = connection.createStatement();
         statement.execute("set search_path = 'main'");
+        // install extensions from stable repository
+        statement.execute("SET custom_extension_repository = 'http://extensions.duckdb.org'");
         return connection;
     }
 
