@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -74,6 +75,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithBigquery
@@ -724,6 +726,34 @@ public class TestWireProtocolWithBigquery
     }
 
     @Test
+    public void testAuthMessageFlow()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, "wah", "test", "ina");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+        }
+
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, null, "test", "ina");
+            protocolClient.assertAuthenticationCleartextPassword();
+            protocolClient.sendPasswordMessage("wah");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+        }
+
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, null, "test", "fakeuser");
+            protocolClient.assertAuthenticationCleartextPassword();
+            protocolClient.sendPasswordMessage(MOCK_PASSWORD);
+            protocolClient.assertErrorMessage(".*not found or permission denied");
+        }
+    }
+
+    @Test
     public void testJdbcConnection()
             throws Exception
     {
@@ -1208,6 +1238,30 @@ public class TestWireProtocolWithBigquery
             result.next();
             assertThat(result.getLong(1)).isEqualTo(1L);
         }
+    }
+
+    @Test
+    public void testAuth()
+    {
+        Properties props = new Properties();
+        props.setProperty("password", "wah");
+        props.setProperty("user", "ina");
+        props.setProperty("ssl", "false");
+        props.setProperty("currentSchema", getDefaultSchema());
+        assertThatNoException().isThrownBy(() -> createConnection(props).close());
+        props.setProperty("user", "gura");
+        props.setProperty("password", "a");
+        assertThatNoException().isThrownBy(() -> createConnection(props).close());
+        props.setProperty("user", "pekochan");
+        props.setProperty("password", "pekopeko");
+        props.setProperty("user", "notfound");
+        assertThatThrownBy(() -> createConnection(props)).hasMessageContaining("not found or permission denied");
+        props.setProperty("user", "ina");
+        props.setProperty("password", "wrong");
+        assertThatThrownBy(() -> createConnection(props)).hasMessageContaining("not found or permission denied");
+        props.setProperty("user", "");
+        props.setProperty("password", "emptypass");
+        assertThatThrownBy(() -> createConnection(props)).hasMessageContaining("user is empty");
     }
 
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)

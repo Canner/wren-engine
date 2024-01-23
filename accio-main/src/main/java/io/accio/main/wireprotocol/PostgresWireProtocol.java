@@ -51,7 +51,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
-import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 public class PostgresWireProtocol
@@ -187,16 +186,13 @@ public class PostgresWireProtocol
 
     private void initAuthentication(Channel channel)
     {
-        finishAuthentication(channel, "");
-
-        // TODO: support auth
-        // Optional<String> password = wireProtocolSession.getPassword();
-        // if (password.isPresent()) {
-        //     finishAuthentication(channel, password.get());
-        // }
-        // else {
-        //     Messages.sendAuthenticationCleartextPassword(channel);
-        // }
+        Optional<String> password = wireProtocolSession.getPassword();
+        if (password.isPresent()) {
+            finishAuthentication(channel, password.get());
+        }
+        else {
+            Messages.sendAuthenticationCleartextPassword(channel);
+        }
     }
 
     private void handlePassword(ByteBuf buffer, final Channel channel)
@@ -208,9 +204,9 @@ public class PostgresWireProtocol
     private void finishAuthentication(Channel channel, String password)
     {
         try {
-            String clientUser = wireProtocolSession.getClientUser();
-            if (isNull(clientUser)) {
-                Messages.sendAuthenticationError(channel, format("User %s does not exist", clientUser));
+            Optional<String> clientUser = wireProtocolSession.getClientUser();
+            if (clientUser.isEmpty() || clientUser.get().isEmpty()) {
+                Messages.sendAuthenticationError(channel, "user is empty");
             }
             if (wireProtocolSession.doAuthentication(password)) {
                 Messages.sendAuthenticationOK(channel)

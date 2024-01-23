@@ -56,9 +56,14 @@ public abstract class AbstractWireProtocolTest
     protected Connection createConnection()
             throws SQLException
     {
+        return createConnection(getDefaultProperties());
+    }
+
+    protected Connection createConnection(Properties props)
+            throws SQLException
+    {
         HostAndPort hostAndPort = server().getPgHostAndPort();
         String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), getDefaultCatalog());
-        Properties props = getDefaultProperties();
         return DriverManager.getConnection(url, props);
     }
 
