@@ -56,6 +56,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -94,6 +95,7 @@ public class PostgresNetty
     private final CachedTableMapping cachedTableMapping;
     private final AccioConfig accioConfig;
     private final Authentication authentication;
+    private final NioEventLoopGroup nioEventLoopGroup;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -123,12 +125,13 @@ public class PostgresNetty
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.authentication = requireNonNull(authentication, "authentication is null");
+        this.nioEventLoopGroup = new NioEventLoopGroup(threadCount);
     }
 
     public void start()
     {
         this.openChannels = new Netty4OpenChannelsHandler(LOGGER);
-        this.bootstrap = ChannelBootstrapFactory.newChannelBootstrap(settings, new NioEventLoopGroup(threadCount));
+        this.bootstrap = ChannelBootstrapFactory.newChannelBootstrap(settings, nioEventLoopGroup);
 
         bootstrap.childHandler(new ChannelInitializer()
         {
@@ -259,6 +262,12 @@ public class PostgresNetty
         if (openChannels != null) {
             openChannels.close();
             openChannels = null;
+        }
+        try {
+            nioEventLoopGroup.shutdownGracefully().get();
+        }
+        catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
         }
         LOGGER.info("close all channels.");
     }

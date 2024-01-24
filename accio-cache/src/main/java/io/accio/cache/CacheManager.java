@@ -298,7 +298,9 @@ public class CacheManager
     @PreDestroy
     public void stop()
     {
-        refreshExecutor.shutdown();
+        refreshExecutor.shutdownNow();
+        retryExecutor.shutdownNow();
+        executorService.shutdownNow();
         cleanTempFiles();
     }
 
