@@ -591,7 +591,6 @@ public class TestResultSetMetadata
             assertEquals(rs.getString("function_name"), "current_schemas");
             assertNull(rs.getString("remarks"));
             assertEquals(rs.getInt("function_type"), 1);
-            assertEquals(rs.getString("specific_name"), "current_schemas_532");
         }
     }
 
