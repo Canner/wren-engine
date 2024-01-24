@@ -5,6 +5,7 @@ import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 
 import java.io.Closeable;
@@ -93,6 +94,7 @@ public class DuckdbTaskManager
         }
     }
 
+    @PreDestroy
     @Override
     public void close()
             throws IOException
