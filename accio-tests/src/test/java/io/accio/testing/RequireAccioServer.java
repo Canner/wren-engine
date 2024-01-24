@@ -77,7 +77,7 @@ public abstract class RequireAccioServer
     public void init()
     {
         this.accioServer = createAccioServer();
-        this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(300, SECONDS))));
+        this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS))));
         closer.register(accioServer);
         prepare();
     }
