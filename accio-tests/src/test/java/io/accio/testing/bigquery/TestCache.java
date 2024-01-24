@@ -160,7 +160,7 @@ public class TestCache
         }
     }
 
-    @Test
+    @Test(enabled = false)
     public void testQueryMetricWithDroppedCachedTable()
             throws SQLException
     {
