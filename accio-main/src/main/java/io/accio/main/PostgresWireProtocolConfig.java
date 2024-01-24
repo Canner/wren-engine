@@ -25,7 +25,7 @@ public class PostgresWireProtocolConfig
 
     private String port = "7432";
     private boolean sslEnable;
-    private int nettyThreadCount;
+    private int nettyThreadCount = 2;
     private File authFile = new File("etc/accounts");
 
     @NotNull
