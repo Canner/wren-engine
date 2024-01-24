@@ -25,10 +25,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static io.accio.base.Utils.randomIntString;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.base.dto.Model.model;
 import static io.accio.testing.WebApplicationExceptionAssert.assertWebApplicationException;
+import static java.lang.String.format;
 import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,6 +73,7 @@ public class TestMDLResource
                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .put("bigquery.location", "asia-east1")
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
+                .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("accio.directory", mdlDir.toAbsolutePath().toString())
                 .put("accio.datasource.type", "bigquery");
 
