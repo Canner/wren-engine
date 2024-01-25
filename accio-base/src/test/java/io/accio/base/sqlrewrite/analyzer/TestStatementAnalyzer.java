@@ -20,6 +20,7 @@ import com.google.common.collect.Multimap;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
+import io.accio.base.sqlrewrite.AbstractTestFramework;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.ComparisonExpression;
@@ -31,6 +32,7 @@ import io.trino.sql.tree.StringLiteral;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 import static io.accio.base.AccioMDL.EMPTY;
@@ -47,6 +49,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestStatementAnalyzer
+        extends AbstractTestFramework
 {
     public static final SqlParser sqlParser = new SqlParser();
 
@@ -135,5 +138,61 @@ public class TestStatementAnalyzer
                         new SimplePredicate(t1, "c2", ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL, new LongLiteral("123")),
                         new SimplePredicate(t2, "c1", ComparisonExpression.Operator.NOT_EQUAL, new StringLiteral("bar")),
                         new SimplePredicate(t2, "c2", ComparisonExpression.Operator.LESS_THAN, new GenericLiteral("DATE", "2020-01-01"))));
+    }
+
+    @Test
+    public void testScope()
+    {
+        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                .build();
+        Function<String, Analysis> analyzeSql = (sql) -> analyze(
+                sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL)),
+                sessionContext,
+                fromManifest(manifest));
+
+        Optional<Scope> scope = analyzeSql.apply("SELECT * FROM table_1").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = analyzeSql.apply("SELECT * FROM table_2").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = analyzeSql.apply("SELECT * FROM test.test.foo").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = analyzeSql.apply("SELECT * FROM test.foo").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = analyzeSql.apply("SELECT * FROM foo").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = analyzeSql.apply("SELECT * FROM (select * from test.test.foo) table_1").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = analyzeSql.apply("WITH t1 as (SELECT * FROM (select * from test.test.foo) table_1) select * from t1").getQueryScope();
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
     }
 }

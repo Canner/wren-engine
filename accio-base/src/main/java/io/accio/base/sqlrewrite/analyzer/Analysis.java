@@ -25,6 +25,7 @@ import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
+import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
@@ -35,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -56,6 +58,9 @@ public class Analysis
     private final Set<View> views = new HashSet<>();
     private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
     private final List<SimplePredicate> simplePredicates = new ArrayList<>();
+
+    private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
+    private Scope queryScope;
 
     Analysis(Statement statement)
     {
@@ -170,6 +175,26 @@ public class Analysis
     public Multimap<CatalogSchemaTableName, String> getCollectedColumns()
     {
         return collectedColumns;
+    }
+
+    void addTypeCoercion(NodeRef<Node> nodeRef, Node node)
+    {
+        typeCoercionMap.put(nodeRef, node);
+    }
+
+    public Map<NodeRef<Node>, Node> getTypeCoercionMap()
+    {
+        return typeCoercionMap;
+    }
+
+    public Optional<Scope> getQueryScope()
+    {
+        return Optional.ofNullable(queryScope);
+    }
+
+    public void setQueryScope(Scope queryScope)
+    {
+        this.queryScope = queryScope;
     }
 
     /**

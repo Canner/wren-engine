@@ -281,7 +281,6 @@ public final class Utils
         return Scope.builder()
                 .parent(context)
                 .relationType(new RelationType(fields.build()))
-                .isTableScope(true)
                 .build();
     }
 
