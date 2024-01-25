@@ -48,6 +48,7 @@ import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -55,6 +56,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.dto.TimeUnit.timeUnit;
 import static io.accio.base.sqlrewrite.Utils.toCatalogSchemaTableName;
+import static io.accio.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
+import static io.accio.base.sqlrewrite.analyzer.matcher.PredicateMatcher.PREDICATE_MATCHER;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -221,7 +224,8 @@ public final class StatementAnalyzer
         {
             Scope sourceScope = analyzeFrom(node, scope);
             analyzeSelect(node, sourceScope);
-            node.getHaving().map(having -> ExpressionAnalyzer.analyze(sourceScope, having));
+            node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
+            node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(sourceScope, having));
             return createAndAssignScope(scope, sourceScope.getRelationType());
         }
 
@@ -265,6 +269,24 @@ public final class StatementAnalyzer
                 return process(node.getFrom().get(), scope);
             }
             return Scope.builder().parent(scope).build();
+        }
+
+        private void analyzeWhere(Expression node, Scope scope)
+        {
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, node);
+            Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
+            expressionAnalysis.getPredicates().stream()
+                    .filter(PREDICATE_MATCHER::shapeMatches)
+                    .forEach(comparisonExpression -> {
+                        Expression expression = comparisonExpression.getLeft();
+                        Optional.ofNullable(fields.get(NodeRef.of(expression)))
+                                .ifPresent(field -> analysis.addSimplePredicate(
+                                        new SimplePredicate(
+                                                field.getTableName(),
+                                                field.getColumnName(),
+                                                comparisonExpression.getOperator(),
+                                                comparisonExpression.getRight())));
+                    });
         }
 
         @Override

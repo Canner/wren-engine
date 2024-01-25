@@ -22,7 +22,6 @@ import io.accio.base.sqlrewrite.AccioDataLineage;
 import io.accio.main.AccioMetastore;
 import io.accio.main.web.dto.ColumnLineageInputDto;
 import io.accio.main.web.dto.LineageResult;
-import io.accio.main.web.dto.SqlLineageInputDto;
 import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
@@ -121,14 +120,5 @@ public class LineageResource
             }
         }
         throw new IllegalArgumentException("Dataset " + objectName + " is not a model, metric or cumulative metric");
-    }
-
-    @GET
-    @Path("sql")
-    public void getSqlLineage(
-            SqlLineageInputDto inputDto,
-            @Suspended AsyncResponse asyncResponse)
-    {
-        // TODO: wait sql lineage implemented
     }
 }

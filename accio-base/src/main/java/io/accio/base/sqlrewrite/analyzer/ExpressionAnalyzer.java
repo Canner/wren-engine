@@ -15,16 +15,19 @@
 package io.accio.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
+import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.util.Objects.requireNonNull;
 
@@ -37,14 +40,15 @@ public class ExpressionAnalyzer
         ExpressionVisitor visitor = new ExpressionVisitor(scope);
         visitor.process(expression);
 
-        return new ExpressionAnalysis(visitor.getCollectedFields());
+        return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates());
     }
 
     private static class ExpressionVisitor
             extends DefaultTraversalVisitor<Void>
     {
         private final Scope scope;
-        private final List<Field> collectedFields = new ArrayList<>();
+        private final Map<NodeRef<Expression>, Field> referenceFields = new HashMap<>();
+        private final List<ComparisonExpression> predicates = new ArrayList<>();
 
         public ExpressionVisitor(Scope scope)
         {
@@ -56,9 +60,10 @@ public class ExpressionAnalyzer
         {
             QualifiedName qualifiedName = getQualifiedName(node);
             if (qualifiedName != null) {
-                collectedFields.addAll(scope.getRelationType().getFields().stream()
+                scope.getRelationType().getFields().stream()
                         .filter(field -> field.canResolve(qualifiedName))
-                        .collect(toImmutableList()));
+                        .findAny()
+                        .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             }
             return null;
         }
@@ -67,15 +72,30 @@ public class ExpressionAnalyzer
         protected Void visitIdentifier(Identifier node, Void context)
         {
             QualifiedName qualifiedName = QualifiedName.of(ImmutableList.of(node));
-            collectedFields.addAll(scope.getRelationType().getFields().stream()
+            scope.getRelationType().getFields().stream()
                     .filter(field -> field.canResolve(qualifiedName))
-                    .collect(toImmutableList()));
+                    .findAny()
+                    .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             return null;
         }
 
-        public List<Field> getCollectedFields()
+        @Override
+        protected Void visitComparisonExpression(ComparisonExpression node, Void context)
         {
-            return collectedFields;
+            process(node.getLeft());
+            process(node.getRight());
+            predicates.add(node);
+            return null;
+        }
+
+        public Map<NodeRef<Expression>, Field> getReferenceFields()
+        {
+            return referenceFields;
+        }
+
+        public List<ComparisonExpression> getPredicates()
+        {
+            return predicates;
         }
     }
 }
