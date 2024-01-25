@@ -34,6 +34,9 @@ public final class IntervalLiteralUtil
         String[] strings = text.split(" ");
         String value = strings[0].replaceFirst("[-+]", "");
         IntervalLiteral.Sign sign = (strings[0].startsWith("-")) ? NEGATIVE : POSITIVE;
+        if (strings[1].equalsIgnoreCase("week")) {
+            return new IntervalLiteral(location, Long.toString(Long.parseLong(value) * 7), sign, IntervalLiteral.IntervalField.DAY, Optional.empty());
+        }
         IntervalLiteral.IntervalField field = IntervalLiteral.IntervalField.valueOf(strings[1].toUpperCase(Locale.ROOT));
 
         return new IntervalLiteral(location, value, sign, field, Optional.empty());
