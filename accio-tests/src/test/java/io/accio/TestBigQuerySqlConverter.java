@@ -14,8 +14,10 @@
 
 package io.accio;
 
+import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.connector.bigquery.BigQueryClient;
+import io.accio.main.AccioMetastore;
 import io.accio.main.connector.bigquery.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
 import io.accio.main.connector.bigquery.BigQuerySqlConverter;
@@ -45,7 +47,9 @@ public class TestBigQuerySqlConverter
                 BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
-        bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata);
+        AccioMetastore accioMetastore = new AccioMetastore();
+        accioMetastore.setAccioMDL(AccioMDL.EMPTY);
+        bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, accioMetastore);
     }
 
     @Test

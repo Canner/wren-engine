@@ -17,6 +17,7 @@ package io.accio.main.connector.bigquery;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
 import io.accio.main.sql.bigquery.FlattenGroupingElements;
@@ -29,6 +30,7 @@ import io.accio.main.sql.bigquery.RewriteNamesToAlias;
 import io.accio.main.sql.bigquery.RewriteToBigQueryFunction;
 import io.accio.main.sql.bigquery.RewriteToBigQueryType;
 import io.accio.main.sql.bigquery.TransformCorrelatedJoinToJoin;
+import io.accio.main.sql.bigquery.TypeCoercionRewrite;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Node;
 import org.intellij.lang.annotations.Language;
@@ -47,11 +49,14 @@ public class BigQuerySqlConverter
 {
     private static final Logger LOG = Logger.get(BigQuerySqlConverter.class);
     private final Metadata metadata;
+    private final AccioMetastore accioMetastore;
 
     @Inject
-    public BigQuerySqlConverter(Metadata metadata)
+    public BigQuerySqlConverter(Metadata metadata,
+            AccioMetastore accioMetastore)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
+        this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
     }
 
     @Override
@@ -76,7 +81,8 @@ public class BigQuerySqlConverter
                 RemoveParameterInTypesInCast.INSTANCE,
                 FlattenGroupingElements.INSTANCE,
                 RewriteNamesToAlias.INSTANCE,
-                RewriteArithmetic.INSTANCE);
+                RewriteArithmetic.INSTANCE,
+                new TypeCoercionRewrite(accioMetastore.getAnalyzedMDL().getAccioMDL()));
 
         LOG.info("[Input sql]: %s", sql);
 
