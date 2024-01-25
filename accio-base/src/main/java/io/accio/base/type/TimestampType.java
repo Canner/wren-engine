@@ -32,7 +32,7 @@ import static java.util.Locale.ENGLISH;
 public class TimestampType
         extends BaseTimestampType
 {
-    public static final PGType TIMESTAMP = new TimestampType();
+    public static final PGType<?> TIMESTAMP = new TimestampType();
 
     private static final int OID = 1114;
     private static final String NAME = "timestamp";
