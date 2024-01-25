@@ -31,7 +31,6 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
-import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -277,7 +276,7 @@ public final class StatementAnalyzer
             ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, node);
             Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
             expressionAnalysis.getPredicates().stream()
-                    .filter(f -> PREDICATE_MATCHER.shapeMatches(f))
+                    .filter(PREDICATE_MATCHER::shapeMatches)
                     .forEach(comparisonExpression -> {
                         Expression expression = comparisonExpression.getLeft();
                         Optional.ofNullable(fields.get(NodeRef.of(expression)))
@@ -286,7 +285,7 @@ public final class StatementAnalyzer
                                                 field.getTableName(),
                                                 field.getColumnName(),
                                                 comparisonExpression.getOperator(),
-                                                (Literal) comparisonExpression.getRight())));
+                                                comparisonExpression.getRight())));
                     });
         }
 

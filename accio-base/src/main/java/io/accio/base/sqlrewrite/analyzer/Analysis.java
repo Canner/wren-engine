@@ -23,8 +23,8 @@ import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
-import io.trino.sql.tree.Literal;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
@@ -186,7 +186,7 @@ public class Analysis
                 CatalogSchemaTableName tableName,
                 String columnName,
                 Operator operator,
-                Literal value)
+                Expression value)
         {
             this.tableName = requireNonNull(tableName);
             this.columnName = requireNonNull(columnName);

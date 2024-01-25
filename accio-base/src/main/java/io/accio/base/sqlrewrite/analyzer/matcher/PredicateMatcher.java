@@ -24,6 +24,7 @@ public class PredicateMatcher
         Expression left = ((ComparisonExpression) node).getLeft();
         Expression right = ((ComparisonExpression) node).getRight();
 
-        return (left instanceof DereferenceExpression || left instanceof Identifier) && right instanceof Literal;
+        return (left instanceof DereferenceExpression || left instanceof Identifier) &&
+                (right instanceof Literal || right instanceof DereferenceExpression || right instanceof Identifier);
     }
 }
