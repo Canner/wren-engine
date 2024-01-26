@@ -26,6 +26,7 @@ import io.airlift.log.Logger;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
@@ -69,6 +70,11 @@ public abstract class AbstractWireProtocolTestWithBigQuery
         return TestingAccioServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();
+    }
+
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("tpch_mdl.json")).getPath());
     }
 
     @Override
