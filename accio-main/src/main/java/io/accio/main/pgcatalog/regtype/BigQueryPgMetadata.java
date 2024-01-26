@@ -16,6 +16,7 @@ package io.accio.main.pgcatalog.regtype;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import io.accio.base.ConnectorRecordIterator;
 import io.accio.main.metadata.Metadata;
 
 import javax.inject.Inject;
@@ -44,9 +45,15 @@ public class BigQueryPgMetadata
     {
         // TODO: change to use bigquery api to save cost
         // https://github.com/Canner/canner-metric-layer/issues/63
-        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM %s.%s", REGPROC.getNameField(), metadata.getPgCatalogName(), REGPROC.getTableName()), ImmutableList.of()))
-                .map(row -> new RegProc((long) row[0], (String) row[1]))
-                .collect(toImmutableList());
+        try (ConnectorRecordIterator iter = metadata.directQuery(format("SELECT oid, %s FROM %s.%s",
+                REGPROC.getNameField(), metadata.getPgCatalogName(), REGPROC.getTableName()), ImmutableList.of())) {
+            return Streams.stream(iter)
+                    .map(row -> new RegProc((long) row[0], (String) row[1]))
+                    .collect(toImmutableList());
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -54,8 +61,14 @@ public class BigQueryPgMetadata
     {
         // TODO: change to use bigquery api to save cost
         // https://github.com/Canner/canner-metric-layer/issues/63
-        return Streams.stream(metadata.directQuery(format("SELECT oid, %s FROM %s.%s", REGCLASS.getNameField(), metadata.getPgCatalogName(), REGCLASS.getTableName()), ImmutableList.of()))
-                .map(row -> new RegObjectImpl((long) row[0], (String) row[1]))
-                .collect(toImmutableList());
+        try (ConnectorRecordIterator iter = metadata.directQuery(format("SELECT oid, %s FROM %s.%s",
+                REGCLASS.getNameField(), metadata.getPgCatalogName(), REGCLASS.getTableName()), ImmutableList.of())) {
+            return Streams.stream(iter)
+                    .map(row -> new RegObjectImpl((long) row[0], (String) row[1]))
+                    .collect(toImmutableList());
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

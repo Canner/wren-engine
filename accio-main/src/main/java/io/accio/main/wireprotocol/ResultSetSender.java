@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import java.util.Iterator;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -32,7 +31,7 @@ class ResultSetSender
 {
     private final String query;
     private final Channel channel;
-    private final Iterator<Object[]> connectorRecordIterator;
+    private final ConnectorRecordIterator connectorRecordIterator;
     private final List<PGType> schema;
     private final int maxRows;
 
@@ -92,6 +91,7 @@ class ResultSetSender
     }
 
     public long sendResultSet()
+            throws Exception
     {
         while (connectorRecordIterator.hasNext()) {
             sendRow(connectorRecordIterator.next());
@@ -102,6 +102,7 @@ class ResultSetSender
             }
         }
         totalRowCount += localRowCount;
+        connectorRecordIterator.close();
         allFinished(false);
         return totalRowCount;
     }
