@@ -29,15 +29,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
 public class AccioManager
 {
@@ -61,7 +58,7 @@ public class AccioManager
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.pgCatalogManager = requireNonNull(pgCatalogManager, "pgCatalogManager is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        File[] mdlFiles = accioMDLDirectory.listFiles();
+        File[] mdlFiles = accioMDLDirectory.listFiles((dir, name) -> name.endsWith(".json"));
         if (mdlFiles != null && mdlFiles.length > 0) {
             deployAccioMDLFromDir(mdlFiles);
         }
@@ -77,11 +74,8 @@ public class AccioManager
     private void deployAccioMDLFromDir(File[] mdlFiles)
             throws IOException
     {
-        List<File> mdls = Arrays.stream(mdlFiles)
-                .filter(file -> file.getName().endsWith(".json"))
-                .collect(toList());
-        checkArgument(mdls.size() == 1, "There should be only one mdl file in the directory");
-        accioMDLFile = mdls.get(0);
+        checkArgument(mdlFiles.length == 1, "There should be only one mdl file in the directory");
+        accioMDLFile = mdlFiles[0];
         deployAccioMDLFromFile();
     }
 
