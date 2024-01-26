@@ -72,16 +72,14 @@ public final class StatementAnalyzer
 {
     private StatementAnalyzer() {}
 
-    public static Analysis analyze(Statement statement, SessionContext sessionContext, AccioMDL accioMDL)
+    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, AccioMDL accioMDL)
     {
-        return analyze(statement, sessionContext, accioMDL, null);
+        return analyze(analysis, statement, sessionContext, accioMDL, null);
     }
 
-    public static Analysis analyze(Statement statement, SessionContext sessionContext, AccioMDL accioMDL, TypeCoercion typeCoercion)
+    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, AccioMDL accioMDL, TypeCoercion typeCoercion)
     {
-        Analysis analysis = new Analysis(statement);
         Scope queryScope = new Visitor(sessionContext, analysis, accioMDL, typeCoercion).process(statement, Optional.empty());
-        analysis.setQueryScope(queryScope);
 
         // add models directly used in sql query
         analysis.addModels(
@@ -120,8 +118,7 @@ public final class StatementAnalyzer
                 .collect(toUnmodifiableSet());
 
         analysis.addViews(views);
-
-        return analysis;
+        return queryScope;
     }
 
     private static class Visitor
@@ -164,8 +161,9 @@ public final class StatementAnalyzer
                 if (withQuery.isPresent()) {
                     // currently we only care about the table that is actually a model instead of a alias table that use cte table
                     // return empty scope here.
-                    Analysis analyzed = analyze(withQuery.get().getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null));
-                    return analyzed.getQueryScope().map(value -> createAndAssignScope(scope, value))
+                    Analysis analyzed = new Analysis(withQuery.get().getQuery());
+                    return Optional.ofNullable(analyze(analyzed, withQuery.get().getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
+                            .map(value -> createAndAssignScope(scope, value))
                             .orElse(Scope.builder().parent(scope).build());
                 }
             }
@@ -426,8 +424,8 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
         {
-            Optional<Scope> analyzed = StatementAnalyzer.analyze(node.getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)).getQueryScope();
-            return analyzed.map(value -> createAndAssignScope(scope, value))
+            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
+                    .map(value -> createAndAssignScope(scope, value))
                     .orElseGet(() -> Scope.builder().parent(scope).build());
         }
 

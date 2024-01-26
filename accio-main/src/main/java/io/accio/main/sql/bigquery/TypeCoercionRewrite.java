@@ -42,7 +42,8 @@ public class TypeCoercionRewrite
     @Override
     public Node rewrite(Node node, Metadata metadata)
     {
-        Analysis analysis = StatementAnalyzer.analyze((Statement) node, SessionContext.builder()
+        Analysis analysis = new Analysis((Statement) node);
+        StatementAnalyzer.analyze(analysis, (Statement) node, SessionContext.builder()
                 .setCatalog(mdl.getCatalog())
                 .setSchema(mdl.getSchema())
                 .build(), mdl, new BigQueryTypeCoercion(mdl));

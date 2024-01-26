@@ -36,7 +36,8 @@ public class ViewInfo
     public static ViewInfo get(View view, AnalyzedMDL analyzedMDL, SessionContext sessionContext)
     {
         Query query = parseView(view.getStatement());
-        Analysis analysis = StatementAnalyzer.analyze(query, sessionContext, analyzedMDL.getAccioMDL());
+        Analysis analysis = new Analysis(query);
+        StatementAnalyzer.analyze(analysis, query, sessionContext, analyzedMDL.getAccioMDL());
         // sql in view can use metric rollup syntax
         query = (Query) MetricRollupRewrite.METRIC_ROLLUP_REWRITE.apply(query, sessionContext, analysis, analyzedMDL);
         return new ViewInfo(view.getName(), analysis.getAccioObjectNames(), query);

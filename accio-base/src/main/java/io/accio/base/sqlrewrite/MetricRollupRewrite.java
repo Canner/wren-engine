@@ -40,7 +40,9 @@ public class MetricRollupRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
-        return apply(root, sessionContext, StatementAnalyzer.analyze(root, sessionContext, analyzedMDL.getAccioMDL()), analyzedMDL);
+        Analysis analysis = new Analysis(root);
+        StatementAnalyzer.analyze(analysis, root, sessionContext, analyzedMDL.getAccioMDL());
+        return apply(root, sessionContext, analysis, analyzedMDL);
     }
 
     @Override
