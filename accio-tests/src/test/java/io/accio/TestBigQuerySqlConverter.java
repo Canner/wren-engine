@@ -16,6 +16,7 @@ package io.accio;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Manifest;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.AccioMetastore;
 import io.accio.main.connector.bigquery.BigQueryConfig;
@@ -52,7 +53,7 @@ public class TestBigQuerySqlConverter
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         AccioMetastore accioMetastore = new AccioMetastore();
-        accioMetastore.setAccioMDL(AccioMDL.EMPTY);
+        accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()));
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, accioMetastore);
     }
 
