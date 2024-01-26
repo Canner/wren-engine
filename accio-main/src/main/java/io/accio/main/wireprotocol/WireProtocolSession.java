@@ -308,6 +308,7 @@ public class WireProtocolSession
                         statementTrimmed,
                         isSessionCommand(rewrittenStatement),
                         QueryLevel.DATASOURCE));
+        queries.remove(preparedStmtPortalName(statementName, null));
         LOG.info("Create preparedStatement %s", statementName);
     }
 
@@ -352,6 +353,7 @@ public class WireProtocolSession
             catch (Exception e) {
                 LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", query.getPortal().get().getPreparedStatement().getStatement());
                 query.getPortal().get().close();
+                queries.remove(preparedStmtPortalName(statementName, null));
                 parseMetastoreSemiQuery(query.getPreparedStatement().getName(),
                         query.getPreparedStatement().getOriginalStatement(),
                         query.getPreparedStatement().getParamTypeOids());
@@ -374,6 +376,7 @@ public class WireProtocolSession
             catch (Exception e) {
                 LOG.debug(e, "Failed to execute SQL in METASTORE_SEMI level: %s", level2Query.getPreparedStatement().getStatement());
                 level2Query.getPortal().get().close();
+                queries.remove(preparedStmtPortalName(statementName, null));
                 parseDataSourceQuery(level2Query.getPreparedStatement().getName(),
                         level2Query.getPreparedStatement().getOriginalStatement(),
                         level2Query.getPreparedStatement().getParamTypeOids());
