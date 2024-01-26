@@ -27,13 +27,16 @@ import io.accio.base.type.PGType;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.TestingAccioServer;
+import org.testng.annotations.BeforeClass;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -66,6 +69,15 @@ public abstract class AbstractCacheTest
         catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @BeforeClass
+    @Override
+    public void init()
+    {
+        super.init();
+        AccioMDL mdl = getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
+        mdl.listCached().forEach(cached -> waitCacheReady(mdl.getCatalog(), mdl.getSchema(), cached.getName()));
     }
 
     protected ImmutableMap.Builder<String, String> getProperties()
@@ -120,6 +132,22 @@ public abstract class AbstractCacheTest
                 builder.add(returnResults);
             }
             return builder.build();
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void waitCacheReady(String catalog, String schema, String name)
+    {
+        try {
+            while (true) {
+                Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
+                if (cachedTable.isPresent()) {
+                    break;
+                }
+                Thread.sleep(1000);
+            }
         }
         catch (Exception e) {
             throw new RuntimeException(e);
