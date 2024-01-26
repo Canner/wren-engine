@@ -351,6 +351,7 @@ public class WireProtocolSession
             }
             catch (Exception e) {
                 LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", query.getPortal().get().getPreparedStatement().getStatement());
+                query.getPortal().get().close();
                 parseMetastoreSemiQuery(query.getPreparedStatement().getName(),
                         query.getPreparedStatement().getOriginalStatement(),
                         query.getPreparedStatement().getParamTypeOids());
@@ -372,6 +373,7 @@ public class WireProtocolSession
             }
             catch (Exception e) {
                 LOG.debug(e, "Failed to execute SQL in METASTORE_SEMI level: %s", level2Query.getPreparedStatement().getStatement());
+                level2Query.getPortal().get().close();
                 parseDataSourceQuery(level2Query.getPreparedStatement().getName(),
                         level2Query.getPreparedStatement().getOriginalStatement(),
                         level2Query.getPreparedStatement().getParamTypeOids());
@@ -446,11 +448,13 @@ public class WireProtocolSession
     }
 
     public void close(byte type, String name)
+            throws Exception
     {
         switch (type) {
             case 'P':
                 Portal portal = portals.get(name);
                 if (portal != null) {
+                    portal.getConnectorRecordIterable().close();
                     portals.remove(name);
                     queries.remove(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
                 }

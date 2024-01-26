@@ -52,14 +52,20 @@ public abstract class BaseJdbcRecordIterator<T>
     {
         requireNonNull(client, "client is null");
         connection = client.createConnection();
-        statement = connection.prepareStatement(sql);
-        setParameter(parameters);
-        resultSet = statement.executeQuery();
+        try {
+            statement = connection.prepareStatement(sql);
+            setParameter(parameters);
+            resultSet = statement.executeQuery();
 
-        this.resultSetMetaData = resultSet.getMetaData();
-        this.columnCount = resultSetMetaData.getColumnCount();
+            this.resultSetMetaData = resultSet.getMetaData();
+            this.columnCount = resultSetMetaData.getColumnCount();
 
-        hasNext = resultSet.next();
+            hasNext = resultSet.next();
+        }
+        catch (SQLException e) {
+            connection.close();
+            throw e;
+        }
     }
 
     protected void setParameter(List<Parameter> parameters)

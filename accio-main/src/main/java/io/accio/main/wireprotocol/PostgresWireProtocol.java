@@ -564,7 +564,12 @@ public class PostgresWireProtocol
         byte type = buffer.readByte();
         String portalOrStatementName = readCString(buffer);
         LOG.info("Close %s", portalOrStatementName);
-        wireProtocolSession.close(type, portalOrStatementName);
+        try {
+            wireProtocolSession.close(type, portalOrStatementName);
+        }
+        catch (Exception e) {
+            LOG.error(format("Close failed. Root cause is %s", e.getMessage()));
+        }
         Messages.sendCloseComplete(channel);
     }
 
