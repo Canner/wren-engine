@@ -15,6 +15,8 @@
 package io.accio.base.client.duckdb;
 
 import com.google.common.collect.ImmutableList;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import io.accio.base.AccioException;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
@@ -45,8 +47,9 @@ public final class DuckdbClient
         implements Client
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
-    private final Connection duckDBConnection;
+    private final DuckDBConnection duckDBConnection;
     private final DuckDBConfig duckDBConfig;
+    private final HikariDataSource ds;
 
     @Inject
     public DuckdbClient(DuckDBConfig duckDBConfig)
@@ -55,8 +58,16 @@ public final class DuckdbClient
             // The instance will be cleared after the process end. We don't need to
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
-            this.duckDBConnection = DriverManager.getConnection("jdbc:duckdb:");
+            this.duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
             this.duckDBConfig = duckDBConfig;
+            DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection);
+            HikariConfig config = new HikariConfig();
+            config.setDataSource(dataSource);
+            config.setPoolName("MY_POOL");
+            // config.setConnectionTimeout(checkOutTimeout);
+            config.setMinimumIdle(20);
+            config.setMaximumPoolSize(20);
+            ds = new HikariDataSource(config);
             init();
         }
         catch (SQLException | ClassNotFoundException e) {
@@ -185,15 +196,7 @@ public final class DuckdbClient
     public Connection createConnection()
             throws SQLException
     {
-        // Refer to the official doc, if we want to create multiple read-write connections,
-        // to the same database in-memory database instance, we can use the custom `duplicate()` method.
-        // https://duckdb.org/docs/api/java
-        Connection connection = ((DuckDBConnection) duckDBConnection).duplicate();
-        Statement statement = connection.createStatement();
-        statement.execute("set search_path = 'main'");
-        // install extensions from stable repository
-        statement.execute("SET custom_extension_repository = 'http://extensions.duckdb.org'");
-        return connection;
+        return ds.getConnection();
     }
 
     public DuckDBConfig getDuckDBConfig()
