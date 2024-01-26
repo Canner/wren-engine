@@ -390,8 +390,7 @@ public class CacheManager
 
     public List<Object> getDuckDBSettings()
     {
-        try {
-            ConnectorRecordIterator iter = query("SELECT * FROM duckdb_settings()", List.of());
+        try (ConnectorRecordIterator iter = query("SELECT * FROM duckdb_settings()", List.of())) {
             return ImmutableList.copyOf(iter);
         }
         catch (Exception e) {
