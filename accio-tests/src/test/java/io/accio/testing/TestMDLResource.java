@@ -87,6 +87,7 @@ public class TestMDLResource
             throws Exception
     {
         CheckOutputDto startUp = getDeployStatus();
+        assertThat(startUp.getStatus()).isEqualTo(CheckOutputDto.Status.READY);
         assertThat(startUp.getManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         assertThatNoException().isThrownBy(() -> deployMDL(updated));
         CheckOutputDto afterDeploy = getDeployStatus();

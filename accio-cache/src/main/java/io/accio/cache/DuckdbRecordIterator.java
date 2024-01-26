@@ -102,7 +102,7 @@ public class DuckdbRecordIterator
                 return ((Timestamp) value).toLocalDateTime();
             }
             if (pgType.equals(PGArray.VARCHAR_ARRAY)) {
-                return Arrays.asList((Object[]) ((DuckDBArray) value).getArray()).stream().map(Object::toString).collect(toList());
+                return Arrays.stream((Object[]) ((DuckDBArray) value).getArray()).map(Object::toString).collect(toList());
             }
             return value;
         }

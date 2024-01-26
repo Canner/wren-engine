@@ -19,9 +19,7 @@ import io.accio.base.AccioException;
 import io.accio.main.sql.PgOidTypeTableInfo;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
@@ -41,7 +39,6 @@ public abstract class AbstractRegObjectFactory
     public RegObject of(String objName)
     {
         requireNonNull(objName, "obj name can't be null");
-        List tmp = Streams.stream(this::getPgTableRecords).collect(Collectors.toList());
         Optional<RegObject> result = Streams.stream(this::getPgTableRecords).filter(regObject -> regObject.getName().equals(objName)).findFirst();
         if (result.isEmpty()) {
             throw new AccioException(NOT_FOUND, format("%s does not exist", objName));

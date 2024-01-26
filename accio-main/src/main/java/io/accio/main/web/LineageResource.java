@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static io.accio.base.AccioMDL.getColumnType;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.main.web.AccioExceptionMapper.bindAsyncResponse;
 import static java.util.Objects.requireNonNull;
@@ -84,7 +83,7 @@ public class LineageResource
                             .map(entry -> new LineageResult(
                                     entry.getKey(),
                                     entry.getValue().stream().map(column ->
-                                            new LineageResult.Column(column, Map.of("type", getColumnType(mdl, entry.getKey(), column)))).collect(toList())))
+                                            new LineageResult.Column(column, Map.of("type", mdl.getColumnType(entry.getKey(), column)))).collect(toList())))
                             .collect(Collectors.toList());
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));

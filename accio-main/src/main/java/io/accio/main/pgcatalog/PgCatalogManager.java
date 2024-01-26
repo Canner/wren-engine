@@ -24,8 +24,8 @@ import io.accio.main.pgcatalog.function.PgFunctionRegistry;
 import io.accio.main.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.log.Logger;
+import org.apache.commons.lang3.StringUtils;
 
-import static io.accio.base.AccioMDL.getColumnType;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
@@ -113,7 +113,7 @@ public class PgCatalogManager
         try {
             AccioMDL mdl = accioMetastore.getAnalyzedMDL().getAccioMDL();
             StringBuilder sb = new StringBuilder();
-            if (mdl.getSchema() != null && !mdl.getSchema().isEmpty()) {
+            if (StringUtils.isNotEmpty(mdl.getSchema())) {
                 sb.append(format("DROP SCHEMA IF EXISTS %s CASCADE;\n", mdl.getSchema()));
                 sb.append("CREATE SCHEMA IF NOT EXISTS ").append(mdl.getSchema()).append(";\n");
             }
@@ -133,7 +133,7 @@ public class PgCatalogManager
                         metric.getMeasure().getName(),
                         pgMetastore.handlePgType(metric.getMeasure().getType()),
                         metric.getWindow().getName(),
-                        getColumnType(mdl, metric.getName(), metric.getWindow().getName()));
+                        mdl.getColumnType(metric.getName(), metric.getWindow().getName()));
                 sb.append(format("CREATE TABLE IF NOT EXISTS %s.%s (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
             String syncSql = sb.toString();
