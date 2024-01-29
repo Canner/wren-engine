@@ -1264,6 +1264,59 @@ public class TestWireProtocolWithBigquery
         assertThatThrownBy(() -> createConnection(props)).hasMessageContaining("user is empty");
     }
 
+    @Test
+    public void testIntervalCompareWithTimestamp()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate FROM Lineitem WHERE shipdate > current_date + interval '1' day");
+                resultSet.next();
+            });
+        }
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate FROM Lineitem WHERE shipdate > current_timestamp + interval '1' day");
+                resultSet.next();
+            });
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate FROM Lineitem WHERE shipdate > current_date + interval '1 week'");
+                resultSet.next();
+            });
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate FROM Lineitem WHERE shipdate > current_date + interval '1' day AND shipdate > current_date + interval '1' day");
+                resultSet.next();
+            });
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate > current_date + interval '1' day FROM Lineitem");
+                resultSet.next();
+            });
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT shipdate > current_date + interval '1' day AND shipdate < now() FROM Lineitem");
+                resultSet.next();
+            });
+        }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT cast(shipdate as timestamp) = date_trunc('month', shipdate) FROM Lineitem");
+                resultSet.next();
+            });
+        }
+    }
+
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)
             throws IOException
     {

@@ -27,14 +27,14 @@ public class Scope
 {
     private final Optional<Scope> parent;
     private final RelationType relationType;
-    private final boolean isTableScope;
+    private final boolean isDataSourceScope;
     private final Map<String, WithQuery> namedQueries;
 
-    private Scope(Scope parent, RelationType relationType, boolean isTableScope, Map<String, WithQuery> namedQueries)
+    private Scope(Scope parent, RelationType relationType, boolean isDataSourceScope, Map<String, WithQuery> namedQueries)
     {
         this.parent = Optional.ofNullable(parent);
         this.relationType = requireNonNull(relationType, "relationType is null");
-        this.isTableScope = isTableScope;
+        this.isDataSourceScope = isDataSourceScope;
         this.namedQueries = requireNonNull(namedQueries, "namedQueries is null");
     }
 
@@ -48,9 +48,9 @@ public class Scope
         return relationType;
     }
 
-    public boolean isTableScope()
+    public boolean isDataSourceScope()
     {
-        return isTableScope;
+        return isDataSourceScope;
     }
 
     public Optional<WithQuery> getNamedQuery(String name)
@@ -75,7 +75,7 @@ public class Scope
     {
         private Optional<Scope> parent = Optional.empty();
         private RelationType relationType = new RelationType();
-        private boolean isTableScope;
+        private boolean isDataSourceScope;
         private final Map<String, WithQuery> namedQueries = new HashMap<>();
 
         public Builder relationType(RelationType relationType)
@@ -91,9 +91,9 @@ public class Scope
             return this;
         }
 
-        public Builder isTableScope(boolean isTableScope)
+        public Builder isDataSourceScope(boolean isDataSourceScope)
         {
-            this.isTableScope = isTableScope;
+            this.isDataSourceScope = isDataSourceScope;
             return this;
         }
 
@@ -111,7 +111,7 @@ public class Scope
 
         public Scope build()
         {
-            return new Scope(parent.orElse(null), relationType, isTableScope, namedQueries);
+            return new Scope(parent.orElse(null), relationType, isDataSourceScope, namedQueries);
         }
     }
 }

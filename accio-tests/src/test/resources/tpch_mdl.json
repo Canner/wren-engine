@@ -127,6 +127,11 @@
           "type": "date"
         },
         {
+          "name": "comment",
+          "expression": "l_comment",
+          "type": "varchar"
+        },
+        {
           "name": "order",
           "type": "int4",
           "expression": "1"

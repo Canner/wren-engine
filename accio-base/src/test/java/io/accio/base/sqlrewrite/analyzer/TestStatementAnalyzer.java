@@ -20,6 +20,7 @@ import com.google.common.collect.Multimap;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
+import io.accio.base.sqlrewrite.AbstractTestFramework;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.ComparisonExpression;
@@ -27,10 +28,12 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.StringLiteral;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 import static io.accio.base.AccioMDL.EMPTY;
@@ -47,6 +50,7 @@ import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECI
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestStatementAnalyzer
+        extends AbstractTestFramework
 {
     public static final SqlParser sqlParser = new SqlParser();
 
@@ -54,16 +58,23 @@ public class TestStatementAnalyzer
     public void testValues()
     {
         SessionContext sessionContext = SessionContext.builder().build();
-        analyze(sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY);
-        analyze(sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL)), sessionContext, EMPTY);
+        Statement statement = sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL));
+        Analysis analysis = new Analysis(statement);
+        analyze(analysis, statement, sessionContext, EMPTY);
+
+        statement = sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL));
+        analysis = new Analysis(statement);
+        analyze(analysis, statement, sessionContext, EMPTY);
     }
 
     @Test
     public void testGetTableWithoutWithTable()
     {
         SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
-        Analysis analysis = analyze(
-                sqlParser.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL)),
+        Statement statement = sqlParser.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL));
+        Analysis analysis = new Analysis(statement);
+        analyze(analysis,
+                statement,
                 sessionContext,
                 EMPTY);
 
@@ -81,10 +92,16 @@ public class TestStatementAnalyzer
                         model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
                         model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
                 .build();
-        Function<String, Analysis> analyzeSql = (sql) -> analyze(
-                sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL)),
-                sessionContext,
-                fromManifest(manifest));
+        Function<String, Analysis> analyzeSql = (sql) -> {
+            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Analysis analysis = new Analysis(statement);
+            analyze(
+                    analysis,
+                    statement,
+                    sessionContext,
+                    fromManifest(manifest));
+            return analysis;
+        };
 
         Multimap<CatalogSchemaTableName, String> expected;
         expected = HashMultimap.create();
@@ -120,10 +137,16 @@ public class TestStatementAnalyzer
                         model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), column("c2", INTEGER, null, true))),
                         model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), column("c2", DATE, null, true)))))
                 .build();
-        Function<String, Analysis> analyzeSql = (sql) -> analyze(
-                sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL)),
-                sessionContext,
-                fromManifest(manifest));
+        Function<String, Analysis> analyzeSql = (sql) -> {
+            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Analysis analysis = new Analysis(statement);
+            analyze(
+                    analysis,
+                    statement,
+                    sessionContext,
+                    fromManifest(manifest));
+            return analysis;
+        };
 
         CatalogSchemaTableName t1 = new CatalogSchemaTableName("test", "test", "table_1");
         CatalogSchemaTableName t2 = new CatalogSchemaTableName("test", "test", "table_2");
@@ -135,5 +158,67 @@ public class TestStatementAnalyzer
                         new SimplePredicate(t1, "c2", ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL, new LongLiteral("123")),
                         new SimplePredicate(t2, "c1", ComparisonExpression.Operator.NOT_EQUAL, new StringLiteral("bar")),
                         new SimplePredicate(t2, "c2", ComparisonExpression.Operator.LESS_THAN, new GenericLiteral("DATE", "2020-01-01"))));
+    }
+
+    @Test
+    public void testScope()
+    {
+        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                .build();
+
+        Function<String, Scope> analyzeSql = (sql) -> {
+            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Analysis analysis = new Analysis(statement);
+            return analyze(
+                    analysis,
+                    statement,
+                    sessionContext,
+                    fromManifest(manifest));
+        };
+
+        Optional<Scope> scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM table_1"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM table_2"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM test.test.foo"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM test.foo"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM foo"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(0);
+        assertThat(scope.get().isDataSourceScope()).isTrue();
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM (select * from test.test.foo) table_1"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("WITH t1 as (SELECT * FROM (select * from test.test.foo) table_1) select * from t1"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
     }
 }

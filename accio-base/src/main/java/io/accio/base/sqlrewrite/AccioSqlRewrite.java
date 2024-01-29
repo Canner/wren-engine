@@ -76,7 +76,8 @@ public class AccioSqlRewrite
     @Override
     public Statement apply(Statement root, SessionContext sessionContext, AnalyzedMDL analyzedMDL)
     {
-        Analysis analysis = StatementAnalyzer.analyze(root, sessionContext, analyzedMDL.getAccioMDL());
+        Analysis analysis = new Analysis(root);
+        StatementAnalyzer.analyze(analysis, root, sessionContext, analyzedMDL.getAccioMDL());
         return apply(root, sessionContext, analysis, analyzedMDL);
     }
 

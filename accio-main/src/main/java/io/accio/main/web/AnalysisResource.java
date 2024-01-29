@@ -24,6 +24,7 @@ import io.accio.main.web.dto.PredicateDto;
 import io.accio.main.web.dto.SqlAnalysisInputDto;
 import io.accio.main.web.dto.SqlAnalysisOutputDto;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Statement;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -74,8 +75,11 @@ public class AnalysisResource
                     else {
                         mdl = AccioMDL.fromManifest(inputDto.getManifest());
                     }
-                    Analysis analysis = StatementAnalyzer.analyze(
-                            parseSql(inputDto.getSql()),
+                    Statement statement = parseSql(inputDto.getSql());
+                    Analysis analysis = new Analysis(statement);
+                    StatementAnalyzer.analyze(
+                            analysis,
+                            statement,
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
                             mdl);
                     return toSqlAnalysisOutputDto(analysis.getSimplePredicates());

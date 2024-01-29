@@ -114,7 +114,7 @@ public class TestFunctions
             throws SQLException
     {
         try (Connection conn = createConnection()) {
-            PreparedStatement stmt = conn.prepareStatement("SELECT substring(tpch_tiny.lineitem.l_comment FROM ?) FROM tpch_tiny.lineitem LIMIT 1");
+            PreparedStatement stmt = conn.prepareStatement("SELECT substring(Lineitem.comment FROM ?) FROM Lineitem LIMIT 1");
             stmt.setString(1, "[a-z]+");
             ResultSet result = stmt.executeQuery();
             assertThat(result.next()).isTrue();

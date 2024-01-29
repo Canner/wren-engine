@@ -18,13 +18,16 @@ import com.google.common.collect.ImmutableMap;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
 import static io.accio.base.type.CharType.CHAR;
 import static io.accio.base.type.DateType.DATE;
+import static io.accio.base.type.DoubleType.DOUBLE;
 import static io.accio.base.type.HstoreType.HSTORE;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static io.accio.base.type.IntervalType.INTERVAL;
@@ -44,13 +47,15 @@ public final class PGTypes
     private static final Map<Integer, PGArray> INNER_TYPE_TO_ARRAY_TABLE;
     private static final Set<PGType<?>> TYPES;
 
+    private static final Map<String, PGType<?>> TYPE_NAME_TABLE = new HashMap<>();
+
     static {
         TYPE_TABLE.put(BOOLEAN.oid(), BOOLEAN);
         TYPE_TABLE.put(SMALLINT.oid(), SMALLINT);
         TYPE_TABLE.put(INTEGER.oid(), INTEGER);
         TYPE_TABLE.put(BIGINT.oid(), BIGINT);
         TYPE_TABLE.put(REAL.oid(), REAL);
-        TYPE_TABLE.put(DoubleType.DOUBLE.oid(), DoubleType.DOUBLE);
+        TYPE_TABLE.put(DOUBLE.oid(), DOUBLE);
         TYPE_TABLE.put(NumericType.NUMERIC.oid(), NumericType.NUMERIC);
         TYPE_TABLE.put(VARCHAR.oid(), VARCHAR);
         TYPE_TABLE.put(CHAR.oid(), CHAR);
@@ -86,6 +91,14 @@ public final class PGTypes
         // the following polymorphic types are added manually,
         // because there are no corresponding data types in Cannerflow
         TYPES.add(AnyType.ANY);
+
+        TYPES.forEach(type -> TYPE_NAME_TABLE.put(type.typName().toUpperCase(Locale.ROOT), type));
+        TYPE_NAME_TABLE.put("REAL", REAL);
+        TYPE_NAME_TABLE.put("DOUBLE", DOUBLE);
+        TYPE_NAME_TABLE.put("BOOLEAN", BOOLEAN);
+        TYPE_NAME_TABLE.put("INTEGER", INTEGER);
+        TYPE_NAME_TABLE.put("SMALLINT", SMALLINT);
+        TYPE_NAME_TABLE.put("BIGINT", BIGINT);
     }
 
     public static Iterable<PGType<?>> pgTypes()
@@ -111,6 +124,11 @@ public final class PGTypes
                     format("No array type mapping from '%s' to pg_type", innerOid));
         }
         return arrayType;
+    }
+
+    public static Optional<PGType<?>> nameToPgType(String name)
+    {
+        return Optional.ofNullable(TYPE_NAME_TABLE.get(name.toUpperCase(Locale.ROOT)));
     }
 
     public static PGType<?> toPgRecordArray(PGType<?> innerRecordType)

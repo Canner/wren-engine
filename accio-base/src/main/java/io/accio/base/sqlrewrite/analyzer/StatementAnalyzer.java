@@ -47,6 +47,8 @@ import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,10 +72,14 @@ public final class StatementAnalyzer
 {
     private StatementAnalyzer() {}
 
-    public static Analysis analyze(Statement statement, SessionContext sessionContext, AccioMDL accioMDL)
+    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, AccioMDL accioMDL)
     {
-        Analysis analysis = new Analysis(statement);
-        new Visitor(sessionContext, analysis, accioMDL).process(statement, Optional.empty());
+        return analyze(analysis, statement, sessionContext, accioMDL, null);
+    }
+
+    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, AccioMDL accioMDL, TypeCoercion typeCoercion)
+    {
+        Scope queryScope = new Visitor(sessionContext, analysis, accioMDL, typeCoercion).process(statement, Optional.empty());
 
         // add models directly used in sql query
         analysis.addModels(
@@ -112,8 +118,7 @@ public final class StatementAnalyzer
                 .collect(toUnmodifiableSet());
 
         analysis.addViews(views);
-
-        return analysis;
+        return queryScope;
     }
 
     private static class Visitor
@@ -122,12 +127,18 @@ public final class StatementAnalyzer
         private final SessionContext sessionContext;
         private final Analysis analysis;
         private final AccioMDL accioMDL;
+        private final Optional<TypeCoercion> typeCoercionOptional;
 
-        public Visitor(SessionContext sessionContext, Analysis analysis, AccioMDL accioMDL)
+        public Visitor(
+                SessionContext sessionContext,
+                Analysis analysis,
+                AccioMDL accioMDL,
+                @Nullable TypeCoercion typeCoercion)
         {
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
             this.accioMDL = requireNonNull(accioMDL, "accioMDL is null");
+            this.typeCoercionOptional = Optional.ofNullable(typeCoercion);
         }
 
         public Scope process(Node node)
@@ -150,10 +161,10 @@ public final class StatementAnalyzer
                 if (withQuery.isPresent()) {
                     // currently we only care about the table that is actually a model instead of a alias table that use cte table
                     // return empty scope here.
-                    return Scope.builder()
-                            .parent(scope)
-                            .relationType(new RelationType(List.of()))
-                            .build();
+                    Analysis analyzed = new Analysis(withQuery.get().getQuery());
+                    return Optional.ofNullable(analyze(analyzed, withQuery.get().getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
+                            .map(value -> createAndAssignScope(scope, value))
+                            .orElse(Scope.builder().parent(scope).build());
                 }
             }
 
@@ -161,44 +172,14 @@ public final class StatementAnalyzer
             analysis.addTable(tableName);
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
-                List<Field> fields = ImmutableList.of();
-                if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
-                    fields = accioMDL.getModel(tableName.getSchemaTableName().getTableName())
-                            .map(Model::getColumns)
-                            .orElseGet(ImmutableList::of)
-                            .stream()
-                            .map(column -> Field.builder()
-                                    .modelName(tableName)
-                                    .columnName(column.getName())
-                                    .name(column.getName())
-                                    .build())
-                            .collect(toImmutableList());
-                }
-                else if (accioMDL.getMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
-                    fields = accioMDL.getMetric(tableName.getSchemaTableName().getTableName())
-                            .map(Metric::getColumns)
-                            .orElseGet(ImmutableList::of)
-                            .stream()
-                            .map(column -> Field.builder()
-                                    .modelName(tableName)
-                                    .columnName(column.getName())
-                                    .name(column.getName())
-                                    .build())
-                            .collect(toImmutableList());
-                }
-                else if (accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
-                    CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).get();
-                    fields = ImmutableList.of(
-                            Field.builder()
-                                    .modelName(tableName)
-                                    .columnName(cumulativeMetric.getWindow().getName())
-                                    .name(cumulativeMetric.getWindow().getName())
-                                    .build(),
-                            Field.builder()
-                                    .modelName(tableName)
-                                    .columnName(cumulativeMetric.getMeasure().getName())
-                                    .name(cumulativeMetric.getMeasure().getName())
-                                    .build());
+                List<Field> fields = collectFieldFromMDL(tableName);
+
+                // if catalog and schema matches, but table name doesn't match any model, we assume it's a remote data source table
+                if (fields.isEmpty()) {
+                    return Scope.builder()
+                            .parent(scope)
+                            .isDataSourceScope(true)
+                            .build();
                 }
                 return Scope.builder()
                         .parent(scope)
@@ -211,12 +192,55 @@ public final class StatementAnalyzer
                     .build();
         }
 
+        private List<Field> collectFieldFromMDL(CatalogSchemaTableName tableName)
+        {
+            if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                return accioMDL.getModel(tableName.getSchemaTableName().getTableName())
+                        .map(Model::getColumns)
+                        .orElseGet(ImmutableList::of)
+                        .stream()
+                        .map(column -> Field.builder()
+                                .modelName(tableName)
+                                .columnName(column.getName())
+                                .name(column.getName())
+                                .build())
+                        .collect(toImmutableList());
+            }
+            else if (accioMDL.getMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                return accioMDL.getMetric(tableName.getSchemaTableName().getTableName())
+                        .map(Metric::getColumns)
+                        .orElseGet(ImmutableList::of)
+                        .stream()
+                        .map(column -> Field.builder()
+                                .modelName(tableName)
+                                .columnName(column.getName())
+                                .name(column.getName())
+                                .build())
+                        .collect(toImmutableList());
+            }
+            else if (accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).isPresent()) {
+                CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).get();
+                return ImmutableList.of(
+                        Field.builder()
+                                .modelName(tableName)
+                                .columnName(cumulativeMetric.getWindow().getName())
+                                .name(cumulativeMetric.getWindow().getName())
+                                .build(),
+                        Field.builder()
+                                .modelName(tableName)
+                                .columnName(cumulativeMetric.getMeasure().getName())
+                                .name(cumulativeMetric.getMeasure().getName())
+                                .build());
+            }
+            return ImmutableList.of();
+        }
+
         @Override
         protected Scope visitQuery(Query node, Optional<Scope> scope)
         {
             Optional<Scope> withScope = analyzeWith(node, scope);
             Scope queryBodyScope = process(node.getQueryBody(), withScope);
-            return createAndAssignScope(scope, queryBodyScope.getRelationType());
+            return createAndAssignScope(scope, queryBodyScope);
         }
 
         @Override
@@ -226,7 +250,7 @@ public final class StatementAnalyzer
             analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
             node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(sourceScope, having));
-            return createAndAssignScope(scope, sourceScope.getRelationType());
+            return createAndAssignScope(scope, sourceScope);
         }
 
         private void analyzeSelect(QuerySpecification node, Scope scope)
@@ -261,6 +285,11 @@ public final class StatementAnalyzer
                 ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
                 analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
             });
+
+            typeCoercionOptional.ifPresent(typeCoercion -> {
+                Optional<Expression> coerced = typeCoercion.coerceExpression(singleColumn.getExpression(), scope);
+                coerced.ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(singleColumn.getExpression()), expression));
+            });
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
@@ -287,6 +316,8 @@ public final class StatementAnalyzer
                                                 comparisonExpression.getOperator(),
                                                 comparisonExpression.getRight())));
                     });
+            typeCoercionOptional.flatMap(typeCoercion -> typeCoercion.coerceExpression(node, scope))
+                    .ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(node), expression));
         }
 
         @Override
@@ -350,6 +381,16 @@ public final class StatementAnalyzer
             if (criteria instanceof JoinOn) {
                 Expression expression = ((JoinOn) criteria).getExpression();
                 analysis.addCollectedColumns(ExpressionAnalyzer.analyze(outputScope, expression).getCollectedFields());
+                typeCoercionOptional.ifPresent(typeCoercion -> {
+                    Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
+                    if (coerced.isPresent()) {
+                        JoinOn newJoinOn = new JoinOn(coerced.get());
+                        Join newJoin = node.getLocation().isPresent() ?
+                                new Join(node.getLocation().get(), node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn)) :
+                                new Join(node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn));
+                        analysis.addTypeCoercion(NodeRef.of(node), newJoin);
+                    }
+                });
             }
             // TODO: output scope here isn't right
             return createAndAssignScope(scope, relationType);
@@ -360,7 +401,14 @@ public final class StatementAnalyzer
         {
             Scope relationScope = process(relation.getRelation(), scope);
 
-            List<Field> fieldsWithRelationAlias = relationScope.getRelationType().getFields().stream()
+            List<Field> fields = relationScope.getRelationType().getFields();
+            // if scope is a data source scope, we should get the fields from MDL
+            if (relationScope.isDataSourceScope()) {
+                CatalogSchemaTableName tableName = toCatalogSchemaTableName(sessionContext, QualifiedName.of(relation.getAlias().getValue()));
+                fields = collectFieldFromMDL(tableName);
+            }
+
+            List<Field> fieldsWithRelationAlias = fields.stream()
                     .map(field -> Field.builder()
                             .like(field)
                             .relationAlias(QualifiedName.of(relation.getAlias().getValue()))
@@ -376,9 +424,9 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
         {
-            process(node.getQuery());
-            // TODO: output scope here isn't right
-            return Scope.builder().parent(scope).build();
+            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
+                    .map(value -> createAndAssignScope(scope, value))
+                    .orElseGet(() -> Scope.builder().parent(scope).build());
         }
 
         // TODO: will recursive query mess up anything here?
@@ -413,6 +461,15 @@ public final class StatementAnalyzer
             return Scope.builder()
                     .parent(parentScope)
                     .relationType(relationType)
+                    .build();
+        }
+
+        private Scope createAndAssignScope(Optional<Scope> parentScope, Scope scope)
+        {
+            return Scope.builder()
+                    .parent(parentScope)
+                    .isDataSourceScope(scope.isDataSourceScope())
+                    .relationType(scope.getRelationType())
                     .build();
         }
     }

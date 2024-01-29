@@ -17,7 +17,6 @@ package io.accio.testing.bigquery;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
-import io.accio.base.AccioMDL;
 import io.accio.base.dto.Manifest;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.metadata.Metadata;
@@ -27,6 +26,7 @@ import io.airlift.log.Logger;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
@@ -36,6 +36,10 @@ import static java.util.Objects.requireNonNull;
 public abstract class AbstractWireProtocolTestWithBigQuery
         extends AbstractWireProtocolTest
 {
+    private static final Manifest DEFAULT_MANIFEST = Manifest.builder()
+            .setCatalog("canner-cml")
+            .setSchema("tpch_tiny")
+            .build();
     private static final Logger LOG = Logger.get(AbstractWireProtocolTestWithBigQuery.class);
 
     @Override
@@ -55,7 +59,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
                 Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
             }
             else {
-                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
+                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(DEFAULT_MANIFEST));
             }
             properties.put("accio.directory", dir.toString());
         }
@@ -66,6 +70,11 @@ public abstract class AbstractWireProtocolTestWithBigQuery
         return TestingAccioServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();
+    }
+
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("tpch_mdl.json")).getPath());
     }
 
     @Override
