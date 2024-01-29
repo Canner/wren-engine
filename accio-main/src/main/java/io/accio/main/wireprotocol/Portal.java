@@ -133,6 +133,11 @@ public class Portal
         return builder.build();
     }
 
+    public List<Object> getParametersValue()
+    {
+        return params;
+    }
+
     // TODO: make sure this annotation works.
     @PreDestroy
     protected void close()

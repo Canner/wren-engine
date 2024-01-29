@@ -22,6 +22,7 @@ import io.accio.main.wireprotocol.Portal;
 import io.accio.main.wireprotocol.PreparedStatement;
 
 import java.util.List;
+import java.util.Optional;
 
 public final class PostgreSqlRewriteUtil
 {
@@ -65,20 +66,24 @@ public final class PostgreSqlRewriteUtil
     {
         String statement = portal.getPreparedStatement().getStatement();
         List<Parameter> parameters = portal.getParameters();
-        String rewrittenSql = WITH_PARAMS_PATTERNS.stream()
+        Optional<String> rewrittenSql = WITH_PARAMS_PATTERNS.stream()
                 .filter(pattern -> pattern.matcher(statement).find() && pattern.matchParams(parameters))
                 .findFirst()
-                .map(pattern -> pattern.rewrite(statement))
-                .orElse(statement);
+                .map(pattern -> pattern.rewrite(statement));
 
         PreparedStatement preparedStatement = new PreparedStatement(portal.getPreparedStatement().getName(),
-                rewrittenSql,
+                rewrittenSql.orElse(statement),
                 portal.getPreparedStatement().getCacheStatement(),
-                List.of(),
+                rewrittenSql.isPresent() ? List.of() : portal.getPreparedStatement().getParamTypeOids(),
                 portal.getPreparedStatement().getOriginalStatement(),
                 portal.getPreparedStatement().isSessionCommand(),
                 portal.getPreparedStatement().getQueryLevel());
 
-        return new Portal(portal.getName(), preparedStatement, List.of(), portal.getResultFormatCodes(), preparedStatement.getQueryLevel());
+        return new Portal(
+                portal.getName(),
+                preparedStatement,
+                rewrittenSql.isPresent() ? List.of() : portal.getParametersValue(),
+                portal.getResultFormatCodes(),
+                preparedStatement.getQueryLevel());
     }
 }
