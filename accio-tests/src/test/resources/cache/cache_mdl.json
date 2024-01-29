@@ -124,8 +124,7 @@
             "MONTH"
           ]
         }
-      ],
-      "refreshTime": "2m"
+      ]
     },
     {
       "cached": "true",
