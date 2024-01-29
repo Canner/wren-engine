@@ -21,6 +21,11 @@ import io.accio.main.wireprotocol.PostgresWireProtocol;
 import io.accio.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
+import org.testng.ITestResult;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -35,8 +40,10 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -45,13 +52,43 @@ import static io.accio.base.type.VarcharType.VARCHAR;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithPostgres
         extends AbstractWireProtocolTestWithPostgres
 {
+    private static final Logger log = Logger.getLogger(TestWireProtocolWithPostgres.class.getName());
+
+    @BeforeClass
+    public void beforeClass()
+    {
+        log.info("TestWireProtocolWithPostgres.beforeClass");
+    }
+
+    @BeforeMethod
+    public ITestResult beforeMethod(ITestResult result)
+    {
+        log.info(format("TestWireProtocolWithPostgres.beforeMethod %s %s", result.getName(), Arrays.stream(result.getParameters()).map(Object::toString).collect(joining(", "))));
+        return result;
+    }
+
+    @AfterMethod
+    public ITestResult afterMethod(ITestResult result)
+    {
+        log.info(format("TestWireProtocolWithPostgres.afterMethod %s %s", result.getName(), Arrays.stream(result.getParameters()).map(Object::toString).collect(joining(", "))));
+        return result;
+    }
+
+    @AfterClass
+    public void afterClass()
+    {
+        log.info("TestWireProtocolWithPostgres.afterClass");
+    }
+
     @Test
     public void testSimpleQuery()
             throws IOException
@@ -357,10 +394,11 @@ public class TestWireProtocolWithPostgres
         };
     }
 
-    @Test(dataProvider = "statementNameWithSpecialCharacters")
+    @Test(dataProvider = "statementNameWithSpecialCharacters", timeOut = 600)
     public void testStatementNameWithHyphens(String statementName)
             throws IOException
     {
+        log.info(format("TestWireProtocolWithPostgres.testStatementNameWithHyphens: case: %s try start", statementName));
         try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
             protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
             protocolClient.assertAuthOk();
@@ -386,7 +424,9 @@ public class TestWireProtocolWithPostgres
             protocolClient.assertDataRow("rows1");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
+            log.info(format("TestWireProtocolWithPostgres.testStatementNameWithHyphens: case: %s try end", statementName));
         }
+        log.info(format("TestWireProtocolWithPostgres.testStatementNameWithHyphens: case: %s Done", statementName));
     }
 
     private static void assertFields(TestingWireProtocolClient client, List<PGType<?>> types)

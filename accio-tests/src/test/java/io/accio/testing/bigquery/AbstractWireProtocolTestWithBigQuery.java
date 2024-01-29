@@ -83,11 +83,15 @@ public abstract class AbstractWireProtocolTestWithBigQuery
     @Override
     protected void cleanup()
     {
+        LOG.info("cleanup bigquery schema");
         try {
             Metadata metadata = getInstance(Key.get(Metadata.class));
             BigQueryClient bigQueryClient = getInstance(Key.get(BigQueryClient.class));
+            LOG.info("drop dataset: " + metadata.getPgCatalogName());
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
+            LOG.info("drop dataset: " + metadata.getMetadataSchemaName());
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
+            LOG.info("drop dataset done");
         }
         catch (Exception ex) {
             LOG.error(ex, "cleanup bigquery schema failed");

@@ -27,7 +27,7 @@ public abstract class AbstractWireProtocolTestWithPostgres
     @Override
     protected TestingAccioServer createAccioServer()
     {
-        testingPostgreSqlServer = new TestingPostgreSqlServer();
+        testingPostgreSqlServer = closer.register(new TestingPostgreSqlServer());
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("postgres.jdbc.url", testingPostgreSqlServer.getJdbcUrl())
                 .put("postgres.user", testingPostgreSqlServer.getUser())

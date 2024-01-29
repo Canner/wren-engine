@@ -342,7 +342,7 @@ public class WireProtocolSession
                 Portal portal = rewriteWithParameters(new Portal(portalName, query.getPreparedStatement(), params, resultFormatCodes, query.getPreparedStatement().getQueryLevel()));
                 query.setPortal(portal);
                 // Execute Level 1 Query
-                LOG.debug("Bind Portal %s with parameters %s to Statement %s", portalName, params.stream().map(Object::toString).collect(Collectors.joining(",")), statementName);
+                LOG.debug("Level1 Bind Portal %s with parameters %s to Statement %s", portalName, params.stream().map(Object::toString).collect(Collectors.joining(",")), statementName);
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
                 query.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
@@ -389,7 +389,7 @@ public class WireProtocolSession
         String paramString = params.stream()
                 .map(element -> (isNull(element)) ? "null" : element.toString())
                 .collect(Collectors.joining(","));
-        LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
+        LOG.info("Level3 Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
     }
 
     public CompletableFuture<Optional<ConnectorRecordIterator>> execute(String portalName)

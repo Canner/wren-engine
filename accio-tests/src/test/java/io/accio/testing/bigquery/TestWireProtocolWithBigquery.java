@@ -23,6 +23,11 @@ import io.accio.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
 import org.postgresql.util.PGInterval;
+import org.testng.ITestResult;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -42,10 +47,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -71,9 +78,11 @@ import static io.accio.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.accio.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.binaryParameter;
 import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -81,10 +90,38 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 public class TestWireProtocolWithBigquery
         extends AbstractWireProtocolTestWithBigQuery
 {
+    private static final Logger log = Logger.getLogger(TestWireProtocolWithBigquery.class.getName());
+
     @Override
     protected Optional<String> getAccioMDLPath()
     {
         return Optional.of(requireNonNull(getClass().getClassLoader().getResource("bigquery/TestWireProtocolWithBigquery.json")).getPath());
+    }
+
+    @BeforeClass
+    public void beforeClass()
+    {
+        log.info("TestWireProtocolWithBigquery.beforeClass");
+    }
+
+    @BeforeMethod
+    public ITestResult beforeMethod(ITestResult result)
+    {
+        log.info(format("TestWireProtocolWithBigquery.beforeMethod %s %s", result.getName(), Arrays.stream(result.getParameters()).map(Object::toString).collect(joining(", "))));
+        return result;
+    }
+
+    @AfterMethod
+    public ITestResult afterMethod(ITestResult result)
+    {
+        log.info(format("TestWireProtocolWithBigquery.afterMethod %s %s", result.getName(), Arrays.stream(result.getParameters()).map(Object::toString).collect(joining(", "))));
+        return result;
+    }
+
+    @AfterClass
+    public void afterClass()
+    {
+        log.info("TestWireProtocolWithBigquery.afterClass");
     }
 
     @Test
@@ -502,6 +539,7 @@ public class TestWireProtocolWithBigquery
     public void testStatementNameWithHyphens(String statementName)
             throws IOException
     {
+        log.info(format("TestWireProtocolWithBigquery.testStatementNameWithHyphens: case: %s try start", statementName));
         try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
             protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
             protocolClient.assertAuthOk();
@@ -527,7 +565,9 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertDataRow("rows1");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
+            log.info(format("TestWireProtocolWithBigquery.testStatementNameWithHyphens: case: %s try end", statementName));
         }
+        log.info(format("TestWireProtocolWithBigquery.testStatementNameWithHyphens: case: %s Done", statementName));
     }
 
     private static void assertFields(TestingWireProtocolClient client, List<PGType<?>> types)
