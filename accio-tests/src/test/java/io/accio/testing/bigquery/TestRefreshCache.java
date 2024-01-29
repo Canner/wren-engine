@@ -19,6 +19,7 @@ import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.CacheInfo;
+import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
 import org.testng.annotations.Test;
@@ -47,7 +48,6 @@ public class TestRefreshCache
 
     @Test
     public void testRefreshFrequently()
-            throws Exception
     {
         AccioMDL mdl = accioMDL.get();
         CatalogSchemaTableName revenueName = catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), "RefreshFrequently");
@@ -89,10 +89,14 @@ public class TestRefreshCache
     public void testRefreshCache()
             throws InterruptedException
     {
-        String before = getDefaultCacheInfoPair("RefreshFrequently").getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair("RefreshFrequently");
+        assertThat(cacheInfoPairOptional).isPresent();
+        String before = cacheInfoPairOptional.get().getRequiredTableName();
         // considering the refresh connects to BigQuery service, it will take some time
         Thread.sleep(3000);
-        String after = getDefaultCacheInfoPair("RefreshFrequently").getRequiredTableName();
+        Optional<CacheInfoPair> afterOptional = getDefaultCacheInfoPair("RefreshFrequently");
+        assertThat(afterOptional).isPresent();
+        String after = afterOptional.get().getRequiredTableName();
         assertThat(before).isNotEqualTo(after);
     }
 

@@ -22,6 +22,7 @@ import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.sqlrewrite.CacheRewrite;
+import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
 import org.testng.annotations.Test;
@@ -60,8 +61,11 @@ public class TestCache
     @Test
     public void testCache()
     {
-        String mappingName = getDefaultCacheInfoPair("Revenue").getRequiredTableName();
-        assertThat(getDefaultCacheInfoPair("AvgRevenue")).isNull();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair("Revenue");
+        assertThat(cacheInfoPairOptional).isPresent();
+
+        String mappingName = cacheInfoPairOptional.get().getRequiredTableName();
+        assertThat(getDefaultCacheInfoPair("AvgRevenue")).isEmpty();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -77,7 +81,8 @@ public class TestCache
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
-        String errMsg = getDefaultCacheInfoPair("unqualified").getErrorMessage()
+        String errMsg = getDefaultCacheInfoPair("unqualified")
+                .flatMap(CacheInfoPair::getErrorMessage)
                 .orElseThrow(AssertionError::new);
         assertThat(errMsg).matches("Failed to do cache for cacheInfo .*");
     }
@@ -85,7 +90,7 @@ public class TestCache
     @Test
     public void testMetricWithoutCache()
     {
-        assertThat(getDefaultCacheInfoPair("AvgRevenue")).isNull();
+        assertThat(getDefaultCacheInfoPair("AvgRevenue")).isEmpty();
     }
 
     @Override
@@ -164,7 +169,9 @@ public class TestCache
     public void testQueryMetricWithDroppedCachedTable()
             throws SQLException
     {
-        String tableName = getDefaultCacheInfoPair("ForDropTable").getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair("ForDropTable");
+        assertThat(cacheInfoPairOptional).isPresent();
+        String tableName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
         duckdbClient.get().executeDDL(dropTableStatement.apply(tableName));
@@ -183,7 +190,9 @@ public class TestCache
     @Test
     public void testModelCache()
     {
-        String mappingName = getDefaultCacheInfoPair("Orders").getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair("Orders");
+        assertThat(cacheInfoPairOptional).isPresent();
+        String mappingName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());

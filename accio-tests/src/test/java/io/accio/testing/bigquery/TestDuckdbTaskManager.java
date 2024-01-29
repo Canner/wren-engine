@@ -59,9 +59,9 @@ public class TestDuckdbTaskManager
     }
 
     @Override
-    protected CacheInfoPair getDefaultCacheInfoPair(String name)
+    protected Optional<CacheInfoPair> getDefaultCacheInfoPair(String name)
     {
-        return cachedTableMapping.get().getCacheInfoPair(mdl.getCatalog(), mdl.getSchema(), name);
+        return Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(mdl.getCatalog(), mdl.getSchema(), name));
     }
 
     @Test
@@ -146,7 +146,9 @@ public class TestDuckdbTaskManager
 
     private void assertCache(String name)
     {
-        String mappingName = getDefaultCacheInfoPair(name).getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(name);
+        assertThat(cacheInfoPairOptional).isPresent();
+        String mappingName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);
