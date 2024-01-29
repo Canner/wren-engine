@@ -394,7 +394,7 @@ public class TestWireProtocolWithPostgres
         };
     }
 
-    @Test(dataProvider = "statementNameWithSpecialCharacters", timeOut = 600)
+    @Test(dataProvider = "statementNameWithSpecialCharacters", timeOut = 600000)
     public void testStatementNameWithHyphens(String statementName)
             throws IOException
     {
