@@ -48,7 +48,7 @@ public final class DuckdbClient
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
-    private final HikariDataSource ds;
+    private final HikariDataSource connectionPool;
 
     @Inject
     public DuckdbClient(DuckDBConfig duckDBConfig, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
@@ -59,14 +59,8 @@ public final class DuckdbClient
             Class.forName("org.duckdb.DuckDBDriver");
             DuckDBConnection duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
             this.duckDBConfig = duckDBConfig;
-            DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckdbS3StyleStorageConfig);
-            HikariConfig config = new HikariConfig();
-            config.setDataSource(dataSource);
-            config.setPoolName("MY_POOL");
-            config.setConnectionTimeout(10000);
-            config.setMinimumIdle(10);
-            config.setMaximumPoolSize(20);
-            ds = new HikariDataSource(config);
+            HikariConfig config = getHikariConfig(duckDBConfig, duckdbS3StyleStorageConfig, duckDBConnection);
+            connectionPool = new HikariDataSource(config);
             init();
         }
         catch (SQLException | ClassNotFoundException e) {
@@ -74,6 +68,25 @@ public final class DuckdbClient
         }
     }
 
+    private static HikariConfig getHikariConfig(
+            DuckDBConfig duckDBConfig,
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
+            DuckDBConnection duckDBConnection)
+    {
+        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, duckdbS3StyleStorageConfig);
+        HikariConfig config = new HikariConfig();
+        config.setDataSource(dataSource);
+        config.setPoolName("DUCKDB_POOL");
+        config.setConnectionTimeout(10000);
+        config.setMinimumIdle(duckDBConfig.getMaxConcurrentTasks());
+        // remain some query slots for metadata queries
+        config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
+        return config;
+    }
+
+    /**
+     * Initialize the global variables of DuckDB.
+     */
     private void init()
     {
         DataSize memoryLimit = duckDBConfig.getMemoryLimit();
@@ -81,9 +94,6 @@ public final class DuckdbClient
         LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
         executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
         LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
-        // TODO: Known issue: https://github.com/duckdb/duckdb/issues/10062
-        // executeDDL(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
-        // LOG.info("Set home directory to %s", duckDBConfig.getHomeDirectory());
     }
 
     @Override
@@ -195,7 +205,7 @@ public final class DuckdbClient
     public Connection createConnection()
             throws SQLException
     {
-        return ds.getConnection();
+        return connectionPool.getConnection();
     }
 
     public DuckDBConfig getDuckDBConfig()

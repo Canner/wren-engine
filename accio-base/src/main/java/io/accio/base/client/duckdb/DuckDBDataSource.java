@@ -34,12 +34,16 @@ public class DuckDBDataSource
         implements DataSource, Serializable
 {
     private final DuckDBConnection duckDBConnection;
+    private final DuckDBConfig duckDBConfig;
     private final DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig;
 
-    public DuckDBDataSource(DuckDBConnection duckDBConnection, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfifg)
+    public DuckDBDataSource(DuckDBConnection duckDBConnection,
+            DuckDBConfig duckDBConfig,
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
         this.duckDBConnection = duckDBConnection;
-        this.duckdbS3StyleStorageConfig = duckdbS3StyleStorageConfifg;
+        this.duckDBConfig = duckDBConfig;
+        this.duckdbS3StyleStorageConfig = duckdbS3StyleStorageConfig;
     }
 
     @Override
@@ -48,6 +52,9 @@ public class DuckDBDataSource
         return "Non-Pooling DataSource from DuckDB";
     }
 
+    /**
+     * Get a connection from the DuckDB instance and init some local variables.
+     */
     @Override
     public Connection getConnection()
             throws SQLException
@@ -61,13 +68,13 @@ public class DuckDBDataSource
         // install extensions from stable repository
         statement.execute("SET custom_extension_repository = 'http://extensions.duckdb.org'");
         // init httpfs settings
-        statement.execute(format("SET s3_endpoint='%s'\n", duckdbS3StyleStorageConfig.getEndpoint()));
-        statement.execute(format("SET s3_url_style='%s'\n", duckdbS3StyleStorageConfig.getUrlStyle()));
+        statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
+        statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
+        statement.execute(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
         return connection;
     }
 
     public boolean isWrapperFor(Class<?> iface)
-            throws SQLException
     {
         return iface.isAssignableFrom(getClass());
     }
