@@ -51,7 +51,7 @@ public final class DuckdbClient
     private final HikariDataSource ds;
 
     @Inject
-    public DuckdbClient(DuckDBConfig duckDBConfig)
+    public DuckdbClient(DuckDBConfig duckDBConfig, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
         try {
             // The instance will be cleared after the process end. We don't need to
@@ -59,7 +59,7 @@ public final class DuckdbClient
             Class.forName("org.duckdb.DuckDBDriver");
             DuckDBConnection duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
             this.duckDBConfig = duckDBConfig;
-            DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection);
+            DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckdbS3StyleStorageConfig);
             HikariConfig config = new HikariConfig();
             config.setDataSource(dataSource);
             config.setPoolName("MY_POOL");

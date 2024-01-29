@@ -16,8 +16,10 @@ package io.accio.cache;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
+import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;

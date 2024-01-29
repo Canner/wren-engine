@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.cache;
+package io.accio.base.client.duckdb;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
@@ -103,12 +103,10 @@ public class DuckdbS3StyleStorageConfig
     public String generateDuckdbParquetStatement(String path, String tableName)
     {
         // ref: https://github.com/duckdb/duckdb/issues/1403
-        StringBuilder sb = new StringBuilder("INSTALL httpfs;\n" +
-                "LOAD httpfs;\n");
-        sb.append(format("SET s3_endpoint='%s';\n", endpoint));
+        StringBuilder sb = new StringBuilder();
+        // TODO: check why can't we set s3 access key and secret key in Data source
         accessKey.ifPresent(accessKey -> sb.append(format("SET s3_access_key_id='%s';\n", accessKey)));
         secretKey.ifPresent(secretKey -> sb.append(format("SET s3_secret_access_key='%s';\n", secretKey)));
-        sb.append(format("SET s3_url_style='%s';\n", urlStyle));
         sb.append("BEGIN TRANSACTION;\n");
         sb.append(format("CREATE TABLE \"%s\" AS SELECT * FROM read_parquet('s3://%s');", tableName, path));
         sb.append("COMMIT;\n");

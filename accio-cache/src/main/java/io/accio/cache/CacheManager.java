@@ -23,6 +23,7 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
+import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
