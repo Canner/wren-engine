@@ -27,15 +27,19 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import static java.lang.String.format;
+
 public class DuckDBDataSource
         extends BaseDataSource
         implements DataSource, Serializable
 {
     private final DuckDBConnection duckDBConnection;
+    private final DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig;
 
-    public DuckDBDataSource(DuckDBConnection duckDBConnection)
+    public DuckDBDataSource(DuckDBConnection duckDBConnection, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfifg)
     {
         this.duckDBConnection = duckDBConnection;
+        this.duckdbS3StyleStorageConfig = duckdbS3StyleStorageConfifg;
     }
 
     @Override
@@ -51,11 +55,14 @@ public class DuckDBDataSource
         // Refer to the official doc, if we want to create multiple read-write connections,
         // to the same database in-memory database instance, we can use the custom `duplicate()` method.
         // https://duckdb.org/docs/api/java
-        Connection connection = ((DuckDBConnection) duckDBConnection).duplicate();
+        Connection connection = duckDBConnection.duplicate();
         Statement statement = connection.createStatement();
         statement.execute("set search_path = 'main'");
         // install extensions from stable repository
         statement.execute("SET custom_extension_repository = 'http://extensions.duckdb.org'");
+        // init httpfs settings
+        statement.execute(format("SET s3_endpoint='%s'\n", duckdbS3StyleStorageConfig.getEndpoint()));
+        statement.execute(format("SET s3_url_style='%s'\n", duckdbS3StyleStorageConfig.getUrlStyle()));
         return connection;
     }
 
