@@ -61,7 +61,6 @@ import static io.accio.main.wireprotocol.PgQueryAnalyzer.isMetadataQuery;
 import static io.accio.main.wireprotocol.PostgresWireProtocol.isIgnoredCommand;
 import static io.accio.main.wireprotocol.PostgresWireProtocolErrorCode.INVALID_PREPARED_STATEMENT_NAME;
 import static io.accio.main.wireprotocol.PreparedStatement.RESERVED_DRY_RUN_NAME;
-import static io.accio.main.wireprotocol.PreparedStatement.cloneWithName;
 import static io.accio.main.wireprotocol.WireProtocolSession.PreparedStmtPortalName.preparedStmtPortalName;
 import static io.accio.main.wireprotocol.patterns.PostgreSqlRewriteUtil.rewriteWithParameters;
 import static io.trino.execution.ParameterExtractor.getParameterCount;
@@ -243,8 +242,7 @@ public class WireProtocolSession
      */
     public Optional<List<Column>> dryRunAfterDescribeStatement(String statementName, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
     {
-        preparedStatements.put(RESERVED_DRY_RUN_NAME, cloneWithName(preparedStatements.get(statementName), RESERVED_DRY_RUN_NAME));
-        metadataQueries.put(preparedStmtPortalName(RESERVED_DRY_RUN_NAME, null), Query.builder(preparedStatements.get(RESERVED_DRY_RUN_NAME)).build());
+        parse(RESERVED_DRY_RUN_NAME, preparedStatements.get(statementName).getOriginalStatement(), preparedStatements.get(statementName).getParamTypeOids());
         bind(RESERVED_DRY_RUN_NAME, RESERVED_DRY_RUN_NAME, params, resultFormatCodes);
 
         Optional<List<Column>> result = describePortal(RESERVED_DRY_RUN_NAME);
@@ -326,7 +324,7 @@ public class WireProtocolSession
                         statementTrimmed,
                         isSessionCommand(rewrittenStatement),
                         QueryLevel.DATASOURCE));
-        // metadataQueries.remove(preparedStmtPortalName(statementName, null));
+        metadataQueries.remove(preparedStmtPortalName(statementName, null));
         LOG.info("Create preparedStatement %s", statementName);
     }
 
@@ -412,7 +410,7 @@ public class WireProtocolSession
     private void resetMetadataQuery(String statementName, String portalName)
     {
         PreparedStmtPortalName name = preparedStmtPortalName(statementName, portalName);
-        metadataQueries.get(name).getPortal().ifPresent(Portal::close);
+        Optional.ofNullable(metadataQueries.get(name)).flatMap(Query::getPortal).ifPresent(Portal::close);
         metadataQueries.remove(name);
     }
 
@@ -451,6 +449,11 @@ public class WireProtocolSession
                 return null;
             }
         });
+    }
+
+    public void removeMetadataQuery(String statementName, String portalName)
+    {
+        metadataQueries.remove(preparedStmtPortalName(statementName, portalName));
     }
 
     private CompletableFuture<Optional<Iterable<?>>> executeSessionCommand(Portal portal)

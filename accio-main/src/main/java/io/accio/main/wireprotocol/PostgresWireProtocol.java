@@ -469,6 +469,8 @@ public class PostgresWireProtocol
                     portal.getRowCount(),
                     resultFormatCodes);
             portal.setRowCount(resultSetSender.sendResultSet());
+            // clean metadata query after executed
+            wireProtocolSession.removeMetadataQuery(portal.getPreparedStatement().getName(), portal.getName());
         }
         catch (Exception e) {
             LOG.error(e, format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
