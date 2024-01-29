@@ -95,9 +95,9 @@ public abstract class AbstractCacheTest
         return properties;
     }
 
-    protected CacheInfoPair getDefaultCacheInfoPair(String name)
+    protected Optional<CacheInfoPair> getDefaultCacheInfoPair(String name)
     {
-        return cachedTableMapping.get().getCacheInfoPair("canner-cml", "tpch_tiny", name);
+        return Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair("canner-cml", "tpch_tiny", name));
     }
 
     protected List<Object[]> queryDuckdb(String statement)
