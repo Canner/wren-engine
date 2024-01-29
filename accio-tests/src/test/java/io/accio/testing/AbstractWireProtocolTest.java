@@ -15,12 +15,14 @@
 package io.accio.testing;
 
 import com.google.common.net.HostAndPort;
+import io.accio.main.wireprotocol.PostgresWireProtocol;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -75,5 +77,13 @@ public abstract class AbstractWireProtocolTest
         props.setProperty("ssl", "false");
         props.setProperty("currentSchema", getDefaultSchema());
         return props;
+    }
+
+    protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)
+            throws IOException
+    {
+        for (Map.Entry<String, String> config : PostgresWireProtocol.DEFAULT_PG_CONFIGS.entrySet()) {
+            protocolClient.assertParameterStatus(config.getKey(), config.getValue());
+        }
     }
 }

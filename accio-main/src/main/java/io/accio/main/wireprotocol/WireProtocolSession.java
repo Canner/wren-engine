@@ -60,6 +60,8 @@ import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.main.wireprotocol.PgQueryAnalyzer.isMetadataQuery;
 import static io.accio.main.wireprotocol.PostgresWireProtocol.isIgnoredCommand;
 import static io.accio.main.wireprotocol.PostgresWireProtocolErrorCode.INVALID_PREPARED_STATEMENT_NAME;
+import static io.accio.main.wireprotocol.PreparedStatement.RESERVED_DRY_RUN_NAME;
+import static io.accio.main.wireprotocol.PreparedStatement.cloneWithName;
 import static io.accio.main.wireprotocol.WireProtocolSession.PreparedStmtPortalName.preparedStmtPortalName;
 import static io.accio.main.wireprotocol.patterns.PostgreSqlRewriteUtil.rewriteWithParameters;
 import static io.trino.execution.ParameterExtractor.getParameterCount;
@@ -83,7 +85,7 @@ public class WireProtocolSession
     private final PortalMap portals = new PortalMap();
     private final List<String> sessionProperties = new ArrayList<>();
     private CompletableFuture<Optional<GenericTableRecordIterable>> runningQuery = CompletableFuture.completedFuture(null);
-    private final HashMap<PreparedStmtPortalName, Query> queries = new HashMap<>();
+    private final HashMap<PreparedStmtPortalName, Query> metadataQueries = new HashMap<>();
     private final SqlParser sqlParser;
     private final RegObjectFactory regObjectFactory;
     private final Metadata metadata;
@@ -209,7 +211,7 @@ public class WireProtocolSession
     public Optional<List<Column>> describePortal(String name)
     {
         Portal portal = getPortal(name);
-        Query query = queries.get(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
+        Query query = metadataQueries.get(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
         if (query != null && query.getConnectorRecordIterator().isPresent()) {
             return Optional.of(query.getConnectorRecordIterator().get().getColumns());
         }
@@ -234,6 +236,25 @@ public class WireProtocolSession
         return preparedStatements.get(name).getParamTypeOids();
     }
 
+    /**
+     * Refer to the doc, a prepared statement describe is followed by a RowDescription message.
+     * Create another dry-run prepared statement and portal to get the RowDescription message and
+     * avoid to effect the real prepared statement.
+     */
+    public Optional<List<Column>> dryRunAfterDescribeStatement(String statementName, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
+    {
+        preparedStatements.put(RESERVED_DRY_RUN_NAME, cloneWithName(preparedStatements.get(statementName), RESERVED_DRY_RUN_NAME));
+        metadataQueries.put(preparedStmtPortalName(RESERVED_DRY_RUN_NAME, null), Query.builder(preparedStatements.get(RESERVED_DRY_RUN_NAME)).build());
+        bind(RESERVED_DRY_RUN_NAME, RESERVED_DRY_RUN_NAME, params, resultFormatCodes);
+
+        Optional<List<Column>> result = describePortal(RESERVED_DRY_RUN_NAME);
+        resetMetadataQuery(RESERVED_DRY_RUN_NAME, RESERVED_DRY_RUN_NAME);
+        preparedStatements.remove(RESERVED_DRY_RUN_NAME);
+        portals.remove(RESERVED_DRY_RUN_NAME);
+
+        return result;
+    }
+
     public void parse(String statementName, String statement, List<Integer> paramTypes)
     {
         if (statementName.equalsIgnoreCase(ALL)) {
@@ -250,7 +271,6 @@ public class WireProtocolSession
         String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
         if (isMetadataQuery(statementPreRewritten)) {
             // Level 1 Query
-            // PG Metadata Query won't carry any parameters
             createMetadataQueryPreparedStatement(statementName, statement, statement, paramTypes, QueryLevel.METASTORE_FULL);
             return;
         }
@@ -270,9 +290,7 @@ public class WireProtocolSession
         try {
             Statement metadataQueryStatement = MetastoreSqlRewrite.rewrite(regObjectFactory,
                     sqlParser.createStatement(statementPreRewritten, PARSE_AS_DECIMAL));
-            LOG.info("Rewritten SQL: %s", SqlFormatter.formatSql(metadataQueryStatement));
             String converted = pgMetastore.getSqlConverter().convert(SqlFormatter.formatSql(metadataQueryStatement), sessionContext);
-            LOG.info(converted);
             createMetadataQueryPreparedStatement(statementName, statement, converted, paramTypes, QueryLevel.METASTORE_SEMI);
         }
         catch (Exception e) {
@@ -308,7 +326,7 @@ public class WireProtocolSession
                         statementTrimmed,
                         isSessionCommand(rewrittenStatement),
                         QueryLevel.DATASOURCE));
-        queries.remove(preparedStmtPortalName(statementName, null));
+        // metadataQueries.remove(preparedStmtPortalName(statementName, null));
         LOG.info("Create preparedStatement %s", statementName);
     }
 
@@ -316,7 +334,7 @@ public class WireProtocolSession
     {
         PreparedStatement preparedStatement = new PreparedStatement(statementName, rewritten, paramTypes, statement, false, level);
         preparedStatements.put(statementName, preparedStatement);
-        queries.put(preparedStmtPortalName(statementName, null), Query.builder(preparedStatement).build());
+        metadataQueries.put(preparedStmtPortalName(statementName, null), Query.builder(preparedStatement).build());
     }
 
     private static boolean isSessionCommand(Statement statement)
@@ -336,7 +354,7 @@ public class WireProtocolSession
 
     public void bind(String portalName, String statementName, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
     {
-        Query query = queries.get(preparedStmtPortalName(statementName, null));
+        Query query = metadataQueries.get(preparedStmtPortalName(statementName, null));
         if (query != null) {
             try {
                 Portal portal = rewriteWithParameters(new Portal(portalName, query.getPreparedStatement(), params, resultFormatCodes, query.getPreparedStatement().getQueryLevel()));
@@ -346,14 +364,14 @@ public class WireProtocolSession
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
                 query.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
-                queries.remove(preparedStmtPortalName(statementName, null));
-                queries.put(preparedStmtPortalName(statementName, portalName), query);
+                metadataQueries.remove(preparedStmtPortalName(statementName, null));
+                metadataQueries.put(preparedStmtPortalName(statementName, portalName), query);
                 return;
             }
             catch (Exception e) {
+                // Forward to level 2
                 LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", query.getPortal().get().getPreparedStatement().getStatement());
-                query.getPortal().get().close();
-                queries.remove(preparedStmtPortalName(statementName, null));
+                resetMetadataQuery(statementName, null);
                 parseMetastoreSemiQuery(query.getPreparedStatement().getName(),
                         query.getPreparedStatement().getOriginalStatement(),
                         query.getPreparedStatement().getParamTypeOids());
@@ -361,7 +379,7 @@ public class WireProtocolSession
         }
 
         // Execute Level 2 Query
-        Query level2Query = queries.get(preparedStmtPortalName(statementName, null));
+        Query level2Query = metadataQueries.get(preparedStmtPortalName(statementName, null));
         if (level2Query != null) {
             try {
                 Portal portal = new Portal(portalName, level2Query.getPreparedStatement(), params, resultFormatCodes, level2Query.getPreparedStatement().getQueryLevel());
@@ -369,14 +387,14 @@ public class WireProtocolSession
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
                 level2Query.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
-                queries.remove(preparedStmtPortalName(statementName, null));
-                queries.put(preparedStmtPortalName(statementName, portalName), level2Query);
+                metadataQueries.remove(preparedStmtPortalName(statementName, null));
+                metadataQueries.put(preparedStmtPortalName(statementName, portalName), level2Query);
                 return;
             }
             catch (Exception e) {
+                // Forward to level 3
                 LOG.debug(e, "Failed to execute SQL in METASTORE_SEMI level: %s", level2Query.getPreparedStatement().getStatement());
-                level2Query.getPortal().get().close();
-                queries.remove(preparedStmtPortalName(statementName, null));
+                resetMetadataQuery(statementName, null);
                 parseDataSourceQuery(level2Query.getPreparedStatement().getName(),
                         level2Query.getPreparedStatement().getOriginalStatement(),
                         level2Query.getPreparedStatement().getParamTypeOids());
@@ -384,12 +402,18 @@ public class WireProtocolSession
         }
 
         // Bind Level 3 Query
-
         portals.put(portalName, new Portal(portalName, preparedStatements.get(statementName), params, resultFormatCodes, QueryLevel.DATASOURCE));
         String paramString = params.stream()
                 .map(element -> (isNull(element)) ? "null" : element.toString())
                 .collect(Collectors.joining(","));
         LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, paramString, statementName);
+    }
+
+    private void resetMetadataQuery(String statementName, String portalName)
+    {
+        PreparedStmtPortalName name = preparedStmtPortalName(statementName, portalName);
+        metadataQueries.get(name).getPortal().ifPresent(Portal::close);
+        metadataQueries.remove(name);
     }
 
     public CompletableFuture<Optional<ConnectorRecordIterator>> execute(String portalName)
@@ -399,7 +423,7 @@ public class WireProtocolSession
 
     private CompletableFuture<Optional<ConnectorRecordIterator>> execute(Portal portal)
     {
-        Query query = queries.get(preparedStmtPortalName(portal.getPreparedStatement().getName(), portal.getName()));
+        Query query = metadataQueries.get(preparedStmtPortalName(portal.getPreparedStatement().getName(), portal.getName()));
         if (query != null && query.getConnectorRecordIterator().isPresent()) {
             return CompletableFuture.completedFuture(query.getConnectorRecordIterator());
         }
@@ -446,7 +470,7 @@ public class WireProtocolSession
     {
         CompletableFuture<Optional<GenericTableRecordIterable>> ended = runningQuery;
         runningQuery = CompletableFuture.completedFuture(null);
-        queries.clear();
+        metadataQueries.clear();
         return ended;
     }
 
@@ -459,7 +483,7 @@ public class WireProtocolSession
                 if (portal != null) {
                     portal.getConnectorRecordIterable().close();
                     portals.remove(name);
-                    queries.remove(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
+                    metadataQueries.remove(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
                 }
                 break;
             case 'S':
@@ -469,7 +493,7 @@ public class WireProtocolSession
                             .filter(entry -> entry.getValue().getPreparedStatement().getName().equals(preparedStatement.getName()))
                             .map(Map.Entry::getKey).collect(toImmutableList());
                     removedNames.forEach(portals::remove);
-                    removedNames.forEach(portalName -> queries.remove(preparedStmtPortalName(name, portalName)));
+                    removedNames.forEach(portalName -> metadataQueries.remove(preparedStmtPortalName(name, portalName)));
                 }
                 break;
             default:

@@ -518,8 +518,9 @@ public class PostgresWireProtocol
                 case 'S':
                     List<Integer> paramTypes = wireProtocolSession.describeStatement(portalOrStatement);
                     Messages.sendParameterDescription(channel, paramTypes);
-                    wireProtocolSession.bind("", portalOrStatement, paramTypes.stream().map(ignore -> "null").collect(toImmutableList()), null);
-                    Optional<List<Column>> described = wireProtocolSession.describePortal("");
+                    Optional<List<Column>> described = wireProtocolSession.dryRunAfterDescribeStatement(
+                            portalOrStatement, paramTypes.stream().map(ignore -> "null").collect(toImmutableList()),
+                            null);
                     if (described.isEmpty()) {
                         Messages.sendNoData(channel);
                     }

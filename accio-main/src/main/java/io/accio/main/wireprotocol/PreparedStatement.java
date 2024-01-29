@@ -20,6 +20,19 @@ import java.util.Optional;
 public class PreparedStatement
 {
     public static final String RESERVED_PREPARE_NAME = "acc1o";
+    public static final String RESERVED_DRY_RUN_NAME = "dry_run";
+
+    public static PreparedStatement cloneWithName(PreparedStatement preparedStatement, String newName)
+    {
+        return new PreparedStatement(
+                newName,
+                preparedStatement.getStatement(),
+                preparedStatement.getCacheStatement(),
+                preparedStatement.getParamTypeOids(),
+                preparedStatement.getOriginalStatement(),
+                preparedStatement.isSessionCommand(),
+                preparedStatement.getQueryLevel());
+    }
 
     private final String name;
     private final String statement;

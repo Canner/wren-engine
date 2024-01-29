@@ -14,9 +14,13 @@
 
 package io.accio.testing;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.Manifest;
+import io.accio.base.type.PGType;
+import io.accio.base.type.PGTypes;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.testng.annotations.Test;
 
 import java.nio.file.Files;
@@ -25,8 +29,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.type.IntegerType.INTEGER;
+import static io.accio.base.type.VarcharType.VARCHAR;
+import static io.accio.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -103,6 +112,82 @@ public class TestMetadataQuery
             ResultSet result = stmt.executeQuery();
             result.next();
             assertThat(result.getString(1)).isEqualTo("bigint");
+        }
+    }
+
+    @Test
+    public void testExecuteAndDescribeLevel1Query()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            List<PGType> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("", "select typname from pg_type where pg_type.oid = ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertParseComplete();
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+
+            protocolClient.assertDataRow("bigint");
+            protocolClient.assertCommandComplete("SELECT 1");
+        }
+    }
+
+    @Test
+    public void testExecuteAndDescribeLevel2Query()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            List<PGType> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("", "select 'pg_type'::regclass, ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertParseComplete();
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertDataRow("pg_type,14");
+            protocolClient.assertCommandComplete("SELECT 1");
         }
     }
 }
