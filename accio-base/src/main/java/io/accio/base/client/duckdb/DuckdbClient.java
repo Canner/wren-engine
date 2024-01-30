@@ -48,6 +48,7 @@ public final class DuckdbClient
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
+    private final DuckDBConnection duckDBConnection;
     private final HikariDataSource connectionPool;
 
     @Inject
@@ -57,7 +58,7 @@ public final class DuckdbClient
             // The instance will be cleared after the process end. We don't need to
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
-            DuckDBConnection duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
+            this.duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
             this.duckDBConfig = duckDBConfig;
             HikariConfig config = getHikariConfig(duckDBConfig, duckdbS3StyleStorageConfig, duckDBConnection);
             connectionPool = new HikariDataSource(config);
@@ -211,5 +212,17 @@ public final class DuckdbClient
     public DuckDBConfig getDuckDBConfig()
     {
         return duckDBConfig;
+    }
+
+    @Override
+    public void close()
+    {
+        try {
+            connectionPool.close();
+            duckDBConnection.close();
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

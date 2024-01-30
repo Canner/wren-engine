@@ -21,6 +21,7 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
@@ -96,6 +97,7 @@ public class TestingAccioServer
                 .quiet()
                 .initialize();
 
+        closer.register(() -> injector.getInstance(DuckdbClient.class).close());
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }
 

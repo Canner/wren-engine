@@ -204,4 +204,9 @@ public class PostgresClient
             preparedStatement.setObject(i, parameters.get(i - 1).getValue());
         }
     }
+
+    @Override
+    public void close()
+    {
+    }
 }

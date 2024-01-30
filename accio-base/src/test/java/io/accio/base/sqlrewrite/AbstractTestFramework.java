@@ -74,6 +74,7 @@ public abstract class AbstractTestFramework
     public final void close()
     {
         cleanup();
+        duckdbClient.close();
     }
 
     protected void prepareData() {}

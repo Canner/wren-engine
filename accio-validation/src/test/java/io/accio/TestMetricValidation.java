@@ -33,6 +33,7 @@ import io.accio.validation.ModelValidation;
 import io.accio.validation.NotNullValidation;
 import io.accio.validation.RelationshipValidation;
 import io.accio.validation.ValidationResult;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -67,6 +68,12 @@ public class TestMetricValidation
                         EnumDefinition.enumDefinition("Carrier", List.of(enumValue("AA"), enumValue("UA"))),
                         EnumDefinition.enumDefinition("Status", List.of(enumValue("OK"), enumValue("NOT_OK")))))
                 .build());
+    }
+
+    @AfterClass
+    public void cleanup()
+    {
+        client.close();
     }
 
     @Test

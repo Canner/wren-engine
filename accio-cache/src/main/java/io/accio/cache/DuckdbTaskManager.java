@@ -100,5 +100,6 @@ public class DuckdbTaskManager
             throws IOException
     {
         taskExecutorService.shutdownNow();
+        duckdbClient.close();
     }
 }
