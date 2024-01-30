@@ -5,10 +5,10 @@ on:
     inputs:
       image_tag_name:
         type: string
-        description: Specify the image tag or leave it empty to use the latest commit hash as the tag
+        description: Specify the image tag name (Optional)
       specify_commit:
         type: string
-        description: Specify the commit hash to build the image
+        description: Specify the commit hash (Optional)
 
 jobs:
   build-image:
