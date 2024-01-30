@@ -52,17 +52,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestStatementAnalyzer
         extends AbstractTestFramework
 {
-    public static final SqlParser sqlParser = new SqlParser();
+    private static final SqlParser SQL_PARSER = new SqlParser();
+    private static final SessionContext DEFAULT_SESSION_CONTEXT =
+            SessionContext.builder().setCatalog("test").setSchema("test").build();
 
     @Test
     public void testValues()
     {
         SessionContext sessionContext = SessionContext.builder().build();
-        Statement statement = sqlParser.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL));
+        Statement statement = SQL_PARSER.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL));
         Analysis analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
 
-        statement = sqlParser.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL));
+        statement = SQL_PARSER.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL));
         analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
     }
@@ -71,7 +73,7 @@ public class TestStatementAnalyzer
     public void testGetTableWithoutWithTable()
     {
         SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
-        Statement statement = sqlParser.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL));
+        Statement statement = SQL_PARSER.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL));
         Analysis analysis = new Analysis(statement);
         analyze(analysis,
                 statement,
@@ -84,7 +86,6 @@ public class TestStatementAnalyzer
     @Test
     public void testCollectedColumns()
     {
-        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
         Manifest manifest = Manifest.builder()
                 .setCatalog("test")
                 .setSchema("test")
@@ -92,44 +93,33 @@ public class TestStatementAnalyzer
                         model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
                         model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
                 .build();
-        Function<String, Analysis> analyzeSql = (sql) -> {
-            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-            Analysis analysis = new Analysis(statement);
-            analyze(
-                    analysis,
-                    statement,
-                    sessionContext,
-                    fromManifest(manifest));
-            return analysis;
-        };
 
         Multimap<CatalogSchemaTableName, String> expected;
         expected = HashMultimap.create();
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1", "c2"));
-        assertThat(analyzeSql.apply("SELECT * FROM table_1").getCollectedColumns()).isEqualTo(expected);
+        assertThat(analyzeSql("SELECT * FROM table_1", manifest).getCollectedColumns()).isEqualTo(expected);
 
         expected = HashMultimap.create();
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1"));
-        assertThat(analyzeSql.apply("SELECT c1 FROM table_1").getCollectedColumns()).isEqualTo(expected);
+        assertThat(analyzeSql("SELECT c1 FROM table_1", manifest).getCollectedColumns()).isEqualTo(expected);
 
         expected = HashMultimap.create();
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1"));
-        assertThat(analyzeSql.apply("SELECT c1, c1 FROM table_1").getCollectedColumns()).isEqualTo(expected);
+        assertThat(analyzeSql("SELECT c1, c1 FROM table_1", manifest).getCollectedColumns()).isEqualTo(expected);
 
         expected = HashMultimap.create();
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1"));
-        assertThat(analyzeSql.apply("SELECT t1.c1 FROM table_1 t1").getCollectedColumns()).isEqualTo(expected);
+        assertThat(analyzeSql("SELECT t1.c1 FROM table_1 t1", manifest).getCollectedColumns()).isEqualTo(expected);
 
         expected = HashMultimap.create();
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1", "c2"));
         expected.putAll(catalogSchemaTableName("test", "test", "table_2"), ImmutableList.of("c1", "c2"));
-        assertThat(analyzeSql.apply("SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1").getCollectedColumns()).isEqualTo(expected);
+        assertThat(analyzeSql("SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1", manifest).getCollectedColumns()).isEqualTo(expected);
     }
 
     @Test
     public void testGetSimplePredicates()
     {
-        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
         Manifest manifest = Manifest.builder()
                 .setCatalog("test")
                 .setSchema("test")
@@ -137,27 +127,29 @@ public class TestStatementAnalyzer
                         model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), column("c2", INTEGER, null, true))),
                         model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), column("c2", DATE, null, true)))))
                 .build();
-        Function<String, Analysis> analyzeSql = (sql) -> {
-            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-            Analysis analysis = new Analysis(statement);
-            analyze(
-                    analysis,
-                    statement,
-                    sessionContext,
-                    fromManifest(manifest));
-            return analysis;
-        };
 
         CatalogSchemaTableName t1 = new CatalogSchemaTableName("test", "test", "table_1");
         CatalogSchemaTableName t2 = new CatalogSchemaTableName("test", "test", "table_2");
-        assertThat(analyzeSql.apply("SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1\n" +
-                "WHERE t1.c1 = 'foo' AND t1.c2 >= 123 OR t2.c1 != 'bar' OR t2.c2 < DATE '2020-01-01' AND t1.c1 != t2.c1").getSimplePredicates())
+        assertThat(analyzeSql("SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1\n" +
+                "WHERE t1.c1 = 'foo' AND t1.c2 >= 123 OR t2.c1 != 'bar' OR t2.c2 < DATE '2020-01-01' AND t1.c1 != t2.c1", manifest).getSimplePredicates())
                 .containsExactlyInAnyOrderElementsOf(List.of(
                         new SimplePredicate(t1, "c1", ComparisonExpression.Operator.EQUAL, new StringLiteral("foo")),
                         new SimplePredicate(t1, "c1", ComparisonExpression.Operator.NOT_EQUAL, DereferenceExpression.from(QualifiedName.of("t2", "c1"))),
                         new SimplePredicate(t1, "c2", ComparisonExpression.Operator.GREATER_THAN_OR_EQUAL, new LongLiteral("123")),
                         new SimplePredicate(t2, "c1", ComparisonExpression.Operator.NOT_EQUAL, new StringLiteral("bar")),
                         new SimplePredicate(t2, "c2", ComparisonExpression.Operator.LESS_THAN, new GenericLiteral("DATE", "2020-01-01"))));
+    }
+
+    private Analysis analyzeSql(String sql, Manifest manifest)
+    {
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        Analysis analysis = new Analysis(statement);
+        analyze(
+                analysis,
+                statement,
+                DEFAULT_SESSION_CONTEXT,
+                fromManifest(manifest));
+        return analysis;
     }
 
     @Test
@@ -173,7 +165,7 @@ public class TestStatementAnalyzer
                 .build();
 
         Function<String, Scope> analyzeSql = (sql) -> {
-            Statement statement = sqlParser.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
             Analysis analysis = new Analysis(statement);
             return analyze(
                     analysis,
