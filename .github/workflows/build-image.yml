@@ -41,7 +41,7 @@ jobs:
         run: |
           ACCIO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
           if [ -z "${{ inputs.image_tag_name }}" ]; then
-            tag_name=${{ github.ref_name }}-$(git log -1 --pretty=%h)
+            tag_name=${{ github.ref_name | sed 's/[^a-zA-Z0-9]/-/g' }}-$(git log -1 --pretty=%h)
           else
             tag_name=${{ inputs.image_tag_name }}
           fi
