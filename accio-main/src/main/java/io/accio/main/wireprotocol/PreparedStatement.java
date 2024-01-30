@@ -17,22 +17,12 @@ package io.accio.main.wireprotocol;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 public class PreparedStatement
 {
     public static final String RESERVED_PREPARE_NAME = "acc1o";
     public static final String RESERVED_DRY_RUN_NAME = "dry_run";
-
-    public static PreparedStatement cloneWithName(PreparedStatement preparedStatement, String newName)
-    {
-        return new PreparedStatement(
-                newName,
-                preparedStatement.getStatement(),
-                preparedStatement.getCacheStatement(),
-                preparedStatement.getParamTypeOids(),
-                preparedStatement.getOriginalStatement(),
-                preparedStatement.isSessionCommand(),
-                preparedStatement.getQueryLevel());
-    }
 
     private final String name;
     private final String statement;
@@ -104,5 +94,18 @@ public class PreparedStatement
     public QueryLevel getQueryLevel()
     {
         return queryLevel;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("statement", statement)
+                .add("paramTypeOids", paramTypeOids)
+                .add("originalStatement", originalStatement)
+                .add("isSessionCommand", isSessionCommand)
+                .add("queryLevel", queryLevel)
+                .toString();
     }
 }

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 
@@ -136,6 +137,20 @@ public class Portal
     public List<Object> getParametersValue()
     {
         return params;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("preparedStatement", preparedStatement)
+                .add("params", params)
+                .add("resultFormatCodes", resultFormatCodes)
+                .add("connectorRecordIterator", connectorRecordIterator)
+                .add("rowCount", rowCount)
+                .add("level", level)
+                .toString();
     }
 
     // TODO: make sure this annotation works.
