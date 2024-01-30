@@ -54,6 +54,5 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag ghcr.io/canner/accio:${{ steps.prepare_tag.outputs.tag_name }} \
-            --tag ghcr.io/canner/accio:latest \
             --push -f ./Dockerfile \
             --build-arg "ACCIO_VERSION=${ACCIO_VERSION}" .
