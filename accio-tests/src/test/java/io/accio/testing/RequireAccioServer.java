@@ -79,6 +79,7 @@ public abstract class RequireAccioServer
 
     @BeforeClass
     public void init()
+            throws Exception
     {
         this.accioServer = createAccioServer();
         this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS))));
@@ -86,7 +87,8 @@ public abstract class RequireAccioServer
         prepare();
     }
 
-    protected abstract TestingAccioServer createAccioServer();
+    protected abstract TestingAccioServer createAccioServer()
+            throws Exception;
 
     protected TestingAccioServer server()
     {

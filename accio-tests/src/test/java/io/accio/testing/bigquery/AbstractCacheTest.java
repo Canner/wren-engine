@@ -21,6 +21,7 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.dto.CacheInfo;
 import io.accio.base.dto.Manifest;
 import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
@@ -55,31 +56,30 @@ public abstract class AbstractCacheTest
 
     @Override
     protected TestingAccioServer createAccioServer()
+            throws Exception
     {
-        try {
-            Path dir = Files.createTempDirectory(getAccioDirectory());
-            if (getAccioMDLPath().isPresent()) {
-                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
-            }
-            else {
-                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
-            }
-            return TestingAccioServer.builder()
-                    .setRequiredConfigs(getProperties().put("accio.directory", dir.toString()).build())
-                    .build();
+        Path dir = Files.createTempDirectory(getAccioDirectory());
+        if (getAccioMDLPath().isPresent()) {
+            Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
         }
-        catch (Exception ex) {
-            throw new RuntimeException(ex);
+        else {
+            Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
         }
+        return TestingAccioServer.builder()
+                .setRequiredConfigs(getProperties().put("accio.directory", dir.toString()).build())
+                .build();
     }
 
     @BeforeClass
     @Override
     public void init()
+            throws Exception
     {
         super.init();
         AccioMDL mdl = getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
-        mdl.listCached().forEach(cached -> waitCacheReady(mdl.getCatalog(), mdl.getSchema(), cached.getName()));
+        for (CacheInfo cached : mdl.listCached()) {
+            waitCacheReady(mdl.getCatalog(), mdl.getSchema(), cached.getName());
+        }
     }
 
     protected ImmutableMap.Builder<String, String> getProperties()
@@ -141,25 +141,21 @@ public abstract class AbstractCacheTest
     }
 
     private void waitCacheReady(String catalog, String schema, String name)
+            throws Exception
     {
-        try {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    while (true) {
-                        Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
-                        if (cachedTable.isPresent()) {
-                            break;
-                        }
-                        Thread.sleep(1000);
+        CompletableFuture.runAsync(() -> {
+            try {
+                while (true) {
+                    Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
+                    if (cachedTable.isPresent()) {
+                        break;
                     }
+                    Thread.sleep(1000);
                 }
-                catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }).get(30, TimeUnit.SECONDS);
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).get(30, TimeUnit.SECONDS);
     }
 }

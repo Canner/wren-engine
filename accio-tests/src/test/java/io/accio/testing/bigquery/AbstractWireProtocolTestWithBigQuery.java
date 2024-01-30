@@ -44,6 +44,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
 
     @Override
     protected TestingAccioServer createAccioServer()
+            throws Exception
     {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
