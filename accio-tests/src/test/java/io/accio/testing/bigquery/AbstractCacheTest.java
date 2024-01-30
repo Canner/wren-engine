@@ -37,6 +37,8 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -141,13 +143,20 @@ public abstract class AbstractCacheTest
     private void waitCacheReady(String catalog, String schema, String name)
     {
         try {
-            while (true) {
-                Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
-                if (cachedTable.isPresent()) {
-                    break;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    while (true) {
+                        Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
+                        if (cachedTable.isPresent()) {
+                            break;
+                        }
+                        Thread.sleep(1000);
+                    }
                 }
-                Thread.sleep(1000);
-            }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).get(30, TimeUnit.SECONDS);
         }
         catch (Exception e) {
             throw new RuntimeException(e);

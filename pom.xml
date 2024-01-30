@@ -401,6 +401,7 @@
                 <version>3.21.4</version>
             </dependency>
 
+            <!-- using a self-built pre-release version until the official release (0.9.3) -->
             <!--            <dependency>-->
             <!--                <groupId>org.duckdb</groupId>-->
             <!--                <artifactId>duckdb_jdbc</artifactId>-->

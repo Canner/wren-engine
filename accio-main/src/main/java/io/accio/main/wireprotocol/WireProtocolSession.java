@@ -66,7 +66,6 @@ import static io.accio.main.wireprotocol.patterns.PostgreSqlRewriteUtil.rewriteW
 import static io.trino.execution.ParameterExtractor.getParameterCount;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static java.lang.String.format;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
@@ -311,6 +310,7 @@ public class WireProtocolSession
                 statementPreRewritten,
                 sessionContext,
                 analyzedMDL);
+        // TODO: support set session property
         // validateSetSessionProperty(statementPreRewritten);
         Statement parsedStatement = sqlParser.createStatement(accioRewritten, PARSE_AS_DECIMAL);
         Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), metadata.getPgCatalogName(), parsedStatement);
@@ -484,7 +484,6 @@ public class WireProtocolSession
             case 'P':
                 Portal portal = portals.get(name);
                 if (portal != null) {
-                    portal.getConnectorRecordIterable().close();
                     portals.remove(name);
                     metadataQueries.remove(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
                 }
@@ -624,11 +623,6 @@ public class WireProtocolSession
         {
             return Objects.hash(preparedStmtName, portalName);
         }
-    }
-
-    private boolean isNoDataReturnedCommand(String statement)
-    {
-        return statement.toUpperCase(ENGLISH).startsWith("SET");
     }
 
     private List<Integer> rewriteParameters(Statement statement, List<Integer> paramTypes)

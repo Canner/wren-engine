@@ -159,8 +159,6 @@ public final class StatementAnalyzer
                 // is this a reference to a WITH query?
                 Optional<WithQuery> withQuery = scope.get().getNamedQuery(node.getName().getSuffix());
                 if (withQuery.isPresent()) {
-                    // currently we only care about the table that is actually a model instead of a alias table that use cte table
-                    // return empty scope here.
                     Analysis analyzed = new Analysis(withQuery.get().getQuery());
                     return Optional.ofNullable(analyze(analyzed, withQuery.get().getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
                             .map(value -> createAndAssignScope(scope, value))
