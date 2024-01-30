@@ -482,11 +482,10 @@ public class WireProtocolSession
     {
         switch (type) {
             case 'P':
-                Portal portal = portals.get(name);
-                if (portal != null) {
+                Optional.ofNullable(portals.get(name)).ifPresent(portal -> {
                     portals.remove(name);
                     metadataQueries.remove(preparedStmtPortalName(portal.getPreparedStatement().getName(), name));
-                }
+                });
                 break;
             case 'S':
                 PreparedStatement preparedStatement = preparedStatements.remove(name);
