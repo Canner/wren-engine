@@ -23,7 +23,6 @@ jobs:
           java-version: 11
           distribution: 'adopt'
           cache: 'maven'
-          cache-dependency-path: '**/pom.xml'
       - name: Build
         run: |
           ./mvnw clean install -B -DskipTests -P exec-jar
