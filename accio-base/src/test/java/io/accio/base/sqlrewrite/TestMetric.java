@@ -42,6 +42,7 @@ import static io.accio.base.dto.TimeUnit.MONTH;
 import static io.accio.base.dto.TimeUnit.YEAR;
 import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestMetric
@@ -253,6 +254,13 @@ public class TestMetric
     }
 
     @Test
+    public void testSelectEmptyWithDynamic()
+    {
+        assertThatCode(() -> query(rewrite("select 1 from TotalpriceByCustomerBaseOrders", true)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     public void testModelOnMetric()
     {
         List<Model> models = ImmutableList.<Model>builder()
@@ -273,6 +281,9 @@ public class TestMetric
         List<List<Object>> result = query(rewrite("select * from testModelOnMetric", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(14958);
+
+        assertThatCode(() -> query(rewrite("select 1 from testModelOnMetric", true)))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -292,6 +303,9 @@ public class TestMetric
         List<List<Object>> result = query(rewrite("SELECT * FROM testMetricOnMetric ORDER BY orderyear", mdl));
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(7);
+
+        assertThatCode(() -> query(rewrite("select 1 from testMetricOnMetric", true)))
+                .doesNotThrowAnyException();
     }
 
     @Test
