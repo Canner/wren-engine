@@ -5,7 +5,7 @@ on:
     inputs:
       docker_image_name:
         type: string
-        description: Docker image name (default {branch name}-{commit hash})
+        description: Docker image name (Optional)
 
 jobs:
   build-image:
