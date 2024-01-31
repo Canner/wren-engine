@@ -20,10 +20,10 @@ import io.accio.base.SessionContext;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
 import io.accio.base.sqlrewrite.analyzer.StatementAnalyzer;
 import io.accio.main.AccioMetastore;
+import io.accio.main.web.dto.ColumnPredicateDto;
 import io.accio.main.web.dto.PredicateDto;
 import io.accio.main.web.dto.SqlAnalysisInputDto;
 import io.accio.main.web.dto.SqlAnalysisOutputDto;
-import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 
 import javax.inject.Inject;
@@ -90,17 +90,23 @@ public class AnalysisResource
     private static List<SqlAnalysisOutputDto> toSqlAnalysisOutputDto(List<SimplePredicate> predicates)
     {
         return predicates.stream()
-                .collect(groupingBy(predicate -> QualifiedName.of(
-                        predicate.getTableName().getSchemaTableName().getTableName(),
-                        predicate.getColumnName())))
+                .collect(
+                        // group by table name
+                        groupingBy(predicate -> predicate.getTableName().getSchemaTableName().getTableName(),
+                                // then group by column name
+                                groupingBy(SimplePredicate::getColumnName)))
                 .entrySet()
                 .stream()
                 .map(e ->
                         new SqlAnalysisOutputDto(
-                                e.getKey().getParts().get(0),
-                                e.getKey().getParts().get(1),
-                                e.getValue().stream()
-                                        .map(simplePredicate -> new PredicateDto(simplePredicate.getOperator(), simplePredicate.getValue()))
+                                e.getKey(),
+                                e.getValue().entrySet().stream()
+                                        .map(columns ->
+                                                new ColumnPredicateDto(
+                                                        columns.getKey(),
+                                                        columns.getValue().stream()
+                                                                .map(predicate -> new PredicateDto(predicate.getOperator(), predicate.getValue()))
+                                                                .collect(toImmutableList())))
                                         .collect(toImmutableList())))
                 .collect(toImmutableList());
     }

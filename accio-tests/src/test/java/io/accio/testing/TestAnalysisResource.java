@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Model;
+import io.accio.main.web.dto.ColumnPredicateDto;
 import io.accio.main.web.dto.PredicateDto;
 import io.accio.main.web.dto.SqlAnalysisInputDto;
 import io.accio.main.web.dto.SqlAnalysisOutputDto;
@@ -90,12 +91,12 @@ public class TestAnalysisResource
     public void testAnalysisSqlDefaultManifest()
     {
         List<SqlAnalysisOutputDto> results = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM Customer WHERE custkey >= 100 AND custkey <= 123 OR name != 'foo'"));
-        assertThat(results.size()).isEqualTo(2);
+        assertThat(results.size()).isEqualTo(1);
 
         List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("Customer", "custkey",
-                        List.of(new PredicateDto(">=", "100"), new PredicateDto("<=", "123"))))
-                .add(new SqlAnalysisOutputDto("Customer", "name", List.of(new PredicateDto("<>", "'foo'"))))
+                .add(new SqlAnalysisOutputDto("Customer",
+                        List.of(new ColumnPredicateDto("custkey", List.of(new PredicateDto(">=", "100"), new PredicateDto("<=", "123"))),
+                                new ColumnPredicateDto("name", List.of(new PredicateDto("<>", "'foo'"))))))
                 .build();
 
         assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
@@ -116,13 +117,15 @@ public class TestAnalysisResource
                 new SqlAnalysisInputDto(manifest,
                         "SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1\n" +
                                 "WHERE t1.c1 = 'foo' AND t1.c2 >= 123 OR t2.c1 != 'bar' OR t2.c2 < DATE '2020-01-01'"));
-        assertThat(results.size()).isEqualTo(4);
+        assertThat(results.size()).isEqualTo(2);
 
         List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("table_1", "c1", List.of(new PredicateDto("=", "'foo'"))))
-                .add(new SqlAnalysisOutputDto("table_1", "c2", List.of(new PredicateDto(">=", "123"))))
-                .add(new SqlAnalysisOutputDto("table_2", "c1", List.of(new PredicateDto("<>", "'bar'"))))
-                .add(new SqlAnalysisOutputDto("table_2", "c2", List.of(new PredicateDto("<", "DATE '2020-01-01'"))))
+                .add(new SqlAnalysisOutputDto("table_1",
+                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("=", "'foo'"))),
+                                new ColumnPredicateDto("c2", List.of(new PredicateDto(">=", "123"))))))
+                .add(new SqlAnalysisOutputDto("table_2",
+                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("<>", "'bar'"))),
+                                new ColumnPredicateDto("c2", List.of(new PredicateDto("<", "DATE '2020-01-01'"))))))
                 .build();
 
         assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
