@@ -488,14 +488,14 @@ public class WireProtocolSession
                 });
                 break;
             case 'S':
-                PreparedStatement preparedStatement = preparedStatements.remove(name);
-                if (preparedStatement != null) {
+                Optional.ofNullable(preparedStatements.get(name)).ifPresent(preparedStatement -> {
+                    preparedStatements.remove(name);
                     List<String> removedNames = portals.entrySet().stream()
                             .filter(entry -> entry.getValue().getPreparedStatement().getName().equals(preparedStatement.getName()))
                             .map(Map.Entry::getKey).collect(toImmutableList());
                     removedNames.forEach(portals::remove);
                     removedNames.forEach(portalName -> metadataQueries.remove(preparedStmtPortalName(name, portalName)));
-                }
+                });
                 break;
             default:
                 throw new AccioException(INVALID_PARAMETER_USAGE, format("Type %s is invalid. We only support 'P' and 'S'", type));
@@ -522,12 +522,12 @@ public class WireProtocolSession
             return delegate.put(key, value);
         }
 
-        public PreparedStatement remove(String key)
+        public void remove(String key)
         {
             if (key.isEmpty()) {
-                return delegate.remove(PreparedStatement.RESERVED_PREPARE_NAME);
+                delegate.remove(PreparedStatement.RESERVED_PREPARE_NAME);
             }
-            return delegate.remove(key);
+            delegate.remove(key);
         }
 
         public boolean containsKey(String key)
@@ -564,10 +564,10 @@ public class WireProtocolSession
             return delegate.put(key, value);
         }
 
-        public Portal remove(String key)
+        public void remove(String key)
         {
             close(key);
-            return delegate.remove(key);
+            delegate.remove(key);
         }
 
         public boolean containsKey(String key)
