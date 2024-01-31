@@ -3,9 +3,9 @@ name: Build image
 on:
   workflow_dispatch:
     inputs:
-      docker_image_name:
+      docker_image_tag_name:
         type: string
-        description: Docker image name (Optional)
+        description: Docker image tag name (Optional)
 
 jobs:
   build-image:
@@ -34,8 +34,8 @@ jobs:
       - name: Prepare tag name
         id: prepare_tag
         run: |
-          if [ -n "${{ github.event.inputs.docker_image_name }}" ]; then
-            tag_name=${{ github.event.inputs.docker_image_name }}
+          if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
+            tag_name=${{ github.event.inputs.docker_image_tag_name }}
           else
             tag_name=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')-$(git log -1 --pretty=%h)
           fi
