@@ -100,7 +100,8 @@ public class AccioDataLineage
      * Retrieve tables in the order of CTE generation and their respective required columns for the given column.
      *
      * @param columnNames list of QualifiedName, the qualified name should only have two elements, first element is table name, second element is column name.
-     * @return {@code LinkedHashMap<String, Set<String>>} which key is table name, value is a set of column names
+     * @return {@code LinkedHashMap<String, Set<String>>} which key is table name, value is a set of column names.
+     * The order of the entry is the order of CTE generation. That's why use LinkedHashMap.
      */
     public LinkedHashMap<String, Set<String>> getRequiredFields(List<QualifiedName> columnNames)
     {

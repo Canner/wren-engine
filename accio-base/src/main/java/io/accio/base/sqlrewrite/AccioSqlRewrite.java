@@ -118,6 +118,9 @@ public class AccioSqlRewrite
                 withQueries.add(getWithQuery(DateSpineInfo.get(accioMDL.getDateSpine())));
             }
             descriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
+            // If a selected table lacks any required fields, create a dummy with query for it.
+            analysis.getTables().stream().filter(table -> !tableRequiredFields.containsKey(table.getSchemaTableName().getTableName()))
+                    .forEach(dummy -> withQueries.add(getWithQuery(new DummyInfo(dummy.getSchemaTableName().getTableName()))));
 
             Node rewriteWith = new WithRewriter(withQueries).process(root);
             return (Statement) new Rewriter(accioMDL, analysis).process(rewriteWith);

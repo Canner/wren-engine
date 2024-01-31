@@ -255,6 +255,9 @@ public class TestModel
                         "LEFT JOIN orders o ON c.custkey = o.custkey\n" +
                         "WHERE c.custkey = 370\n" +
                         "GROUP BY 1");
+
+        assertThatCode(() -> query(rewrite("SELECT 1 FROM OnCustomer", mdl, true)))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -281,6 +284,39 @@ public class TestModel
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
 
         assertThatCode(() -> query(rewrite("SELECT test_column FROM Lineitem", mdl, true)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    public void testSelectEmpty()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("total_price", BIGINT, "sum(orders.totalprice)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                column("customer", "Customer", "OrdersCustomer", true),
+                column("lineitem", "Lineitem", "OrdersLineitem", true),
+                caluclatedColumn("customer_name", BIGINT, "customer.name"),
+                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"));
+        Model newLineitem = addColumnsToModel(
+                lineitem,
+                column("orders", "Orders", "OrdersLineitem", true),
+                caluclatedColumn("test_column", BIGINT, "orders.customer.total_price + extendedprice"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, newOrders, newLineitem))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThatCode(() -> query(rewrite("SELECT true \"_\" FROM Lineitem", mdl, true)))
+                .doesNotThrowAnyException();
+
+        assertThatCode(() -> query(rewrite("SELECT true \"_\" FROM Lineitem, Orders", mdl, true)))
+                .doesNotThrowAnyException();
+
+        assertThatCode(() -> query(rewrite("SELECT orderkey FROM Lineitem, Orders", mdl, true)))
                 .doesNotThrowAnyException();
     }
 

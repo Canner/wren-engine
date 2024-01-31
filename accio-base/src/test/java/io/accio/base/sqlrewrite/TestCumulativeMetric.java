@@ -40,6 +40,7 @@ import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Window.window;
 import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestCumulativeMetric
@@ -102,6 +103,11 @@ public class TestCumulativeMetric
             assertThat(query(rewrite("select * from QuarterlyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(8);
             assertThat(query(rewrite("select * from YearlyRevenue", accioMDL, enableDynamic)).size()).isEqualTo(5);
         });
+
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatCode(() -> query(rewrite("SELECT 1 FROM DailyRevenue", accioMDL, true)))
+                    .doesNotThrowAnyException();
+        });
     }
 
     @Test
@@ -127,6 +133,11 @@ public class TestCumulativeMetric
             assertThat(result.get(0).size()).isEqualTo(2);
             assertThat(result.size()).isEqualTo(53);
         });
+
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatCode(() -> query(rewrite("SELECT 1 FROM testModelOnCumulativeMetric", mdl, true)))
+                    .doesNotThrowAnyException();
+        });
     }
 
     @Test
@@ -151,6 +162,11 @@ public class TestCumulativeMetric
             assertThat(result.get(0).size()).isEqualTo(2);
             assertThat(result.size()).isEqualTo(12);
         });
+
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatCode(() -> query(rewrite("SELECT 1 FROM testMetricOnCumulativeMetric", mdl, true)))
+                    .doesNotThrowAnyException();
+        });
     }
 
     @Test
@@ -171,6 +187,11 @@ public class TestCumulativeMetric
             List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnCumulativeMetric ORDER BY orderyear", mdl, enableDynamic));
             assertThat(result.get(0).size()).isEqualTo(2);
             assertThat(result.size()).isEqualTo(5);
+        });
+
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatCode(() -> query(rewrite("SELECT 1 FROM testCumulativeMetricOnCumulativeMetric", mdl, true)))
+                    .doesNotThrowAnyException();
         });
     }
 
@@ -219,6 +240,11 @@ public class TestCumulativeMetric
             List<List<Object>> result = query(rewrite("SELECT * FROM testCumulativeMetricOnMetric ORDER BY orderyear", mdl, enableDynamic));
             assertThat(result.get(0).size()).isEqualTo(2);
             assertThat(result.size()).isEqualTo(5);
+        });
+
+        List.of(true, false).forEach(enableDynamic -> {
+            assertThatCode(() -> query(rewrite("SELECT 1 FROM testCumulativeMetricOnMetric", mdl, true)))
+                    .doesNotThrowAnyException();
         });
     }
 
