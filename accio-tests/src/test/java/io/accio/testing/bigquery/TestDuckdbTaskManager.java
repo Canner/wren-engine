@@ -21,6 +21,7 @@ import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Model;
 import io.accio.cache.CacheInfoPair;
@@ -73,9 +74,9 @@ public class TestDuckdbTaskManager
     }
 
     @Override
-    protected CacheInfoPair getDefaultCacheInfoPair(String name)
+    protected Optional<CacheInfoPair> getDefaultCacheInfoPair(String name)
     {
-        return cachedTableMapping.get().getCacheInfoPair(mdl.getCatalog(), mdl.getSchema(), name);
+        return Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(mdl.getCatalog(), mdl.getSchema(), name));
     }
 
     @Test
@@ -92,7 +93,7 @@ public class TestDuckdbTaskManager
 
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMaxCacheTableSizeRatio(0);
-        try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig))) {
+        try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig, new DuckdbS3StyleStorageConfig()))) {
             assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageMatching("Cache memory limit exceeded. Usage: .* bytes, Limit: 0.0 bytes");
         }
     }
@@ -160,7 +161,9 @@ public class TestDuckdbTaskManager
 
     private void assertCache(String name)
     {
-        String mappingName = getDefaultCacheInfoPair(name).getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(name);
+        assertThat(cacheInfoPairOptional).isPresent();
+        String mappingName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);

@@ -62,7 +62,7 @@ public class AccioManager
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.pgCatalogManager = requireNonNull(pgCatalogManager, "pgCatalogManager is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
-        File[] mdlFiles = accioMDLDirectory.listFiles();
+        File[] mdlFiles = accioMDLDirectory.listFiles((dir, name) -> name.endsWith(".json"));
         if (mdlFiles != null && mdlFiles.length > 0) {
             deployAccioMDLFromDir(mdlFiles);
         }
@@ -108,6 +108,8 @@ public class AccioManager
             accioMetastore.setAccioMDL(AccioMDL.fromManifest(manifest), version);
             archiveAccioMDL(oldAccioMDL);
             Files.write(accioMDLFile.toPath(), MANIFEST_JSON_CODEC.toJson(accioMetastore.getAnalyzedMDL().getAccioMDL().getManifest()).getBytes(UTF_8));
+            // pre drop if the schema name is changed.
+            pgCatalogManager.dropSchema(oldAccioMDL.getSchema());
             deploy();
         }
         catch (IOException e) {

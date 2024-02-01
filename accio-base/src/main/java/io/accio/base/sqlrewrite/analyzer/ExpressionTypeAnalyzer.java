@@ -16,7 +16,6 @@ package io.accio.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
-import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.type.BigIntType;
 import io.accio.base.type.BooleanType;
 import io.accio.base.type.ByteaType;
@@ -318,31 +317,7 @@ public class ExpressionTypeAnalyzer
     {
         String objectName = field.getTableName().getSchemaTableName().getTableName();
         String columnName = field.getColumnName();
-
-        if (mdl.getModel(objectName).isPresent()) {
-            return mdl.getModel(objectName).get().getColumns().stream()
-                    .filter(column -> columnName.equals(column.getName()))
-                    .findFirst()
-                    .flatMap(column -> PGTypes.nameToPgType(column.getType()))
-                    .orElse(null);
-        }
-        if (mdl.getMetric(objectName).isPresent()) {
-            return mdl.getMetric(objectName).get().getColumns().stream()
-                    .filter(column -> columnName.equals(column.getName()))
-                    .findFirst()
-                    .flatMap(column -> PGTypes.nameToPgType(column.getType()))
-                    .orElse(null);
-        }
-        if (mdl.getCumulativeMetric(objectName).isPresent()) {
-            CumulativeMetric cumulativeMetric = mdl.getCumulativeMetric(objectName).get();
-            if (cumulativeMetric.getMeasure().getName().equals(columnName)) {
-                return PGTypes.nameToPgType(cumulativeMetric.getMeasure().getType()).orElse(null);
-            }
-            if (cumulativeMetric.getWindow().getName().equals(columnName)) {
-                return TimestampType.TIMESTAMP;
-            }
-        }
-        return null;
+        return PGTypes.nameToPgType(mdl.getColumnType(objectName, columnName)).orElse(null);
     }
 
     @Override

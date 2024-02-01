@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.accio.base.AccioException;
 import io.accio.base.ConnectorRecordIterator;
-import io.accio.main.metadata.Metadata;
+import io.accio.main.wireprotocol.PgMetastore;
 
 import javax.inject.Inject;
 
@@ -31,10 +31,10 @@ import static java.util.Objects.requireNonNull;
 public class PostgresPgMetadata
         extends PgMetadata
 {
-    private final Metadata metadata;
+    private final PgMetastore metadata;
 
     @Inject
-    public PostgresPgMetadata(Metadata metadata)
+    public PostgresPgMetadata(PgMetastore metadata)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
     }

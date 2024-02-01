@@ -14,37 +14,66 @@
 
 package io.accio.main.connector.duckdb;
 
+import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.client.AutoCloseableIterator;
+import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.duckdb.DuckdbTypes;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.base.sql.SqlConverter;
+import io.accio.base.type.VarcharType;
+import io.accio.cache.DuckdbRecordIterator;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
+
+import javax.inject.Inject;
 
 import java.util.List;
 
+import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class DuckDBMetadata
-        implements Metadata
+        implements Metadata, PgMetastore
 {
-    @Override
-    public void createSchema(String name)
+    private final DuckdbClient duckdbClient;
+    private final SqlConverter sqlConverter = new DuckDBSqlConverter();
+
+    @Inject
+    public DuckDBMetadata(DuckdbClient duckdbClient)
     {
-        throw new UnsupportedOperationException();
+        this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
     }
 
     @Override
     public boolean isSchemaExist(String name)
     {
-        return false;
+        try (AutoCloseableIterator iter = duckdbClient
+                .query("SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", List.of(new Parameter(VarcharType.VARCHAR, name)))) {
+            return iter.hasNext();
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void createSchema(String name)
+    {
+        duckdbClient.executeDDL("CREATE SCHEMA " + name);
     }
 
     @Override
     public void dropSchemaIfExists(String name)
     {
-        throw new UnsupportedOperationException();
+        duckdbClient.executeDDL("DROP SCHEMA " + name);
     }
 
     @Override
@@ -80,19 +109,26 @@ public class DuckDBMetadata
     @Override
     public void directDDL(String sql)
     {
-        throw new UnsupportedOperationException();
+        duckdbClient.executeDDL(sql);
     }
 
     @Override
     public ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters)
     {
-        return null;
+        try {
+            return DuckdbRecordIterator.of(duckdbClient, sql, parameters);
+        }
+        catch (Exception e) {
+            throw new AccioException(GENERIC_INTERNAL_ERROR, e);
+        }
     }
 
     @Override
     public List<Column> describeQuery(String sql, List<Parameter> parameters)
     {
-        return null;
+        return duckdbClient.describe(sql, parameters).stream()
+                .map(columnMetadata -> new Column(columnMetadata.getName(), columnMetadata.getType()))
+                .collect(toList());
     }
 
     @Override
@@ -111,5 +147,23 @@ public class DuckDBMetadata
     public String getPgCatalogName()
     {
         return PG_CATALOG_NAME;
+    }
+
+    @Override
+    public String handlePgType(String type)
+    {
+        if (type.startsWith("_")) {
+            return format("%s[]", handlePgType(type.substring(1)));
+        }
+        else if (!DuckdbTypes.getDuckDBTypeNames().contains(type)) {
+            return "VARCHAR";
+        }
+        return type;
+    }
+
+    @Override
+    public SqlConverter getSqlConverter()
+    {
+        return sqlConverter;
     }
 }

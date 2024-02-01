@@ -16,6 +16,9 @@ package io.accio.main.connector.duckdb;
 
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
+import io.trino.sql.SqlFormatter;
+
+import static io.accio.base.sqlrewrite.Utils.parseSql;
 
 public class DuckDBSqlConverter
         implements SqlConverter
@@ -23,6 +26,6 @@ public class DuckDBSqlConverter
     @Override
     public String convert(String sql, SessionContext sessionContext)
     {
-        return sql;
+        return SqlFormatter.formatSql(parseSql(sql), SqlFormatter.Dialect.DUCKDB);
     }
 }

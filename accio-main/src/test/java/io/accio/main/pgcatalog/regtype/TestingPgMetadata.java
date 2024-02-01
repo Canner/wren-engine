@@ -27,7 +27,7 @@ public class TestingPgMetadata
     @Override
     protected List<RegObject> listRegProc()
     {
-        return ImmutableList.of(new RegProc(functionOid("array_in"), "array_in__varchar____varchar"), new RegProc(functionOid("equals"), "equals__varchar_varchar___boolean"));
+        return ImmutableList.of(new RegProc(functionOid("array_in"), "array_in"), new RegProc(functionOid("equals"), "equals"));
     }
 
     @Override

@@ -267,6 +267,37 @@ public class AccioMDL
                 .findAny();
     }
 
+    public String getColumnType(String objectName, String columnName)
+    {
+        if (!isObjectExist(objectName)) {
+            throw new IllegalArgumentException("Dataset " + objectName + " not found");
+        }
+        if (getModel(objectName).isPresent()) {
+            return getModel(objectName).get().getColumns().stream()
+                    .filter(column -> columnName.equals(column.getName()))
+                    .map(Column::getType)
+                    .findAny()
+                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
+        }
+        else if (getMetric(objectName).isPresent()) {
+            return getMetric(objectName).get().getColumns().stream()
+                    .filter(column -> columnName.equals(column.getName()))
+                    .map(Column::getType)
+                    .findAny()
+                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
+        }
+        else if (getCumulativeMetric(objectName).isPresent()) {
+            CumulativeMetric cumulativeMetric = getCumulativeMetric(objectName).get();
+            if (cumulativeMetric.getMeasure().getName().equals(columnName)) {
+                return cumulativeMetric.getMeasure().getType();
+            }
+            if (cumulativeMetric.getWindow().getName().equals(columnName)) {
+                return getColumnType(cumulativeMetric.getBaseObject(), cumulativeMetric.getWindow().getRefColumn());
+            }
+        }
+        throw new IllegalArgumentException("Dataset " + objectName + " is not a model, metric or cumulative metric");
+    }
+
     public DateSpine getDateSpine()
     {
         return manifest.getDateSpine();

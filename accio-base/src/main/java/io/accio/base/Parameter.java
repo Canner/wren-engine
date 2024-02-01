@@ -16,6 +16,8 @@ package io.accio.base;
 
 import io.accio.base.type.PGType;
 
+import java.util.Objects;
+
 public class Parameter
 {
     private final PGType<?> type;
@@ -35,5 +37,25 @@ public class Parameter
     public Object getValue()
     {
         return value;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Parameter parameter = (Parameter) o;
+        return Objects.equals(type, parameter.type) &&
+                Objects.equals(value, parameter.value);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(type, value);
     }
 }

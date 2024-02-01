@@ -20,9 +20,11 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.base.sql.SqlConverter;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresRecordIterator;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
@@ -37,7 +39,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class PostgresMetadata
-        implements Metadata
+        implements Metadata, PgMetastore
 {
     private final PostgresClient postgresClient;
 
@@ -147,6 +149,18 @@ public class PostgresMetadata
         return postgresClient.describe(sql, parameters).stream()
                 .map(columnMetadata -> new Column(columnMetadata.getName(), columnMetadata.getType()))
                 .collect(toList());
+    }
+
+    @Override
+    public String handlePgType(String type)
+    {
+        return type;
+    }
+
+    @Override
+    public SqlConverter getSqlConverter()
+    {
+        return new PostgresSqlConverter(this);
     }
 
     @Override

@@ -17,24 +17,32 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.accio.base.AccioMDL;
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.dto.CacheInfo;
 import io.accio.base.dto.Manifest;
 import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
+import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.TestingAccioServer;
+import org.testng.annotations.BeforeClass;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.randomIntString;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
@@ -48,21 +56,29 @@ public abstract class AbstractCacheTest
 
     @Override
     protected TestingAccioServer createAccioServer()
+            throws Exception
     {
-        try {
-            Path dir = Files.createTempDirectory(getAccioDirectory());
-            if (getAccioMDLPath().isPresent()) {
-                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
-            }
-            else {
-                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
-            }
-            return TestingAccioServer.builder()
-                    .setRequiredConfigs(getProperties().put("accio.directory", dir.toString()).build())
-                    .build();
+        Path dir = Files.createTempDirectory(getAccioDirectory());
+        if (getAccioMDLPath().isPresent()) {
+            Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
         }
-        catch (Exception ex) {
-            throw new RuntimeException(ex);
+        else {
+            Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(AccioMDL.EMPTY.getManifest()));
+        }
+        return TestingAccioServer.builder()
+                .setRequiredConfigs(getProperties().put("accio.directory", dir.toString()).build())
+                .build();
+    }
+
+    @BeforeClass
+    @Override
+    public void init()
+            throws Exception
+    {
+        super.init();
+        AccioMDL mdl = getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
+        for (CacheInfo cached : mdl.listCached()) {
+            waitCacheReady(mdl.getCatalog(), mdl.getSchema(), cached.getName());
         }
     }
 
@@ -81,9 +97,9 @@ public abstract class AbstractCacheTest
         return properties;
     }
 
-    protected CacheInfoPair getDefaultCacheInfoPair(String name)
+    protected Optional<CacheInfoPair> getDefaultCacheInfoPair(String name)
     {
-        return cachedTableMapping.get().getCacheInfoPair("canner-cml", "tpch_tiny", name);
+        return Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair("canner-cml", "tpch_tiny", name));
     }
 
     protected List<Object[]> queryDuckdb(String statement)
@@ -104,7 +120,7 @@ public abstract class AbstractCacheTest
     {
         Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
         try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
-            List<PGType> pgTypes = iterator.getTypes();
+            List<PGType> pgTypes = iterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
                 Object[] bqResults = iterator.next();
@@ -122,5 +138,24 @@ public abstract class AbstractCacheTest
         catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void waitCacheReady(String catalog, String schema, String name)
+            throws Exception
+    {
+        CompletableFuture.runAsync(() -> {
+            try {
+                while (true) {
+                    Optional<CacheInfoPair> cachedTable = Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(catalog, schema, name));
+                    if (cachedTable.isPresent()) {
+                        break;
+                    }
+                    Thread.sleep(1000);
+                }
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).get(30, TimeUnit.SECONDS);
     }
 }

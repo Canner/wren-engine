@@ -34,6 +34,7 @@ import io.accio.base.metadata.TableMetadata;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.pgcatalog.function.DataSourceFunctionRegistry;
 import io.accio.main.pgcatalog.function.PgFunctionRegistry;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
@@ -77,7 +78,7 @@ public class BigQueryMetadata
                 .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "Location must be set"));
         this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + ACCIO_TEMP_NAME;
         this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
-        this.pgFunctionRegistry = new PgFunctionRegistry(pgCatalogName);
+        this.pgFunctionRegistry = new DataSourceFunctionRegistry();
     }
 
     /**

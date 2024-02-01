@@ -269,6 +269,8 @@ public class TestPostgreSqlRewrite
     {
         assertRewrite("SELECT * FROM pg_type WHERE typinput = 'array_in'::regproc",
                 format("SELECT * FROM %s.pg_catalog.pg_type WHERE typinput = %s", DEFAULT_CATALOG, functionOid("array_in")));
+        assertRewrite("SELECT * FROM pg_type WHERE typinput = 'pg_catalog.array_in'::regproc",
+                format("SELECT * FROM %s.pg_catalog.pg_type WHERE typinput = %s", DEFAULT_CATALOG, functionOid("array_in")));
         assertRewrite("SELECT * FROM pg_attribute WHERE attrelid = 't1'::regclass",
                 format("SELECT * FROM %s.pg_catalog.pg_attribute WHERE attrelid = %s", DEFAULT_CATALOG, oid("t1")));
         assertRewrite("SELECT typinput = 'array_in'::regproc FROM pg_type ",

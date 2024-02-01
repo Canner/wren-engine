@@ -31,6 +31,7 @@ public abstract class PgFunctionBuilder
     public void createPgFunction(PgFunction pgFunction)
     {
         String sql = generateCreateFunction(pgFunction);
+        LOG.info("Creating or updating %s.%s: %s", connector.getPgCatalogName(), pgFunction.getName(), sql);
         connector.directDDL(sql);
         LOG.info("%s.%s has created or updated", connector.getPgCatalogName(), pgFunction.getName());
     }

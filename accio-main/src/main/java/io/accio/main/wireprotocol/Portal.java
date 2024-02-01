@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 
@@ -37,19 +38,28 @@ public class Portal
 {
     private static final Logger LOG = Logger.get(Portal.class);
 
+    private final String name;
     private final PreparedStatement preparedStatement;
     private final List<Object> params;
     private ConnectorRecordIterator connectorRecordIterator;
     private long rowCount;
+    private QueryLevel level;
 
     @Nullable
     private final FormatCodes.FormatCode[] resultFormatCodes;
 
-    public Portal(PreparedStatement preparedStatement, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
+    public Portal(String name, PreparedStatement preparedStatement, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes, QueryLevel level)
     {
+        this.name = name;
         this.preparedStatement = preparedStatement;
         this.params = params;
         this.resultFormatCodes = resultFormatCodes;
+        this.level = level;
+    }
+
+    public String getName()
+    {
+        return name;
     }
 
     public PreparedStatement getPreparedStatement()
@@ -122,6 +132,25 @@ public class Portal
             builder.add(new Parameter(pgTypes.get(i), params.get(i).equals("null") ? pgTypes.get(i).getEmptyValue() : params.get(i)));
         }
         return builder.build();
+    }
+
+    public List<Object> getParametersValue()
+    {
+        return params;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("preparedStatement", preparedStatement)
+                .add("params", params)
+                .add("resultFormatCodes", resultFormatCodes)
+                .add("connectorRecordIterator", connectorRecordIterator)
+                .add("rowCount", rowCount)
+                .add("level", level)
+                .toString();
     }
 
     // TODO: make sure this annotation works.

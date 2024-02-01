@@ -469,6 +469,8 @@ public class PostgresWireProtocol
                     portal.getRowCount(),
                     resultFormatCodes);
             portal.setRowCount(resultSetSender.sendResultSet());
+            // clean metadata query after executed
+            wireProtocolSession.removeMetadataQuery(portal.getPreparedStatement().getName(), portal.getName());
         }
         catch (Exception e) {
             LOG.error(e, format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
@@ -518,8 +520,9 @@ public class PostgresWireProtocol
                 case 'S':
                     List<Integer> paramTypes = wireProtocolSession.describeStatement(portalOrStatement);
                     Messages.sendParameterDescription(channel, paramTypes);
-                    wireProtocolSession.bind("", portalOrStatement, paramTypes.stream().map(ignore -> "null").collect(toImmutableList()), null);
-                    Optional<List<Column>> described = wireProtocolSession.describePortal("");
+                    Optional<List<Column>> described = wireProtocolSession.dryRunAfterDescribeStatement(
+                            portalOrStatement, paramTypes.stream().map(ignore -> "null").collect(toImmutableList()),
+                            null);
                     if (described.isEmpty()) {
                         Messages.sendNoData(channel);
                     }
@@ -564,7 +567,12 @@ public class PostgresWireProtocol
         byte type = buffer.readByte();
         String portalOrStatementName = readCString(buffer);
         LOG.info("Close %s", portalOrStatementName);
-        wireProtocolSession.close(type, portalOrStatementName);
+        try {
+            wireProtocolSession.close(type, portalOrStatementName);
+        }
+        catch (Exception e) {
+            LOG.error(format("Close failed. Root cause is %s", e.getMessage()));
+        }
         Messages.sendCloseComplete(channel);
     }
 
@@ -611,7 +619,7 @@ public class PostgresWireProtocol
 
         private void dispatchState(ByteBuf buffer, Channel channel)
         {
-            LOG.info("channel dispatch state: %s", state);
+            LOG.debug("channel dispatch state: %s", state);
             switch (state) {
                 case STARTUP_HEADER:
                 case MSG_HEADER:
@@ -642,7 +650,7 @@ public class PostgresWireProtocol
          */
         private void dispatchMessage(ByteBuf buffer, Channel channel)
         {
-            LOG.info("channel dispatch message. msgType: %s", msgType);
+            LOG.debug("channel dispatch message. msgType: %s", msgType);
             switch (msgType) {
                 case 'Q': // Query (simple)
                     handleSimpleQuery(buffer, channel);

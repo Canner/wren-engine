@@ -51,7 +51,6 @@ public class PostgresWireProtocolModule
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
         binder.bind(RegObjectFactory.class).in((Scopes.SINGLETON));
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
-
         // for cache extra rewrite
         binder.bind(ExtraRewriter.class).to(PgWireProtocolExtraRewriter.class).in(Scopes.SINGLETON);
     }

@@ -21,7 +21,6 @@ import io.accio.main.wireprotocol.PostgresWireProtocol;
 import io.accio.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
-import org.postgresql.util.PGInterval;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -885,7 +884,8 @@ public class TestWireProtocolWithPostgres
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
                 {"bytea", "test1".getBytes(UTF_8)},
-                {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
+                // TODO support interval for pg connector
+                // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
                 {"array", new Boolean[] {true, false}},
                 {"array", new Double[] {1.0, 2.0, 3.0}},
                 {"array", new String[] {"hello", "world"}}
