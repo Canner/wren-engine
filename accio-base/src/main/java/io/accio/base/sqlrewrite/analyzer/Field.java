@@ -102,6 +102,17 @@ public class Field
         return matchesPrefix(name.getPrefix()) && this.name.get().equalsIgnoreCase(name.getSuffix());
     }
 
+    @Override
+    public String toString()
+    {
+        return "Field{" +
+                "relationAlias=" + relationAlias +
+                ", tableName=" + tableName +
+                ", columnName='" + columnName + '\'' +
+                ", name=" + name +
+                '}';
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -131,9 +142,9 @@ public class Field
             return this;
         }
 
-        public Builder modelName(CatalogSchemaTableName modelName)
+        public Builder tableName(CatalogSchemaTableName tableName)
         {
-            this.tableName = modelName;
+            this.tableName = tableName;
             return this;
         }
 

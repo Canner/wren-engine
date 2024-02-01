@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
@@ -161,10 +162,7 @@ public final class StatementAnalyzer
                 if (withQuery.isPresent()) {
                     // currently we only care about the table that is actually a model instead of a alias table that use cte table
                     // return empty scope here.
-                    Analysis analyzed = new Analysis(withQuery.get().getQuery());
-                    return Optional.ofNullable(analyze(analyzed, withQuery.get().getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
-                            .map(value -> createAndAssignScope(scope, value))
-                            .orElse(Scope.builder().parent(scope).build());
+                    return createScopeForCommonTableExpression(node, withQuery.get(), scope);
                 }
             }
 
@@ -192,6 +190,62 @@ public final class StatementAnalyzer
                     .build();
         }
 
+        private Scope createScopeForCommonTableExpression(Table table, WithQuery withQuery, Optional<Scope> scope)
+        {
+            Query query = withQuery.getQuery();
+            Analysis analyzed = new Analysis(query);
+            Optional<Scope> queryScope = Optional.ofNullable(analyze(analyzed, query, sessionContext, accioMDL, typeCoercionOptional.orElse(null)));
+            List<Field> fields;
+            Optional<List<Identifier>> columnNames = withQuery.getColumnNames();
+            if (columnNames.isPresent()) {
+                List<Identifier> aliasNames = columnNames.get();
+                AtomicInteger i = new AtomicInteger();
+                List<Field> scopedFields = createScopeForQuery(query, table.getName(), queryScope);
+                checkArgument(aliasNames.size() == scopedFields.size(), "Column alias count does not match query column count");
+                fields = scopedFields.stream()
+                        .map(field -> Field.builder()
+                                .like(field)
+                                .name(aliasNames.get(i.getAndIncrement()).getValue())
+                                .build())
+                        .collect(toImmutableList());
+            }
+            else {
+                fields = createScopeForQuery(query, table.getName(), queryScope);
+            }
+            return Scope.builder()
+                    .parent(scope)
+                    .relationType(new RelationType(fields))
+                    .build();
+        }
+
+        private List<Field> createScopeForQuery(Query query, QualifiedName scopeName, Optional<Scope> scope)
+        {
+            ImmutableList.Builder<Field> fields = ImmutableList.builder();
+            if (query.getQueryBody() instanceof QuerySpecification) {
+                QuerySpecification body = (QuerySpecification) query.getQueryBody();
+                for (SelectItem selectItem : body.getSelect().getSelectItems()) {
+                    if (selectItem instanceof AllColumns) {
+                        scope.ifPresent(s -> s.getRelationType().getFields()
+                                .forEach(f -> fields.add(Field.builder()
+                                        .columnName(f.getColumnName())
+                                        .name(f.getName().orElse(f.getColumnName()))
+                                        .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                        .build())));
+                    }
+                    else {
+                        SingleColumn singleColumn = (SingleColumn) selectItem;
+                        String name = singleColumn.getAlias().map(Identifier::getValue).orElse(singleColumn.getExpression().toString());
+                        fields.add(Field.builder()
+                                .columnName(name)
+                                .name(name)
+                                .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                .build());
+                    }
+                }
+            }
+            return fields.build();
+        }
+
         private List<Field> collectFieldFromMDL(CatalogSchemaTableName tableName)
         {
             if (accioMDL.getModel(tableName.getSchemaTableName().getTableName()).isPresent()) {
@@ -200,7 +254,7 @@ public final class StatementAnalyzer
                         .orElseGet(ImmutableList::of)
                         .stream()
                         .map(column -> Field.builder()
-                                .modelName(tableName)
+                                .tableName(tableName)
                                 .columnName(column.getName())
                                 .name(column.getName())
                                 .build())
@@ -212,7 +266,7 @@ public final class StatementAnalyzer
                         .orElseGet(ImmutableList::of)
                         .stream()
                         .map(column -> Field.builder()
-                                .modelName(tableName)
+                                .tableName(tableName)
                                 .columnName(column.getName())
                                 .name(column.getName())
                                 .build())
@@ -222,12 +276,12 @@ public final class StatementAnalyzer
                 CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(tableName.getSchemaTableName().getTableName()).get();
                 return ImmutableList.of(
                         Field.builder()
-                                .modelName(tableName)
+                                .tableName(tableName)
                                 .columnName(cumulativeMetric.getWindow().getName())
                                 .name(cumulativeMetric.getWindow().getName())
                                 .build(),
                         Field.builder()
-                                .modelName(tableName)
+                                .tableName(tableName)
                                 .columnName(cumulativeMetric.getMeasure().getName())
                                 .name(cumulativeMetric.getMeasure().getName())
                                 .build());
