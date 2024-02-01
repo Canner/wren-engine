@@ -23,30 +23,30 @@ import java.util.Objects;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public class SqlAnalysisOutputDto
+public class ColumnPredicateDto
 {
-    private final String modelName;
-    private final List<ColumnPredicateDto> columnPredicates;
+    private final String columnName;
+    private final List<PredicateDto> predicates;
 
     @JsonCreator
-    public SqlAnalysisOutputDto(
-            @JsonProperty("modelName") String modelName,
-            @JsonProperty("columnPredicates") List<ColumnPredicateDto> columnPredicates)
+    public ColumnPredicateDto(
+            @JsonProperty("columnName") String columnName,
+            @JsonProperty("predicates") List<PredicateDto> predicates)
     {
-        this.modelName = requireNonNull(modelName);
-        this.columnPredicates = requireNonNull(columnPredicates);
+        this.columnName = requireNonNull(columnName);
+        this.predicates = requireNonNull(predicates);
     }
 
     @JsonProperty
-    public String getModelName()
+    public String getColumnName()
     {
-        return modelName;
+        return columnName;
     }
 
     @JsonProperty
-    public List<ColumnPredicateDto> getColumnPredicates()
+    public List<PredicateDto> getPredicates()
     {
-        return columnPredicates;
+        return predicates;
     }
 
     @Override
@@ -58,22 +58,22 @@ public class SqlAnalysisOutputDto
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        SqlAnalysisOutputDto that = (SqlAnalysisOutputDto) o;
-        return Objects.equals(modelName, that.modelName) && Objects.equals(columnPredicates, that.columnPredicates);
+        ColumnPredicateDto that = (ColumnPredicateDto) o;
+        return Objects.equals(columnName, that.columnName) && Objects.equals(predicates, that.predicates);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(modelName, columnPredicates);
+        return Objects.hash(columnName, predicates);
     }
 
     @Override
     public String toString()
     {
         return toStringHelper(this)
-                .add("modelName", modelName)
-                .add("columnPredicates", columnPredicates)
+                .add("columnName", columnName)
+                .add("predicates", predicates)
                 .toString();
     }
 }
