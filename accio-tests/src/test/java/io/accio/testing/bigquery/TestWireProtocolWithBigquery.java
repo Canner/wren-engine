@@ -1315,6 +1315,13 @@ public class TestWireProtocolWithBigquery
                 resultSet.next();
             });
         }
+
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT cast(orderdate as timestamp) = date_trunc('month', orderdate) FROM Revenue");
+                resultSet.next();
+            });
+        }
     }
 
     protected static void assertDefaultPgConfigResponse(TestingWireProtocolClient protocolClient)

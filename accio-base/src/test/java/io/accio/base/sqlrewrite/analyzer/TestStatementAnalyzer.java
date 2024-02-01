@@ -19,7 +19,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Manifest;
+import io.accio.base.dto.Metric;
 import io.accio.base.sqlrewrite.AbstractTestFramework;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -42,7 +44,6 @@ import static io.accio.base.AccioTypes.DATE;
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.accio.base.dto.Column.column;
-import static io.accio.base.dto.Column.varcharColumn;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static io.accio.base.sqlrewrite.analyzer.StatementAnalyzer.analyze;
@@ -169,7 +170,12 @@ public class TestStatementAnalyzer
                 .setSchema("test")
                 .setModels(ImmutableList.of(
                         model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
-                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_3", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), integerColumn("c2")))))
+                .setMetrics(ImmutableList.of(
+                        Metric.metric("metric_1", "table_3",
+                                ImmutableList.of(varcharColumn("c1")),
+                                ImmutableList.of(column("max_c2", INTEGER, null, false, "max(c2)")))))
                 .build();
 
         Function<String, Scope> analyzeSql = (sql) -> {
@@ -220,5 +226,27 @@ public class TestStatementAnalyzer
         assertThat(scope.get().getRelationType().getFields()).hasSize(2);
         assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
         assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("SELECT * FROM table_3"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("WITH table_1 as (SELECT * FROM foo), table_3 as (SELECT c1, max(c2) max_c2 FROM table_1)  SELECT * FROM table_3"));
+        assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("max_c2");
+    }
+
+    private static Column varcharColumn(String name)
+    {
+        return column(name, "VARCHAR", null, false, null, null);
+    }
+
+    private static Column integerColumn(String name)
+    {
+        return column(name, "INTEGER", null, false, null, null);
     }
 }

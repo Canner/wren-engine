@@ -16,7 +16,6 @@ package io.accio.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
@@ -37,12 +36,6 @@ public class Column
     private final String description;
     private final boolean isCalculated;
     private final Map<String, String> properties;
-
-    @VisibleForTesting
-    public static Column varcharColumn(String name)
-    {
-        return column(name, "VARCHAR", null, false, null, null);
-    }
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
