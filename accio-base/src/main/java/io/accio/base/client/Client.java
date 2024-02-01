@@ -35,4 +35,6 @@ public interface Client
 
     Connection createConnection()
             throws SQLException;
+
+    void close();
 }

@@ -26,6 +26,7 @@ public class DuckDBConfig
     private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
     private int maxConcurrentTasks = 10;
+    private int maxConcurrentMetadataQueries = 10;
     private double maxCacheTableSizeRatio = 0.5;
     private long maxCacheQueryTimeout = 20;
     private long cacheTaskRetryDelay = 60;
@@ -72,6 +73,17 @@ public class DuckDBConfig
     public void setMaxConcurrentTasks(int maxConcurrentTasks)
     {
         this.maxConcurrentTasks = maxConcurrentTasks;
+    }
+
+    public int getMaxConcurrentMetadataQueries()
+    {
+        return maxConcurrentMetadataQueries;
+    }
+
+    @Config("duckdb.max-concurrent-metadata-queries")
+    public void setMaxConcurrentMetadataQueries(int maxConcurrentMetadataQueries)
+    {
+        this.maxConcurrentMetadataQueries = maxConcurrentMetadataQueries;
     }
 
     @Min(0)

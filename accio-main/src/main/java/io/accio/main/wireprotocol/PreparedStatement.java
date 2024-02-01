@@ -17,9 +17,12 @@ package io.accio.main.wireprotocol;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 public class PreparedStatement
 {
-    public static final String CANNERFLOW_RESERVED_PREPARE_NAME = "canner_f1ow";
+    public static final String RESERVED_PREPARE_NAME = "acc1o";
+    public static final String RESERVED_DRY_RUN_NAME = "dry_run";
 
     private final String name;
     private final String statement;
@@ -27,15 +30,17 @@ public class PreparedStatement
     private final List<Integer> paramTypeOids;
     private final String originalStatement;
     private final boolean isSessionCommand;
+    private final QueryLevel queryLevel;
 
     public PreparedStatement(
             String name,
             String statement,
             List<Integer> paramTypeOids,
             String originalStatement,
-            boolean isSessionCommand)
+            boolean isSessionCommand,
+            QueryLevel queryLevel)
     {
-        this(name, statement, Optional.empty(), paramTypeOids, originalStatement, isSessionCommand);
+        this(name, statement, Optional.empty(), paramTypeOids, originalStatement, isSessionCommand, queryLevel);
     }
 
     public PreparedStatement(
@@ -44,14 +49,16 @@ public class PreparedStatement
             Optional<String> cacheStatement,
             List<Integer> paramTypeOids,
             String originalStatement,
-            boolean isSessionCommand)
+            boolean isSessionCommand,
+            QueryLevel queryLevel)
     {
-        this.name = name.isEmpty() ? CANNERFLOW_RESERVED_PREPARE_NAME : name;
+        this.name = name.isEmpty() ? RESERVED_PREPARE_NAME : name;
         this.statement = statement;
         this.cacheStatement = cacheStatement;
         this.paramTypeOids = paramTypeOids;
         this.originalStatement = originalStatement;
         this.isSessionCommand = isSessionCommand;
+        this.queryLevel = queryLevel;
     }
 
     public String getName()
@@ -82,5 +89,23 @@ public class PreparedStatement
     public Optional<String> getCacheStatement()
     {
         return cacheStatement;
+    }
+
+    public QueryLevel getQueryLevel()
+    {
+        return queryLevel;
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("statement", statement)
+                .add("paramTypeOids", paramTypeOids)
+                .add("originalStatement", originalStatement)
+                .add("isSessionCommand", isSessionCommand)
+                .add("queryLevel", queryLevel)
+                .toString();
     }
 }

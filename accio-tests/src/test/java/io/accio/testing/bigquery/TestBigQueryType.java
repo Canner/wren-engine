@@ -22,6 +22,8 @@ import com.google.inject.Key;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.airlift.log.Logger;
+import org.postgresql.core.BaseConnection;
+import org.postgresql.jdbc.PgArray;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
 import org.testng.annotations.Test;
@@ -50,6 +52,7 @@ public class TestBigQueryType
     private SchemaTableName testSchemaTableName;
     private BigQueryClient bigQueryClient;
     private Multimap<DataType, TypeCase> testCases;
+    private BaseConnection pgConnection;
 
     enum DataType
     {
@@ -77,6 +80,7 @@ public class TestBigQueryType
         testSchemaTableName = new SchemaTableName("cml_temp", "test_bigquery_type_" + currentTimeMillis());
         bigQueryClient = getInstance(Key.get(BigQueryClient.class));
         try {
+            pgConnection = (BaseConnection) createConnection();
             testCases = initTestcases();
         }
         catch (SQLException e) {
@@ -89,7 +93,13 @@ public class TestBigQueryType
     protected void cleanup()
     {
         super.cleanup();
-        bigQueryClient.dropTable(testSchemaTableName);
+        try {
+            pgConnection.close();
+            bigQueryClient.dropTable(testSchemaTableName);
+        }
+        catch (Exception e) {
+            LOG.error(e);
+        }
     }
 
     private Multimap<DataType, TypeCase> initTestcases()
@@ -131,13 +141,8 @@ public class TestBigQueryType
                 Timestamp.valueOf("2020-01-01 15:10:55.123456"), Timestamp.valueOf("2020-01-01 15:10:56.123456")}));
         typeCaseMap.put(DataType.ARRAY, new TypeCase("c_json_in_array", "array<json>", "[PARSE_JSON(\"{\\\"a\\\": 1}\"), PARSE_JSON(\"{\\\"a\\\": 2}\")]", new String[] {"{a:1}",
                 "{a:2}"}));
-        PGobject s1 = new PGobject();
-        s1.setType("record");
-        s1.setValue("(1,hello)");
-        PGobject s2 = new PGobject();
-        s2.setType("record");
-        s2.setValue("(2,world)");
-        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_struct_in_array", "array<struct<s1 int64, s2 string>>", "[(1, 'hello'), (2, 'world')]", new PGobject[] {s1, s2}));
+        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_struct_in_array", "array<struct<s1 int64, s2 string>>", "[(1, 'hello'), (2, 'world')]",
+                new PgArray(pgConnection, 2287, "{\"(1,hello)\",\"(2,world)\"}")));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_interval_in_array", "array<interval>", "[INTERVAL '1' day, INTERVAL '2' day]", new PGInterval[] {
 //                new PGInterval(0, 0, 1, 0, 0, 0), new PGInterval(0, 0, 2, 0, 0, 0)}));
 //        typeCaseMap.put(DataType.ARRAY, new TypeCase("c_geography_in_array", "array<geography>", "[ST_GEOGPOINT(30, 50), ST_GEOGPOINT(40, 60)]", new String[]{"POINT(30 50)", "POINT(40 60)"}));
@@ -307,6 +312,7 @@ public class TestBigQueryType
             throws SQLException
     {
         for (TypeCase testCase : testCases.get(DataType.ARRAY)) {
+            LOG.info("test array type: " + testCase.columnName);
             assertType(testCase, testCase.getExpectedPgValue());
         }
     }
@@ -347,8 +353,13 @@ public class TestBigQueryType
     private void assertArrayEquals(Array jdbcArray, Object expected)
             throws SQLException
     {
-        Object[] actualArray = (Object[]) jdbcArray.getArray();
-        assertThat(actualArray).isEqualTo(expected);
+        if (expected instanceof Array) {
+            Object[] actualArray = (Object[]) jdbcArray.getArray();
+            assertThat(actualArray).isEqualTo(((Array) expected).getArray());
+        }
+        else {
+            assertThat(jdbcArray.getArray()).isEqualTo(expected);
+        }
     }
 
     private static class TypeCase

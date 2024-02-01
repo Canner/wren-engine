@@ -15,6 +15,7 @@
 package io.accio.main.connector.postgres;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.type.PGType;
 import io.accio.connector.postgres.PostgresJdbcType;
@@ -31,26 +32,26 @@ public class PostgresConnectorRecordIterator
 {
     // TODO: Implement ConnectorRecordIterator instead of JdbcRecordIterator
     private final PostgresRecordIterator internalIterator;
-    private final List<PGType> types;
+    private final List<Column> columns;
 
     public PostgresConnectorRecordIterator(PostgresRecordIterator internalIterator)
             throws SQLException
     {
         this.internalIterator = requireNonNull(internalIterator, "internalIterator is null");
         ResultSetMetaData resultSetMetaData = internalIterator.getResultSetMetaData();
-        ImmutableList.Builder<PGType> typeBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Column> columnBuilder = ImmutableList.builder();
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             String columnType = resultSetMetaData.getColumnTypeName(i);
             PGType<?> pgType = PostgresJdbcType.toPGType(columnType);
-            typeBuilder.add(pgType);
+            columnBuilder.add(new Column(resultSetMetaData.getColumnName(i), pgType));
         }
-        this.types = typeBuilder.build();
+        this.columns = columnBuilder.build();
     }
 
     @Override
-    public List<PGType> getTypes()
+    public List<Column> getColumns()
     {
-        return types;
+        return columns;
     }
 
     @Override

@@ -96,6 +96,7 @@ public class PostgresNetty
     private final AccioConfig accioConfig;
     private final Authentication authentication;
     private final NioEventLoopGroup nioEventLoopGroup;
+    private final PgMetastore pgMetastore;
 
     public PostgresNetty(
             NetworkService networkService,
@@ -108,7 +109,8 @@ public class PostgresNetty
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
             CachedTableMapping cachedTableMapping,
-            Authentication authentication)
+            Authentication authentication,
+            PgMetastore pgMetastore)
     {
         this.settings = toWireProtocolSettings();
         this.port = postgresWireProtocolConfig.getPort();
@@ -126,6 +128,7 @@ public class PostgresNetty
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.authentication = requireNonNull(authentication, "authentication is null");
         this.nioEventLoopGroup = new NioEventLoopGroup(threadCount);
+        this.pgMetastore = requireNonNull(pgMetastore, "pgMetastore is null");
     }
 
     public void start()
@@ -141,7 +144,7 @@ public class PostgresNetty
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("open_channels", openChannels);
                 WireProtocolSession wireProtocolSession =
-                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioConfig, accioMetastore, cacheManager, cachedTableMapping, authentication);
+                        new WireProtocolSession(regObjectFactory, connector, sqlConverter, accioConfig, accioMetastore, cacheManager, cachedTableMapping, authentication, pgMetastore);
                 PostgresWireProtocol postgresWireProtocol = new PostgresWireProtocol(wireProtocolSession, new SslReqHandler(sslContextProvider));
                 pipeline.addLast("frame-decoder", postgresWireProtocol.decoder);
                 pipeline.addLast("handler", postgresWireProtocol.handler);

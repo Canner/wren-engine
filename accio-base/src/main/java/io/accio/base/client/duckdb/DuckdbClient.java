@@ -15,6 +15,8 @@
 package io.accio.base.client.duckdb;
 
 import com.google.common.collect.ImmutableList;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import io.accio.base.AccioException;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
@@ -37,7 +39,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.accio.base.client.duckdb.DuckdbType.DUCKDB_TYPE;
+import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
 
@@ -45,18 +47,21 @@ public final class DuckdbClient
         implements Client
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
-    private final Connection duckDBConnection;
     private final DuckDBConfig duckDBConfig;
+    private final DuckDBConnection duckDBConnection;
+    private final HikariDataSource connectionPool;
 
     @Inject
-    public DuckdbClient(DuckDBConfig duckDBConfig)
+    public DuckdbClient(DuckDBConfig duckDBConfig, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
         try {
             // The instance will be cleared after the process end. We don't need to
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
-            this.duckDBConnection = DriverManager.getConnection("jdbc:duckdb:");
+            this.duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
             this.duckDBConfig = duckDBConfig;
+            HikariConfig config = getHikariConfig(duckDBConfig, duckdbS3StyleStorageConfig, duckDBConnection);
+            connectionPool = new HikariDataSource(config);
             init();
         }
         catch (SQLException | ClassNotFoundException e) {
@@ -64,6 +69,25 @@ public final class DuckdbClient
         }
     }
 
+    private static HikariConfig getHikariConfig(
+            DuckDBConfig duckDBConfig,
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
+            DuckDBConnection duckDBConnection)
+    {
+        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, duckdbS3StyleStorageConfig);
+        HikariConfig config = new HikariConfig();
+        config.setDataSource(dataSource);
+        config.setPoolName("DUCKDB_POOL");
+        config.setConnectionTimeout(10000);
+        config.setMinimumIdle(duckDBConfig.getMaxConcurrentTasks());
+        // remain some query slots for metadata queries
+        config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
+        return config;
+    }
+
+    /**
+     * Initialize the global variables of DuckDB.
+     */
     private void init()
     {
         DataSize memoryLimit = duckDBConfig.getMemoryLimit();
@@ -71,10 +95,6 @@ public final class DuckdbClient
         LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
         executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
         LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
-
-        // TODO: Known issue: https://github.com/duckdb/duckdb/issues/10062
-        // executeDDL(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
-        // LOG.info("Set home directory to %s", duckDBConfig.getHomeDirectory());
     }
 
     @Override
@@ -117,7 +137,7 @@ public final class DuckdbClient
             for (int i = 1; i <= columnCount; i++) {
                 builder.add(ColumnMetadata.builder()
                         .setName(metaData.getColumnName(i))
-                        .setType(DUCKDB_TYPE.toPGType(metaData.getColumnType(i)))
+                        .setType(toPGType(metaData.getColumnType(i)))
                         .build());
             }
             return builder.build();
@@ -186,15 +206,23 @@ public final class DuckdbClient
     public Connection createConnection()
             throws SQLException
     {
-        // Refer to the official doc, if we want to create multiple read-write connections,
-        // to the same database in-memory database instance, we can use the custom `duplicate()` method.
-        // https://duckdb.org/docs/api/java
-
-        return ((DuckDBConnection) duckDBConnection).duplicate();
+        return connectionPool.getConnection();
     }
 
     public DuckDBConfig getDuckDBConfig()
     {
         return duckDBConfig;
+    }
+
+    @Override
+    public void close()
+    {
+        try {
+            connectionPool.close();
+            duckDBConnection.close();
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

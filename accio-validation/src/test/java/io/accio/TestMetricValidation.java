@@ -19,6 +19,7 @@ import io.accio.base.AccioTypes;
 import io.accio.base.client.Client;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.EnumDefinition;
 import io.accio.base.dto.JoinType;
@@ -32,6 +33,7 @@ import io.accio.validation.ModelValidation;
 import io.accio.validation.NotNullValidation;
 import io.accio.validation.RelationshipValidation;
 import io.accio.validation.ValidationResult;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -51,7 +53,7 @@ public class TestMetricValidation
 
     public TestMetricValidation()
     {
-        client = new DuckdbClient(new DuckDBConfig());
+        client = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig());
         sample = AccioMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Flight",
@@ -66,6 +68,12 @@ public class TestMetricValidation
                         EnumDefinition.enumDefinition("Carrier", List.of(enumValue("AA"), enumValue("UA"))),
                         EnumDefinition.enumDefinition("Status", List.of(enumValue("OK"), enumValue("NOT_OK")))))
                 .build());
+    }
+
+    @AfterClass
+    public void cleanup()
+    {
+        client.close();
     }
 
     @Test

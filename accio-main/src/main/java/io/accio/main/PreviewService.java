@@ -17,6 +17,7 @@ package io.accio.main;
 import com.google.common.collect.Streams;
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
+import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.sqlrewrite.AccioPlanner;
@@ -55,9 +56,14 @@ public class PreviewService
 
             String planned = AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
             String converted = sqlConverter.convert(planned, sessionContext);
-            return Streams.stream(metadata.directQuery(converted, List.of()))
-                    .limit(limit)
-                    .collect(toList());
+            try (ConnectorRecordIterator iter = metadata.directQuery(converted, List.of())) {
+                return Streams.stream(iter)
+                        .limit(limit)
+                        .collect(toList());
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 }

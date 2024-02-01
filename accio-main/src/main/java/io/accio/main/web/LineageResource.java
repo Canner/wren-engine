@@ -16,8 +16,6 @@ package io.accio.main.web;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
-import io.accio.base.dto.Column;
-import io.accio.base.dto.CumulativeMetric;
 import io.accio.base.sqlrewrite.AccioDataLineage;
 import io.accio.main.AccioMetastore;
 import io.accio.main.web.dto.ColumnLineageInputDto;
@@ -85,40 +83,9 @@ public class LineageResource
                             .map(entry -> new LineageResult(
                                     entry.getKey(),
                                     entry.getValue().stream().map(column ->
-                                            new LineageResult.Column(column, Map.of("type", getColumnType(mdl, entry.getKey(), column)))).collect(toList())))
+                                            new LineageResult.Column(column, Map.of("type", mdl.getColumnType(entry.getKey(), column)))).collect(toList())))
                             .collect(Collectors.toList());
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
-    }
-
-    private String getColumnType(AccioMDL mdl, String objectName, String columnName)
-    {
-        if (!mdl.isObjectExist(objectName)) {
-            throw new IllegalArgumentException("Dataset " + objectName + " not found");
-        }
-        if (mdl.getModel(objectName).isPresent()) {
-            return mdl.getModel(objectName).get().getColumns().stream()
-                    .filter(column -> columnName.equals(column.getName()))
-                    .map(Column::getType)
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
-        }
-        else if (mdl.getMetric(objectName).isPresent()) {
-            return mdl.getMetric(objectName).get().getColumns().stream()
-                    .filter(column -> columnName.equals(column.getName()))
-                    .map(Column::getType)
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
-        }
-        else if (mdl.getCumulativeMetric(objectName).isPresent()) {
-            CumulativeMetric cumulativeMetric = mdl.getCumulativeMetric(objectName).get();
-            if (cumulativeMetric.getMeasure().getName().equals(columnName)) {
-                return cumulativeMetric.getMeasure().getType();
-            }
-            if (cumulativeMetric.getWindow().getName().equals(columnName)) {
-                return getColumnType(mdl, cumulativeMetric.getBaseObject(), cumulativeMetric.getWindow().getRefColumn());
-            }
-        }
-        throw new IllegalArgumentException("Dataset " + objectName + " is not a model, metric or cumulative metric");
     }
 }

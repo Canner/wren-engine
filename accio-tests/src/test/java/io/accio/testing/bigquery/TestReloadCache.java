@@ -15,6 +15,7 @@ package io.accio.testing.bigquery;
 
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Manifest;
+import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.cache.dto.CachedTable;
 import io.accio.main.web.dto.DeployInputDto;
@@ -41,7 +42,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestReloadCache
         extends AbstractCacheTest
@@ -68,7 +68,9 @@ public class TestReloadCache
     {
         String beforeName = "Revenue";
         CatalogSchemaTableName beforeCatalogSchemaTableName = new CatalogSchemaTableName("canner-cml", "tpch_tiny", beforeName);
-        String beforeMappingName = getDefaultCacheInfoPair(beforeName).getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(beforeName);
+        assertThat(cacheInfoPairOptional).isPresent();
+        String beforeMappingName = cacheInfoPairOptional.get().getRequiredTableName();
         assertCache(beforeName);
 
         deployMDL("cache/cache_reload_2_mdl.json");
@@ -80,7 +82,7 @@ public class TestReloadCache
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).doesNotContain(beforeMappingName);
         assertThat(cacheManager.get().cacheScheduledFutureExists(beforeCatalogSchemaTableName)).isFalse();
-        assertThatThrownBy(() -> getDefaultCacheInfoPair(beforeMappingName).getRequiredTableName()).isInstanceOf(NullPointerException.class);
+        assertThat(getDefaultCacheInfoPair(beforeMappingName)).isEmpty();
 
         deployMDL("cache/cache_reload_1_mdl.json");
         waitUntilReady();
@@ -125,7 +127,9 @@ public class TestReloadCache
     private void assertCache(String name)
     {
         CatalogSchemaTableName mapping = new CatalogSchemaTableName("canner-cml", "tpch_tiny", name);
-        String mappingName = getDefaultCacheInfoPair(name).getRequiredTableName();
+        Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(name);
+        assertThat(cacheInfoPairOptional).isPresent();
+        String mappingName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
         assertThat(tableNames).contains(mappingName);

@@ -60,8 +60,7 @@ public class MDLResource
             DeployInputDto deployInputDto,
             @Suspended AsyncResponse asyncResponse)
     {
-        CompletableFuture
-                .runAsync(() -> accioManager.deployAndArchive(deployInputDto.getManifest(), deployInputDto.getVersion()));
+        accioManager.deployAndArchive(deployInputDto.getManifest(), deployInputDto.getVersion());
         asyncResponse.resume(Response.accepted().build());
     }
 
