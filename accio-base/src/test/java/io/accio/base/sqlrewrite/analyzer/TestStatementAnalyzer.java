@@ -124,6 +124,10 @@ public class TestStatementAnalyzer
         expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1", "c2"));
         expected.putAll(catalogSchemaTableName("test", "test", "table_2"), ImmutableList.of("c1", "c2"));
         assertThat(analyzeSql.apply("SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1").getCollectedColumns()).isEqualTo(expected);
+
+        expected = HashMultimap.create();
+        expected.putAll(catalogSchemaTableName("test", "test", "table_1"), ImmutableList.of("c1", "c2"));
+        assertThat(analyzeSql.apply("SELECT t1.c1 FROM table_1 t1 WHERE t1.c2 = 'wah'").getCollectedColumns()).isEqualTo(expected);
     }
 
     @Test
