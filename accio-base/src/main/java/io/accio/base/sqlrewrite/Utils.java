@@ -292,7 +292,7 @@ public final class Utils
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelName));
 
         return Field.builder()
-                .modelName(new CatalogSchemaTableName(accioMDL.getCatalog(), accioMDL.getSchema(), modelName))
+                .tableName(new CatalogSchemaTableName(accioMDL.getCatalog(), accioMDL.getSchema(), modelName))
                 .columnName(column.getName())
                 .name(column.getName())
                 .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))

@@ -306,7 +306,7 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitIdentifier(Identifier node, Void context)
     {
-        QualifiedName qualifiedName = QualifiedName.of(ImmutableList.of(node));
+        QualifiedName qualifiedName = QualifiedName.of(ImmutableList.of(node.getValue()));
         scope.getRelationType().getFields().stream()
                 .filter(field -> field.canResolve(qualifiedName))
                 .findFirst()

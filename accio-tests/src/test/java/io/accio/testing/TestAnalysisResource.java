@@ -16,6 +16,7 @@ package io.accio.testing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Model;
 import io.accio.main.web.dto.ColumnPredicateDto;
@@ -33,7 +34,6 @@ import static io.accio.base.AccioTypes.DATE;
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.column;
-import static io.accio.base.dto.Column.varcharColumn;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.base.dto.Model.model;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
@@ -136,5 +136,10 @@ public class TestAnalysisResource
     {
         assertThat(getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM Customer")).size()).isEqualTo(0);
         assertThat(getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey = 123 FROM Customer")).size()).isEqualTo(0);
+    }
+
+    private static Column varcharColumn(String name)
+    {
+        return column(name, "VARCHAR", null, false, null, null);
     }
 }

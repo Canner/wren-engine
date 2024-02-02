@@ -136,7 +136,7 @@ public class TestExpressionTypeAnalyzer
         AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema().setModels(List.of(customer)).build());
         List<Field> fields = customer.getColumns().stream()
                 .map(column -> Field.builder()
-                        .modelName(new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), customer.getName()))
+                        .tableName(new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), customer.getName()))
                         .columnName(column.getName())
                         .name(column.getName())
                         .build())

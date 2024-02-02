@@ -38,11 +38,6 @@
           "type": "float8"
         },
         {
-          "name": "customer",
-          "type": "Customer",
-          "relationship": "OrdersCustomer"
-        },
-        {
           "name": "orderdate",
           "expression": "o_orderdate",
           "type": "date"
@@ -93,9 +88,40 @@
           "name": "orderkey_linenumber",
           "type": "varchar",
           "expression": "concat(l_orderkey, l_linenumber)"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersLineitem"
         }
       ],
       "primaryKey": "orderkey_linenumber"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Revenue",
+      "baseObject": "Lineitem",
+      "dimension": [
+        {
+          "name": "orderkey",
+          "type": "int4",
+          "expression": "orderkey"
+        },
+        {
+          "name": "orderdate",
+          "type": "date",
+          "expression": "orders.orderdate"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(extendedprice)"
+        }
+      ],
+      "timeGrain": []
     }
   ]
 }
