@@ -168,11 +168,11 @@ public class TestMetric
                                 List.of()),
                         metric("CountOrders", "Orders",
                                 List.of(column("custkey", INTEGER, null, true),
-                                        column("orderstatus", DATE, null, true)),
+                                        column("orderstatus", VARCHAR, null, true)),
                                 List.of(column("count", INTEGER, null, true, "count(*)")),
                                 List.of()),
                         metric("CountOrders2", "CountOrders",
-                                List.of(column("orderstatus", DATE, null, true)),
+                                List.of(column("orderstatus", VARCHAR, null, true)),
                                 List.of(column("sum_count", INTEGER, null, true, "sum(count)")),
                                 List.of())))
                 .build();
@@ -331,7 +331,7 @@ public class TestMetric
 
         // select measure in CountOrders
         assertThat(query(rewrite("SELECT count FROM CountOrders WHERE custkey = 370", true)))
-                .isEqualTo(query("WITH output AS (SELECT custkey, orderstatus, count(*) AS count FROM orders WHERE custkey = 370 GROUP BY 1, 2) SELECT count FROM output"));
+                .isEqualTo(query("WITH output AS (SELECT custkey, count(*) AS count FROM orders WHERE custkey = 370 GROUP BY 1) SELECT count FROM output"));
 
         // select dim custkey and measure count in CountOrders
         assertThat(query(rewrite("SELECT custkey, count FROM CountOrders WHERE custkey = 370", true)))

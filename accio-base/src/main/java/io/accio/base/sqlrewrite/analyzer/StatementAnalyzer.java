@@ -357,6 +357,7 @@ public final class StatementAnalyzer
         private void analyzeWhere(Expression node, Scope scope)
         {
             ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, node);
+            analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
             Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
             expressionAnalysis.getPredicates().stream()
                     .filter(PREDICATE_MATCHER::shapeMatches)
