@@ -50,7 +50,7 @@ public class TestMetricViewSqlRewrite
 {
     @Language("sql")
     private static final String MODEL_CTES = "" +
-            "  Album AS (\n" +
+            "  \"Album\" AS (\n" +
             "   SELECT\n" +
             "     \"Album\".\"id\" \"id\"\n" +
             "   , \"Album\".\"name\" \"name\"\n" +
@@ -84,7 +84,7 @@ public class TestMetricViewSqlRewrite
     @Language("sql")
     private static final String METRIC_CTES =
             MODEL_CTES +
-                    ", Collection AS (\n" +
+                    ", \"Collection\" AS (\n" +
                     "   SELECT\n" +
                     "     \"Album\".\"author\" \"author\"\n" +
                     "   , \"Album\".\"name\" \"album_name\"\n" +
@@ -96,7 +96,7 @@ public class TestMetricViewSqlRewrite
                     "        (\n" +
                     "         SELECT *\n" +
                     "         FROM\n" +
-                    "           Album\n" +
+                    "           \"Album\"\n" +
                     "      )  \"Album\"\n" +
                     "   )  \"Album\"\n" +
                     "   GROUP BY 1, 2" +
@@ -127,15 +127,15 @@ public class TestMetricViewSqlRewrite
                                 "Album",
                                 List.of(
                                         column("author", VARCHAR, null, true),
-                                        column("album_name", VARCHAR, null, true, "name")),
+                                        column("album_name", VARCHAR, null, true, "\"name\"")),
                                 List.of(Column.column("price", INTEGER, null, true, "sum(price)")),
                                 List.of(
                                         timeGrain("p_date", "Album.publish_date", List.of(YEAR)),
                                         timeGrain("r_date", "Album.release_date", List.of(YEAR))))))
                 .setViews(List.of(
-                        view("UseModel", "select * from Album"),
-                        view("useView", "select * from useMetric"),
-                        view("useMetric", "select * from Collection")))
+                        view("UseModel", "select * from \"Album\""),
+                        view("useView", "select * from \"useMetric\""),
+                        view("useMetric", "select * from \"Collection\"")))
                 .build());
 
         invalidAccioMDL = AccioMDL.fromManifest(withDefaultCatalogSchema()
@@ -175,8 +175,8 @@ public class TestMetricViewSqlRewrite
                                 "  (\n" +
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('YEAR', Album.publish_date) \"p_date\"\n" +
-                                "   , \"author\"\n" +
-                                "   , name \"album_name\"\n" +
+                                "   , \"author\" \"author\"\n" +
+                                "   , \"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
@@ -194,8 +194,8 @@ public class TestMetricViewSqlRewrite
                                 "  (\n" +
                                 "   SELECT\n" +
                                 "     DATE_TRUNC('DAY', Album.publish_date) \"p_date\"\n" +
-                                "   , \"author\"\n" +
-                                "   , name \"album_name\"\n" +
+                                "   , \"author\" \"author\"\n" +
+                                "   , \"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
                                 "     Album\n" +
@@ -205,10 +205,10 @@ public class TestMetricViewSqlRewrite
                 {
                         "SELECT author, price FROM UseModel",
                         "WITH\n" + MODEL_CTES +
-                                ", UseModel AS (\n" +
+                                ", \"UseModel\" AS (\n" +
                                 "   SELECT *\n" +
                                 "   FROM\n" +
-                                "     Album\n" +
+                                "     \"Album\"\n" +
                                 ") \n" +
                                 "SELECT\n" +
                                 "  author\n" +
@@ -219,7 +219,7 @@ public class TestMetricViewSqlRewrite
                 {
                         "SELECT album_name, price FROM useMetric",
                         "WITH\n" + MODEL_CTES +
-                                ", Collection AS (\n" +
+                                ", \"Collection\" AS (\n" +
                                 "   SELECT\n" +
                                 "     \"Album\".\"author\" \"author\"\n" +
                                 "   , \"Album\".\"name\" \"album_name\"\n" +
@@ -231,15 +231,15 @@ public class TestMetricViewSqlRewrite
                                 "        (\n" +
                                 "         SELECT *\n" +
                                 "         FROM\n" +
-                                "           Album\n" +
+                                "           \"Album\"\n" +
                                 "      )  \"Album\"\n" +
                                 "   )  \"Album\"\n" +
                                 "   GROUP BY 1, 2" +
                                 ") \n" +
-                                ", useMetric AS (\n" +
+                                ", \"useMetric\" AS (\n" +
                                 "   SELECT *\n" +
                                 "   FROM\n" +
-                                "     Collection\n" +
+                                "     \"Collection\"\n" +
                                 ") \n" +
                                 "SELECT\n" +
                                 "  album_name\n" +
@@ -250,7 +250,7 @@ public class TestMetricViewSqlRewrite
                 {
                         "SELECT album_name, price FROM useView",
                         "WITH\n" + MODEL_CTES +
-                                ", Collection AS (\n" +
+                                ", \"Collection\" AS (\n" +
                                 "   SELECT\n" +
                                 "     \"Album\".\"author\" \"author\"\n" +
                                 "   , \"Album\".\"name\" \"album_name\"\n" +
@@ -262,20 +262,20 @@ public class TestMetricViewSqlRewrite
                                 "        (\n" +
                                 "         SELECT *\n" +
                                 "         FROM\n" +
-                                "           Album\n" +
+                                "           \"Album\"\n" +
                                 "      )  \"Album\"\n" +
                                 "   )  \"Album\"\n" +
                                 "   GROUP BY 1, 2\n" +
                                 ") \n" +
-                                ", useMetric AS (\n" +
+                                ", \"useMetric\" AS (\n" +
                                 "   SELECT *\n" +
                                 "   FROM\n" +
-                                "     Collection\n" +
+                                "     \"Collection\"\n" +
                                 ") \n" +
-                                ", useView AS (\n" +
+                                ", \"useView\" AS (\n" +
                                 "   SELECT *\n" +
                                 "   FROM\n" +
-                                "     useMetric\n" +
+                                "     \"useMetric\"\n" +
                                 ") \n" +
                                 "SELECT\n" +
                                 "  album_name\n" +
