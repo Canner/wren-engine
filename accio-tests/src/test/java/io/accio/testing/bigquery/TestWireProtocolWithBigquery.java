@@ -1331,4 +1331,21 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertParameterStatus(config.getKey(), config.getValue());
         }
     }
+
+    @Test
+    public void testReservedWordAsName()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT \"select\", \"column\", \"totalprice\" FROM \"Table\"");
+                resultSet.next();
+            });
+
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT \"key\", \"totalprice\" FROM \"Delete\"");
+                resultSet.next();
+            });
+        }
+    }
 }

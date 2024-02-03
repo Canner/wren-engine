@@ -134,11 +134,7 @@ public class Column
 
     public String getSqlExpression()
     {
-        if (getExpression().isEmpty()) {
-            return quote(name);
-        }
-
-        return String.format("%s as %s", expression, quote(name));
+        return getExpression().orElse(quote(name));
     }
 
     @Override

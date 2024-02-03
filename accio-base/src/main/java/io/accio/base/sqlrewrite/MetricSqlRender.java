@@ -84,7 +84,7 @@ public class MetricSqlRender
     @Override
     protected String initRefSql(Relationable relationable)
     {
-        return "SELECT * FROM " + relationable.getBaseObject();
+        return "SELECT * FROM \"" + relationable.getBaseObject() + "\"";
     }
 
     @Override
@@ -113,7 +113,7 @@ public class MetricSqlRender
         Metric metric = (Metric) relationable;
         List<String> selectItems = metric.getColumns().stream()
                 .filter(column -> isRequiredColumn(column.getName()))
-                .map(column -> format("%s AS %s", column.getExpression().orElse(column.getName()), column.getName()))
+                .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
                 .collect(toList());
         addCountAllIfNeeded();
         String sql = getQuerySql(Joiner.on(", ").join(selectItems), metricName);
@@ -143,7 +143,7 @@ public class MetricSqlRender
         Metric metric = (Metric) relationable;
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
         Model baseModel = mdl.getModel(metric.getBaseObject()).orElseThrow(() -> new IllegalArgumentException(format("cannot find model %s", metric.getBaseObject())));
-        Expression expression = parseExpression(column.getExpression().orElse(column.getName()));
+        Expression expression = parseExpression(column.getSqlExpression());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
 
         if (!relationshipInfos.isEmpty() && relationableBase.isPresent()) {
@@ -166,7 +166,7 @@ public class MetricSqlRender
                     .orElseThrow(() -> new IllegalArgumentException("measure column must have expression"))))), column.getName());
         }
 
-        return format("\"%s\".\"%s\" AS \"%s\"", relationable.getBaseObject(), column.getExpression().orElse(column.getName()), column.getName());
+        return format("\"%s\".%s AS \"%s\"", relationable.getBaseObject(), column.getSqlExpression(), column.getName());
     }
 
     @Override
@@ -175,8 +175,7 @@ public class MetricSqlRender
         if (!isRequiredColumn(column.getName())) {
             return;
         }
-        // TODO: There're some issue about sql keyword as expression, e.g. column named as "order"
-        Expression expression = parseExpression(column.getExpression().get());
+        Expression expression = parseExpression(column.getSqlExpression());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
             calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
@@ -195,7 +194,7 @@ public class MetricSqlRender
         }
         else {
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-            columnWithoutRelationships.put(column.getName(), column.getExpression().get());
+            columnWithoutRelationships.put(column.getName(), column.getSqlExpression());
         }
     }
 
@@ -221,10 +220,10 @@ public class MetricSqlRender
                 .flatMap(List::stream)
                 .distinct()
                 .collect(toImmutableList());
-        String tableJoins = format("%s\n%s",
+        String tableJoins = format("\"%s\"\n%s",
                 baseModel.getName(),
                 requiredRelationships.stream()
-                        .map(relationship -> format("LEFT JOIN \"%s\" ON %s\n", relationship.getModels().get(1), relationship.getCondition()))
+                        .map(relationship -> format("LEFT JOIN \"%s\" ON %s\n", relationship.getModels().get(1), relationship.getQualifiedCondition()))
                         .collect(joining()));
 
         Function<String, String> tableJoinCondition =

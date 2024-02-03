@@ -10,6 +10,15 @@
       ],
       "joinType": "ONE_TO_MANY",
       "condition": "Orders.orderkey = Lineitem.orderkey"
+    },
+    {
+      "name": "TableOrder",
+      "models": [
+        "Table",
+        "Order"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "\"Table\".\"select\" = \"Order\".\"alter\""
     }
   ],
   "models": [
@@ -96,6 +105,72 @@
         }
       ],
       "primaryKey": "orderkey_linenumber"
+    },
+    {
+      "name": "Table",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "columns": [
+        {
+          "name": "select",
+          "expression": "c_custkey",
+          "type": "int4"
+        },
+        {
+          "name": "column",
+          "expression": "c_name",
+          "type": "varchar"
+        },
+        {
+          "name": "order",
+          "type": "Order",
+          "relationship": "TableOrder"
+        },
+        {
+          "name": "totalprice",
+          "type": "float8",
+          "expression": "sum(\"order\".\"integer\")",
+          "isCalculated": true
+        }
+      ],
+      "primaryKey": "select"
+    },
+    {
+      "name": "Order",
+      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "columns": [
+        {
+          "name": "alter",
+          "expression": "o_custkey",
+          "type": "int4"
+        },
+        {
+          "name": "integer",
+          "expression": "o_totalprice",
+          "type": "float8"
+        }
+      ],
+      "primaryKey": "alter"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Delete",
+      "baseObject": "Table",
+      "dimension": [
+        {
+          "name": "key",
+          "type": "int4",
+          "expression": "\"select\""
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(\"order\".\"integer\")"
+        }
+      ],
+      "timeGrain": []
     }
   ],
   "metrics": [

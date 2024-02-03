@@ -68,7 +68,7 @@ public class ModelSqlRender
             return model.getRefSql();
         }
         else if (model.getBaseObject() != null) {
-            return "SELECT * FROM " + model.getBaseObject();
+            return "SELECT * FROM \"" + model.getBaseObject() + "\"";
         }
         else {
             throw new IllegalArgumentException("cannot get reference sql from model");
@@ -112,7 +112,7 @@ public class ModelSqlRender
     @Override
     protected void collectRelationship(Column column, Model baseModel)
     {
-        Expression expression = parseExpression(column.getExpression().orElseThrow(() -> new IllegalArgumentException("expression not found in column")));
+        Expression expression = parseExpression(column.getSqlExpression());
         List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (column.isCalculated() && relationshipInfos.size() > 0) {
             if (!requiredFields.contains(column.getName())) {
@@ -140,7 +140,7 @@ public class ModelSqlRender
         else {
             // No relationships, add select item with no alias
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-            columnWithoutRelationships.put(column.getName(), column.getExpression().get());
+            columnWithoutRelationships.put(column.getName(), column.getSqlExpression());
         }
     }
 
@@ -184,7 +184,7 @@ public class ModelSqlRender
                 getBaseModelSql(baseModel),
                 baseModel.getName(),
                 requiredRelationships.stream()
-                        .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
+                        .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getQualifiedCondition()))
                         .collect(joining()));
 
         Function<String, String> tableJoinCondition =
@@ -245,7 +245,7 @@ public class ModelSqlRender
                 .filter(CalculatedFieldRelationshipInfo::isAggregated)
                 .map(relationshipInfo -> {
                     String requiredExpressions = format("%s AS \"%s\"",
-                            RelationshipRewriter.rewrite(relationshipInfo.getExpressionRelationshipInfo(), parseExpression(relationshipInfo.getColumn().getExpression().get())),
+                            RelationshipRewriter.rewrite(relationshipInfo.getExpressionRelationshipInfo(), parseExpression(relationshipInfo.getColumn().getSqlExpression())),
                             relationshipInfo.getAlias());
 
                     String tableJoins = format("(%s) AS \"%s\" %s",
@@ -255,7 +255,7 @@ public class ModelSqlRender
                                     .map(ExpressionRelationshipInfo::getRelationships)
                                     .flatMap(List::stream)
                                     .distinct()
-                                    .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getCondition()))
+                                    .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getQualifiedCondition()))
                                     .collect(joining()));
 
                     checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
@@ -277,7 +277,7 @@ public class ModelSqlRender
         String selectItems = model.getColumns().stream()
                 .filter(column -> !column.isCalculated())
                 .filter(column -> column.getRelationship().isEmpty())
-                .map(Column::getSqlExpression)
+                .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
                 .collect(joining(", "));
         return format("SELECT %s FROM (%s) AS \"%s\"", selectItems, refSql, model.getName());
     }
