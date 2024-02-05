@@ -90,7 +90,7 @@ public class TestModelSqlRewrite
      */
     @Language("SQL")
     private static final String WITH_PEOPLE_QUERY = "" +
-            "  WishList AS (\n" +
+            "  \"WishList\" AS (\n" +
             "   SELECT\n" +
             "     \"WishList\".\"id\" \"id\"\n" +
             "   , \"WishList\".\"bookId\" \"bookId\"\n" +
@@ -107,7 +107,7 @@ public class TestModelSqlRewrite
             "      )  \"WishList\"\n" +
             "   )  \"WishList\"\n" +
             ") \n" +
-            ", People AS (\n" +
+            ", \"People\" AS (\n" +
             "   SELECT\n" +
             "     \"People\".\"id\" \"id\"\n" +
             "   , \"People\".\"email\" \"email\"\n" +
@@ -131,8 +131,8 @@ public class TestModelSqlRewrite
             "      FROM\n" +
             "        ((\n" +
             "         SELECT\n" +
-            "           \"id\"\n" +
-            "         , \"email\"\n" +
+            "           \"id\" \"id\"\n" +
+            "         , \"email\" \"email\"\n" +
             "         FROM\n" +
             "           (\n" +
             "            SELECT *\n" +
@@ -140,13 +140,13 @@ public class TestModelSqlRewrite
             "              table_people\n" +
             "         )  \"People\"\n" +
             "      )  \"People\"\n" +
-            "      LEFT JOIN \"WishList\" ON (WishList.id = People.id))\n" +
+            "      LEFT JOIN \"WishList\" ON (\"WishList\".\"id\" = \"People\".\"id\"))\n" +
             "   )  \"People_relationsub\" ON (\"People\".\"id\" = \"People_relationsub\".\"id\"))\n" +
             ")\n";
 
     @Language("SQL")
     private static final String WITH_BOOK_QUERY = WITH_PEOPLE_QUERY +
-            ", Book AS (\n" +
+            ", \"Book\" AS (\n" +
             "   SELECT\n" +
             "     \"Book\".\"bookId\" \"bookId\"\n" +
             "   , \"Book\".\"authorId\" \"authorId\"\n" +
@@ -174,9 +174,9 @@ public class TestModelSqlRewrite
             "      FROM\n" +
             "        (((\n" +
             "         SELECT\n" +
-            "           \"bookId\"\n" +
-            "         , \"authorId\"\n" +
-            "         , \"publish_date\"\n" +
+            "           \"bookId\" \"bookId\"\n" +
+            "         , \"authorId\" \"authorId\"\n" +
+            "         , \"publish_date\" \"publish_date\"\n" +
             "         , date_trunc('year', publish_date) \"publish_year\"\n" +
             "         FROM\n" +
             "           (\n" +
@@ -185,8 +185,8 @@ public class TestModelSqlRewrite
             "              table_book\n" +
             "         )  \"Book\"\n" +
             "      )  \"Book\"\n" +
-            "      LEFT JOIN \"People\" ON (People.id = Book.authorId))\n" +
-            "      LEFT JOIN \"WishList\" ON (WishList.id = People.id))\n" +
+            "      LEFT JOIN \"People\" ON (\"People\".\"id\" = \"Book\".\"authorId\"))\n" +
+            "      LEFT JOIN \"WishList\" ON (\"WishList\".\"id\" = \"People\".\"id\"))\n" +
             "   )  \"Book_relationsub\" ON (\"Book\".\"bookId\" = \"Book_relationsub\".\"bookId\"))\n" +
             ")\n";
 
@@ -306,7 +306,7 @@ public class TestModelSqlRewrite
 
         @Language("SQL")
         String bookReplica = "" +
-                ", BookReplica AS (\n" +
+                ", \"BookReplica\" AS (\n" +
                 "   SELECT\n" +
                 "     \"BookReplica\".\"authorId\" \"authorId\"\n" +
                 "   , \"BookReplica\".\"author_gift_id\" \"author_gift_id\"\n" +
@@ -324,7 +324,7 @@ public class TestModelSqlRewrite
                 "        (\n" +
                 "         SELECT *\n" +
                 "         FROM\n" +
-                "           Book\n" +
+                "           \"Book\"\n" +
                 "      )  \"BookReplica\"\n" +
                 "   )  \"BookReplica\"\n" +
                 "   LEFT JOIN (\n" +
@@ -335,17 +335,17 @@ public class TestModelSqlRewrite
                 "        ((\n" +
                 "         SELECT\n" +
                 "           bookId \"id\"\n" +
-                "         , \"authorId\"\n" +
+                "         , \"authorId\" \"authorId\"\n" +
                 "         , date_trunc('year', publish_date) \"publish_year\"\n" +
-                "         , \"author_gift_id\"\n" +
+                "         , \"author_gift_id\" \"author_gift_id\"\n" +
                 "         FROM\n" +
                 "           (\n" +
                 "            SELECT *\n" +
                 "            FROM\n" +
-                "              Book\n" +
+                "              \"Book\"\n" +
                 "         )  \"BookReplica\"\n" +
                 "      )  \"BookReplica\"\n" +
-                "      LEFT JOIN \"WishList\" ON (BookReplica.id = WishList.bookId))\n" +
+                "      LEFT JOIN \"WishList\" ON (\"BookReplica\".\"id\" = \"WishList\".\"bookId\"))\n" +
                 "   )  \"BookReplica_relationsub\" ON (\"BookReplica\".\"id\" = \"BookReplica_relationsub\".\"id\"))\n" +
                 ") ";
 

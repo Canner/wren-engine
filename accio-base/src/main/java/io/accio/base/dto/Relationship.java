@@ -18,6 +18,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.ExpressionRewriter;
+import io.trino.sql.tree.ExpressionTreeRewriter;
+import io.trino.sql.tree.Identifier;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +31,7 @@ import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.base.sqlrewrite.Utils.parseExpression;
 import static java.util.Objects.requireNonNull;
 
 public class Relationship
@@ -34,6 +40,7 @@ public class Relationship
     private final List<String> models;
     private final JoinType joinType;
     private final String condition;
+    private final Expression qualifiedCondition;
 
     // for debugging internally
     private final boolean isReverse;
@@ -97,10 +104,39 @@ public class Relationship
         this.models = models;
         this.joinType = requireNonNull(joinType, "joinType is null");
         this.condition = requireNonNull(condition, "condition is null");
+        this.qualifiedCondition = qualifiedCondition(condition);
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
         this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
+    }
+
+    private Expression qualifiedCondition(String condition)
+    {
+        Expression parsed = parseExpression(condition);
+        return ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
+        {
+            @Override
+            public Expression rewriteDereferenceExpression(DereferenceExpression node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
+            {
+                return new DereferenceExpression(
+                        node.getLocation(),
+                        treeRewriter.rewrite(node.getBase(), context),
+                        node.getField().map(field -> treeRewriter.rewrite(field, context)));
+            }
+
+            @Override
+            public Expression rewriteIdentifier(Identifier node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
+            {
+                if (node.isDelimited()) {
+                    return node;
+                }
+                if (node.getLocation().isPresent()) {
+                    return new Identifier(node.getLocation().get(), node.getValue(), true);
+                }
+                return new Identifier(node.getValue(), true);
+            }
+        }, parsed);
     }
 
     @JsonProperty
@@ -125,6 +161,11 @@ public class Relationship
     public String getCondition()
     {
         return condition;
+    }
+
+    public Expression getQualifiedCondition()
+    {
+        return qualifiedCondition;
     }
 
     @JsonProperty

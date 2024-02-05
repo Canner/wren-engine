@@ -310,12 +310,7 @@ public class AccioDataLineage
         Expression expression;
         // TODO: current column expression allow not empty (i.e. its expression is the same as column name)
         //  we should not directly use dto object, instead, we should convert them into another object. and fill the expression in every column.
-        if (column.getExpression().isEmpty()) {
-            expression = parseExpression(column.getName());
-        }
-        else {
-            expression = parseExpression(column.getExpression().get());
-        }
+        expression = parseExpression(column.getSqlExpression());
         Analyzer analyzer = new Analyzer(mdl, model, column);
         analyzer.process(expression);
         return analyzer.getSourceColumns();
@@ -326,12 +321,7 @@ public class AccioDataLineage
         Expression expression;
         // TODO: current column expression allow not empty (i.e. its expression is the same as column name)
         //  we should not directly use dto object, instead, we should convert them into another object. and fill the expression in every column.
-        if (column.getExpression().isEmpty()) {
-            expression = parseExpression(column.getName());
-        }
-        else {
-            expression = parseExpression(column.getExpression().get());
-        }
+        expression = parseExpression(column.getSqlExpression());
         MetricAnalyzer analyzer = new MetricAnalyzer(mdl, metric, column);
         analyzer.process(expression);
         return analyzer.getSourceColumns();

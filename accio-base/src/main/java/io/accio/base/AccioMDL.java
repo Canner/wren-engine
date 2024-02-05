@@ -125,7 +125,7 @@ public class AccioMDL
             return original;
         }
 
-        String withTag = macroTags + JinjavaExpressionProcessor.process(original.getExpression().get(), unProcessedManifest.getMacros());
+        String withTag = macroTags + JinjavaExpressionProcessor.process(original.getSqlExpression(), unProcessedManifest.getMacros());
         String expression = JINJAVA.render(withTag, ImmutableMap.of());
         return new Column(original.getName(),
                 original.getType(),

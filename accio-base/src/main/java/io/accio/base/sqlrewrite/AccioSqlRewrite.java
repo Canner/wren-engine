@@ -273,6 +273,6 @@ public class AccioSqlRewrite
 
     private static WithQuery getWithQuery(QueryDescriptor queryDescriptor)
     {
-        return new WithQuery(new Identifier(queryDescriptor.getName()), queryDescriptor.getQuery(), Optional.empty());
+        return new WithQuery(new Identifier(queryDescriptor.getName(), true), queryDescriptor.getQuery(), Optional.empty());
     }
 }

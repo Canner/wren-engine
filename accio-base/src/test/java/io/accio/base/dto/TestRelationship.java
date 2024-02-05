@@ -17,6 +17,9 @@ package io.accio.base.dto;
 import io.accio.base.dto.Relationship.SortKey.Ordering;
 import org.testng.annotations.Test;
 
+import java.util.List;
+
+import static io.trino.sql.SqlFormatter.formatSql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,5 +33,17 @@ public class TestRelationship
         assertThat(Ordering.get("aSC")).isEqualTo(Ordering.ASC);
         assertThat(Ordering.get("DESC")).isEqualTo(Ordering.DESC);
         assertThatThrownBy(() -> Ordering.get("foo")).hasMessage("Unsupported ordering");
+    }
+
+    @Test
+    public void testQualifiedCondition()
+    {
+        String expected = "(\"A\".\"c1\" = \"B\".\"c1\")";
+        Relationship relationship = Relationship.relationship("name", List.of("A", "B"), JoinType.ONE_TO_ONE, "A.c1 = B.c1");
+        assertThat(formatSql(relationship.getQualifiedCondition())).isEqualTo(expected);
+        relationship = Relationship.relationship("name", List.of("A", "B"), JoinType.ONE_TO_ONE, "\"A\".c1 = \"B\".c1");
+        assertThat(formatSql(relationship.getQualifiedCondition())).isEqualTo(expected);
+        relationship = Relationship.relationship("name", List.of("A", "B"), JoinType.ONE_TO_ONE, "A.\"c1\" = B.\"c1\"");
+        assertThat(formatSql(relationship.getQualifiedCondition())).isEqualTo(expected);
     }
 }

@@ -221,7 +221,7 @@ public final class Utils
                         .add(timeGrain)
                         .addAll(
                                 Stream.concat(metric.getDimension().stream(), metric.getMeasure().stream())
-                                        .map(Column::getSqlExpression)
+                                        .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
                                         .collect(toList()))
                         .build();
 
@@ -230,7 +230,7 @@ public final class Utils
                         .mapToObj(String::valueOf)
                         .collect(joining(","));
 
-        return format("SELECT %s FROM %s GROUP BY %s",
+        return format("SELECT %s FROM \"%s\" GROUP BY %s",
                 String.join(",", selectItems),
                 metric.getBaseObject(),
                 groupByColumnOrdinals);
