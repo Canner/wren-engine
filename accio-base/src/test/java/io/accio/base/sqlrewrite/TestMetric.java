@@ -282,7 +282,7 @@ public class TestMetric
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(14958);
 
-        assertThatCode(() -> query(rewrite("select 1 from testModelOnMetric", true)))
+        assertThatCode(() -> query(rewrite("select 1 from testModelOnMetric", mdl, true)))
                 .doesNotThrowAnyException();
     }
 
@@ -304,7 +304,7 @@ public class TestMetric
         assertThat(result.get(0).size()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(7);
 
-        assertThatCode(() -> query(rewrite("select 1 from testMetricOnMetric", true)))
+        assertThatCode(() -> query(rewrite("select 1 from testMetricOnMetric", mdl, true)))
                 .doesNotThrowAnyException();
     }
 
