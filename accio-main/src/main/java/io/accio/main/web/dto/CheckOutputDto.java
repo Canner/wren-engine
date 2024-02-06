@@ -16,18 +16,17 @@ package io.accio.main.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.accio.base.dto.Manifest;
 
 public class CheckOutputDto
 {
-    public static CheckOutputDto ready(Manifest manifest)
+    public static CheckOutputDto ready(String version)
     {
-        return new CheckOutputDto(Status.READY, manifest);
+        return new CheckOutputDto(Status.READY, version);
     }
 
-    public static CheckOutputDto prepare(Manifest manifest)
+    public static CheckOutputDto prepare(String version)
     {
-        return new CheckOutputDto(Status.PREPARING, manifest);
+        return new CheckOutputDto(Status.PREPARING, version);
     }
 
     public enum Status
@@ -37,15 +36,15 @@ public class CheckOutputDto
     }
 
     private final Status status;
-    private final Manifest manifest;
+    private final String version;
 
     @JsonCreator
     public CheckOutputDto(
             @JsonProperty("systemStatus") Status status,
-            @JsonProperty("manifest") Manifest manifest)
+            @JsonProperty("version") String version)
     {
         this.status = status;
-        this.manifest = manifest;
+        this.version = version;
     }
 
     @JsonProperty
@@ -55,8 +54,8 @@ public class CheckOutputDto
     }
 
     @JsonProperty
-    public Manifest getManifest()
+    public String getVersion()
     {
-        return manifest;
+        return version;
     }
 }

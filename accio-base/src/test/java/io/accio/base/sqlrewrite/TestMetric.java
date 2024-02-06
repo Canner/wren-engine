@@ -370,7 +370,7 @@ public class TestMetric
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null), List.of(ACCIO_SQL_REWRITE));
     }
 
     private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicField)
@@ -380,6 +380,6 @@ public class TestMetric
                 .setSchema("test")
                 .setEnableDynamic(enableDynamicField)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL, null), List.of(ACCIO_SQL_REWRITE));
     }
 }

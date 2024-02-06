@@ -53,7 +53,7 @@ public class PreviewService
                     .setSchema(mdl.getSchema())
                     .build();
 
-            String planned = AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl));
+            String planned = AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
             String converted = sqlConverter.convert(planned, sessionContext);
             return Streams.stream(metadata.directQuery(converted, List.of()))
                     .limit(limit)

@@ -313,6 +313,6 @@ public class TestMetricViewSqlRewrite
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL), List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null), List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
     }
 }

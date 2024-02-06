@@ -53,7 +53,7 @@ public class TestBigQuerySqlConverter
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         AccioMetastore accioMetastore = new AccioMetastore();
-        accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()));
+        accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()), null);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, accioMetastore);
     }
 

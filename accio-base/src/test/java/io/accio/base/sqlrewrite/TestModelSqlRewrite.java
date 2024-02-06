@@ -362,7 +362,7 @@ public class TestModelSqlRewrite
 
     private static String rewrite(String sql, AccioMDL mdl)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(mdl), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(mdl, null), List.of(ACCIO_SQL_REWRITE));
     }
 
     private static void assertSqlEquals(String actual, String expected)

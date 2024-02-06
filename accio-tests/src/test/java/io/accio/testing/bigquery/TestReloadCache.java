@@ -17,6 +17,7 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Manifest;
 import io.accio.cache.TaskInfo;
 import io.accio.cache.dto.CachedTable;
+import io.accio.main.web.dto.DeployInputDto;
 import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 
@@ -118,7 +119,7 @@ public class TestReloadCache
     private void deployMDL(String resourcePath)
             throws IOException
     {
-        deployMDL(Manifest.MANIFEST_JSON_CODEC.fromJson(Files.readString(Path.of(getClass().getClassLoader().getResource(resourcePath).getPath()))));
+        deployMDL(new DeployInputDto(Manifest.MANIFEST_JSON_CODEC.fromJson(Files.readString(Path.of(getClass().getClassLoader().getResource(resourcePath).getPath()))), null));
     }
 
     private void assertCache(String name)

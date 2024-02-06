@@ -333,6 +333,6 @@ public class TestModel
                 .setSchema("test")
                 .setEnableDynamic(enableDynamicField)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL, null), List.of(ACCIO_SQL_REWRITE));
     }
 }

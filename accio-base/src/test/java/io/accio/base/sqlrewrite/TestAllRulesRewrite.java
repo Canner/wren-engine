@@ -154,6 +154,6 @@ public class TestAllRulesRewrite
 
     private String rewrite(String sql)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null));
     }
 }

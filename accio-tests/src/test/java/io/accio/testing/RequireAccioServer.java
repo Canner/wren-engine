@@ -21,6 +21,7 @@ import io.accio.base.dto.Manifest;
 import io.accio.cache.TaskInfo;
 import io.accio.main.web.dto.CheckOutputDto;
 import io.accio.main.web.dto.ColumnLineageInputDto;
+import io.accio.main.web.dto.DeployInputDto;
 import io.accio.main.web.dto.ErrorMessageDto;
 import io.accio.main.web.dto.LineageResult;
 import io.accio.main.web.dto.PreviewDto;
@@ -48,7 +49,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.prepareGet;
 import static io.airlift.http.client.Request.Builder.preparePost;
@@ -69,7 +69,9 @@ public abstract class RequireAccioServer
     public static final JsonCodec<List<TaskInfo>> TASK_INFO_LIST_CODEC = listJsonCodec(TaskInfo.class);
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
     private static final JsonCodec<CheckOutputDto> CHECK_OUTPUT_DTO_CODEC = jsonCodec(CheckOutputDto.class);
+    private static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = jsonCodec(Manifest.class);
     private static final JsonCodec<PreviewDto> PREVIEW_DTO_CODEC = jsonCodec(PreviewDto.class);
+    private static final JsonCodec<DeployInputDto> DEPLOY_INPUT_DTO_JSON_CODEC = jsonCodec(DeployInputDto.class);
     private static final JsonCodec<ColumnLineageInputDto> COLUMN_LINEAGE_INPUT_DTO_CODEC = jsonCodec(ColumnLineageInputDto.class);
     private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
     private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
@@ -157,18 +159,31 @@ public abstract class RequireAccioServer
         return JsonCodec.listJsonCodec(Object[].class).fromJson(response.getBody());
     }
 
-    protected void deployMDL(Manifest manifest)
+    protected void deployMDL(DeployInputDto dto)
     {
         Request request = preparePost()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/deploy"))
                 .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                .setBodyGenerator(jsonBodyGenerator(MANIFEST_JSON_CODEC, manifest))
+                .setBodyGenerator(jsonBodyGenerator(DEPLOY_INPUT_DTO_JSON_CODEC, dto))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
         if (response.getStatusCode() != 202) {
             getWebApplicationException(response);
         }
+    }
+
+    protected Manifest getCurrentManifest()
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl"))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return MANIFEST_JSON_CODEC.fromJson(response.getBody());
     }
 
     protected CheckOutputDto getDeployStatus()
