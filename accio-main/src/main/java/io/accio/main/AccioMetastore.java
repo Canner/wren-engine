@@ -24,15 +24,15 @@ import static io.accio.base.AccioMDL.EMPTY;
 
 public class AccioMetastore
 {
-    private final AtomicReference<AnalyzedMDL> analyzed = new AtomicReference<>(new AnalyzedMDL(EMPTY, AccioDataLineage.EMPTY));
+    private final AtomicReference<AnalyzedMDL> analyzed = new AtomicReference<>(new AnalyzedMDL(EMPTY, AccioDataLineage.EMPTY, "0"));
 
     public AnalyzedMDL getAnalyzedMDL()
     {
         return analyzed.get();
     }
 
-    public synchronized void setAccioMDL(AccioMDL accioMDL)
+    public synchronized void setAccioMDL(AccioMDL accioMDL, String version)
     {
-        this.analyzed.set(new AnalyzedMDL(accioMDL, AccioDataLineage.analyze(accioMDL)));
+        this.analyzed.set(new AnalyzedMDL(accioMDL, AccioDataLineage.analyze(accioMDL), version));
     }
 }

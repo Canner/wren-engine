@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
@@ -67,7 +68,7 @@ public class AccioManager
         }
         else if (accioConfig.getAccioMDLFile().isPresent()) {
             this.accioMDLFile = accioConfig.getAccioMDLFile().get();
-            deployAccioMDLFromFile();
+            deployAccioMDLFromFile(null);
         }
         else {
             LOG.warn("No AccioMDL file found. AccioMDL will not be deployed, and no pg table will be generated.");
@@ -82,26 +83,29 @@ public class AccioManager
                 .collect(toList());
         checkArgument(mdls.size() == 1, "There should be only one mdl file in the directory");
         accioMDLFile = mdls.get(0);
-        deployAccioMDLFromFile();
+        File versionFile = accioMDLDirectory.toPath().resolve("version").toFile();
+        String version = versionFile.exists() ? Files.readString(versionFile.toPath()) : null;
+        deployAccioMDLFromFile(version);
     }
 
-    private void deployAccioMDLFromFile()
+    private void deployAccioMDLFromFile(String version)
             throws IOException
     {
         String json = Files.readString(accioMDLFile.toPath());
-        accioMetastore.setAccioMDL(AccioMDL.fromManifest(MANIFEST_JSON_CODEC.fromJson(json)));
+        accioMetastore.setAccioMDL(AccioMDL.fromManifest(MANIFEST_JSON_CODEC.fromJson(json)), version);
         deploy();
     }
 
-    public synchronized void deployAndArchive(Manifest manifest)
+    public synchronized void deployAndArchive(Manifest manifest, String version)
     {
         checkArgument(accioConfig.getAccioMDLFile().isEmpty(), "Deprecated config `accio.file`. Please use `accio.directory` instead.");
         checkArgument(accioMDLDirectory.exists() &&
                 accioMDLDirectory.isDirectory() &&
                 requireNonNull(accioMDLDirectory.listFiles()).length > 0, "AccioMDL directory does not exist or is empty");
         try {
+            Files.write(accioMDLDirectory.toPath().resolve("version"), Optional.ofNullable(version).map(v -> v.getBytes(UTF_8)).orElse(new byte[0]));
             AccioMDL oldAccioMDL = accioMetastore.getAnalyzedMDL().getAccioMDL();
-            accioMetastore.setAccioMDL(AccioMDL.fromManifest(manifest));
+            accioMetastore.setAccioMDL(AccioMDL.fromManifest(manifest), version);
             archiveAccioMDL(oldAccioMDL);
             Files.write(accioMDLFile.toPath(), MANIFEST_JSON_CODEC.toJson(accioMetastore.getAnalyzedMDL().getAccioMDL().getManifest()).getBytes(UTF_8));
             deploy();

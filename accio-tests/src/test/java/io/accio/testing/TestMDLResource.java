@@ -17,6 +17,7 @@ package io.accio.testing;
 import com.google.common.collect.ImmutableMap;
 import io.accio.base.dto.Manifest;
 import io.accio.main.web.dto.CheckOutputDto;
+import io.accio.main.web.dto.DeployInputDto;
 import io.accio.main.web.dto.PreviewDto;
 import org.testng.annotations.Test;
 
@@ -88,15 +89,18 @@ public class TestMDLResource
     {
         CheckOutputDto startUp = getDeployStatus();
         assertThat(startUp.getStatus()).isEqualTo(CheckOutputDto.Status.READY);
-        assertThat(startUp.getManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
-        assertThatNoException().isThrownBy(() -> deployMDL(updated));
+        assertThat(startUp.getVersion()).isNull();
+        assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
+        assertThatNoException().isThrownBy(() -> deployMDL(new DeployInputDto(updated, "abcd")));
         CheckOutputDto afterDeploy = getDeployStatus();
-        assertThat(afterDeploy.getManifest().getModels().get(0).getColumns().size()).isEqualTo(2);
+        assertThat(afterDeploy.getVersion()).isEqualTo("abcd");
+        assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(2);
         waitUntilReady();
 
-        assertThatNoException().isThrownBy(() -> deployMDL(initial));
+        assertThatNoException().isThrownBy(() -> deployMDL(new DeployInputDto(initial, "1234")));
         CheckOutputDto afterDeploy2 = getDeployStatus();
-        assertThat(afterDeploy2.getManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
+        assertThat(afterDeploy2.getVersion()).isEqualTo("1234");
+        assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         waitUntilReady();
 
         assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isEqualTo(2);
@@ -128,7 +132,9 @@ public class TestMDLResource
         assertThat(preview2.size()).isEqualTo(150);
         assertThat(preview2.get(0).length).isEqualTo(1);
 
+        assertThatNoException().isThrownBy(() -> deployMDL(new DeployInputDto(initial, null)));
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
                 .hasErrorMessageMatches(".*Table \"Orders\" must be qualified with a dataset.*");
+        assertThatNoException().isThrownBy(() -> preview(new PreviewDto(null, "select orderkey from Orders limit 100", null)));
     }
 }

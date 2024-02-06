@@ -15,9 +15,9 @@
 package io.accio.main.web;
 
 import io.accio.base.AccioMDL;
-import io.accio.base.dto.Manifest;
 import io.accio.main.AccioManager;
 import io.accio.main.PreviewService;
+import io.accio.main.web.dto.DeployInputDto;
 import io.accio.main.web.dto.PreviewDto;
 
 import javax.inject.Inject;
@@ -57,12 +57,21 @@ public class MDLResource
     @Path("/deploy")
     @Consumes(APPLICATION_JSON)
     public void deploy(
-            Manifest manifest,
+            DeployInputDto deployInputDto,
             @Suspended AsyncResponse asyncResponse)
     {
         CompletableFuture
-                .runAsync(() -> accioManager.deployAndArchive(manifest));
+                .runAsync(() -> accioManager.deployAndArchive(deployInputDto.getManifest(), deployInputDto.getVersion()));
         asyncResponse.resume(Response.accepted().build());
+    }
+
+    @GET
+    @Produces(APPLICATION_JSON)
+    public void getCurrentManifest(@Suspended AsyncResponse asyncResponse)
+    {
+        CompletableFuture
+                .supplyAsync(() -> accioManager.getAnalyzedMDL().getAccioMDL().getManifest())
+                .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
     @GET
@@ -73,9 +82,9 @@ public class MDLResource
         CompletableFuture
                 .supplyAsync(() -> {
                     if (accioManager.checkStatus()) {
-                        return ready(accioManager.getAnalyzedMDL().getAccioMDL().getManifest());
+                        return ready(accioManager.getAnalyzedMDL().getVersion());
                     }
-                    return prepare(accioManager.getAnalyzedMDL().getAccioMDL().getManifest());
+                    return prepare(accioManager.getAnalyzedMDL().getVersion());
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
@@ -87,8 +96,15 @@ public class MDLResource
             PreviewDto previewDto,
             @Suspended AsyncResponse asyncResponse)
     {
+        AccioMDL mdl;
+        if (previewDto.getManifest() == null) {
+            mdl = accioManager.getAnalyzedMDL().getAccioMDL();
+        }
+        else {
+            mdl = AccioMDL.fromManifest(previewDto.getManifest());
+        }
         previewService.preview(
-                        AccioMDL.fromManifest(previewDto.getManifest()),
+                        mdl,
                         previewDto.getSql(),
                         Optional.ofNullable(previewDto.getLimit()).orElse(100L))
                 .whenComplete(bindAsyncResponse(asyncResponse));
