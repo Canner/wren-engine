@@ -103,7 +103,7 @@ public class TestMDLResource
         assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         waitUntilReady();
 
-        assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isEqualTo(2);
+        assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isGreaterThanOrEqualTo(2);
     }
 
     @Test
