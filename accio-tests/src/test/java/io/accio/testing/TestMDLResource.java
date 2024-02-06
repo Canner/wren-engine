@@ -103,7 +103,8 @@ public class TestMDLResource
         assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         waitUntilReady();
 
-        assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isGreaterThanOrEqualTo(2);
+        assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isEqualTo(2);
+        assertThatNoException().isThrownBy(() -> preview(new PreviewDto(null, "select orderkey from Orders limit 100", null)));
     }
 
     @Test
@@ -132,9 +133,7 @@ public class TestMDLResource
         assertThat(preview2.size()).isEqualTo(150);
         assertThat(preview2.get(0).length).isEqualTo(1);
 
-        assertThatNoException().isThrownBy(() -> deployMDL(new DeployInputDto(initial, null)));
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
                 .hasErrorMessageMatches(".*Table \"Orders\" must be qualified with a dataset.*");
-        assertThatNoException().isThrownBy(() -> preview(new PreviewDto(null, "select orderkey from Orders limit 100", null)));
     }
 }
