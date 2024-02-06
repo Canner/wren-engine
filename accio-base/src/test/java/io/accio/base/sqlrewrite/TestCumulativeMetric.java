@@ -255,6 +255,6 @@ public class TestCumulativeMetric
                 .setSchema("test")
                 .setEnableDynamic(enableDynamic)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL, null), List.of(ACCIO_SQL_REWRITE));
     }
 }

@@ -92,7 +92,7 @@ public class TestEnumRewrite
 
     private Statement rewrite(String sql)
     {
-        return ENUM_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL));
+        return ENUM_REWRITE.apply(parse(sql), DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null));
     }
 
     private Statement parse(String sql)

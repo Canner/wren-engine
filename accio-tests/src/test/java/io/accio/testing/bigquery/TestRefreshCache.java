@@ -111,7 +111,7 @@ public class TestRefreshCache
                 .filter(taskInfo -> taskInfo.getCatalogSchemaTableName().equals(ordersName))
                 .findAny().orElseThrow(AssertionError::new);
 
-        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl), orders).join();
+        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl, null), orders).join();
         assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
         assertThat(start.getEndTime()).isNull();
         cacheManager.get().untilTaskDone(ordersName);

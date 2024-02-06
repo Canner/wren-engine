@@ -103,7 +103,7 @@ public class TestDuckdbTaskManager
         Optional<Model> model = mdl.getModel("Orders");
         assertThat(model).isPresent();
 
-        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl), model.get()).join();
+        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdl, null), model.get()).join();
         assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
         assertThat(start.getEndTime()).isNull();
         cacheManager.get().untilTaskDone(ordersName);
@@ -126,7 +126,7 @@ public class TestDuckdbTaskManager
         Optional<Model> model = mdlWithWrongSql.getModel("WrongOrders");
         assertThat(model).isPresent();
 
-        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdlWithWrongSql), model.get()).join();
+        TaskInfo start = cacheManager.get().createTask(new AnalyzedMDL(mdlWithWrongSql, null), model.get()).join();
         assertThat(start.getTaskStatus()).isEqualTo(QUEUED);
 
         CatalogSchemaTableName wrongOrdersName = catalogSchemaTableName(mdlWithWrongSql.getCatalog(), mdlWithWrongSql.getSchema(), "WrongOrders");

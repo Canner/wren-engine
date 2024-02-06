@@ -16,23 +16,28 @@ package io.accio.base;
 
 import io.accio.base.sqlrewrite.AccioDataLineage;
 
+import javax.annotation.Nullable;
+
 import static java.util.Objects.requireNonNull;
 
 public class AnalyzedMDL
 {
     private final AccioMDL accioMDL;
     private final AccioDataLineage accioDataLineage;
+    private final String version;
 
-    public AnalyzedMDL(AccioMDL accioMDL)
+    public AnalyzedMDL(AccioMDL accioMDL, @Nullable String version)
     {
         this.accioMDL = requireNonNull(accioMDL);
         this.accioDataLineage = AccioDataLineage.analyze(accioMDL);
+        this.version = version;
     }
 
-    public AnalyzedMDL(AccioMDL accioMDL, AccioDataLineage accioDataLineage)
+    public AnalyzedMDL(AccioMDL accioMDL, AccioDataLineage accioDataLineage, @Nullable String version)
     {
         this.accioMDL = requireNonNull(accioMDL);
         this.accioDataLineage = requireNonNull(accioDataLineage);
+        this.version = version;
     }
 
     public AccioMDL getAccioMDL()
@@ -43,5 +48,11 @@ public class AnalyzedMDL
     public AccioDataLineage getAccioDataLineage()
     {
         return accioDataLineage;
+    }
+
+    @Nullable
+    public String getVersion()
+    {
+        return version;
     }
 }
