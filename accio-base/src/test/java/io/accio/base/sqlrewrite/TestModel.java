@@ -41,6 +41,7 @@ import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestModel
         extends AbstractTestFramework
@@ -318,6 +319,18 @@ public class TestModel
 
         assertThatCode(() -> query(rewrite("SELECT orderkey FROM Lineitem, Orders", mdl, true)))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    public void testSelectNotFound()
+    {
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(customer))
+                .setRelationships(List.of(ordersCustomer, ordersLineitem))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        assertThatThrownBy(() -> query(rewrite("SELECT * FROM notfound", mdl, true)))
+                .hasMessageFindingMatch(".*notfound.*");
     }
 
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)
