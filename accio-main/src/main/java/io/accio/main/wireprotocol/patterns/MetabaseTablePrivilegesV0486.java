@@ -18,33 +18,38 @@ import java.util.regex.Pattern;
 
 /**
  * DuckDB doesn't support ahs_table_privilege() function with user arguments now.
- * Metabase submit a query with invalid syntax. It make the sql rewrite won't work.
+ * Metabase v0.48.6 submit a query with invalid syntax. It make the sql rewrite won't work.
  * Thus, rewrite this query through hard code for now.
  */
-public class MetabaseTablePrivileges
+public class MetabaseTablePrivilegesV0486
         extends QueryPattern
 {
-    static final QueryPattern INSTANCE = new MetabaseTablePrivileges();
+    static final QueryPattern INSTANCE = new MetabaseTablePrivilegesV0486();
 
-    public MetabaseTablePrivileges()
+    public MetabaseTablePrivilegesV0486()
     {
         super(Pattern.compile("with table_privileges as \\(\n" +
-                        "select\n" +
+                        " *select\n" +
                         " *NULL as role,\n" +
                         " *t\\.schemaname as schema,\n" +
-                        " *t\\.tablename as table,\n" +
-                        " *pg_catalog\\.has_table_privilege\\(current_user, concat\\('\"', t\\.schemaname, '\"', '\\.', '\"', t\\.tablename, '\"'\\), 'SELECT'\\) as select,\n" +
-                        " *pg_catalog\\.has_table_privilege\\(current_user, concat\\('\"', t\\.schemaname, '\"', '\\.', '\"', t\\.tablename, '\"'\\), 'UPDATE'\\) as update,\n" +
-                        " *pg_catalog\\.has_table_privilege\\(current_user, concat\\('\"', t\\.schemaname, '\"', '\\.', '\"', t\\.tablename, '\"'\\), 'INSERT'\\) as insert,\n" +
-                        " *pg_catalog\\.has_table_privilege\\(current_user, concat\\('\"', t\\.schemaname, '\"', '\\.', '\"', t\\.tablename, '\"'\\), 'DELETE'\\) as delete\n" +
-                        "from pg_catalog\\.pg_tables t\n" +
-                        "where t\\.schemaname !~ '\\^pg_'\n" +
+                        " *t\\.objectname as table,\n" +
+                        " *pg_catalog\\.has_table_privilege\\(current_user, '\"' \\|\\| t\\.schemaname \\|\\| '\"' \\|\\| '\\.' \\|\\| '\"' \\|\\| t\\.objectname \\|\\| '\"',  'UPDATE'\\) as update,\n" +
+                        " *pg_catalog\\.has_table_privilege\\(current_user, '\"' \\|\\| t\\.schemaname \\|\\| '\"' \\|\\| '\\.' \\|\\| '\"' \\|\\| t\\.objectname \\|\\| '\"',  'SELECT'\\) as select,\n" +
+                        " *pg_catalog\\.has_table_privilege\\(current_user, '\"' \\|\\| t\\.schemaname \\|\\| '\"' \\|\\| '\\.' \\|\\| '\"' \\|\\| t\\.objectname \\|\\| '\"',  'INSERT'\\) as insert,\n" +
+                        " *pg_catalog\\.has_table_privilege\\(current_user, '\"' \\|\\| t\\.schemaname \\|\\| '\"' \\|\\| '\\.' \\|\\| '\"' \\|\\| t\\.objectname \\|\\| '\"',  'DELETE'\\) as delete\n" +
+                        " *from \\(\n" +
+                        " *select schemaname, tablename as objectname from pg_catalog\\.pg_tables\n" +
+                        " *union\n" +
+                        " *select schemaname, viewname as objectname from pg_catalog\\.pg_views\n" +
+                        " *union\n" +
+                        " *select schemaname, matviewname as objectname from pg_catalog\\.pg_matviews\n" +
+                        " \\) t\n" +
+                        " *where t\\.schemaname !~ '\\^pg_'\n" +
                         " *and t\\.schemaname <> 'information_schema'\n" +
                         " *and pg_catalog\\.has_schema_privilege\\(current_user, t\\.schemaname, 'USAGE'\\)\n" +
                         "\\)\n" +
                         "select t\\.\\*\n" +
-                        "from table_privileges t\n" +
-                        "where t\\.select or t\\.update or t\\.insert or t\\.delete",
+                        "from table_privileges t",
                 Pattern.CASE_INSENSITIVE));
     }
 
