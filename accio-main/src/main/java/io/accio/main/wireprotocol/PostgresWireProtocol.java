@@ -186,12 +186,18 @@ public class PostgresWireProtocol
 
     private void initAuthentication(Channel channel)
     {
-        Optional<String> password = wireProtocolSession.getPassword();
-        if (password.isPresent()) {
-            finishAuthentication(channel, password.get());
+        if (wireProtocolSession.isAuthenticationEnabled()) {
+            Optional<String> password = wireProtocolSession.getPassword();
+            if (password.isPresent()) {
+                finishAuthentication(channel, password.get());
+            }
+            else {
+                Messages.sendAuthenticationCleartextPassword(channel);
+            }
         }
         else {
-            Messages.sendAuthenticationCleartextPassword(channel);
+            Messages.sendAuthenticationOK(channel)
+                    .addListener(f -> sendParamsAndRdyForQuery(channel));
         }
     }
 

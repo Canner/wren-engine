@@ -117,6 +117,18 @@ public class TestMetadataQuery
     }
 
     @Test
+    public void testAuthWithoutPassword()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, null, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    @Test
     public void testExecuteAndDescribeLevel1Query()
             throws Exception
     {
