@@ -65,8 +65,6 @@ public class DuckDBDataSource
         Connection connection = duckDBConnection.duplicate();
         Statement statement = connection.createStatement();
         statement.execute("set search_path = 'main'");
-        // install extensions from stable repository
-        statement.execute("SET custom_extension_repository = 'http://extensions.duckdb.org'");
         // init httpfs settings
         statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
         statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
