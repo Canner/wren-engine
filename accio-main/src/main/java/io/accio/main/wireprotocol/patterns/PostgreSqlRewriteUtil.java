@@ -39,7 +39,8 @@ public final class PostgreSqlRewriteUtil
             .add(ArraySelectPattern.INSTANCE)
             .add(ShowDateStylePattern.INSTANCE)
             .add(ShowStandardConformingPattern.INSTANCE)
-            .add(MetabaseTablePrivileges.INSTANCE)
+            .add(MetabaseTablePrivilegesLegacy.INSTANCE)
+            .add(MetabaseTablePrivilegesV0486.INSTANCE)
             .add(ShowTimezonePattern.INSTANCE)
             .add(JdbcGetProcedureColumnsPattern.INSTANCE)
             .build();
