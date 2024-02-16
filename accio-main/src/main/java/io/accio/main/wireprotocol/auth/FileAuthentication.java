@@ -36,6 +36,12 @@ public class FileAuthentication
     }
 
     @Override
+    public boolean isEnabled()
+    {
+        return !accounts.isEmpty();
+    }
+
+    @Override
     public boolean authenticate(String username, String password)
     {
         if (accounts.isEmpty()) {

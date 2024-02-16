@@ -17,4 +17,6 @@ package io.accio.main.wireprotocol.auth;
 public interface Authentication
 {
     boolean authenticate(String username, String password);
+
+    boolean isEnabled();
 }

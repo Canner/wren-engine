@@ -206,6 +206,11 @@ public class WireProtocolSession
                 .isPresent();
     }
 
+    public boolean isAuthenticationEnabled()
+    {
+        return authentication.isEnabled();
+    }
+
     public Optional<List<Column>> describePortal(String name)
     {
         Portal portal = getPortal(name);
