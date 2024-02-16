@@ -339,6 +339,7 @@ public final class PostgresSessionProperties
             "xmloption",
             "gin_pending_list_limit",
             /* Client Connection Defaults / Locale and Formatting */
+            DATE_STYLE,
             INTERVALSTYLE,
             TIMEZONE,
             "timezone_abbreviations",
