@@ -463,10 +463,10 @@ public class PostgresWireProtocol
                     Messages.sendCommandComplete(channel, statement, 0);
                     return;
                 }
-                portal.setResultSetSender(connectorRecordIterable.get());
+                portal.setConnectorRecordIterator(connectorRecordIterable.get());
             }
 
-            ConnectorRecordIterator connectorRecordIterable = portal.getConnectorRecordIterable();
+            ConnectorRecordIterator connectorRecordIterable = portal.getConnectorRecordIterator();
             FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
             ResultSetSender resultSetSender = new ResultSetSender(
                     statement,
@@ -476,8 +476,6 @@ public class PostgresWireProtocol
                     portal.getRowCount(),
                     resultFormatCodes);
             portal.setRowCount(resultSetSender.sendResultSet());
-            // clean metadata query after executed
-            wireProtocolSession.removeMetadataQuery(portal.getPreparedStatement().getName(), portal.getName());
         }
         catch (Exception e) {
             LOG.error(e, format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));

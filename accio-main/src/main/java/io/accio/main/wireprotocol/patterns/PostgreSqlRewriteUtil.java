@@ -84,7 +84,6 @@ public final class PostgreSqlRewriteUtil
                 portal.getName(),
                 preparedStatement,
                 rewrittenSql.isPresent() ? List.of() : portal.getParametersValue(),
-                portal.getResultFormatCodes(),
-                preparedStatement.getQueryLevel());
+                portal.getResultFormatCodes());
     }
 }

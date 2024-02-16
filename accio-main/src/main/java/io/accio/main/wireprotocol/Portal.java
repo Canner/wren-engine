@@ -43,18 +43,16 @@ public class Portal
     private final List<Object> params;
     private ConnectorRecordIterator connectorRecordIterator;
     private long rowCount;
-    private QueryLevel level;
 
     @Nullable
     private final FormatCodes.FormatCode[] resultFormatCodes;
 
-    public Portal(String name, PreparedStatement preparedStatement, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes, QueryLevel level)
+    public Portal(String name, PreparedStatement preparedStatement, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
     {
         this.name = name;
         this.preparedStatement = preparedStatement;
         this.params = params;
         this.resultFormatCodes = resultFormatCodes;
-        this.level = level;
     }
 
     public String getName()
@@ -99,12 +97,12 @@ public class Portal
         throw new UnsupportedOperationException();
     }
 
-    public ConnectorRecordIterator getConnectorRecordIterable()
+    public ConnectorRecordIterator getConnectorRecordIterator()
     {
         return connectorRecordIterator;
     }
 
-    public void setResultSetSender(ConnectorRecordIterator connectorRecordIterator)
+    public void setConnectorRecordIterator(ConnectorRecordIterator connectorRecordIterator)
     {
         this.connectorRecordIterator = connectorRecordIterator;
     }
@@ -122,6 +120,11 @@ public class Portal
     public boolean isSuspended()
     {
         return connectorRecordIterator != null;
+    }
+
+    public boolean isMetadataQuery()
+    {
+        return preparedStatement.isMetaDtaQuery();
     }
 
     public List<Parameter> getParameters()
@@ -149,7 +152,6 @@ public class Portal
                 .add("resultFormatCodes", resultFormatCodes)
                 .add("connectorRecordIterator", connectorRecordIterator)
                 .add("rowCount", rowCount)
-                .add("level", level)
                 .toString();
     }
 
