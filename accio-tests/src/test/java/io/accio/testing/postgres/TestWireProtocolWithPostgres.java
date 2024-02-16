@@ -585,6 +585,100 @@ public class TestWireProtocolWithPostgres
     }
 
     @Test
+    public void testSetSession()
+            throws IOException
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            // ignore property
+            protocolClient.sendSimpleQuery("set data_directory = '/tmp'");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // system property
+            protocolClient.sendSimpleQuery("set extra_float_digits = 2");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendSimpleQuery("set DateStyle = 'ISO'");
+            protocolClient.assertParameterStatus("DateStyle", "ISO");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendSimpleQuery("set DateStyle = 'ISO', 'DMY'");
+            protocolClient.assertParameterStatus("DateStyle", "ISO, DMY");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendSimpleQuery("set DateStyle = ISO, DMY");
+            protocolClient.assertParameterStatus("DateStyle", "ISO, DMY");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // hard-weird property
+            protocolClient.sendSimpleQuery("SET application_name = 'PostgreSQL JDBC Driver'");
+            protocolClient.assertParameterStatus("application_name", "PostgreSQL JDBC Driver");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // ignore property
+            protocolClient.sendParse("teststmt", "set data_directory = '/tmp'", ImmutableList.of());
+            protocolClient.sendBind("exec", "teststmt", ImmutableList.of());
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec");
+            protocolClient.sendExecute("exec", 0);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+            protocolClient.assertBindComplete();
+            protocolClient.assertNoData();
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // system property
+            protocolClient.sendParse("teststmt2", "set extra_float_digits = 2", ImmutableList.of());
+            protocolClient.sendBind("exec2", "teststmt2", ImmutableList.of());
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec2");
+            protocolClient.sendExecute("exec2", 0);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+            protocolClient.assertBindComplete();
+            protocolClient.assertNoData();
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // hard-weird property
+            protocolClient.sendParse("teststmt4", "SET application_name = 'PostgreSQL JDBC Driver'", ImmutableList.of());
+            protocolClient.sendBind("exec4", "teststmt4", ImmutableList.of());
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "exec4");
+            protocolClient.sendExecute("exec4", 0);
+            protocolClient.sendSync();
+
+            protocolClient.assertParseComplete();
+            protocolClient.assertBindComplete();
+            protocolClient.assertNoData();
+            protocolClient.assertParameterStatus("application_name", "PostgreSQL JDBC Driver");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            // hard-weird property
+            protocolClient.sendSimpleQuery("SET TimeZone = 'UTC'");
+            protocolClient.assertParameterStatus("TimeZone", "UTC");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+
+            protocolClient.sendSimpleQuery("SET timezone = 'UTC'");
+            protocolClient.assertParameterStatus("timezone", "UTC");
+            protocolClient.assertCommandComplete("SET");
+            protocolClient.assertReadyForQuery('I');
+        }
+    }
+
+    @Test
     public void testJdbcConnection()
             throws Exception
     {

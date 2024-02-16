@@ -49,6 +49,8 @@ import java.util.regex.Pattern;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.accio.main.wireprotocol.PostgresSessionProperties.UNQUOTE_STRATEGY;
+import static io.accio.main.wireprotocol.PostgresSessionProperties.formatValue;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -66,7 +68,7 @@ public class PostgresWireProtocol
             .build();
 
     // set (session) property { = | to } { value | 'value' }
-    private static final Pattern SET_STMT_PATTERN = Pattern.compile("(?i)^ *SET( +SESSION)* +(?<property>[a-zA-Z0-9_]+)( *= *| +TO +)(?<value>[^ ']+|'.*')");
+    private static final Pattern SET_STMT_PATTERN = Pattern.compile("(?i)^ *SET( +SESSION)* +(?<property>[a-zA-Z0-9_]+)( *= *| +TO +)(?<value>(.*))");
     private static final Pattern SET_TRANSACTION_PATTERN = Pattern.compile("SET +(SESSION CHARACTERISTICS AS )? *TRANSACTION");
     private static final Pattern SET_SESSION_AUTHORIZATION = Pattern.compile("SET (SESSION |LOCAL )?SESSION AUTHORIZATION");
 
@@ -308,11 +310,11 @@ public class PostgresWireProtocol
 
     public static Optional<Pair<String, String>> parseSetStmt(String statement)
     {
-        Matcher matcher = SET_STMT_PATTERN.matcher(statement);
+        Matcher matcher = SET_STMT_PATTERN.matcher(statement.split(";")[0]);
         if (matcher.find()) {
             String property = matcher.group("property");
             String val = matcher.group("value");
-            return Optional.of(Pair.of(property, val.matches("'.*'") ? val.substring(1, val.length() - 1) : val));
+            return Optional.of(Pair.of(property, formatValue(val, UNQUOTE_STRATEGY)));
         }
         return Optional.empty();
     }
