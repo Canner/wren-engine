@@ -36,7 +36,7 @@ public final class PostgresSessionProperties
     public static final String IS_SUPER_USER = "is_superuser";
     public static final String SESSION_AUTHORIZATION = "session_authorization";
     public static final String INTERVALSTYLE = "intervalstyle";
-    public static final String TIMEZONE = "TimeZone";
+    public static final String TIMEZONE = "timezone";
     public static final String INTEGER_DATETIMES = "integer_datetimes";
     public static final String STANDARD_CONFORMING_STRINGS = "standard_conforming_strings";
     public static final String APPLICATION_NAME = "application_name";
