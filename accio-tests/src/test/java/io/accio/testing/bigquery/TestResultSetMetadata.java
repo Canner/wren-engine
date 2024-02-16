@@ -389,7 +389,7 @@ public class TestResultSetMetadata
         assertEquals(metadata.getColumnType(4), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(5), "REMARKS");
-        assertEquals(metadata.getColumnType(5), Types.INTEGER);
+        assertEquals(metadata.getColumnType(5), Types.VARCHAR);
 
         assertEquals(metadata.getColumnLabel(6), "TYPE_CAT");
         assertEquals(metadata.getColumnType(6), Types.VARCHAR);

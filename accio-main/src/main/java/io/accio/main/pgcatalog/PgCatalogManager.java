@@ -114,30 +114,30 @@ public class PgCatalogManager
             AccioMDL mdl = accioMetastore.getAnalyzedMDL().getAccioMDL();
             StringBuilder sb = new StringBuilder();
             if (StringUtils.isNotEmpty(mdl.getSchema())) {
-                sb.append(format("DROP SCHEMA IF EXISTS %s CASCADE;\n", mdl.getSchema()));
+                sb.append(format("DROP SCHEMA IF EXISTS \"%s\" CASCADE;\n", mdl.getSchema()));
                 sb.append("CREATE SCHEMA IF NOT EXISTS ").append(mdl.getSchema()).append(";\n");
             }
             mdl.listModels().forEach(model -> {
                 String cols = model.getColumns().stream()
                         .filter(column -> column.getRelationship().isEmpty())
-                        .map(column -> format("%s %s", column.getName(), pgMetastore.handlePgType(column.getType())))
+                        .map(column -> format("\"%s\" %s", column.getName(), pgMetastore.handlePgType(column.getType())))
                         .collect(joining(","));
-                sb.append(format("CREATE TABLE IF NOT EXISTS %s.%s (%s);\n", mdl.getSchema(), model.getName(), cols));
+                sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), model.getName(), cols));
             });
             mdl.listMetrics().forEach(metric -> {
-                String cols = metric.getColumns().stream().map(column -> format("%s %s", column.getName(), pgMetastore.handlePgType(column.getType()))).collect(joining(","));
-                sb.append(format("CREATE TABLE IF NOT EXISTS %s.%s (%s);\n", mdl.getSchema(), metric.getName(), cols));
+                String cols = metric.getColumns().stream().map(column -> format("\"%s\" %s", column.getName(), pgMetastore.handlePgType(column.getType()))).collect(joining(","));
+                sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
             mdl.listCumulativeMetrics().forEach(metric -> {
-                String cols = format("%s %s, %s %s",
+                String cols = format("\"%s\" %s, \"%s\" %s",
                         metric.getMeasure().getName(),
                         pgMetastore.handlePgType(metric.getMeasure().getType()),
                         metric.getWindow().getName(),
                         mdl.getColumnType(metric.getName(), metric.getWindow().getName()));
-                sb.append(format("CREATE TABLE IF NOT EXISTS %s.%s (%s);\n", mdl.getSchema(), metric.getName(), cols));
+                sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
             String syncSql = sb.toString();
-            LOG.debug("Sync PG Metastore DDL:\n %s", syncSql);
+            LOG.info("Sync PG Metastore DDL:\n %s", syncSql);
             if (!syncSql.isEmpty()) {
                 pgMetastore.directDDL(syncSql);
             }
