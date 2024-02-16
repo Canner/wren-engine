@@ -96,6 +96,11 @@ public class PreparedStatement
         return queryLevel;
     }
 
+    public boolean isMetaDtaQuery()
+    {
+        return queryLevel != QueryLevel.DATASOURCE;
+    }
+
     @Override
     public String toString()
     {

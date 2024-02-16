@@ -349,6 +349,7 @@ public class PostgresWireProtocol
                 int oid = buffer.readInt();
                 paramTypes.add(PGTypes.oidToPgType(oid).oid());
             }
+            LOG.debug("Create prepared statement %s query: %s", statementName, query);
             wireProtocolSession.parse(statementName, query, paramTypes);
             Messages.sendParseComplete(channel);
         }

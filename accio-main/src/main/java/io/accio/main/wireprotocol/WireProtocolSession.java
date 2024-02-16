@@ -337,7 +337,6 @@ public class WireProtocolSession
     {
         PreparedStatement preparedStatement = new PreparedStatement(statementName, rewritten, paramTypes, statement, false, level);
         preparedStatements.put(statementName, preparedStatement);
-        metadataQueries.put(preparedStmtPortalName(statementName, null), Query.builder(preparedStatement).build());
     }
 
     private static boolean isSessionCommand(Statement statement)
@@ -357,50 +356,51 @@ public class WireProtocolSession
 
     public void bind(String portalName, String statementName, List<Object> params, @Nullable FormatCodes.FormatCode[] resultFormatCodes)
     {
-        Query query = metadataQueries.get(preparedStmtPortalName(statementName, null));
-        if (query != null) {
+        PreparedStatement preparedStatement = preparedStatements.get(statementName);
+        if (preparedStatement.isMetaDtaQuery()) {
             try {
-                Portal portal = rewriteWithParameters(new Portal(portalName, query.getPreparedStatement(), params, resultFormatCodes, query.getPreparedStatement().getQueryLevel()));
-                query.setPortal(portal);
+                Portal portal = rewriteWithParameters(new Portal(portalName, preparedStatement, params, resultFormatCodes, preparedStatement.getQueryLevel()));
                 // Execute Level 1 Query
                 LOG.debug("Bind Portal %s with parameters %s to Statement %s", portalName, params.stream().map(Object::toString).collect(Collectors.joining(",")), statementName);
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
-                query.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
                 metadataQueries.remove(preparedStmtPortalName(statementName, null));
-                metadataQueries.put(preparedStmtPortalName(statementName, portalName), query);
+                metadataQueries.put(preparedStmtPortalName(statementName, portalName),
+                        Query.builder(preparedStatement)
+                                .setPortal(portal)
+                                .setConnectorRecordIterator(iter).build());
                 return;
             }
             catch (Exception e) {
                 // Forward to level 2
-                LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", query.getPortal().get().getPreparedStatement().getStatement());
+                LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", preparedStatement.getStatement());
                 resetMetadataQuery(statementName, null);
-                parseMetastoreSemiQuery(query.getPreparedStatement().getName(),
-                        query.getPreparedStatement().getOriginalStatement(),
-                        query.getPreparedStatement().getParamTypeOids());
+                parseMetastoreSemiQuery(preparedStatement.getName(),
+                        preparedStatement.getOriginalStatement(),
+                        preparedStatement.getParamTypeOids());
             }
         }
 
         // Execute Level 2 Query
-        Query level2Query = metadataQueries.get(preparedStmtPortalName(statementName, null));
-        if (level2Query != null) {
+        preparedStatement = preparedStatements.get(statementName);
+        if (preparedStatement.isMetaDtaQuery()) {
             try {
-                Portal portal = new Portal(portalName, level2Query.getPreparedStatement(), params, resultFormatCodes, level2Query.getPreparedStatement().getQueryLevel());
-                level2Query.setPortal(portal);
+                Portal portal = new Portal(portalName, preparedStatement, params, resultFormatCodes, preparedStatement.getQueryLevel());
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
-                level2Query.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
                 metadataQueries.remove(preparedStmtPortalName(statementName, null));
-                metadataQueries.put(preparedStmtPortalName(statementName, portalName), level2Query);
+                metadataQueries.put(preparedStmtPortalName(statementName, portalName), Query.builder(preparedStatement)
+                        .setPortal(portal)
+                        .setConnectorRecordIterator(iter).build());
                 return;
             }
             catch (Exception e) {
                 // Forward to level 3
-                LOG.debug(e, "Failed to execute SQL in METASTORE_SEMI level: %s", level2Query.getPreparedStatement().getStatement());
+                LOG.debug(e, "Failed to execute SQL in METASTORE_SEMI level: %s", preparedStatement.getStatement());
                 resetMetadataQuery(statementName, null);
-                parseDataSourceQuery(level2Query.getPreparedStatement().getName(),
-                        level2Query.getPreparedStatement().getOriginalStatement(),
-                        level2Query.getPreparedStatement().getParamTypeOids());
+                parseDataSourceQuery(preparedStatement.getName(),
+                        preparedStatement.getOriginalStatement(),
+                        preparedStatement.getParamTypeOids());
             }
         }
 
