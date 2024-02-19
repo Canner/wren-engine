@@ -260,6 +260,110 @@ public class TestWireProtocolWithBigquery
     }
 
     @Test
+    public void testReusedLevel1PreparedStatement()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            List<PGType> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("", "select typname from pg_type where pg_type.oid = ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertParseComplete();
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+
+            protocolClient.assertDataRow("bigint");
+            protocolClient.assertCommandComplete("SELECT 1");
+
+            // reuse the parsed prepared statement
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertBindComplete();
+
+            fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+
+            protocolClient.assertDataRow("bigint");
+            protocolClient.assertCommandComplete("SELECT 1");
+        }
+    }
+
+    @Test
+    public void testReusedLevel2PreparedStatement()
+            throws Exception
+    {
+        try (TestingWireProtocolClient protocolClient = wireProtocolClient()) {
+            protocolClient.sendStartUpMessage(196608, MOCK_PASSWORD, "test", "canner");
+            protocolClient.assertAuthOk();
+            assertDefaultPgConfigResponse(protocolClient);
+            protocolClient.assertReadyForQuery('I');
+
+            List<PGType> paramTypes = ImmutableList.of(INTEGER);
+            protocolClient.sendParse("", "select 'pg_type'::regclass, ?",
+                    paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertParseComplete();
+
+            List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
+            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+
+            List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertBindComplete();
+
+            List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertDataRow("pg_type,14");
+            protocolClient.assertCommandComplete("SELECT 1");
+
+            // reuse the parsed prepared statement
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
+            protocolClient.sendExecute("", 0);
+
+            protocolClient.assertBindComplete();
+
+            fields2 = protocolClient.assertAndGetRowDescriptionFields();
+            actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
+            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+
+            protocolClient.assertDataRow("pg_type,14");
+            protocolClient.assertCommandComplete("SELECT 1");
+        }
+    }
+
+    @Test
     public void testNullExtendedQuery()
             throws IOException
     {
