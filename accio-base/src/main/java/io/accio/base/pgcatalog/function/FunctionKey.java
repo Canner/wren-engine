@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import java.util.Objects;
 

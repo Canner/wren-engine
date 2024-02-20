@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 
@@ -21,22 +21,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_IN;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_OUT;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_RECV;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_UPPER;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.CURRENT_DATABASE;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.CURRENT_SCHEMAS;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.FORMAT_TYPE;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.GENERATE_ARRAY;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_EXPANDARRAY;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_GET_EXPR;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_GET_EXPR_PRETTY;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_GET_FUNCTION_RESULT;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.PG_RELATION_SIZE__INT___BIGINT;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.REGEXP_LIKE;
-import static io.accio.main.pgcatalog.function.FunctionKey.functionKey;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_IN;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_OUT;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_RECV;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_UPPER;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.CURRENT_DATABASE;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.CURRENT_SCHEMAS;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.FORMAT_TYPE;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.GENERATE_ARRAY;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_EXPANDARRAY;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_GET_EXPR;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_GET_EXPR_PRETTY;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_GET_FUNCTION_RESULT;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.PG_RELATION_SIZE__INT___BIGINT;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.REGEXP_LIKE;
+import static io.accio.base.pgcatalog.function.FunctionKey.functionKey;
 
 public final class PgMetastoreFunctionRegistry
         implements PgFunctionRegistry

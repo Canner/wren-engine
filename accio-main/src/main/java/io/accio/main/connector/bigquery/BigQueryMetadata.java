@@ -31,11 +31,11 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
+import io.accio.base.pgcatalog.function.PgFunctionRegistry;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.pgcatalog.function.DataSourceFunctionRegistry;
-import io.accio.main.pgcatalog.function.PgFunctionRegistry;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 

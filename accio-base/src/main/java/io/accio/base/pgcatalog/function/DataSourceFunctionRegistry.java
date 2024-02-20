@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 
@@ -21,10 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.NOW;
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.PG_TO_CHAR;
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.SUBSTR;
-import static io.accio.main.pgcatalog.function.FunctionKey.functionKey;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.DATE_TRUNC;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.NOW;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.PG_TO_CHAR;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.SUBSTR;
+import static io.accio.base.pgcatalog.function.FunctionKey.functionKey;
 
 public class DataSourceFunctionRegistry
         implements PgFunctionRegistry
@@ -33,6 +34,7 @@ public class DataSourceFunctionRegistry
             .add(PG_TO_CHAR)
             .add(NOW)
             .add(SUBSTR)
+            .add(DATE_TRUNC)
             .build();
 
     private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();

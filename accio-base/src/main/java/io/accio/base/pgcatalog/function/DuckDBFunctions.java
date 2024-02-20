@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.type.RecordType;
 
 import java.util.List;
 
+import static io.accio.base.pgcatalog.function.PgFunction.Argument.argument;
+import static io.accio.base.pgcatalog.function.PgFunction.Language.SQL;
+import static io.accio.base.pgcatalog.function.PgFunction.builder;
 import static io.accio.base.type.BigIntType.BIGINT;
 import static io.accio.base.type.BooleanType.BOOLEAN;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static io.accio.base.type.PGArray.INT4_ARRAY;
 import static io.accio.base.type.PGArray.VARCHAR_ARRAY;
 import static io.accio.base.type.VarcharType.VARCHAR;
-import static io.accio.main.pgcatalog.function.PgFunction.Argument.argument;
-import static io.accio.main.pgcatalog.function.PgFunction.Language.SQL;
-import static io.accio.main.pgcatalog.function.PgFunction.builder;
 
 public class DuckDBFunctions
 {

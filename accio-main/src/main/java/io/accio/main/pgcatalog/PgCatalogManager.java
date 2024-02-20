@@ -15,13 +15,13 @@ package io.accio.main.pgcatalog;
 
 import com.google.inject.Inject;
 import io.accio.base.AccioMDL;
+import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
+import io.accio.base.pgcatalog.function.PgFunctionRegistry;
+import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
-import io.accio.main.pgcatalog.function.DataSourceFunctionRegistry;
-import io.accio.main.pgcatalog.function.PgFunctionRegistry;
-import io.accio.main.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.log.Logger;
 import org.apache.commons.lang3.StringUtils;

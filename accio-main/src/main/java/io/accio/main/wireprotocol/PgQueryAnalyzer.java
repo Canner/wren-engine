@@ -14,7 +14,7 @@
 
 package io.accio.main.wireprotocol;
 
-import io.accio.main.pgcatalog.function.PgMetastoreFunctionRegistry;
+import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DefaultTraversalVisitor;

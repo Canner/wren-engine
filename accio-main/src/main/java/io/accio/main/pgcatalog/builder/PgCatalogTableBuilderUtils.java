@@ -21,9 +21,9 @@ import io.accio.main.pgcatalog.table.PgCatalogTable;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_IN;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_OUT;
-import static io.accio.main.pgcatalog.function.DuckDBFunctions.ARRAY_RECV;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_IN;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_OUT;
+import static io.accio.base.pgcatalog.function.DuckDBFunctions.ARRAY_RECV;
 import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.DEFAULT_AUTH;
 import static io.accio.main.pgcatalog.table.PgCatalogTableUtils.PG_CATALOG;
 import static java.lang.String.format;
