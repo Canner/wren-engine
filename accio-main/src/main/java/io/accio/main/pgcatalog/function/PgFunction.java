@@ -15,6 +15,7 @@
 package io.accio.main.pgcatalog.function;
 
 import com.google.common.base.Joiner;
+import io.accio.base.metadata.Function;
 import io.accio.base.type.PGType;
 
 import java.util.List;
@@ -26,6 +27,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class PgFunction
+        implements Function
 {
     public static final Pattern PG_FUNCTION_PATTERN = Pattern.compile("(?<functionName>[a-zA-Z]+(_[a-zA-Z0-9]+)*)(__(?<argsType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?(___(?<returnType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?");
 

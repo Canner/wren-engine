@@ -17,6 +17,8 @@ package io.accio.base.sqlrewrite.analyzer;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.dto.CumulativeMetric;
+import io.accio.base.metadata.Function;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.type.BigIntType;
 import io.accio.base.type.BooleanType;
 import io.accio.base.type.ByteaType;
@@ -78,9 +80,9 @@ import static java.util.Objects.requireNonNull;
 public class ExpressionTypeAnalyzer
         extends DefaultTraversalVisitor<Void>
 {
-    public static PGType<?> analyze(AccioMDL mdl, Scope scope, Expression expression)
+    public static PGType<?> analyze(AccioMDL mdl, Scope scope, Expression expression, FunctionBundle functionBundle)
     {
-        ExpressionTypeAnalyzer analyzer = new ExpressionTypeAnalyzer(mdl, scope);
+        ExpressionTypeAnalyzer analyzer = new ExpressionTypeAnalyzer(mdl, scope, functionBundle);
         analyzer.process(expression);
         return analyzer.result;
     }
@@ -88,11 +90,13 @@ public class ExpressionTypeAnalyzer
     private final AccioMDL mdl;
     private final Scope scope;
     private PGType<?> result;
+    private final FunctionBundle functionBundle;
 
-    public ExpressionTypeAnalyzer(AccioMDL mdl, Scope scope)
+    public ExpressionTypeAnalyzer(AccioMDL mdl, Scope scope, FunctionBundle functionBundle)
     {
         this.mdl = requireNonNull(mdl, "mdl is null");
         this.scope = requireNonNull(scope, "scope is null");
+        this.functionBundle = requireNonNull(functionBundle, "functionBundle is null");
     }
 
     @Override
@@ -277,12 +281,11 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        // TODO: build a function list
-        if (node.getName().getSuffix().equalsIgnoreCase("date_trunc")) {
-            result = DateType.DATE;
-        }
+        functionBundle.getFunction(node.getName().getSuffix(), node.getArguments().size())
+                .flatMap(Function::getReturnType)
+                .ifPresent(type -> result = type);
         // TODO: handle the remote name
-        else if (node.getName().getSuffix().equalsIgnoreCase("now") ||
+        if (node.getName().getSuffix().equalsIgnoreCase("now") ||
                 node.getName().getSuffix().equalsIgnoreCase("now___timestamp")) {
             result = TimestampType.TIMESTAMP;
         }

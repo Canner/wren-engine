@@ -16,6 +16,7 @@ package io.accio.main.sql.bigquery.analyzer;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.sqlrewrite.analyzer.ExpressionTypeAnalyzer;
 import io.accio.base.sqlrewrite.analyzer.Scope;
 import io.accio.base.sqlrewrite.analyzer.TypeCoercion;
@@ -23,6 +24,7 @@ import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.base.type.TimestampType;
 import io.accio.base.type.TimestampWithTimeZoneType;
+import io.accio.main.metadata.SystemFunctionBundle;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.ComparisonExpression;
@@ -56,8 +58,9 @@ public class BigQueryTypeCoercion
             @Override
             public Expression rewriteComparisonExpression(ComparisonExpression node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
             {
-                PGType<?> leftType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getLeft());
-                PGType<?> rightType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getRight());
+                FunctionBundle functionBundle = SystemFunctionBundle.create(mdl.getCatalog());
+                PGType<?> leftType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getLeft(), functionBundle);
+                PGType<?> rightType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getRight(), functionBundle);
                 LOG.debug("left: %s leftType: %s, right: %s rightType: %s",
                         node.getLeft(),
                         leftType == null ? null : leftType.typName(),

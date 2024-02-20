@@ -15,6 +15,8 @@
 package io.accio.main.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.metadata.Function;
+import io.accio.main.metadata.FunctionRegistry;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -45,6 +47,7 @@ import static java.util.Objects.requireNonNull;
 
 @ThreadSafe
 public final class PgFunctionRegistry
+        implements FunctionRegistry
 {
     private final List<PgFunction> pgFunctions;
     private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();
@@ -82,7 +85,8 @@ public final class PgFunctionRegistry
         return pgFunctions;
     }
 
-    public Optional<PgFunction> getPgFunction(String name, int numArgument)
+    @Override
+    public Optional<Function> getFunction(String name, int numArgument)
     {
         return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, numArgument)));
     }

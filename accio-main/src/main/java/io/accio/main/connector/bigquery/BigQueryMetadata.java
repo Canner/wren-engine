@@ -166,8 +166,8 @@ public class BigQueryMetadata
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        if (pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).isPresent()) {
-            return QualifiedName.of(pgCatalogName, pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).get().getRemoteName());
+        if (pgFunctionRegistry.getFunction(funcNameLowerCase, numArgument).isPresent()) {
+            return QualifiedName.of(pgCatalogName, pgFunctionRegistry.getFunction(funcNameLowerCase, numArgument).get().getRemoteName());
         }
 
         return QualifiedName.of(functionName);
