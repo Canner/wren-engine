@@ -82,7 +82,7 @@ public class BigQuerySqlConverter
                 FlattenGroupingElements.INSTANCE,
                 RewriteNamesToAlias.INSTANCE,
                 RewriteArithmetic.INSTANCE,
-                new TypeCoercionRewrite(accioMetastore.getAnalyzedMDL().getAccioMDL()));
+                new TypeCoercionRewrite(accioMetastore.getAnalyzedMDL().getAccioMDL(), accioMetastore.getFunctionBundle()));
 
         LOG.info("[Input sql]: %s", sql);
 

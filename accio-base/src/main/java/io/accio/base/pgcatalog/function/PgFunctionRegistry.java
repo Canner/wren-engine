@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.metadata.Function;
-import io.accio.main.metadata.FunctionRegistry;
+import io.accio.base.metadata.FunctionRegistry;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -26,23 +26,24 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static io.accio.main.pgcatalog.function.PgFunctionRegistry.FunctionKey.functionKey;
-import static io.accio.main.pgcatalog.function.PgFunctions.ARRAY_IN;
-import static io.accio.main.pgcatalog.function.PgFunctions.ARRAY_OUT;
-import static io.accio.main.pgcatalog.function.PgFunctions.ARRAY_RECV;
-import static io.accio.main.pgcatalog.function.PgFunctions.ARRAY_UPPER;
-import static io.accio.main.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
-import static io.accio.main.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
-import static io.accio.main.pgcatalog.function.PgFunctions.FORMAT_TYPE;
-import static io.accio.main.pgcatalog.function.PgFunctions.NOW;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_EXPANDARRAY;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_GET_EXPR;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESULT;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
-import static io.accio.main.pgcatalog.function.PgFunctions.PG_TO_CHAR;
-import static io.accio.main.pgcatalog.function.PgFunctions.SUBSTR;
+import static io.accio.base.pgcatalog.function.PgFunctionRegistry.FunctionKey.functionKey;
+import static io.accio.base.pgcatalog.function.PgFunctions.ARRAY_IN;
+import static io.accio.base.pgcatalog.function.PgFunctions.ARRAY_OUT;
+import static io.accio.base.pgcatalog.function.PgFunctions.ARRAY_RECV;
+import static io.accio.base.pgcatalog.function.PgFunctions.ARRAY_UPPER;
+import static io.accio.base.pgcatalog.function.PgFunctions.CURRENT_DATABASE;
+import static io.accio.base.pgcatalog.function.PgFunctions.CURRENT_SCHEMAS;
+import static io.accio.base.pgcatalog.function.PgFunctions.DATE_TRUNC;
+import static io.accio.base.pgcatalog.function.PgFunctions.FORMAT_TYPE;
+import static io.accio.base.pgcatalog.function.PgFunctions.NOW;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_EXPANDARRAY;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_GET_EXPR;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_GET_EXPR_PRETTY;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_GET_FUNCTION_RESULT;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT_VARCHAR___BIGINT;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_RELATION_SIZE__INT___BIGINT;
+import static io.accio.base.pgcatalog.function.PgFunctions.PG_TO_CHAR;
+import static io.accio.base.pgcatalog.function.PgFunctions.SUBSTR;
 import static java.util.Objects.requireNonNull;
 
 @ThreadSafe
@@ -72,6 +73,7 @@ public final class PgFunctionRegistry
                 .add(NOW)
                 .add(PG_EXPANDARRAY)
                 .add(SUBSTR)
+                .add(DATE_TRUNC)
                 .build();
 
         // TODO: handle function name overloading

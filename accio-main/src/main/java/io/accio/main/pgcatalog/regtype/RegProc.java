@@ -19,7 +19,7 @@ import io.accio.base.AccioException;
 import java.util.regex.Matcher;
 
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
-import static io.accio.main.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
+import static io.accio.base.pgcatalog.function.PgFunction.PG_FUNCTION_PATTERN;
 import static java.lang.String.format;
 
 public class RegProc

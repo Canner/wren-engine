@@ -1,6 +1,4 @@
-package io.accio.main.metadata;
-
-import io.accio.base.metadata.Function;
+package io.accio.base.metadata;
 
 import java.util.Optional;
 

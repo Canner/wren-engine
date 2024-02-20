@@ -24,7 +24,6 @@ import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.base.type.TimestampType;
 import io.accio.base.type.TimestampWithTimeZoneType;
-import io.accio.main.metadata.SystemFunctionBundle;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.ComparisonExpression;
@@ -44,10 +43,12 @@ public class BigQueryTypeCoercion
 {
     private static final Logger LOG = Logger.get(BigQueryTypeCoercion.class);
     private final AccioMDL mdl;
+    private final FunctionBundle functionBundle;
 
-    public BigQueryTypeCoercion(AccioMDL mdl)
+    public BigQueryTypeCoercion(AccioMDL mdl, FunctionBundle functionBundle)
     {
         this.mdl = requireNonNull(mdl, "mdl is null");
+        this.functionBundle = requireNonNull(functionBundle, "functionBundle is null");
     }
 
     @Override
@@ -58,7 +59,6 @@ public class BigQueryTypeCoercion
             @Override
             public Expression rewriteComparisonExpression(ComparisonExpression node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
             {
-                FunctionBundle functionBundle = SystemFunctionBundle.create(mdl.getCatalog());
                 PGType<?> leftType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getLeft(), functionBundle);
                 PGType<?> rightType = ExpressionTypeAnalyzer.analyze(mdl, scope, node.getRight(), functionBundle);
                 LOG.debug("left: %s leftType: %s, right: %s rightType: %s",

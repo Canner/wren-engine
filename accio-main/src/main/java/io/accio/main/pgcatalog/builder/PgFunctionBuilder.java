@@ -14,8 +14,8 @@
 
 package io.accio.main.pgcatalog.builder;
 
+import io.accio.base.pgcatalog.function.PgFunction;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.pgcatalog.function.PgFunction;
 import io.airlift.log.Logger;
 
 public abstract class PgFunctionBuilder

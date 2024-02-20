@@ -16,6 +16,7 @@ package io.accio.main.sql.bigquery;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.sqlrewrite.BaseTreeRewriter;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
 import io.accio.base.sqlrewrite.analyzer.StatementAnalyzer;
@@ -33,10 +34,12 @@ public class TypeCoercionRewrite
         implements SqlRewrite
 {
     private final AccioMDL mdl;
+    private final FunctionBundle functionBundle;
 
-    public TypeCoercionRewrite(AccioMDL mdl)
+    public TypeCoercionRewrite(AccioMDL mdl, FunctionBundle functionBundle)
     {
         this.mdl = requireNonNull(mdl, "mdl is null");
+        this.functionBundle = requireNonNull(functionBundle, "functionBundle is null");
     }
 
     @Override
@@ -46,7 +49,7 @@ public class TypeCoercionRewrite
         StatementAnalyzer.analyze(analysis, (Statement) node, SessionContext.builder()
                 .setCatalog(mdl.getCatalog())
                 .setSchema(mdl.getSchema())
-                .build(), mdl, new BigQueryTypeCoercion(mdl));
+                .build(), mdl, new BigQueryTypeCoercion(mdl, functionBundle));
         return new Rewriter(analysis).process(node);
     }
 

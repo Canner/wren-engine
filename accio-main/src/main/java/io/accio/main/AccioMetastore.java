@@ -16,6 +16,7 @@ package io.accio.main;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.sqlrewrite.AccioDataLineage;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,14 +26,21 @@ import static io.accio.base.AccioMDL.EMPTY;
 public class AccioMetastore
 {
     private final AtomicReference<AnalyzedMDL> analyzed = new AtomicReference<>(new AnalyzedMDL(EMPTY, AccioDataLineage.EMPTY, "0"));
+    private final AtomicReference<FunctionBundle> functionBundle = new AtomicReference<>(null);
 
     public AnalyzedMDL getAnalyzedMDL()
     {
         return analyzed.get();
     }
 
+    public FunctionBundle getFunctionBundle()
+    {
+        return functionBundle.get();
+    }
+
     public synchronized void setAccioMDL(AccioMDL accioMDL, String version)
     {
         this.analyzed.set(new AnalyzedMDL(accioMDL, AccioDataLineage.analyze(accioMDL), version));
+        this.functionBundle.set(FunctionBundle.create(accioMDL.getCatalog()));
     }
 }

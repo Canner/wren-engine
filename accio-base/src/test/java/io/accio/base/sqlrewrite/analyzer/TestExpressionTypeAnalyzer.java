@@ -17,6 +17,7 @@ package io.accio.base.sqlrewrite.analyzer;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Model;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.sqlrewrite.AbstractTestFramework;
 import io.accio.base.type.BigIntType;
 import io.accio.base.type.BooleanType;
@@ -49,6 +50,7 @@ public class TestExpressionTypeAnalyzer
 {
     private static final Scope EMPTY_SCOPE = Scope.builder().build();
     private static final AccioMDL EMPTY_MDL = AccioMDL.fromManifest(withDefaultCatalogSchema().build());
+    private static final FunctionBundle DEFAULT_FUNCTION_BUNDLE = FunctionBundle.create("default");
 
     private final Model customer;
 
@@ -71,29 +73,29 @@ public class TestExpressionTypeAnalyzer
     @Test
     public void testLiteral()
     {
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1"))).isEqualTo(BigIntType.BIGINT);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("'abc'"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("INTERVAL '1 month'"))).isEqualTo(IntervalType.INTERVAL);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("NULL"))).isEqualTo(null);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("TIMESTAMP '2023-10-29 00:00:00.000000'"))).isEqualTo(TimestampType.TIMESTAMP);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("REAL '3.5'"))).isEqualTo(RealType.REAL);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("x'65683F'"))).isEqualTo(ByteaType.BYTEA);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1.1"))).isEqualTo(NumericType.NUMERIC);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("10.3e0"))).isEqualTo(DoubleType.DOUBLE);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("false"))).isEqualTo(BooleanType.BOOLEAN);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("cast(1.1 as DOUBLE)"))).isEqualTo(DoubleType.DOUBLE);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("ROW(1, 2e0)"))).isEqualTo(RecordType.EMPTY_RECORD);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("array[1,2,3]"))).isEqualTo(PGArray.INT8_ARRAY);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("array['a','b','c']"))).isEqualTo(PGArray.VARCHAR_ARRAY);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_user"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_schema"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_catalog"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_path"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_date"))).isEqualTo(DateType.DATE);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_time"))).isEqualTo(TimestampType.TIMESTAMP);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_timestamp"))).isEqualTo(TimestampType.TIMESTAMP);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("localtime"))).isEqualTo(TimestampType.TIMESTAMP);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("localtimestamp"))).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(BigIntType.BIGINT);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("'abc'"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("INTERVAL '1 month'"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntervalType.INTERVAL);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("NULL"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(null);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("TIMESTAMP '2023-10-29 00:00:00.000000'"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("REAL '3.5'"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(RealType.REAL);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("x'65683F'"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(ByteaType.BYTEA);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1.1"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(NumericType.NUMERIC);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("10.3e0"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(DoubleType.DOUBLE);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("false"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(BooleanType.BOOLEAN);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("cast(1.1 as DOUBLE)"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(DoubleType.DOUBLE);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("ROW(1, 2e0)"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(RecordType.EMPTY_RECORD);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("array[1,2,3]"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(PGArray.INT8_ARRAY);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("array['a','b','c']"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(PGArray.VARCHAR_ARRAY);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_user"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_schema"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_catalog"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_path"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_date"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(DateType.DATE);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_time"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("current_timestamp"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("localtime"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("localtimestamp"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
     }
 
     @Test
@@ -119,15 +121,15 @@ public class TestExpressionTypeAnalyzer
 
     private void assertPredicate(String expression)
     {
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression(expression))).isEqualTo(BooleanType.BOOLEAN);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression(expression), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(BooleanType.BOOLEAN);
     }
 
     @Test
     public void testFunction()
     {
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("date_trunc('day', create_date)"))).isEqualTo(DateType.DATE);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now()"))).isEqualTo(TimestampType.TIMESTAMP);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now___timestamp()"))).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("date_trunc('day', create_date)"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(DateType.DATE);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now()"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now___timestamp()"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(TimestampType.TIMESTAMP);
     }
 
     @Test
@@ -143,22 +145,22 @@ public class TestExpressionTypeAnalyzer
                 .collect(toImmutableList());
         Scope scope = Scope.builder().relationType(new RelationType(fields)).build();
 
-        assertThat(analyze(mdl, scope, parseExpression("custkey"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("name"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("address"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("nationkey"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("phone"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("acctbal"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("mktsegment"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("comment"))).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("custkey"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("name"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("address"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("nationkey"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("phone"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("acctbal"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("mktsegment"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("comment"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
 
-        assertThat(analyze(mdl, scope, parseExpression("Customer.custkey"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.name"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.address"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.nationkey"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.phone"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.acctbal"))).isEqualTo(IntegerType.INTEGER);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.mktsegment"))).isEqualTo(VarcharType.VARCHAR);
-        assertThat(analyze(mdl, scope, parseExpression("Customer.comment"))).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.custkey"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.name"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.address"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.nationkey"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.phone"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.acctbal"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(IntegerType.INTEGER);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.mktsegment"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
+        assertThat(analyze(mdl, scope, parseExpression("Customer.comment"), DEFAULT_FUNCTION_BUNDLE)).isEqualTo(VarcharType.VARCHAR);
     }
 }

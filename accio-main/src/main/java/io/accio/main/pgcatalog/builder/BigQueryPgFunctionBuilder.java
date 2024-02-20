@@ -15,8 +15,8 @@
 package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
+import io.accio.base.pgcatalog.function.PgFunction;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.pgcatalog.function.PgFunction;
 
 import javax.inject.Inject;
 
