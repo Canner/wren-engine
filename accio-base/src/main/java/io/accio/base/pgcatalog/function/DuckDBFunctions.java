@@ -19,7 +19,7 @@ import io.accio.base.type.RecordType;
 
 import java.util.List;
 
-import static io.accio.base.pgcatalog.function.PgFunction.Argument.argument;
+import static io.accio.base.metadata.Function.Argument.argument;
 import static io.accio.base.pgcatalog.function.PgFunction.Language.SQL;
 import static io.accio.base.pgcatalog.function.PgFunction.builder;
 import static io.accio.base.type.BigIntType.BIGINT;

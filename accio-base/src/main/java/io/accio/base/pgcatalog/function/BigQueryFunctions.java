@@ -14,12 +14,11 @@
 
 package io.accio.base.pgcatalog.function;
 
-import com.google.common.collect.ImmutableList;
 import io.accio.base.type.RecordType;
 
 import java.util.List;
 
-import static io.accio.base.pgcatalog.function.PgFunction.Argument.argument;
+import static io.accio.base.metadata.Function.Argument.argument;
 import static io.accio.base.pgcatalog.function.PgFunction.Language.SQL;
 import static io.accio.base.pgcatalog.function.PgFunction.builder;
 import static io.accio.base.type.AnyType.ANY;
@@ -78,12 +77,5 @@ public final class BigQueryFunctions
                     "END")
             .setArguments(List.of(argument("arg1", VARCHAR), argument("arg2", ANY)))
             .setReturnType(VARCHAR)
-            .build();
-
-    public static final PgFunction DATE_TRUNC = builder()
-            .setName("date_trunc")
-            .setLanguage(SQL)
-            .setArguments(ImmutableList.of(argument("text", VARCHAR), argument("timestamp", TIMESTAMP)))
-            .setReturnType(TIMESTAMP)
             .build();
 }

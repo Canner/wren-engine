@@ -67,7 +67,7 @@ public class PgQueryAnalyzer
     {
         if (node.getName().hasPrefix(QualifiedName.of("pg_catalog")) ||
                 node.getName().hasPrefix(QualifiedName.of("information_schema")) ||
-                pgMetastoreFunctionRegistry.getPgFunction(node.getName().getSuffix(), node.getArguments().size()).isPresent()) {
+                pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), node.getArguments().size()).isPresent()) {
             visitedPgFunction.add(node.getName().toString());
         }
 

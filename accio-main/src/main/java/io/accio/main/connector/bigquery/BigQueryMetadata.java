@@ -32,7 +32,6 @@ import io.accio.base.Parameter;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
-import io.accio.base.pgcatalog.function.PgFunctionRegistry;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
 import io.accio.main.metadata.Metadata;
@@ -60,7 +59,7 @@ public class BigQueryMetadata
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
     private final BigQueryClient bigQueryClient;
 
-    private final PgFunctionRegistry pgFunctionRegistry;
+    private final DataSourceFunctionRegistry functionRegistry;
 
     private final Map<String, String> pgToBqFunctionNameMappings;
 
@@ -78,7 +77,7 @@ public class BigQueryMetadata
                 .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "Location must be set"));
         this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + ACCIO_TEMP_NAME;
         this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
-        this.pgFunctionRegistry = new DataSourceFunctionRegistry();
+        this.functionRegistry = new DataSourceFunctionRegistry();
     }
 
     /**
@@ -167,8 +166,8 @@ public class BigQueryMetadata
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        if (pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).isPresent()) {
-            return QualifiedName.of(pgCatalogName, pgFunctionRegistry.getPgFunction(funcNameLowerCase, numArgument).get().getRemoteName());
+        if (functionRegistry.getFunction(funcNameLowerCase, numArgument).isPresent()) {
+            return QualifiedName.of(pgCatalogName, functionRegistry.getFunction(funcNameLowerCase, numArgument).get().getRemoteName());
         }
 
         return QualifiedName.of(functionName);

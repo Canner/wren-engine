@@ -16,8 +16,8 @@ package io.accio.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.metadata.Function;
 import io.accio.base.metadata.FunctionBundle;
-import io.accio.base.pgcatalog.function.PgFunction;
 import io.accio.base.type.BigIntType;
 import io.accio.base.type.BooleanType;
 import io.accio.base.type.ByteaType;
@@ -278,8 +278,8 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        FunctionBundle.getPgFunction(node.getName().getSuffix(), node.getArguments().size())
-                .flatMap(PgFunction::getReturnType)
+        FunctionBundle.getFunction(node.getName().getSuffix(), node.getArguments().size())
+                .flatMap(Function::getReturnType)
                 .ifPresent(type -> result = type);
         // TODO: handle the remote name
         if (node.getName().getSuffix().equalsIgnoreCase("now") ||
