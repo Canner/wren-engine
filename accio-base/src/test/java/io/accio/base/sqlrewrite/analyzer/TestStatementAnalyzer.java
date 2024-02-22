@@ -248,7 +248,9 @@ public class TestStatementAnalyzer
                         model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
                 .build();
 
-        assertThat(analyzeSql("SELECT * FROM table_1 LIMIT 100", manifest).getLimit()).isEqualTo(new LongLiteral("100"));
+        assertThat(analyzeSql("SELECT * FROM table_1 LIMIT 100", manifest).getLimit()).isEqualTo(Optional.of(new LongLiteral("100")));
+        assertThat(analyzeSql("SELECT * FROM table_1", manifest).getLimit()).isEqualTo(Optional.empty());
+        assertThat(analyzeSql("SELECT * FROM table_1 LIMIT 100::integer", manifest).getLimit()).isEqualTo(Optional.of(new LongLiteral("100")));
     }
 
     @Test
