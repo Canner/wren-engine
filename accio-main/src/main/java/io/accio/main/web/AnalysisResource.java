@@ -24,6 +24,9 @@ import io.accio.main.web.dto.ColumnPredicateDto;
 import io.accio.main.web.dto.PredicateDto;
 import io.accio.main.web.dto.SqlAnalysisInputDto;
 import io.accio.main.web.dto.SqlAnalysisOutputDto;
+import io.trino.sql.ExpressionFormatter;
+import io.trino.sql.SqlFormatter;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Statement;
 
 import javax.inject.Inject;
@@ -82,14 +85,14 @@ public class AnalysisResource
                             statement,
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
                             mdl);
-                    return toSqlAnalysisOutputDto(analysis.getSimplePredicates());
+                    return toSqlAnalysisOutputDto(analysis);
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
-    private static List<SqlAnalysisOutputDto> toSqlAnalysisOutputDto(List<SimplePredicate> predicates)
+    private static List<SqlAnalysisOutputDto> toSqlAnalysisOutputDto(Analysis analysis)
     {
-        return predicates.stream()
+        return analysis.getSimplePredicates().stream()
                 .collect(
                         // group by table name
                         groupingBy(predicate -> predicate.getTableName().getSchemaTableName().getTableName(),
@@ -107,7 +110,15 @@ public class AnalysisResource
                                                         columns.getValue().stream()
                                                                 .map(predicate -> new PredicateDto(predicate.getOperator(), predicate.getValue()))
                                                                 .collect(toImmutableList())))
-                                        .collect(toImmutableList())))
+                                        .collect(toImmutableList()),
+                                analysis.getLimit().map(AnalysisResource::formatExpression).orElse(null),
+                                analysis.getSortItems().stream()
+                                        .map(item -> new SqlAnalysisOutputDto.SortItem(item.getSortKey().toString(), item.getOrdering())).collect(toImmutableList())))
                 .collect(toImmutableList());
+    }
+
+    private static String formatExpression(Expression expression)
+    {
+        return ExpressionFormatter.formatExpression(expression, SqlFormatter.Dialect.DEFAULT);
     }
 }
