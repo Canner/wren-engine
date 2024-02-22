@@ -27,6 +27,7 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 
@@ -36,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -59,6 +61,8 @@ public class Analysis
     private final List<SimplePredicate> simplePredicates = new ArrayList<>();
 
     private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
+    private Expression limit;
+    private final List<SortItemAnalysis> sortItems = new ArrayList<>();
 
     public Analysis(Statement statement)
     {
@@ -185,6 +189,26 @@ public class Analysis
         return typeCoercionMap;
     }
 
+    public Optional<Expression> getLimit()
+    {
+        return Optional.ofNullable(limit);
+    }
+
+    public void setLimit(Expression limit)
+    {
+        this.limit = limit;
+    }
+
+    public List<SortItemAnalysis> getSortItems()
+    {
+        return sortItems;
+    }
+
+    public void addSortItem(SortItemAnalysis sortItem)
+    {
+        sortItems.add(sortItem);
+    }
+
     /**
      * A placeholder to record predicates like c1 = 'foo', c2 >= 1
      */
@@ -257,6 +281,57 @@ public class Analysis
                     .add("columnName", columnName)
                     .add("operator", operator)
                     .add("value", value)
+                    .toString();
+        }
+    }
+
+    public static class SortItemAnalysis
+    {
+        private QualifiedName sortKey;
+        private String ordering;
+
+        public SortItemAnalysis(QualifiedName sortKey, String ordering)
+        {
+            this.sortKey = sortKey;
+            this.ordering = ordering;
+        }
+
+        public QualifiedName getSortKey()
+        {
+            return sortKey;
+        }
+
+        public String getOrdering()
+        {
+            return ordering;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SortItemAnalysis that = (SortItemAnalysis) o;
+            return Objects.equals(sortKey, that.sortKey) &&
+                    Objects.equals(ordering, that.ordering);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(sortKey, ordering);
+        }
+
+        @Override
+        public String toString()
+        {
+            return toStringHelper(this)
+                    .add("sortKey", sortKey)
+                    .add("ordering", ordering)
                     .toString();
         }
     }
