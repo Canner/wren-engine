@@ -18,6 +18,7 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.base.type.PGType;
 import io.accio.main.metadata.Metadata;
 import io.trino.sql.tree.QualifiedName;
 
@@ -66,7 +67,7 @@ public class TestingMetadata
     }
 
     @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, List<PGType<?>> argumentTypes)
     {
         return QualifiedName.of(functionName);
     }

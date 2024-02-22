@@ -15,7 +15,11 @@
 package io.accio.main.sql.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.AccioMDL;
 import io.accio.base.sqlrewrite.BaseRewriter;
+import io.accio.base.sqlrewrite.analyzer.ExpressionTypeAnalyzer;
+import io.accio.base.sqlrewrite.analyzer.Scope;
+import io.accio.base.type.PGType;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
@@ -34,30 +38,37 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.tree.ArithmeticBinaryExpression.Operator.SUBTRACT;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class RewriteToBigQueryFunction
         implements SqlRewrite
 {
-    public static final RewriteToBigQueryFunction INSTANCE = new RewriteToBigQueryFunction();
     public static final Extract.Field DAYOFYEAR = new Extract.Field("DAYOFYEAR");
     public static final Extract.Field DAYOFWEEK = new Extract.Field("DAYOFWEEK");
     public static final LongLiteral ONE = new LongLiteral("1");
 
-    private RewriteToBigQueryFunction() {}
+    private final AccioMDL mdl;
+
+    public RewriteToBigQueryFunction(AccioMDL mdl)
+    {
+        this.mdl = requireNonNull(mdl, "mdl is null");
+    }
 
     public Node rewrite(Node node, Metadata metadata)
     {
-        return new RewriteToBigQueryFunctionRewriter(metadata).process(node);
+        return new RewriteToBigQueryFunctionRewriter(metadata, mdl).process(node);
     }
 
     private static class RewriteToBigQueryFunctionRewriter
             extends BaseRewriter<Void>
     {
         private final Metadata metadata;
+        private final AccioMDL mdl;
 
-        private RewriteToBigQueryFunctionRewriter(Metadata metadata)
+        private RewriteToBigQueryFunctionRewriter(Metadata metadata, AccioMDL mdl)
         {
             this.metadata = requireNonNull(metadata, "metadata is null");
+            this.mdl = requireNonNull(mdl, "mdl is null");
         }
 
         @Override
@@ -98,7 +109,9 @@ public class RewriteToBigQueryFunction
         @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
-            QualifiedName functionName = metadata.resolveFunction(node.getName().toString(), node.getArguments().size());
+            Scope scope = Scope.builder().build();
+            List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+            QualifiedName functionName = metadata.resolveFunction(node.getName().toString(), pgTypes);
             List<Expression> arguments = node.getArguments().stream()
                     .map(argument -> visitAndCast(argument, context))
                     .collect(toImmutableList());

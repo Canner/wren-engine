@@ -32,6 +32,7 @@ import io.accio.base.Parameter;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
+import io.accio.base.type.PGType;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
 import io.accio.main.metadata.Metadata;
@@ -157,7 +158,7 @@ public class BigQueryMetadata
     }
 
     @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, List<PGType<?>> argumentTypes)
     {
         String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
 
@@ -166,8 +167,8 @@ public class BigQueryMetadata
         }
 
         // PgFunction is an udf defined in `pg_catalog` dataset. Add dataset prefix to invoke it in global.
-        if (functionRegistry.getFunction(funcNameLowerCase, numArgument).isPresent()) {
-            return QualifiedName.of(pgCatalogName, functionRegistry.getFunction(funcNameLowerCase, numArgument).get().getRemoteName());
+        if (functionRegistry.getFunction(funcNameLowerCase, argumentTypes).isPresent()) {
+            return QualifiedName.of(pgCatalogName, functionRegistry.getFunction(funcNameLowerCase, argumentTypes).get().getRemoteName());
         }
 
         return QualifiedName.of(functionName);

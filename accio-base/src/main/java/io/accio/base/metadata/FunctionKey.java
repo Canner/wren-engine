@@ -14,30 +14,25 @@
 
 package io.accio.base.metadata;
 
+import io.accio.base.type.PGType;
+
+import java.util.List;
 import java.util.Objects;
 
-/**
- * TODO: analyze the type of argument expression
- *  https://github.com/Canner/canner-metric-layer/issues/92
- * <p>
- * We only support function overloading with different number of argument now. Because
- * the work of analyze the type of argument is too huge to implement, FunctionKey only
- * recognizes each function by its name and number of argument.
- */
 public class FunctionKey
 {
-    public static FunctionKey functionKey(String name, int numArgument)
+    public static FunctionKey functionKey(String name, List<PGType<?>> argumentTypes)
     {
-        return new FunctionKey(name, numArgument);
+        return new FunctionKey(name, argumentTypes);
     }
 
     private final String name;
-    private final int numArgument;
+    private final List<PGType<?>> arguments;
 
-    private FunctionKey(String name, int numArgument)
+    private FunctionKey(String name, List<PGType<?>> arguments)
     {
         this.name = name;
-        this.numArgument = numArgument;
+        this.arguments = arguments;
     }
 
     public String getName()
@@ -48,7 +43,7 @@ public class FunctionKey
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, numArgument);
+        return Objects.hash(name, arguments);
     }
 
     @Override
@@ -61,6 +56,7 @@ public class FunctionKey
             return false;
         }
         FunctionKey that = (FunctionKey) o;
-        return numArgument == that.numArgument && Objects.equals(name, that.name);
+        return Objects.equals(name, that.name)
+                && Objects.equals(arguments, that.arguments);
     }
 }

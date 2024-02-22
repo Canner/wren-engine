@@ -16,6 +16,7 @@ package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.metadata.FunctionKey;
+import io.accio.base.type.PGType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,10 +41,7 @@ public class DataSourceFunctionRegistry
 
     public DataSourceFunctionRegistry()
     {
-        // TODO: handle function name overloading
-        //  https://github.com/Canner/canner-metric-layer/issues/73
-        // use HashMap to handle multiple same key entries
-        functions.forEach(function -> simpleNameToFunction.put(functionKey(function.getName(), function.getArguments().map(List::size).orElse(0)), function));
+        functions.forEach(function -> simpleNameToFunction.put(functionKey(function.getName(), function.getArguments().map(this::getArgumentTypes).orElse(ImmutableList.of())), function));
     }
 
     @Override
@@ -53,8 +51,8 @@ public class DataSourceFunctionRegistry
     }
 
     @Override
-    public Optional<PgFunction> getFunction(String name, int numArgument)
+    public Optional<PgFunction> getFunction(String name, List<PGType<?>> argumentTypes)
     {
-        return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, numArgument)));
+        return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, argumentTypes)));
     }
 }

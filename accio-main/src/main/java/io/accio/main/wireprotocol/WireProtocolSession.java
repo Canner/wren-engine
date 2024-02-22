@@ -266,7 +266,7 @@ public class WireProtocolSession
         LOG.info("Parse statement: %s", statementTrimmed);
         // To fit SQL syntax of Accio
         String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
-        if (isMetadataQuery(statementPreRewritten)) {
+        if (isMetadataQuery(statementPreRewritten, accioMetastore.getAnalyzedMDL().getAccioMDL())) {
             // Level 1 Query
             createMetadataQueryPreparedStatement(statementName, statement, statement, paramTypes, QueryLevel.METASTORE_FULL);
             return;

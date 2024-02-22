@@ -23,6 +23,7 @@ import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbTypes;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.type.PGType;
 import io.accio.base.type.VarcharType;
 import io.accio.cache.DuckdbRecordIterator;
 import io.accio.main.metadata.Metadata;
@@ -95,7 +96,7 @@ public class DuckDBMetadata
     }
 
     @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, List<PGType<?>> argumentTypes)
     {
         return null;
     }

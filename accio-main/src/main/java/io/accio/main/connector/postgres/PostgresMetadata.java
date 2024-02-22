@@ -21,6 +21,7 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.type.PGType;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresRecordIterator;
 import io.accio.main.metadata.Metadata;
@@ -110,7 +111,7 @@ public class PostgresMetadata
     }
 
     @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
+    public QualifiedName resolveFunction(String functionName, List<PGType<?>> argumentTypes)
     {
         return QualifiedName.of(functionName);
     }

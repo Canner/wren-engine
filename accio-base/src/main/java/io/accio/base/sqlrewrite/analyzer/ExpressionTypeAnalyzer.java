@@ -71,10 +71,12 @@ import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
 
+import java.util.List;
 import java.util.Optional;
 
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 public class ExpressionTypeAnalyzer
         extends DefaultTraversalVisitor<Void>
@@ -278,7 +280,8 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        FunctionBundle.getFunction(node.getName().getSuffix(), node.getArguments().size())
+        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+        FunctionBundle.getFunction(node.getName().getSuffix(), pgTypes)
                 .flatMap(Function::getReturnType)
                 .ifPresent(type -> result = type);
         // TODO: handle the remote name

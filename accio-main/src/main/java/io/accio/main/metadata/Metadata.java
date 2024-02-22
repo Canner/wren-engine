@@ -17,6 +17,7 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.base.type.PGType;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -35,7 +36,7 @@ public interface Metadata
 
     List<String> listFunctionNames(String schemaName);
 
-    QualifiedName resolveFunction(String functionName, int numArgument);
+    QualifiedName resolveFunction(String functionName, List<PGType<?>> argumentTypes);
 
     String getDefaultCatalog();
 

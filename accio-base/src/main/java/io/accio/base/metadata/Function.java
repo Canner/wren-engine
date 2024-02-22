@@ -37,15 +37,15 @@ public class Function
 
     public static class Argument
     {
-        public static Argument argument(String name, PGType type)
+        public static Argument argument(String name, PGType<?> type)
         {
             return new Argument(name, type);
         }
 
         private final String name;
-        private final PGType type;
+        private final PGType<?> type;
 
-        public Argument(String name, PGType type)
+        public Argument(String name, PGType<?> type)
         {
             this.name = name;
             this.type = type;
@@ -56,7 +56,7 @@ public class Function
             return name;
         }
 
-        public PGType getType()
+        public PGType<?> getType()
         {
             return type;
         }

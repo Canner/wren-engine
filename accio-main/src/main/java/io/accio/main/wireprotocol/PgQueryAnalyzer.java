@@ -14,7 +14,11 @@
 
 package io.accio.main.wireprotocol;
 
+import io.accio.base.AccioMDL;
 import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
+import io.accio.base.sqlrewrite.analyzer.ExpressionTypeAnalyzer;
+import io.accio.base.sqlrewrite.analyzer.Scope;
+import io.accio.base.type.PGType;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DefaultTraversalVisitor;
@@ -27,16 +31,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.accio.base.sqlrewrite.Utils.parseQuery;
+import static java.util.stream.Collectors.toList;
 
 public class PgQueryAnalyzer
         extends DefaultTraversalVisitor<Void>
 {
     private static final Logger LOG = Logger.get(PgQueryAnalyzer.class);
 
-    public static boolean isMetadataQuery(String sql)
+    public static boolean isMetadataQuery(String sql, AccioMDL mdl)
     {
         try {
-            PgQueryAnalyzer analyzer = new PgQueryAnalyzer();
+            PgQueryAnalyzer analyzer = new PgQueryAnalyzer(mdl);
             analyzer.process(parseQuery(sql));
             return !analyzer.visitedPgTable.isEmpty() ||
                     !analyzer.visitedPgFunction.isEmpty() ||
@@ -52,6 +57,12 @@ public class PgQueryAnalyzer
     private final List<String> visitedPgFunction = new ArrayList<>();
     private boolean useOidType;
     private final PgMetastoreFunctionRegistry pgMetastoreFunctionRegistry = new PgMetastoreFunctionRegistry();
+    private final AccioMDL mdl;
+
+    private PgQueryAnalyzer(AccioMDL mdl)
+    {
+        this.mdl = mdl;
+    }
 
     @Override
     protected Void visitTable(Table node, Void context)
@@ -65,13 +76,23 @@ public class PgQueryAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        if (node.getName().hasPrefix(QualifiedName.of("pg_catalog")) ||
-                node.getName().hasPrefix(QualifiedName.of("information_schema")) ||
-                pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), node.getArguments().size()).isPresent()) {
+        if (isVisitedPgFunction(node)) {
             visitedPgFunction.add(node.getName().toString());
         }
 
         return super.visitFunctionCall(node, context);
+    }
+
+    private boolean isVisitedPgFunction(FunctionCall node)
+    {
+        if (node.getName().hasPrefix(QualifiedName.of("pg_catalog")) ||
+                node.getName().hasPrefix(QualifiedName.of("information_schema"))) {
+            return true;
+        }
+
+        Scope scope = Scope.builder().build();
+        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+        return pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), pgTypes).isPresent();
     }
 
     @Override

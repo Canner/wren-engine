@@ -2,7 +2,9 @@ package io.accio.base.metadata;
 
 import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
 import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
+import io.accio.base.type.PGType;
 
+import java.util.List;
 import java.util.Optional;
 
 public class FunctionBundle
@@ -19,10 +21,10 @@ public class FunctionBundle
         datSourceFunctionRegistry = new DataSourceFunctionRegistry();
     }
 
-    public static Optional<Function> getFunction(String name, int numArgument)
+    public static Optional<Function> getFunction(String name, List<PGType<?>> argumentTypes)
     {
-        return basicFunctionRegistry.getFunction(name, numArgument)
-                .or(() -> pgMetastoreFunctionRegistry.getFunction(name, numArgument))
-                .or(() -> datSourceFunctionRegistry.getFunction(name, numArgument));
+        return basicFunctionRegistry.getFunction(name, argumentTypes)
+                .or(() -> pgMetastoreFunctionRegistry.getFunction(name, argumentTypes))
+                .or(() -> datSourceFunctionRegistry.getFunction(name, argumentTypes));
     }
 }

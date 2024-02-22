@@ -15,6 +15,7 @@
 package io.accio.main.connector.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
 import io.accio.main.AccioMetastore;
@@ -64,6 +65,8 @@ public class BigQuerySqlConverter
     {
         Node rewrittenNode = parseSql(sql);
 
+        AccioMDL mdl = accioMetastore.getAnalyzedMDL().getAccioMDL();
+
         List<SqlRewrite> sqlRewrites = ImmutableList.of(
                 // bigquery doesn't support column name with catalog.schema.table prefix or schema.table prefix
                 RemoveCatalogSchemaColumnPrefix.INSTANCE,
@@ -73,7 +76,7 @@ public class BigQuerySqlConverter
                 ReplaceColumnAliasInUnnest.INSTANCE,
                 // bigquery doesn't support correlated join in where clause
                 TransformCorrelatedJoinToJoin.INSTANCE,
-                RewriteToBigQueryFunction.INSTANCE,
+                new RewriteToBigQueryFunction(mdl),
                 RewriteToBigQueryType.INSTANCE,
                 // bigquery doesn't support parameter in types in cast
                 // this should happen after RewriteToBigQueryType since RewriteToBigQueryType will replace
@@ -82,7 +85,7 @@ public class BigQuerySqlConverter
                 FlattenGroupingElements.INSTANCE,
                 RewriteNamesToAlias.INSTANCE,
                 RewriteArithmetic.INSTANCE,
-                new TypeCoercionRewrite(accioMetastore.getAnalyzedMDL().getAccioMDL()));
+                new TypeCoercionRewrite(mdl));
 
         LOG.info("[Input sql]: %s", sql);
 
