@@ -125,7 +125,7 @@ public class TestExpressionTypeAnalyzer
     @Test
     public void testFunction()
     {
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("date_trunc('day', create_date)"))).isEqualTo(TimestampType.TIMESTAMP);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("date_trunc('day', create_date)"))).isEqualTo(DateType.DATE);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now()"))).isEqualTo(TimestampType.TIMESTAMP);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now___timestamp()"))).isEqualTo(TimestampType.TIMESTAMP);
     }
