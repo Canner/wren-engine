@@ -14,6 +14,7 @@
 
 package io.accio.base.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Model;
@@ -36,6 +37,8 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.AccioTypes.DATE;
+import static io.accio.base.AccioTypes.DOUBLE;
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
 import static io.accio.base.dto.Column.column;
@@ -51,6 +54,7 @@ public class TestExpressionTypeAnalyzer
     private static final AccioMDL EMPTY_MDL = AccioMDL.fromManifest(withDefaultCatalogSchema().build());
 
     private final Model customer;
+    private final Model orders;
 
     public TestExpressionTypeAnalyzer()
     {
@@ -66,6 +70,20 @@ public class TestExpressionTypeAnalyzer
                         column("mktsegment", VARCHAR, null, true),
                         column("comment", VARCHAR, null, true)),
                 "custkey");
+
+        orders = model("Orders",
+                "select * from main.orders",
+                List.of(
+                        column("orderkey", INTEGER, null, true),
+                        column("custkey", INTEGER, null, true),
+                        column("orderstatus", VARCHAR, null, true),
+                        column("totalprice", DOUBLE, null, true),
+                        column("orderdate", DATE, null, true),
+                        column("orderpriority", VARCHAR, null, true),
+                        column("clerk", VARCHAR, null, true),
+                        column("shippriority", INTEGER, null, true),
+                        column("comment", VARCHAR, null, true)),
+                "orderkey");
     }
 
     @Test
@@ -125,7 +143,15 @@ public class TestExpressionTypeAnalyzer
     @Test
     public void testFunction()
     {
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("date_trunc('day', create_date)"))).isEqualTo(DateType.DATE);
+        AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema().setModels(List.of(orders)).build());
+        List<Field> fields = ImmutableList.of(Field.builder()
+                .tableName(new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), orders.getName()))
+                .columnName("orderdate")
+                .name("orderdate")
+                .build());
+        Scope scope = Scope.builder().relationType(new RelationType(fields)).build();
+        assertThat(analyze(mdl, scope, parseExpression("date_trunc('day', orderdate)"))).isEqualTo(DateType.DATE);
+
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now()"))).isEqualTo(TimestampType.TIMESTAMP);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("now___timestamp()"))).isEqualTo(TimestampType.TIMESTAMP);
     }
