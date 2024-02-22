@@ -30,6 +30,7 @@ import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.StringLiteral;
 import org.testng.annotations.Test;
@@ -234,6 +235,66 @@ public class TestStatementAnalyzer
         assertThat(scope.get().getRelationType().getFields()).hasSize(2);
         assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
         assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("max_c2");
+    }
+
+    @Test
+    public void testAnalyzeLimit()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                .build();
+
+        assertThat(analyzeSql("SELECT * FROM table_1 LIMIT 100", manifest).getLimit()).isEqualTo(Optional.of(new LongLiteral("100")));
+        assertThat(analyzeSql("SELECT * FROM table_1", manifest).getLimit()).isEqualTo(Optional.empty());
+        assertThat(analyzeSql("SELECT * FROM table_1 LIMIT 100::integer", manifest).getLimit()).isEqualTo(Optional.of(new LongLiteral("100")));
+    }
+
+    @Test
+    public void testAnalyzeOrderBy()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2"))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                .build();
+
+        assertThat(analyzeSql("SELECT * FROM table_1 ORDER BY c1, c2", manifest).getSortItems())
+                .isEqualTo(List.of(ascSortItem(QualifiedName.of("c1")), ascSortItem(QualifiedName.of("c2"))));
+        assertThat(analyzeSql("SELECT * FROM table_1 ORDER BY c1 desc, c2 asc", manifest).getSortItems())
+                .isEqualTo(List.of(descSortItem(QualifiedName.of("c1")), ascSortItem(QualifiedName.of("c2"))));
+
+        assertThat(analyzeSql("SELECT * FROM table_1 ORDER BY 1, 2", manifest).getSortItems())
+                .isEqualTo(List.of(ascSortItem(QualifiedName.of("table_1", "c1")), ascSortItem(QualifiedName.of("table_1", "c2"))));
+
+        assertThat(analyzeSql("SELECT * FROM table_1, table_2 ORDER BY 1, 2, 3, 4", manifest).getSortItems())
+                .isEqualTo(List.of(
+                        ascSortItem(QualifiedName.of("table_1", "c1")),
+                        ascSortItem(QualifiedName.of("table_1", "c2")),
+                        ascSortItem(QualifiedName.of("table_2", "c1")),
+                        ascSortItem(QualifiedName.of("table_2", "c2"))));
+
+        assertThat(analyzeSql("SELECT * FROM table_1, table_2 ORDER BY table_1.c1, 2, 4, table_2.c1", manifest).getSortItems())
+                .isEqualTo(List.of(
+                        ascSortItem(QualifiedName.of("table_1", "c1")),
+                        ascSortItem(QualifiedName.of("table_1", "c2")),
+                        ascSortItem(QualifiedName.of("table_2", "c2")),
+                        ascSortItem(QualifiedName.of("table_2", "c1"))));
+    }
+
+    private static Analysis.SortItemAnalysis ascSortItem(QualifiedName sortKey)
+    {
+        return new Analysis.SortItemAnalysis(sortKey, SortItem.Ordering.ASCENDING.name());
+    }
+
+    private static Analysis.SortItemAnalysis descSortItem(QualifiedName sortKey)
+    {
+        return new Analysis.SortItemAnalysis(sortKey, SortItem.Ordering.DESCENDING.name());
     }
 
     private static Column varcharColumn(String name)

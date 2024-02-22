@@ -96,7 +96,9 @@ public class TestAnalysisResource
         List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
                 .add(new SqlAnalysisOutputDto("Customer",
                         List.of(new ColumnPredicateDto("custkey", List.of(new PredicateDto(">=", "100"), new PredicateDto("<=", "123"))),
-                                new ColumnPredicateDto("name", List.of(new PredicateDto("<>", "'foo'"))))))
+                                new ColumnPredicateDto("name", List.of(new PredicateDto("<>", "'foo'")))),
+                        null,
+                        null))
                 .build();
 
         assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
@@ -122,12 +124,48 @@ public class TestAnalysisResource
         List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
                 .add(new SqlAnalysisOutputDto("table_1",
                         List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("=", "'foo'"))),
-                                new ColumnPredicateDto("c2", List.of(new PredicateDto(">=", "123"))))))
+                                new ColumnPredicateDto("c2", List.of(new PredicateDto(">=", "123")))),
+                        null,
+                        null))
                 .add(new SqlAnalysisOutputDto("table_2",
                         List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("<>", "'bar'"))),
-                                new ColumnPredicateDto("c2", List.of(new PredicateDto("<", "DATE '2020-01-01'"))))))
+                                new ColumnPredicateDto("c2", List.of(new PredicateDto("<", "DATE '2020-01-01'")))),
+                        null,
+                        null))
                 .build();
 
+        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
+    }
+
+    @Test
+    public void testAnalyzesSqlWithLimitAndOrdering()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), column("c2", INTEGER, null, true))),
+                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), column("c2", DATE, null, true)))))
+                .build();
+
+        List<SqlAnalysisOutputDto> results = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM table_1 WHERE c1 > 10 ORDER BY c1 LIMIT 10"));
+        assertThat(results.size()).isEqualTo(1);
+        List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
+                .add(new SqlAnalysisOutputDto("table_1",
+                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto(">", "10")))),
+                        "10",
+                        List.of(new SqlAnalysisOutputDto.SortItem("c1", "ASCENDING"))))
+                .build();
+        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
+
+        results = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM table_1 WHERE c1 > 10 ORDER BY c1 DESC LIMIT 10"));
+        assertThat(results.size()).isEqualTo(1);
+        expected = ImmutableList.<SqlAnalysisOutputDto>builder()
+                .add(new SqlAnalysisOutputDto("table_1",
+                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto(">", "10")))),
+                        "10",
+                        List.of(new SqlAnalysisOutputDto.SortItem("c1", "DESCENDING"))))
+                .build();
         assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
     }
 

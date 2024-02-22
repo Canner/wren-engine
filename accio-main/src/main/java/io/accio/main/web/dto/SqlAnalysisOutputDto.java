@@ -27,14 +27,20 @@ public class SqlAnalysisOutputDto
 {
     private final String modelName;
     private final List<ColumnPredicateDto> columnPredicates;
+    private final String limit;
+    private final List<SortItem> ordering;
 
     @JsonCreator
     public SqlAnalysisOutputDto(
             @JsonProperty("modelName") String modelName,
-            @JsonProperty("columnPredicates") List<ColumnPredicateDto> columnPredicates)
+            @JsonProperty("columnPredicates") List<ColumnPredicateDto> columnPredicates,
+            @JsonProperty("limit") String limit,
+            @JsonProperty("ordering") List<SortItem> ordering)
     {
         this.modelName = requireNonNull(modelName);
-        this.columnPredicates = requireNonNull(columnPredicates);
+        this.columnPredicates = columnPredicates;
+        this.limit = limit;
+        this.ordering = ordering == null ? List.of() : ordering;
     }
 
     @JsonProperty
@@ -49,6 +55,18 @@ public class SqlAnalysisOutputDto
         return columnPredicates;
     }
 
+    @JsonProperty
+    public String getLimit()
+    {
+        return limit;
+    }
+
+    @JsonProperty
+    public List<SortItem> getOrdering()
+    {
+        return ordering;
+    }
+
     @Override
     public boolean equals(Object o)
     {
@@ -59,13 +77,20 @@ public class SqlAnalysisOutputDto
             return false;
         }
         SqlAnalysisOutputDto that = (SqlAnalysisOutputDto) o;
-        return Objects.equals(modelName, that.modelName) && Objects.equals(columnPredicates, that.columnPredicates);
+        return Objects.equals(modelName, that.modelName) &&
+                Objects.equals(columnPredicates, that.columnPredicates)
+                && Objects.equals(limit, that.limit)
+                && Objects.equals(ordering, that.ordering);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(modelName, columnPredicates);
+        return Objects.hash(
+                modelName,
+                columnPredicates,
+                limit,
+                ordering);
     }
 
     @Override
@@ -75,5 +100,64 @@ public class SqlAnalysisOutputDto
                 .add("modelName", modelName)
                 .add("columnPredicates", columnPredicates)
                 .toString();
+    }
+
+    public static class SortItem
+    {
+        private final String identifier;
+        private final String direction;
+
+        @JsonCreator
+        public SortItem(
+                @JsonProperty("identifier") String identifier,
+                @JsonProperty("direction") String direction)
+        {
+            this.identifier = identifier;
+            this.direction = direction;
+        }
+
+        @JsonProperty
+        public String getIdentifier()
+        {
+            return identifier;
+        }
+
+        @JsonProperty
+        public String getDirection()
+        {
+            return direction;
+        }
+
+        // generate to string function
+        @Override
+        public String toString()
+        {
+            return toStringHelper(this)
+                    .add("identifier", identifier)
+                    .add("direction", direction)
+                    .toString();
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            SortItem sortItem = (SortItem) o;
+            return Objects.equals(identifier, sortItem.identifier) &&
+                    Objects.equals(direction, sortItem.direction);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(identifier, direction);
+        }
     }
 }

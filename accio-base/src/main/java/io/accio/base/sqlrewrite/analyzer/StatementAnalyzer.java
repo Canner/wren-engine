@@ -25,12 +25,15 @@ import io.accio.base.dto.View;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
+import io.trino.sql.tree.Limit;
+import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -301,39 +304,59 @@ public final class StatementAnalyzer
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
             Scope sourceScope = analyzeFrom(node, scope);
-            analyzeSelect(node, sourceScope);
+            List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
             node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(sourceScope, having));
+            node.getLimit().ifPresent(limit -> analysis.setLimit(((Limit) limit).getRowCount()));
+            node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems()
+                    .forEach(item -> {
+                        QualifiedName name;
+                        if (item.getSortKey() instanceof LongLiteral) {
+                            long index = ((LongLiteral) item.getSortKey()).getValue() - 1;
+                            name = getQualifiedName(outputExpressions.get((int) index));
+                        }
+                        else {
+                            name = getQualifiedName(item.getSortKey());
+                        }
+                        analysis.addSortItem(new Analysis.SortItemAnalysis(name, item.getOrdering().name()));
+                    }));
             return createAndAssignScope(scope, sourceScope);
         }
 
-        private void analyzeSelect(QuerySpecification node, Scope scope)
+        private List<Expression> analyzeSelect(QuerySpecification node, Scope scope)
         {
+            ImmutableList.Builder<Expression> outputExpressions = ImmutableList.builder();
             for (SelectItem item : node.getSelect().getSelectItems()) {
                 if (item instanceof AllColumns) {
-                    analyzeSelectAllColumns((AllColumns) item, scope);
+                    analyzeSelectAllColumns((AllColumns) item, scope, outputExpressions);
                 }
                 else if (item instanceof SingleColumn) {
-                    analyzeSelectSingleColumn((SingleColumn) item, scope);
+                    analyzeSelectSingleColumn((SingleColumn) item, scope, outputExpressions);
                 }
                 else {
                     throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
                 }
             }
+            return outputExpressions.build();
         }
 
-        private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope)
+        private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
             if (allColumns.getTarget().isPresent()) {
                 // TODO handle target.*
             }
             else {
                 analysis.addCollectedColumns(scope.getRelationType().getFields());
+                scope.getRelationType().getFields().stream().map(field ->
+                                field.getRelationAlias().map(DereferenceExpression::from)
+                                        .orElse(DereferenceExpression.from(QualifiedName.of(field.getTableName().getSchemaTableName().getTableName(), field.getColumnName()))))
+                        .forEach(outputExpressions::add);
             }
         }
 
-        private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope)
+        private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
+            outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
             // TODO: handle when singleColumn is a subquery
             scope.getRelationType().getFields().forEach(field -> {
                 ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
