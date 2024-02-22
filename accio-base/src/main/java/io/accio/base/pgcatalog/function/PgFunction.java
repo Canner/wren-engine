@@ -12,13 +12,13 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.base.Joiner;
+import io.accio.base.metadata.Function;
 import io.accio.base.type.PGType;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -26,6 +26,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class PgFunction
+        extends Function
 {
     public static final Pattern PG_FUNCTION_PATTERN = Pattern.compile("(?<functionName>[a-zA-Z]+(_[a-zA-Z0-9]+)*)(__(?<argsType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?(___(?<returnType>[a-zA-Z]+(_[a-zA-Z0-9]+)*))?");
 
@@ -35,18 +36,12 @@ public class PgFunction
         JS
     }
 
-    public static PgFunction.Builder builder()
+    public static Builder builder()
     {
         return new Builder();
     }
 
-    private final String name;
     private final Language language;
-
-    private final List<Argument> arguments;
-
-    private final PGType returnType;
-
     private final String definition;
     private final boolean subquery;
     // if the function is implemented in the database
@@ -61,18 +56,11 @@ public class PgFunction
             boolean subquery,
             boolean implemented)
     {
-        this.name = name;
+        super(name, arguments, returnType);
         this.language = language;
-        this.arguments = arguments;
-        this.returnType = returnType;
         this.definition = definition;
         this.subquery = subquery;
         this.implemented = implemented;
-    }
-
-    public String getName()
-    {
-        return name;
     }
 
     /**
@@ -93,16 +81,6 @@ public class PgFunction
     public Language getLanguage()
     {
         return language;
-    }
-
-    public Optional<List<Argument>> getArguments()
-    {
-        return Optional.ofNullable(arguments);
-    }
-
-    public Optional<PGType> getReturnType()
-    {
-        return Optional.ofNullable(returnType);
     }
 
     public String getDefinition()
@@ -136,34 +114,8 @@ public class PgFunction
         return format("%s(%s)%s", getName(), parameterBuilder, getReturnType().isPresent() ? returnType.typName() : "void");
     }
 
-    public static class Argument
-    {
-        public static Argument argument(String name, PGType type)
-        {
-            return new Argument(name, type);
-        }
-
-        private final String name;
-        private final PGType type;
-
-        public Argument(String name, PGType type)
-        {
-            this.name = name;
-            this.type = type;
-        }
-
-        public String getName()
-        {
-            return name;
-        }
-
-        public PGType getType()
-        {
-            return type;
-        }
-    }
-
     public static class Builder
+            extends Function.Builder
     {
         private String name;
         private Language language;

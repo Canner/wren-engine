@@ -14,7 +14,7 @@
 
 package io.accio.main.pgcatalog.builder;
 
-import io.accio.main.pgcatalog.function.PgFunction;
+import io.accio.base.pgcatalog.function.PgFunction;
 
 public interface PgMetastoreFunctionBuilder
 {

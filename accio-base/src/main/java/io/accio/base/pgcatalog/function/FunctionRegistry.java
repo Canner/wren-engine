@@ -12,14 +12,16 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
+
+import io.accio.base.metadata.Function;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface PgFunctionRegistry
+public interface FunctionRegistry<F extends Function>
 {
-    List<PgFunction> getPgFunctions();
+    List<F> getFunctions();
 
-    Optional<PgFunction> getPgFunction(String name, int numArgument);
+    Optional<F> getFunction(String name, int numArgument);
 }

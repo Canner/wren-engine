@@ -16,6 +16,8 @@ package io.accio.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.metadata.Function;
+import io.accio.base.metadata.FunctionBundle;
 import io.accio.base.type.BigIntType;
 import io.accio.base.type.BooleanType;
 import io.accio.base.type.ByteaType;
@@ -276,12 +278,11 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        // TODO: build a function list
-        if (node.getName().getSuffix().equalsIgnoreCase("date_trunc")) {
-            result = DateType.DATE;
-        }
+        FunctionBundle.getFunction(node.getName().getSuffix(), node.getArguments().size())
+                .flatMap(Function::getReturnType)
+                .ifPresent(type -> result = type);
         // TODO: handle the remote name
-        else if (node.getName().getSuffix().equalsIgnoreCase("now") ||
+        if (node.getName().getSuffix().equalsIgnoreCase("now") ||
                 node.getName().getSuffix().equalsIgnoreCase("now___timestamp")) {
             result = TimestampType.TIMESTAMP;
         }

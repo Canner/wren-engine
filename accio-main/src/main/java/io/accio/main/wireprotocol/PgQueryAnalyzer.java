@@ -14,7 +14,7 @@
 
 package io.accio.main.wireprotocol;
 
-import io.accio.main.pgcatalog.function.PgMetastoreFunctionRegistry;
+import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DefaultTraversalVisitor;
@@ -67,7 +67,7 @@ public class PgQueryAnalyzer
     {
         if (node.getName().hasPrefix(QualifiedName.of("pg_catalog")) ||
                 node.getName().hasPrefix(QualifiedName.of("information_schema")) ||
-                pgMetastoreFunctionRegistry.getPgFunction(node.getName().getSuffix(), node.getArguments().size()).isPresent()) {
+                pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), node.getArguments().size()).isPresent()) {
             visitedPgFunction.add(node.getName().toString());
         }
 

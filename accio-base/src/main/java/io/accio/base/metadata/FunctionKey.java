@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.metadata;
 
 import java.util.Objects;
 
@@ -24,7 +24,7 @@ import java.util.Objects;
  * the work of analyze the type of argument is too huge to implement, FunctionKey only
  * recognizes each function by its name and number of argument.
  */
-class FunctionKey
+public class FunctionKey
 {
     public static FunctionKey functionKey(String name, int numArgument)
     {

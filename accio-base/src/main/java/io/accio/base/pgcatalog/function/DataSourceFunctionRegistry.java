@@ -12,24 +12,25 @@
  * limitations under the License.
  */
 
-package io.accio.main.pgcatalog.function;
+package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.metadata.FunctionKey;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.NOW;
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.PG_TO_CHAR;
-import static io.accio.main.pgcatalog.function.BigQueryFunctions.SUBSTR;
-import static io.accio.main.pgcatalog.function.FunctionKey.functionKey;
+import static io.accio.base.metadata.FunctionKey.functionKey;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.NOW;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.PG_TO_CHAR;
+import static io.accio.base.pgcatalog.function.BigQueryFunctions.SUBSTR;
 
 public class DataSourceFunctionRegistry
-        implements PgFunctionRegistry
+        implements FunctionRegistry<PgFunction>
 {
-    private final List<PgFunction> pgFunctions = ImmutableList.<PgFunction>builder()
+    private final List<PgFunction> functions = ImmutableList.<PgFunction>builder()
             .add(PG_TO_CHAR)
             .add(NOW)
             .add(SUBSTR)
@@ -42,15 +43,17 @@ public class DataSourceFunctionRegistry
         // TODO: handle function name overloading
         //  https://github.com/Canner/canner-metric-layer/issues/73
         // use HashMap to handle multiple same key entries
-        pgFunctions.forEach(pgFunction -> simpleNameToFunction.put(functionKey(pgFunction.getName(), pgFunction.getArguments().map(List::size).orElse(0)), pgFunction));
+        functions.forEach(function -> simpleNameToFunction.put(functionKey(function.getName(), function.getArguments().map(List::size).orElse(0)), function));
     }
 
-    public List<PgFunction> getPgFunctions()
+    @Override
+    public List<PgFunction> getFunctions()
     {
-        return pgFunctions;
+        return functions;
     }
 
-    public Optional<PgFunction> getPgFunction(String name, int numArgument)
+    @Override
+    public Optional<PgFunction> getFunction(String name, int numArgument)
     {
         return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, numArgument)));
     }
