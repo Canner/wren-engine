@@ -34,6 +34,7 @@ import io.trino.sql.tree.Table;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,12 +43,15 @@ import java.util.Set;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.trino.sql.tree.ComparisonExpression.Operator;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
 public class Analysis
 {
     private final Statement root;
+    private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
+
     private final Set<CatalogSchemaTableName> tables = new HashSet<>();
     private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
     private final Set<Relationship> relationships = new HashSet<>();
@@ -207,6 +211,31 @@ public class Analysis
     public void addSortItem(SortItemAnalysis sortItem)
     {
         sortItems.add(sortItem);
+    }
+
+    public Scope getScope(Node node)
+    {
+        return tryGetScope(node).orElseThrow(() -> new IllegalArgumentException(format("Analysis does not contain information for node: %s", node)));
+    }
+
+    public Optional<Scope> tryGetScope(Node node)
+    {
+        NodeRef<Node> key = NodeRef.of(node);
+        if (scopes.containsKey(key)) {
+            return Optional.of(scopes.get(key));
+        }
+
+        return Optional.empty();
+    }
+
+    public Scope getRootScope()
+    {
+        return getScope(root);
+    }
+
+    public void setScope(Node node, Scope scope)
+    {
+        scopes.put(NodeRef.of(node), scope);
     }
 
     /**

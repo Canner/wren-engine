@@ -26,13 +26,20 @@ import static java.util.Objects.requireNonNull;
 public class Scope
 {
     private final Optional<Scope> parent;
+    private final RelationId relationId;
     private final RelationType relationType;
     private final boolean isDataSourceScope;
     private final Map<String, WithQuery> namedQueries;
 
-    private Scope(Scope parent, RelationType relationType, boolean isDataSourceScope, Map<String, WithQuery> namedQueries)
+    private Scope(
+            Scope parent,
+            RelationId relationId,
+            RelationType relationType,
+            boolean isDataSourceScope,
+            Map<String, WithQuery> namedQueries)
     {
         this.parent = Optional.ofNullable(parent);
+        this.relationId = requireNonNull(relationId, "relationId is null");
         this.relationType = requireNonNull(relationType, "relationType is null");
         this.isDataSourceScope = isDataSourceScope;
         this.namedQueries = requireNonNull(namedQueries, "namedQueries is null");
@@ -46,6 +53,11 @@ public class Scope
     public RelationType getRelationType()
     {
         return relationType;
+    }
+
+    public RelationId getRelationId()
+    {
+        return relationId;
     }
 
     public boolean isDataSourceScope()
@@ -74,6 +86,7 @@ public class Scope
     public static final class Builder
     {
         private Optional<Scope> parent = Optional.empty();
+        private RelationId relationId = RelationId.anonymous();
         private RelationType relationType = new RelationType();
         private boolean isDataSourceScope;
         private final Map<String, WithQuery> namedQueries = new HashMap<>();
@@ -81,6 +94,12 @@ public class Scope
         public Builder relationType(RelationType relationType)
         {
             this.relationType = relationType;
+            return this;
+        }
+
+        public Builder relationId(RelationId relationId)
+        {
+            this.relationId = relationId;
             return this;
         }
 
@@ -111,7 +130,7 @@ public class Scope
 
         public Scope build()
         {
-            return new Scope(parent.orElse(null), relationType, isDataSourceScope, namedQueries);
+            return new Scope(parent.orElse(null), relationId, relationType, isDataSourceScope, namedQueries);
         }
     }
 }

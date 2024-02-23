@@ -165,32 +165,43 @@ public final class StatementAnalyzer
                 if (withQuery.isPresent()) {
                     // currently we only care about the table that is actually a model instead of a alias table that use cte table
                     // return empty scope here.
-                    return createScopeForCommonTableExpression(node, withQuery.get(), scope);
+                    Scope outputScope = createScopeForCommonTableExpression(node, withQuery.get(), scope);
+                    analysis.setScope(node, outputScope);
+                    return outputScope;
                 }
             }
 
             CatalogSchemaTableName tableName = toCatalogSchemaTableName(sessionContext, node.getName());
             analysis.addTable(tableName);
+            Scope outputScope;
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
                 analysis.addModelNodeRef(NodeRef.of(node));
                 List<Field> fields = collectFieldFromMDL(tableName);
 
                 // if catalog and schema matches, but table name doesn't match any model, we assume it's a remote data source table
                 if (fields.isEmpty()) {
-                    return Scope.builder()
+                    outputScope = Scope.builder()
                             .parent(scope)
                             .isDataSourceScope(true)
                             .build();
                 }
-                return Scope.builder()
+                else {
+                    outputScope = Scope.builder()
+                            .parent(scope)
+                            .relationId(RelationId.of(node))
+                            .relationType(new RelationType(fields))
+                            .build();
+                }
+            }
+            else {
+                outputScope = Scope.builder()
                         .parent(scope)
-                        .relationType(new RelationType(fields))
+                        .relationId(RelationId.of(node))
+                        .relationType(new RelationType())
                         .build();
             }
-            return Scope.builder()
-                    .parent(scope)
-                    .relationType(new RelationType())
-                    .build();
+            analysis.setScope(node, outputScope);
+            return outputScope;
         }
 
         private Scope createScopeForCommonTableExpression(Table table, WithQuery withQuery, Optional<Scope> scope)
@@ -215,10 +226,7 @@ public final class StatementAnalyzer
             else {
                 fields = createScopeForQuery(query, table.getName(), queryScope);
             }
-            return Scope.builder()
-                    .parent(scope)
-                    .relationType(new RelationType(fields))
-                    .build();
+            return createAndAssignScope(table, scope, new RelationType(fields));
         }
 
         private List<Field> createScopeForQuery(Query query, QualifiedName scopeName, Optional<Scope> scope)
@@ -297,7 +305,7 @@ public final class StatementAnalyzer
         {
             Optional<Scope> withScope = analyzeWith(node, scope);
             Scope queryBodyScope = process(node.getQueryBody(), withScope);
-            return createAndAssignScope(scope, queryBodyScope);
+            return createAndAssignScope(node, scope, queryBodyScope);
         }
 
         @Override
@@ -320,7 +328,7 @@ public final class StatementAnalyzer
                         }
                         analysis.addSortItem(new Analysis.SortItemAnalysis(name, item.getOrdering().name()));
                     }));
-            return createAndAssignScope(scope, sourceScope);
+            return createAndAssignScope(node, scope, sourceScope);
         }
 
         private List<Expression> analyzeSelect(QuerySpecification node, Scope scope)
@@ -401,6 +409,7 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitValues(Values node, Optional<Scope> scope)
         {
+            // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
 
@@ -452,7 +461,7 @@ public final class StatementAnalyzer
             Scope leftScope = process(node.getLeft(), scope);
             Scope rightScope = process(node.getRight(), scope);
             RelationType relationType = leftScope.getRelationType().joinWith(rightScope.getRelationType());
-            Scope outputScope = createAndAssignScope(scope, relationType);
+            Scope outputScope = createAndAssignScope(node, scope, relationType);
 
             JoinCriteria criteria = node.getCriteria().orElse(null);
             // TODO: handle other join types
@@ -471,7 +480,7 @@ public final class StatementAnalyzer
                 });
             }
             // TODO: output scope here isn't right
-            return createAndAssignScope(scope, relationType);
+            return createAndAssignScope(node, scope, relationType);
         }
 
         @Override
@@ -493,17 +502,14 @@ public final class StatementAnalyzer
                             .build())
                     .collect(toImmutableList());
 
-            return Scope.builder()
-                    .parent(scope)
-                    .relationType(new RelationType(fieldsWithRelationAlias))
-                    .build();
+            return createAndAssignScope(relation, scope, new RelationType(fieldsWithRelationAlias));
         }
 
         @Override
         protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
         {
             return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, accioMDL, typeCoercionOptional.orElse(null)))
-                    .map(value -> createAndAssignScope(scope, value))
+                    .map(value -> createAndAssignScope(node, scope, value))
                     .orElseGet(() -> Scope.builder().parent(scope).build());
         }
 
@@ -534,21 +540,27 @@ public final class StatementAnalyzer
             return process(node, Optional.of(scope));
         }
 
-        private Scope createAndAssignScope(Optional<Scope> parentScope, RelationType relationType)
+        private Scope createAndAssignScope(Node node, Optional<Scope> parentScope, RelationType relationType)
         {
-            return Scope.builder()
+            Scope newScope = Scope.builder()
                     .parent(parentScope)
+                    .relationId(RelationId.of(node))
                     .relationType(relationType)
                     .build();
+            analysis.setScope(node, newScope);
+            return newScope;
         }
 
-        private Scope createAndAssignScope(Optional<Scope> parentScope, Scope scope)
+        private Scope createAndAssignScope(Node node, Optional<Scope> parentScope, Scope scope)
         {
-            return Scope.builder()
+            Scope newScope = Scope.builder()
                     .parent(parentScope)
                     .isDataSourceScope(scope.isDataSourceScope())
+                    .relationId(RelationId.of(node))
                     .relationType(scope.getRelationType())
                     .build();
+            analysis.setScope(node, newScope);
+            return newScope;
         }
     }
 }
