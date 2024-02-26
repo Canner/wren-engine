@@ -29,12 +29,15 @@ public class ExpressionAnalysis
     private final List<Field> collectedFields;
     private final Map<NodeRef<Expression>, Field> referencedFields;
     private final List<ComparisonExpression> predicates;
+    // For `count(*)` expression, we should generate the specific CTE for it.
+    private final boolean requireRelation;
 
-    public ExpressionAnalysis(Map<NodeRef<Expression>, Field> referenceFields, List<ComparisonExpression> predicates)
+    public ExpressionAnalysis(Map<NodeRef<Expression>, Field> referenceFields, List<ComparisonExpression> predicates, boolean requireRelation)
     {
         this.referencedFields = requireNonNull(referenceFields);
         this.collectedFields = referenceFields.values().stream().collect(toImmutableList());
         this.predicates = requireNonNull(predicates);
+        this.requireRelation = requireRelation;
     }
 
     public List<Field> getCollectedFields()
@@ -50,5 +53,10 @@ public class ExpressionAnalysis
     public List<ComparisonExpression> getPredicates()
     {
         return predicates;
+    }
+
+    public boolean isRequireRelation()
+    {
+        return requireRelation;
     }
 }

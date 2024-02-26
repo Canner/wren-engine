@@ -29,7 +29,6 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Statement;
-import io.trino.sql.tree.Table;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +52,6 @@ public class Analysis
     private final Map<NodeRef<Node>, Scope> scopes = new LinkedHashMap<>();
 
     private final Set<CatalogSchemaTableName> tables = new HashSet<>();
-    private final Set<NodeRef<Table>> modelNodeRefs = new HashSet<>();
     private final Set<Relationship> relationships = new HashSet<>();
     private final Set<Model> models = new HashSet<>();
     private final Set<Metric> metrics = new HashSet<>();
@@ -64,6 +62,9 @@ public class Analysis
     private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
     private final List<SimplePredicate> simplePredicates = new ArrayList<>();
 
+    private final Set<Node> requiredSourceNodes = new HashSet<>();
+
+    private final Map<NodeRef<Node>, QualifiedName> sourceNodeNames = new HashMap<>();
     private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
     private Expression limit;
     private final List<SortItemAnalysis> sortItems = new ArrayList<>();
@@ -101,16 +102,6 @@ public class Analysis
     public Set<Model> getModels()
     {
         return models;
-    }
-
-    void addModelNodeRef(NodeRef<Table> tableNodeRef)
-    {
-        this.modelNodeRefs.add(tableNodeRef);
-    }
-
-    public Set<NodeRef<Table>> getModelNodeRefs()
-    {
-        return modelNodeRefs;
     }
 
     void addMetrics(Set<Metric> metrics)
@@ -236,6 +227,31 @@ public class Analysis
     public void setScope(Node node, Scope scope)
     {
         scopes.put(NodeRef.of(node), scope);
+    }
+
+    public Map<NodeRef<Node>, Scope> getScopes()
+    {
+        return scopes;
+    }
+
+    public Set<Node> getRequiredSourceNodes()
+    {
+        return requiredSourceNodes;
+    }
+
+    public void addRequiredSourceNode(Node node)
+    {
+        requiredSourceNodes.add(node);
+    }
+
+    public Optional<QualifiedName> getSourceNodeNames(Node node)
+    {
+        return Optional.ofNullable(sourceNodeNames.get(NodeRef.of(node)));
+    }
+
+    public void addSourceNodeName(NodeRef<Node> nodeRef, QualifiedName name)
+    {
+        sourceNodeNames.put(nodeRef, name);
     }
 
     /**
