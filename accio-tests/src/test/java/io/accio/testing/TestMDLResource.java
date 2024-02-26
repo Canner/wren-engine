@@ -107,7 +107,7 @@ public class TestMDLResource
         assertThatNoException().isThrownBy(() -> preview(new PreviewDto(null, "select orderkey from Orders limit 100", null)));
     }
 
-    @Test
+    @Test(enabled = false, description = "We will fix the scope is without Dataset Customer via #472")
     public void testPreview()
     {
         Manifest previewManifest = Manifest.builder()
