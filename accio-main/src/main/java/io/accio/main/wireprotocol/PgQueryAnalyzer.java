@@ -15,16 +15,19 @@
 package io.accio.main.wireprotocol;
 
 import io.accio.base.AccioMDL;
+import io.accio.base.SessionContext;
 import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
-import io.accio.base.sqlrewrite.analyzer.ExpressionTypeAnalyzer;
-import io.accio.base.sqlrewrite.analyzer.Scope;
+import io.accio.base.sqlrewrite.analyzer.Analysis;
+import io.accio.base.sqlrewrite.analyzer.StatementAnalyzer;
 import io.accio.base.type.PGType;
+import io.accio.main.sql.bigquery.analyzer.BigQueryTypeCoercion;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Table;
 
 import java.util.ArrayList;
@@ -41,8 +44,14 @@ public class PgQueryAnalyzer
     public static boolean isMetadataQuery(String sql, AccioMDL mdl)
     {
         try {
-            PgQueryAnalyzer analyzer = new PgQueryAnalyzer(mdl);
-            analyzer.process(parseQuery(sql));
+            Query query = parseQuery(sql);
+            Analysis analysis = new Analysis(query);
+            StatementAnalyzer.analyze(analysis, query, SessionContext.builder()
+                    .setCatalog(mdl.getCatalog())
+                    .setSchema(mdl.getSchema())
+                    .build(), mdl, new BigQueryTypeCoercion(mdl));
+            PgQueryAnalyzer analyzer = new PgQueryAnalyzer(analysis);
+            analyzer.process(query);
             return !analyzer.visitedPgTable.isEmpty() ||
                     !analyzer.visitedPgFunction.isEmpty() ||
                     analyzer.useOidType;
@@ -57,11 +66,11 @@ public class PgQueryAnalyzer
     private final List<String> visitedPgFunction = new ArrayList<>();
     private boolean useOidType;
     private final PgMetastoreFunctionRegistry pgMetastoreFunctionRegistry = new PgMetastoreFunctionRegistry();
-    private final AccioMDL mdl;
+    private final Analysis analysis;
 
-    private PgQueryAnalyzer(AccioMDL mdl)
+    private PgQueryAnalyzer(Analysis analysis)
     {
-        this.mdl = mdl;
+        this.analysis = analysis;
     }
 
     @Override
@@ -90,8 +99,7 @@ public class PgQueryAnalyzer
             return true;
         }
 
-        Scope scope = Scope.builder().build();
-        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypeMap().get(arg)).collect(toList());
         return pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), pgTypes).isPresent();
     }
 
