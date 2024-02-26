@@ -336,6 +336,14 @@ public class TestMetric
         // select dim custkey and measure count in CountOrders
         assertThat(query(rewrite("SELECT custkey, count FROM CountOrders WHERE custkey = 370", true)))
                 .isEqualTo(query("SELECT custkey, count(*) FROM orders WHERE custkey = 370 GROUP BY 1"));
+
+        // select only measure will use all dimension
+        assertThat(query(rewrite("SELECT count FROM CountOrders ORDER BY 1", true)))
+                .isEqualTo(query("WITH output AS (SELECT count(*) AS count FROM orders) SELECT count FROM output ORDER BY 1"));
+
+        // apply count(*) on metric
+        assertThat(query(rewrite("SELECT count(*) FROM CountOrders ORDER BY 1", true)))
+                .isEqualTo(query("WITH output AS (SELECT custkey, orderstatus, count(*) AS count FROM orders GROUP BY 1, 2) SELECT count(*) FROM output"));
     }
 
     @Test

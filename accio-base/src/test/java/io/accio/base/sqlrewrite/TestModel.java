@@ -198,6 +198,8 @@ public class TestModel
                         "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
                         "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
                         "WHERE l.orderkey = 44995");
+
+        assertQuery(mdl, "SELECT count(*) FROM Lineitem", "SELECT count(*) FROM lineitem");
     }
 
     @Test
