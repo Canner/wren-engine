@@ -16,12 +16,14 @@ package io.accio.main.sql.bigquery;
 
 import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
+import io.accio.base.SessionContext;
 import io.accio.base.sqlrewrite.BaseRewriter;
-import io.accio.base.sqlrewrite.analyzer.ExpressionTypeAnalyzer;
-import io.accio.base.sqlrewrite.analyzer.Scope;
+import io.accio.base.sqlrewrite.analyzer.Analysis;
+import io.accio.base.sqlrewrite.analyzer.StatementAnalyzer;
 import io.accio.base.type.PGType;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.sql.SqlRewrite;
+import io.accio.main.sql.bigquery.analyzer.BigQueryTypeCoercion;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Extract;
@@ -30,6 +32,7 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.StringLiteral;
 
 import java.util.List;
@@ -56,19 +59,24 @@ public class RewriteToBigQueryFunction
 
     public Node rewrite(Node node, Metadata metadata)
     {
-        return new RewriteToBigQueryFunctionRewriter(metadata, mdl).process(node);
+        Analysis analysis = new Analysis((Statement) node);
+        StatementAnalyzer.analyze(analysis, (Statement) node, SessionContext.builder()
+                .setCatalog(mdl.getCatalog())
+                .setSchema(mdl.getSchema())
+                .build(), mdl, new BigQueryTypeCoercion(mdl));
+        return new RewriteToBigQueryFunctionRewriter(metadata, analysis).process(node);
     }
 
     private static class RewriteToBigQueryFunctionRewriter
             extends BaseRewriter<Void>
     {
         private final Metadata metadata;
-        private final AccioMDL mdl;
+        private final Analysis analysis;
 
-        private RewriteToBigQueryFunctionRewriter(Metadata metadata, AccioMDL mdl)
+        private RewriteToBigQueryFunctionRewriter(Metadata metadata, Analysis analysis)
         {
             this.metadata = requireNonNull(metadata, "metadata is null");
-            this.mdl = requireNonNull(mdl, "mdl is null");
+            this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
         @Override
@@ -109,8 +117,7 @@ public class RewriteToBigQueryFunction
         @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
-            Scope scope = Scope.builder().build();
-            List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+            List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypeMap().get(arg)).collect(toList());
             QualifiedName functionName = metadata.resolveFunction(node.getName().toString(), pgTypes);
             List<Expression> arguments = node.getArguments().stream()
                     .map(argument -> visitAndCast(argument, context))

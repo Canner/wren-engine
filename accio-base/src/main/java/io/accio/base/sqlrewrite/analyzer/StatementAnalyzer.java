@@ -378,6 +378,17 @@ public final class StatementAnalyzer
                 Optional<Expression> coerced = typeCoercion.coerceExpression(singleColumn.getExpression(), scope);
                 coerced.ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(singleColumn.getExpression()), expression));
             });
+
+            List<? extends Node> children = singleColumn.getExpression().getChildren();
+            if (children.isEmpty()) {
+                Expression expression = singleColumn.getExpression();
+                analysis.addExpressionType(expression, ExpressionTypeAnalyzer.analyze(accioMDL, scope, expression));
+            }
+            else {
+                children.stream()
+                        .map(child -> (Expression) child)
+                        .forEach(expression -> analysis.addExpressionType(expression, ExpressionTypeAnalyzer.analyze(accioMDL, scope, expression)));
+            }
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)

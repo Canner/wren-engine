@@ -76,6 +76,7 @@ public class BigQuerySqlConverter
                 ReplaceColumnAliasInUnnest.INSTANCE,
                 // bigquery doesn't support correlated join in where clause
                 TransformCorrelatedJoinToJoin.INSTANCE,
+                new TypeCoercionRewrite(mdl),
                 new RewriteToBigQueryFunction(mdl),
                 RewriteToBigQueryType.INSTANCE,
                 // bigquery doesn't support parameter in types in cast
@@ -84,8 +85,7 @@ public class BigQuerySqlConverter
                 RemoveParameterInTypesInCast.INSTANCE,
                 FlattenGroupingElements.INSTANCE,
                 RewriteNamesToAlias.INSTANCE,
-                RewriteArithmetic.INSTANCE,
-                new TypeCoercionRewrite(mdl));
+                RewriteArithmetic.INSTANCE);
 
         LOG.info("[Input sql]: %s", sql);
 

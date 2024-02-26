@@ -23,6 +23,7 @@ import io.accio.base.dto.Metric;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
 import io.accio.base.dto.View;
+import io.accio.base.type.PGType;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Node;
@@ -66,6 +67,7 @@ public class Analysis
 
     private final Map<NodeRef<Node>, QualifiedName> sourceNodeNames = new HashMap<>();
     private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
+    private final Map<Expression, PGType<?>> expressionTypeMap = new HashMap<>();
     private Expression limit;
     private final List<SortItemAnalysis> sortItems = new ArrayList<>();
 
@@ -182,6 +184,16 @@ public class Analysis
     public Map<NodeRef<Node>, Node> getTypeCoercionMap()
     {
         return typeCoercionMap;
+    }
+
+    public void addExpressionType(Expression expression, PGType<?> pgType)
+    {
+        expressionTypeMap.put(expression, pgType);
+    }
+
+    public Map<Expression, PGType<?>> getExpressionTypeMap()
+    {
+        return expressionTypeMap;
     }
 
     public Optional<Expression> getLimit()
