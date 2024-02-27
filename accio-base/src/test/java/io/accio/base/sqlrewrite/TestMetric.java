@@ -344,6 +344,10 @@ public class TestMetric
         // apply count(*) on metric
         assertThat(query(rewrite("SELECT count(*) FROM CountOrders ORDER BY 1", true)))
                 .isEqualTo(query("WITH output AS (SELECT custkey, orderstatus, count(*) AS count FROM orders GROUP BY 1, 2) SELECT count(*) FROM output"));
+
+        // apply count(custkey) on metric
+        assertThat(query(rewrite("SELECT count(custkey) FROM CountOrders ORDER BY 1", true)))
+                .isEqualTo(query("WITH output AS (SELECT custkey, count(*) FROM orders GROUP BY 1) SELECT count(custkey) FROM output"));
     }
 
     @Test

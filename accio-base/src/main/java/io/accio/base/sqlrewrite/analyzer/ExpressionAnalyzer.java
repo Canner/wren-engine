@@ -95,7 +95,9 @@ public class ExpressionAnalyzer
         {
             if (node.getName().getSuffix().equalsIgnoreCase("count") && node.getArguments().isEmpty()) {
                 requireRelation = true;
+                return null;
             }
+            node.getArguments().forEach(this::process);
             return null;
         }
 
