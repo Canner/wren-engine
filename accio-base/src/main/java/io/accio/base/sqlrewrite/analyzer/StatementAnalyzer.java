@@ -386,6 +386,7 @@ public final class StatementAnalyzer
             }
             else {
                 children.stream()
+                        .filter(child -> child instanceof Expression)
                         .map(child -> (Expression) child)
                         .forEach(expression -> analysis.addExpressionType(expression, ExpressionTypeAnalyzer.analyze(accioMDL, scope, expression)));
             }
