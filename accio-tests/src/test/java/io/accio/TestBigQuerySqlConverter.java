@@ -26,6 +26,10 @@ import io.accio.server.module.BigQueryConnectorModule;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.List;
+
+import static io.accio.base.dto.Column.column;
+import static io.accio.base.dto.Model.model;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,7 +57,9 @@ public class TestBigQuerySqlConverter
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
         AccioMetastore accioMetastore = new AccioMetastore();
-        accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny").build()), null);
+        accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny")
+                .setModels(List.of(model("Orders", "select * from \"canner-cml\".\"tpch_tiny\".\"orders\"",
+                        List.of(column("custkey", "integer", null, true, "o_custkey"))))).build()), null);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, accioMetastore);
     }
 
@@ -61,28 +67,28 @@ public class TestBigQuerySqlConverter
     public void testBigQueryGroupByOrdinal()
     {
         assertThat(bigQuerySqlConverter.convert(
-                "SELECT o_custkey, COUNT(*) AS cnt\n" +
-                        "FROM \"canner-cml\".\"tpch_tiny\".\"orders\"\n" +
+                "SELECT custkey, COUNT(*) AS cnt\n" +
+                        "FROM \"Orders\"\n" +
                         "GROUP BY 1", DEFAULT_SESSION_CONTEXT))
                 .isEqualTo("SELECT\n" +
-                        "  o_custkey\n" +
+                        "  custkey\n" +
                         ", COUNT(*) cnt\n" +
                         "FROM\n" +
-                        "  `canner-cml`.`tpch_tiny`.`orders`\n" +
+                        "  `Orders`\n" +
                         "GROUP BY 1\n");
     }
 
     @Test
     public void testCaseSensitive()
     {
-        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"canner-cml\".\"cml_temp\".\"canner\"", DEFAULT_SESSION_CONTEXT))
+        assertThat(bigQuerySqlConverter.convert("SELECT a FROM \"Orders\"", DEFAULT_SESSION_CONTEXT))
                 .isEqualTo("SELECT a\n" +
                         "FROM\n" +
-                        "  `canner-cml`.`cml_temp`.`canner`\n");
-        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"canner-cml\".\"cml_temp\".\"CANNER\"", DEFAULT_SESSION_CONTEXT))
+                        "  `Orders`\n");
+        assertThat(bigQuerySqlConverter.convert("SELECT b FROM \"Orders\"", DEFAULT_SESSION_CONTEXT))
                 .isEqualTo("SELECT b\n" +
                         "FROM\n" +
-                        "  `canner-cml`.`cml_temp`.`CANNER`\n");
+                        "  `Orders`\n");
     }
 
     @Test
@@ -325,35 +331,35 @@ public class TestBigQuerySqlConverter
     public void testRewriteNamesToAlias()
     {
         assertThat(bigQuerySqlConverter.convert(
-                "SELECT FLOOR(l_orderkey) l_orderkey\n" +
+                "SELECT FLOOR(o_orderkey) o_orderkey\n" +
                         ", COUNT(*) count\n" +
                         "FROM\n" +
-                        "  tpch_tiny.lineitem\n" +
-                        "GROUP BY FLOOR(l_orderkey)\n" +
-                        "ORDER BY FLOOR(l_orderkey) ASC\n", DEFAULT_SESSION_CONTEXT))
+                        "  \"Orders\"\n" +
+                        "GROUP BY FLOOR(o_orderkey)\n" +
+                        "ORDER BY FLOOR(o_orderkey) ASC\n", DEFAULT_SESSION_CONTEXT))
                 .isEqualTo("SELECT\n" +
-                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        "  FLOOR(o_orderkey) o_orderkey\n" +
                         ", COUNT(*) count\n" +
                         "FROM\n" +
-                        "  tpch_tiny.lineitem\n" +
-                        "GROUP BY l_orderkey\n" +
-                        "ORDER BY l_orderkey ASC\n");
+                        "  `Orders`\n" +
+                        "GROUP BY o_orderkey\n" +
+                        "ORDER BY o_orderkey ASC\n");
 
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT\n" +
-                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        "  FLOOR(o_orderkey) o_orderkey\n" +
                         ", COUNT(*) count\n" +
                         "FROM\n" +
-                        "  tpch_tiny.lineitem\n" +
-                        "GROUP BY l_orderkey\n" +
-                        "ORDER BY l_orderkey ASC\n", DEFAULT_SESSION_CONTEXT))
+                        "  \"Orders\"\n" +
+                        "GROUP BY o_orderkey\n" +
+                        "ORDER BY o_orderkey ASC\n", DEFAULT_SESSION_CONTEXT))
                 .isEqualTo("SELECT\n" +
-                        "  FLOOR(l_orderkey) l_orderkey\n" +
+                        "  FLOOR(o_orderkey) o_orderkey\n" +
                         ", COUNT(*) count\n" +
                         "FROM\n" +
-                        "  tpch_tiny.lineitem\n" +
-                        "GROUP BY l_orderkey\n" +
-                        "ORDER BY l_orderkey ASC\n");
+                        "  `Orders`\n" +
+                        "GROUP BY o_orderkey\n" +
+                        "ORDER BY o_orderkey ASC\n");
     }
 
     @Test
