@@ -314,7 +314,8 @@ public final class StatementAnalyzer
             Scope sourceScope = analyzeFrom(node, scope);
             List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
-            node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(sourceScope, having));
+            // FIXME: having is not analyzed, fix it with #476
+            node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(accioMDL, sourceScope, having));
             node.getLimit().ifPresent(limit -> analysis.setLimit(((Limit) limit).getRowCount()));
             node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems()
                     .forEach(item -> {
