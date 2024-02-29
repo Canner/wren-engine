@@ -15,12 +15,9 @@
 package io.accio.base.pgcatalog.function;
 
 import com.google.common.collect.ImmutableList;
-import io.accio.base.metadata.FunctionKey;
 import io.accio.base.type.PGType;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static io.accio.base.metadata.FunctionKey.functionKey;
@@ -61,13 +58,6 @@ public final class PgMetastoreFunctionRegistry
             .add(PG_GET_EXPR_PRETTY)
             .build();
 
-    private final Map<FunctionKey, PgFunction> simpleNameToFunction = new HashMap<>();
-
-    public PgMetastoreFunctionRegistry()
-    {
-        functions.forEach(function -> simpleNameToFunction.put(functionKey(function.getName(), function.getArguments().map(this::getArgumentTypes).orElse(ImmutableList.of())), function));
-    }
-
     @Override
     public List<PgFunction> getFunctions()
     {
@@ -77,6 +67,6 @@ public final class PgMetastoreFunctionRegistry
     @Override
     public Optional<PgFunction> getFunction(String name, List<PGType<?>> argumentTypes)
     {
-        return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, argumentTypes)));
+        return functions.stream().filter(func -> functionKey(name, argumentTypes).equals(func.getFunctionKey())).findAny();
     }
 }

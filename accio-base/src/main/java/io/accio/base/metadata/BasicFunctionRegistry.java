@@ -4,9 +4,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.pgcatalog.function.FunctionRegistry;
 import io.accio.base.type.PGType;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static io.accio.base.metadata.BasicFunctions.DATE_TRUNC;
@@ -19,13 +17,6 @@ public class BasicFunctionRegistry
             .add(DATE_TRUNC)
             .build();
 
-    private final Map<FunctionKey, Function> simpleNameToFunction = new HashMap<>();
-
-    public BasicFunctionRegistry()
-    {
-        functions.forEach(function -> simpleNameToFunction.put(functionKey(function.getName(), function.getArguments().map(this::getArgumentTypes).orElse(ImmutableList.of())), function));
-    }
-
     public List<Function> getFunctions()
     {
         return functions;
@@ -34,6 +25,6 @@ public class BasicFunctionRegistry
     @Override
     public Optional<Function> getFunction(String name, List<PGType<?>> argumentTypes)
     {
-        return Optional.ofNullable(simpleNameToFunction.get(functionKey(name, argumentTypes)));
+        return functions.stream().filter(func -> functionKey(name, argumentTypes).equals(func.getFunctionKey())).findAny();
     }
 }

@@ -14,10 +14,12 @@
 
 package io.accio.base.metadata;
 
+import io.accio.base.type.AnyType;
 import io.accio.base.type.PGType;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 public class FunctionKey
 {
@@ -57,6 +59,17 @@ public class FunctionKey
         }
         FunctionKey that = (FunctionKey) o;
         return Objects.equals(name, that.name)
-                && Objects.equals(arguments, that.arguments);
+                && equals(arguments, that.arguments);
+    }
+
+    private boolean equals(List<PGType<?>> arguments1, List<PGType<?>> arguments2)
+    {
+        if (arguments1.size() != arguments2.size()) {
+            return false;
+        }
+        return IntStream.range(0, arguments1.size())
+                .allMatch(i -> arguments1.get(i).equals(arguments2.get(i))
+                        || arguments1.get(i).equals(AnyType.ANY)
+                        || arguments2.get(i).equals(AnyType.ANY));
     }
 }

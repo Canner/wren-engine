@@ -5,6 +5,8 @@ import io.accio.base.type.PGType;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.accio.base.metadata.FunctionKey.functionKey;
 import static java.util.Objects.requireNonNull;
 
 public class Function
@@ -12,12 +14,14 @@ public class Function
     protected final String name;
     protected final List<Argument> arguments;
     protected final PGType returnType;
+    protected final FunctionKey functionKey;
 
     public Function(String name, List<Argument> arguments, PGType returnType)
     {
         this.name = name;
         this.arguments = arguments;
         this.returnType = returnType;
+        this.functionKey = functionKey(name, getArgumentTypes());
     }
 
     public String getName()
@@ -33,6 +37,16 @@ public class Function
     public Optional<PGType> getReturnType()
     {
         return Optional.ofNullable(returnType);
+    }
+
+    public FunctionKey getFunctionKey()
+    {
+        return functionKey;
+    }
+
+    private List<PGType<?>> getArgumentTypes()
+    {
+        return getArguments().orElse(List.of()).stream().map(Argument::getType).collect(toImmutableList());
     }
 
     public static class Argument

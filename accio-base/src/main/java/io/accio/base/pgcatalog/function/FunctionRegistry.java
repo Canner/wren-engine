@@ -17,7 +17,6 @@ package io.accio.base.pgcatalog.function;
 import io.accio.base.metadata.Function;
 import io.accio.base.type.PGType;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,14 +25,4 @@ public interface FunctionRegistry<F extends Function>
     List<F> getFunctions();
 
     Optional<F> getFunction(String name, List<PGType<?>> argumentTypes);
-
-    default List<PGType<?>> getArgumentTypes(List<Function.Argument> arguments)
-    {
-        List<PGType<?>> pgTypes = new ArrayList<>();
-        for (Function.Argument arg : arguments) {
-            PGType<?> pgType = arg.getType();
-            pgTypes.add(pgType);
-        }
-        return pgTypes;
-    }
 }
