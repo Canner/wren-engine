@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk:11.0.14
+FROM azul/zulu-openjdk:11.0.22
 LABEL maintainer="https://www.canner.io/"
 WORKDIR /usr/src/app
 
