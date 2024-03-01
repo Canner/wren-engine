@@ -175,7 +175,7 @@ public final class StatementAnalyzer
             analysis.addTable(tableName);
             Scope outputScope;
             if (tableName.getCatalogName().equals(accioMDL.getCatalog()) && tableName.getSchemaTableName().getSchemaName().equals(accioMDL.getSchema())) {
-                analysis.addModelNodeRef(NodeRef.of(node));
+                analysis.addSourceNodeName(NodeRef.of(node), QualifiedName.of(tableName.getSchemaTableName().getTableName()));
                 List<Field> fields = collectFieldFromMDL(tableName);
 
                 // if catalog and schema matches, but table name doesn't match any model, we assume it's a remote data source table
@@ -366,10 +366,13 @@ public final class StatementAnalyzer
         {
             outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
             // TODO: handle when singleColumn is a subquery
-            scope.getRelationType().getFields().forEach(field -> {
-                ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
-                analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
-            });
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
+            analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+
+            if (expressionAnalysis.isRequireRelation()) {
+                analysis.addRequiredSourceNode(scope.getRelationId().getSourceNode()
+                        .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source")));
+            }
 
             typeCoercionOptional.ifPresent(typeCoercion -> {
                 Optional<Expression> coerced = typeCoercion.coerceExpression(singleColumn.getExpression(), scope);

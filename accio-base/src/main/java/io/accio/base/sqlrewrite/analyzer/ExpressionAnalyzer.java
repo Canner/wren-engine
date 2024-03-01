@@ -19,6 +19,7 @@ import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -40,7 +41,7 @@ public class ExpressionAnalyzer
         ExpressionVisitor visitor = new ExpressionVisitor(scope);
         visitor.process(expression);
 
-        return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates());
+        return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates(), visitor.isRequireRelation());
     }
 
     private static class ExpressionVisitor
@@ -49,6 +50,7 @@ public class ExpressionAnalyzer
         private final Scope scope;
         private final Map<NodeRef<Expression>, Field> referenceFields = new HashMap<>();
         private final List<ComparisonExpression> predicates = new ArrayList<>();
+        private boolean requireRelation;
 
         public ExpressionVisitor(Scope scope)
         {
@@ -88,6 +90,17 @@ public class ExpressionAnalyzer
             return null;
         }
 
+        @Override
+        protected Void visitFunctionCall(FunctionCall node, Void context)
+        {
+            if (node.getName().getSuffix().equalsIgnoreCase("count") && node.getArguments().isEmpty()) {
+                requireRelation = true;
+                return null;
+            }
+            node.getArguments().forEach(this::process);
+            return null;
+        }
+
         public Map<NodeRef<Expression>, Field> getReferenceFields()
         {
             return referenceFields;
@@ -96,6 +109,11 @@ public class ExpressionAnalyzer
         public List<ComparisonExpression> getPredicates()
         {
             return predicates;
+        }
+
+        public boolean isRequireRelation()
+        {
+            return requireRelation;
         }
     }
 }
