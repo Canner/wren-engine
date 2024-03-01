@@ -365,9 +365,12 @@ public final class StatementAnalyzer
         private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
             outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
+
             // TODO: handle when singleColumn is a subquery
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
+
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(accioMDL, scope, singleColumn.getExpression());
             analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            analysis.addExpressionTypes(expressionAnalysis.getExpressionTypes());
 
             if (expressionAnalysis.isRequireRelation()) {
                 analysis.addRequiredSourceNode(scope.getRelationId().getSourceNode()
@@ -378,21 +381,6 @@ public final class StatementAnalyzer
                 Optional<Expression> coerced = typeCoercion.coerceExpression(singleColumn.getExpression(), scope);
                 coerced.ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(singleColumn.getExpression()), expression));
             });
-
-            analyzeExpressionType(singleColumn.getExpression(), scope);
-        }
-
-        private void analyzeExpressionType(Expression expression, Scope scope)
-        {
-            List<? extends Node> children = expression.getChildren();
-            if (children.isEmpty()) {
-                analysis.addExpressionType(expression, ExpressionTypeAnalyzer.analyze(accioMDL, scope, expression));
-                return;
-            }
-            children.stream()
-                    .filter(child -> child instanceof Expression)
-                    .map(child -> (Expression) child)
-                    .forEach(e -> analyzeExpressionType(e, scope));
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
@@ -405,8 +393,9 @@ public final class StatementAnalyzer
 
         private void analyzeWhere(Expression node, Scope scope)
         {
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, node);
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(accioMDL, scope, node);
             analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            analysis.addExpressionTypes(expressionAnalysis.getExpressionTypes());
             Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
             expressionAnalysis.getPredicates().stream()
                     .filter(PREDICATE_MATCHER::shapeMatches)
@@ -434,7 +423,9 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitUnnest(Unnest node, Optional<Scope> scope)
         {
-            // TODO: output scope here isn't right
+            node.getExpressions().stream()
+                    .map(e -> ExpressionAnalyzer.analyze(accioMDL, Scope.builder().parent(scope).build(), e))
+                    .forEach(expressionAnalysis -> analysis.addExpressionTypes(expressionAnalysis.getExpressionTypes()));
             return Scope.builder().parent(scope).build();
         }
 
@@ -485,7 +476,9 @@ public final class StatementAnalyzer
             // TODO: handle other join types
             if (criteria instanceof JoinOn) {
                 Expression expression = ((JoinOn) criteria).getExpression();
-                analysis.addCollectedColumns(ExpressionAnalyzer.analyze(outputScope, expression).getCollectedFields());
+                ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(accioMDL, outputScope, expression);
+                analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+                analysis.addExpressionTypes(expressionAnalysis.getExpressionTypes());
                 typeCoercionOptional.ifPresent(typeCoercion -> {
                     Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
                     if (coerced.isPresent()) {

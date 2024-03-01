@@ -15,6 +15,8 @@
 package io.accio.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.AccioMDL;
+import io.accio.base.type.PGType;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
@@ -36,12 +38,24 @@ public class ExpressionAnalyzer
 {
     private ExpressionAnalyzer() {}
 
-    public static ExpressionAnalysis analyze(Scope scope, Expression expression)
+    public static ExpressionAnalysis analyze(AccioMDL mdl, Scope scope, Expression expression)
     {
         ExpressionVisitor visitor = new ExpressionVisitor(scope);
         visitor.process(expression);
 
-        return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates(), visitor.isRequireRelation());
+        Map<Expression, PGType<?>> expressionTypes = new HashMap<>();
+        analyzeExpressionType(mdl, scope, expression, expressionTypes);
+
+        return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates(), visitor.isRequireRelation(), expressionTypes);
+    }
+
+    private static void analyzeExpressionType(AccioMDL mdl, Scope scope, Expression expression, Map<Expression, PGType<?>> expressionTypes)
+    {
+        expressionTypes.put(expression, ExpressionTypeAnalyzer.analyze(mdl, scope, expression));
+        expression.getChildren().stream()
+                .filter(child -> child instanceof Expression)
+                .map(child -> (Expression) child)
+                .forEach(e -> analyzeExpressionType(mdl, scope, e, expressionTypes));
     }
 
     private static class ExpressionVisitor

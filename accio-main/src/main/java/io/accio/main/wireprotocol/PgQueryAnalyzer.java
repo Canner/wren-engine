@@ -99,7 +99,7 @@ public class PgQueryAnalyzer
             return true;
         }
 
-        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypeMap().get(arg)).collect(toList());
+        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypes().get(arg)).collect(toList());
         return pgMetastoreFunctionRegistry.getFunction(node.getName().getSuffix(), pgTypes).isPresent();
     }
 

@@ -67,7 +67,7 @@ public class Analysis
 
     private final Map<NodeRef<Node>, QualifiedName> sourceNodeNames = new HashMap<>();
     private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
-    private final Map<Expression, PGType<?>> expressionTypeMap = new HashMap<>();
+    private final Map<Expression, PGType<?>> expressionTypes = new HashMap<>();
     private Expression limit;
     private final List<SortItemAnalysis> sortItems = new ArrayList<>();
 
@@ -186,14 +186,14 @@ public class Analysis
         return typeCoercionMap;
     }
 
-    public void addExpressionType(Expression expression, PGType<?> pgType)
+    public void addExpressionTypes(Map<Expression, PGType<?>> expressionTypes)
     {
-        expressionTypeMap.put(expression, pgType);
+        this.expressionTypes.putAll(expressionTypes);
     }
 
-    public Map<Expression, PGType<?>> getExpressionTypeMap()
+    public Map<Expression, PGType<?>> getExpressionTypes()
     {
-        return expressionTypeMap;
+        return expressionTypes;
     }
 
     public Optional<Expression> getLimit()

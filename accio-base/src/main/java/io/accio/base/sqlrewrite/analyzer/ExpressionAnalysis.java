@@ -14,6 +14,7 @@
 
 package io.accio.base.sqlrewrite.analyzer;
 
+import io.accio.base.type.PGType;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.NodeRef;
@@ -31,13 +32,15 @@ public class ExpressionAnalysis
     private final List<ComparisonExpression> predicates;
     // For `count(*)` expression, we should generate the specific CTE for it.
     private final boolean requireRelation;
+    private final Map<Expression, PGType<?>> expressionTypes;
 
-    public ExpressionAnalysis(Map<NodeRef<Expression>, Field> referenceFields, List<ComparisonExpression> predicates, boolean requireRelation)
+    public ExpressionAnalysis(Map<NodeRef<Expression>, Field> referenceFields, List<ComparisonExpression> predicates, boolean requireRelation, Map<Expression, PGType<?>> expressionTypes)
     {
         this.referencedFields = requireNonNull(referenceFields);
         this.collectedFields = referenceFields.values().stream().collect(toImmutableList());
         this.predicates = requireNonNull(predicates);
         this.requireRelation = requireRelation;
+        this.expressionTypes = requireNonNull(expressionTypes);
     }
 
     public List<Field> getCollectedFields()
@@ -58,5 +61,10 @@ public class ExpressionAnalysis
     public boolean isRequireRelation()
     {
         return requireRelation;
+    }
+
+    public Map<Expression, PGType<?>> getExpressionTypes()
+    {
+        return expressionTypes;
     }
 }

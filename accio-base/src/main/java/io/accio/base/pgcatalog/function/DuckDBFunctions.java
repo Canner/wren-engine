@@ -46,6 +46,7 @@ public class DuckDBFunctions
             .setLanguage(SQL)
             .setArguments(ImmutableList.of(argument("includeImplicit", BOOLEAN)))
             .setImplemented(true)
+            .setReturnType(VARCHAR_ARRAY)
             .build();
 
     public static final PgFunction PG_RELATION_SIZE__INT_VARCHAR___BIGINT = builder()

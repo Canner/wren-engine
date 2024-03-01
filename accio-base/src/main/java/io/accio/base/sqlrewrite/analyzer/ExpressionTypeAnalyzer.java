@@ -71,7 +71,9 @@ import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.TimeLiteral;
 import io.trino.sql.tree.TimestampLiteral;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
@@ -90,6 +92,7 @@ public class ExpressionTypeAnalyzer
 
     private final AccioMDL mdl;
     private final Scope scope;
+    private final Map<FunctionCall, PGType<?>> functionReturnTypes = new HashMap<>();
     private PGType<?> result;
 
     public ExpressionTypeAnalyzer(AccioMDL mdl, Scope scope)
@@ -280,10 +283,23 @@ public class ExpressionTypeAnalyzer
     @Override
     protected Void visitFunctionCall(FunctionCall node, Void context)
     {
-        List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> ExpressionTypeAnalyzer.analyze(mdl, scope, arg)).collect(toList());
+        List<PGType<?>> pgTypes = node.getArguments().stream()
+                .map(argument -> {
+                    if (argument instanceof FunctionCall) {
+                        if (!functionReturnTypes.containsKey(argument)) {
+                            process(argument);
+                            functionReturnTypes.put((FunctionCall) argument, result);
+                        }
+                        return functionReturnTypes.get(argument);
+                    }
+                    return ExpressionTypeAnalyzer.analyze(mdl, scope, argument);
+                })
+                .collect(toList());
+
         FunctionBundle.getFunction(node.getName().getSuffix(), pgTypes)
                 .flatMap(Function::getReturnType)
                 .ifPresent(type -> result = type);
+
         // TODO: handle the remote name
         if (node.getName().getSuffix().equalsIgnoreCase("now") ||
                 node.getName().getSuffix().equalsIgnoreCase("now___timestamp")) {

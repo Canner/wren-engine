@@ -68,8 +68,7 @@ public class FunctionKey
             return false;
         }
         return IntStream.range(0, arguments1.size())
-                .allMatch(i -> arguments1.get(i).equals(arguments2.get(i))
-                        || arguments1.get(i).equals(AnyType.ANY)
-                        || arguments2.get(i).equals(AnyType.ANY));
+                .allMatch(i -> arguments1.get(i) != null && arguments2.get(i) != null
+                        && (arguments1.get(i).equals(arguments2.get(i)) || arguments1.get(i).equals(AnyType.ANY) || arguments2.get(i).equals(AnyType.ANY)));
     }
 }

@@ -117,7 +117,7 @@ public class RewriteToBigQueryFunction
         @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
-            List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypeMap().get(arg)).collect(toList());
+            List<PGType<?>> pgTypes = node.getArguments().stream().map(arg -> analysis.getExpressionTypes().get(arg)).collect(toList());
             QualifiedName functionName = metadata.resolveFunction(node.getName().toString(), pgTypes);
             List<Expression> arguments = node.getArguments().stream()
                     .map(argument -> visitAndCast(argument, context))
