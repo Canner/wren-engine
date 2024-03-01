@@ -25,6 +25,7 @@ import io.accio.base.type.DateType;
 import io.accio.base.type.DoubleType;
 import io.accio.base.type.IntervalType;
 import io.accio.base.type.NumericType;
+import io.accio.base.type.PGArray;
 import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
 import io.accio.base.type.RecordType;
@@ -352,7 +353,11 @@ public class ExpressionTypeAnalyzer
     {
         process(node.getBase(), context);
         if (result != null) {
-            result = PGTypes.getArrayType(result.oid());
+            int oid = result.oid();
+            if (result instanceof PGArray) {
+                oid = ((PGArray) result).getInnerType().oid();
+            }
+            result = PGTypes.getArrayType(oid);
         }
         return null;
     }
