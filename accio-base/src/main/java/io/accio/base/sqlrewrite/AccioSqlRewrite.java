@@ -16,6 +16,7 @@ package io.accio.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
@@ -294,7 +295,7 @@ public class AccioSqlRewrite
         // the model is added in with query, and the catalog and schema should be removed
         private Node applyModelRule(Table table)
         {
-            return new Table(QualifiedName.of(table.getName().getSuffix()));
+            return new Table(QualifiedName.of(ImmutableList.of(Iterables.getLast(table.getName().getOriginalParts()))));
         }
     }
 
