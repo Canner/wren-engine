@@ -179,7 +179,7 @@ public class TestMetricViewSqlRewrite
                                 "   , \"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
-                                "     Album\n" +
+                                "     \"Album\"\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ")  Collection"
                 },
@@ -198,7 +198,7 @@ public class TestMetricViewSqlRewrite
                                 "   , \"name\" \"album_name\"\n" +
                                 "   , sum(price) \"price\"\n" +
                                 "   FROM\n" +
-                                "     Album\n" +
+                                "     \"Album\"\n" +
                                 "   GROUP BY 1, 2, 3\n" +
                                 ")  Collection"
                 },
