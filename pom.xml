@@ -71,7 +71,6 @@
     <modules>
         <module>accio-base</module>
         <module>accio-cache</module>
-        <module>accio-connector-client</module>
         <module>accio-main</module>
         <module>accio-server</module>
         <module>accio-shaded</module>
@@ -307,12 +306,6 @@
             <dependency>
                 <groupId>io.accio</groupId>
                 <artifactId>accio-cache</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-connector-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

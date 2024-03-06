@@ -121,11 +121,6 @@
 
         <dependency>
             <groupId>io.accio</groupId>
-            <artifactId>accio-connector-client</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.accio</groupId>
             <artifactId>accio-main</artifactId>
         </dependency>
 
