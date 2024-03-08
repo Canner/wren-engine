@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.main;
+package io.accio.base.config;
 
 import io.airlift.configuration.Config;
 
@@ -23,6 +23,11 @@ import java.util.Optional;
 
 public class AccioConfig
 {
+    public static final String ACCIO_FILE = "accio.file";
+    public static final String ACCIO_DIRECTORY = "accio.directory";
+    public static final String ACCIO_DATASOURCE_TYPE = "accio.datasource.type";
+    public static final String ACCIO_ENABLE_DYNAMIC_FIELDS = "accio.experimental-enable-dynamic-fields";
+
     public enum DataSourceType
     {
         BIGQUERY,
@@ -43,7 +48,7 @@ public class AccioConfig
     }
 
     @Deprecated
-    @Config("accio.file")
+    @Config(ACCIO_FILE)
     public AccioConfig setAccioMDLFile(File accioMDLFile)
     {
         this.accioMDLFile = accioMDLFile;
@@ -56,20 +61,19 @@ public class AccioConfig
         return accioMDLDirectory;
     }
 
-    @Config("accio.directory")
+    @Config(ACCIO_DIRECTORY)
     public AccioConfig setAccioMDLDirectory(File accioMDLDirectory)
     {
         this.accioMDLDirectory = accioMDLDirectory;
         return this;
     }
 
-    @NotNull
     public DataSourceType getDataSourceType()
     {
         return dataSourceType;
     }
 
-    @Config("accio.datasource.type")
+    @Config(ACCIO_DATASOURCE_TYPE)
     public AccioConfig setDataSourceType(DataSourceType dataSourceType)
     {
         this.dataSourceType = dataSourceType;
@@ -81,7 +85,7 @@ public class AccioConfig
         return enableDynamicFields;
     }
 
-    @Config("accio.experimental-enable-dynamic-fields")
+    @Config(ACCIO_ENABLE_DYNAMIC_FIELDS)
     public AccioConfig setEnableDynamicFields(boolean enableDynamicFields)
     {
         this.enableDynamicFields = enableDynamicFields;

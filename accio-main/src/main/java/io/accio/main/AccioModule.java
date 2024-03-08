@@ -16,6 +16,7 @@ package io.accio.main;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
+import io.accio.base.config.AccioConfig;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;

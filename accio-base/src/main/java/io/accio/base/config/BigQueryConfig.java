@@ -11,7 +11,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.accio.main.connector.bigquery;
+
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.accio.base.config;
 
 import io.airlift.configuration.Config;
 import io.airlift.configuration.ConfigDescription;
@@ -24,6 +38,13 @@ import java.util.Optional;
 
 public class BigQueryConfig
 {
+    public static final String BIGQUERY_CRENDITALS_KEY = "bigquery.credentials-key";
+    public static final String BIGQUERY_CRENDITALS_FILE = "bigquery.credentials-file";
+    public static final String BIGQUERY_PROJECT_ID = "bigquery.project-id";
+    public static final String BIGQUERY_PARENT_PROJECT_ID = "bigquery.parent-project-id";
+    public static final String BIGQUERY_LOCATION = "bigquery.location";
+    public static final String BIGQUERY_BUCKET_NAME = "bigquery.bucket-name";
+    public static final String BIGQUERY_METADATA_SCHEMA_PREFIX = "bigquery.metadata.schema.prefix";
     private Optional<String> credentialsKey = Optional.empty();
     private Optional<String> credentialsFile = Optional.empty();
     private Optional<String> projectId = Optional.empty();
@@ -39,12 +60,12 @@ public class BigQueryConfig
         return credentialsKey;
     }
 
-    @Config("bigquery.credentials-key")
+    @Config(BIGQUERY_CRENDITALS_KEY)
     @ConfigDescription("The base64 encoded credentials key")
     @ConfigSecuritySensitive
     public BigQueryConfig setCredentialsKey(String credentialsKey)
     {
-        this.credentialsKey = Optional.of(credentialsKey);
+        this.credentialsKey = Optional.ofNullable(credentialsKey);
         return this;
     }
 
@@ -53,11 +74,11 @@ public class BigQueryConfig
         return credentialsFile;
     }
 
-    @Config("bigquery.credentials-file")
+    @Config(BIGQUERY_CRENDITALS_FILE)
     @ConfigDescription("The path to the JSON credentials file")
     public BigQueryConfig setCredentialsFile(String credentialsFile)
     {
-        this.credentialsFile = Optional.of(credentialsFile);
+        this.credentialsFile = Optional.ofNullable(credentialsFile);
         return this;
     }
 
@@ -66,11 +87,11 @@ public class BigQueryConfig
         return projectId;
     }
 
-    @Config("bigquery.project-id")
+    @Config(BIGQUERY_PROJECT_ID)
     @ConfigDescription("The Google Cloud Project ID where the data reside")
     public BigQueryConfig setProjectId(String projectId)
     {
-        this.projectId = Optional.of(projectId);
+        this.projectId = Optional.ofNullable(projectId);
         return this;
     }
 
@@ -79,11 +100,11 @@ public class BigQueryConfig
         return parentProjectId;
     }
 
-    @Config("bigquery.parent-project-id")
+    @Config(BIGQUERY_PARENT_PROJECT_ID)
     @ConfigDescription("The Google Cloud Project ID to bill for the export")
     public BigQueryConfig setParentProjectId(String parentProjectId)
     {
-        this.parentProjectId = Optional.of(parentProjectId);
+        this.parentProjectId = Optional.ofNullable(parentProjectId);
         return this;
     }
 
@@ -92,11 +113,11 @@ public class BigQueryConfig
         return location;
     }
 
-    @Config("bigquery.location")
+    @Config(BIGQUERY_LOCATION)
     @ConfigDescription("The Google Cloud Project ID where the data reside")
     public BigQueryConfig setLocation(String location)
     {
-        this.location = Optional.of(location);
+        this.location = Optional.ofNullable(location);
         return this;
     }
 
@@ -105,11 +126,11 @@ public class BigQueryConfig
         return bucketName;
     }
 
-    @Config("bigquery.bucket-name")
+    @Config(BIGQUERY_BUCKET_NAME)
     @ConfigDescription("The Google Cloud bucket name used to temporarily store the metric cached results")
     public BigQueryConfig setBucketName(String bucketName)
     {
-        this.bucketName = Optional.of(bucketName);
+        this.bucketName = Optional.ofNullable(bucketName);
         return this;
     }
 
@@ -119,7 +140,7 @@ public class BigQueryConfig
         return metadataSchemaPrefix;
     }
 
-    @Config("bigquery.metadata.schema.prefix")
+    @Config(BIGQUERY_METADATA_SCHEMA_PREFIX)
     @ConfigDescription("Accio needs to create two schemas in BigQuery: accio_temp, pg_catalog. This is a config to add a prefix to the names of these two schemas if it's set.")
     public BigQueryConfig setMetadataSchemaPrefix(String metadataSchemaPrefix)
     {

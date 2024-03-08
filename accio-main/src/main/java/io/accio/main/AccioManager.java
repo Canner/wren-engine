@@ -17,6 +17,7 @@ package io.accio.main;
 import io.accio.base.AccioException;
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.dto.Manifest;
 import io.accio.cache.CacheManager;
 import io.accio.main.pgcatalog.PgCatalogManager;

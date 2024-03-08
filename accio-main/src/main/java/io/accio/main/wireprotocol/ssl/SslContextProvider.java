@@ -16,7 +16,7 @@ package io.accio.main.wireprotocol.ssl;
 
 import com.google.inject.Inject;
 import io.accio.base.AccioException;
-import io.accio.main.PostgresWireProtocolConfig;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.airlift.log.Logger;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ClientAuth;

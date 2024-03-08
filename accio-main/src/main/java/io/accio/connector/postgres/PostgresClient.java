@@ -21,6 +21,7 @@ import io.accio.base.AccioException;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.Client;
+import io.accio.base.config.PostgresConfig;
 import io.accio.base.metadata.ColumnMetadata;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.metadata.TableMetadata;
