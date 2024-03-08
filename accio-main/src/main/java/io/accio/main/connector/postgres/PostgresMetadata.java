@@ -21,6 +21,7 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
+import io.accio.connector.StorageClient;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresRecordIterator;
 import io.accio.main.metadata.Metadata;
@@ -179,5 +180,14 @@ public class PostgresMetadata
     public String getPgCatalogName()
     {
         return PG_CATALOG_NAME;
+    }
+
+    @Override
+    public void reloadConfig() {}
+
+    @Override
+    public StorageClient getCacheStorageClient()
+    {
+        throw new UnsupportedOperationException("Postgres does not support cache storage client");
     }
 }

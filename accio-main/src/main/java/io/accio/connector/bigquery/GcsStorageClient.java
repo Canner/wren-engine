@@ -19,6 +19,7 @@ import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import io.accio.connector.StorageClient;
 
 import javax.inject.Inject;
 
@@ -27,6 +28,7 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 public class GcsStorageClient
+        implements StorageClient
 {
     private final Storage storage;
 

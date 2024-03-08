@@ -17,6 +17,7 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.connector.StorageClient;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -50,4 +51,8 @@ public interface Metadata
     String getMetadataSchemaName();
 
     String getPgCatalogName();
+
+    void reloadConfig();
+
+    StorageClient getCacheStorageClient();
 }

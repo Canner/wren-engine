@@ -13,12 +13,13 @@
  */
 package io.accio.testing.bigquery;
 
+import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.api.gax.rpc.HeaderProvider;
+import io.accio.base.config.BigQueryConfig;
+import io.accio.base.config.ConfigManager;
 import io.accio.cache.PathInfo;
-import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.connector.bigquery.BigQueryCacheService;
-import io.accio.main.connector.bigquery.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryCredentialsSupplier;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
 import org.testng.annotations.Test;
@@ -26,10 +27,7 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 
 import static io.accio.main.connector.bigquery.BigQueryCacheService.getTableLocationPrefix;
-import static io.accio.server.module.BigQueryConnectorModule.createHeaderProvider;
-import static io.accio.server.module.BigQueryConnectorModule.provideBigQuery;
-import static io.accio.server.module.BigQueryConnectorModule.provideBigQueryCredentialsSupplier;
-import static io.accio.server.module.BigQueryConnectorModule.provideGcsStorageClient;
+import static io.accio.main.connector.bigquery.BigQueryMetadata.provideGcsStorageClient;
 import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -72,12 +70,18 @@ public class TestBigQueryCacheService
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .setBucketName(getenv("TEST_BIG_QUERY_BUCKET_NAME"));
-        BigQueryCredentialsSupplier bigQueryCredentialsSupplier = provideBigQueryCredentialsSupplier(bigQueryConfig);
-        HeaderProvider headerProvider = createHeaderProvider();
-        BigQueryClient bigQueryClient = provideBigQuery(bigQueryConfig, headerProvider, bigQueryCredentialsSupplier);
+        BigQueryCredentialsSupplier bigQueryCredentialsSupplier = new BigQueryCredentialsSupplier(bigQueryConfig.getCredentialsKey(), bigQueryConfig.getCredentialsFile());
+        HeaderProvider headerProvider = FixedHeaderProvider.create("user-agent", "accio/1");
+        ConfigManager configManager = new ConfigManager(
+                null,
+                null,
+                bigQueryConfig,
+                null,
+                null,
+                null);
         gcsStorageClient = provideGcsStorageClient(bigQueryConfig, headerProvider, bigQueryCredentialsSupplier);
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, bigQueryConfig);
-        this.bigQueryCacheService = new BigQueryCacheService(bigQueryMetadata, bigQueryConfig, gcsStorageClient);
+        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
+        this.bigQueryCacheService = new BigQueryCacheService(bigQueryMetadata, bigQueryConfig);
     }
 
     @Test

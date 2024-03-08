@@ -19,7 +19,6 @@ import com.google.inject.Scopes;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheService;
 import io.accio.connector.postgres.PostgresClient;
-import io.accio.connector.postgres.PostgresConfig;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.connector.postgres.PostgresCacheService;
 import io.accio.main.connector.postgres.PostgresMetadata;
@@ -36,8 +35,6 @@ import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
-import static io.airlift.configuration.ConfigBinder.configBinder;
-
 public class PostgresConnectorModule
         extends AbstractConfigurationAwareModule
 {
@@ -53,7 +50,5 @@ public class PostgresConnectorModule
         binder.bind(CacheService.class).to(PostgresCacheService.class).in(Scopes.SINGLETON);
         binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
-
-        configBinder(binder).bindConfig(PostgresConfig.class);
     }
 }

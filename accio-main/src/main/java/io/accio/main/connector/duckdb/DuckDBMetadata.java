@@ -25,6 +25,7 @@ import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.type.VarcharType;
 import io.accio.cache.DuckdbRecordIterator;
+import io.accio.connector.StorageClient;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
@@ -165,5 +166,14 @@ public class DuckDBMetadata
     public SqlConverter getSqlConverter()
     {
         return sqlConverter;
+    }
+
+    @Override
+    public void reloadConfig() {}
+
+    @Override
+    public StorageClient getCacheStorageClient()
+    {
+        throw new UnsupportedOperationException("DuckDB does not support cache storage");
     }
 }

@@ -16,9 +16,9 @@ package io.accio.server.module;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
+import io.accio.base.config.PostgresConfig;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheService;
-import io.accio.connector.postgres.PostgresConfig;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.connector.duckdb.DuckDBSqlConverter;
 import io.accio.main.connector.postgres.PostgresCacheService;

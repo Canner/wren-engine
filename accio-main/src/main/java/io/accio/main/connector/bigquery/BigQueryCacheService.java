@@ -14,9 +14,9 @@
 package io.accio.main.connector.bigquery;
 
 import io.accio.base.AccioException;
+import io.accio.base.config.BigQueryConfig;
 import io.accio.cache.CacheService;
 import io.accio.cache.PathInfo;
-import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.metadata.Metadata;
 
 import javax.inject.Inject;
@@ -45,18 +45,15 @@ public class BigQueryCacheService
 
     private final Optional<String> bucketName;
     private final Metadata metadata;
-    private final GcsStorageClient gcsStorageClient;
 
     @Inject
     public BigQueryCacheService(
             Metadata metadata,
-            BigQueryConfig bigQueryConfig,
-            GcsStorageClient gcsStorageClient)
+            BigQueryConfig bigQueryConfig)
     {
         requireNonNull(bigQueryConfig, "bigQueryConfig is null");
         this.bucketName = bigQueryConfig.getBucketName();
         this.metadata = requireNonNull(metadata, "metadata is null");
-        this.gcsStorageClient = requireNonNull(gcsStorageClient, "gcsStorageClient is null");
     }
 
     @Override
@@ -85,7 +82,7 @@ public class BigQueryCacheService
     public void deleteTarget(PathInfo pathInfo)
     {
         getTableLocationPrefix(pathInfo.getPath())
-                .ifPresent(prefix -> gcsStorageClient.cleanFolders(getRequiredBucketName(), prefix));
+                .ifPresent(prefix -> metadata.getCacheStorageClient().cleanFolders(getRequiredBucketName(), prefix));
     }
 
     public static Optional<String> getTableLocationPrefix(String path)

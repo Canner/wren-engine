@@ -14,23 +14,11 @@
 
 package io.accio.server.module;
 
-import com.google.api.gax.rpc.FixedHeaderProvider;
-import com.google.api.gax.rpc.HeaderProvider;
-import com.google.auth.Credentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.storage.StorageOptions;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheService;
-import io.accio.connector.bigquery.BigQueryClient;
-import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.connector.bigquery.BigQueryCacheService;
-import io.accio.main.connector.bigquery.BigQueryConfig;
-import io.accio.main.connector.bigquery.BigQueryCredentialsSupplier;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
 import io.accio.main.connector.bigquery.BigQuerySqlConverter;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
@@ -46,10 +34,6 @@ import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
-import java.util.Optional;
-
-import static io.airlift.configuration.ConfigBinder.configBinder;
-
 public class BigQueryConnectorModule
         extends AbstractConfigurationAwareModule
 {
@@ -63,64 +47,6 @@ public class BigQueryConnectorModule
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
         binder.bind(SqlConverter.class).to(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
         binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
-
-        configBinder(binder).bindConfig(BigQueryConfig.class);
-
         binder.bind(CacheService.class).to(BigQueryCacheService.class).in(Scopes.SINGLETON);
-    }
-
-    @Provides
-    @Singleton
-    public static BigQueryClient provideBigQuery(BigQueryConfig config, HeaderProvider headerProvider, BigQueryCredentialsSupplier bigQueryCredentialsSupplier)
-    {
-        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
-        BigQueryOptions.Builder options = BigQueryOptions.newBuilder()
-                .setHeaderProvider(headerProvider)
-                .setProjectId(billingProjectId)
-                .setLocation(config.getLocation().orElse(null));
-        // set credentials of provided
-        bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
-        return new BigQueryClient(options.build().getService());
-    }
-
-    @Provides
-    @Singleton
-    public static BigQueryCredentialsSupplier provideBigQueryCredentialsSupplier(BigQueryConfig config)
-    {
-        return new BigQueryCredentialsSupplier(config.getCredentialsKey(), config.getCredentialsFile());
-    }
-
-    static String calculateBillingProjectId(Optional<String> configParentProjectId, Optional<Credentials> credentials)
-    {
-        // 1. Get from configuration
-        if (configParentProjectId.isPresent()) {
-            return configParentProjectId.get();
-        }
-        // 2. Get from the provided credentials, but only ServiceAccountCredentials contains the project id.
-        // All other credentials types (User, AppEngine, GCE, CloudShell, etc.) take it from the environment
-        if (credentials.isPresent() && credentials.get() instanceof ServiceAccountCredentials) {
-            return ((ServiceAccountCredentials) credentials.get()).getProjectId();
-        }
-        // 3. No configuration was provided, so get the default from the environment
-        return BigQueryOptions.getDefaultProjectId();
-    }
-
-    @Provides
-    @Singleton
-    public static HeaderProvider createHeaderProvider()
-    {
-        return FixedHeaderProvider.create("user-agent", "accio/1");
-    }
-
-    @Provides
-    @Singleton
-    public static GcsStorageClient provideGcsStorageClient(BigQueryConfig config, HeaderProvider headerProvider, BigQueryCredentialsSupplier bigQueryCredentialsSupplier)
-    {
-        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
-        StorageOptions.Builder options = StorageOptions.newBuilder()
-                .setHeaderProvider(headerProvider)
-                .setProjectId(billingProjectId);
-        bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
-        return new GcsStorageClient(options.build().getService());
     }
 }
