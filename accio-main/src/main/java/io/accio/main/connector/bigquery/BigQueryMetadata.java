@@ -48,6 +48,7 @@ import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.metadata.Metadata;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
+import org.jheaps.annotations.VisibleForTesting;
 
 import javax.inject.Inject;
 
@@ -229,6 +230,12 @@ public class BigQueryMetadata
         return queryStatistics.getSchema().getFields().stream()
                 .map(field -> new Column(field.getName(), BigQueryType.toPGType(field)))
                 .collect(toImmutableList());
+    }
+
+    @VisibleForTesting
+    public void dropTable(SchemaTableName schemaTableName)
+    {
+        bigQueryClient.dropTable(schemaTableName);
     }
 
     @Override

@@ -16,11 +16,11 @@ package io.accio.testing.bigquery;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.inject.Key;
 import io.accio.base.metadata.SchemaTableName;
-import io.accio.connector.bigquery.BigQueryClient;
+import io.accio.main.connector.bigquery.BigQueryMetadata;
+import io.accio.main.metadata.Metadata;
 import io.airlift.log.Logger;
 import org.postgresql.core.BaseConnection;
 import org.postgresql.jdbc.PgArray;
@@ -50,7 +50,7 @@ public class TestBigQueryType
 {
     private static final Logger LOG = Logger.get(TestBigQueryType.class);
     private SchemaTableName testSchemaTableName;
-    private BigQueryClient bigQueryClient;
+    private BigQueryMetadata bigQueryMetadata;
     private Multimap<DataType, TypeCase> testCases;
     private BaseConnection pgConnection;
 
@@ -78,7 +78,7 @@ public class TestBigQueryType
     protected void prepare()
     {
         testSchemaTableName = new SchemaTableName("cml_temp", "test_bigquery_type_" + currentTimeMillis());
-        bigQueryClient = getInstance(Key.get(BigQueryClient.class));
+        bigQueryMetadata = (BigQueryMetadata) getInstance(Key.get(Metadata.class));
         try {
             pgConnection = (BaseConnection) createConnection();
             testCases = initTestcases();
@@ -95,7 +95,7 @@ public class TestBigQueryType
         super.cleanup();
         try {
             pgConnection.close();
-            bigQueryClient.dropTable(testSchemaTableName);
+            bigQueryMetadata.dropTable(testSchemaTableName);
         }
         catch (Exception e) {
             LOG.error(e);
@@ -171,12 +171,12 @@ public class TestBigQueryType
         // CREATE TABLE table_name (column_name1 data_type1, column_name2 data_type2, ...);
         String createTableQuery = format("CREATE TABLE %s (%s)", testSchemaTableName, columnType);
         LOG.info("[Input sql]: %s", createTableQuery);
-        bigQueryClient.query(createTableQuery, ImmutableList.of());
+        bigQueryMetadata.directDDL(createTableQuery);
 
         // INSERT INTO table_name VALUES (value1, value2, value3, ...);
         String insertTableQuery = format("INSERT INTO %s VALUES (%s)", testSchemaTableName, columnValue);
         LOG.info("[Input sql]: %s", insertTableQuery);
-        bigQueryClient.query(insertTableQuery, ImmutableList.of());
+        bigQueryMetadata.directDDL(insertTableQuery);
     }
 
     @Test
