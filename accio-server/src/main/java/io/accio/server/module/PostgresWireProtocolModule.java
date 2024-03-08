@@ -16,9 +16,10 @@ package io.accio.server.module;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
+import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.cache.ExtraRewriter;
 import io.accio.main.PostgresNettyProvider;
-import io.accio.main.PostgresWireProtocolConfig;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
 import io.accio.main.wireprotocol.PgWireProtocolExtraRewriter;
@@ -53,5 +54,6 @@ public class PostgresWireProtocolModule
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
         // for cache extra rewrite
         binder.bind(ExtraRewriter.class).to(PgWireProtocolExtraRewriter.class).in(Scopes.SINGLETON);
+        binder.bind(ConfigManager.class).in(Scopes.SINGLETON);
     }
 }
