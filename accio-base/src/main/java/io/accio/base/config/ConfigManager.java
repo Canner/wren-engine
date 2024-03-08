@@ -44,6 +44,24 @@ import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STOR
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_REGION;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_SECRET_KEY;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_URL_STYLE;
+import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
+import static io.accio.base.config.AccioConfig.ACCIO_DIRECTORY;
+import static io.accio.base.config.AccioConfig.ACCIO_ENABLE_DYNAMIC_FIELDS;
+import static io.accio.base.config.AccioConfig.ACCIO_FILE;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_BUCKET_NAME;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_FILE;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_LOCATION;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_PARENT_PROJECT_ID;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_PROJECT_ID;
+import static io.accio.base.config.PostgresConfig.POSTGRES_JDBC_URL;
+import static io.accio.base.config.PostgresConfig.POSTGRES_PASSWORD;
+import static io.accio.base.config.PostgresConfig.POSTRES_USER;
+import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE;
+import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT;
+import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
+import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.util.stream.Collectors.toList;
 
@@ -91,10 +109,10 @@ public class ConfigManager
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
-        initConfig(AccioConfig.ACCIO_FILE, accioConfig.getAccioMDLFile().map(File::getAbsolutePath).orElse(null));
-        initConfig(AccioConfig.ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath());
-        initConfig(AccioConfig.ACCIO_DATASOURCE_TYPE, Optional.ofNullable(accioConfig.getDataSourceType()).map(Enum::name).orElse(null));
-        initConfig(AccioConfig.ACCIO_ENABLE_DYNAMIC_FIELDS, Boolean.toString(accioConfig.getEnableDynamicFields()));
+        initConfig(ACCIO_FILE, accioConfig.getAccioMDLFile().map(File::getAbsolutePath).orElse(null));
+        initConfig(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath());
+        initConfig(ACCIO_DATASOURCE_TYPE, Optional.ofNullable(accioConfig.getDataSourceType()).map(Enum::name).orElse(null));
+        initConfig(ACCIO_ENABLE_DYNAMIC_FIELDS, Boolean.toString(accioConfig.getEnableDynamicFields()));
         initConfig(DUCKDB_STORAGE_ENDPOINT, duckdbS3StyleStorageConfig.getEndpoint());
         initConfig(DUCKDB_STORAGE_ACCESS_KEY, duckdbS3StyleStorageConfig.getAccessKey().orElse(null));
         initConfig(DUCKDB_STORAGE_SECRET_KEY, duckdbS3StyleStorageConfig.getSecretKey().orElse(null));
@@ -107,20 +125,20 @@ public class ConfigManager
         initConfig(DUCKDB_MAX_CONCURRENT_QUERIES, Integer.toString(duckDBConfig.getMaxConcurrentMetadataQueries()));
         initConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, Long.toString(duckDBConfig.getMaxCacheQueryTimeout()));
         initConfig(DUCKDB_CACHE_TASK_RETRY_DELAY, Long.toString(duckDBConfig.getCacheTaskRetryDelay()));
-        initConfig(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT, postgresWireProtocolConfig.getPort());
-        initConfig(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED, Boolean.toString(postgresWireProtocolConfig.isSslEnable()));
-        initConfig(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT, Integer.toString(postgresWireProtocolConfig.getNettyThreadCount()));
-        initConfig(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE, postgresWireProtocolConfig.getAuthFile().getPath());
-        initConfig(BigQueryConfig.BIGQUERY_CRENDITALS_KEY, bigQueryConfig.getCredentialsKey().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_CRENDITALS_FILE, bigQueryConfig.getCredentialsFile().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_PROJECT_ID, bigQueryConfig.getProjectId().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_PARENT_PROJECT_ID, bigQueryConfig.getParentProjectId().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_LOCATION, bigQueryConfig.getLocation().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null));
-        initConfig(BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix());
-        initConfig(PostgresConfig.POSTGRES_JDBC_URL, postgresConfig.getJdbcUrl());
-        initConfig(PostgresConfig.POSTRES_USER, postgresConfig.getUser());
-        initConfig(PostgresConfig.POSTGRES_PASSWORD, postgresConfig.getPassword());
+        initConfig(PG_WIRE_PROTOCOL_PORT, postgresWireProtocolConfig.getPort());
+        initConfig(PG_WIRE_PROTOCOL_SSL_ENABLED, Boolean.toString(postgresWireProtocolConfig.isSslEnable()));
+        initConfig(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT, Integer.toString(postgresWireProtocolConfig.getNettyThreadCount()));
+        initConfig(PG_WIRE_PROTOCOL_AUTH_FILE, postgresWireProtocolConfig.getAuthFile().getPath());
+        initConfig(BIGQUERY_CRENDITALS_KEY, bigQueryConfig.getCredentialsKey().orElse(null));
+        initConfig(BIGQUERY_CRENDITALS_FILE, bigQueryConfig.getCredentialsFile().orElse(null));
+        initConfig(BIGQUERY_PROJECT_ID, bigQueryConfig.getProjectId().orElse(null));
+        initConfig(BIGQUERY_PARENT_PROJECT_ID, bigQueryConfig.getParentProjectId().orElse(null));
+        initConfig(BIGQUERY_LOCATION, bigQueryConfig.getLocation().orElse(null));
+        initConfig(BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null));
+        initConfig(BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix());
+        initConfig(POSTGRES_JDBC_URL, postgresConfig.getJdbcUrl());
+        initConfig(POSTRES_USER, postgresConfig.getUser());
+        initConfig(POSTGRES_PASSWORD, postgresConfig.getPassword());
     }
 
     private void initConfig(String key, String value)
@@ -139,10 +157,10 @@ public class ConfigManager
         if (config == AccioConfig.class) {
             return (T) accioConfig.orElseGet(() -> {
                 AccioConfig result = new AccioConfig();
-                result.setAccioMDLFile(new File(configs.get(AccioConfig.ACCIO_FILE)));
-                result.setAccioMDLDirectory(new File(configs.get(AccioConfig.ACCIO_DIRECTORY)));
-                result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(AccioConfig.ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
-                result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(AccioConfig.ACCIO_ENABLE_DYNAMIC_FIELDS)));
+                result.setAccioMDLFile(new File(configs.get(ACCIO_FILE)));
+                result.setAccioMDLDirectory(new File(configs.get(ACCIO_DIRECTORY)));
+                result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
+                result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(ACCIO_ENABLE_DYNAMIC_FIELDS)));
                 accioConfig = Optional.of(result);
                 return result;
             });
@@ -150,13 +168,13 @@ public class ConfigManager
         if (config == BigQueryConfig.class) {
             return (T) bigQueryConfig.orElseGet(() -> {
                 BigQueryConfig result = new BigQueryConfig();
-                result.setCredentialsKey(configs.get(BigQueryConfig.BIGQUERY_CRENDITALS_KEY));
-                result.setCredentialsFile(configs.get(BigQueryConfig.BIGQUERY_CRENDITALS_FILE));
-                result.setProjectId(configs.get(BigQueryConfig.BIGQUERY_PROJECT_ID));
-                result.setParentProjectId(configs.get(BigQueryConfig.BIGQUERY_PARENT_PROJECT_ID));
-                result.setLocation(configs.get(BigQueryConfig.BIGQUERY_LOCATION));
-                result.setBucketName(configs.get(BigQueryConfig.BIGQUERY_BUCKET_NAME));
-                result.setMetadataSchemaPrefix(configs.get(BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX));
+                result.setCredentialsKey(configs.get(BIGQUERY_CRENDITALS_KEY));
+                result.setCredentialsFile(configs.get(BIGQUERY_CRENDITALS_FILE));
+                result.setProjectId(configs.get(BIGQUERY_PROJECT_ID));
+                result.setParentProjectId(configs.get(BIGQUERY_PARENT_PROJECT_ID));
+                result.setLocation(configs.get(BIGQUERY_LOCATION));
+                result.setBucketName(configs.get(BIGQUERY_BUCKET_NAME));
+                result.setMetadataSchemaPrefix(configs.get(BIGQUERY_METADATA_SCHEMA_PREFIX));
                 bigQueryConfig = Optional.of(result);
                 return result;
             });
@@ -164,9 +182,9 @@ public class ConfigManager
         if (config == PostgresConfig.class) {
             return (T) postgresConfig.orElseGet(() -> {
                 PostgresConfig result = new PostgresConfig();
-                result.setJdbcUrl(configs.get(PostgresConfig.POSTGRES_JDBC_URL));
-                result.setUser(configs.get(PostgresConfig.POSTRES_USER));
-                result.setPassword(configs.get(PostgresConfig.POSTGRES_PASSWORD));
+                result.setJdbcUrl(configs.get(POSTGRES_JDBC_URL));
+                result.setUser(configs.get(POSTRES_USER));
+                result.setPassword(configs.get(POSTGRES_PASSWORD));
                 postgresConfig = Optional.of(result);
                 return result;
             });
@@ -188,10 +206,10 @@ public class ConfigManager
         if (config == PostgresWireProtocolConfig.class) {
             return (T) postgresWireProtocolConfig.orElseGet(() -> {
                 PostgresWireProtocolConfig result = new PostgresWireProtocolConfig();
-                result.setPort(configs.get(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT));
-                result.setSslEnable(Boolean.parseBoolean(configs.get(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED)));
-                result.setNettyThreadCount(Integer.parseInt(configs.get(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
-                result.setAuthFile(new File(configs.get(PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE)));
+                result.setPort(configs.get(PG_WIRE_PROTOCOL_PORT));
+                result.setSslEnable(Boolean.parseBoolean(configs.get(PG_WIRE_PROTOCOL_SSL_ENABLED)));
+                result.setNettyThreadCount(Integer.parseInt(configs.get(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
+                result.setAuthFile(new File(configs.get(PG_WIRE_PROTOCOL_AUTH_FILE)));
                 postgresWireProtocolConfig = Optional.of(result);
                 return result;
             });
