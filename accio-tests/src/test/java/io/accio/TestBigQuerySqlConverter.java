@@ -16,8 +16,13 @@ package io.accio;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.config.BigQueryConfig;
 import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresConfig;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.dto.Manifest;
 import io.accio.main.AccioMetastore;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
@@ -50,12 +55,12 @@ public class TestBigQuerySqlConverter
                 .setLocation("asia-east1");
 
         ConfigManager configManager = new ConfigManager(
-                null,
-                null,
+                new AccioConfig(),
+                new PostgresConfig(),
                 config,
-                null,
-                null,
-                null);
+                new DuckDBConfig(),
+                new PostgresWireProtocolConfig(),
+                new DuckdbS3StyleStorageConfig());
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
         AccioMetastore accioMetastore = new AccioMetastore();

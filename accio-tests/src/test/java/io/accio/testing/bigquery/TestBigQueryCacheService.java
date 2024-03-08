@@ -15,8 +15,13 @@ package io.accio.testing.bigquery;
 
 import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.api.gax.rpc.HeaderProvider;
+import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.config.BigQueryConfig;
 import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresConfig;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.cache.PathInfo;
 import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.connector.bigquery.BigQueryCacheService;
@@ -73,12 +78,12 @@ public class TestBigQueryCacheService
         BigQueryCredentialsSupplier bigQueryCredentialsSupplier = new BigQueryCredentialsSupplier(bigQueryConfig.getCredentialsKey(), bigQueryConfig.getCredentialsFile());
         HeaderProvider headerProvider = FixedHeaderProvider.create("user-agent", "accio/1");
         ConfigManager configManager = new ConfigManager(
-                null,
-                null,
+                new AccioConfig(),
+                new PostgresConfig(),
                 bigQueryConfig,
-                null,
-                null,
-                null);
+                new DuckDBConfig(),
+                new PostgresWireProtocolConfig(),
+                new DuckdbS3StyleStorageConfig());
         gcsStorageClient = provideGcsStorageClient(bigQueryConfig, headerProvider, bigQueryCredentialsSupplier);
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
         this.bigQueryCacheService = new BigQueryCacheService(bigQueryMetadata, bigQueryConfig);
