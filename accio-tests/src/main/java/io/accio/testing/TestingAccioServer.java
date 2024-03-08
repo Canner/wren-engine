@@ -22,12 +22,13 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.config.AccioConfig;
 import io.accio.cache.CacheModule;
-import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
+import io.accio.server.module.ConnectorConfigModule;
 import io.accio.server.module.DuckDBConnectorModule;
 import io.accio.server.module.PostgresConnectorModule;
 import io.accio.server.module.PostgresWireProtocolModule;
@@ -48,10 +49,10 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.accio.main.AccioConfig.DataSourceType.BIGQUERY;
-import static io.accio.main.AccioConfig.DataSourceType.DUCKDB;
-import static io.accio.main.AccioConfig.DataSourceType.POSTGRES;
-import static io.accio.main.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
+import static io.accio.base.config.AccioConfig.DataSourceType.BIGQUERY;
+import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
+import static io.accio.base.config.AccioConfig.DataSourceType.POSTGRES;
+import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 
 public class TestingAccioServer
@@ -89,7 +90,8 @@ public class TestingAccioServer
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(DUCKDB), new DuckDBConnectorModule()),
                 new AccioModule(),
                 new CacheModule(),
-                new WebModule()));
+                new WebModule(),
+                new ConnectorConfigModule()));
 
         injector = app
                 .doNotInitializeLogging()

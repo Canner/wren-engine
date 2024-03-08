@@ -16,12 +16,13 @@ package io.accio.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Module;
+import io.accio.base.config.AccioConfig;
 import io.accio.cache.CacheModule;
-import io.accio.main.AccioConfig;
 import io.accio.main.AccioModule;
 import io.accio.main.server.Server;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
+import io.accio.server.module.ConnectorConfigModule;
 import io.accio.server.module.PostgresConnectorModule;
 import io.accio.server.module.PostgresWireProtocolModule;
 import io.accio.server.module.WebModule;
@@ -31,8 +32,8 @@ import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
 
-import static io.accio.main.AccioConfig.DataSourceType.BIGQUERY;
-import static io.accio.main.AccioConfig.DataSourceType.POSTGRES;
+import static io.accio.base.config.AccioConfig.DataSourceType.BIGQUERY;
+import static io.accio.base.config.AccioConfig.DataSourceType.POSTGRES;
 import static io.airlift.configuration.ConditionalModule.conditionalModule;
 
 public class AccioServer
@@ -57,6 +58,7 @@ public class AccioServer
                 conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
                 new AccioModule(),
                 new CacheModule(),
-                new WebModule());
+                new WebModule(),
+                new ConnectorConfigModule());
     }
 }
