@@ -22,14 +22,13 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import io.accio.base.client.duckdb.DuckdbClient;
-import io.accio.base.config.AccioConfig;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioModule;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
-import io.accio.server.module.ConnectorConfigModule;
 import io.accio.server.module.DuckDBConnectorModule;
+import io.accio.server.module.MainModule;
 import io.accio.server.module.PostgresConnectorModule;
 import io.accio.server.module.PostgresWireProtocolModule;
 import io.accio.server.module.WebModule;
@@ -52,11 +51,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static io.accio.base.config.AccioConfig.DataSourceType.BIGQUERY;
-import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
-import static io.accio.base.config.AccioConfig.DataSourceType.POSTGRES;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
-import static io.airlift.configuration.ConditionalModule.conditionalModule;
 
 public class TestingAccioServer
         implements Closeable
@@ -87,14 +82,14 @@ public class TestingAccioServer
                 new JsonModule(),
                 new JaxrsModule(),
                 new EventModule(),
+                new MainModule(),
                 new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
-                conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(BIGQUERY), new BigQueryConnectorModule()),
-                conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(POSTGRES), new PostgresConnectorModule()),
-                conditionalModule(AccioConfig.class, config -> config.getDataSourceType().equals(DUCKDB), new DuckDBConnectorModule()),
+                new BigQueryConnectorModule(),
+                new PostgresConnectorModule(),
+                new DuckDBConnectorModule(),
                 new AccioModule(),
                 new CacheModule(),
-                new WebModule(),
-                new ConnectorConfigModule()));
+                new WebModule()));
 
         injector = app
                 .doNotInitializeLogging()
