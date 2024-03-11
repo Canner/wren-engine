@@ -38,7 +38,7 @@ public class AccioConfig
     @Deprecated
     private File accioMDLFile = new File("etc/mdl/manifest.json");
     private File accioMDLDirectory = new File("etc/mdl");
-    private DataSourceType dataSourceType;
+    private DataSourceType dataSourceType = DataSourceType.DUCKDB;
     private boolean enableDynamicFields;
 
     @Deprecated
