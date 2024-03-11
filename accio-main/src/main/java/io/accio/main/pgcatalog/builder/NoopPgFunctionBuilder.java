@@ -16,23 +16,14 @@ package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
 import io.accio.base.pgcatalog.function.PgFunction;
-import io.accio.main.metadata.Metadata;
-
-import javax.inject.Inject;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 
 public class NoopPgFunctionBuilder
-        extends PgFunctionBuilder
+        implements PgFunctionBuilder
 {
-    @Inject
-    public NoopPgFunctionBuilder(Metadata connector)
-    {
-        super(connector);
-    }
-
     @Override
-    protected String generateCreateFunction(PgFunction pgFunction)
+    public String generateCreateFunction(PgFunction pgFunction)
     {
         throw new AccioException(GENERIC_INTERNAL_ERROR, "Postgres no need to invoke this method");
     }

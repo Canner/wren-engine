@@ -18,8 +18,6 @@ import io.accio.base.AccioException;
 import io.accio.base.pgcatalog.function.PgFunction;
 import io.accio.main.metadata.Metadata;
 
-import javax.inject.Inject;
-
 import java.util.Locale;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
@@ -29,19 +27,17 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class BigQueryPgFunctionBuilder
-        extends PgFunctionBuilder
+        implements PgFunctionBuilder
 {
     private final String pgCatalogName;
 
-    @Inject
     public BigQueryPgFunctionBuilder(Metadata connector)
     {
-        super(connector);
         this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
     }
 
     @Override
-    protected String generateCreateFunction(PgFunction pgFunction)
+    public String generateCreateFunction(PgFunction pgFunction)
     {
         switch (pgFunction.getLanguage()) {
             case SQL:
