@@ -27,6 +27,8 @@ import io.accio.base.type.VarcharType;
 import io.accio.cache.DuckdbRecordIterator;
 import io.accio.connector.StorageClient;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.pgcatalog.builder.DuckDBFunctionBuilder;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
 
@@ -46,11 +48,13 @@ public class DuckDBMetadata
 {
     private final DuckdbClient duckdbClient;
     private final SqlConverter sqlConverter = new DuckDBSqlConverter();
+    private final PgFunctionBuilder pgFunctionBuilder;
 
     @Inject
     public DuckDBMetadata(DuckdbClient duckdbClient)
     {
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
+        this.pgFunctionBuilder = new DuckDBFunctionBuilder(this);
     }
 
     @Override
@@ -169,11 +173,23 @@ public class DuckDBMetadata
     }
 
     @Override
-    public void reloadConfig() {}
+    public void reload() {}
 
     @Override
     public StorageClient getCacheStorageClient()
     {
         throw new UnsupportedOperationException("DuckDB does not support cache storage");
+    }
+
+    @Override
+    public void close()
+    {
+        duckdbClient.close();
+    }
+
+    @Override
+    public PgFunctionBuilder getPgFunctionBuilder()
+    {
+        return pgFunctionBuilder;
     }
 }
