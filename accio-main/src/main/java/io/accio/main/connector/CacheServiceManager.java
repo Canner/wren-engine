@@ -1,0 +1,86 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.accio.main.connector;
+
+import io.accio.base.config.AccioConfig;
+import io.accio.base.config.ConfigManager;
+import io.accio.cache.CacheService;
+import io.accio.cache.PathInfo;
+import io.accio.main.connector.bigquery.BigQueryCacheService;
+import io.accio.main.connector.postgres.PostgresCacheService;
+
+import javax.inject.Inject;
+
+import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
+
+public final class CacheServiceManager
+        implements CacheService
+{
+    private final ConfigManager configManager;
+    private final BigQueryCacheService bigQueryCacheService;
+    private final PostgresCacheService postgresCacheService;
+    private AccioConfig.DataSourceType dataSourceType;
+    private CacheService delegate;
+
+    @Inject
+    public CacheServiceManager(
+            ConfigManager configManager,
+            BigQueryCacheService bigQueryCacheService,
+            PostgresCacheService postgresCacheService)
+    {
+        this.postgresCacheService = requireNonNull(postgresCacheService, "postgresCacheService is null");
+        this.bigQueryCacheService = requireNonNull(bigQueryCacheService, "bigQueryCacheService is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
+        this.dataSourceType = requireNonNull(configManager.getConfig(AccioConfig.class).getDataSourceType(), "dataSourceType is null");
+        changeDelegate(dataSourceType);
+    }
+
+    private void changeDelegate(AccioConfig.DataSourceType dataSourceType)
+    {
+        switch (dataSourceType) {
+            case BIGQUERY:
+                delegate = bigQueryCacheService;
+                break;
+            case POSTGRES:
+            case DUCKDB:
+                delegate = postgresCacheService;
+                break;
+            default:
+                throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
+        }
+    }
+
+    @Override
+    public Optional<PathInfo> createCache(String catalog, String schema, String name, String statement)
+    {
+        return delegate.createCache(catalog, schema, name, statement);
+    }
+
+    @Override
+    public void deleteTarget(PathInfo pathInfo)
+    {
+        delegate.deleteTarget(pathInfo);
+    }
+
+    public void reload()
+    {
+        if (dataSourceType != configManager.getConfig(AccioConfig.class).getDataSourceType()) {
+            dataSourceType = configManager.getConfig(AccioConfig.class).getDataSourceType();
+            changeDelegate(dataSourceType);
+        }
+    }
+}
