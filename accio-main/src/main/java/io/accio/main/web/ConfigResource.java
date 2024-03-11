@@ -15,6 +15,12 @@
 package io.accio.main.web;
 
 import io.accio.base.config.ConfigManager;
+import io.accio.base.sql.SqlConverter;
+import io.accio.cache.CacheService;
+import io.accio.main.connector.CacheServiceManager;
+import io.accio.main.metadata.Metadata;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilderManager;
+import io.accio.main.sql.SqlConverterManager;
 
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
@@ -36,11 +42,25 @@ import static java.util.Objects.requireNonNull;
 public class ConfigResource
 {
     private final ConfigManager configManager;
+    private final Metadata metadata;
+    private final SqlConverterManager sqlConverter;
+    private final CacheServiceManager cacheService;
+    private final PgFunctionBuilderManager pgFunctionBuilderManager;
 
     @Inject
-    public ConfigResource(ConfigManager configManager)
+    public ConfigResource(
+            ConfigManager configManager,
+            Metadata metadata,
+            SqlConverter sqlConverter,
+            CacheService cacheService,
+            PgFunctionBuilderManager pgFunctionBuilderManager)
+
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.sqlConverter = (SqlConverterManager) requireNonNull(sqlConverter, "sqlConverter is null");
+        this.cacheService = (CacheServiceManager) requireNonNull(cacheService, "cacheService is null");
+        this.pgFunctionBuilderManager = requireNonNull(pgFunctionBuilderManager, "pgFunctionBuilderManager is null");
     }
 
     @GET
@@ -80,7 +100,19 @@ public class ConfigResource
             @Suspended AsyncResponse asyncResponse)
     {
         CompletableFuture
-                .runAsync(() -> configManager.setConfigs(configEntries, false))
+                .runAsync(() -> {
+                    if (configManager.setConfigs(configEntries, false)) {
+                        reloadConfig();
+                    }
+                })
                 .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    private void reloadConfig()
+    {
+        metadata.reload();
+        sqlConverter.reload();
+        cacheService.reload();
+        pgFunctionBuilderManager.reload();
     }
 }
