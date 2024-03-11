@@ -2,6 +2,7 @@ package io.accio.cache;
 
 import io.accio.base.AccioException;
 import io.accio.base.client.AutoCloseableIterator;
+import io.accio.base.client.ForCache;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 
@@ -35,7 +36,7 @@ public class DuckdbTaskManager
     private final double cacheMemoryLimit;
 
     @Inject
-    public DuckdbTaskManager(DuckDBConfig duckDBConfig, DuckdbClient duckdbClient)
+    public DuckdbTaskManager(DuckDBConfig duckDBConfig, @ForCache DuckdbClient duckdbClient)
     {
         this.duckDBConfig = requireNonNull(duckDBConfig, "duckDBConfig is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");

@@ -21,7 +21,10 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.accio.base.client.ForCache;
+import io.accio.base.client.ForConnector;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.config.AccioConfig;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioModule;
 import io.accio.main.wireprotocol.PostgresNetty;
@@ -51,6 +54,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
 public class TestingAccioServer
@@ -97,7 +101,10 @@ public class TestingAccioServer
                 .quiet()
                 .initialize();
 
-        closer.register(() -> injector.getInstance(DuckdbClient.class).close());
+        closer.register(() -> injector.getInstance(Key.get(DuckdbClient.class, ForCache.class)).close());
+        if (injector.getInstance(AccioConfig.class).getDataSourceType().equals(DUCKDB)) {
+            closer.register(() -> injector.getInstance(Key.get(DuckdbClient.class, ForConnector.class)).close());
+        }
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }
 

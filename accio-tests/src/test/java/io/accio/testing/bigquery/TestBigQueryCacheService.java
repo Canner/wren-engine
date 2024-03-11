@@ -20,6 +20,7 @@ import io.accio.cache.CacheService;
 import io.accio.cache.PathInfo;
 import io.accio.main.connector.CacheServiceManager;
 import io.accio.main.metadata.Metadata;
+import io.accio.testing.AbstractCacheTest;
 import io.accio.testing.TestingAccioServer;
 import org.testng.annotations.Test;
 

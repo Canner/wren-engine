@@ -35,15 +35,19 @@ public class DuckDBDataSource
 {
     private final DuckDBConnection duckDBConnection;
     private final DuckDBConfig duckDBConfig;
-    private final DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig;
+    private final CacheStorageConfig cacheStorageConfig;
+    private final DuckDBConnectorConfig connectorConfig;
 
-    public DuckDBDataSource(DuckDBConnection duckDBConnection,
+    public DuckDBDataSource(
+            DuckDBConnection duckDBConnection,
             DuckDBConfig duckDBConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
+            CacheStorageConfig cacheStorageConfig,
+            DuckDBConnectorConfig connectorConfig)
     {
         this.duckDBConnection = duckDBConnection;
         this.duckDBConfig = duckDBConfig;
-        this.duckdbS3StyleStorageConfig = duckdbS3StyleStorageConfig;
+        this.cacheStorageConfig = cacheStorageConfig;
+        this.connectorConfig = connectorConfig;
     }
 
     @Override
@@ -66,8 +70,14 @@ public class DuckDBDataSource
         Statement statement = connection.createStatement();
         statement.execute("set search_path = 'main'");
         // init httpfs settings
-        statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
-        statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
+        if (cacheStorageConfig instanceof DuckdbS3StyleStorageConfig) {
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig = (DuckdbS3StyleStorageConfig) cacheStorageConfig;
+            statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
+            statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
+        }
+        if (connectorConfig != null && connectorConfig.getSessionSQL() != null) {
+            statement.execute(connectorConfig.getSessionSQL());
+        }
         statement.execute(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
         return connection;
     }

@@ -15,7 +15,11 @@
 package io.accio.server.module;
 
 import com.google.inject.Binder;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
+import io.accio.base.client.ForCache;
+import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.config.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryCacheService;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
@@ -39,9 +43,15 @@ public class BigQueryConnectorModule
         binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
         binder.bind(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
         binder.bind(BigQueryCacheService.class).in(Scopes.SINGLETON);
         binder.bind(BigQueryMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(BigQueryConfig.class);
+    }
+
+    @Provides
+    @Singleton
+    public static PgMetastore providePgMetastore(@ForCache DuckdbClient duckdbClient)
+    {
+        return new DuckDBMetadata(duckdbClient);
     }
 }

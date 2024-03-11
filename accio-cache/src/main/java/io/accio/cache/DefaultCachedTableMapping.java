@@ -14,6 +14,7 @@
 package io.accio.cache;
 
 import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.client.ForCache;
 import io.accio.base.client.duckdb.DuckdbClient;
 
 import javax.inject.Inject;
@@ -35,7 +36,7 @@ public class DefaultCachedTableMapping
     private final ConcurrentMap<CatalogSchemaTableName, CacheInfoPair> cachedTableMapping = new ConcurrentHashMap<>();
 
     @Inject
-    public DefaultCachedTableMapping(DuckdbClient duckdbClient)
+    public DefaultCachedTableMapping(@ForCache DuckdbClient duckdbClient)
     {
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
     }

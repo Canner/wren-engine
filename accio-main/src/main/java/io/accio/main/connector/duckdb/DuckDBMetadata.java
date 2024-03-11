@@ -192,4 +192,9 @@ public class DuckDBMetadata
     {
         return pgFunctionBuilder;
     }
+
+    public void reset()
+    {
+        duckdbClient.reset();
+    }
 }

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.accio.testing.bigquery;
+package io.accio.testing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,6 +20,7 @@ import io.accio.base.AccioMDL;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.AutoCloseableIterator;
+import io.accio.base.client.ForCache;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
 import io.accio.base.dto.Manifest;
@@ -30,7 +31,7 @@ import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
-import io.accio.testing.TestingAccioServer;
+import io.accio.testing.bigquery.AbstractWireProtocolTestWithBigQuery;
 import org.testng.annotations.BeforeClass;
 
 import java.nio.file.Files;
@@ -52,7 +53,7 @@ public abstract class AbstractCacheTest
 {
     protected final Supplier<CacheManager> cacheManager = () -> getInstance(Key.get(CacheManager.class));
     protected final Supplier<CachedTableMapping> cachedTableMapping = () -> getInstance(Key.get(CachedTableMapping.class));
-    protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class));
+    protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
 
     @Override
     protected TestingAccioServer createAccioServer()
@@ -116,10 +117,10 @@ public abstract class AbstractCacheTest
         }
     }
 
-    protected List<Object[]> queryBigQuery(String statement)
+    protected List<Object[]> queryByMetadata(String statement)
     {
-        Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
-        try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
+        Metadata metadata = getInstance(Key.get(Metadata.class));
+        try (ConnectorRecordIterator iterator = metadata.directQuery(statement, List.of())) {
             List<PGType> pgTypes = iterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {

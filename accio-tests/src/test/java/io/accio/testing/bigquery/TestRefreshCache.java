@@ -22,6 +22,7 @@ import io.accio.base.dto.CacheInfo;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
+import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.Test;
 
 import java.util.List;

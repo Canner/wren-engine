@@ -37,6 +37,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.dto.EnumValue.enumValue;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
@@ -53,7 +54,7 @@ public class TestMetricValidation
 
     public TestMetricValidation()
     {
-        client = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig());
+        client = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), Optional.empty());
         sample = AccioMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Flight",

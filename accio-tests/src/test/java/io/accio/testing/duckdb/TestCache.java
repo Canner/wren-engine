@@ -12,21 +12,26 @@
  * limitations under the License.
  */
 
-package io.accio.testing.bigquery;
+package io.accio.testing.duckdb;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
 import com.google.inject.Key;
 import io.accio.base.AccioMDL;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
 import io.accio.base.client.ForCache;
+import io.accio.base.client.ForConnector;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.sqlrewrite.CacheRewrite;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
+import io.accio.main.AccioManager;
 import io.accio.main.AccioMetastore;
 import io.accio.testing.AbstractCacheTest;
+import io.accio.testing.TestingAccioServer;
 import org.testng.annotations.Test;
 
 import java.sql.Connection;
@@ -39,11 +44,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
+import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
@@ -56,9 +64,69 @@ public class TestCache
     private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
     private final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
-            .setCatalog("canner-cml")
-            .setSchema("tpch_tiny")
+            .setCatalog(getDefaultCatalog())
+            .setSchema(getDefaultSchema())
             .build();
+
+    @Override
+    protected void prepare()
+    {
+        try {
+            initDuckDB(server());
+            // Refresh MDL after data loaded
+            String mdlJson = Resources.toString(requireNonNull(getClass().getClassLoader().getResource("duckdb/cache_mdl.json")).toURI().toURL(), UTF_8);
+            getInstance(Key.get(AccioManager.class)).deployAndArchive(AccioMDL.fromJson(mdlJson).getManifest(), "v1");
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void initDuckDB(TestingAccioServer accioServer)
+            throws Exception
+    {
+        ClassLoader classLoader = getClass().getClassLoader();
+        String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
+        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("duckdb/data")).getPath());
+        accioServer.getInstance(Key.get(DuckdbClient.class, ForConnector.class)).executeDDL(initSQL);
+    }
+
+    @Override
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+    }
+
+    @Override
+    protected String getDefaultCatalog()
+    {
+        return "memory";
+    }
+
+    @Override
+    protected String getDefaultSchema()
+    {
+        return "tpch";
+    }
+
+    @Override
+    protected ImmutableMap.Builder<String, String> getProperties()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("accio.datasource.type", DUCKDB.name());
+    }
+
+    @Override
+    protected Optional<CacheInfoPair> getDefaultCacheInfoPair(String name)
+    {
+        return Optional.ofNullable(cachedTableMapping.get().getCacheInfoPair(getDefaultCatalog(), getDefaultSchema(), name));
+    }
+
+    @Override
+    protected void cleanup()
+    {
+        // Do nothing
+    }
 
     @Test
     public void testCache()
@@ -78,27 +146,21 @@ public class TestCache
                 "     o_custkey\n" +
                 "   , sum(o_totalprice) revenue\n" +
                 "   FROM\n" +
-                "     `%s.%s.%s`\n" +
-                "   GROUP BY o_custkey", "canner-cml", "tpch_tiny", "orders"));
+                "     %s.%s.%s\n" +
+                "   GROUP BY o_custkey", getDefaultCatalog(), getDefaultSchema(), "orders"));
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
         String errMsg = getDefaultCacheInfoPair("unqualified")
                 .flatMap(CacheInfoPair::getErrorMessage)
                 .orElseThrow(AssertionError::new);
-        assertThat(errMsg).matches("Failed to do cache for cacheInfo .*");
+        assertThat(errMsg).matches(Pattern.compile("Failed to do cache for cacheInfo .*", Pattern.DOTALL));
     }
 
     @Test
     public void testMetricWithoutCache()
     {
         assertThat(getDefaultCacheInfoPair("AvgRevenue")).isEmpty();
-    }
-
-    @Override
-    protected Optional<String> getAccioMDLPath()
-    {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("cache/cache_mdl.json")).getPath());
     }
 
     @Test
@@ -162,7 +224,7 @@ public class TestCache
         try (ConnectorRecordIterator connectorRecordIterator = cacheManager.get().query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
             assertThat(result.length).isEqualTo(2);
-            assertThat(result[0]).isEqualTo(1202L);
+            assertThat(result[0]).isEqualTo(1202);
             assertThat(connectorRecordIterator.hasNext()).isFalse();
         }
     }
@@ -201,13 +263,13 @@ public class TestCache
         assertThat(tableNames).contains(mappingName);
 
         List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
-        List<Object[]> bqResult = queryByMetadata("SELECT\n" +
+        List<Object[]> bqResult = queryByMetadata(format("SELECT\n" +
                 "     o_orderkey orderkey\n" +
                 "   , o_custkey custkey\n" +
                 "   , o_orderstatus orderstatus\n" +
                 "   , o_totalprice totalprice\n" +
                 "   , o_orderdate orderdate" +
-                " from `canner-cml`.tpch_tiny.orders");
+                " from %s.%s.orders", getDefaultCatalog(), getDefaultSchema()));
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
     }

@@ -14,6 +14,7 @@
 
 package io.accio.testing.bigquery;
 
+import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 

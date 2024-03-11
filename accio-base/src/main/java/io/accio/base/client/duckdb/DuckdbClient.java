@@ -38,6 +38,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
@@ -48,21 +49,42 @@ public final class DuckdbClient
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
-    private final DuckDBConnection duckDBConnection;
-    private final HikariDataSource connectionPool;
+    private final CacheStorageConfig cacheStorageConfig;
+    private final DuckDBConnectorConfig connectorConfig;
+    private DuckDBConnection duckDBConnection;
+    private HikariDataSource connectionPool;
 
     @Inject
-    public DuckdbClient(DuckDBConfig duckDBConfig, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
+    public DuckdbClient(
+            DuckDBConfig duckDBConfig,
+            CacheStorageConfig cacheStorageConfig,
+            Optional<DuckDBConnectorConfig> connectorConfig)
+    {
+        this.duckDBConfig = duckDBConfig;
+        this.cacheStorageConfig = cacheStorageConfig;
+        this.connectorConfig = connectorConfig.orElse(null);
+        init();
+    }
+
+    private void init()
     {
         try {
             // The instance will be cleared after the process end. We don't need to
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
-            this.duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
-            this.duckDBConfig = duckDBConfig;
-            HikariConfig config = getHikariConfig(duckDBConfig, duckdbS3StyleStorageConfig, duckDBConnection);
+            duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
+            HikariConfig config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, connectorConfig);
             connectionPool = new HikariDataSource(config);
-            init();
+
+            DataSize memoryLimit = duckDBConfig.getMemoryLimit();
+            executeDDL(format("SET memory_limit='%s'", memoryLimit.toBytesValueString()));
+            LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
+            executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
+            LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
+
+            if (connectorConfig != null && connectorConfig.getInitSQL() != null) {
+                executeDDL(connectorConfig.getInitSQL());
+            }
         }
         catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -71,10 +93,11 @@ public final class DuckdbClient
 
     private static HikariConfig getHikariConfig(
             DuckDBConfig duckDBConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnection duckDBConnection)
+            CacheStorageConfig cacheStorageConfig,
+            DuckDBConnection duckDBConnection,
+            DuckDBConnectorConfig connectorConfig)
     {
-        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, duckdbS3StyleStorageConfig);
+        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, cacheStorageConfig, connectorConfig);
         HikariConfig config = new HikariConfig();
         config.setDataSource(dataSource);
         config.setPoolName("DUCKDB_POOL");
@@ -83,18 +106,6 @@ public final class DuckdbClient
         // remain some query slots for metadata queries
         config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
         return config;
-    }
-
-    /**
-     * Initialize the global variables of DuckDB.
-     */
-    private void init()
-    {
-        DataSize memoryLimit = duckDBConfig.getMemoryLimit();
-        executeDDL(format("SET memory_limit='%s'", memoryLimit.toBytesValueString()));
-        LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
-        executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
-        LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
     }
 
     @Override
@@ -144,6 +155,7 @@ public final class DuckdbClient
         }
         catch (Exception e) {
             LOG.error(e, "Error executing DDL");
+            LOG.error("Failed SQL: %s", sql);
             throw new AccioException(GENERIC_USER_ERROR, e);
         }
     }
@@ -156,6 +168,7 @@ public final class DuckdbClient
             statement.execute(sql);
         }
         catch (SQLException se) {
+            LOG.error("Failed SQL: %s", sql);
             throw new RuntimeException(se);
         }
     }
@@ -209,11 +222,6 @@ public final class DuckdbClient
         return connectionPool.getConnection();
     }
 
-    public DuckDBConfig getDuckDBConfig()
-    {
-        return duckDBConfig;
-    }
-
     @Override
     public void close()
     {
@@ -224,5 +232,11 @@ public final class DuckdbClient
         catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void reset()
+    {
+        close();
+        init();
     }
 }

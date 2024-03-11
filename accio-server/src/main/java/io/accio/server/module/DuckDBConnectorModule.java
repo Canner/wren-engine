@@ -15,19 +15,27 @@
 package io.accio.server.module;
 
 import com.google.inject.Binder;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import io.accio.base.config.PostgresConfig;
+import com.google.inject.Singleton;
+import io.accio.base.client.ForCache;
+import io.accio.base.client.ForConnector;
+import io.accio.base.client.duckdb.DuckDBConnectorConfig;
+import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.connector.duckdb.DuckDBSqlConverter;
 import io.accio.main.connector.postgres.PostgresCacheService;
+import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.DuckDBFunctionBuilder;
 import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
 import io.accio.main.pgcatalog.regtype.PgMetadata;
 import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
+import io.accio.main.web.DuckDBResource;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
+import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
 
 public class DuckDBConnectorModule
         extends AbstractConfigurationAwareModule
@@ -35,13 +43,27 @@ public class DuckDBConnectorModule
     @Override
     protected void setup(Binder binder)
     {
+        configBinder(binder).bindConfig(DuckDBConnectorConfig.class);
+        binder.bind(DuckdbClient.class).annotatedWith(ForConnector.class).to(DuckdbClient.class).in(Scopes.SINGLETON);
         binder.bind(DuckDBSqlConverter.class).in(Scopes.SINGLETON);
         binder.bind(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
         binder.bind(PostgresCacheService.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(DuckDBMetadata.class).in(Scopes.SINGLETON);
-        configBinder(binder).bindConfig(PostgresConfig.class);
+        jaxrsBinder(binder).bind(DuckDBResource.class);
+    }
+
+    @Provides
+    @Singleton
+    public static Metadata provideMetadata(@ForConnector DuckdbClient duckdbClient)
+    {
+        return new DuckDBMetadata(duckdbClient);
+    }
+
+    @Provides
+    @Singleton
+    public static PgMetastore providePgMetastore(@ForCache DuckdbClient duckdbClient)
+    {
+        return new DuckDBMetadata(duckdbClient);
     }
 }

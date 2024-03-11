@@ -31,6 +31,7 @@ import org.testng.annotations.BeforeClass;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.dto.Model.model;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
@@ -66,7 +67,7 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig());
+        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), Optional.empty());
         prepareData();
     }
 

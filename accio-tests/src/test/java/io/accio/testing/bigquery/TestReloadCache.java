@@ -19,6 +19,7 @@ import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.cache.dto.CachedTable;
 import io.accio.main.web.dto.DeployInputDto;
+import io.accio.testing.AbstractCacheTest;
 import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 

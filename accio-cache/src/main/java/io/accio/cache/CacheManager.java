@@ -23,6 +23,7 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
+import io.accio.base.client.ForCache;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
@@ -100,7 +101,7 @@ public class CacheManager
             SqlConverter sqlConverter,
             CacheService cacheService,
             ExtraRewriter extraRewriter,
-            DuckdbClient duckdbClient,
+            @ForCache DuckdbClient duckdbClient,
             CachedTableMapping cachedTableMapping,
             EventLogger eventLogger,
             DuckdbTaskManager duckdbTaskManager,

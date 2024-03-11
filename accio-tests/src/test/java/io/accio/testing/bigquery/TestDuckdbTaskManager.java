@@ -27,6 +27,7 @@ import io.accio.base.dto.Model;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.DuckdbTaskManager;
 import io.accio.cache.TaskInfo;
+import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -93,7 +94,7 @@ public class TestDuckdbTaskManager
 
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMaxCacheTableSizeRatio(0);
-        try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig, new DuckdbS3StyleStorageConfig()))) {
+        try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig, new DuckdbS3StyleStorageConfig(), Optional.empty()))) {
             assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageMatching("Cache memory limit exceeded. Usage: .* bytes, Limit: 0.0 bytes");
         }
     }
