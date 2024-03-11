@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 public abstract class AbstractWireProtocolTestWithBigQuery
         extends AbstractWireProtocolTest
 {
-    private static final Manifest DEFAULT_MANIFEST = Manifest.builder()
+    protected static final Manifest DEFAULT_MANIFEST = Manifest.builder()
             .setCatalog("canner-cml")
             .setSchema("tpch_tiny")
             .build();
