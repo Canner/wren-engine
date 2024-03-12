@@ -32,6 +32,7 @@ import static java.lang.System.getenv;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+@Test(singleThreaded = true)
 public class TestDeployBigQueryRuntime
         extends AbstractWireProtocolTestWithBigQuery
 {

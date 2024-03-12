@@ -28,6 +28,7 @@ import static io.accio.base.config.ConfigManager.ConfigEntry.configEntry;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+@Test(singleThreaded = true)
 public class TestDeployPostgresRuntime
         extends AbstractWireProtocolTestWithPostgres
 {
