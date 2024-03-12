@@ -20,7 +20,6 @@ import com.google.inject.Key;
 import io.accio.base.dto.Manifest;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
-import io.accio.main.metadata.Metadata;
 import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
 import io.airlift.log.Logger;
@@ -95,7 +94,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
     protected void cleanup()
     {
         try {
-            BigQueryMetadata metadata = (BigQueryMetadata) getInstance(Key.get(Metadata.class));
+            BigQueryMetadata metadata = getInstance(Key.get(BigQueryMetadata.class));
             BigQueryClient bigQueryClient = metadata.getBigQueryClient();
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));

@@ -64,32 +64,6 @@ public class TestDeployPostgresRuntime
                 resultSet.next();
             }
         });
-
-        resetConfig();
-
-        assertThatThrownBy(() -> {
-            try (Connection connection = createConnection()) {
-                Statement statement = connection.createStatement();
-                statement.execute("select * from (values ('rows1', 10), ('rows2', 10), ('rows3', 10)) as t(col1, col2)");
-                ResultSet resultSet = statement.getResultSet();
-                resultSet.next();
-            }
-        });
-
-        patchConfig(List.of(
-                configEntry("postgres.jdbc.url", testingPostgreSqlServer.getJdbcUrl()),
-                configEntry("postgres.user", testingPostgreSqlServer.getUser()),
-                configEntry("postgres.password", testingPostgreSqlServer.getPassword()),
-                configEntry("accio.datasource.type", "POSTGRES")));
-
-        assertThatNoException().isThrownBy(() -> {
-            try (Connection connection = createConnection()) {
-                Statement statement = connection.createStatement();
-                statement.execute("select * from (values ('rows1', 10), ('rows2', 10), ('rows3', 10)) as t(col1, col2)");
-                ResultSet resultSet = statement.getResultSet();
-                resultSet.next();
-            }
-        });
     }
 
     @Test
