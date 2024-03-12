@@ -15,6 +15,7 @@
 package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.pgcatalog.function.PgFunction;
+import io.accio.main.metadata.Metadata;
 import io.accio.main.metadata.MetadataManager;
 import io.airlift.log.Logger;
 
@@ -29,9 +30,9 @@ public class PgFunctionBuilderManager
 
     @Inject
     public PgFunctionBuilderManager(
-            MetadataManager metadataManager)
+            Metadata metadataManager)
     {
-        this.metadataManager = requireNonNull(metadataManager, "metadataManager is null");
+        this.metadataManager = (MetadataManager) requireNonNull(metadataManager, "metadataManager is null");
     }
 
     public void createPgFunction(PgFunction pgFunction)
