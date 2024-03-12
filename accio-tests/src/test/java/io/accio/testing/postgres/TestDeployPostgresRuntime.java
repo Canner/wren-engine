@@ -65,7 +65,7 @@ public class TestDeployPostgresRuntime
             }
         });
 
-        updateConfig(List.of());
+        resetConfig();
 
         assertThatThrownBy(() -> {
             try (Connection connection = createConnection()) {
@@ -76,7 +76,7 @@ public class TestDeployPostgresRuntime
             }
         });
 
-        updateConfig(List.of(
+        patchConfig(List.of(
                 configEntry("postgres.jdbc.url", testingPostgreSqlServer.getJdbcUrl()),
                 configEntry("postgres.user", testingPostgreSqlServer.getUser()),
                 configEntry("postgres.password", testingPostgreSqlServer.getPassword()),

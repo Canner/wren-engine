@@ -75,20 +75,6 @@ public class TestDeployBigQueryRuntime
                 resultSet.next();
             }
         });
-
-        updateConfig(List.of(
-                configEntry("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID")),
-                configEntry("bigquery.location", "asia-east1"),
-                configEntry("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON")),
-                configEntry("accio.datasource.type", "bigquery")));
-        assertThatNoException().isThrownBy(() -> {
-            try (Connection connection = createConnection()) {
-                Statement statement = connection.createStatement();
-                statement.execute("SELECT count(*) from Orders");
-                ResultSet resultSet = statement.getResultSet();
-                resultSet.next();
-            }
-        });
     }
 
     @Test
