@@ -20,16 +20,25 @@ import io.accio.base.AccioException;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
+import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 
 import javax.inject.Inject;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Properties;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_CACHE_TASK_RETRY_DELAY;
@@ -63,10 +72,14 @@ import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_N
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
+import static io.airlift.configuration.ConfigurationLoader.loadPropertiesFrom;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class ConfigManager
 {
+    private static final Logger LOG = Logger.get(ConfigManager.class);
     private Optional<AccioConfig> accioConfig;
     private Optional<PostgresConfig> postgresConfig;
     private Optional<BigQueryConfig> bigQueryConfig;
@@ -74,7 +87,10 @@ public class ConfigManager
     private Optional<PostgresWireProtocolConfig> postgresWireProtocolConfig;
     private Optional<DuckdbS3StyleStorageConfig> duckdbS3StyleStorageConfig;
 
-    private ConcurrentHashMap<String, String> configs = new ConcurrentHashMap<>();
+    private final Map<String, String> configs = new HashMap<>();
+    // All configs set by user and config files. It's used to sync with config file.
+    private Properties setConfigs = new Properties();
+    private final String configFile = System.getProperty("config");
 
     @Inject
     public ConfigManager(
@@ -99,6 +115,13 @@ public class ConfigManager
                 duckDBConfig,
                 postgresWireProtocolConfig,
                 duckdbS3StyleStorageConfig);
+
+        try {
+            setConfigs.putAll(loadPropertiesFrom(configFile));
+        }
+        catch (IOException e) {
+            throw new AccioException(NOT_FOUND, "Config file not found");
+        }
     }
 
     private void initConfig(
@@ -143,97 +166,133 @@ public class ConfigManager
 
     private void initConfig(String key, String value)
     {
-        if (value == null) {
-            // ConcurrentHashMap are not allowed value to be null, use empty string instead.
-            configs.put(key, "");
-        }
-        else {
-            configs.put(key, value);
-        }
+        configs.put(key, value);
     }
 
     public <T> T getConfig(Class<T> config)
     {
         if (config == AccioConfig.class) {
             return (T) accioConfig.orElseGet(() -> {
-                AccioConfig result = new AccioConfig();
-                result.setAccioMDLFile(new File(configs.get(ACCIO_FILE)));
-                result.setAccioMDLDirectory(new File(configs.get(ACCIO_DIRECTORY)));
-                result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
-                result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(ACCIO_ENABLE_DYNAMIC_FIELDS)));
+                AccioConfig result = getAccioConfig();
                 accioConfig = Optional.of(result);
                 return result;
             });
         }
         if (config == BigQueryConfig.class) {
             return (T) bigQueryConfig.orElseGet(() -> {
-                BigQueryConfig result = new BigQueryConfig();
-                result.setCredentialsKey(configs.get(BIGQUERY_CRENDITALS_KEY));
-                result.setCredentialsFile(configs.get(BIGQUERY_CRENDITALS_FILE));
-                result.setProjectId(configs.get(BIGQUERY_PROJECT_ID));
-                result.setParentProjectId(configs.get(BIGQUERY_PARENT_PROJECT_ID));
-                result.setLocation(configs.get(BIGQUERY_LOCATION));
-                result.setBucketName(configs.get(BIGQUERY_BUCKET_NAME));
-                result.setMetadataSchemaPrefix(configs.get(BIGQUERY_METADATA_SCHEMA_PREFIX));
+                BigQueryConfig result = getBigQueryConfig();
                 bigQueryConfig = Optional.of(result);
                 return result;
             });
         }
         if (config == PostgresConfig.class) {
             return (T) postgresConfig.orElseGet(() -> {
-                PostgresConfig result = new PostgresConfig();
-                result.setJdbcUrl(configs.get(POSTGRES_JDBC_URL));
-                result.setUser(configs.get(POSTRES_USER));
-                result.setPassword(configs.get(POSTGRES_PASSWORD));
+                PostgresConfig result = getPostgresConfig();
                 postgresConfig = Optional.of(result);
                 return result;
             });
         }
         if (config == DuckDBConfig.class) {
             return (T) duckDBConfig.orElseGet(() -> {
-                DuckDBConfig result = new DuckDBConfig();
-                result.setMemoryLimit(DataSize.valueOf(configs.get(DUCKDB_MEMORY_LIMIT)));
-                result.setHomeDirectory(configs.get(DUCKDB_HOME_DIRECTORY));
-                result.setTempDirectory(configs.get(DUCKDB_TEMP_DIRECTORY));
-                result.setMaxConcurrentTasks(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_TASKS)));
-                result.setMaxConcurrentMetadataQueries(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_QUERIES)));
-                result.setMaxCacheQueryTimeout(Integer.parseInt(configs.get(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)));
-                result.setCacheTaskRetryDelay(Integer.parseInt(configs.get(DUCKDB_CACHE_TASK_RETRY_DELAY)));
+                DuckDBConfig result = getDuckDBConfig();
                 duckDBConfig = Optional.of(result);
                 return result;
             });
         }
         if (config == PostgresWireProtocolConfig.class) {
             return (T) postgresWireProtocolConfig.orElseGet(() -> {
-                PostgresWireProtocolConfig result = new PostgresWireProtocolConfig();
-                result.setPort(configs.get(PG_WIRE_PROTOCOL_PORT));
-                result.setSslEnable(Boolean.parseBoolean(configs.get(PG_WIRE_PROTOCOL_SSL_ENABLED)));
-                result.setNettyThreadCount(Integer.parseInt(configs.get(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
-                result.setAuthFile(new File(configs.get(PG_WIRE_PROTOCOL_AUTH_FILE)));
-                postgresWireProtocolConfig = Optional.of(result);
+                PostgresWireProtocolConfig result = getPostgresWireProtocolConfig();
                 return result;
             });
         }
         if (config == CacheStorageConfig.class &&
                 accioConfig.map(AccioConfig::getDataSourceType).stream().anyMatch(type -> type == AccioConfig.DataSourceType.BIGQUERY)) {
             return (T) duckdbS3StyleStorageConfig.orElseGet(() -> {
-                DuckdbS3StyleStorageConfig result = new DuckdbS3StyleStorageConfig();
-                result.setEndpoint(configs.get(DUCKDB_STORAGE_ENDPOINT));
-                result.setAccessKey(configs.get(DUCKDB_STORAGE_ACCESS_KEY));
-                result.setSecretKey(configs.get(DUCKDB_STORAGE_SECRET_KEY));
-                result.setRegion(configs.get(DUCKDB_STORAGE_REGION));
-                result.setUrlStyle(configs.get(DUCKDB_STORAGE_URL_STYLE));
-                duckdbS3StyleStorageConfig = Optional.of(result);
+                DuckdbS3StyleStorageConfig result = getDuckdbS3StyleStorageConfig();
                 return result;
             });
         }
         throw new RuntimeException("Unknown config class: " + config.getName());
     }
 
-    public synchronized void setConfigs(List<ConfigEntry> configEntries)
+    private AccioConfig getAccioConfig()
     {
-        configEntries.forEach(entry -> setConfigInternal(entry.getName(), entry.getValue()));
+        AccioConfig result = new AccioConfig();
+        result.setAccioMDLFile(new File(configs.get(ACCIO_FILE)));
+        result.setAccioMDLDirectory(new File(configs.get(ACCIO_DIRECTORY)));
+        result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
+        result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(ACCIO_ENABLE_DYNAMIC_FIELDS)));
+        return result;
+    }
+
+    private BigQueryConfig getBigQueryConfig()
+    {
+        BigQueryConfig result = new BigQueryConfig();
+        result.setCredentialsKey(configs.get(BIGQUERY_CRENDITALS_KEY));
+        result.setCredentialsFile(configs.get(BIGQUERY_CRENDITALS_FILE));
+        result.setProjectId(configs.get(BIGQUERY_PROJECT_ID));
+        result.setParentProjectId(configs.get(BIGQUERY_PARENT_PROJECT_ID));
+        result.setLocation(configs.get(BIGQUERY_LOCATION));
+        result.setBucketName(configs.get(BIGQUERY_BUCKET_NAME));
+        result.setMetadataSchemaPrefix(configs.get(BIGQUERY_METADATA_SCHEMA_PREFIX));
+        return result;
+    }
+
+    private PostgresConfig getPostgresConfig()
+    {
+        PostgresConfig result = new PostgresConfig();
+        result.setJdbcUrl(configs.get(POSTGRES_JDBC_URL));
+        result.setUser(configs.get(POSTRES_USER));
+        result.setPassword(configs.get(POSTGRES_PASSWORD));
+        return result;
+    }
+
+    private DuckDBConfig getDuckDBConfig()
+    {
+        DuckDBConfig result = new DuckDBConfig();
+        result.setMemoryLimit(DataSize.valueOf(configs.get(DUCKDB_MEMORY_LIMIT)));
+        result.setHomeDirectory(configs.get(DUCKDB_HOME_DIRECTORY));
+        result.setTempDirectory(configs.get(DUCKDB_TEMP_DIRECTORY));
+        result.setMaxConcurrentTasks(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_TASKS)));
+        result.setMaxConcurrentMetadataQueries(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_QUERIES)));
+        result.setMaxCacheQueryTimeout(Integer.parseInt(configs.get(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)));
+        result.setCacheTaskRetryDelay(Integer.parseInt(configs.get(DUCKDB_CACHE_TASK_RETRY_DELAY)));
+        return result;
+    }
+
+    private PostgresWireProtocolConfig getPostgresWireProtocolConfig()
+    {
+        PostgresWireProtocolConfig result = new PostgresWireProtocolConfig();
+        result.setPort(configs.get(PG_WIRE_PROTOCOL_PORT));
+        result.setSslEnable(Boolean.parseBoolean(configs.get(PG_WIRE_PROTOCOL_SSL_ENABLED)));
+        result.setNettyThreadCount(Integer.parseInt(configs.get(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
+        result.setAuthFile(new File(configs.get(PG_WIRE_PROTOCOL_AUTH_FILE)));
+        return result;
+    }
+
+    private DuckdbS3StyleStorageConfig getDuckdbS3StyleStorageConfig()
+    {
+        DuckdbS3StyleStorageConfig result = new DuckdbS3StyleStorageConfig();
+        result.setEndpoint(configs.get(DUCKDB_STORAGE_ENDPOINT));
+        result.setAccessKey(configs.get(DUCKDB_STORAGE_ACCESS_KEY));
+        result.setSecretKey(configs.get(DUCKDB_STORAGE_SECRET_KEY));
+        result.setRegion(configs.get(DUCKDB_STORAGE_REGION));
+        result.setUrlStyle(configs.get(DUCKDB_STORAGE_URL_STYLE));
+        return result;
+    }
+
+    public synchronized void setConfigs(List<ConfigEntry> configEntries, boolean reset)
+    {
+        if (reset) {
+            reset();
+        }
+
+        Map<String, String> update = configEntries.stream()
+                .map(entry -> Map.entry(entry.getName(), entry.getValue()))
+                .collect(toMap(Map.Entry::getKey, entry -> entry.getValue().trim()));
+        update.forEach(this::setConfigInternal);
         resetCache();
+        syncFile(update);
     }
 
     private void setConfigInternal(String key, String value)
@@ -247,7 +306,7 @@ public class ConfigManager
         }
     }
 
-    private synchronized void resetCache()
+    private void resetCache()
     {
         accioConfig = Optional.empty();
         postgresConfig = Optional.empty();
@@ -257,9 +316,10 @@ public class ConfigManager
         duckdbS3StyleStorageConfig = Optional.empty();
     }
 
-    public synchronized void reset()
+    private void reset()
     {
         configs.clear();
+        setConfigs.clear();
         initConfig(
                 new AccioConfig(),
                 new PostgresConfig(),
@@ -267,7 +327,35 @@ public class ConfigManager
                 new DuckDBConfig(),
                 new PostgresWireProtocolConfig(),
                 new DuckdbS3StyleStorageConfig());
-        resetCache();
+    }
+
+    private void syncFile(Map<String, String> updated)
+    {
+        try {
+            archiveConfigs();
+            setConfigs.putAll(updated);
+            setConfigs.store(new FileWriter(configFile), "sync with file");
+            LOG.info("Syncing config file: " + configFile);
+        }
+        catch (IOException e) {
+            throw new AccioException(NOT_FOUND, format("Config file %s not found", configFile), e);
+        }
+    }
+
+    private void archiveConfigs()
+            throws IOException
+    {
+        Path home = new File(configFile).getParentFile().toPath();
+        File archived = home.resolve("archived").toFile();
+        if (!archived.exists()) {
+            if (!archived.mkdir()) {
+                throw new IOException("Cannot create archive folder");
+            }
+        }
+        File archivedFile = new File(configFile);
+        Files.copy(archivedFile.toPath(),
+                archived.toPath().resolve(archivedFile.getName() + "." + LocalDateTime.now().format(DateTimeFormatter.ofPattern("uuuuMMddHHmmssnnnn"))));
+        LOG.info("Archiving config file: " + archived);
     }
 
     public List<ConfigEntry> getConfigs()
