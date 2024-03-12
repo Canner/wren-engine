@@ -19,7 +19,7 @@ import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheService;
 import io.accio.main.connector.CacheServiceManager;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.pgcatalog.builder.PgFunctionBuilderManager;
+import io.accio.main.metadata.MetadataManager;
 import io.accio.main.sql.SqlConverterManager;
 
 import javax.inject.Inject;
@@ -42,25 +42,22 @@ import static java.util.Objects.requireNonNull;
 public class ConfigResource
 {
     private final ConfigManager configManager;
-    private final Metadata metadata;
+    private final MetadataManager metadata;
     private final SqlConverterManager sqlConverter;
     private final CacheServiceManager cacheService;
-    private final PgFunctionBuilderManager pgFunctionBuilderManager;
 
     @Inject
     public ConfigResource(
             ConfigManager configManager,
             Metadata metadata,
             SqlConverter sqlConverter,
-            CacheService cacheService,
-            PgFunctionBuilderManager pgFunctionBuilderManager)
+            CacheService cacheService)
 
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
-        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.metadata = (MetadataManager) requireNonNull(metadata, "metadata is null");
         this.sqlConverter = (SqlConverterManager) requireNonNull(sqlConverter, "sqlConverter is null");
         this.cacheService = (CacheServiceManager) requireNonNull(cacheService, "cacheService is null");
-        this.pgFunctionBuilderManager = requireNonNull(pgFunctionBuilderManager, "pgFunctionBuilderManager is null");
     }
 
     @GET
@@ -113,6 +110,5 @@ public class ConfigResource
         metadata.reload();
         sqlConverter.reload();
         cacheService.reload();
-        pgFunctionBuilderManager.reload();
     }
 }
