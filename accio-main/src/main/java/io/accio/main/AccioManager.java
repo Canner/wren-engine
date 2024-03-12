@@ -103,7 +103,6 @@ public class AccioManager
 
     public synchronized void deployAndArchive(Manifest manifest, String version)
     {
-        checkArgument(accioConfig.getAccioMDLFile().isEmpty(), "Deprecated config `accio.file`. Please use `accio.directory` instead.");
         checkArgument(accioMDLDirectory.exists() &&
                 accioMDLDirectory.isDirectory() &&
                 requireNonNull(accioMDLDirectory.listFiles()).length > 0, "AccioMDL directory does not exist or is empty");
