@@ -51,10 +51,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
+import static io.airlift.http.client.Request.Builder.prepareDelete;
 import static io.airlift.http.client.Request.Builder.prepareGet;
 import static io.airlift.http.client.Request.Builder.preparePatch;
 import static io.airlift.http.client.Request.Builder.preparePost;
-import static io.airlift.http.client.Request.Builder.preparePut;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.listJsonCodec;
@@ -281,12 +281,11 @@ public abstract class RequireAccioServer
         return CONFIG_ENTRY_JSON_CODEC.fromJson(response.getBody());
     }
 
-    protected void updateConfig(List<ConfigManager.ConfigEntry> configEntries)
+    protected void resetConfig()
     {
-        Request request = preparePut()
+        Request request = prepareDelete()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
                 .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-                .setBodyGenerator(jsonBodyGenerator(CONFIG_ENTRY_LIST_CODEC, configEntries))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());

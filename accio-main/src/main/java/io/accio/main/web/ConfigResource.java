@@ -17,9 +17,9 @@ package io.accio.main.web;
 import io.accio.base.config.ConfigManager;
 
 import javax.inject.Inject;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -64,17 +64,12 @@ public class ConfigResource
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
-    @PUT
+    @DELETE
     @Produces("application/json")
-    public void updateConfig(
-            List<ConfigManager.ConfigEntry> configEntries,
-            @Suspended AsyncResponse asyncResponse)
+    public void resetToDefaultConfig(@Suspended AsyncResponse asyncResponse)
     {
         CompletableFuture
-                .runAsync(() -> {
-                    configManager.reset();
-                    configManager.setConfigs(configEntries);
-                })
+                .runAsync(() -> configManager.setConfigs(List.of(), true))
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
@@ -85,7 +80,7 @@ public class ConfigResource
             @Suspended AsyncResponse asyncResponse)
     {
         CompletableFuture
-                .runAsync(() -> configManager.setConfigs(configEntries))
+                .runAsync(() -> configManager.setConfigs(configEntries, false))
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }
