@@ -56,7 +56,6 @@ public class AccioManager
             AccioMetastore accioMetastore,
             CacheManager cacheManager,
             PgCatalogManager pgCatalogManager)
-            throws IOException
     {
         this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
         this.accioMDLDirectory = requireNonNull(accioConfig.getAccioMDLDirectory(), "accioMDLDirectory is null");
@@ -64,15 +63,20 @@ public class AccioManager
         this.pgCatalogManager = requireNonNull(pgCatalogManager, "pgCatalogManager is null");
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
         File[] mdlFiles = accioMDLDirectory.listFiles((dir, name) -> name.endsWith(".json"));
-        if (mdlFiles != null && mdlFiles.length > 0) {
-            deployAccioMDLFromDir(mdlFiles);
+        try {
+            if (mdlFiles != null && mdlFiles.length > 0) {
+                deployAccioMDLFromDir(mdlFiles);
+            }
+            else if (accioConfig.getAccioMDLFile().isPresent()) {
+                this.accioMDLFile = accioConfig.getAccioMDLFile().get();
+                deployAccioMDLFromFile(null);
+            }
+            else {
+                LOG.warn("No AccioMDL file found. AccioMDL will not be deployed, and no pg table will be generated.");
+            }
         }
-        else if (accioConfig.getAccioMDLFile().isPresent()) {
-            this.accioMDLFile = accioConfig.getAccioMDLFile().get();
-            deployAccioMDLFromFile(null);
-        }
-        else {
-            LOG.warn("No AccioMDL file found. AccioMDL will not be deployed, and no pg table will be generated.");
+        catch (IOException e) {
+            LOG.warn("Load AccioMDL file failed. AccioMDL will not be deployed, and no pg table will be generated.", e);
         }
     }
 
