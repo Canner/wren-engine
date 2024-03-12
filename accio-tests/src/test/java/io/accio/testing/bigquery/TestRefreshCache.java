@@ -22,7 +22,6 @@ import io.accio.base.dto.CacheInfo;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.main.AccioMetastore;
-import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -37,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
 public class TestRefreshCache
-        extends AbstractCacheTest
+        extends AbstractCacheTestWithBigQuery
 {
     private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
 

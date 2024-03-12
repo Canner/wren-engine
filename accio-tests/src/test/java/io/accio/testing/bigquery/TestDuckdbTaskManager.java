@@ -27,7 +27,6 @@ import io.accio.base.dto.Model;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.DuckdbTaskManager;
 import io.accio.cache.TaskInfo;
-import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -47,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 @Test(singleThreaded = true)
 public class TestDuckdbTaskManager
-        extends AbstractCacheTest
+        extends AbstractCacheTestWithBigQuery
 {
     private static final AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
             .setModels(List.of(

@@ -19,7 +19,6 @@ import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
 import io.accio.cache.dto.CachedTable;
 import io.accio.main.web.dto.DeployInputDto;
-import io.accio.testing.AbstractCacheTest;
 import io.airlift.units.Duration;
 import org.testng.annotations.Test;
 
@@ -45,7 +44,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestReloadCache
-        extends AbstractCacheTest
+        extends AbstractCacheTestWithBigQuery
 {
     private Path accioMDLFilePath;
 

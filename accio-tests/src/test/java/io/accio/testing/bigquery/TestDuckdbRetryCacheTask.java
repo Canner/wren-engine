@@ -22,7 +22,6 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Model;
 import io.accio.cache.TaskInfo;
-import io.accio.testing.AbstractCacheTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
@@ -36,7 +35,7 @@ import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDuckdbRetryCacheTask
-        extends AbstractCacheTest
+        extends AbstractCacheTestWithBigQuery
 {
     private static final AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
             .setModels(List.of(

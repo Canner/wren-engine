@@ -31,7 +31,7 @@ import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
-import io.accio.testing.bigquery.AbstractWireProtocolTestWithBigQuery;
+import io.airlift.log.Logger;
 import org.testng.annotations.BeforeClass;
 
 import java.nio.file.Files;
@@ -49,11 +49,12 @@ import static java.lang.String.format;
 import static java.lang.System.getenv;
 
 public abstract class AbstractCacheTest
-        extends AbstractWireProtocolTestWithBigQuery
+        extends AbstractWireProtocolTest
 {
     protected final Supplier<CacheManager> cacheManager = () -> getInstance(Key.get(CacheManager.class));
     protected final Supplier<CachedTableMapping> cachedTableMapping = () -> getInstance(Key.get(CachedTableMapping.class));
     protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
+    private static final Logger LOG = Logger.get(AbstractCacheTest.class);
 
     @Override
     protected TestingAccioServer createAccioServer()
