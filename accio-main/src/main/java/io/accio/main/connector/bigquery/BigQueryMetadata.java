@@ -275,6 +275,12 @@ public class BigQueryMetadata
         return cacheStorageClient;
     }
 
+    @VisibleForTesting
+    public BigQueryClient getBigQueryClient()
+    {
+        return bigQueryClient;
+    }
+
     private BigQueryClient createBigQueryClient()
     {
         BigQueryConfig config = configManager.getConfig(BigQueryConfig.class);

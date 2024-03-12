@@ -13,34 +13,27 @@
  */
 package io.accio.testing.bigquery;
 
-import com.google.api.gax.rpc.FixedHeaderProvider;
-import com.google.api.gax.rpc.HeaderProvider;
-import io.accio.base.client.duckdb.DuckDBConfig;
-import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
-import io.accio.base.config.AccioConfig;
+import com.google.inject.Key;
 import io.accio.base.config.BigQueryConfig;
 import io.accio.base.config.ConfigManager;
-import io.accio.base.config.PostgresConfig;
-import io.accio.base.config.PostgresWireProtocolConfig;
+import io.accio.cache.CacheService;
 import io.accio.cache.PathInfo;
-import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.connector.bigquery.BigQueryCacheService;
-import io.accio.main.connector.bigquery.BigQueryCredentialsSupplier;
-import io.accio.main.connector.bigquery.BigQueryMetadata;
+import io.accio.main.metadata.Metadata;
+import io.accio.testing.TestingAccioServer;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
 
 import static io.accio.main.connector.bigquery.BigQueryCacheService.getTableLocationPrefix;
-import static io.accio.main.connector.bigquery.BigQueryMetadata.provideGcsStorageClient;
-import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQueryCacheService
+        extends AbstractCacheTest
 {
-    private final BigQueryCacheService bigQueryCacheService;
-    private final BigQueryConfig bigQueryConfig;
-    private final GcsStorageClient gcsStorageClient;
+    private BigQueryCacheService bigQueryCacheService;
+    private BigQueryConfig bigQueryConfig;
+    private Metadata metadata;
     private final String query = "WITH\n" +
             "  Orders AS (\n" +
             "   SELECT\n" +
@@ -68,25 +61,15 @@ public class TestBigQueryCacheService
             "FROM\n" +
             "  Revenue";
 
-    private TestBigQueryCacheService()
+    @Override
+    protected TestingAccioServer createAccioServer()
+            throws Exception
     {
-        this.bigQueryConfig = new BigQueryConfig();
-        bigQueryConfig.setLocation("asia-east1")
-                .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .setBucketName(getenv("TEST_BIG_QUERY_BUCKET_NAME"));
-        BigQueryCredentialsSupplier bigQueryCredentialsSupplier = new BigQueryCredentialsSupplier(bigQueryConfig.getCredentialsKey(), bigQueryConfig.getCredentialsFile());
-        HeaderProvider headerProvider = FixedHeaderProvider.create("user-agent", "accio/1");
-        ConfigManager configManager = new ConfigManager(
-                new AccioConfig(),
-                new PostgresConfig(),
-                bigQueryConfig,
-                new DuckDBConfig(),
-                new PostgresWireProtocolConfig(),
-                new DuckdbS3StyleStorageConfig());
-        gcsStorageClient = provideGcsStorageClient(bigQueryConfig, headerProvider, bigQueryCredentialsSupplier);
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
-        this.bigQueryCacheService = new BigQueryCacheService(bigQueryMetadata, bigQueryConfig);
+        TestingAccioServer accioServer = super.createAccioServer();
+        bigQueryCacheService = (BigQueryCacheService) accioServer.getInstance(Key.get(CacheService.class));
+        bigQueryConfig = accioServer.getInstance(Key.get(ConfigManager.class)).getConfig(BigQueryConfig.class);
+        metadata = accioServer.getInstance(Key.get(Metadata.class));
+        return accioServer;
     }
 
     @Test
@@ -100,9 +83,9 @@ public class TestBigQueryCacheService
         assertThat(pathInfo).isPresent();
         String bucketName = bigQueryConfig.getBucketName().orElseThrow(AssertionError::new);
         String prefix = getTableLocationPrefix(pathInfo.get().getPath()).orElseThrow(AssertionError::new);
-        assertThat(gcsStorageClient.checkFolderExists(bucketName, prefix)).isTrue();
+        assertThat(metadata.getCacheStorageClient().checkFolderExists(bucketName, prefix)).isTrue();
         bigQueryCacheService.deleteTarget(pathInfo.get());
-        assertThat(gcsStorageClient.checkFolderExists(bucketName, prefix)).isFalse();
+        assertThat(metadata.getCacheStorageClient().checkFolderExists(bucketName, prefix)).isFalse();
     }
 
     @Test
