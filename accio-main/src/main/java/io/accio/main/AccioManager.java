@@ -78,6 +78,9 @@ public class AccioManager
         catch (IOException e) {
             LOG.warn("Load AccioMDL file failed. AccioMDL will not be deployed, and no pg table will be generated.", e);
         }
+        catch (Exception e) {
+            LOG.error(e, "Failed to deploy AccioMDL");
+        }
     }
 
     private void deployAccioMDLFromDir(File[] mdlFiles)

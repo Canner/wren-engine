@@ -92,8 +92,13 @@ public class BigQueryMetadata
         this.configManager = requireNonNull(configManager, "configManager is null");
         // if data source isn't bigquery, don't init the clients.
         if (configManager.getConfig(AccioConfig.class).getDataSourceType().equals(AccioConfig.DataSourceType.BIGQUERY)) {
-            this.bigQueryClient = createBigQueryClient();
-            this.cacheStorageClient = createGcsStorageClient();
+            try {
+                this.bigQueryClient = createBigQueryClient();
+                this.cacheStorageClient = createGcsStorageClient();
+            }
+            catch (Exception ex) {
+                LOG.error(ex, "Failed to create BigQuery client. Please check your configuration.");
+            }
         }
         BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
