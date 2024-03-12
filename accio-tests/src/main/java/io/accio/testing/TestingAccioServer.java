@@ -46,8 +46,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static io.accio.base.config.AccioConfig.DataSourceType.BIGQUERY;
 import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
@@ -154,6 +157,11 @@ public class TestingAccioServer
         public TestingAccioServer build()
         {
             try {
+                Path config = Files.createTempDirectory("config").resolve("config.properties");
+                System.setProperty("config", config.toString());
+                Properties properties = new Properties();
+                properties.putAll(configs);
+                properties.store(Files.newBufferedWriter(config), "TestingAccioServer");
                 return new TestingAccioServer(configs);
             }
             catch (IOException ex) {

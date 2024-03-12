@@ -15,6 +15,10 @@
 package io.accio.testing;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Key;
+import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.config.AccioConfig;
+import io.accio.base.config.ConfigManager;
 import io.accio.base.dto.Manifest;
 import org.testng.annotations.Test;
 
@@ -23,9 +27,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_QUERIES;
+import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
 import static io.accio.base.config.AccioConfig.ACCIO_DIRECTORY;
-import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
+import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.base.config.ConfigManager.ConfigEntry.configEntry;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
@@ -54,7 +60,7 @@ public class TestConfigResource
 
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put(ACCIO_DIRECTORY, mdlDir.toAbsolutePath().toString())
-                .put(ACCIO_DATASOURCE_TYPE, "duckdb");
+                .put(ACCIO_DATASOURCE_TYPE, DUCKDB.name());
 
         return TestingAccioServer.builder()
                 .setRequiredConfigs(properties.build())
@@ -66,7 +72,7 @@ public class TestConfigResource
     {
         assertThat(getConfigs().size()).isGreaterThan(2);
         assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, mdlDir.toAbsolutePath().toString()));
-        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, "DUCKDB"));
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, DUCKDB.name()));
 
         assertThatThrownBy(() -> getConfig("notfound"))
                 .hasMessageFindingMatch(".*404 Not Found.*");
@@ -77,17 +83,29 @@ public class TestConfigResource
     @Test
     public void testuUpdateConfigs()
     {
-        patchConfig(List.of(configEntry(ACCIO_DATASOURCE_TYPE, "BIGQUERY")));
-        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, "BIGQUERY"));
+        patchConfig(List.of(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"), configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, "20")));
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, DUCKDB.name()));
         assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, mdlDir.toAbsolutePath().toString()));
-        assertThat(getConfig(BIGQUERY_CRENDITALS_KEY)).isEqualTo(configEntry(BIGQUERY_CRENDITALS_KEY, null));
+        assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"));
+        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, "20"));
 
-        updateConfig(List.of(configEntry(ACCIO_DATASOURCE_TYPE, "BIGQUERY"), configEntry(BIGQUERY_CRENDITALS_KEY, "key")));
-        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, "BIGQUERY"));
-        assertThat(getConfig(BIGQUERY_CRENDITALS_KEY)).isEqualTo(configEntry(BIGQUERY_CRENDITALS_KEY, "key"));
+        resetConfig();
+        DuckDBConfig duckDBConfig = new DuckDBConfig();
+        AccioConfig accioConfig = new AccioConfig();
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, null));
+        assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath()));
+        assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, duckDBConfig.getMemoryLimit().toString()));
+        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));
+    }
 
-        updateConfig(List.of(configEntry(ACCIO_DATASOURCE_TYPE, "bigquery")));
-        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, "bigquery"));
-        assertThat(getConfig(BIGQUERY_CRENDITALS_KEY)).isEqualTo(configEntry(BIGQUERY_CRENDITALS_KEY, null));
+    @Test
+    public void testDataSourceTypeCaseInsensitive()
+    {
+        patchConfig(List.of(configEntry(ACCIO_DATASOURCE_TYPE, "DuCkDb")));
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, "DuCkDb"));
+        AccioConfig accioConfig = server().getInstance(Key.get(ConfigManager.class)).getConfig(AccioConfig.class);
+        assertThat(accioConfig.getDataSourceType()).isEqualTo(DUCKDB);
+        patchConfig(List.of(configEntry(ACCIO_DATASOURCE_TYPE, DUCKDB.name())));
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, DUCKDB.name()));
     }
 }

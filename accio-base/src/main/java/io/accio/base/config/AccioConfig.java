@@ -36,7 +36,7 @@ public class AccioConfig
     }
 
     @Deprecated
-    private File accioMDLFile;
+    private File accioMDLFile = new File("etc/mdl/manifest.json");
     private File accioMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType;
     private boolean enableDynamicFields;
