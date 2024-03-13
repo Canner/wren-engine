@@ -15,13 +15,21 @@
 package io.accio.testing.postgres;
 
 import com.google.common.collect.ImmutableMap;
+import io.accio.base.dto.Manifest;
 import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
 import io.accio.testing.TestingPostgreSqlServer;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 public abstract class AbstractWireProtocolTestWithPostgres
         extends AbstractWireProtocolTest
 {
+    protected static final Manifest DEFAULT_MANIFEST = Manifest.builder()
+            .setCatalog("tpch")
+            .setSchema("tpch")
+            .build();
     private TestingPostgreSqlServer testingPostgreSqlServer;
 
     @Override
@@ -34,10 +42,19 @@ public abstract class AbstractWireProtocolTestWithPostgres
                 .put("postgres.password", testingPostgreSqlServer.getPassword())
                 .put("accio.datasource.type", "POSTGRES");
 
-        if (getAccioMDLPath().isPresent()) {
-            properties.put("accio.file", getAccioMDLPath().get());
+        try {
+            Path dir = Files.createTempDirectory(getAccioDirectory());
+            if (getAccioMDLPath().isPresent()) {
+                Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
+            }
+            else {
+                Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(DEFAULT_MANIFEST));
+            }
+            properties.put("accio.directory", dir.toString());
         }
-
+        catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
         return TestingAccioServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();

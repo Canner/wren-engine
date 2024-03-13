@@ -19,11 +19,9 @@ import io.airlift.configuration.Config;
 import javax.validation.constraints.NotNull;
 
 import java.io.File;
-import java.util.Optional;
 
 public class AccioConfig
 {
-    public static final String ACCIO_FILE = "accio.file";
     public static final String ACCIO_DIRECTORY = "accio.directory";
     public static final String ACCIO_DATASOURCE_TYPE = "accio.datasource.type";
     public static final String ACCIO_ENABLE_DYNAMIC_FIELDS = "accio.experimental-enable-dynamic-fields";
@@ -35,25 +33,9 @@ public class AccioConfig
         DUCKDB,
     }
 
-    @Deprecated
-    private File accioMDLFile = new File("etc/mdl/manifest.json");
     private File accioMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType = DataSourceType.DUCKDB;
     private boolean enableDynamicFields;
-
-    @Deprecated
-    public Optional<File> getAccioMDLFile()
-    {
-        return Optional.ofNullable(accioMDLFile);
-    }
-
-    @Deprecated
-    @Config(ACCIO_FILE)
-    public AccioConfig setAccioMDLFile(File accioMDLFile)
-    {
-        this.accioMDLFile = accioMDLFile;
-        return this;
-    }
 
     @NotNull
     public File getAccioMDLDirectory()

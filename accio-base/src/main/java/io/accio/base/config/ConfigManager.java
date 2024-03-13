@@ -58,7 +58,6 @@ import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STOR
 import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
 import static io.accio.base.config.AccioConfig.ACCIO_DIRECTORY;
 import static io.accio.base.config.AccioConfig.ACCIO_ENABLE_DYNAMIC_FIELDS;
-import static io.accio.base.config.AccioConfig.ACCIO_FILE;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_BUCKET_NAME;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_FILE;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
@@ -136,7 +135,6 @@ public class ConfigManager
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
-        initConfig(ACCIO_FILE, accioConfig.getAccioMDLFile().map(File::getAbsolutePath).orElse(null), false, true);
         initConfig(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath(), false, true);
         initConfig(ACCIO_DATASOURCE_TYPE, Optional.ofNullable(accioConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
         initConfig(ACCIO_ENABLE_DYNAMIC_FIELDS, Boolean.toString(accioConfig.getEnableDynamicFields()), false, false);
@@ -231,8 +229,6 @@ public class ConfigManager
     private AccioConfig getAccioConfig()
     {
         AccioConfig result = new AccioConfig();
-        Optional.ofNullable(configs.get(ACCIO_FILE))
-                .ifPresent(file -> result.setAccioMDLFile(new File(file)));
         Optional.ofNullable(configs.get(ACCIO_DIRECTORY))
                 .ifPresent(directory -> result.setAccioMDLDirectory(new File(directory)));
         result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
