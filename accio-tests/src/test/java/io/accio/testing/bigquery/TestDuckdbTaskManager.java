@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 @Test(singleThreaded = true)
 public class TestDuckdbTaskManager
-        extends AbstractCacheTestWithBigQuery
+        extends AbstractCacheTest
 {
     private static final AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
             .setModels(List.of(

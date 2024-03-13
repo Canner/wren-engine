@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.accio.testing;
+package io.accio.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Key;
@@ -38,26 +38,25 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.accio.base.CatalogSchemaTableName.catalogSchemaTableName;
-import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 
 @Test(singleThreaded = true)
-public abstract class TestCache
+public class TestCache
         extends AbstractCacheTest
 {
-    protected static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
-    protected final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
-    protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
-    protected final SessionContext defaultSessionContext = SessionContext.builder()
-            .setCatalog(getDefaultCatalog())
-            .setSchema(getDefaultSchema())
+    private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
+    private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
+    private final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
+    private final SessionContext defaultSessionContext = SessionContext.builder()
+            .setCatalog("canner-cml")
+            .setSchema("tpch_tiny")
             .build();
 
     @Test
@@ -74,25 +73,31 @@ public abstract class TestCache
         assertThat(tableNames).contains(mappingName);
 
         List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
-        List<Object[]> bqResult = queryByMetadata(format("SELECT\n" +
+        List<Object[]> bqResult = queryBigQuery(format("SELECT\n" +
                 "     o_custkey\n" +
                 "   , sum(o_totalprice) revenue\n" +
                 "   FROM\n" +
-                "     %s.%s.%s\n" +
-                "   GROUP BY o_custkey", getDefaultCatalog(), getDefaultSchema(), "orders"));
+                "     `%s.%s.%s`\n" +
+                "   GROUP BY o_custkey", "canner-cml", "tpch_tiny", "orders"));
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
         String errMsg = getDefaultCacheInfoPair("unqualified")
                 .flatMap(CacheInfoPair::getErrorMessage)
                 .orElseThrow(AssertionError::new);
-        assertThat(errMsg).matches(Pattern.compile("Failed to do cache for cacheInfo .*", Pattern.DOTALL));
+        assertThat(errMsg).matches("Failed to do cache for cacheInfo .*");
     }
 
     @Test
     public void testMetricWithoutCache()
     {
         assertThat(getDefaultCacheInfoPair("AvgRevenue")).isEmpty();
+    }
+
+    @Override
+    protected Optional<String> getAccioMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("cache/cache_mdl.json")).getPath());
     }
 
     @Test
@@ -103,7 +108,7 @@ public abstract class TestCache
                 PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from Revenue limit 100");
                 ResultSet resultSet = stmt.executeQuery()) {
             resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
+            assertThatNoException().isThrownBy(() -> resultSet.getLong("custkey"));
             assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
             int count = 1;
 
@@ -118,9 +123,9 @@ public abstract class TestCache
             stmt.setObject(1, 1202);
             try (ResultSet resultSet = stmt.executeQuery()) {
                 resultSet.next();
-                assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
+                assertThatNoException().isThrownBy(() -> resultSet.getLong("custkey"));
                 assertThatNoException().isThrownBy(() -> resultSet.getInt("revenue"));
-                assertThat(resultSet.getInt("custkey")).isEqualTo(1202);
+                assertThat(resultSet.getLong("custkey")).isEqualTo(1202L);
                 assertThat(resultSet.next()).isFalse();
             }
         }
@@ -156,7 +161,7 @@ public abstract class TestCache
         try (ConnectorRecordIterator connectorRecordIterator = cacheManager.get().query(withParam, ImmutableList.of(new Parameter(INTEGER, 1202)))) {
             Object[] result = connectorRecordIterator.next();
             assertThat(result.length).isEqualTo(2);
-            assertThat(result[0]).isEqualTo(1202);
+            assertThat(result[0]).isEqualTo(1202L);
             assertThat(connectorRecordIterator.hasNext()).isFalse();
         }
     }
@@ -195,13 +200,13 @@ public abstract class TestCache
         assertThat(tableNames).contains(mappingName);
 
         List<Object[]> duckdbResult = queryDuckdb(format("select * from \"%s\"", mappingName));
-        List<Object[]> bqResult = queryByMetadata(format("SELECT\n" +
+        List<Object[]> bqResult = queryBigQuery("SELECT\n" +
                 "     o_orderkey orderkey\n" +
                 "   , o_custkey custkey\n" +
                 "   , o_orderstatus orderstatus\n" +
                 "   , o_totalprice totalprice\n" +
                 "   , o_orderdate orderdate" +
-                " from %s.%s.orders", getDefaultCatalog(), getDefaultSchema()));
+                " from `canner-cml`.tpch_tiny.orders");
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
     }

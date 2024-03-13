@@ -41,7 +41,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException
 
 @Test(singleThreaded = true)
 public class TestBigQueryCache
-        extends AbstractCacheTestWithBigQuery
+        extends AbstractCacheTest
 {
     @Override
     protected Optional<String> getAccioMDLPath()

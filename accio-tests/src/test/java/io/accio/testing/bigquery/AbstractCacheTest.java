@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.accio.testing;
+package io.accio.testing.bigquery;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,7 +31,7 @@ import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
-import io.airlift.log.Logger;
+import io.accio.testing.TestingAccioServer;
 import org.testng.annotations.BeforeClass;
 
 import java.nio.file.Files;
@@ -49,12 +49,11 @@ import static java.lang.String.format;
 import static java.lang.System.getenv;
 
 public abstract class AbstractCacheTest
-        extends AbstractWireProtocolTest
+        extends AbstractWireProtocolTestWithBigQuery
 {
     protected final Supplier<CacheManager> cacheManager = () -> getInstance(Key.get(CacheManager.class));
     protected final Supplier<CachedTableMapping> cachedTableMapping = () -> getInstance(Key.get(CachedTableMapping.class));
     protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
-    private static final Logger LOG = Logger.get(AbstractCacheTest.class);
 
     @Override
     protected TestingAccioServer createAccioServer()
@@ -118,10 +117,10 @@ public abstract class AbstractCacheTest
         }
     }
 
-    protected List<Object[]> queryByMetadata(String statement)
+    protected List<Object[]> queryBigQuery(String statement)
     {
-        Metadata metadata = getInstance(Key.get(Metadata.class));
-        try (ConnectorRecordIterator iterator = metadata.directQuery(statement, List.of())) {
+        Metadata bigQueryMetadata = getInstance(Key.get(Metadata.class));
+        try (ConnectorRecordIterator iterator = bigQueryMetadata.directQuery(statement, List.of())) {
             List<PGType> pgTypes = iterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {

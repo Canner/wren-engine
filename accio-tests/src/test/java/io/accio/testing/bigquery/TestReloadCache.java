@@ -44,7 +44,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestReloadCache
-        extends AbstractCacheTestWithBigQuery
+        extends AbstractCacheTest
 {
     private Path accioMDLFilePath;
 

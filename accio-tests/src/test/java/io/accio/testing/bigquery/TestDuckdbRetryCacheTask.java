@@ -35,7 +35,7 @@ import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDuckdbRetryCacheTask
-        extends AbstractCacheTestWithBigQuery
+        extends AbstractCacheTest
 {
     private static final AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
             .setModels(List.of(

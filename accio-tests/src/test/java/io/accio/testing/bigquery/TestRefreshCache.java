@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Test(singleThreaded = true)
 public class TestRefreshCache
-        extends AbstractCacheTestWithBigQuery
+        extends AbstractCacheTest
 {
     private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
 
