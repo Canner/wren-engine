@@ -20,7 +20,6 @@ import com.google.common.collect.Multimap;
 import com.google.inject.Key;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
-import io.accio.main.metadata.Metadata;
 import io.airlift.log.Logger;
 import org.postgresql.core.BaseConnection;
 import org.postgresql.jdbc.PgArray;
@@ -78,7 +77,7 @@ public class TestBigQueryType
     protected void prepare()
     {
         testSchemaTableName = new SchemaTableName("cml_temp", "test_bigquery_type_" + currentTimeMillis());
-        bigQueryMetadata = (BigQueryMetadata) getInstance(Key.get(Metadata.class));
+        bigQueryMetadata = getInstance(Key.get(BigQueryMetadata.class));
         try {
             pgConnection = (BaseConnection) createConnection();
             testCases = initTestcases();

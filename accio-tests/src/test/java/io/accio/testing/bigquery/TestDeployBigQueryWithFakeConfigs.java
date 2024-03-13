@@ -14,42 +14,35 @@
 
 package io.accio.testing.bigquery;
 
-import com.google.cloud.bigquery.DatasetId;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Key;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.dto.Manifest;
-import io.accio.connector.bigquery.BigQueryClient;
-import io.accio.main.connector.bigquery.BigQueryMetadata;
-import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
-import io.airlift.log.Logger;
+import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 
 import static io.accio.base.Utils.randomIntString;
+import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
+import static io.accio.base.config.BigQueryConfig.BIGQUERY_PROJECT_ID;
+import static io.accio.base.config.ConfigManager.ConfigEntry.configEntry;
 import static java.lang.String.format;
-import static java.lang.System.getenv;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class AbstractWireProtocolTestWithBigQuery
-        extends AbstractWireProtocolTest
+public class TestDeployBigQueryWithFakeConfigs
+        extends AbstractWireProtocolTestWithBigQuery
 {
-    protected static final Manifest DEFAULT_MANIFEST = Manifest.builder()
-            .setCatalog("canner-cml")
-            .setSchema("tpch_tiny")
-            .build();
-    private static final Logger LOG = Logger.get(AbstractWireProtocolTestWithBigQuery.class);
-
     @Override
     protected TestingAccioServer createAccioServer()
             throws Exception
     {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
+                .put("bigquery.project-id", "fake")
                 .put("bigquery.location", "asia-east1")
-                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
+                .put("bigquery.credentials-key", "fake")
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("pg-wire-protocol.auth.file", requireNonNull(getClass().getClassLoader().getResource("accounts")).getPath())
                 .put("accio.datasource.type", "bigquery");
@@ -73,34 +66,11 @@ public abstract class AbstractWireProtocolTestWithBigQuery
                 .build();
     }
 
-    protected Optional<String> getAccioMDLPath()
+    @Test
+    public void testDeployBigQueryWithFakeConfigs()
     {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("tpch_mdl.json")).getPath());
-    }
-
-    @Override
-    protected String getDefaultCatalog()
-    {
-        return "canner-cml";
-    }
-
-    @Override
-    protected String getDefaultSchema()
-    {
-        return "tpch_tiny";
-    }
-
-    @Override
-    protected void cleanup()
-    {
-        try {
-            BigQueryMetadata metadata = getInstance(Key.get(BigQueryMetadata.class));
-            BigQueryClient bigQueryClient = metadata.getBigQueryClient();
-            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
-            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
-        }
-        catch (Exception ex) {
-            LOG.error(ex, "cleanup bigquery schema failed");
-        }
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, AccioConfig.DataSourceType.BIGQUERY.name()));
+        assertThat(getConfig(BIGQUERY_PROJECT_ID)).isEqualTo(configEntry(BIGQUERY_PROJECT_ID, "fake"));
+        assertThat(getConfig(BIGQUERY_CRENDITALS_KEY)).isEqualTo(configEntry(BIGQUERY_CRENDITALS_KEY, "fake"));
     }
 }

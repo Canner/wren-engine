@@ -16,26 +16,29 @@ package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
 import io.accio.base.pgcatalog.function.PgFunction;
-import io.accio.main.metadata.Metadata;
-import io.accio.main.wireprotocol.PgMetastore;
+import io.accio.main.connector.duckdb.DuckDBMetadata;
+import io.airlift.log.Logger;
 
 import javax.inject.Inject;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class DuckDBFunctionBuilder
-        extends PgFunctionBuilder
-        implements PgMetastoreFunctionBuilder
+        implements PgFunctionBuilder, PgMetastoreFunctionBuilder
 {
+    private static final Logger LOG = Logger.get(DuckDBFunctionBuilder.class);
+    private final DuckDBMetadata duckDBMetadata;
+
     @Inject
-    public DuckDBFunctionBuilder(PgMetastore connector)
+    public DuckDBFunctionBuilder(DuckDBMetadata duckDBMetadata)
     {
-        super((Metadata) connector);
+        this.duckDBMetadata = requireNonNull(duckDBMetadata, "duckDBMetadata is null");
     }
 
     @Override
-    protected String generateCreateFunction(PgFunction pgFunction)
+    public String generateCreateFunction(PgFunction pgFunction)
     {
         switch (pgFunction.getLanguage()) {
             case SQL:
@@ -60,5 +63,13 @@ public class DuckDBFunctionBuilder
                 pgFunction.getName(),
                 parameterBuilder,
                 pgFunction.getDefinition());
+    }
+
+    public void createPgFunction(PgFunction pgFunction)
+    {
+        String sql = generateCreateFunction(pgFunction);
+        LOG.info("Creating or updating pg_catalog.%s: %s", pgFunction.getName(), sql);
+        duckDBMetadata.directDDL(sql);
+        LOG.info("pg_catalog.%s has created or updated", pgFunction.getName());
     }
 }

@@ -19,12 +19,16 @@ import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresConfig;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
 import io.accio.connector.StorageClient;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresRecordIterator;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.pgcatalog.builder.NoopPgFunctionBuilder;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
 
@@ -42,12 +46,16 @@ import static java.util.stream.Collectors.toList;
 public class PostgresMetadata
         implements Metadata, PgMetastore
 {
-    private final PostgresClient postgresClient;
+    private final ConfigManager configManager;
+    private final PgFunctionBuilder pgFunctionBuilder;
+    private PostgresClient postgresClient;
 
     @Inject
-    public PostgresMetadata(PostgresClient postgresClient)
+    public PostgresMetadata(ConfigManager configManager)
     {
-        this.postgresClient = requireNonNull(postgresClient, "postgresClient is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
+        this.postgresClient = new PostgresClient(configManager.getConfig(PostgresConfig.class));
+        this.pgFunctionBuilder = new NoopPgFunctionBuilder();
     }
 
     @Override
@@ -183,11 +191,23 @@ public class PostgresMetadata
     }
 
     @Override
-    public void reloadConfig() {}
+    public void reload()
+    {
+        this.postgresClient = new PostgresClient(configManager.getConfig(PostgresConfig.class));
+    }
 
     @Override
     public StorageClient getCacheStorageClient()
     {
         throw new UnsupportedOperationException("Postgres does not support cache storage client");
+    }
+
+    @Override
+    public void close() {}
+
+    @Override
+    public PgFunctionBuilder getPgFunctionBuilder()
+    {
+        return pgFunctionBuilder;
     }
 }

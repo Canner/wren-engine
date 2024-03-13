@@ -18,6 +18,7 @@ import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.connector.StorageClient;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.trino.sql.tree.QualifiedName;
 
 import java.util.List;
@@ -52,7 +53,11 @@ public interface Metadata
 
     String getPgCatalogName();
 
-    void reloadConfig();
+    void reload();
 
     StorageClient getCacheStorageClient();
+
+    PgFunctionBuilder getPgFunctionBuilder();
+
+    void close();
 }

@@ -18,7 +18,7 @@ import io.accio.base.config.BigQueryConfig;
 import io.accio.base.config.ConfigManager;
 import io.accio.cache.CacheService;
 import io.accio.cache.PathInfo;
-import io.accio.main.connector.bigquery.BigQueryCacheService;
+import io.accio.main.connector.CacheServiceManager;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.TestingAccioServer;
 import org.testng.annotations.Test;
@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestBigQueryCacheService
         extends AbstractCacheTest
 {
-    private BigQueryCacheService bigQueryCacheService;
+    private CacheServiceManager cacheServiceManager;
     private BigQueryConfig bigQueryConfig;
     private Metadata metadata;
     private final String query = "WITH\n" +
@@ -66,7 +66,7 @@ public class TestBigQueryCacheService
             throws Exception
     {
         TestingAccioServer accioServer = super.createAccioServer();
-        bigQueryCacheService = (BigQueryCacheService) accioServer.getInstance(Key.get(CacheService.class));
+        cacheServiceManager = (CacheServiceManager) accioServer.getInstance(Key.get(CacheService.class));
         bigQueryConfig = accioServer.getInstance(Key.get(ConfigManager.class)).getConfig(BigQueryConfig.class);
         metadata = accioServer.getInstance(Key.get(Metadata.class));
         return accioServer;
@@ -75,7 +75,7 @@ public class TestBigQueryCacheService
     @Test
     public void testBigQueryCacheService()
     {
-        Optional<PathInfo> pathInfo = bigQueryCacheService.createCache(
+        Optional<PathInfo> pathInfo = cacheServiceManager.createCache(
                 bigQueryConfig.getProjectId().orElseThrow(AssertionError::new),
                 "tpch_tiny",
                 "Revenue",
@@ -84,7 +84,7 @@ public class TestBigQueryCacheService
         String bucketName = bigQueryConfig.getBucketName().orElseThrow(AssertionError::new);
         String prefix = getTableLocationPrefix(pathInfo.get().getPath()).orElseThrow(AssertionError::new);
         assertThat(metadata.getCacheStorageClient().checkFolderExists(bucketName, prefix)).isTrue();
-        bigQueryCacheService.deleteTarget(pathInfo.get());
+        cacheServiceManager.deleteTarget(pathInfo.get());
         assertThat(metadata.getCacheStorageClient().checkFolderExists(bucketName, prefix)).isFalse();
     }
 
@@ -93,6 +93,6 @@ public class TestBigQueryCacheService
     {
         // No exception should be thrown when deleting a non-existent directory
         PathInfo pathInfo = PathInfo.of("aa/bb/cc", "*.parquet");
-        bigQueryCacheService.deleteTarget(pathInfo);
+        cacheServiceManager.deleteTarget(pathInfo);
     }
 }

@@ -19,14 +19,15 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Streams;
+import io.accio.base.AccioException;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.util.Objects.requireNonNull;
 
 public class BigQueryCredentialsSupplier
@@ -53,7 +54,7 @@ public class BigQueryCredentialsSupplier
             return GoogleCredentials.fromStream(new ByteArrayInputStream(Base64.decodeBase64(key)));
         }
         catch (IOException e) {
-            throw new UncheckedIOException("Failed to create Credentials from key", e);
+            throw new AccioException(GENERIC_USER_ERROR, "Failed to create Credentials from key", e);
         }
     }
 
@@ -63,7 +64,7 @@ public class BigQueryCredentialsSupplier
             return GoogleCredentials.fromStream(new FileInputStream(file));
         }
         catch (IOException e) {
-            throw new UncheckedIOException("Failed to create Credentials from file", e);
+            throw new AccioException(GENERIC_USER_ERROR, "Failed to create Credentials from file", e);
         }
     }
 

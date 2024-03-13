@@ -92,7 +92,7 @@ public class TestConfigResource
         resetConfig();
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         AccioConfig accioConfig = new AccioConfig();
-        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, null));
+        assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, accioConfig.getDataSourceType().name()));
         assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath()));
         assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, duckDBConfig.getMemoryLimit().toString()));
         assertThat(getConfig(DUCKDB_MAX_CONCURRENT_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));

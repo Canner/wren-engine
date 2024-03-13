@@ -36,6 +36,7 @@ import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.config.BigQueryConfig;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.metadata.SchemaTableName;
@@ -46,6 +47,8 @@ import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
 import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.metadata.Metadata;
+import io.accio.main.pgcatalog.builder.BigQueryPgFunctionBuilder;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 import org.jheaps.annotations.VisibleForTesting;
@@ -57,7 +60,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.accio.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
@@ -74,12 +76,13 @@ public class BigQueryMetadata
 
     private final Map<String, String> pgToBqFunctionNameMappings;
 
-    private final String location;
-    private final String metadataSchemaName;
-    private final String pgCatalogName;
+    private String location;
+    private String metadataSchemaName;
+    private String pgCatalogName;
 
     private final ConfigManager configManager;
 
+    private final PgFunctionBuilder pgFunctionBuilder;
     private BigQueryClient bigQueryClient;
     private StorageClient cacheStorageClient;
 
@@ -87,15 +90,23 @@ public class BigQueryMetadata
     public BigQueryMetadata(ConfigManager configManager)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
-        this.bigQueryClient = createBigQueryClient();
-        this.cacheStorageClient = createGcsStorageClient();
+        // if data source isn't bigquery, don't init the clients.
+        if (configManager.getConfig(AccioConfig.class).getDataSourceType().equals(AccioConfig.DataSourceType.BIGQUERY)) {
+            try {
+                this.bigQueryClient = createBigQueryClient();
+                this.cacheStorageClient = createGcsStorageClient();
+            }
+            catch (Exception ex) {
+                LOG.error(ex, "Failed to create BigQuery client. Please check your configuration.");
+            }
+        }
         BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
-        this.location = bigQueryConfig.getLocation()
-                .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "Location must be set"));
+        this.location = bigQueryConfig.getLocation().orElse(null);
         this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + ACCIO_TEMP_NAME;
         this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
         this.functionRegistry = new DataSourceFunctionRegistry();
+        this.pgFunctionBuilder = new BigQueryPgFunctionBuilder(this);
     }
 
     /**
@@ -263,10 +274,14 @@ public class BigQueryMetadata
     }
 
     @Override
-    public synchronized void reloadConfig()
+    public synchronized void reload()
     {
         bigQueryClient = createBigQueryClient();
         cacheStorageClient = createGcsStorageClient();
+        BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
+        this.location = bigQueryConfig.getLocation().orElse(null);
+        this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + ACCIO_TEMP_NAME;
+        this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
     }
 
     @Override
@@ -298,7 +313,7 @@ public class BigQueryMetadata
         HeaderProvider headerProvider = FixedHeaderProvider.create("user-agent", "accio/1");
 
         BigQueryCredentialsSupplier bigQueryCredentialsSupplier = new BigQueryCredentialsSupplier(config.getCredentialsKey(), config.getCredentialsFile());
-        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
+        String billingProjectId = calculateBillingProjectId(config.getProjectId(), bigQueryCredentialsSupplier.getCredentials());
         BigQueryOptions.Builder options = BigQueryOptions.newBuilder()
                 .setHeaderProvider(headerProvider)
                 .setProjectId(billingProjectId)
@@ -332,4 +347,13 @@ public class BigQueryMetadata
         bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
         return new GcsStorageClient(options.build().getService());
     }
+
+    @Override
+    public PgFunctionBuilder getPgFunctionBuilder()
+    {
+        return pgFunctionBuilder;
+    }
+
+    @Override
+    public void close() {}
 }

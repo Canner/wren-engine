@@ -19,7 +19,7 @@ import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
 import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.accio.main.AccioMetastore;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
+import io.accio.main.pgcatalog.builder.PgFunctionBuilderManager;
 import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
 import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.log.Logger;
@@ -39,7 +39,7 @@ public class PgCatalogManager
     private final Metadata connector;
     private final DataSourceFunctionRegistry dataSourceFunctionRegistry;
     private final PgMetastoreFunctionRegistry metastoreFunctionRegistry;
-    private final PgFunctionBuilder pgFunctionBuilder;
+    private final PgFunctionBuilderManager pgFunctionBuilderManager;
     private final PgMetastoreFunctionBuilder pgMetastoreFunctionBuilder;
     private final PgMetastore pgMetastore;
     private final AccioMetastore accioMetastore;
@@ -47,13 +47,13 @@ public class PgCatalogManager
     @Inject
     public PgCatalogManager(
             Metadata connector,
-            PgFunctionBuilder pgFunctionBuilder,
+            PgFunctionBuilderManager pgFunctionBuilderManager,
             PgMetastore pgMetastore,
             PgMetastoreFunctionBuilder pgMetastoreFunctionBuilder,
             AccioMetastore accioMetastore)
     {
         this.connector = requireNonNull(connector, "connector is null");
-        this.pgFunctionBuilder = requireNonNull(pgFunctionBuilder, "pgFunctionBuilder is null");
+        this.pgFunctionBuilderManager = requireNonNull(pgFunctionBuilderManager, "pgFunctionBuilderManager is null");
         this.metadataSchemaName = requireNonNull(connector.getMetadataSchemaName());
         this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
         this.dataSourceFunctionRegistry = new DataSourceFunctionRegistry();
@@ -82,7 +82,7 @@ public class PgCatalogManager
             dataSourceFunctionRegistry.getFunctions()
                     .stream()
                     .filter(f -> !f.isImplemented())
-                    .forEach(pgFunctionBuilder::createPgFunction);
+                    .forEach(pgFunctionBuilderManager::createPgFunction);
         }
     }
 

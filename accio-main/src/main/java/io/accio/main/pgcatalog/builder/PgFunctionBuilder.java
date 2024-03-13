@@ -15,26 +15,8 @@
 package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.pgcatalog.function.PgFunction;
-import io.accio.main.metadata.Metadata;
-import io.airlift.log.Logger;
 
-public abstract class PgFunctionBuilder
+public interface PgFunctionBuilder
 {
-    private static final Logger LOG = Logger.get(PgFunctionBuilder.class);
-    private final Metadata connector;
-
-    public PgFunctionBuilder(Metadata connector)
-    {
-        this.connector = connector;
-    }
-
-    public void createPgFunction(PgFunction pgFunction)
-    {
-        String sql = generateCreateFunction(pgFunction);
-        LOG.info("Creating or updating %s.%s: %s", connector.getPgCatalogName(), pgFunction.getName(), sql);
-        connector.directDDL(sql);
-        LOG.info("%s.%s has created or updated", connector.getPgCatalogName(), pgFunction.getName());
-    }
-
-    protected abstract String generateCreateFunction(PgFunction pgFunction);
+    String generateCreateFunction(PgFunction pgFunction);
 }
