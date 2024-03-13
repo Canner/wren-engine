@@ -309,7 +309,7 @@ public class ConfigManager
         update.forEach(this::setConfigInternal);
         boolean needReload = false;
         for (ConfigEntry configEntry : configEntries) {
-            needReload = setConfigInternal(configEntry.getName(), configEntry.getValue());
+            needReload |= setConfigInternal(configEntry.getName(), configEntry.getValue());
         }
         resetCache();
         syncFile(update);
