@@ -19,7 +19,6 @@ import io.accio.base.type.PGType;
 import io.accio.base.type.PGTypes;
 import io.accio.main.wireprotocol.PostgresWireProtocol;
 import io.accio.testing.TestingWireProtocolClient;
-import io.accio.testing.postgres.AbstractWireProtocolTestWithPostgres;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
@@ -51,7 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestWireProtocolWithDuckDB
-        extends AbstractWireProtocolTestWithPostgres
+        extends AbstractWireProtocolTestWithDuckDB
 {
     @Test
     public void testSimpleQuery()
@@ -926,11 +925,6 @@ public class TestWireProtocolWithDuckDB
                 {"select typinput = 1, typoutput = 1, typreceive = 1 from pg_catalog.pg_type"},
                 {"select * from unnest(generate_array(1, 10)) t(col_1)"},
                 {"select * from unnest(array[1,2,3]) t(col_1)"},
-                {"SELECT\n" +
-                        "s.r\n" +
-                        ", current_schemas(false)[s.r] nspname\n" +
-                        "FROM\n" +
-                        "UNNEST(generate_array(1, array_upper(current_schemas(false), 1))) s (r)"},
         };
     }
 
@@ -972,21 +966,19 @@ public class TestWireProtocolWithDuckDB
                 {"oid", 1L},
                 {"numeric", new BigDecimal("30.123")},
                 {"date", LocalDate.of(1900, 1, 3)},
-                // TODO support time
+                // TODO: Support time
                 // {"time", LocalTime.of(12, 10, 16)},
                 {"timestamp", LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000)},
-                // TODO support timestamptz
+                // TODO: Support timestamptz
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
                 {"bytea", "test1".getBytes(UTF_8)},
-                // TODO support interval for pg connector
+                // TODO: Support interval
                 // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
-                {"array", new Boolean[] {true, false}},
-                {"array", new Double[] {1.0, 2.0, 3.0}},
-                {"array", new String[] {"hello", "world"}}
-
-                // TODO: type support
-                // {"any", new Object[] {1, "test", new BigDecimal(10)}}
+                // TODO: Wait DuckDB support array type
+                // {"array", new Boolean[] {true, false}},
+                // {"array", new Double[] {1.0, 2.0, 3.0}},
+                // {"array", new String[] {"hello", "world"}}
         };
     }
 

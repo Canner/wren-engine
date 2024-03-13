@@ -141,7 +141,7 @@ public final class DuckdbClient
             }
             // workaround for describe duckdb sql
             preparedStatement.execute();
-            ResultSetMetaData metaData = preparedStatement.getMetaData();
+            ResultSetMetaData metaData = preparedStatement.getResultSet().getMetaData();
             int columnCount = metaData.getColumnCount();
 
             ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();

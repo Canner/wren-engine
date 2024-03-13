@@ -14,6 +14,7 @@
 
 package io.accio.main.connector.duckdb;
 
+import com.google.common.collect.ImmutableMap;
 import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
@@ -23,6 +24,8 @@ import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbTypes;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.type.DateType;
+import io.accio.base.type.PGType;
 import io.accio.base.type.VarcharType;
 import io.accio.cache.DuckdbRecordIterator;
 import io.accio.connector.StorageClient;
@@ -34,12 +37,16 @@ import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
 
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -47,14 +54,27 @@ public class DuckDBMetadata
         implements Metadata, PgMetastore
 {
     private final DuckdbClient duckdbClient;
-    private final SqlConverter sqlConverter = new DuckDBSqlConverter();
+    private final SqlConverter sqlConverter;
     private final PgFunctionBuilder pgFunctionBuilder;
+    private final Map<String, String> pgToDuckDBFunctionNameMappings;
 
     @Inject
     public DuckDBMetadata(DuckdbClient duckdbClient)
     {
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.pgFunctionBuilder = new DuckDBFunctionBuilder(this);
+        this.sqlConverter = new DuckDBSqlConverter(this);
+        this.pgToDuckDBFunctionNameMappings = initPgNameToDuckDBFunctions();
+    }
+
+    /**
+     * @return mapping table for pg function which can be replaced by duckdb function.
+     */
+    private Map<String, String> initPgNameToDuckDBFunctions()
+    {
+        return ImmutableMap.<String, String>builder()
+                .put("generate_array", "generate_series")
+                .build();
     }
 
     @Override
@@ -102,7 +122,13 @@ public class DuckDBMetadata
     @Override
     public QualifiedName resolveFunction(String functionName, int numArgument)
     {
-        return null;
+        String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
+
+        if (pgToDuckDBFunctionNameMappings.containsKey(funcNameLowerCase)) {
+            return QualifiedName.of(pgToDuckDBFunctionNameMappings.get(funcNameLowerCase));
+        }
+
+        return QualifiedName.of(functionName);
     }
 
     @Override
@@ -121,7 +147,7 @@ public class DuckDBMetadata
     public ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters)
     {
         try {
-            return DuckdbRecordIterator.of(duckdbClient, sql, parameters);
+            return DuckdbRecordIterator.of(duckdbClient, sql, convertParameters(parameters));
         }
         catch (Exception e) {
             throw new AccioException(GENERIC_INTERNAL_ERROR, e);
@@ -131,7 +157,7 @@ public class DuckDBMetadata
     @Override
     public List<Column> describeQuery(String sql, List<Parameter> parameters)
     {
-        return duckdbClient.describe(sql, parameters).stream()
+        return duckdbClient.describe(sql, convertParameters(parameters)).stream()
                 .map(columnMetadata -> new Column(columnMetadata.getName(), columnMetadata.getType()))
                 .collect(toList());
     }
@@ -191,6 +217,21 @@ public class DuckDBMetadata
     public PgFunctionBuilder getPgFunctionBuilder()
     {
         return pgFunctionBuilder;
+    }
+
+    private List<Parameter> convertParameters(List<Parameter> parameters)
+    {
+        return parameters.stream().map(this::convertParameter).collect(toList());
+    }
+
+    private Parameter convertParameter(Parameter parameter)
+    {
+        PGType<?> type = parameter.getType();
+        Object value = parameter.getValue();
+        if (type instanceof DateType && value instanceof LocalDate) {
+            value = Date.valueOf((LocalDate) value);
+        }
+        return new Parameter(type, value);
     }
 
     public void reset()
