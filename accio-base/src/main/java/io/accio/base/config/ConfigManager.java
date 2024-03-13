@@ -63,7 +63,6 @@ import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_FILE;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_LOCATION;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX;
-import static io.accio.base.config.BigQueryConfig.BIGQUERY_PARENT_PROJECT_ID;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_PROJECT_ID;
 import static io.accio.base.config.PostgresConfig.POSTGRES_JDBC_URL;
 import static io.accio.base.config.PostgresConfig.POSTGRES_PASSWORD;
@@ -157,7 +156,6 @@ public class ConfigManager
         initConfig(BIGQUERY_CRENDITALS_KEY, bigQueryConfig.getCredentialsKey().orElse(null), true, false);
         initConfig(BIGQUERY_CRENDITALS_FILE, bigQueryConfig.getCredentialsFile().orElse(null), true, false);
         initConfig(BIGQUERY_PROJECT_ID, bigQueryConfig.getProjectId().orElse(null), true, false);
-        initConfig(BIGQUERY_PARENT_PROJECT_ID, bigQueryConfig.getParentProjectId().orElse(null), true, false);
         initConfig(BIGQUERY_LOCATION, bigQueryConfig.getLocation().orElse(null), true, false);
         initConfig(BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null), true, false);
         initConfig(BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix(), true, false);
@@ -242,7 +240,6 @@ public class ConfigManager
         result.setCredentialsKey(configs.get(BIGQUERY_CRENDITALS_KEY));
         result.setCredentialsFile(configs.get(BIGQUERY_CRENDITALS_FILE));
         result.setProjectId(configs.get(BIGQUERY_PROJECT_ID));
-        result.setParentProjectId(configs.get(BIGQUERY_PARENT_PROJECT_ID));
         result.setLocation(configs.get(BIGQUERY_LOCATION));
         result.setBucketName(configs.get(BIGQUERY_BUCKET_NAME));
         result.setMetadataSchemaPrefix(configs.get(BIGQUERY_METADATA_SCHEMA_PREFIX));

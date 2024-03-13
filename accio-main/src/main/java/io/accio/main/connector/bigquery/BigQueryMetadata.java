@@ -340,7 +340,7 @@ public class BigQueryMetadata
 
     public static GcsStorageClient provideGcsStorageClient(BigQueryConfig config, HeaderProvider headerProvider, BigQueryCredentialsSupplier bigQueryCredentialsSupplier)
     {
-        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
+        String billingProjectId = calculateBillingProjectId(config.getProjectId(), bigQueryCredentialsSupplier.getCredentials());
         StorageOptions.Builder options = StorageOptions.newBuilder()
                 .setHeaderProvider(headerProvider)
                 .setProjectId(billingProjectId);

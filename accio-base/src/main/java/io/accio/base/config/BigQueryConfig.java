@@ -27,14 +27,12 @@ public class BigQueryConfig
     public static final String BIGQUERY_CRENDITALS_KEY = "bigquery.credentials-key";
     public static final String BIGQUERY_CRENDITALS_FILE = "bigquery.credentials-file";
     public static final String BIGQUERY_PROJECT_ID = "bigquery.project-id";
-    public static final String BIGQUERY_PARENT_PROJECT_ID = "bigquery.parent-project-id";
     public static final String BIGQUERY_LOCATION = "bigquery.location";
     public static final String BIGQUERY_BUCKET_NAME = "bigquery.bucket-name";
     public static final String BIGQUERY_METADATA_SCHEMA_PREFIX = "bigquery.metadata.schema.prefix";
     private Optional<String> credentialsKey = Optional.empty();
     private Optional<String> credentialsFile = Optional.empty();
     private Optional<String> projectId = Optional.empty();
-    private Optional<String> parentProjectId = Optional.empty();
 
     private Optional<String> location = Optional.empty();
 
@@ -78,19 +76,6 @@ public class BigQueryConfig
     public BigQueryConfig setProjectId(String projectId)
     {
         this.projectId = Optional.ofNullable(projectId);
-        return this;
-    }
-
-    public Optional<String> getParentProjectId()
-    {
-        return parentProjectId;
-    }
-
-    @Config(BIGQUERY_PARENT_PROJECT_ID)
-    @ConfigDescription("The Google Cloud Project ID to bill for the export")
-    public BigQueryConfig setParentProjectId(String parentProjectId)
-    {
-        this.parentProjectId = Optional.ofNullable(parentProjectId);
         return this;
     }
 
