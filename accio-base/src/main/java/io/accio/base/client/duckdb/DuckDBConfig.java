@@ -26,7 +26,7 @@ public class DuckDBConfig
     public static final String DUCKDB_HOME_DIRECTORY = "duckdb.home-directory";
     public static final String DUCKDB_TEMP_DIRECTORY = "duckdb.temp-directory";
     public static final String DUCKDB_MAX_CONCURRENT_TASKS = "duckdb.max-concurrent-tasks";
-    public static final String DUCKDB_MAX_CONCURRENT_QUERIES = "duckdb.max-concurrent-queries";
+    public static final String DUCKDB_MAX_CONCURRENT_METADATA_QUERIES = "duckdb.max-concurrent-metadata-queries";
     public static final String DUCKDB_MAX_CACHE_QUERY_TIMEOUT = "duckdb.max-cache-query-timeout";
 
     public static final String DUCKDB_MAX_CACHE_TABLE_SIZE_RATIO = "duckdb.max-cache-table-size-ratio";
@@ -89,7 +89,7 @@ public class DuckDBConfig
         return maxConcurrentMetadataQueries;
     }
 
-    @Config(DUCKDB_MAX_CONCURRENT_QUERIES)
+    @Config(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)
     public void setMaxConcurrentMetadataQueries(int maxConcurrentMetadataQueries)
     {
         this.maxConcurrentMetadataQueries = maxConcurrentMetadataQueries;
