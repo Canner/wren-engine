@@ -16,13 +16,17 @@ package io.accio;
 
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
+import io.accio.base.config.AccioConfig;
+import io.accio.base.config.BigQueryConfig;
+import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresConfig;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.dto.Manifest;
-import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.main.AccioMetastore;
-import io.accio.main.connector.bigquery.BigQueryConfig;
 import io.accio.main.connector.bigquery.BigQueryMetadata;
 import io.accio.main.connector.bigquery.BigQuerySqlConverter;
-import io.accio.server.module.BigQueryConnectorModule;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -50,12 +54,15 @@ public class TestBigQuerySqlConverter
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .setLocation("asia-east1");
 
-        BigQueryClient bigQueryClient = BigQueryConnectorModule.provideBigQuery(
+        ConfigManager configManager = new ConfigManager(
+                new AccioConfig(),
+                new PostgresConfig(),
                 config,
-                BigQueryConnectorModule.createHeaderProvider(),
-                BigQueryConnectorModule.provideBigQueryCredentialsSupplier(config));
+                new DuckDBConfig(),
+                new PostgresWireProtocolConfig(),
+                new DuckdbS3StyleStorageConfig());
 
-        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(bigQueryClient, config);
+        BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
         AccioMetastore accioMetastore = new AccioMetastore();
         accioMetastore.setAccioMDL(AccioMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny")
                 .setModels(List.of(model("Orders", "select * from \"canner-cml\".\"tpch_tiny\".\"orders\"",

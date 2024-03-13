@@ -22,6 +22,15 @@ import javax.validation.constraints.Min;
 
 public class DuckDBConfig
 {
+    public static final String DUCKDB_MEMORY_LIMIT = "duckdb.memory-limit";
+    public static final String DUCKDB_HOME_DIRECTORY = "duckdb.home-directory";
+    public static final String DUCKDB_TEMP_DIRECTORY = "duckdb.temp-directory";
+    public static final String DUCKDB_MAX_CONCURRENT_TASKS = "duckdb.max-concurrent-tasks";
+    public static final String DUCKDB_MAX_CONCURRENT_QUERIES = "duckdb.max-concurrent-queries";
+    public static final String DUCKDB_MAX_CACHE_QUERY_TIMEOUT = "duckdb.max-cache-query-timeout";
+
+    public static final String DUCKDB_MAX_CACHE_TABLE_SIZE_RATIO = "duckdb.max-cache-table-size-ratio";
+    public static final String DUCKDB_CACHE_TASK_RETRY_DELAY = "duckdb.cache-task-retry-delay";
     private DataSize memoryLimit = DataSize.of(Runtime.getRuntime().maxMemory() / 2, DataSize.Unit.BYTE);
     private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
@@ -36,7 +45,7 @@ public class DuckDBConfig
         return memoryLimit;
     }
 
-    @Config("duckdb.memory-limit")
+    @Config(DUCKDB_MEMORY_LIMIT)
     public void setMemoryLimit(DataSize memoryLimit)
     {
         this.memoryLimit = memoryLimit;
@@ -47,7 +56,7 @@ public class DuckDBConfig
         return homeDirectory;
     }
 
-    @Config("duckdb.home-directory")
+    @Config(DUCKDB_HOME_DIRECTORY)
     public void setHomeDirectory(String homeDirectory)
     {
         this.homeDirectory = homeDirectory;
@@ -58,7 +67,7 @@ public class DuckDBConfig
         return tempDirectory;
     }
 
-    @Config("duckdb.temp-directory")
+    @Config(DUCKDB_TEMP_DIRECTORY)
     public void setTempDirectory(String tempDirectory)
     {
         this.tempDirectory = tempDirectory;
@@ -69,7 +78,7 @@ public class DuckDBConfig
         return maxConcurrentTasks;
     }
 
-    @Config("duckdb.max-concurrent-tasks")
+    @Config(DUCKDB_MAX_CONCURRENT_TASKS)
     public void setMaxConcurrentTasks(int maxConcurrentTasks)
     {
         this.maxConcurrentTasks = maxConcurrentTasks;
@@ -80,7 +89,7 @@ public class DuckDBConfig
         return maxConcurrentMetadataQueries;
     }
 
-    @Config("duckdb.max-concurrent-metadata-queries")
+    @Config(DUCKDB_MAX_CONCURRENT_QUERIES)
     public void setMaxConcurrentMetadataQueries(int maxConcurrentMetadataQueries)
     {
         this.maxConcurrentMetadataQueries = maxConcurrentMetadataQueries;
@@ -93,7 +102,7 @@ public class DuckDBConfig
         return maxCacheTableSizeRatio;
     }
 
-    @Config("duckdb.max-cache-table-size-ratio")
+    @Config(DUCKDB_MAX_CACHE_TABLE_SIZE_RATIO)
     public void setMaxCacheTableSizeRatio(double maxCacheTableSizeRatio)
     {
         this.maxCacheTableSizeRatio = maxCacheTableSizeRatio;
@@ -104,7 +113,7 @@ public class DuckDBConfig
         return maxCacheQueryTimeout;
     }
 
-    @Config("duckdb.max-cache-query-timeout")
+    @Config(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)
     public void setMaxCacheQueryTimeout(long maxCacheQueryTimeout)
     {
         this.maxCacheQueryTimeout = maxCacheQueryTimeout;
@@ -115,7 +124,7 @@ public class DuckDBConfig
         return cacheTaskRetryDelay;
     }
 
-    @Config("duckdb.cache-task-retry-delay")
+    @Config(DUCKDB_CACHE_TASK_RETRY_DELAY)
     public void setCacheTaskRetryDelay(long cacheTaskRetryDelay)
     {
         this.cacheTaskRetryDelay = cacheTaskRetryDelay;

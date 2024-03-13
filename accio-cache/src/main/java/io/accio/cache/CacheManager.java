@@ -26,6 +26,7 @@ import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.config.ConfigManager;
 import io.accio.base.dto.CacheInfo;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.sqlrewrite.AccioPlanner;
@@ -82,7 +83,6 @@ public class CacheManager
     private final SqlParser sqlParser;
     private final SqlConverter sqlConverter;
     private final DuckdbClient duckdbClient;
-    private final CacheStorageConfig cacheStorageConfig;
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final CachedTableMapping cachedTableMapping;
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> cacheScheduledFutures = new ConcurrentHashMap<>();
@@ -93,7 +93,7 @@ public class CacheManager
     private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
     private final EventLogger eventLogger;
     private final DuckdbTaskManager duckdbTaskManager;
-    private final DuckDBConfig duckdbConfig;
+    private final ConfigManager configManager;
 
     @Inject
     public CacheManager(
@@ -101,11 +101,10 @@ public class CacheManager
             CacheService cacheService,
             ExtraRewriter extraRewriter,
             DuckdbClient duckdbClient,
-            CacheStorageConfig cacheStorageConfig,
             CachedTableMapping cachedTableMapping,
             EventLogger eventLogger,
             DuckdbTaskManager duckdbTaskManager,
-            DuckDBConfig duckDBConfig)
+            ConfigManager configManager)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
@@ -113,10 +112,9 @@ public class CacheManager
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
         this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
         this.duckdbTaskManager = requireNonNull(duckdbTaskManager, "duckdbTaskManager is null");
-        this.cacheStorageConfig = requireNonNull(cacheStorageConfig, "cacheStorageConfig is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.eventLogger = requireNonNull(eventLogger, "eventLogger is null");
-        this.duckdbConfig = requireNonNull(duckDBConfig, "duckDBConfig is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
         refreshExecutor.setRemoveOnCancelPolicy(true);
     }
 
@@ -154,13 +152,14 @@ public class CacheManager
                     String errMsg = format("Failed to do cache for cacheInfo %s; caused by %s", cacheInfo.getName(), e.getMessage());
                     // If the cache fails because DuckDB doesn't have sufficient memory, we'll attempt to retry it later.
                     if (e.getCause() instanceof AccioException && EXCEEDED_GLOBAL_MEMORY_LIMIT.toErrorCode().equals(((AccioException) e.getCause()).getErrorCode())) {
+                        long delay = configManager.getConfig(DuckDBConfig.class).getCacheTaskRetryDelay();
                         retryScheduledFutures.put(
                                 catalogSchemaTableName,
                                 retryExecutor.schedule(
                                         () -> createTask(analyzedMDL, cacheInfo).join(),
-                                        duckdbConfig.getCacheTaskRetryDelay(),
+                                        delay,
                                         SECONDS));
-                        errMsg += "; will retry after " + duckdbConfig.getCacheTaskRetryDelay() + " seconds";
+                        errMsg += "; will retry after " + delay + " seconds";
                     }
                     duckdbClient.dropTableQuietly(duckdbTableName);
                     LOG.error(e, errMsg);
@@ -224,7 +223,7 @@ public class CacheManager
 
     private void refreshCacheInDuckDB(String path, String tableName)
     {
-        duckdbClient.executeDDL(cacheStorageConfig.generateDuckdbParquetStatement(path, tableName));
+        duckdbClient.executeDDL(configManager.getConfig(CacheStorageConfig.class).generateDuckdbParquetStatement(path, tableName));
     }
 
     public void removeCacheIfExist(String catalogName, String schemaName)

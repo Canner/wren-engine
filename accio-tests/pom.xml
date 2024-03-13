@@ -80,11 +80,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.api</groupId>
-            <artifactId>gax</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-bigquery</artifactId>
             <exclusions>

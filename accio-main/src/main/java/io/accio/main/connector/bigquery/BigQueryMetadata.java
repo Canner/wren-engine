@@ -14,7 +14,13 @@
 
 package io.accio.main.connector.bigquery;
 
+import com.google.api.gax.rpc.FixedHeaderProvider;
+import com.google.api.gax.rpc.HeaderProvider;
+import com.google.auth.Credentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryException;
+import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
@@ -22,6 +28,7 @@ import com.google.cloud.bigquery.JobStatistics;
 import com.google.cloud.bigquery.Routine;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableResult;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
@@ -29,14 +36,19 @@ import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.config.BigQueryConfig;
+import io.accio.base.config.ConfigManager;
 import io.accio.base.metadata.SchemaTableName;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
+import io.accio.connector.StorageClient;
 import io.accio.connector.bigquery.BigQueryClient;
 import io.accio.connector.bigquery.BigQueryType;
+import io.accio.connector.bigquery.GcsStorageClient;
 import io.accio.main.metadata.Metadata;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
+import org.jheaps.annotations.VisibleForTesting;
 
 import javax.inject.Inject;
 
@@ -57,7 +69,6 @@ public class BigQueryMetadata
         implements Metadata
 {
     private static final Logger LOG = Logger.get(BigQueryMetadata.class);
-    private final BigQueryClient bigQueryClient;
 
     private final DataSourceFunctionRegistry functionRegistry;
 
@@ -67,11 +78,18 @@ public class BigQueryMetadata
     private final String metadataSchemaName;
     private final String pgCatalogName;
 
+    private final ConfigManager configManager;
+
+    private BigQueryClient bigQueryClient;
+    private StorageClient cacheStorageClient;
+
     @Inject
-    public BigQueryMetadata(BigQueryClient bigQueryClient, BigQueryConfig bigQueryConfig)
+    public BigQueryMetadata(ConfigManager configManager)
     {
-        this.bigQueryClient = requireNonNull(bigQueryClient, "bigQueryClient is null");
-        requireNonNull(bigQueryConfig, "bigQueryConfig is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
+        this.bigQueryClient = createBigQueryClient();
+        this.cacheStorageClient = createGcsStorageClient();
+        BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
         this.location = bigQueryConfig.getLocation()
                 .orElseThrow(() -> new AccioException(GENERIC_USER_ERROR, "Location must be set"));
@@ -214,6 +232,12 @@ public class BigQueryMetadata
                 .collect(toImmutableList());
     }
 
+    @VisibleForTesting
+    public void dropTable(SchemaTableName schemaTableName)
+    {
+        bigQueryClient.dropTable(schemaTableName);
+    }
+
     @Override
     public String getDefaultCatalog()
     {
@@ -236,5 +260,76 @@ public class BigQueryMetadata
     public String getPgCatalogName()
     {
         return pgCatalogName;
+    }
+
+    @Override
+    public synchronized void reloadConfig()
+    {
+        bigQueryClient = createBigQueryClient();
+        cacheStorageClient = createGcsStorageClient();
+    }
+
+    @Override
+    public StorageClient getCacheStorageClient()
+    {
+        return cacheStorageClient;
+    }
+
+    @VisibleForTesting
+    public BigQueryClient getBigQueryClient()
+    {
+        return bigQueryClient;
+    }
+
+    private BigQueryClient createBigQueryClient()
+    {
+        BigQueryConfig config = configManager.getConfig(BigQueryConfig.class);
+        return new BigQueryClient(provideBigQuery(config));
+    }
+
+    private GcsStorageClient createGcsStorageClient()
+    {
+        BigQueryConfig config = configManager.getConfig(BigQueryConfig.class);
+        return provideGcsStorageClient(config, FixedHeaderProvider.create("user-agent", "accio/1"), new BigQueryCredentialsSupplier(config.getCredentialsKey(), config.getCredentialsFile()));
+    }
+
+    private static BigQuery provideBigQuery(BigQueryConfig config)
+    {
+        HeaderProvider headerProvider = FixedHeaderProvider.create("user-agent", "accio/1");
+
+        BigQueryCredentialsSupplier bigQueryCredentialsSupplier = new BigQueryCredentialsSupplier(config.getCredentialsKey(), config.getCredentialsFile());
+        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
+        BigQueryOptions.Builder options = BigQueryOptions.newBuilder()
+                .setHeaderProvider(headerProvider)
+                .setProjectId(billingProjectId)
+                .setLocation(config.getLocation().orElse(null));
+        // set credentials of provided
+        bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
+        return options.build().getService();
+    }
+
+    private static String calculateBillingProjectId(Optional<String> configParentProjectId, Optional<Credentials> credentials)
+    {
+        // 1. Get from configuration
+        if (configParentProjectId.isPresent()) {
+            return configParentProjectId.get();
+        }
+        // 2. Get from the provided credentials, but only ServiceAccountCredentials contains the project id.
+        // All other credentials types (User, AppEngine, GCE, CloudShell, etc.) take it from the environment
+        if (credentials.isPresent() && credentials.get() instanceof ServiceAccountCredentials) {
+            return ((ServiceAccountCredentials) credentials.get()).getProjectId();
+        }
+        // 3. No configuration was provided, so get the default from the environment
+        return BigQueryOptions.getDefaultProjectId();
+    }
+
+    public static GcsStorageClient provideGcsStorageClient(BigQueryConfig config, HeaderProvider headerProvider, BigQueryCredentialsSupplier bigQueryCredentialsSupplier)
+    {
+        String billingProjectId = calculateBillingProjectId(config.getParentProjectId(), bigQueryCredentialsSupplier.getCredentials());
+        StorageOptions.Builder options = StorageOptions.newBuilder()
+                .setHeaderProvider(headerProvider)
+                .setProjectId(billingProjectId);
+        bigQueryCredentialsSupplier.getCredentials().ifPresent(options::setCredentials);
+        return new GcsStorageClient(options.build().getService());
     }
 }

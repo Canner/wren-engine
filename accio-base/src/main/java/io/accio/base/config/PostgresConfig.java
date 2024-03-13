@@ -12,12 +12,15 @@
  * limitations under the License.
  */
 
-package io.accio.connector.postgres;
+package io.accio.base.config;
 
 import io.airlift.configuration.Config;
 
 public class PostgresConfig
 {
+    public static final String POSTGRES_JDBC_URL = "postgres.jdbc.url";
+    public static final String POSTRES_USER = "postgres.user";
+    public static final String POSTGRES_PASSWORD = "postgres.password";
     private String jdbcUrl;
     private String user;
     private String password;
@@ -27,7 +30,7 @@ public class PostgresConfig
         return jdbcUrl;
     }
 
-    @Config("postgres.jdbc.url")
+    @Config(POSTGRES_JDBC_URL)
     public PostgresConfig setJdbcUrl(String jdbcUrl)
     {
         this.jdbcUrl = jdbcUrl;
@@ -39,7 +42,7 @@ public class PostgresConfig
         return user;
     }
 
-    @Config("postgres.user")
+    @Config(POSTRES_USER)
     public PostgresConfig setUser(String user)
     {
         this.user = user;
@@ -51,7 +54,7 @@ public class PostgresConfig
         return password;
     }
 
-    @Config("postgres.password")
+    @Config(POSTGRES_PASSWORD)
     public PostgresConfig setPassword(String password)
     {
         this.password = password;

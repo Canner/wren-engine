@@ -15,6 +15,8 @@
 package io.accio.main;
 
 import com.google.common.collect.ImmutableList;
+import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.sql.SqlConverter;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
@@ -35,7 +37,7 @@ public class PostgresNettyProvider
         implements Provider<PostgresNetty>
 {
     private final PostgresWireProtocolConfig postgresWireProtocolConfig;
-    private final AccioConfig accioConfig;
+    private final ConfigManager configManager;
     private final SslContextProvider sslContextProvider;
     private final RegObjectFactory regObjectFactory;
 
@@ -50,7 +52,7 @@ public class PostgresNettyProvider
     @Inject
     public PostgresNettyProvider(
             PostgresWireProtocolConfig postgresWireProtocolConfig,
-            AccioConfig accioConfig,
+            ConfigManager configManager,
             SslContextProvider sslContextProvider,
             RegObjectFactory regObjectFactory,
             Metadata connector,
@@ -62,7 +64,7 @@ public class PostgresNettyProvider
             PgMetastore pgMetastore)
     {
         this.postgresWireProtocolConfig = requireNonNull(postgresWireProtocolConfig, "postgreWireProtocolConfig is null");
-        this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
         this.sslContextProvider = requireNonNull(sslContextProvider, "sslContextProvider is null");
         this.regObjectFactory = requireNonNull(regObjectFactory, "regObjectFactory is null");
         this.connector = requireNonNull(connector, "connector is null");
@@ -81,7 +83,7 @@ public class PostgresNettyProvider
         PostgresNetty postgresNetty = new PostgresNetty(
                 networkService,
                 postgresWireProtocolConfig,
-                accioConfig,
+                configManager,
                 sslContextProvider,
                 regObjectFactory,
                 connector,

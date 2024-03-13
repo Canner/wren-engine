@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.accio.base.dto.Manifest;
 import io.accio.connector.bigquery.BigQueryClient;
+import io.accio.main.connector.bigquery.BigQueryMetadata;
 import io.accio.main.metadata.Metadata;
 import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
@@ -94,8 +95,8 @@ public abstract class AbstractWireProtocolTestWithBigQuery
     protected void cleanup()
     {
         try {
-            Metadata metadata = getInstance(Key.get(Metadata.class));
-            BigQueryClient bigQueryClient = getInstance(Key.get(BigQueryClient.class));
+            BigQueryMetadata metadata = (BigQueryMetadata) getInstance(Key.get(Metadata.class));
+            BigQueryClient bigQueryClient = metadata.getBigQueryClient();
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
         }

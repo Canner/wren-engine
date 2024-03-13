@@ -25,6 +25,12 @@ import static java.lang.String.format;
 public class DuckdbS3StyleStorageConfig
         implements CacheStorageConfig
 {
+    public static final String DUCKDB_STORAGE_ENDPOINT = "duckdb.storage.endpoint";
+    public static final String DUCKDB_STORAGE_ACCESS_KEY = "duckdb.storage.access-key";
+    public static final String DUCKDB_STORAGE_SECRET_KEY = "duckdb.storage.secret-key";
+    public static final String DUCKDB_STORAGE_REGION = "duckdb.storage.region";
+    public static final String DUCKDB_STORAGE_URL_STYLE = "duckdb.storage.url-style";
+
     // https://duckdb.org/docs/guides/import/s3_import.html
     private String endpoint = "storage.googleapis.com";
     private Optional<String> accessKey = Optional.empty();
@@ -32,7 +38,7 @@ public class DuckdbS3StyleStorageConfig
     private Optional<String> region = Optional.empty();
     private String urlStyle = "path";
 
-    @Config("duckdb.storage.endpoint")
+    @Config(DUCKDB_STORAGE_ENDPOINT)
     @ConfigDescription("The storage endpoint; default is storage.googleapis.com")
     public DuckdbS3StyleStorageConfig setEndpoint(String endpoint)
     {
@@ -45,7 +51,7 @@ public class DuckdbS3StyleStorageConfig
         return endpoint;
     }
 
-    @Config("duckdb.storage.access-key")
+    @Config(DUCKDB_STORAGE_ACCESS_KEY)
     @ConfigDescription("The storage access key")
     @ConfigSecuritySensitive
     public DuckdbS3StyleStorageConfig setAccessKey(String accessKey)
@@ -59,7 +65,7 @@ public class DuckdbS3StyleStorageConfig
         return accessKey;
     }
 
-    @Config("duckdb.storage.secret-key")
+    @Config(DUCKDB_STORAGE_SECRET_KEY)
     @ConfigDescription("The storage secret key")
     @ConfigSecuritySensitive
     public DuckdbS3StyleStorageConfig setSecretKey(String secretKey)
@@ -73,7 +79,7 @@ public class DuckdbS3StyleStorageConfig
         return secretKey;
     }
 
-    @Config("duckdb.storage.region")
+    @Config(DUCKDB_STORAGE_REGION)
     @ConfigDescription("The storage region")
     public DuckdbS3StyleStorageConfig setRegion(String region)
     {
@@ -86,7 +92,7 @@ public class DuckdbS3StyleStorageConfig
         return region;
     }
 
-    @Config("duckdb.storage.url-style")
+    @Config(DUCKDB_STORAGE_URL_STYLE)
     @ConfigDescription("The storage url style; default is path")
     public DuckdbS3StyleStorageConfig setUrlStyle(String urlStyle)
     {

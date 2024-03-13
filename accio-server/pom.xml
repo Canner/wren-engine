@@ -49,52 +49,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.api</groupId>
-            <artifactId>gax</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.auth</groupId>
-            <artifactId>google-auth-library-credentials</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.auth</groupId>
-            <artifactId>google-auth-library-oauth2-http</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-bigquery</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>listenablefuture</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.cloud</groupId>
-            <artifactId>google-cloud-storage</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>listenablefuture</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>

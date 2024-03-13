@@ -12,23 +12,22 @@
  * limitations under the License.
  */
 
-package io.accio.main;
+package io.accio.server.module;
 
 import com.google.inject.Binder;
-import com.google.inject.Scopes;
-import io.accio.base.config.AccioConfig;
+import io.accio.base.config.BigQueryConfig;
+import io.accio.base.config.PostgresConfig;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
-public class AccioModule
+public class ConnectorConfigModule
         extends AbstractConfigurationAwareModule
 {
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(AccioConfig.class);
-        binder.bind(AccioManager.class).in(Scopes.SINGLETON);
-        binder.bind(AccioMetastore.class).in(Scopes.SINGLETON);
+        configBinder(binder).bindConfig(BigQueryConfig.class);
+        configBinder(binder).bindConfig(PostgresConfig.class);
     }
 }

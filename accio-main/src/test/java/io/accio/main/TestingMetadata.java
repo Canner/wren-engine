@@ -18,6 +18,7 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.metadata.TableMetadata;
+import io.accio.connector.StorageClient;
 import io.accio.main.metadata.Metadata;
 import io.trino.sql.tree.QualifiedName;
 
@@ -111,5 +112,16 @@ public class TestingMetadata
     public String getPgCatalogName()
     {
         return PG_CATALOG_NAME;
+    }
+
+    @Override
+    public void reloadConfig()
+    {
+    }
+
+    @Override
+    public StorageClient getCacheStorageClient()
+    {
+        throw new UnsupportedOperationException("TestingMetadata doesn't support this method");
     }
 }

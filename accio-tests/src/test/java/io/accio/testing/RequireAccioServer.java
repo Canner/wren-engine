@@ -17,6 +17,7 @@ package io.accio.testing;
 import com.google.common.io.Closer;
 import com.google.inject.Key;
 import io.accio.base.CatalogSchemaTableName;
+import io.accio.base.config.ConfigManager;
 import io.accio.base.dto.Manifest;
 import io.accio.cache.TaskInfo;
 import io.accio.main.web.dto.CheckOutputDto;
@@ -50,7 +51,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
+import static io.airlift.http.client.Request.Builder.prepareDelete;
 import static io.airlift.http.client.Request.Builder.prepareGet;
+import static io.airlift.http.client.Request.Builder.preparePatch;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
@@ -76,6 +79,8 @@ public abstract class RequireAccioServer
     private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
     private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
     private static final JsonCodec<List<SqlAnalysisOutputDto>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(SqlAnalysisOutputDto.class);
+    private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
+    private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
 
     public RequireAccioServer() {}
 
@@ -248,6 +253,59 @@ public abstract class RequireAccioServer
             getWebApplicationException(response);
         }
         return SQL_ANALYSIS_OUTPUT_LIST_CODEC.fromJson(response.getBody());
+    }
+
+    protected List<ConfigManager.ConfigEntry> getConfigs()
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return CONFIG_ENTRY_LIST_CODEC.fromJson(response.getBody());
+    }
+
+    protected ConfigManager.ConfigEntry getConfig(String configName)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve(format("/v1/config/%s", configName)))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return CONFIG_ENTRY_JSON_CODEC.fromJson(response.getBody());
+    }
+
+    protected void resetConfig()
+    {
+        Request request = prepareDelete()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+    }
+
+    protected void patchConfig(List<ConfigManager.ConfigEntry> configEntries)
+    {
+        Request request = preparePatch()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
+                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(CONFIG_ENTRY_LIST_CODEC, configEntries))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
     }
 
     public static void getWebApplicationException(StringResponseHandler.StringResponse response)
