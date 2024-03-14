@@ -91,6 +91,7 @@ public class MDLResource
     @GET
     @Path("/preview")
     @Consumes(APPLICATION_JSON)
+    @Produces(APPLICATION_JSON)
     public void preview(
             PreviewDto previewDto,
             @Suspended AsyncResponse asyncResponse)

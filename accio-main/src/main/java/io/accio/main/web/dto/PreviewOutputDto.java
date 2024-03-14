@@ -12,48 +12,37 @@
  * limitations under the License.
  */
 
-package io.accio.base;
+package io.accio.main.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.accio.base.type.AnyType;
-import io.accio.base.type.PGType;
-import io.accio.base.type.PGTypes;
+import io.accio.base.Column;
 
-public final class Column
+import java.util.List;
+
+public class PreviewOutputDto
 {
-    private final String name;
-    private final PGType<?> type;
+    private final List<Column> columns;
+    private final List<Object[]> data;
 
     @JsonCreator
-    public Column(
-            @JsonProperty("name") String name,
-            @JsonProperty("type") String type)
+    public PreviewOutputDto(
+            @JsonProperty("columns") List<Column> columns,
+            @JsonProperty("data") List<Object[]> data)
     {
-        this.name = name;
-        this.type = PGTypes.nameToPgType(type).orElse(AnyType.ANY);
-    }
-
-    public Column(String name, PGType<?> type)
-    {
-        this.name = name;
-        this.type = type;
+        this.columns = columns;
+        this.data = data;
     }
 
     @JsonProperty
-    public String getName()
+    public List<Column> getColumns()
     {
-        return name;
+        return columns;
     }
 
-    public PGType<?> getType()
+    @JsonProperty
+    public List<Object[]> getData()
     {
-        return type;
-    }
-
-    @JsonProperty("type")
-    public String getTypeName()
-    {
-        return type.typName();
+        return data;
     }
 }
