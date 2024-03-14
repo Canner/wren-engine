@@ -17,8 +17,7 @@ package io.accio.testing.duckdb;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.inject.Key;
-import io.accio.base.client.ForConnector;
-import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.testing.AbstractWireProtocolTest;
 import io.accio.testing.TestingAccioServer;
 
@@ -62,7 +61,9 @@ public abstract class AbstractWireProtocolTestWithDuckDB
         ClassLoader classLoader = getClass().getClassLoader();
         String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
         initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("duckdb/data")).getPath());
-        accioServer.getInstance(Key.get(DuckdbClient.class, ForConnector.class)).executeDDL(initSQL);
+        DuckDBMetadata metadata = accioServer.getInstance(Key.get(DuckDBMetadata.class));
+        metadata.setInitSQL(initSQL);
+        metadata.reload();
     }
 
     protected Optional<String> getAccioMDLPath()

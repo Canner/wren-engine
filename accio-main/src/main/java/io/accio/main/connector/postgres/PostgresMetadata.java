@@ -19,17 +19,18 @@ import io.accio.base.AccioException;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.client.Client;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.config.PostgresConfig;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.connector.StorageClient;
 import io.accio.connector.postgres.PostgresClient;
 import io.accio.connector.postgres.PostgresRecordIterator;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.NoopPgFunctionBuilder;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilder;
-import io.accio.main.wireprotocol.PgMetastore;
 import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
@@ -79,6 +80,12 @@ public class PostgresMetadata
         catch (Exception e) {
             throw new AccioException(GENERIC_INTERNAL_ERROR, e);
         }
+    }
+
+    @Override
+    public void dropTableIfExists(String name)
+    {
+        postgresClient.executeDDL("DROP TABLE IF EXISTS " + name);
     }
 
     @Override
@@ -194,6 +201,12 @@ public class PostgresMetadata
     public void reload()
     {
         this.postgresClient = new PostgresClient(configManager.getConfig(PostgresConfig.class));
+    }
+
+    @Override
+    public Client getClient()
+    {
+        return postgresClient;
     }
 
     @Override

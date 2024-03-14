@@ -1,10 +1,10 @@
 package io.accio.cache;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioException;
-import io.accio.base.client.AutoCloseableIterator;
-import io.accio.base.client.ForCache;
+import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.client.duckdb.DuckDBConfig;
-import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.wireprotocol.PgMetastore;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
@@ -27,19 +27,19 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class DuckdbTaskManager
+public class CacheTaskManager
         implements Closeable
 {
-    private final DuckdbClient duckdbClient;
+    private final PgMetastore pgMetastore;
     private final ExecutorService taskExecutorService;
     private final DuckDBConfig duckDBConfig;
     private final double cacheMemoryLimit;
 
     @Inject
-    public DuckdbTaskManager(DuckDBConfig duckDBConfig, @ForCache DuckdbClient duckdbClient)
+    public CacheTaskManager(DuckDBConfig duckDBConfig, PgMetastore pgMetastore)
     {
         this.duckDBConfig = requireNonNull(duckDBConfig, "duckDBConfig is null");
-        this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
+        this.pgMetastore = requireNonNull(pgMetastore, "pgMetastore is null");
         this.taskExecutorService = newFixedThreadPool(duckDBConfig.getMaxConcurrentTasks(), threadsNamed("duckdb-task-%s"));
         this.cacheMemoryLimit = duckDBConfig.getMaxCacheTableSizeRatio() * duckDBConfig.getMemoryLimit().toBytes();
     }
@@ -78,7 +78,7 @@ public class DuckdbTaskManager
 
     public long getMemoryUsageBytes()
     {
-        try (AutoCloseableIterator<Object[]> result = duckdbClient.query("SELECT memory_usage FROM pragma_database_size()")) {
+        try (ConnectorRecordIterator result = pgMetastore.directQuery("SELECT memory_usage FROM pragma_database_size()", ImmutableList.of())) {
             Object[] row = result.next();
             return convertDuckDBUnits(row[0].toString()).toBytes();
         }
@@ -101,6 +101,6 @@ public class DuckdbTaskManager
             throws IOException
     {
         taskExecutorService.shutdownNow();
-        duckdbClient.close();
+        pgMetastore.close();
     }
 }

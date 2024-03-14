@@ -15,22 +15,11 @@
 package io.accio.server.module;
 
 import com.google.inject.Binder;
-import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
-import io.accio.base.client.ForCache;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.config.PostgresConfig;
-import io.accio.connector.postgres.PostgresClient;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.connector.postgres.PostgresCacheService;
 import io.accio.main.connector.postgres.PostgresMetadata;
 import io.accio.main.connector.postgres.PostgresSqlConverter;
-import io.accio.main.pgcatalog.builder.DuckDBFunctionBuilder;
-import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
-import io.accio.main.pgcatalog.regtype.PgMetadata;
-import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
-import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -41,19 +30,9 @@ public class PostgresConnectorModule
     @Override
     protected void setup(Binder binder)
     {
-        binder.bind(PostgresClient.class).in(Scopes.SINGLETON);
-        binder.bind(PostgresSqlConverter.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(PostgresCacheService.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
-        binder.bind(PostgresMetadata.class).in(Scopes.SINGLETON);
         configBinder(binder).bindConfig(PostgresConfig.class);
-    }
-
-    @Provides
-    @Singleton
-    public static PgMetastore providePgMetastore(@ForCache DuckdbClient duckdbClient)
-    {
-        return new DuckDBMetadata(duckdbClient);
+        binder.bind(PostgresSqlConverter.class).in(Scopes.SINGLETON);
+        binder.bind(PostgresCacheService.class).in(Scopes.SINGLETON);
+        binder.bind(PostgresMetadata.class).in(Scopes.SINGLETON);
     }
 }

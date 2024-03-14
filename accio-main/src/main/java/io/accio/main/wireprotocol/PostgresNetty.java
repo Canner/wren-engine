@@ -21,6 +21,7 @@ import io.accio.base.config.AccioConfig;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.sql.SqlConverter;
+import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
 import io.accio.main.AccioMetastore;

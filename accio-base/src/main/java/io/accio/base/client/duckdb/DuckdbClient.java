@@ -27,8 +27,6 @@ import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import org.duckdb.DuckDBConnection;
 
-import javax.inject.Inject;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -38,11 +36,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public final class DuckdbClient
         implements Client
@@ -50,19 +48,18 @@ public final class DuckdbClient
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
     private final CacheStorageConfig cacheStorageConfig;
-    private final DuckDBConnectorConfig connectorConfig;
+    private final DuckDBSettingSQL duckDBSettingSQL;
     private DuckDBConnection duckDBConnection;
     private HikariDataSource connectionPool;
 
-    @Inject
     public DuckdbClient(
             DuckDBConfig duckDBConfig,
             CacheStorageConfig cacheStorageConfig,
-            Optional<DuckDBConnectorConfig> connectorConfig)
+            DuckDBSettingSQL duckDBSettingSQL)
     {
         this.duckDBConfig = duckDBConfig;
         this.cacheStorageConfig = cacheStorageConfig;
-        this.connectorConfig = connectorConfig.orElse(null);
+        this.duckDBSettingSQL = requireNonNull(duckDBSettingSQL, "duckDBSettingSQL is null");
         init();
     }
 
@@ -73,7 +70,7 @@ public final class DuckdbClient
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
             duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
-            HikariConfig config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, connectorConfig);
+            HikariConfig config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL);
             connectionPool = new HikariDataSource(config);
 
             DataSize memoryLimit = duckDBConfig.getMemoryLimit();
@@ -82,8 +79,8 @@ public final class DuckdbClient
             executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
             LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
 
-            if (connectorConfig != null && connectorConfig.getInitSQL() != null) {
-                executeDDL(connectorConfig.getInitSQL());
+            if (duckDBSettingSQL.getInitSQL() != null) {
+                executeDDL(duckDBSettingSQL.getInitSQL());
             }
         }
         catch (SQLException | ClassNotFoundException e) {
@@ -95,9 +92,9 @@ public final class DuckdbClient
             DuckDBConfig duckDBConfig,
             CacheStorageConfig cacheStorageConfig,
             DuckDBConnection duckDBConnection,
-            DuckDBConnectorConfig connectorConfig)
+            DuckDBSettingSQL duckDBSettingSQL)
     {
-        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, cacheStorageConfig, connectorConfig);
+        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, cacheStorageConfig, duckDBSettingSQL);
         HikariConfig config = new HikariConfig();
         config.setDataSource(dataSource);
         config.setPoolName("DUCKDB_POOL");
@@ -205,16 +202,6 @@ public final class DuckdbClient
         }
     }
 
-    public void dropTableQuietly(String tableName)
-    {
-        try {
-            executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName));
-        }
-        catch (Exception e) {
-            LOG.error(e, "Failed to drop table %s", tableName);
-        }
-    }
-
     @Override
     public Connection createConnection()
             throws SQLException
@@ -232,11 +219,5 @@ public final class DuckdbClient
         catch (SQLException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public void reset()
-    {
-        close();
-        init();
     }
 }

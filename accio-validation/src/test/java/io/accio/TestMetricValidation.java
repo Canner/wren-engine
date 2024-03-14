@@ -18,6 +18,7 @@ import io.accio.base.AccioMDL;
 import io.accio.base.AccioTypes;
 import io.accio.base.client.Client;
 import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckDBSettingSQL;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.dto.Column;
@@ -37,7 +38,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static io.accio.base.dto.EnumValue.enumValue;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
@@ -54,7 +54,7 @@ public class TestMetricValidation
 
     public TestMetricValidation()
     {
-        client = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), Optional.empty());
+        client = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), new DuckDBSettingSQL());
         sample = AccioMDL.fromManifest(withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Flight",

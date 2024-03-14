@@ -19,13 +19,11 @@ import com.google.inject.Key;
 import io.accio.base.AccioMDL;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
-import io.accio.base.client.AutoCloseableIterator;
-import io.accio.base.client.ForCache;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.dto.CacheInfo;
 import io.accio.base.dto.Manifest;
 import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
+import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.CacheManager;
 import io.accio.cache.CachedTableMapping;
@@ -53,7 +51,7 @@ public abstract class AbstractCacheTest
 {
     protected final Supplier<CacheManager> cacheManager = () -> getInstance(Key.get(CacheManager.class));
     protected final Supplier<CachedTableMapping> cachedTableMapping = () -> getInstance(Key.get(CachedTableMapping.class));
-    protected final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class, ForCache.class));
+    protected final Supplier<PgMetastore> pgMetastore = () -> getInstance(Key.get(PgMetastore.class));
 
     @Override
     protected TestingAccioServer createAccioServer()
@@ -105,7 +103,7 @@ public abstract class AbstractCacheTest
 
     protected List<Object[]> queryDuckdb(String statement)
     {
-        try (AutoCloseableIterator<Object[]> iterator = duckdbClient.get().query(statement)) {
+        try (ConnectorRecordIterator iterator = pgMetastore.get().directQuery(statement, ImmutableList.of())) {
             ImmutableList.Builder<Object[]> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
                 builder.add(iterator.next());

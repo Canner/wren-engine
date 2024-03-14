@@ -14,8 +14,7 @@
 package io.accio.cache;
 
 import io.accio.base.CatalogSchemaTableName;
-import io.accio.base.client.ForCache;
-import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.wireprotocol.PgMetastore;
 
 import javax.inject.Inject;
 
@@ -32,13 +31,13 @@ import static java.util.Objects.requireNonNull;
 public class DefaultCachedTableMapping
         implements CachedTableMapping
 {
-    private final DuckdbClient duckdbClient;
+    private final PgMetastore pgMetastore;
     private final ConcurrentMap<CatalogSchemaTableName, CacheInfoPair> cachedTableMapping = new ConcurrentHashMap<>();
 
     @Inject
-    public DefaultCachedTableMapping(@ForCache DuckdbClient duckdbClient)
+    public DefaultCachedTableMapping(PgMetastore pgMetastore)
     {
-        this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
+        this.pgMetastore = requireNonNull(pgMetastore, "duckdbClient is null");
     }
 
     @Override
@@ -48,10 +47,10 @@ public class DefaultCachedTableMapping
             if (cachedTableMapping.containsKey(catalogSchemaTableName)) {
                 CacheInfoPair existedCacheInfoPair = cachedTableMapping.get(catalogSchemaTableName);
                 if (existedCacheInfoPair.getCreateTime() > cacheInfoPair.getCreateTime()) {
-                    cacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
+                    cacheInfoPair.getTableName().ifPresent(pgMetastore::dropTableIfExists);
                     return;
                 }
-                existedCacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
+                existedCacheInfoPair.getTableName().ifPresent(pgMetastore::dropTableIfExists);
             }
             cachedTableMapping.put(catalogSchemaTableName, cacheInfoPair);
         }

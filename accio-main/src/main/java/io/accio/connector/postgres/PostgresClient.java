@@ -32,8 +32,6 @@ import io.airlift.log.Logger;
 import org.joda.time.Period;
 import org.postgresql.util.PGInterval;
 
-import javax.inject.Inject;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -53,7 +51,6 @@ public class PostgresClient
     private static final Logger LOG = Logger.get(PostgresClient.class);
     private final PostgresConfig postgresConfig;
 
-    @Inject
     public PostgresClient(PostgresConfig postgresConfig)
     {
         this.postgresConfig = requireNonNull(postgresConfig, "postgresConfig is null");

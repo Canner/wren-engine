@@ -23,14 +23,13 @@ import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
-import io.accio.base.client.ForCache;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.dto.CacheInfo;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.sqlrewrite.AccioPlanner;
+import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.dto.CachedTable;
 import io.airlift.log.Logger;
 import io.trino.sql.parser.ParsingOptions;
@@ -83,7 +82,7 @@ public class CacheManager
     private final CacheService cacheService;
     private final SqlParser sqlParser;
     private final SqlConverter sqlConverter;
-    private final DuckdbClient duckdbClient;
+    private final PgMetastore pgMetastore;
     private final ConcurrentLinkedQueue<PathInfo> tempFileLocations = new ConcurrentLinkedQueue<>();
     private final CachedTableMapping cachedTableMapping;
     private final ConcurrentMap<CatalogSchemaTableName, ScheduledFuture<?>> cacheScheduledFutures = new ConcurrentHashMap<>();
@@ -93,7 +92,7 @@ public class CacheManager
     private final ExecutorService executorService = newCachedThreadPool(threadsNamed("cache-manager-%s"));
     private final ConcurrentHashMap<CatalogSchemaTableName, Task> tasks = new ConcurrentHashMap<>();
     private final EventLogger eventLogger;
-    private final DuckdbTaskManager duckdbTaskManager;
+    private final CacheTaskManager cacheTaskManager;
     private final ConfigManager configManager;
 
     @Inject
@@ -101,18 +100,18 @@ public class CacheManager
             SqlConverter sqlConverter,
             CacheService cacheService,
             ExtraRewriter extraRewriter,
-            @ForCache DuckdbClient duckdbClient,
+            PgMetastore pgMetastore,
             CachedTableMapping cachedTableMapping,
             EventLogger eventLogger,
-            DuckdbTaskManager duckdbTaskManager,
+            CacheTaskManager cacheTaskManager,
             ConfigManager configManager)
     {
         this.sqlParser = new SqlParser();
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.cacheService = requireNonNull(cacheService, "cacheService is null");
         this.extraRewriter = requireNonNull(extraRewriter, "extraRewriter is null");
-        this.duckdbClient = requireNonNull(duckdbClient, "duckdbClient is null");
-        this.duckdbTaskManager = requireNonNull(duckdbTaskManager, "duckdbTaskManager is null");
+        this.pgMetastore = requireNonNull(pgMetastore, "pgMetastore is null");
+        this.cacheTaskManager = requireNonNull(cacheTaskManager, "cacheTaskManager is null");
         this.cachedTableMapping = requireNonNull(cachedTableMapping, "cachedTableMapping is null");
         this.eventLogger = requireNonNull(eventLogger, "eventLogger is null");
         this.configManager = requireNonNull(configManager, "configManager is null");
@@ -162,7 +161,7 @@ public class CacheManager
                                         SECONDS));
                         errMsg += "; will retry after " + delay + " seconds";
                     }
-                    duckdbClient.dropTableQuietly(duckdbTableName);
+                    pgMetastore.dropTableIfExists(duckdbTableName);
                     LOG.error(e, errMsg);
                     cachedTableMapping.putCachedTableMapping(catalogSchemaTableName, new CacheInfoPair(cacheInfo, Optional.empty(), Optional.of(errMsg), createTime));
                     return null;
@@ -171,7 +170,7 @@ public class CacheManager
 
     public ConnectorRecordIterator query(String sql, List<Parameter> parameters)
     {
-        return duckdbTaskManager.addCacheQueryTask(() -> DuckdbRecordIterator.of(duckdbClient, sql, parameters.stream().collect(toImmutableList())));
+        return cacheTaskManager.addCacheQueryTask(() -> DuckdbRecordIterator.of(pgMetastore.getClient(), sql, parameters.stream().collect(toImmutableList())));
     }
 
     private CompletableFuture<Void> doCache(AnalyzedMDL analyzedMDL, CacheInfo cacheInfo, TaskInfo taskInfo)
@@ -180,8 +179,8 @@ public class CacheManager
         CatalogSchemaTableName catalogSchemaTableName = new CatalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), cacheInfo.getName());
         String duckdbTableName = format("%s_%s", cacheInfo.getName(), randomUUID().toString().replace("-", ""));
         long createTime = currentTimeMillis();
-        return duckdbTaskManager.addCacheTask(() -> {
-            duckdbTaskManager.checkCacheMemoryLimit();
+        return cacheTaskManager.addCacheTask(() -> {
+            cacheTaskManager.checkCacheMemoryLimit();
             taskInfo.setTaskStatus(RUNNING);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
@@ -224,7 +223,7 @@ public class CacheManager
 
     private void refreshCacheInDuckDB(String path, String tableName)
     {
-        duckdbClient.executeDDL(configManager.getConfig(CacheStorageConfig.class).generateDuckdbParquetStatement(path, tableName));
+        pgMetastore.directDDL(configManager.getConfig(CacheStorageConfig.class).generateDuckdbParquetStatement(path, tableName));
     }
 
     public void removeCacheIfExist(String catalogName, String schemaName)
@@ -252,7 +251,7 @@ public class CacheManager
                 .filter(entry -> entry.getKey().getCatalogName().equals(catalogName)
                         && entry.getKey().getSchemaTableName().getSchemaName().equals(schemaName))
                 .forEach(entry -> {
-                    entry.getValue().getTableName().ifPresent(duckdbClient::dropTableQuietly);
+                    entry.getValue().getTableName().ifPresent(pgMetastore::dropTableIfExists);
                     cachedTableMapping.remove(entry.getKey());
                 });
 
@@ -275,7 +274,7 @@ public class CacheManager
         }
 
         Optional.ofNullable(cachedTableMapping.get(catalogSchemaTableName)).ifPresent(cacheInfoPair -> {
-            cacheInfoPair.getTableName().ifPresent(duckdbClient::dropTableQuietly);
+            cacheInfoPair.getTableName().ifPresent(pgMetastore::dropTableIfExists);
             cachedTableMapping.remove(catalogSchemaTableName);
         });
 

@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckDBSettingSQL;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.dto.Column;
@@ -31,7 +32,6 @@ import org.testng.annotations.BeforeClass;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import static io.accio.base.dto.Model.model;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
@@ -67,7 +67,7 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), Optional.empty());
+        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), new DuckDBSettingSQL());
         prepareData();
     }
 

@@ -17,6 +17,7 @@ package io.accio;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.config.AccioConfig;
 import io.accio.base.config.BigQueryConfig;
@@ -59,7 +60,8 @@ public class TestBigQuerySqlConverter
                 config,
                 new DuckDBConfig(),
                 new PostgresWireProtocolConfig(),
-                new DuckdbS3StyleStorageConfig());
+                new DuckdbS3StyleStorageConfig(),
+                new DuckDBConnectorConfig());
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
         AccioMetastore accioMetastore = new AccioMetastore();

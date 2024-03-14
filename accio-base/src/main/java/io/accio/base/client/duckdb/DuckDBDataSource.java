@@ -36,18 +36,18 @@ public class DuckDBDataSource
     private final DuckDBConnection duckDBConnection;
     private final DuckDBConfig duckDBConfig;
     private final CacheStorageConfig cacheStorageConfig;
-    private final DuckDBConnectorConfig connectorConfig;
+    private final DuckDBSettingSQL duckDBSettingSQL;
 
     public DuckDBDataSource(
             DuckDBConnection duckDBConnection,
             DuckDBConfig duckDBConfig,
             CacheStorageConfig cacheStorageConfig,
-            DuckDBConnectorConfig connectorConfig)
+            DuckDBSettingSQL duckDBSettingSQL)
     {
         this.duckDBConnection = duckDBConnection;
         this.duckDBConfig = duckDBConfig;
         this.cacheStorageConfig = cacheStorageConfig;
-        this.connectorConfig = connectorConfig;
+        this.duckDBSettingSQL = duckDBSettingSQL;
     }
 
     @Override
@@ -75,18 +75,20 @@ public class DuckDBDataSource
             statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
             statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
         }
-        if (connectorConfig != null && connectorConfig.getSessionSQL() != null) {
-            statement.execute(connectorConfig.getSessionSQL());
+        if (duckDBSettingSQL.getSessionSQL() != null) {
+            statement.execute(duckDBSettingSQL.getSessionSQL());
         }
         statement.execute(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
         return connection;
     }
 
+    @Override
     public boolean isWrapperFor(Class<?> iface)
     {
         return iface.isAssignableFrom(getClass());
     }
 
+    @Override
     public <T> T unwrap(Class<T> iface)
             throws SQLException
     {

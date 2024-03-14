@@ -3,10 +3,8 @@ package io.accio.main.web;
 import com.google.common.collect.ImmutableList;
 import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
-import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.FileUtil;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
-import io.accio.main.metadata.Metadata;
 import io.accio.main.web.dto.DuckDBQueryDto;
 
 import javax.inject.Inject;
@@ -32,15 +30,12 @@ public class DuckDBResource
         extends DataSourceResource
 {
     private final DuckDBMetadata metadata;
-    private final DuckDBConnectorConfig duckDBConnectorConfig;
 
     @Inject
     public DuckDBResource(
-            Metadata metadata,
-            DuckDBConnectorConfig duckDBConnectorConfig)
+            DuckDBMetadata metadata)
     {
-        this.metadata = (DuckDBMetadata) requireNonNull(metadata, "metadata is null");
-        this.duckDBConnectorConfig = requireNonNull(duckDBConnectorConfig, "duckDBConnectorConfig is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
     @POST
@@ -68,7 +63,7 @@ public class DuckDBResource
     @Path("/settings/init-sql")
     public String getInitSQL()
     {
-        return duckDBConnectorConfig.getInitSQL();
+        return metadata.getInitSQL();
     }
 
     @PUT
@@ -77,9 +72,9 @@ public class DuckDBResource
             String sql,
             @Suspended AsyncResponse asyncResponse)
     {
-        duckDBConnectorConfig.setInitSQL(sql);
-        metadata.reset();
-        java.nio.file.Path initSQLPath = duckDBConnectorConfig.getInitSQLPath();
+        metadata.setInitSQL(sql);
+        metadata.reload();
+        java.nio.file.Path initSQLPath = metadata.getInitSQLPath();
         FileUtil.archiveFile(initSQLPath);
         FileUtil.createFile(initSQLPath, sql);
         asyncResponse.resume(Response.ok().build());
@@ -92,8 +87,8 @@ public class DuckDBResource
             @Suspended AsyncResponse asyncResponse)
     {
         metadata.directDDL(sql);
-        duckDBConnectorConfig.setInitSQL(duckDBConnectorConfig.getInitSQL() + "\n" + sql);
-        FileUtil.appendToFile(duckDBConnectorConfig.getInitSQLPath(), sql);
+        metadata.setInitSQL(metadata.getInitSQL() + "\n" + sql);
+        FileUtil.appendToFile(metadata.getInitSQLPath(), sql);
         asyncResponse.resume(Response.ok().build());
     }
 
@@ -101,7 +96,7 @@ public class DuckDBResource
     @Path("/settings/session-sql")
     public String getSessionSQL()
     {
-        return duckDBConnectorConfig.getSessionSQL();
+        return metadata.getSessionSQL();
     }
 
     @PUT
@@ -110,9 +105,9 @@ public class DuckDBResource
             String sql,
             @Suspended AsyncResponse asyncResponse)
     {
-        duckDBConnectorConfig.setSessionSQL(sql);
-        metadata.reset();
-        java.nio.file.Path sessionSQLPath = duckDBConnectorConfig.getSessionSQLPath();
+        metadata.setSessionSQL(sql);
+        metadata.reload();
+        java.nio.file.Path sessionSQLPath = metadata.getSessionSQLPath();
         FileUtil.archiveFile(sessionSQLPath);
         FileUtil.createFile(sessionSQLPath, sql);
         asyncResponse.resume(Response.ok().build());
@@ -125,8 +120,8 @@ public class DuckDBResource
             @Suspended AsyncResponse asyncResponse)
     {
         metadata.directDDL(sql);
-        duckDBConnectorConfig.setSessionSQL(duckDBConnectorConfig.getSessionSQL() + "\n" + sql);
-        FileUtil.appendToFile(duckDBConnectorConfig.getSessionSQLPath(), sql);
+        metadata.setSessionSQL(metadata.getSessionSQL() + "\n" + sql);
+        FileUtil.appendToFile(metadata.getSessionSQLPath(), sql);
         asyncResponse.resume(Response.ok().build());
     }
 

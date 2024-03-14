@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.accio.base.AccioException;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
@@ -50,6 +51,7 @@ import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_MET
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_TASKS;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_TEMP_DIRECTORY;
+import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_SETTING_DIR;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ACCESS_KEY;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ENDPOINT;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_REGION;
@@ -86,6 +88,7 @@ public class ConfigManager
     private Optional<DuckDBConfig> duckDBConfig;
     private Optional<PostgresWireProtocolConfig> postgresWireProtocolConfig;
     private Optional<DuckdbS3StyleStorageConfig> duckdbS3StyleStorageConfig;
+    private Optional<DuckDBConnectorConfig> duckDBConnectorConfig;
 
     private final Map<String, String> configs = new HashMap<>();
     // All configs set by user and config files. It's used to sync with config file.
@@ -101,7 +104,8 @@ public class ConfigManager
             BigQueryConfig bigQueryConfig,
             DuckDBConfig duckDBConfig,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
+            DuckDBConnectorConfig duckDBConnectorConfig)
     {
         this.accioConfig = Optional.of(accioConfig);
         this.postgresConfig = Optional.of(postgresConfig);
@@ -109,6 +113,7 @@ public class ConfigManager
         this.duckDBConfig = Optional.of(duckDBConfig);
         this.postgresWireProtocolConfig = Optional.of(postgresWireProtocolConfig);
         this.duckdbS3StyleStorageConfig = Optional.of(duckdbS3StyleStorageConfig);
+        this.duckDBConnectorConfig = Optional.of(duckDBConnectorConfig);
 
         initConfig(
                 accioConfig,
@@ -222,6 +227,13 @@ public class ConfigManager
                 return result;
             });
         }
+        if (config == DuckDBConnectorConfig.class) {
+            return (T) duckDBConnectorConfig.orElseGet(() -> {
+                DuckDBConnectorConfig result = getDuckDBConnectorConfig();
+                duckDBConnectorConfig = Optional.of(result);
+                return result;
+            });
+        }
         throw new RuntimeException("Unknown config class: " + config.getName());
     }
 
@@ -288,6 +300,13 @@ public class ConfigManager
         result.setSecretKey(configs.get(DUCKDB_STORAGE_SECRET_KEY));
         result.setRegion(configs.get(DUCKDB_STORAGE_REGION));
         result.setUrlStyle(configs.get(DUCKDB_STORAGE_URL_STYLE));
+        return result;
+    }
+
+    private DuckDBConnectorConfig getDuckDBConnectorConfig()
+    {
+        DuckDBConnectorConfig result = new DuckDBConnectorConfig();
+        result.setSettingDir(configs.get(DUCKDB_SETTING_DIR));
         return result;
     }
 
