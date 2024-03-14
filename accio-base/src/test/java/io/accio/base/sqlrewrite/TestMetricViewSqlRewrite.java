@@ -37,6 +37,7 @@ import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.TimeUnit.YEAR;
 import static io.accio.base.dto.View.view;
 import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
+import static io.accio.base.sqlrewrite.GenerateViewRewrite.GENERATE_VIEW_REWRITE;
 import static io.accio.base.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
 import static io.accio.base.sqlrewrite.Utils.SQL_PARSER;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
@@ -313,6 +314,6 @@ public class TestMetricViewSqlRewrite
 
     private String rewrite(String sql, AccioMDL accioMDL)
     {
-        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null), List.of(METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(accioMDL, null), List.of(GENERATE_VIEW_REWRITE, METRIC_ROLLUP_REWRITE, ACCIO_SQL_REWRITE));
     }
 }
