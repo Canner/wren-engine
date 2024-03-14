@@ -46,7 +46,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_CACHE_TASK_RETRY_DELAY;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_HOME_DIRECTORY;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CACHE_QUERY_TIMEOUT;
-import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_QUERIES;
+import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_METADATA_QUERIES;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_TASKS;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_TEMP_DIRECTORY;
@@ -58,13 +58,11 @@ import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STOR
 import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
 import static io.accio.base.config.AccioConfig.ACCIO_DIRECTORY;
 import static io.accio.base.config.AccioConfig.ACCIO_ENABLE_DYNAMIC_FIELDS;
-import static io.accio.base.config.AccioConfig.ACCIO_FILE;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_BUCKET_NAME;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_FILE;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_CRENDITALS_KEY;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_LOCATION;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX;
-import static io.accio.base.config.BigQueryConfig.BIGQUERY_PARENT_PROJECT_ID;
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_PROJECT_ID;
 import static io.accio.base.config.PostgresConfig.POSTGRES_JDBC_URL;
 import static io.accio.base.config.PostgresConfig.POSTGRES_PASSWORD;
@@ -136,7 +134,6 @@ public class ConfigManager
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
     {
-        initConfig(ACCIO_FILE, accioConfig.getAccioMDLFile().map(File::getAbsolutePath).orElse(null), false, true);
         initConfig(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath(), false, true);
         initConfig(ACCIO_DATASOURCE_TYPE, Optional.ofNullable(accioConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
         initConfig(ACCIO_ENABLE_DYNAMIC_FIELDS, Boolean.toString(accioConfig.getEnableDynamicFields()), false, false);
@@ -149,7 +146,7 @@ public class ConfigManager
         initConfig(DUCKDB_HOME_DIRECTORY, duckDBConfig.getHomeDirectory(), true, false);
         initConfig(DUCKDB_TEMP_DIRECTORY, duckDBConfig.getTempDirectory(), true, false);
         initConfig(DUCKDB_MAX_CONCURRENT_TASKS, Integer.toString(duckDBConfig.getMaxConcurrentTasks()), true, false);
-        initConfig(DUCKDB_MAX_CONCURRENT_QUERIES, Integer.toString(duckDBConfig.getMaxConcurrentMetadataQueries()), true, false);
+        initConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, Integer.toString(duckDBConfig.getMaxConcurrentMetadataQueries()), true, false);
         initConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, Long.toString(duckDBConfig.getMaxCacheQueryTimeout()), true, false);
         initConfig(DUCKDB_CACHE_TASK_RETRY_DELAY, Long.toString(duckDBConfig.getCacheTaskRetryDelay()), true, false);
         initConfig(PG_WIRE_PROTOCOL_PORT, postgresWireProtocolConfig.getPort(), false, true);
@@ -159,7 +156,6 @@ public class ConfigManager
         initConfig(BIGQUERY_CRENDITALS_KEY, bigQueryConfig.getCredentialsKey().orElse(null), true, false);
         initConfig(BIGQUERY_CRENDITALS_FILE, bigQueryConfig.getCredentialsFile().orElse(null), true, false);
         initConfig(BIGQUERY_PROJECT_ID, bigQueryConfig.getProjectId().orElse(null), true, false);
-        initConfig(BIGQUERY_PARENT_PROJECT_ID, bigQueryConfig.getParentProjectId().orElse(null), true, false);
         initConfig(BIGQUERY_LOCATION, bigQueryConfig.getLocation().orElse(null), true, false);
         initConfig(BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null), true, false);
         initConfig(BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix(), true, false);
@@ -231,8 +227,6 @@ public class ConfigManager
     private AccioConfig getAccioConfig()
     {
         AccioConfig result = new AccioConfig();
-        Optional.ofNullable(configs.get(ACCIO_FILE))
-                .ifPresent(file -> result.setAccioMDLFile(new File(file)));
         Optional.ofNullable(configs.get(ACCIO_DIRECTORY))
                 .ifPresent(directory -> result.setAccioMDLDirectory(new File(directory)));
         result.setDataSourceType(AccioConfig.DataSourceType.valueOf(configs.get(ACCIO_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
@@ -246,7 +240,6 @@ public class ConfigManager
         result.setCredentialsKey(configs.get(BIGQUERY_CRENDITALS_KEY));
         result.setCredentialsFile(configs.get(BIGQUERY_CRENDITALS_FILE));
         result.setProjectId(configs.get(BIGQUERY_PROJECT_ID));
-        result.setParentProjectId(configs.get(BIGQUERY_PARENT_PROJECT_ID));
         result.setLocation(configs.get(BIGQUERY_LOCATION));
         result.setBucketName(configs.get(BIGQUERY_BUCKET_NAME));
         result.setMetadataSchemaPrefix(configs.get(BIGQUERY_METADATA_SCHEMA_PREFIX));
@@ -269,7 +262,7 @@ public class ConfigManager
         result.setHomeDirectory(configs.get(DUCKDB_HOME_DIRECTORY));
         result.setTempDirectory(configs.get(DUCKDB_TEMP_DIRECTORY));
         result.setMaxConcurrentTasks(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_TASKS)));
-        result.setMaxConcurrentMetadataQueries(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_QUERIES)));
+        result.setMaxConcurrentMetadataQueries(Integer.parseInt(configs.get(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)));
         result.setMaxCacheQueryTimeout(Integer.parseInt(configs.get(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)));
         result.setCacheTaskRetryDelay(Integer.parseInt(configs.get(DUCKDB_CACHE_TASK_RETRY_DELAY)));
         return result;

@@ -27,7 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_QUERIES;
+import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_METADATA_QUERIES;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
 import static io.accio.base.config.AccioConfig.ACCIO_DIRECTORY;
@@ -83,11 +83,11 @@ public class TestConfigResource
     @Test
     public void testuUpdateConfigs()
     {
-        patchConfig(List.of(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"), configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, "20")));
+        patchConfig(List.of(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"), configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, "20")));
         assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, DUCKDB.name()));
         assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, mdlDir.toAbsolutePath().toString()));
         assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"));
-        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, "20"));
+        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, "20"));
 
         resetConfig();
         DuckDBConfig duckDBConfig = new DuckDBConfig();
@@ -95,7 +95,7 @@ public class TestConfigResource
         assertThat(getConfig(ACCIO_DATASOURCE_TYPE)).isEqualTo(configEntry(ACCIO_DATASOURCE_TYPE, accioConfig.getDataSourceType().name()));
         assertThat(getConfig(ACCIO_DIRECTORY)).isEqualTo(configEntry(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath()));
         assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, duckDBConfig.getMemoryLimit().toString()));
-        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));
+        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));
     }
 
     @Test

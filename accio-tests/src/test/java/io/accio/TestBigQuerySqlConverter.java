@@ -50,7 +50,6 @@ public class TestBigQuerySqlConverter
     {
         BigQueryConfig config = new BigQueryConfig();
         config.setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .setParentProjectId(getenv("TEST_BIG_QUERY_PARENT_PROJECT_ID"))
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .setLocation("asia-east1");
 

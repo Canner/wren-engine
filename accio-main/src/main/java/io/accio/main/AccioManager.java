@@ -49,7 +49,6 @@ public class AccioManager
     private final CacheManager cacheManager;
     private final PgCatalogManager pgCatalogManager;
     private final AccioMetastore accioMetastore;
-    private final AccioConfig accioConfig;
 
     @Inject
     public AccioManager(AccioConfig accioConfig,
@@ -57,7 +56,7 @@ public class AccioManager
             CacheManager cacheManager,
             PgCatalogManager pgCatalogManager)
     {
-        this.accioConfig = requireNonNull(accioConfig, "accioConfig is null");
+        requireNonNull(accioConfig, "accioConfig is null");
         this.accioMDLDirectory = requireNonNull(accioConfig.getAccioMDLDirectory(), "accioMDLDirectory is null");
         this.cacheManager = requireNonNull(cacheManager, "cacheManager is null");
         this.pgCatalogManager = requireNonNull(pgCatalogManager, "pgCatalogManager is null");
@@ -66,10 +65,6 @@ public class AccioManager
         try {
             if (mdlFiles != null && mdlFiles.length > 0) {
                 deployAccioMDLFromDir(mdlFiles);
-            }
-            else if (accioConfig.getAccioMDLFile().isPresent()) {
-                this.accioMDLFile = accioConfig.getAccioMDLFile().get();
-                deployAccioMDLFromFile(null);
             }
             else {
                 LOG.warn("No AccioMDL file found. AccioMDL will not be deployed, and no pg table will be generated.");
