@@ -27,13 +27,10 @@ import io.accio.base.dto.Model;
 import io.accio.base.sqlrewrite.analyzer.Analysis;
 import io.accio.base.sqlrewrite.analyzer.StatementAnalyzer;
 import io.trino.sql.tree.DereferenceExpression;
-import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
-import io.trino.sql.tree.Query;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
-import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.graph.GraphCycleProhibitedException;
@@ -46,15 +43,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.accio.base.Utils.checkArgument;
 import static io.accio.base.sqlrewrite.Utils.toCatalogSchemaTableName;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.sqlrewrite.WithRewriter.getWithQuery;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
-import static java.util.stream.Collectors.toUnmodifiableList;
 
 public class AccioSqlRewrite
         implements AccioRule
@@ -91,49 +87,22 @@ public class AccioSqlRewrite
         Set<QueryDescriptor> allDescriptors;
         // TODO: Currently DynamicCalculatedField is a experimental feature, and buggy. After all issues are solved,
         //  we should always enable this setting.
-        // currently dynamic fields not support views
-        if (sessionContext.isEnableDynamicField() && analysis.getViews().isEmpty()) {
-            Set<CatalogSchemaTableName> visitedTables = new HashSet<>(analysis.getTables());
-            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getAccioDataLineage(), analysis);
+        if (sessionContext.isEnableDynamicField()) {
+            Set<CatalogSchemaTableName> visitedTables = analysis.getTables().stream().filter(table -> accioMDL.getView(table).isEmpty()).collect(toSet());
+            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getAccioDataLineage(), analysis).entrySet().stream()
+                    .filter(e -> accioMDL.getView(e.getKey()).isEmpty())
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
 
             ImmutableList.Builder<QueryDescriptor> descriptorsBuilder = ImmutableList.builder();
             tableRequiredFields.forEach((name, value) -> {
-                if (accioMDL.getModel(name).isPresent()) {
-                    Model model = accioMDL.getModel(name).get();
-                    descriptorsBuilder.add(RelationInfo.get(model, accioMDL, value));
-                }
-                else if (accioMDL.getMetric(name).isPresent()) {
-                    Metric metric = accioMDL.getMetric(name).get();
-                    descriptorsBuilder.add(RelationInfo.get(metric, accioMDL, value));
-                }
-                else if (accioMDL.getCumulativeMetric(name).isPresent()) {
-                    CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(name).get();
-                    descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, accioMDL));
-                }
-                else {
-                    throw new IllegalArgumentException(name + " not found in mdl");
-                }
+                addDescriptor(name, value, accioMDL, descriptorsBuilder);
                 visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
             });
 
             // Some node be applied `count(*)` which won't be collected but its source is required.
             analysis.getRequiredSourceNodes().forEach(node ->
                     analysis.getSourceNodeNames(node).map(QualifiedName::toString).ifPresent(name -> {
-                        if (accioMDL.getModel(name).isPresent()) {
-                            Model model = accioMDL.getModel(name).get();
-                            descriptorsBuilder.add(RelationInfo.get(model, accioMDL));
-                        }
-                        else if (accioMDL.getMetric(name).isPresent()) {
-                            Metric metric = accioMDL.getMetric(name).get();
-                            descriptorsBuilder.add(RelationInfo.get(metric, accioMDL));
-                        }
-                        else if (accioMDL.getCumulativeMetric(name).isPresent()) {
-                            CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(name).get();
-                            descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, accioMDL));
-                        }
-                        else {
-                            throw new IllegalArgumentException(name + " not found in mdl");
-                        }
+                        addDescriptor(name, accioMDL, descriptorsBuilder);
                         visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
                     }));
 
@@ -157,14 +126,50 @@ public class AccioSqlRewrite
             Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, accioMDL)).collect(toSet());
             Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, accioMDL)).collect(toSet());
             Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> CumulativeMetricInfo.get(metric, accioMDL)).collect(toSet());
-            Set<QueryDescriptor> viewDescriptors = analysis.getViews().stream().map(view -> ViewInfo.get(view, analyzedMDL, sessionContext)).collect(toSet());
             allDescriptors = ImmutableSet.<QueryDescriptor>builder()
                     .addAll(modelDescriptors)
                     .addAll(metricDescriptors)
-                    .addAll(viewDescriptors)
                     .addAll(cumulativeMetricDescriptors)
                     .build();
             return apply(root, sessionContext, analysis, analyzedMDL, allDescriptors);
+        }
+    }
+
+    private void addDescriptor(String name, Set<String> requiredFields, AccioMDL accioMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
+    {
+        if (accioMDL.getModel(name).isPresent()) {
+            Model model = accioMDL.getModel(name).get();
+            descriptorsBuilder.add(RelationInfo.get(model, accioMDL, requiredFields));
+        }
+        else if (accioMDL.getMetric(name).isPresent()) {
+            Metric metric = accioMDL.getMetric(name).get();
+            descriptorsBuilder.add(RelationInfo.get(metric, accioMDL, requiredFields));
+        }
+        else if (accioMDL.getCumulativeMetric(name).isPresent()) {
+            CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(name).get();
+            descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, accioMDL));
+        }
+        else {
+            throw new IllegalArgumentException(name + " not found in mdl");
+        }
+    }
+
+    private void addDescriptor(String name, AccioMDL accioMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
+    {
+        if (accioMDL.getModel(name).isPresent()) {
+            Model model = accioMDL.getModel(name).get();
+            descriptorsBuilder.add(RelationInfo.get(model, accioMDL));
+        }
+        else if (accioMDL.getMetric(name).isPresent()) {
+            Metric metric = accioMDL.getMetric(name).get();
+            descriptorsBuilder.add(RelationInfo.get(metric, accioMDL));
+        }
+        else if (accioMDL.getCumulativeMetric(name).isPresent()) {
+            CumulativeMetric cumulativeMetric = accioMDL.getCumulativeMetric(name).get();
+            descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, accioMDL));
+        }
+        else {
+            throw new IllegalArgumentException(name + " not found in mdl");
         }
     }
 
@@ -223,35 +228,6 @@ public class AccioSqlRewrite
         }
     }
 
-    private static class WithRewriter
-            extends BaseRewriter<Void>
-    {
-        private final List<WithQuery> withQueries;
-
-        public WithRewriter(List<WithQuery> withQueries)
-        {
-            this.withQueries = requireNonNull(withQueries, "withQueries is null");
-        }
-
-        @Override
-        protected Node visitQuery(Query node, Void context)
-        {
-            return new Query(
-                    node.getWith()
-                            .map(with -> new With(
-                                    with.isRecursive(),
-                                    // model queries must come first since with-queries may use models
-                                    // and tables in with query should all be in order.
-                                    Stream.concat(withQueries.stream(), with.getQueries().stream())
-                                            .collect(toUnmodifiableList())))
-                            .or(() -> withQueries.isEmpty() ? Optional.empty() : Optional.of(new With(false, withQueries))),
-                    node.getQueryBody(),
-                    node.getOrderBy(),
-                    node.getOffset(),
-                    node.getLimit());
-        }
-    }
-
     private static class Rewriter
             extends BaseRewriter<Void>
     {
@@ -297,10 +273,5 @@ public class AccioSqlRewrite
         {
             return new Table(QualifiedName.of(ImmutableList.of(Iterables.getLast(table.getName().getOriginalParts()))));
         }
-    }
-
-    private static WithQuery getWithQuery(QueryDescriptor queryDescriptor)
-    {
-        return new WithQuery(new Identifier(queryDescriptor.getName(), true), queryDescriptor.getQuery(), Optional.empty());
     }
 }

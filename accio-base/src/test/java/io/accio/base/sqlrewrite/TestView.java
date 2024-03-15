@@ -30,8 +30,10 @@ import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.View.view;
 import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
+import static io.accio.base.sqlrewrite.GenerateViewRewrite.GENERATE_VIEW_REWRITE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestView
         extends AbstractTestFramework
@@ -76,7 +78,9 @@ public class TestView
                                 List.of())))
                 .setViews(List.of(
                         view("view1", "select * from CountOrders"),
-                        view("view2", "select * from view1")))
+                        view("view2", "select * from view1"),
+                        view("oneDimCount", "select custkey from CountOrders"),
+                        view("oneDimCount2", "select * from oneDimCount")))
                 .build());
 
         List.of(true, false).forEach(enableDynamicFields -> {
@@ -89,7 +93,64 @@ public class TestView
                     .isEqualTo(query(rewrite("SELECT * FROM CountOrders WHERE custkey = 370", mdl, false)));
             assertThat(query(rewrite("SELECT * FROM view2 WHERE custkey = 370", mdl, enableDynamicFields)))
                     .isEqualTo(query(rewrite("SELECT * FROM CountOrders WHERE custkey = 370", mdl, false)));
+
+            assertThat(query(rewrite("SELECT * FROM oneDimCount WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
+            assertThat(query(rewrite("SELECT custkey FROM oneDimCount WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
+
+            assertThat(query(rewrite("SELECT * FROM oneDimCount2 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
+            assertThat(query(rewrite("SELECT custkey FROM oneDimCount2 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
         });
+    }
+
+    @Test
+    public void testViewWithoutOrder()
+    {
+        AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setViews(List.of(
+                        view("view2", "select * from view1"),
+                        view("view3", "select * from view1"),
+                        view("view4", "select * from view2"),
+                        view("view1", "select * from Orders")))
+                .build());
+        List.of(true, false).forEach(enableDynamicFields -> {
+            assertThat(query(rewrite("SELECT custkey FROM view1 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM Orders WHERE custkey = 370", mdl, false)));
+            assertThat(query(rewrite("SELECT custkey FROM view2 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM Orders WHERE custkey = 370", mdl, false)));
+            assertThat(query(rewrite("SELECT custkey FROM view3 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM Orders WHERE custkey = 370", mdl, false)));
+            assertThat(query(rewrite("SELECT custkey FROM view4 WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM Orders WHERE custkey = 370", mdl, false)));
+            assertThat(query(rewrite("SELECT v2.custkey FROM view2 v2 JOIN view4 v4 ON v2.orderkey = v4.orderkey WHERE v2.custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey FROM Orders WHERE custkey = 370", mdl, false)));
+        });
+    }
+
+    @Test
+    public void testCycleDependencyView()
+    {
+        AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setViews(List.of(
+                        view("view2", "select * from view1"),
+                        view("view1", "select * from view2"),
+                        view("view3", "select * from view3")))
+                .build());
+
+        assertThatThrownBy(() -> query(rewrite("select * from view1", mdl, false)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("found cycle in view");
+
+        assertThatThrownBy(() -> query(rewrite("select * from view3", mdl, false)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("found issue in view")
+                .getCause()
+                .hasMessageContaining("loops not allowed");
     }
 
     private String rewrite(String sql, AccioMDL accioMDL, boolean enableDynamicField)
@@ -99,6 +160,6 @@ public class TestView
                 .setSchema("test")
                 .setEnableDynamic(enableDynamicField)
                 .build();
-        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL, null), List.of(ACCIO_SQL_REWRITE));
+        return AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(accioMDL, null), List.of(GENERATE_VIEW_REWRITE, ACCIO_SQL_REWRITE));
     }
 }
