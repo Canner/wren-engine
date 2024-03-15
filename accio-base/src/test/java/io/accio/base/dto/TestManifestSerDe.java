@@ -15,9 +15,11 @@
 package io.accio.base.dto;
 
 import com.google.common.collect.ImmutableMap;
+import io.airlift.json.JsonCodec;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static io.accio.base.AccioTypes.INTEGER;
 import static io.accio.base.AccioTypes.VARCHAR;
@@ -26,9 +28,12 @@ import static io.accio.base.dto.Relationship.SortKey;
 import static io.accio.base.dto.TimeUnit.DAY;
 import static io.accio.base.dto.TimeUnit.MONTH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestManifestSerDe
 {
+    private static final JsonCodec<Map<String, Object>> STRING_TO_STRING_MAP_CODEC = JsonCodec.mapJsonCodec(String.class, Object.class);
+
     @Test
     public void testSerDeRoundTrip()
     {
@@ -147,5 +152,42 @@ public class TestManifestSerDe
                 .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31", ImmutableMap.of("description", "a date spine")))
                 .setMacros(List.of(new Macro("test", "(a: Expression) => a + 1", ImmutableMap.of("description", "a macro"))))
                 .build();
+    }
+
+    @Test
+    public void testEmptyHandle()
+    {
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "", "schema", "test");
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("catalog is null or empty");
+
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "test", "schema", "");
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("schema is null or empty");
+
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models", List.of(Map.of("name", "")));
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("name is null or empty");
+
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models",
+                    List.of(Map.of("name", "test", "columns", List.of(Map.of("name", "")))));
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("name is null or empty");
+
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models",
+                    List.of(Map.of("name", "test", "columns", List.of(Map.of("name", "test", "type", "")))));
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("type is null or empty");
+
+        assertThatThrownBy(() -> {
+            Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "relationships",
+                    List.of(Map.of("name", "")));
+            MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
+        }).getCause().hasMessageFindingMatch("name is null or empty");
     }
 }

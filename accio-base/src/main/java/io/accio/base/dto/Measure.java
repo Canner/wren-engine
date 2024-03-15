@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class Measure
 {
@@ -43,10 +44,10 @@ public class Measure
             @JsonProperty("refColumn") String refColumn,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = name;
-        this.type = type;
-        this.operator = operator;
-        this.refColumn = refColumn;
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.type = requireNonNullEmpty(type, "type is null or empty");
+        this.operator = requireNonNullEmpty(operator, "operator is null or empty");
+        this.refColumn = requireNonNullEmpty(refColumn, "refColumn is null or empty");
         this.properties = properties;
     }
 

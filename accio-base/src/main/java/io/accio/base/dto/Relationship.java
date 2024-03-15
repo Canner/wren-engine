@@ -31,6 +31,7 @@ import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.base.Utils.requireNonNullEmpty;
 import static io.accio.base.sqlrewrite.Utils.parseExpression;
 import static java.util.Objects.requireNonNull;
 
@@ -99,11 +100,11 @@ public class Relationship
             String description,
             Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
         checkArgument(models != null && models.size() >= 2, "relationship should contain at least 2 models");
         this.models = models;
         this.joinType = requireNonNull(joinType, "joinType is null");
-        this.condition = requireNonNull(condition, "condition is null");
+        this.condition = requireNonNullEmpty(condition, "condition is null or empty");
         this.qualifiedCondition = qualifiedCondition(condition);
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;

@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
+import static java.util.Objects.requireNonNull;
 
 public class Window
 {
@@ -49,11 +51,11 @@ public class Window
             @JsonProperty("end") String end,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = name;
-        this.refColumn = refColumn;
-        this.timeUnit = timeUnit;
-        this.start = start;
-        this.end = end;
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.refColumn = requireNonNullEmpty(refColumn, "refColumn is null or empty");
+        this.timeUnit = requireNonNull(timeUnit, "timeUnit is null or empty");
+        this.start = requireNonNullEmpty(start, "start is null or empty");
+        this.end = requireNonNullEmpty(end, "end is null or empty");
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class TimeGrain
 {
@@ -41,8 +41,8 @@ public class TimeGrain
             @JsonProperty("refColumn") String refColumn,
             @JsonProperty("dateParts") List<TimeUnit> timeUnits)
     {
-        this.name = requireNonNull(name, "name is null");
-        this.refColumn = requireNonNull(refColumn, "refColumn is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.refColumn = requireNonNullEmpty(refColumn, "refColumn is null or empty");
         this.timeUnits = timeUnits == null ? List.of() : timeUnits;
     }
 

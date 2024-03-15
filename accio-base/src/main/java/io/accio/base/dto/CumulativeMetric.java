@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
+import static java.util.Objects.requireNonNull;
 
 public class CumulativeMetric
         implements CacheInfo
@@ -58,10 +60,10 @@ public class CumulativeMetric
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = name;
-        this.baseObject = baseObject;
-        this.measure = measure;
-        this.window = window;
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.baseObject = requireNonNullEmpty(baseObject, "baseObject is null or empty");
+        this.measure = requireNonNull(measure, "measure is null");
+        this.window = requireNonNull(window, "window is null");
         this.cached = cached;
         this.refreshTime = refreshTime;
         this.description = description;

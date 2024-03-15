@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class View
 {
@@ -48,8 +48,8 @@ public class View
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
-        this.statement = requireNonNull(statement, "statement is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.statement = requireNonNullEmpty(statement, "statement is null or empty");
         this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }

@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class Model
         implements CacheInfo, Relationable
@@ -80,8 +80,8 @@ public class Model
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
-        checkArgument(Stream.of(refSql, baseObject).filter(Objects::nonNull).count() == 1,
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        checkArgument(Stream.of(refSql, baseObject).filter(value -> value == null || value.isEmpty()).count() == 1,
                 "either none or more than one of (refSql, baseObject) are set");
         this.refSql = refSql;
         this.baseObject = baseObject;

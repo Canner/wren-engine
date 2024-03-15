@@ -36,6 +36,12 @@ public class Utils
         }
     }
 
+    public static String requireNonNullEmpty(String value, String errorMessage)
+    {
+        checkArgument(value != null && !value.isEmpty(), errorMessage);
+        return value;
+    }
+
     public static String randomIntString()
     {
         String randomSuffix = Long.toString(abs(random.nextLong()), MAX_RADIX);
