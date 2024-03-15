@@ -74,19 +74,34 @@ public final class Utils
 
     public static Expression parseExpression(String expression)
     {
-        return SQL_PARSER.createExpression(expression, PARSING_OPTIONS);
+        try {
+            return SQL_PARSER.createExpression(expression, PARSING_OPTIONS);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(format("Failed to parse expression: %s", expression), e);
+        }
     }
 
     public static DataType parseType(String type)
     {
-        return SQL_PARSER.createType(type);
+        try {
+            return SQL_PARSER.createType(type);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(format("Failed to parse type: %s", type), e);
+        }
     }
 
     public static Query parseQuery(String sql)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
+        try {
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            if (statement instanceof Query) {
+                return (Query) statement;
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException(format("Failed to parse query: %s", sql), e);
         }
         throw new IllegalArgumentException("model sql is not a query");
     }
@@ -94,9 +109,14 @@ public final class Utils
     public static Query parseMetricRollupSql(MetricRollupInfo metricRollupInfo)
     {
         String sql = getMetricRollupSql(metricRollupInfo);
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
+        try {
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            if (statement instanceof Query) {
+                return (Query) statement;
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException(format("Failed to parse metric rollup sql: %s", metricRollupInfo), e);
         }
         throw new IllegalArgumentException(format("metric %s is not a query, sql %s", metricRollupInfo.getMetric().getName(), sql));
     }
@@ -104,14 +124,19 @@ public final class Utils
     public static Query parseCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
     {
         String sql = getCumulativeMetricSql(cumulativeMetric, accioMDL);
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
-        if (statement instanceof Query) {
-            return (Query) statement;
+        try {
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            if (statement instanceof Query) {
+                return (Query) statement;
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException(format("Failed to parse cumulative metric sql: %s", cumulativeMetric), e);
         }
         throw new IllegalArgumentException(format("metric %s is not a query, sql %s", cumulativeMetric.getName(), sql));
     }
 
-    public static String getCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
+    private static String getCumulativeMetricSql(CumulativeMetric cumulativeMetric, AccioMDL accioMDL)
     {
         requireNonNull(cumulativeMetric, "cumulativeMetric is null");
 
