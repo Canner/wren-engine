@@ -146,6 +146,7 @@ public class ConfigManager
         initConfig(DUCKDB_HOME_DIRECTORY, duckDBConfig.getHomeDirectory(), true, false);
         initConfig(DUCKDB_TEMP_DIRECTORY, duckDBConfig.getTempDirectory(), true, false);
         initConfig(DUCKDB_MAX_CONCURRENT_TASKS, Integer.toString(duckDBConfig.getMaxConcurrentTasks()), false, true);
+        // TODO: should support reload this config
         initConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, Integer.toString(duckDBConfig.getMaxConcurrentMetadataQueries()), false, true);
         initConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, Long.toString(duckDBConfig.getMaxCacheQueryTimeout()), false, true);
         initConfig(DUCKDB_CACHE_TASK_RETRY_DELAY, Long.toString(duckDBConfig.getCacheTaskRetryDelay()), false, true);
