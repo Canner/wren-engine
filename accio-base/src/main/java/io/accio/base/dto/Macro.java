@@ -26,8 +26,8 @@ import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.base.Utils.requireNonNullEmpty;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 public class Macro
 {
@@ -48,8 +48,8 @@ public class Macro
             @JsonProperty("definition") String definition,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
-        this.definition = requireNonNull(definition, "definition is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.definition = requireNonNullEmpty(definition, "definition is null or empty");
         String[] split = definition.split("=>", 2);
         checkArgument(split.length == 2, format("definition is invalid: %s", definition));
         String paramString = split[0].trim();

@@ -23,7 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class Column
 {
@@ -73,12 +73,12 @@ public class Column
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
-        this.type = requireNonNull(type, "type is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.type = requireNonNullEmpty(type, "type is null or empty");
         this.relationship = relationship;
         this.isCalculated = isCalculated;
         this.notNull = notNull;
-        this.expression = expression;
+        this.expression = expression == null || expression.isEmpty() ? null : expression;
         this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }

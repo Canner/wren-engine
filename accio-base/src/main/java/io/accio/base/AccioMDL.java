@@ -47,7 +47,7 @@ import static java.util.stream.Collectors.toList;
 
 public class AccioMDL
 {
-    public static final AccioMDL EMPTY = AccioMDL.fromManifest(Manifest.builder().setCatalog("").setSchema("").build());
+    public static final AccioMDL EMPTY = AccioMDL.fromManifest(Manifest.builder().setCatalog("default").setSchema("default").build());
     private static final ObjectMapper MAPPER = new ObjectMapper().disable(FAIL_ON_UNKNOWN_PROPERTIES);
     private static final Jinjava JINJAVA = new Jinjava();
 

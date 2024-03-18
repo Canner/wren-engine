@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
 import static java.util.Objects.requireNonNull;
 
 public class EnumDefinition
@@ -50,7 +51,7 @@ public class EnumDefinition
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name);
+        this.name = requireNonNullEmpty(name, "name is null or empty");
         this.values = requireNonNull(values);
         this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;

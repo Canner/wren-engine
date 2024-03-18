@@ -23,7 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static java.util.Objects.requireNonNull;
+import static io.accio.base.Utils.requireNonNullEmpty;
 
 public class EnumValue
 {
@@ -47,7 +47,7 @@ public class EnumValue
             @JsonProperty("value") String value,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
         this.value = value;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }

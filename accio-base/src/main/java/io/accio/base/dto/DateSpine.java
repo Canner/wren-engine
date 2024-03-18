@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
+import static java.util.Objects.requireNonNull;
 
 public class DateSpine
 {
@@ -39,9 +41,9 @@ public class DateSpine
             @JsonProperty("end") String end,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.unit = unit;
-        this.start = start;
-        this.end = end;
+        this.unit = requireNonNull(unit, "unit is null");
+        this.start = requireNonNullEmpty(start, "start is null or empty");
+        this.end = requireNonNullEmpty(end, "end is null or empty");
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 

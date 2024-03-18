@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.checkArgument;
+import static io.accio.base.Utils.requireNonNullEmpty;
 import static java.util.Objects.requireNonNull;
 
 public class Metric
@@ -76,13 +77,13 @@ public class Metric
             @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this.name = requireNonNull(name, "name is null");
-        this.baseObject = requireNonNull(baseObject, "baseObject is null");
+        this.name = requireNonNullEmpty(name, "name is null or empty");
+        this.baseObject = requireNonNullEmpty(baseObject, "baseObject is null or empty");
         this.dimension = requireNonNull(dimension, "dimension is null");
         this.measure = requireNonNull(measure, "measure is null");
         this.cached = cached;
-        checkArgument(measure.size() > 0, "the number of measures should be one at least");
-        this.timeGrain = requireNonNull(timeGrain, "timeGrain is null");
+        checkArgument(!measure.isEmpty(), "the number of measures should be one at least");
+        this.timeGrain = timeGrain == null ? ImmutableList.of() : timeGrain;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
         this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;

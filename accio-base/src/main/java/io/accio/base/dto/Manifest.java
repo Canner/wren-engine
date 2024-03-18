@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.accio.base.Utils.requireNonNullEmpty;
 import static io.accio.base.dto.DateSpine.DEFAULT;
-import static java.util.Objects.requireNonNull;
 
 public class Manifest
 {
@@ -63,8 +63,8 @@ public class Manifest
             @JsonProperty("macros") List<Macro> macros,
             @JsonProperty("dateSpine") DateSpine dateSpine)
     {
-        this.catalog = requireNonNull(catalog, "catalog is null");
-        this.schema = requireNonNull(schema, "schema is null");
+        this.catalog = requireNonNullEmpty(catalog, "catalog is null or empty");
+        this.schema = requireNonNullEmpty(schema, "schema is null or empty");
         this.models = models == null ? List.of() : models;
         this.relationships = relationships == null ? List.of() : relationships;
         this.enumDefinitions = enumDefinitions == null ? List.of() : enumDefinitions;
