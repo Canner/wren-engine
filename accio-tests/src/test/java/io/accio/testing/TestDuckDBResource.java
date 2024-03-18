@@ -14,10 +14,11 @@
 
 package io.accio.testing;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Key;
 import io.accio.base.dto.Manifest;
-import io.accio.main.web.dto.DuckDBQueryDto;
+import io.accio.main.connector.duckdb.DuckDBMetadata;
+import io.accio.main.web.dto.QueryResultDto;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 
@@ -25,7 +26,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_INIT_SQL_PATH;
+import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_SESSION_SQL_PATH;
 import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static io.accio.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.accio.testing.WebApplicationExceptionAssert.assertWebApplicationException;
@@ -40,7 +49,7 @@ public class TestDuckDBResource
     private static final String APPEND_INIT_SQL = "CREATE TABLE orders (orderkey integer, custkey integer);";
     private static final String SHOW_TABLES_SQL = "SHOW TABLES;";
     private static final String SESSION_SQL = "SET s3_region = 'us-east-2';";
-    private static final String APPEND_SESSION_SQL = "SET temp_directory = '/tmp';";
+    private static final String APPEND_SESSION_SQL = "SET temp_directory = '.tmp';";
     private static final String FAILED_SQL = "xxx";
 
     private Path settingDir;
@@ -62,7 +71,8 @@ public class TestDuckDBResource
             ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                     .put("accio.datasource.type", DUCKDB.name())
                     .put("accio.directory", mdlDir.toAbsolutePath().toString())
-                    .put("duckdb.connector.setting-dir", settingDir.toAbsolutePath().toString());
+                    .put(DUCKDB_CONNECTOR_INIT_SQL_PATH, settingDir.resolve("init.sql").toAbsolutePath().toString())
+                    .put(DUCKDB_CONNECTOR_SESSION_SQL_PATH, settingDir.resolve("session.sql").toAbsolutePath().toString());
 
             return TestingAccioServer.builder()
                     .setRequiredConfigs(properties.build())
@@ -80,6 +90,10 @@ public class TestDuckDBResource
         Files.walk(settingDir)
                 .map(Path::toFile)
                 .forEach(File::delete);
+        DuckDBMetadata metadata = getInstance(Key.get(DuckDBMetadata.class));
+        metadata.setInitSQL(null);
+        metadata.setSessionSQL(null);
+        metadata.reload();
     }
 
     @Test
@@ -95,26 +109,29 @@ public class TestDuckDBResource
         assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
         assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
-                .isEqualTo(ImmutableList.of("customer"));
+                .isEqualTo(new String[] {"customer"});
 
         assertThatCode(() -> appendToDuckDBInitSQL(APPEND_INIT_SQL)).doesNotThrowAnyException();
         assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL + "\n" + APPEND_INIT_SQL);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList()
-                .isEqualTo(ImmutableList.of(ImmutableList.of("customer"), ImmutableList.of("orders")));
+                .satisfies(data -> {
+                    assertThat(data).element(0).isEqualTo(new String[] {"customer"});
+                    assertThat(data).element(1).isEqualTo(new String[] {"orders"});
+                });
 
         assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
         assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
-                .isEqualTo(ImmutableList.of("customer"));
+                .isEqualTo(new String[] {"customer"});
     }
 
     @Test
@@ -130,18 +147,41 @@ public class TestDuckDBResource
         assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL)).doesNotThrowAnyException();
         assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL);
         assertThat(queryDuckDB("SELECT current_setting('s3_region') AS s3_region;"))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
-                .isEqualTo(ImmutableList.of("us-east-2"));
+                .isEqualTo(new String[] {"us-east-2"});
 
         assertThatCode(() -> appendToDuckDBSessionSQL(APPEND_SESSION_SQL)).doesNotThrowAnyException();
         assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL + "\n" + APPEND_SESSION_SQL);
         assertThat(queryDuckDB("SELECT current_setting('s3_region') AS s3_region, current_setting('temp_directory') AS temp_directory;"))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
-                .isEqualTo(ImmutableList.of("us-east-2", "/tmp"));
+                .isEqualTo(new String[] {"us-east-2", ".tmp"});
+    }
+
+    @Test
+    public void testSessionSQLEffectAllConnection()
+            throws ExecutionException, InterruptedException
+    {
+        assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL)).doesNotThrowAnyException();
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+        List<Future<QueryResultDto>> futures = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            futures.add(executorService.submit(() -> queryDuckDB("SELECT current_setting('s3_region') AS s3_region;")));
+        }
+
+        for (Future<QueryResultDto> future : futures) {
+            assertThat(future.get())
+                    .extracting(QueryResultDto::getData)
+                    .isNotNull()
+                    .asList().element(0)
+                    .isEqualTo(new String[] {"us-east-2"});
+        }
     }
 
     @Test
@@ -157,9 +197,25 @@ public class TestDuckDBResource
         assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
 
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
-                .extracting(DuckDBQueryDto::getRows)
+                .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
-                .isEqualTo(ImmutableList.of("customer"));
+                .isEqualTo(new String[] {"customer"});
+    }
+
+    @Test(description = "We don't promote sending DDL via query API, but we don't have sql parser to validate the syntax.")
+    public void testInsert()
+    {
+        assertThat(queryDuckDB(SHOW_TABLES_SQL))
+                .extracting(QueryResultDto::getData)
+                .asList().isEmpty();
+
+        assertThatCode(() -> queryDuckDB(INIT_SQL)).doesNotThrowAnyException();
+
+        assertThat(queryDuckDB(SHOW_TABLES_SQL))
+                .extracting(QueryResultDto::getData)
+                .isNotNull()
+                .asList().element(0)
+                .isEqualTo(new String[] {"customer"});
     }
 }

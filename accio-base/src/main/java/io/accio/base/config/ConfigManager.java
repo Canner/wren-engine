@@ -51,7 +51,8 @@ import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_MET
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_TASKS;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.accio.base.client.duckdb.DuckDBConfig.DUCKDB_TEMP_DIRECTORY;
-import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_SETTING_DIR;
+import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_INIT_SQL_PATH;
+import static io.accio.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_SESSION_SQL_PATH;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ACCESS_KEY;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ENDPOINT;
 import static io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_REGION;
@@ -121,7 +122,8 @@ public class ConfigManager
                 bigQueryConfig,
                 duckDBConfig,
                 postgresWireProtocolConfig,
-                duckdbS3StyleStorageConfig);
+                duckdbS3StyleStorageConfig,
+                duckDBConnectorConfig);
 
         try {
             setConfigs.putAll(loadPropertiesFrom(configFile));
@@ -137,7 +139,8 @@ public class ConfigManager
             BigQueryConfig bigQueryConfig,
             DuckDBConfig duckDBConfig,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
+            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
+            DuckDBConnectorConfig duckDBConnectorConfig)
     {
         initConfig(ACCIO_DIRECTORY, accioConfig.getAccioMDLDirectory().getPath(), false, true);
         initConfig(ACCIO_DATASOURCE_TYPE, Optional.ofNullable(accioConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
@@ -168,6 +171,8 @@ public class ConfigManager
         initConfig(POSTGRES_JDBC_URL, postgresConfig.getJdbcUrl(), true, false);
         initConfig(POSTRES_USER, postgresConfig.getUser(), true, false);
         initConfig(POSTGRES_PASSWORD, postgresConfig.getPassword(), true, false);
+        initConfig(DUCKDB_CONNECTOR_INIT_SQL_PATH, duckDBConnectorConfig.getInitSQLPath(), false, false);
+        initConfig(DUCKDB_CONNECTOR_SESSION_SQL_PATH, duckDBConnectorConfig.getSessionSQLPath(), false, false);
     }
 
     private void initConfig(String key, String value, boolean requiredReload, boolean isStatic)
@@ -216,6 +221,7 @@ public class ConfigManager
         if (config == PostgresWireProtocolConfig.class) {
             return (T) postgresWireProtocolConfig.orElseGet(() -> {
                 PostgresWireProtocolConfig result = getPostgresWireProtocolConfig();
+                postgresWireProtocolConfig = Optional.of(result);
                 return result;
             });
         }
@@ -288,7 +294,6 @@ public class ConfigManager
         result.setSslEnable(Boolean.parseBoolean(configs.get(PG_WIRE_PROTOCOL_SSL_ENABLED)));
         result.setNettyThreadCount(Integer.parseInt(configs.get(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
         result.setAuthFile(new File(configs.get(PG_WIRE_PROTOCOL_AUTH_FILE)));
-        postgresWireProtocolConfig = Optional.of(result);
         return result;
     }
 
@@ -306,7 +311,8 @@ public class ConfigManager
     private DuckDBConnectorConfig getDuckDBConnectorConfig()
     {
         DuckDBConnectorConfig result = new DuckDBConnectorConfig();
-        result.setSettingDir(configs.get(DUCKDB_SETTING_DIR));
+        result.setInitSQLPath(configs.get(DUCKDB_CONNECTOR_INIT_SQL_PATH));
+        result.setSessionSQLPath(configs.get(DUCKDB_CONNECTOR_SESSION_SQL_PATH));
         return result;
     }
 
@@ -355,6 +361,7 @@ public class ConfigManager
         duckDBConfig = Optional.empty();
         postgresWireProtocolConfig = Optional.empty();
         duckdbS3StyleStorageConfig = Optional.empty();
+        duckDBConnectorConfig = Optional.empty();
     }
 
     private void reset()
@@ -367,7 +374,8 @@ public class ConfigManager
                 new BigQueryConfig(),
                 new DuckDBConfig(),
                 new PostgresWireProtocolConfig(),
-                new DuckdbS3StyleStorageConfig());
+                new DuckdbS3StyleStorageConfig(),
+                new DuckDBConnectorConfig());
     }
 
     private void syncFile(Map<String, String> updated)

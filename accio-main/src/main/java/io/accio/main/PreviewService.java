@@ -22,7 +22,7 @@ import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.sqlrewrite.AccioPlanner;
 import io.accio.main.metadata.Metadata;
-import io.accio.main.web.dto.PreviewOutputDto;
+import io.accio.main.web.dto.QueryResultDto;
 
 import javax.inject.Inject;
 
@@ -47,7 +47,7 @@ public class PreviewService
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
     }
 
-    public CompletableFuture<PreviewOutputDto> preview(AccioMDL mdl, String sql, long limit)
+    public CompletableFuture<QueryResultDto> preview(AccioMDL mdl, String sql, long limit)
     {
         return CompletableFuture.supplyAsync(() -> {
             SessionContext sessionContext = SessionContext.builder()
@@ -58,7 +58,7 @@ public class PreviewService
             String planned = AccioPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
             String converted = sqlConverter.convert(planned, sessionContext);
             try (ConnectorRecordIterator iter = metadata.directQuery(converted, List.of())) {
-                return new PreviewOutputDto(
+                return new QueryResultDto(
                         iter.getColumns(),
                         Streams.stream(iter).limit(limit).collect(toList()));
             }

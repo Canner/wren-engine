@@ -20,20 +20,16 @@ import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
-import io.accio.base.client.Client;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.DuckDBSettingSQL;
 import io.accio.base.client.duckdb.DuckdbClient;
-import io.accio.base.client.duckdb.DuckdbTypes;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.metadata.TableMetadata;
-import io.accio.base.sql.SqlConverter;
 import io.accio.base.type.DateType;
 import io.accio.base.type.PGType;
 import io.accio.base.type.VarcharType;
-import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.DuckdbRecordIterator;
 import io.accio.connector.StorageClient;
 import io.accio.main.metadata.Metadata;
@@ -44,39 +40,42 @@ import io.trino.sql.tree.QualifiedName;
 
 import javax.inject.Inject;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class DuckDBMetadata
-        implements Metadata, PgMetastore
+        implements Metadata
 {
     private static final Logger LOG = Logger.get(DuckDBMetadata.class);
     private final ConfigManager configManager;
     private DuckdbClient duckdbClient;
-    private final SqlConverter sqlConverter;
     private final PgFunctionBuilder pgFunctionBuilder;
     private final Map<String, String> pgToDuckDBFunctionNameMappings;
-    private final DuckDBSettingSQL duckDBSettingSQL = new DuckDBSettingSQL();
+    private final AtomicReference<DuckDBSettingSQL> duckDBSettingSQL = new AtomicReference<>(new DuckDBSettingSQL());
 
     @Inject
     public DuckDBMetadata(
             ConfigManager configManager)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
+        initDuckDBSettingSQLIfNeed();
         this.duckdbClient = buildDuckDBClient();
-        this.pgFunctionBuilder = new DuckDBFunctionBuilder(this);
-        this.sqlConverter = new DuckDBSqlConverter(this);
+        this.pgFunctionBuilder = new DuckDBFunctionBuilder(duckdbClient);
         this.pgToDuckDBFunctionNameMappings = initPgNameToDuckDBFunctions();
     }
 
@@ -108,17 +107,6 @@ public class DuckDBMetadata
     public List<String> listSchemas()
     {
         return null;
-    }
-
-    @Override
-    public void dropTableIfExists(String name)
-    {
-        try {
-            duckdbClient.executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", name));
-        }
-        catch (Exception e) {
-            LOG.error(e, "Failed to drop table %s", name);
-        }
     }
 
     @Override
@@ -195,34 +183,12 @@ public class DuckDBMetadata
     }
 
     @Override
-    public String handlePgType(String type)
-    {
-        if (type.startsWith("_")) {
-            return format("%s[]", handlePgType(type.substring(1)));
-        }
-        else if (!DuckdbTypes.getDuckDBTypeNames().contains(type)) {
-            return "VARCHAR";
-        }
-        return type;
-    }
-
-    @Override
-    public SqlConverter getSqlConverter()
-    {
-        return sqlConverter;
-    }
-
-    @Override
     public void reload()
     {
+        // Create client success first, then close the old one
+        DuckdbClient duckdbClient = buildDuckDBClient();
         this.duckdbClient.close();
-        this.duckdbClient = buildDuckDBClient();
-    }
-
-    @Override
-    public Client getClient()
-    {
-        return duckdbClient;
+        this.duckdbClient = duckdbClient;
     }
 
     @Override
@@ -243,9 +209,14 @@ public class DuckDBMetadata
         return pgFunctionBuilder;
     }
 
+    public DuckdbClient getClient()
+    {
+        return duckdbClient;
+    }
+
     private DuckdbClient buildDuckDBClient()
     {
-        return new DuckdbClient(configManager.getConfig(DuckDBConfig.class), getCacheStorageConfigIfExists(), duckDBSettingSQL);
+        return new DuckdbClient(configManager.getConfig(DuckDBConfig.class), getCacheStorageConfigIfExists(), duckDBSettingSQL.get());
     }
 
     private CacheStorageConfig getCacheStorageConfigIfExists()
@@ -268,6 +239,27 @@ public class DuckDBMetadata
                 .build();
     }
 
+    private void initDuckDBSettingSQLIfNeed()
+    {
+        setSQLFromFile(getInitSQLPath(), this::setInitSQL);
+        setSQLFromFile(getSessionSQLPath(), this::setSessionSQL);
+    }
+
+    private void setSQLFromFile(Path filePath, Consumer<String> setter)
+    {
+        if (filePath != null) {
+            try {
+                setter.accept(Files.readString(filePath));
+            }
+            catch (NoSuchFileException e) {
+                // Do nothing
+            }
+            catch (IOException e) {
+                LOG.error(e, "Failed to read SQL from %s", filePath);
+            }
+        }
+    }
+
     private List<Parameter> convertParameters(List<Parameter> parameters)
     {
         return parameters.stream().map(this::convertParameter).collect(toList());
@@ -285,31 +277,31 @@ public class DuckDBMetadata
 
     public String getInitSQL()
     {
-        return duckDBSettingSQL.getInitSQL();
+        return duckDBSettingSQL.get().getInitSQL();
     }
 
     public void setInitSQL(String initSQL)
     {
-        duckDBSettingSQL.setInitSQL(initSQL);
+        duckDBSettingSQL.get().setInitSQL(initSQL);
     }
 
     public Path getInitSQLPath()
     {
-        return configManager.getConfig(DuckDBConnectorConfig.class).getInitSQLPath();
+        return Path.of(configManager.getConfig(DuckDBConnectorConfig.class).getInitSQLPath());
     }
 
     public String getSessionSQL()
     {
-        return duckDBSettingSQL.getSessionSQL();
+        return duckDBSettingSQL.get().getSessionSQL();
     }
 
     public void setSessionSQL(String sessionSQL)
     {
-        duckDBSettingSQL.setSessionSQL(sessionSQL);
+        duckDBSettingSQL.get().setSessionSQL(sessionSQL);
     }
 
     public Path getSessionSQLPath()
     {
-        return configManager.getConfig(DuckDBConnectorConfig.class).getSessionSQLPath();
+        return Path.of(configManager.getConfig(DuckDBConnectorConfig.class).getSessionSQLPath());
     }
 }

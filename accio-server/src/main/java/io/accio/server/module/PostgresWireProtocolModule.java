@@ -15,19 +15,16 @@
 package io.accio.server.module;
 
 import com.google.inject.Binder;
-import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
-import io.accio.base.config.ConfigManager;
 import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.ExtraRewriter;
 import io.accio.main.PostgresNettyProvider;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.pgcatalog.PgCatalogManager;
 import io.accio.main.pgcatalog.regtype.PgMetadata;
 import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
 import io.accio.main.pgcatalog.regtype.RegObjectFactory;
+import io.accio.main.wireprotocol.PgMetastoreImpl;
 import io.accio.main.wireprotocol.PgWireProtocolExtraRewriter;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.auth.Authentication;
@@ -61,12 +58,6 @@ public class PostgresWireProtocolModule
         // for cache extra rewrite
         binder.bind(ExtraRewriter.class).to(PgWireProtocolExtraRewriter.class).in(Scopes.SINGLETON);
         binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
-    }
-
-    @Provides
-    @Singleton
-    public static PgMetastore provideMetadataForCache(ConfigManager configManager)
-    {
-        return new DuckDBMetadata(configManager);
+        binder.bind(PgMetastore.class).to(PgMetastoreImpl.class).in(Scopes.SINGLETON);
     }
 }

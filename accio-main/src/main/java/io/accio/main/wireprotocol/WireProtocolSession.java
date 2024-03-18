@@ -280,16 +280,10 @@ public class WireProtocolSession
     {
         String statementTrimmed = rewritePreparedChar(statement.split(";")[0].trim());
         String statementPreRewritten = PostgreSqlRewriteUtil.rewrite(statementTrimmed);
-        SessionContext sessionContext = SessionContext.builder()
-                .setCatalog(getDefaultDatabase())
-                .setSchema(getDefaultSchema())
-                .setEnableDynamic(accioConfig.getEnableDynamicFields())
-                .build();
         try {
             Statement metadataQueryStatement = MetastoreSqlRewrite.rewrite(regObjectFactory,
                     sqlParser.createStatement(statementPreRewritten, PARSE_AS_DECIMAL));
-            String converted = pgMetastore.getSqlConverter().convert(SqlFormatter.formatSql(metadataQueryStatement), sessionContext);
-            createMetadataQueryPreparedStatement(statementName, statement, converted, paramTypes, QueryLevel.METASTORE_SEMI);
+            createMetadataQueryPreparedStatement(statementName, statement, SqlFormatter.formatSql(metadataQueryStatement), paramTypes, QueryLevel.METASTORE_SEMI);
         }
         catch (Exception e) {
             LOG.debug(e, "Failed to parse SQL in METASTORE_SEMI level: %s", statement);

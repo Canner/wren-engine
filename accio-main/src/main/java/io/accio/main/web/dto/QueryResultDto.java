@@ -20,13 +20,13 @@ import io.accio.base.Column;
 
 import java.util.List;
 
-public class PreviewOutputDto
+public class QueryResultDto
 {
     private final List<Column> columns;
     private final List<Object[]> data;
 
     @JsonCreator
-    public PreviewOutputDto(
+    public QueryResultDto(
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("data") List<Object[]> data)
     {

@@ -2,32 +2,33 @@ package io.accio.base.client.duckdb;
 
 import io.airlift.configuration.Config;
 
-import java.nio.file.Path;
-
 public class DuckDBConnectorConfig
 {
-    public static final String DUCKDB_SETTING_DIR = "duckdb.connector.setting-dir";
+    public static final String DUCKDB_CONNECTOR_INIT_SQL_PATH = "duckdb.connector.init-sql-path";
+    public static final String DUCKDB_CONNECTOR_SESSION_SQL_PATH = "duckdb.connector.session-sql-path";
 
-    private Path settingDir = Path.of("etc/duckdb-connector");
+    private String initSQLPath = "etc/duckdb/init.sql";
+    private String sessionSQLPath = "etc/duckdb/session.sql";
 
-    public Path getSettingDir()
+    @Config(DUCKDB_CONNECTOR_INIT_SQL_PATH)
+    public void setInitSQLPath(String initSQLPath)
     {
-        return settingDir;
+        this.initSQLPath = initSQLPath;
     }
 
-    @Config(DUCKDB_SETTING_DIR)
-    public void setSettingDir(String settingDir)
+    @Config(DUCKDB_CONNECTOR_SESSION_SQL_PATH)
+    public void setSessionSQLPath(String sessionSQLPath)
     {
-        this.settingDir = Path.of(settingDir);
+        this.sessionSQLPath = sessionSQLPath;
     }
 
-    public Path getInitSQLPath()
+    public String getInitSQLPath()
     {
-        return settingDir.resolve("init.sql");
+        return initSQLPath;
     }
 
-    public Path getSessionSQLPath()
+    public String getSessionSQLPath()
     {
-        return settingDir.resolve("session.sql");
+        return sessionSQLPath;
     }
 }

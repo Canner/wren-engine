@@ -19,7 +19,6 @@ import io.accio.base.pgcatalog.function.DataSourceFunctionRegistry;
 import io.accio.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.main.AccioMetastore;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.metadata.Metadata;
 import io.accio.main.pgcatalog.builder.DuckDBFunctionBuilder;
 import io.accio.main.pgcatalog.builder.PgFunctionBuilderManager;
@@ -60,7 +59,7 @@ public class PgCatalogManager
         this.dataSourceFunctionRegistry = new DataSourceFunctionRegistry();
         this.metastoreFunctionRegistry = new PgMetastoreFunctionRegistry();
         this.pgMetastore = requireNonNull(pgMetastore, "pgMetastore is null");
-        this.pgMetastoreFunctionBuilder = new DuckDBFunctionBuilder((DuckDBMetadata) pgMetastore);
+        this.pgMetastoreFunctionBuilder = new DuckDBFunctionBuilder(pgMetastore.getClient());
         this.accioMetastore = requireNonNull(accioMetastore, "accioMetastore is null");
     }
 

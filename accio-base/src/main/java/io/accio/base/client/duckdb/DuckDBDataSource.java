@@ -25,29 +25,17 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
-
-import static java.lang.String.format;
 
 public class DuckDBDataSource
         extends BaseDataSource
         implements DataSource, Serializable
 {
     private final DuckDBConnection duckDBConnection;
-    private final DuckDBConfig duckDBConfig;
-    private final CacheStorageConfig cacheStorageConfig;
-    private final DuckDBSettingSQL duckDBSettingSQL;
 
     public DuckDBDataSource(
-            DuckDBConnection duckDBConnection,
-            DuckDBConfig duckDBConfig,
-            CacheStorageConfig cacheStorageConfig,
-            DuckDBSettingSQL duckDBSettingSQL)
+            DuckDBConnection duckDBConnection)
     {
         this.duckDBConnection = duckDBConnection;
-        this.duckDBConfig = duckDBConfig;
-        this.cacheStorageConfig = cacheStorageConfig;
-        this.duckDBSettingSQL = duckDBSettingSQL;
     }
 
     @Override
@@ -66,20 +54,7 @@ public class DuckDBDataSource
         // Refer to the official doc, if we want to create multiple read-write connections,
         // to the same database in-memory database instance, we can use the custom `duplicate()` method.
         // https://duckdb.org/docs/api/java
-        Connection connection = duckDBConnection.duplicate();
-        Statement statement = connection.createStatement();
-        statement.execute("set search_path = 'main'");
-        // init httpfs settings
-        if (cacheStorageConfig instanceof DuckdbS3StyleStorageConfig) {
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig = (DuckdbS3StyleStorageConfig) cacheStorageConfig;
-            statement.execute(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
-            statement.execute(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
-        }
-        if (duckDBSettingSQL.getSessionSQL() != null) {
-            statement.execute(duckDBSettingSQL.getSessionSQL());
-        }
-        statement.execute(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
-        return connection;
+        return duckDBConnection.duplicate();
     }
 
     @Override
