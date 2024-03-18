@@ -18,49 +18,51 @@ import io.accio.base.AccioException;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.client.AutoCloseableIterator;
+import io.accio.base.client.Client;
 import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbTypes;
 import io.accio.base.config.ConfigManager;
-import io.accio.base.type.DateType;
-import io.accio.base.type.PGType;
+import io.accio.base.sql.SqlConverter;
 import io.accio.base.type.VarcharType;
 import io.accio.base.wireprotocol.PgMetastore;
 import io.accio.cache.DuckdbRecordIterator;
+import io.accio.main.connector.duckdb.DuckDBSqlConverter;
 import io.airlift.log.Logger;
 
 import javax.inject.Inject;
 
-import java.sql.Date;
-import java.time.LocalDate;
 import java.util.List;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.accio.main.connector.duckdb.DuckDBMetadata.convertParameters;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
 public class PgMetastoreImpl
-        implements PgMetastore
+        extends PgMetastore
 {
     private static final Logger LOG = Logger.get(PgMetastoreImpl.class);
     private final ConfigManager configManager;
+    private final DuckDBSqlConverter duckDBSqlConverter;
     private final DuckdbClient duckdbClient;
 
     @Inject
     public PgMetastoreImpl(
-            ConfigManager configManager)
+            ConfigManager configManager,
+            DuckDBSqlConverter duckDBSqlConverter)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
+        this.duckDBSqlConverter = duckDBSqlConverter;
         this.duckdbClient = buildDuckDBClient();
     }
 
     @Override
     public boolean isSchemaExist(String name)
     {
-        try (AutoCloseableIterator iter = duckdbClient
+        try (AutoCloseableIterator<Object[]> iter = duckdbClient
                 .query("SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", List.of(new Parameter(VarcharType.VARCHAR, name)))) {
             return iter.hasNext();
         }
@@ -116,9 +118,15 @@ public class PgMetastoreImpl
     }
 
     @Override
-    public DuckdbClient getClient()
+    public Client getClient()
     {
         return duckdbClient;
+    }
+
+    @Override
+    public SqlConverter getSqlConverter()
+    {
+        return duckDBSqlConverter;
     }
 
     @Override
@@ -129,7 +137,10 @@ public class PgMetastoreImpl
 
     private DuckdbClient buildDuckDBClient()
     {
-        return new DuckdbClient(configManager.getConfig(DuckDBConfig.class), getCacheStorageConfigIfExists(), null);
+        return DuckdbClient.builder()
+                .setDuckDBConfig(configManager.getConfig(DuckDBConfig.class))
+                .setCacheStorageConfig(getCacheStorageConfigIfExists())
+                .build();
     }
 
     private CacheStorageConfig getCacheStorageConfigIfExists()
@@ -140,20 +151,5 @@ public class PgMetastoreImpl
         catch (Exception e) {
             return null;
         }
-    }
-
-    private List<Parameter> convertParameters(List<Parameter> parameters)
-    {
-        return parameters.stream().map(this::convertParameter).collect(toList());
-    }
-
-    private Parameter convertParameter(Parameter parameter)
-    {
-        PGType<?> type = parameter.getType();
-        Object value = parameter.getValue();
-        if (type instanceof DateType && value instanceof LocalDate) {
-            value = Date.valueOf((LocalDate) value);
-        }
-        return new Parameter(type, value);
     }
 }

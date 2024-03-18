@@ -32,6 +32,7 @@ import io.accio.base.dto.Model;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.CacheTaskManager;
 import io.accio.cache.TaskInfo;
+import io.accio.main.connector.duckdb.DuckDBSqlConverter;
 import io.accio.main.wireprotocol.PgMetastoreImpl;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -109,7 +110,7 @@ public class TestCacheTaskManager
                 new DuckdbS3StyleStorageConfig(),
                 new DuckDBConnectorConfig());
 
-        try (CacheTaskManager taskManager = new CacheTaskManager(duckDBConfig, new PgMetastoreImpl(configManager))) {
+        try (CacheTaskManager taskManager = new CacheTaskManager(duckDBConfig, new PgMetastoreImpl(configManager, getInstance(Key.get(DuckDBSqlConverter.class))))) {
             assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageMatching("Cache memory limit exceeded. Usage: .* bytes, Limit: 0.0 bytes");
         }
     }

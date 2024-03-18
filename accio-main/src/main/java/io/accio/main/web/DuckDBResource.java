@@ -24,6 +24,7 @@ import io.accio.main.web.dto.QueryResultDto;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -49,7 +50,7 @@ public class DuckDBResource
         this.metadata = requireNonNull(metadata, "metadata is null");
     }
 
-    @GET
+    @POST
     @Path("/query")
     @Produces(APPLICATION_JSON)
     public void query(
@@ -144,8 +145,8 @@ public class DuckDBResource
             @Suspended AsyncResponse asyncResponse)
     {
         runAsync(() -> {
-            metadata.getClient().closeAndInitPool();
             metadata.setSessionSQL(metadata.getSessionSQL() + "\n" + sql);
+            metadata.getClient().closeAndInitPool();
             FileUtil.appendToFile(metadata.getSessionSQLPath(), sql);
         }).whenComplete(bindAsyncResponse(asyncResponse));
     }

@@ -27,6 +27,8 @@ import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import org.duckdb.DuckDBConnection;
 
+import javax.annotation.Nullable;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -36,6 +38,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
@@ -49,18 +52,22 @@ public final class DuckdbClient
     private final CacheStorageConfig cacheStorageConfig;
     private final DuckDBSettingSQL duckDBSettingSQL;
     private DuckDBConnection duckDBConnection;
-    private HikariConfig config;
     private HikariDataSource connectionPool;
 
     public DuckdbClient(
             DuckDBConfig duckDBConfig,
-            CacheStorageConfig cacheStorageConfig,
-            DuckDBSettingSQL duckDBSettingSQL)
+            @Nullable CacheStorageConfig cacheStorageConfig,
+            @Nullable DuckDBSettingSQL duckDBSettingSQL)
     {
         this.duckDBConfig = duckDBConfig;
         this.cacheStorageConfig = cacheStorageConfig;
         this.duckDBSettingSQL = duckDBSettingSQL;
         init();
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
     }
 
     private void init()
@@ -70,7 +77,7 @@ public final class DuckdbClient
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
             duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
-            config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL);
+            HikariConfig config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL);
             connectionPool = new HikariDataSource(config);
             if (duckDBSettingSQL != null) {
                 if (duckDBSettingSQL.getInitSQL() != null) {
@@ -247,6 +254,47 @@ public final class DuckdbClient
     public void closeAndInitPool()
     {
         connectionPool.close();
-        connectionPool = new HikariDataSource(config);
+        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL));
+    }
+
+    public static class Builder
+    {
+        private DuckDBConfig duckDBConfig;
+        private CacheStorageConfig cacheStorageConfig;
+        private DuckDBSettingSQL duckDBSettingSQL;
+
+        public Builder setDuckDBConfig(DuckDBConfig duckDBConfig)
+        {
+            this.duckDBConfig = duckDBConfig;
+            return this;
+        }
+
+        public Builder setCacheStorageConfig(CacheStorageConfig cacheStorageConfig)
+        {
+            this.cacheStorageConfig = cacheStorageConfig;
+            return this;
+        }
+
+        public Builder setDuckDBSettingSQL(DuckDBSettingSQL duckDBSettingSQL)
+        {
+            this.duckDBSettingSQL = duckDBSettingSQL;
+            return this;
+        }
+
+        public DuckdbClient build()
+        {
+            return new DuckdbClient(duckDBConfig, cacheStorageConfig, duckDBSettingSQL);
+        }
+
+        public Optional<DuckdbClient> buildSafely()
+        {
+            try {
+                return Optional.of(build());
+            }
+            catch (Exception e) {
+                LOG.error(e, "Failed to build DuckdbClient");
+                return Optional.empty();
+            }
+        }
     }
 }

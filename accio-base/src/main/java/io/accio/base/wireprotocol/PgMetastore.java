@@ -16,25 +16,28 @@ package io.accio.base.wireprotocol;
 
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
-import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.Client;
+import io.accio.base.sql.SqlConverter;
 
 import java.util.List;
 
-public interface PgMetastore
+public abstract class PgMetastore
 {
-    void directDDL(String sql);
+    public abstract void directDDL(String sql);
 
-    ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
+    public abstract ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
-    String handlePgType(String type);
+    public abstract String handlePgType(String type);
 
-    String getPgCatalogName();
+    public abstract String getPgCatalogName();
 
-    boolean isSchemaExist(String schemaName);
+    public abstract boolean isSchemaExist(String schemaName);
 
-    void dropTableIfExists(String name);
+    public abstract void dropTableIfExists(String name);
 
-    DuckdbClient getClient();
+    public abstract Client getClient();
 
-    void close();
+    public abstract SqlConverter getSqlConverter();
+
+    public abstract void close();
 }

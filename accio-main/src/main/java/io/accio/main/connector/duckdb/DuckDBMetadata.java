@@ -25,6 +25,7 @@ import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.DuckDBSettingSQL;
 import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.metadata.TableMetadata;
 import io.accio.base.type.DateType;
@@ -73,9 +74,11 @@ public class DuckDBMetadata
             ConfigManager configManager)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
-        initDuckDBSettingSQLIfNeed();
-        this.duckdbClient = buildDuckDBClient();
-        this.pgFunctionBuilder = new DuckDBFunctionBuilder(duckdbClient);
+        if (configManager.getConfig(AccioConfig.class).getDataSourceType().equals(AccioConfig.DataSourceType.DUCKDB)) {
+            initDuckDBSettingSQLIfNeed();
+            this.duckdbClient = buildDuckDBClientSafely();
+        }
+        this.pgFunctionBuilder = new DuckDBFunctionBuilder();
         this.pgToDuckDBFunctionNameMappings = initPgNameToDuckDBFunctions();
     }
 
@@ -185,22 +188,24 @@ public class DuckDBMetadata
     @Override
     public void reload()
     {
-        // Create client success first, then close the old one
+        // Create client success first to ensure the sql is legal, then close the old one
         DuckdbClient duckdbClient = buildDuckDBClient();
-        this.duckdbClient.close();
+        close();
         this.duckdbClient = duckdbClient;
+    }
+
+    @Override
+    public void close()
+    {
+        if (duckdbClient != null) {
+            duckdbClient.close();
+        }
     }
 
     @Override
     public StorageClient getCacheStorageClient()
     {
         throw new UnsupportedOperationException("DuckDB does not support cache storage");
-    }
-
-    @Override
-    public void close()
-    {
-        duckdbClient.close();
     }
 
     @Override
@@ -216,7 +221,20 @@ public class DuckDBMetadata
 
     private DuckdbClient buildDuckDBClient()
     {
-        return new DuckdbClient(configManager.getConfig(DuckDBConfig.class), getCacheStorageConfigIfExists(), duckDBSettingSQL.get());
+        return DuckdbClient.builder()
+                .setDuckDBConfig(configManager.getConfig(DuckDBConfig.class))
+                .setCacheStorageConfig(getCacheStorageConfigIfExists())
+                .setDuckDBSettingSQL(duckDBSettingSQL.get())
+                .build();
+    }
+
+    private DuckdbClient buildDuckDBClientSafely()
+    {
+        DuckdbClient.Builder builder = DuckdbClient.builder()
+                .setDuckDBConfig(configManager.getConfig(DuckDBConfig.class))
+                .setCacheStorageConfig(getCacheStorageConfigIfExists())
+                .setDuckDBSettingSQL(duckDBSettingSQL.get());
+        return builder.buildSafely().orElse(builder.setDuckDBSettingSQL(null).build());
     }
 
     private CacheStorageConfig getCacheStorageConfigIfExists()
@@ -260,12 +278,12 @@ public class DuckDBMetadata
         }
     }
 
-    private List<Parameter> convertParameters(List<Parameter> parameters)
+    public static List<Parameter> convertParameters(List<Parameter> parameters)
     {
-        return parameters.stream().map(this::convertParameter).collect(toList());
+        return parameters.stream().map(DuckDBMetadata::convertParameter).collect(toList());
     }
 
-    private Parameter convertParameter(Parameter parameter)
+    private static Parameter convertParameter(Parameter parameter)
     {
         PGType<?> type = parameter.getType();
         Object value = parameter.getValue();

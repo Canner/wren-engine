@@ -315,7 +315,7 @@ public abstract class RequireAccioServer
 
     protected QueryResultDto queryDuckDB(String statement)
     {
-        Request request = prepareGet()
+        Request request = preparePost()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/query"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
