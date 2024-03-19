@@ -21,23 +21,23 @@ import io.accio.base.sql.SqlConverter;
 
 import java.util.List;
 
-public abstract class PgMetastore
+public interface PgMetastore
 {
-    public abstract void directDDL(String sql);
+    void directDDL(String sql);
 
-    public abstract ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
+    ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
-    public abstract String handlePgType(String type);
+    String handlePgType(String type);
 
-    public abstract String getPgCatalogName();
+    String getPgCatalogName();
 
-    public abstract boolean isSchemaExist(String schemaName);
+    boolean isSchemaExist(String schemaName);
 
-    public abstract void dropTableIfExists(String name);
+    void dropTableIfExists(String name);
 
-    public abstract Client getClient();
+    Client getClient();
 
-    public abstract SqlConverter getSqlConverter();
+    SqlConverter getSqlConverter();
 
-    public abstract void close();
+    void close();
 }

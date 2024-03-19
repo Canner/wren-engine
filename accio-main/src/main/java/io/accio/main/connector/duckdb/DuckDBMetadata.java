@@ -235,6 +235,7 @@ public class DuckDBMetadata
             return configManager.getConfig(CacheStorageConfig.class);
         }
         catch (Exception e) {
+            LOG.warn(e, "%s connector does not support cache storage. Cache is disable.", configManager.getConfig(AccioConfig.class).getDataSourceType().name());
             return null;
         }
     }

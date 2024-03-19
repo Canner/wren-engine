@@ -23,6 +23,7 @@ import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbTypes;
+import io.accio.base.config.AccioConfig;
 import io.accio.base.config.ConfigManager;
 import io.accio.base.sql.SqlConverter;
 import io.accio.base.type.VarcharType;
@@ -42,7 +43,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class PgMetastoreImpl
-        extends PgMetastore
+        implements PgMetastore
 {
     private static final Logger LOG = Logger.get(PgMetastoreImpl.class);
     private final ConfigManager configManager;
@@ -149,6 +150,7 @@ public class PgMetastoreImpl
             return configManager.getConfig(CacheStorageConfig.class);
         }
         catch (Exception e) {
+            LOG.warn(e, "%s connector does not support cache storage. Cache is disable.", configManager.getConfig(AccioConfig.class).getDataSourceType().name());
             return null;
         }
     }
