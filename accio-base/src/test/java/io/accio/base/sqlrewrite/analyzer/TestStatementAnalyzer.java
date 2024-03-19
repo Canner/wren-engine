@@ -299,11 +299,11 @@ public class TestStatementAnalyzer
 
     private static Column varcharColumn(String name)
     {
-        return column(name, "VARCHAR", null, false, null, null);
+        return column(name, "VARCHAR", null, false, null);
     }
 
     private static Column integerColumn(String name)
     {
-        return column(name, "INTEGER", null, false, null, null);
+        return column(name, "INTEGER", null, false, null);
     }
 }

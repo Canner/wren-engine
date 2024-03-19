@@ -14,7 +14,6 @@
 
 package io.accio.base.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
@@ -36,7 +35,7 @@ public class CumulativeMetric
             Measure measure,
             Window window)
     {
-        return new CumulativeMetric(name, baseObject, measure, window, false, null, null, ImmutableMap.of());
+        return new CumulativeMetric(name, baseObject, measure, window, false, null, ImmutableMap.of());
     }
 
     private final String name;
@@ -45,7 +44,6 @@ public class CumulativeMetric
     private final Window window;
     private final boolean cached;
     private final Duration refreshTime;
-    private final String description;
     private final Map<String, String> properties;
 
     @JsonCreator
@@ -54,10 +52,8 @@ public class CumulativeMetric
             @JsonProperty("baseObject") String baseObject,
             @JsonProperty("measure") Measure measure,
             @JsonProperty("window") Window window,
-            // preAggregated is deprecated, use cached instead.
-            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
+            @JsonProperty("cached") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
@@ -66,7 +62,6 @@ public class CumulativeMetric
         this.window = requireNonNull(window, "window is null");
         this.cached = cached;
         this.refreshTime = refreshTime;
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -106,13 +101,6 @@ public class CumulativeMetric
         return refreshTime;
     }
 
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
-    }
-
     @JsonProperty
     public Map<String, String> getProperties()
     {
@@ -122,7 +110,7 @@ public class CumulativeMetric
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, description, properties);
+        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, properties);
     }
 
     @Override
@@ -143,7 +131,6 @@ public class CumulativeMetric
                 Objects.equals(measure, that.measure) &&
                 Objects.equals(window, that.window) &&
                 Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
@@ -157,7 +144,6 @@ public class CumulativeMetric
                 .add("window", window)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

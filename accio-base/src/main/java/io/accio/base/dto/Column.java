@@ -33,33 +33,27 @@ public class Column
     private final boolean notNull;
     private final String relationship;
     private final String expression;
-    private final String description;
     private final boolean isCalculated;
     private final Map<String, String> properties;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return column(name, type, relationship, notNull, null, null);
+        return new Column(name, type, relationship, false, notNull, null, null);
     }
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression)
     {
-        return column(name, type, relationship, notNull, expression, null);
-    }
-
-    public static Column column(String name, String type, String relationship, boolean notNull, String expression, String description)
-    {
-        return new Column(name, type, relationship, false, notNull, expression, description, ImmutableMap.of());
+        return new Column(name, type, relationship, false, notNull, expression, null);
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, false, null, null, ImmutableMap.of());
+        return new Column(name, type, relationship, false, false, null, null);
     }
 
     public static Column caluclatedColumn(String name, String type, String expression)
     {
-        return new Column(name, type, null, true, false, expression, null, ImmutableMap.of());
+        return new Column(name, type, null, true, false, expression, null);
     }
 
     @JsonCreator
@@ -70,7 +64,6 @@ public class Column
             @JsonProperty("isCalculated") boolean isCalculated,
             @JsonProperty("notNull") boolean notNull,
             @JsonProperty("expression") String expression,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
@@ -79,7 +72,6 @@ public class Column
         this.isCalculated = isCalculated;
         this.notNull = notNull;
         this.expression = expression == null || expression.isEmpty() ? null : expression;
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -105,13 +97,6 @@ public class Column
     public boolean isNotNull()
     {
         return notNull;
-    }
-
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
     }
 
     @JsonProperty
@@ -153,14 +138,13 @@ public class Column
                 Objects.equals(type, that.type) &&
                 Objects.equals(relationship, that.relationship) &&
                 Objects.equals(expression, that.expression) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, isCalculated, notNull, relationship, expression, description, properties);
+        return Objects.hash(name, type, isCalculated, notNull, relationship, expression, properties);
     }
 
     @Override
@@ -173,7 +157,6 @@ public class Column
                 .add("isCalculated", isCalculated)
                 .add("relationship", relationship)
                 .add("expression", relationship)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

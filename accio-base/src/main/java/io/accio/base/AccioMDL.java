@@ -97,7 +97,6 @@ public class AccioMDL
                     model.getPrimaryKey(),
                     model.isCached(),
                     model.getRefreshTime(),
-                    model.getDescription(),
                     model.getProperties());
         }).collect(toList());
 
@@ -109,7 +108,6 @@ public class AccioMDL
                         metric.getTimeGrain(),
                         metric.isCached(),
                         metric.getRefreshTime(),
-                        metric.getDescription(),
                         metric.getProperties())
         ).collect(toList());
 
@@ -133,7 +131,6 @@ public class AccioMDL
                 original.isCalculated(),
                 original.isNotNull(),
                 expression,
-                original.getDescription(),
                 original.getProperties());
     }
 

@@ -46,22 +46,16 @@ public class Relationship
     // for debugging internally
     private final boolean isReverse;
     private final List<SortKey> manySideSortKeys;
-    private final String description;
     private final Map<String, String> properties;
-
-    public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys)
-    {
-        return relationship(name, models, joinType, condition, manySideSortKeys, null);
-    }
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition)
     {
-        return relationship(name, models, joinType, condition, null, null);
+        return relationship(name, models, joinType, condition, null);
     }
 
-    public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys, String description)
+    public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys)
     {
-        return new Relationship(name, models, joinType, condition, manySideSortKeys, description, ImmutableMap.of());
+        return new Relationship(name, models, joinType, condition, manySideSortKeys, ImmutableMap.of());
     }
 
     public static Relationship reverse(Relationship relationship)
@@ -73,7 +67,6 @@ public class Relationship
                 relationship.getCondition(),
                 true,
                 relationship.getManySideSortKeys(),
-                relationship.getDescription(),
                 ImmutableMap.of());
     }
 
@@ -84,10 +77,9 @@ public class Relationship
             @JsonProperty("joinType") JoinType joinType,
             @JsonProperty("condition") String condition,
             @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
-        this(name, models, joinType, condition, false, manySideSortKeys, description, properties);
+        this(name, models, joinType, condition, false, manySideSortKeys, properties);
     }
 
     public Relationship(
@@ -97,7 +89,6 @@ public class Relationship
             String condition,
             boolean isReverse,
             List<SortKey> manySideSortKeys,
-            String description,
             Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
@@ -108,7 +99,6 @@ public class Relationship
         this.qualifiedCondition = qualifiedCondition(condition);
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -180,13 +170,6 @@ public class Relationship
         return isReverse;
     }
 
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
-    }
-
     @JsonProperty("properties")
     public Map<String, String> getProperties()
     {
@@ -209,7 +192,6 @@ public class Relationship
                 Objects.equals(condition, that.condition) &&
                 isReverse == that.isReverse &&
                 Objects.equals(manySideSortKeys, that.manySideSortKeys) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
@@ -229,7 +211,6 @@ public class Relationship
                 .add("condition", condition)
                 .add("isReverse", isReverse)
                 .add("manySideSortKeys", manySideSortKeys)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

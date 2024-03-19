@@ -178,6 +178,6 @@ public class TestAnalysisResource
 
     private static Column varcharColumn(String name)
     {
-        return column(name, "VARCHAR", null, false, null, null);
+        return column(name, "VARCHAR", null, false, null);
     }
 }
