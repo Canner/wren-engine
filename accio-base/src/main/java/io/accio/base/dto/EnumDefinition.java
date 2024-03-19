@@ -31,29 +31,21 @@ public class EnumDefinition
 {
     public static EnumDefinition enumDefinition(String name, List<EnumValue> values)
     {
-        return enumDefinition(name, values, null);
-    }
-
-    public static EnumDefinition enumDefinition(String name, List<EnumValue> values, String description)
-    {
-        return new EnumDefinition(name, values, description, ImmutableMap.of());
+        return new EnumDefinition(name, values, ImmutableMap.of());
     }
 
     private final String name;
     private final List<EnumValue> values;
-    private final String description;
     private final Map<String, String> properties;
 
     @JsonCreator
     public EnumDefinition(
             @JsonProperty("name") String name,
             @JsonProperty("values") List<EnumValue> values,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.values = requireNonNull(values);
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -67,13 +59,6 @@ public class EnumDefinition
     public String getName()
     {
         return name;
-    }
-
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
     }
 
     @JsonProperty
@@ -101,7 +86,6 @@ public class EnumDefinition
         EnumDefinition that = (EnumDefinition) obj;
         return Objects.equals(name, that.name) &&
                 Objects.equals(values, that.values) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
@@ -111,7 +95,6 @@ public class EnumDefinition
         return Objects.hash(
                 name,
                 values,
-                description,
                 properties);
     }
 
@@ -121,7 +104,6 @@ public class EnumDefinition
         return toStringHelper(this)
                 .add("name", name)
                 .add("values", values)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

@@ -347,8 +347,7 @@
         "end": "1993-12-31"
       },
       "cached": false,
-      "refreshTime": "30m",
-      "description": ""
+      "refreshTime": "30m"
     }
   ],
   "enumDefinitions": [

@@ -28,29 +28,21 @@ public class View
 {
     private final String name;
     private final String statement;
-    private final String description;
     private final Map<String, String> properties;
 
     public static View view(String name, String statement)
     {
-        return view(name, statement, null);
-    }
-
-    public static View view(String name, String statement, String description)
-    {
-        return new View(name, statement, description, ImmutableMap.of());
+        return new View(name, statement, null);
     }
 
     @JsonCreator
     public View(
             @JsonProperty("name") String name,
             @JsonProperty("statement") String statement,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.statement = requireNonNullEmpty(statement, "statement is null or empty");
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -64,13 +56,6 @@ public class View
     public String getStatement()
     {
         return statement;
-    }
-
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
     }
 
     @JsonProperty
@@ -91,7 +76,6 @@ public class View
         View view = (View) o;
         return Objects.equals(name, view.name) &&
                 Objects.equals(statement, view.statement) &&
-                Objects.equals(description, view.description) &&
                 Objects.equals(properties, view.properties);
     }
 
@@ -101,7 +85,6 @@ public class View
         return Objects.hash(
                 name,
                 statement,
-                description,
                 properties);
     }
 
@@ -111,7 +94,6 @@ public class View
         return toStringHelper(this)
                 .add("name", name)
                 .add("statement", statement)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

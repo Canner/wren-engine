@@ -14,7 +14,6 @@
 
 package io.accio.base.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +40,6 @@ public class Metric
     private final List<TimeGrain> timeGrain;
     private final boolean cached;
     private final Duration refreshTime;
-    private final String description;
     private final Map<String, String> properties;
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure)
@@ -56,12 +54,7 @@ public class Metric
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached)
     {
-        return metric(name, baseObject, dimension, measure, timeGrain, cached, null);
-    }
-
-    public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached, String description)
-    {
-        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, description, ImmutableMap.of());
+        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -71,10 +64,8 @@ public class Metric
             @JsonProperty("dimension") List<Column> dimension,
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
-            // preAggregated is deprecated, use cached instead.
-            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
+            @JsonProperty("cached") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
@@ -85,7 +76,6 @@ public class Metric
         checkArgument(!measure.isEmpty(), "the number of measures should be one at least");
         this.timeGrain = timeGrain == null ? ImmutableList.of() : timeGrain;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -148,13 +138,6 @@ public class Metric
         return refreshTime;
     }
 
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
-    }
-
     @JsonProperty
     public Map<String, String> getProperties()
     {
@@ -178,7 +161,6 @@ public class Metric
                 Objects.equals(measure, that.measure) &&
                 Objects.equals(timeGrain, that.timeGrain) &&
                 Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
@@ -193,7 +175,6 @@ public class Metric
                 timeGrain,
                 cached,
                 refreshTime,
-                description,
                 properties);
     }
 
@@ -208,7 +189,6 @@ public class Metric
                 .add("timeGrain", timeGrain)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

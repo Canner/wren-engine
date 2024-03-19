@@ -14,7 +14,6 @@
 
 package io.accio.base.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
@@ -39,7 +38,6 @@ public class Model
     private final String primaryKey;
     private final boolean cached;
     private final Duration refreshTime;
-    private final String description;
     private final Map<String, String> properties;
 
     public static Model model(String name, String refSql, List<Column> columns)
@@ -49,7 +47,7 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, boolean cached)
     {
-        return new Model(name, refSql, null, columns, null, cached, null, null, ImmutableMap.of());
+        return new Model(name, refSql, null, columns, null, cached, null, ImmutableMap.of());
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
@@ -59,12 +57,12 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey, String description)
     {
-        return new Model(name, refSql, null, columns, primaryKey, false, null, description, ImmutableMap.of());
+        return new Model(name, refSql, null, columns, primaryKey, false, null, ImmutableMap.of());
     }
 
     public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, baseObject, columns, primaryKey, false, null, null, ImmutableMap.of());
+        return new Model(name, null, baseObject, columns, primaryKey, false, null, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -74,10 +72,8 @@ public class Model
             @JsonProperty("baseObject") String baseObject,
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("primaryKey") String primaryKey,
-            // preAggregated is deprecated, use cached instead.
-            @JsonProperty("cached") @Deprecated @JsonAlias("preAggregated") boolean cached,
+            @JsonProperty("cached") boolean cached,
             @JsonProperty("refreshTime") Duration refreshTime,
-            @Deprecated @JsonProperty("description") String description,
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
@@ -89,7 +85,6 @@ public class Model
         this.primaryKey = primaryKey;
         this.cached = cached;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
-        this.description = description;
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
@@ -139,13 +134,6 @@ public class Model
         return refreshTime;
     }
 
-    @Deprecated
-    @JsonProperty
-    public String getDescription()
-    {
-        return description;
-    }
-
     @JsonProperty
     public Map<String, String> getProperties()
     {
@@ -169,14 +157,13 @@ public class Model
                 Objects.equals(columns, that.columns) &&
                 Objects.equals(primaryKey, that.primaryKey) &&
                 Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(description, that.description) &&
                 Objects.equals(properties, that.properties);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, baseObject, columns, primaryKey, description, properties);
+        return Objects.hash(name, refSql, baseObject, columns, primaryKey, properties);
     }
 
     @Override
@@ -189,7 +176,6 @@ public class Model
                 .add("columns", columns)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("description", description)
                 .add("properties", properties)
                 .toString();
     }

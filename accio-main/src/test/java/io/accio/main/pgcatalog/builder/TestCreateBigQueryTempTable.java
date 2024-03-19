@@ -91,21 +91,19 @@ public class TestCreateBigQueryTempTable
                                         List.of("OrdersModel", "CustomerModel"),
                                         JoinType.MANY_TO_ONE,
                                         "OrdersModel.custkey = CustomerModel.custkey",
-                                        List.of(sortKey("orderkey", Relationship.SortKey.Ordering.ASC)),
-                                        "the relationship between orders and customers")))
+                                        List.of(sortKey("orderkey", Relationship.SortKey.Ordering.ASC)))))
                         .setEnumDefinitions(List.of(
                                 enumDefinition("OrderStatus", List.of(
-                                                enumValue("PENDING", "pending"),
-                                                enumValue("PROCESSING", "processing"),
-                                                enumValue("SHIPPED", "shipped"),
-                                                enumValue("COMPLETE", "complete")),
-                                        "the status of an order")))
+                                        enumValue("PENDING", "pending"),
+                                        enumValue("PROCESSING", "processing"),
+                                        enumValue("SHIPPED", "shipped"),
+                                        enumValue("COMPLETE", "complete")))))
                         .setMetrics(List.of(metric("Revenue", "OrdersModel",
                                 List.of(column("orderkey", "varchar", null, true)),
                                 List.of(column("total", "int4", null, true)),
                                 List.of(timeGrain("orderdate", "orderdate", List.of(DAY, MONTH))),
-                                true, "the revenue of an order")))
-                        .setViews(List.of(view("useMetric", "select * from Revenue", "the view for the revenue metric")))
+                                true)))
+                        .setViews(List.of(view("useMetric", "select * from Revenue")))
                         .build());
     }
 
