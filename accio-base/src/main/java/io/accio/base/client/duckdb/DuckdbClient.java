@@ -77,8 +77,7 @@ public final class DuckdbClient
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
             duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
-            HikariConfig config = getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL);
-            connectionPool = new HikariDataSource(config);
+            initPool();
             if (duckDBSettingSQL != null) {
                 if (duckDBSettingSQL.getInitSQL() != null) {
                     executeDDL(duckDBSettingSQL.getInitSQL());
@@ -95,6 +94,11 @@ public final class DuckdbClient
         catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public synchronized void initPool()
+    {
+        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL));
     }
 
     private static HikariConfig getHikariConfig(
@@ -251,10 +255,10 @@ public final class DuckdbClient
         }
     }
 
-    public void closeAndInitPool()
+    public synchronized void closeAndInitPool()
     {
         connectionPool.close();
-        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL));
+        initPool();
     }
 
     public static class Builder

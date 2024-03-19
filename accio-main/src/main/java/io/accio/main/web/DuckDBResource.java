@@ -159,6 +159,7 @@ public class DuckDBResource
             }
             catch (Exception e) {
                 metadata.setSessionSQL(sessionSQL);
+                metadata.getClient().initPool();
                 throw e;
             }
             FileUtil.appendToFile(metadata.getSessionSQLPath(), sql);
