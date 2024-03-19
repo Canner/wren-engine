@@ -45,12 +45,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 public class TestDuckDBResource
         extends RequireAccioServer
 {
-    private static final String INIT_SQL = "CREATE TABLE customer (custkey integer, name varchar(25), address varchar(40));";
-    private static final String APPEND_INIT_SQL = "CREATE TABLE orders (orderkey integer, custkey integer);";
+    private static final String INIT_SQL_1 = "CREATE TABLE customer (custkey integer, name varchar(25), address varchar(40));";
+    private static final String INIT_SQL_2 = "CREATE TABLE orders (orderkey integer, custkey integer);";
     private static final String SHOW_TABLES_SQL = "SHOW TABLES;";
-    private static final String SESSION_SQL = "SET s3_region = 'us-east-2';";
-    private static final String APPEND_SESSION_SQL = "SET temp_directory = '.tmp';";
-    private static final String FAILED_SQL = "xxx";
+    private static final String SESSION_SQL_1 = "SET s3_region = 'us-east-2';";
+    private static final String SESSION_SQL_2 = "SET temp_directory = '.tmp';";
+    private static final String INVALID_SQL = "xxx";
 
     private Path settingDir;
 
@@ -97,25 +97,25 @@ public class TestDuckDBResource
     }
 
     @Test
-    public void testInitSQLWithFailedSQL()
+    public void testInitSQLWithInvalidSQL()
     {
-        assertWebApplicationException(() -> setDuckDBInitSQL(FAILED_SQL))
+        assertWebApplicationException(() -> setDuckDBInitSQL(INVALID_SQL))
                 .hasErrorMessageMatches(".*Parser Error: syntax error at or near \"xxx\"");
     }
 
     @Test
     public void testInitSQL()
     {
-        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL);
+        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL_1);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
                 .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
                 .isEqualTo(new String[] {"customer"});
 
-        assertThatCode(() -> appendToDuckDBInitSQL(APPEND_INIT_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL + "\n" + APPEND_INIT_SQL);
+        assertThatCode(() -> appendToDuckDBInitSQL(INIT_SQL_2)).doesNotThrowAnyException();
+        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL_1 + "\n" + INIT_SQL_2);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
                 .extracting(QueryResultDto::getData)
                 .isNotNull()
@@ -125,8 +125,8 @@ public class TestDuckDBResource
                     assertThat(data).element(1).isEqualTo(new String[] {"orders"});
                 });
 
-        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL);
+        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL_1);
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
                 .extracting(QueryResultDto::getData)
                 .isNotNull()
@@ -135,25 +135,41 @@ public class TestDuckDBResource
     }
 
     @Test
-    public void testSessionSQLWithFailedSQL()
+    public void testAppendInitSQLBeforeSet()
     {
-        assertWebApplicationException(() -> setDuckDBSessionSQL(FAILED_SQL))
+        assertThatCode(() -> appendToDuckDBInitSQL(INIT_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBInitSQL()).isEqualTo(INIT_SQL_1);
+    }
+
+    @Test
+    public void testSessionSQLWithInvalidSQL()
+    {
+        assertWebApplicationException(() -> setDuckDBSessionSQL(INVALID_SQL))
                 .hasErrorMessageMatches(".*Parser Error: syntax error at or near \"xxx\"");
+    }
+
+    @Test
+    public void testAppendInvalidSessionSQLAndItWillRollback()
+    {
+        assertThatCode(() -> appendToDuckDBSessionSQL(SESSION_SQL_1)).doesNotThrowAnyException();
+        assertWebApplicationException(() -> appendToDuckDBSessionSQL(INVALID_SQL))
+                .hasErrorMessageMatches(".*Parser Error: syntax error at or near \"xxx\"");
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL_1);
     }
 
     @Test
     public void testSessionSQL()
     {
-        assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL);
+        assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL_1);
         assertThat(queryDuckDB("SELECT current_setting('s3_region') AS s3_region;"))
                 .extracting(QueryResultDto::getData)
                 .isNotNull()
                 .asList().element(0)
                 .isEqualTo(new String[] {"us-east-2"});
 
-        assertThatCode(() -> appendToDuckDBSessionSQL(APPEND_SESSION_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL + "\n" + APPEND_SESSION_SQL);
+        assertThatCode(() -> appendToDuckDBSessionSQL(SESSION_SQL_2)).doesNotThrowAnyException();
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL_1 + "\n" + SESSION_SQL_2);
         assertThat(queryDuckDB("SELECT current_setting('s3_region') AS s3_region, current_setting('temp_directory') AS temp_directory;"))
                 .extracting(QueryResultDto::getData)
                 .isNotNull()
@@ -165,8 +181,8 @@ public class TestDuckDBResource
     public void testSessionSQLEffectAllConnection()
             throws ExecutionException, InterruptedException
     {
-        assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL)).doesNotThrowAnyException();
-        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL);
+        assertThatCode(() -> setDuckDBSessionSQL(SESSION_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL_1);
 
         ExecutorService executorService = Executors.newFixedThreadPool(10);
 
@@ -185,16 +201,23 @@ public class TestDuckDBResource
     }
 
     @Test
-    public void testQueryWithFailedSQL()
+    public void testAppendSessionSQLBeforeSet()
     {
-        assertWebApplicationException(() -> queryDuckDB(FAILED_SQL))
+        assertThatCode(() -> appendToDuckDBSessionSQL(SESSION_SQL_1)).doesNotThrowAnyException();
+        assertThat(getDuckDBSessionSQL()).isEqualTo(SESSION_SQL_1);
+    }
+
+    @Test
+    public void testQueryWithInvalidSQL()
+    {
+        assertWebApplicationException(() -> queryDuckDB(INVALID_SQL))
                 .hasErrorMessageMatches(".*Parser Error: syntax error at or near \"xxx\"");
     }
 
     @Test
     public void testQuery()
     {
-        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL)).doesNotThrowAnyException();
+        assertThatCode(() -> setDuckDBInitSQL(INIT_SQL_1)).doesNotThrowAnyException();
 
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
                 .extracting(QueryResultDto::getData)
@@ -210,7 +233,7 @@ public class TestDuckDBResource
                 .extracting(QueryResultDto::getData)
                 .asList().isEmpty();
 
-        assertThatCode(() -> queryDuckDB(INIT_SQL)).doesNotThrowAnyException();
+        assertThatCode(() -> queryDuckDB(INIT_SQL_1)).doesNotThrowAnyException();
 
         assertThat(queryDuckDB(SHOW_TABLES_SQL))
                 .extracting(QueryResultDto::getData)

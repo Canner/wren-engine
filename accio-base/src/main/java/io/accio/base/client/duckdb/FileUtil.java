@@ -55,7 +55,12 @@ public class FileUtil
     public static void appendToFile(Path path, String content)
     {
         try {
-            Files.writeString(path, System.lineSeparator() + content, APPEND);
+            if (!Files.exists(path)) {
+                createFile(path, content);
+            }
+            else {
+                Files.writeString(path, System.lineSeparator() + content, APPEND);
+            }
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);

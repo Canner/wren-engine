@@ -294,6 +294,20 @@ public class DuckDBMetadata
         duckDBSettingSQL.get().setInitSQL(initSQL);
     }
 
+    public void appendInitSQL(String sql)
+    {
+        duckDBSettingSQL.updateAndGet(settingSQL -> {
+            String initSQL = settingSQL.getInitSQL();
+            if (initSQL == null) {
+                settingSQL.setInitSQL(sql);
+            }
+            else {
+                settingSQL.setInitSQL(initSQL + "\n" + sql);
+            }
+            return settingSQL;
+        });
+    }
+
     public Path getInitSQLPath()
     {
         return Path.of(configManager.getConfig(DuckDBConnectorConfig.class).getInitSQLPath());
@@ -307,6 +321,20 @@ public class DuckDBMetadata
     public void setSessionSQL(String sessionSQL)
     {
         duckDBSettingSQL.get().setSessionSQL(sessionSQL);
+    }
+
+    public void appendSessionSQL(String sql)
+    {
+        duckDBSettingSQL.updateAndGet(settingSQL -> {
+            String sessionSQL = settingSQL.getSessionSQL();
+            if (sessionSQL == null) {
+                settingSQL.setSessionSQL(sql);
+            }
+            else {
+                settingSQL.setSessionSQL(sessionSQL + "\n" + sql);
+            }
+            return settingSQL;
+        });
     }
 
     public Path getSessionSQLPath()

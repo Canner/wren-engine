@@ -117,7 +117,7 @@ public class DuckDBResource
     {
         runAsync(() -> {
             metadata.directDDL(sql);
-            metadata.setInitSQL(metadata.getInitSQL() + "\n" + sql);
+            metadata.appendInitSQL(sql);
             FileUtil.appendToFile(metadata.getInitSQLPath(), sql);
         }).whenComplete(bindAsyncResponse(asyncResponse));
     }
@@ -153,7 +153,7 @@ public class DuckDBResource
     {
         runAsync(() -> {
             String sessionSQL = metadata.getSessionSQL();
-            metadata.setSessionSQL(sessionSQL + "\n" + sql);
+            metadata.appendSessionSQL(sql);
             try {
                 metadata.getClient().closeAndInitPool();
             }
