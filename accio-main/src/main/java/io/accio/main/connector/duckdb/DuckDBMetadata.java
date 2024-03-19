@@ -55,18 +55,17 @@ import java.util.function.Consumer;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.accio.main.pgcatalog.PgCatalogUtils.ACCIO_TEMP_NAME;
 import static io.accio.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 public class DuckDBMetadata
         implements Metadata
 {
+    public static final Map<String, String> PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS = initPgNameToDuckDBFunctions();
     private static final Logger LOG = Logger.get(DuckDBMetadata.class);
     private final ConfigManager configManager;
     private DuckdbClient duckdbClient;
     private final PgFunctionBuilder pgFunctionBuilder;
-    private final Map<String, String> pgToDuckDBFunctionNameMappings;
     private final AtomicReference<DuckDBSettingSQL> duckDBSettingSQL = new AtomicReference<>(new DuckDBSettingSQL());
 
     @Inject
@@ -79,7 +78,6 @@ public class DuckDBMetadata
             this.duckdbClient = buildDuckDBClientSafely();
         }
         this.pgFunctionBuilder = new DuckDBFunctionBuilder();
-        this.pgToDuckDBFunctionNameMappings = initPgNameToDuckDBFunctions();
     }
 
     @Override
@@ -127,12 +125,6 @@ public class DuckDBMetadata
     @Override
     public QualifiedName resolveFunction(String functionName, int numArgument)
     {
-        String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
-
-        if (pgToDuckDBFunctionNameMappings.containsKey(funcNameLowerCase)) {
-            return QualifiedName.of(pgToDuckDBFunctionNameMappings.get(funcNameLowerCase));
-        }
-
         return QualifiedName.of(functionName);
     }
 
@@ -250,7 +242,7 @@ public class DuckDBMetadata
     /**
      * @return mapping table for pg function which can be replaced by duckdb function.
      */
-    private Map<String, String> initPgNameToDuckDBFunctions()
+    private static Map<String, String> initPgNameToDuckDBFunctions()
     {
         return ImmutableMap.<String, String>builder()
                 .put("generate_array", "generate_series")

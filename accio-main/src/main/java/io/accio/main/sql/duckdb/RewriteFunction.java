@@ -21,7 +21,8 @@ import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 
-import static java.util.Objects.requireNonNull;
+import static io.accio.main.connector.duckdb.DuckDBMetadata.PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS;
+import static java.util.Locale.ENGLISH;
 
 public class RewriteFunction
         implements SqlRewrite
@@ -33,29 +34,33 @@ public class RewriteFunction
     @Override
     public Node rewrite(Node node, Metadata metadata)
     {
-        return new RewriteFunctionRewriter(metadata).process(node, null);
+        return new RewriteFunctionRewriter().process(node, null);
     }
 
     private static class RewriteFunctionRewriter
             extends BaseRewriter<Void>
     {
-        private final Metadata metadata;
-
-        public RewriteFunctionRewriter(Metadata metadata)
-        {
-            this.metadata = requireNonNull(metadata, "metadata is null");
-        }
-
         @Override
         protected Node visitFunctionCall(FunctionCall node, Void context)
         {
-            QualifiedName functionName = metadata.resolveFunction(node.getName().toString(), node.getArguments().size());
+            QualifiedName functionName = resolveFunction(node.getName().toString());
 
             FunctionCall newFunctionNode = FunctionCall.builder(node)
                     .name(functionName)
                     .build();
 
             return super.visitFunctionCall(newFunctionNode, context);
+        }
+
+        private QualifiedName resolveFunction(String functionName)
+        {
+            String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
+
+            if (PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.containsKey(funcNameLowerCase)) {
+                return QualifiedName.of(PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.get(funcNameLowerCase));
+            }
+
+            return QualifiedName.of(functionName);
         }
     }
 }
