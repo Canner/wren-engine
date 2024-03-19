@@ -94,8 +94,15 @@ public class DuckDBResource
             @Suspended AsyncResponse asyncResponse)
     {
         runAsync(() -> {
+            String initSQL = metadata.getInitSQL();
             metadata.setInitSQL(sql);
-            metadata.reload();
+            try {
+                metadata.reload();
+            }
+            catch (Exception e) {
+                metadata.setInitSQL(initSQL);
+                throw e;
+            }
             java.nio.file.Path initSQLPath = metadata.getInitSQLPath();
             FileUtil.archiveFile(initSQLPath);
             FileUtil.createFile(initSQLPath, sql);
@@ -131,7 +138,7 @@ public class DuckDBResource
     {
         runAsync(() -> {
             metadata.setSessionSQL(sql);
-            metadata.reload();
+            metadata.getClient().closeAndInitPool();
             java.nio.file.Path sessionSQLPath = metadata.getSessionSQLPath();
             FileUtil.archiveFile(sessionSQLPath);
             FileUtil.createFile(sessionSQLPath, sql);
@@ -145,8 +152,15 @@ public class DuckDBResource
             @Suspended AsyncResponse asyncResponse)
     {
         runAsync(() -> {
-            metadata.setSessionSQL(metadata.getSessionSQL() + "\n" + sql);
-            metadata.getClient().closeAndInitPool();
+            String sessionSQL = metadata.getSessionSQL();
+            metadata.setSessionSQL(sessionSQL + "\n" + sql);
+            try {
+                metadata.getClient().closeAndInitPool();
+            }
+            catch (Exception e) {
+                metadata.setSessionSQL(sessionSQL);
+                throw e;
+            }
             FileUtil.appendToFile(metadata.getSessionSQLPath(), sql);
         }).whenComplete(bindAsyncResponse(asyncResponse));
     }

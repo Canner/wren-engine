@@ -180,10 +180,8 @@ public class DuckDBMetadata
     @Override
     public void reload()
     {
-        // Create client success first to ensure the sql is legal, then close the old one
-        DuckdbClient duckdbClient = buildDuckDBClient();
         close();
-        this.duckdbClient = duckdbClient;
+        this.duckdbClient = buildDuckDBClient();
     }
 
     @Override
