@@ -36,11 +36,6 @@ public class Column
     private final boolean isCalculated;
     private final Map<String, String> properties;
 
-    public static Column column(String name, String type)
-    {
-        return column(name, type, null, false, null, null);
-    }
-
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
         return new Column(name, type, relationship, false, notNull, null, null);
