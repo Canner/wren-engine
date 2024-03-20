@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.trino.sql.tree;
 
 import com.google.common.collect.ImmutableList;
@@ -29,7 +28,8 @@ public class QueryPeriod
     private final Optional<Expression> end;
     private final RangeType rangeType;
 
-    public enum RangeType {
+    public enum RangeType
+    {
         TIMESTAMP,
         VERSION
     }

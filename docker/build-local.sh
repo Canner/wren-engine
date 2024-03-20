@@ -10,16 +10,16 @@ cd ${SCRIPT_DIR}
 
 # Move to the root directory to run maven for current version.
 pushd ${SOURCE_DIR}
-ACCIO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
 popd
 
 WORK_DIR="$(mktemp -d)"
-cp ${SOURCE_DIR}/accio-server/target/accio-server-${ACCIO_VERSION}-executable.jar ${WORK_DIR}
+cp ${SOURCE_DIR}/wren-server/target/wren-server-${WREN_VERSION}-executable.jar ${WORK_DIR}
 
-CONTAINER="accio:${ACCIO_VERSION}"
+CONTAINER="wren:${WREN_VERSION}"
 
-docker build ${WORK_DIR} --pull --platform linux/amd64 -f Dockerfile -t ${CONTAINER}-amd64 --build-arg "ACCIO_VERSION=${ACCIO_VERSION}"
-docker build ${WORK_DIR} --pull --platform linux/arm64 -f Dockerfile -t ${CONTAINER}-arm64 --build-arg "ACCIO_VERSION=${ACCIO_VERSION}"
+docker build ${WORK_DIR} --pull --platform linux/amd64 -f Dockerfile -t ${CONTAINER}-amd64 --build-arg "WREN_VERSION=${WREN_VERSION}"
+docker build ${WORK_DIR} --pull --platform linux/arm64 -f Dockerfile -t ${CONTAINER}-arm64 --build-arg "WREN_VERSION=${WREN_VERSION}"
 
 rm -r ${WORK_DIR}
 

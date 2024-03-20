@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.trino.sql.parser;
 
 import com.google.common.collect.ImmutableList;
@@ -1819,7 +1818,7 @@ class AstBuilder
     {
         QualifiedName name = getQualifiedName(context.functionExpression().qualifiedName());
 
-        // accio function: metric roll_up
+        // wren function: metric roll_up
         if (name.toString().equalsIgnoreCase("roll_up")) {
             List<Expression> arguments = visit(context.functionExpression().expression(), Expression.class);
             return new FunctionRelation(getLocation(context), name, arguments);

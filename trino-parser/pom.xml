@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.accio</groupId>
-        <artifactId>accio-root</artifactId>
+        <groupId>io.wren</groupId>
+        <artifactId>wren-root</artifactId>
         <version>0.2.7-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>

@@ -10,8 +10,8 @@ RUN \
     apt update && \
     apt -y install postgresql-client-13
 
-ARG ACCIO_VERSION
-ENV ENV_ACCIO_VERSION=${ACCIO_VERSION}
-COPY accio-server-${ACCIO_VERSION}-executable.jar ./
+ARG WREN_VERSION
+ENV ENV_WREN_VERSION=${WREN_VERSION}
+COPY wren-server-${WREN_VERSION}-executable.jar ./
 
-CMD ["sh", "-c", "java -Dconfig=etc/config.properties -jar accio-server-${ENV_ACCIO_VERSION}-executable.jar"]
+CMD ["sh", "-c", "java -Dconfig=etc/config.properties -jar wren-server-${ENV_WREN_VERSION}-executable.jar"]
