@@ -79,7 +79,7 @@ public class Model
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
-        checkArgument(Stream.of(refSql, baseObject, tableReference).filter(Model::isSet).count() == 1,
+        checkArgument(Stream.of(refSql, baseObject, tableReference).filter(Model::isNonNullOrNonEmpty).count() == 1,
                 "either none or more than one of (refSql, baseObject, tableReference) are set");
         this.refSql = refSql;
         this.baseObject = baseObject;
@@ -91,7 +91,7 @@ public class Model
         this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
-    private static boolean isSet(Object value)
+    private static boolean isNonNullOrNonEmpty(Object value)
     {
         if (value == null) {
             return false;
