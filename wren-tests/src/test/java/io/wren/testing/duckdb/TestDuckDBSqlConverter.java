@@ -64,13 +64,13 @@ public class TestDuckDBSqlConverter
     @Test
     public void testArray()
     {
-        assertConvert("SELECT ARRAY[1,2,3][1]", "SELECT array_value(1, 2, 3)[1]" +  "\n\n");
+        assertConvert("SELECT ARRAY[1,2,3][1]", "SELECT array_value(1, 2, 3)[1]" + "\n\n");
     }
 
     @Test
     public void testFunction()
     {
-        assertConvert("SELECT generate_array(1, 10)", "SELECT generate_series(1, 10)" +  "\n\n");
+        assertConvert("SELECT generate_array(1, 10)", "SELECT generate_series(1, 10)" + "\n\n");
     }
 
     private void assertConvert(String from, String to)
