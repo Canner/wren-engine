@@ -71,7 +71,6 @@ public class ModelSqlRender
             return "(SELECT * FROM \"" + model.getBaseObject() + "\")";
         }
         else if (model.getTableReference() != null) {
-
             return model.getTableReference().toQualifiedName();
         }
         else {
