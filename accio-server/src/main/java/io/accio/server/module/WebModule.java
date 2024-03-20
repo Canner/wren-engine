@@ -22,6 +22,7 @@ import io.accio.main.web.AccioExceptionMapper;
 import io.accio.main.web.AnalysisResource;
 import io.accio.main.web.CacheResource;
 import io.accio.main.web.ConfigResource;
+import io.accio.main.web.DuckDBResource;
 import io.accio.main.web.LineageResource;
 import io.accio.main.web.MDLResource;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
@@ -39,6 +40,7 @@ public class WebModule
         jaxrsBinder(binder).bind(CacheResource.class);
         jaxrsBinder(binder).bind(AnalysisResource.class);
         jaxrsBinder(binder).bind(ConfigResource.class);
+        jaxrsBinder(binder).bind(DuckDBResource.class);
         jaxrsBinder(binder).bindInstance(new AccioExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);

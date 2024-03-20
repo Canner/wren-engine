@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
 import io.accio.base.client.AutoCloseableIterator;
 import io.accio.base.client.duckdb.DuckDBConfig;
+import io.accio.base.client.duckdb.DuckDBSettingSQL;
 import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.accio.base.dto.Column;
@@ -66,7 +67,7 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig());
+        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), new DuckDBSettingSQL());
         prepareData();
     }
 

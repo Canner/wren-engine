@@ -20,7 +20,6 @@ import io.accio.base.AccioMDL;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
 import io.accio.base.SessionContext;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.sqlrewrite.CacheRewrite;
 import io.accio.cache.CacheInfoPair;
 import io.accio.cache.TaskInfo;
@@ -52,7 +51,6 @@ public class TestCache
 {
     private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
     private final Supplier<AccioMDL> accioMDL = () -> getInstance(Key.get(AccioMetastore.class)).getAnalyzedMDL().getAccioMDL();
-    private final Supplier<DuckdbClient> duckdbClient = () -> getInstance(Key.get(DuckdbClient.class));
     private final SessionContext defaultSessionContext = SessionContext.builder()
             .setCatalog("canner-cml")
             .setSchema("tpch_tiny")
@@ -174,7 +172,7 @@ public class TestCache
         String tableName = cacheInfoPairOptional.get().getRequiredTableName();
         List<Object[]> origin = queryDuckdb(format("select * from %s", tableName));
         assertThat(origin.size()).isGreaterThan(0);
-        duckdbClient.get().executeDDL(dropTableStatement.apply(tableName));
+        pgMetastore.get().directDDL(dropTableStatement.apply(tableName));
 
         try (Connection connection = createConnection();
                 PreparedStatement stmt = connection.prepareStatement("select custkey, revenue from ForDropTable limit 100");

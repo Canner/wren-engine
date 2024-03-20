@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import io.accio.base.AccioException;
 import io.accio.base.ConnectorRecordIterator;
-import io.accio.main.wireprotocol.PgMetastore;
+import io.accio.base.wireprotocol.PgMetastore;
 
 import javax.inject.Inject;
 

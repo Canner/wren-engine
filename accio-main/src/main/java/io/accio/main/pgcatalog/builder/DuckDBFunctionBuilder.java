@@ -16,27 +16,13 @@ package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
 import io.accio.base.pgcatalog.function.PgFunction;
-import io.accio.main.connector.duckdb.DuckDBMetadata;
-import io.airlift.log.Logger;
-
-import javax.inject.Inject;
 
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 public class DuckDBFunctionBuilder
-        implements PgFunctionBuilder, PgMetastoreFunctionBuilder
+        implements PgFunctionBuilder
 {
-    private static final Logger LOG = Logger.get(DuckDBFunctionBuilder.class);
-    private final DuckDBMetadata duckDBMetadata;
-
-    @Inject
-    public DuckDBFunctionBuilder(DuckDBMetadata duckDBMetadata)
-    {
-        this.duckDBMetadata = requireNonNull(duckDBMetadata, "duckDBMetadata is null");
-    }
-
     @Override
     public String generateCreateFunction(PgFunction pgFunction)
     {
@@ -63,13 +49,5 @@ public class DuckDBFunctionBuilder
                 pgFunction.getName(),
                 parameterBuilder,
                 pgFunction.getDefinition());
-    }
-
-    public void createPgFunction(PgFunction pgFunction)
-    {
-        String sql = generateCreateFunction(pgFunction);
-        LOG.info("Creating or updating pg_catalog.%s: %s", pgFunction.getName(), sql);
-        duckDBMetadata.directDDL(sql);
-        LOG.info("pg_catalog.%s has created or updated", pgFunction.getName());
     }
 }

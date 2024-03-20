@@ -27,7 +27,7 @@ import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import org.duckdb.DuckDBConnection;
 
-import javax.inject.Inject;
+import javax.annotation.Nullable;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -38,6 +38,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static io.accio.base.client.duckdb.DuckdbTypes.toPGType;
 import static io.accio.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
@@ -48,33 +49,65 @@ public final class DuckdbClient
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
-    private final DuckDBConnection duckDBConnection;
-    private final HikariDataSource connectionPool;
+    private final CacheStorageConfig cacheStorageConfig;
+    private final DuckDBSettingSQL duckDBSettingSQL;
+    private DuckDBConnection duckDBConnection;
+    private HikariDataSource connectionPool;
 
-    @Inject
-    public DuckdbClient(DuckDBConfig duckDBConfig, DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig)
+    public DuckdbClient(
+            DuckDBConfig duckDBConfig,
+            @Nullable CacheStorageConfig cacheStorageConfig,
+            @Nullable DuckDBSettingSQL duckDBSettingSQL)
+    {
+        this.duckDBConfig = duckDBConfig;
+        this.cacheStorageConfig = cacheStorageConfig;
+        this.duckDBSettingSQL = duckDBSettingSQL;
+        init();
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    private void init()
     {
         try {
             // The instance will be cleared after the process end. We don't need to
             // close this connection
             Class.forName("org.duckdb.DuckDBDriver");
-            this.duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
-            this.duckDBConfig = duckDBConfig;
-            HikariConfig config = getHikariConfig(duckDBConfig, duckdbS3StyleStorageConfig, duckDBConnection);
-            connectionPool = new HikariDataSource(config);
-            init();
+            duckDBConnection = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:");
+            initPool();
+            if (duckDBSettingSQL != null) {
+                if (duckDBSettingSQL.getInitSQL() != null) {
+                    executeDDL(duckDBSettingSQL.getInitSQL());
+                }
+            }
+            else {
+                DataSize memoryLimit = duckDBConfig.getMemoryLimit();
+                executeDDL(format("SET memory_limit='%s'", memoryLimit.toBytesValueString()));
+                LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
+                executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
+                LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
+            }
         }
         catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
 
+    public synchronized void initPool()
+    {
+        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL));
+    }
+
     private static HikariConfig getHikariConfig(
             DuckDBConfig duckDBConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnection duckDBConnection)
+            CacheStorageConfig cacheStorageConfig,
+            DuckDBConnection duckDBConnection,
+            DuckDBSettingSQL duckDBSettingSQL)
     {
-        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection, duckDBConfig, duckdbS3StyleStorageConfig);
+        DuckDBDataSource dataSource = new DuckDBDataSource(duckDBConnection);
         HikariConfig config = new HikariConfig();
         config.setDataSource(dataSource);
         config.setPoolName("DUCKDB_POOL");
@@ -82,19 +115,29 @@ public final class DuckdbClient
         config.setMinimumIdle(duckDBConfig.getMaxConcurrentTasks());
         // remain some query slots for metadata queries
         config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
+        String initSql = buildConnectionInitSql(duckDBSettingSQL, cacheStorageConfig, duckDBConfig);
+        config.setConnectionInitSql(initSql);
         return config;
     }
 
-    /**
-     * Initialize the global variables of DuckDB.
-     */
-    private void init()
+    private static String buildConnectionInitSql(DuckDBSettingSQL duckDBSettingSQL, CacheStorageConfig cacheStorageConfig, DuckDBConfig duckDBConfig)
     {
-        DataSize memoryLimit = duckDBConfig.getMemoryLimit();
-        executeDDL(format("SET memory_limit='%s'", memoryLimit.toBytesValueString()));
-        LOG.info("Set memory limit to %s", memoryLimit.toBytesValueString());
-        executeDDL(format("SET temp_directory='%s'", duckDBConfig.getTempDirectory()));
-        LOG.info("Set temp directory to %s", duckDBConfig.getTempDirectory());
+        List<String> sql = new ArrayList<>();
+        if (duckDBSettingSQL != null) {
+            if (duckDBSettingSQL.getSessionSQL() != null) {
+                sql.add(duckDBSettingSQL.getSessionSQL());
+            }
+        }
+        else {
+            sql.add("SET search_path = 'main'");
+            if (cacheStorageConfig instanceof DuckdbS3StyleStorageConfig) {
+                DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig = (DuckdbS3StyleStorageConfig) cacheStorageConfig;
+                sql.add(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
+                sql.add(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
+            }
+            sql.add(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
+        }
+        return String.join(";", sql);
     }
 
     @Override
@@ -130,7 +173,7 @@ public final class DuckdbClient
             }
             // workaround for describe duckdb sql
             preparedStatement.execute();
-            ResultSetMetaData metaData = preparedStatement.getMetaData();
+            ResultSetMetaData metaData = preparedStatement.getResultSet().getMetaData();
             int columnCount = metaData.getColumnCount();
 
             ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();
@@ -143,7 +186,7 @@ public final class DuckdbClient
             return builder.build();
         }
         catch (Exception e) {
-            LOG.error(e, "Error executing DDL");
+            LOG.error(e, "Error executing DDL: %s", sql);
             throw new AccioException(GENERIC_USER_ERROR, e);
         }
     }
@@ -156,6 +199,7 @@ public final class DuckdbClient
             statement.execute(sql);
         }
         catch (SQLException se) {
+            LOG.error("Failed SQL: %s", sql);
             throw new RuntimeException(se);
         }
     }
@@ -192,26 +236,11 @@ public final class DuckdbClient
         }
     }
 
-    public void dropTableQuietly(String tableName)
-    {
-        try {
-            executeDDL(format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName));
-        }
-        catch (Exception e) {
-            LOG.error(e, "Failed to drop table %s", tableName);
-        }
-    }
-
     @Override
     public Connection createConnection()
             throws SQLException
     {
         return connectionPool.getConnection();
-    }
-
-    public DuckDBConfig getDuckDBConfig()
-    {
-        return duckDBConfig;
     }
 
     @Override
@@ -223,6 +252,53 @@ public final class DuckdbClient
         }
         catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public synchronized void closeAndInitPool()
+    {
+        connectionPool.close();
+        initPool();
+    }
+
+    public static class Builder
+    {
+        private DuckDBConfig duckDBConfig;
+        private CacheStorageConfig cacheStorageConfig;
+        private DuckDBSettingSQL duckDBSettingSQL;
+
+        public Builder setDuckDBConfig(DuckDBConfig duckDBConfig)
+        {
+            this.duckDBConfig = duckDBConfig;
+            return this;
+        }
+
+        public Builder setCacheStorageConfig(CacheStorageConfig cacheStorageConfig)
+        {
+            this.cacheStorageConfig = cacheStorageConfig;
+            return this;
+        }
+
+        public Builder setDuckDBSettingSQL(DuckDBSettingSQL duckDBSettingSQL)
+        {
+            this.duckDBSettingSQL = duckDBSettingSQL;
+            return this;
+        }
+
+        public DuckdbClient build()
+        {
+            return new DuckdbClient(duckDBConfig, cacheStorageConfig, duckDBSettingSQL);
+        }
+
+        public Optional<DuckdbClient> buildSafely()
+        {
+            try {
+                return Optional.of(build());
+            }
+            catch (Exception e) {
+                LOG.error(e, "Failed to build DuckdbClient");
+                return Optional.empty();
+            }
         }
     }
 }

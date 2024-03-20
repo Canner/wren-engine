@@ -14,35 +14,33 @@
 
 package io.accio.main.web.dto;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.accio.base.Column;
 
-import java.util.List;
-
-public class PreviewOutputDto
+public class DuckDBSettingsDto
 {
-    private final List<Column> columns;
-    private final List<Object[]> data;
+    private String initSQL;
 
-    @JsonCreator
-    public PreviewOutputDto(
-            @JsonProperty("columns") List<Column> columns,
-            @JsonProperty("data") List<Object[]> data)
+    private String sessionSQL;
+
+    @JsonProperty
+    public String getInitSQL()
     {
-        this.columns = columns;
-        this.data = data;
+        return initSQL;
+    }
+
+    public void setInitSQL(String initSQL)
+    {
+        this.initSQL = initSQL;
     }
 
     @JsonProperty
-    public List<Column> getColumns()
+    public String getSessionSQL()
     {
-        return columns;
+        return sessionSQL;
     }
 
-    @JsonProperty
-    public List<Object[]> getData()
+    public void setSessionSQL(String sessionSQL)
     {
-        return data;
+        this.sessionSQL = sessionSQL;
     }
 }

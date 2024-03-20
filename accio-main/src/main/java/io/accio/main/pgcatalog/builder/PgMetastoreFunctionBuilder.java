@@ -15,8 +15,27 @@
 package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.pgcatalog.function.PgFunction;
+import io.accio.base.wireprotocol.PgMetastore;
+import io.airlift.log.Logger;
 
-public interface PgMetastoreFunctionBuilder
+public class PgMetastoreFunctionBuilder
+        extends DuckDBFunctionBuilder
 {
-    void createPgFunction(PgFunction pgFunction);
+    private static final Logger LOG = Logger.get(PgMetastoreFunctionBuilder.class);
+
+    private final PgMetastore pgMetastore;
+
+    public PgMetastoreFunctionBuilder(PgMetastore pgMetastore)
+    {
+        super();
+        this.pgMetastore = pgMetastore;
+    }
+
+    public void createPgFunction(PgFunction pgFunction)
+    {
+        String sql = generateCreateFunction(pgFunction);
+        LOG.info("Creating or updating pg_catalog.%s: %s", pgFunction.getName(), sql);
+        pgMetastore.directDDL(sql);
+        LOG.info("pg_catalog.%s has created or updated", pgFunction.getName());
+    }
 }

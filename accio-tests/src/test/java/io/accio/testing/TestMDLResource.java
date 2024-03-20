@@ -20,7 +20,7 @@ import io.accio.base.type.BigIntType;
 import io.accio.main.web.dto.CheckOutputDto;
 import io.accio.main.web.dto.DeployInputDto;
 import io.accio.main.web.dto.PreviewDto;
-import io.accio.main.web.dto.PreviewOutputDto;
+import io.accio.main.web.dto.QueryResultDto;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -121,19 +121,19 @@ public class TestMDLResource
                 .build();
 
         PreviewDto testDefaultDto = new PreviewDto(previewManifest, "select custkey from Customer", null);
-        PreviewOutputDto testDefault = preview(testDefaultDto);
+        QueryResultDto testDefault = preview(testDefaultDto);
         assertThat(testDefault.getData().size()).isEqualTo(100);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("custkey");
         assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(BigIntType.BIGINT);
 
         PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", null);
-        PreviewOutputDto preview1 = preview(testDefaultDto1);
+        QueryResultDto preview1 = preview(testDefaultDto1);
         assertThat(preview1.getData().size()).isEqualTo(100);
         assertThat(preview1.getColumns().size()).isEqualTo(1);
 
         PreviewDto testDefaultDto2 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", 150L);
-        PreviewOutputDto preview2 = preview(testDefaultDto2);
+        QueryResultDto preview2 = preview(testDefaultDto2);
         assertThat(preview2.getData().size()).isEqualTo(150);
         assertThat(preview2.getColumns().size()).isEqualTo(1);
 

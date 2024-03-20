@@ -21,9 +21,9 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.cache.CacheModule;
 import io.accio.main.AccioModule;
+import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.wireprotocol.PostgresNetty;
 import io.accio.main.wireprotocol.ssl.EmptyTlsDataProvider;
 import io.accio.server.module.BigQueryConnectorModule;
@@ -97,7 +97,7 @@ public class TestingAccioServer
                 .quiet()
                 .initialize();
 
-        closer.register(() -> injector.getInstance(DuckdbClient.class).close());
+        closer.register(() -> injector.getInstance(Key.get(DuckDBMetadata.class)).close());
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
     }
 

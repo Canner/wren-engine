@@ -1,0 +1,398 @@
+{
+  "catalog": "memory",
+  "schema": "tpch",
+  "models": [
+    {
+      "name": "Orders",
+      "refSql": "select * from memory.tpch.orders",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "o_orderkey",
+          "type": "int4"
+        },
+        {
+          "name": "custkey",
+          "expression": "o_custkey",
+          "type": "int4"
+        },
+        {
+          "name": "orderstatus",
+          "expression": "o_orderstatus",
+          "type": "OrderStatus"
+        },
+        {
+          "name": "totalprice",
+          "expression": "o_totalprice",
+          "type": "float8"
+        },
+        {
+          "name": "nation_name",
+          "isCalculated": true,
+          "expression": "customer.nation.name",
+          "type": "varchar"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
+        },
+        {
+          "name": "lineitems",
+          "type": "Lineitem",
+          "relationship": "OrdersLineitem"
+        }
+      ],
+      "primaryKey": "orderkey"
+    },
+    {
+      "name": "Customer",
+      "refSql": "select * from memory.tpch.customer",
+      "columns": [
+        {
+          "name": "custkey",
+          "expression": "c_custkey",
+          "type": "int4"
+        },
+        {
+          "name": "nationkey",
+          "expression": "c_nationkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "c_name",
+          "type": "varchar"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "nation",
+          "type": "Nation",
+          "relationship": "CustomerNation"
+        },
+        {
+          "name": "custkey_name",
+          "type": "varchar",
+          "expression": "{{ concat('c_custkey', 'c_name') }} "
+        },
+        {
+          "name": "custkey_call_concat",
+          "type": "varchar",
+          "expression": "{{ callConcat('c_custkey', concat) }} "
+        }
+      ],
+      "primaryKey": "custkey"
+    },
+    {
+      "name": "Lineitem",
+      "refSql": "select * from memory.tpch.lineitem",
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "l_orderkey",
+          "type": "int4"
+        },
+        {
+          "name": "partkey",
+          "expression": "l_partkey",
+          "type": "int4"
+        },
+        {
+          "name": "linenumber",
+          "expression": "l_linenumber",
+          "type": "int4"
+        },
+        {
+          "name": "extendedprice",
+          "expression": "l_extendedprice",
+          "type": "float8"
+        },
+        {
+          "name": "discount",
+          "expression": "l_discount",
+          "type": "float8"
+        },
+        {
+          "name": "shipdate",
+          "expression": "l_shipdate",
+          "type": "date"
+        },
+        {
+          "name": "comment",
+          "expression": "l_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "order",
+          "type": "int4",
+          "expression": "1"
+        },
+        {
+          "name": "part",
+          "type": "Part",
+          "relationship": "LineitemPart"
+        },
+        {
+          "name": "orderkey_linenumber",
+          "type": "varchar",
+          "expression": "concat(l_orderkey, l_linenumber)"
+        }
+      ],
+      "primaryKey": "orderkey_linenumber"
+    },
+    {
+      "name": "Part",
+      "refSql": "select * from memory.tpch.part",
+      "columns": [
+        {
+          "name": "partkey",
+          "expression": "p_partkey",
+          "type": "int4"
+        },
+        {
+          "name": "name",
+          "expression": "p_name",
+          "type": "varchar"
+        }
+      ],
+      "primaryKey": "partkey"
+    },
+    {
+      "name": "Nation",
+      "refSql": "select * from memory.tpch.nation",
+      "columns": [
+        {
+          "name": "nationkey",
+          "expression": "n_nationkey",
+          "type": "int4"
+        },
+        {
+          "name": "name",
+          "expression": "n_name",
+          "type": "varchar"
+        },
+        {
+          "name": "regionkey",
+          "expression": "n_regionkey",
+          "type": "int4"
+        },
+        {
+          "name": "comment",
+          "expression": "n_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "region",
+          "type": "Region",
+          "relationship": "NationRegion"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "CustomerNation"
+        },
+        {
+          "name": "supplier",
+          "type": "Supplier",
+          "relationship": "NationSupplier"
+        }
+      ],
+      "primaryKey": "nationkey"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "OrdersCustomer",
+      "models": [
+        "Orders",
+        "Customer"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Orders.custkey = Customer.custkey"
+    },
+    {
+      "name": "OrdersLineitem",
+      "models": [
+        "Orders",
+        "Lineitem"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "Orders.orderkey = Lineitem.orderkey"
+    },
+    {
+      "name": "LineitemPart",
+      "models": [
+        "Lineitem",
+        "Part"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Lineitem.partkey = Part.partkey"
+    },
+    {
+      "name": "CustomerNation",
+      "models": [
+        "Customer",
+        "Nation"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Customer.nationkey = Nation.nationkey"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "Revenue",
+      "baseObject": "Orders",
+      "dimension": [
+        {
+          "name": "customer",
+          "type": "int4",
+          "expression": "customer.name"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CustomerRevenue",
+      "baseObject": "Customer",
+      "dimension": [
+        {
+          "name": "custkey",
+          "type": "int4",
+          "expression": "custkey"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(orders.totalprice)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "orderdate",
+          "refColumn": "orderdate",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CustomerDailyRevenue",
+      "baseObject": "Orders",
+      "dimension": [
+        {
+          "name": "customer",
+          "type": "int4",
+          "expression": "customer.name"
+        },
+        {
+          "name": "date",
+          "type": "int4",
+          "expression": "orderdate"
+        }
+      ],
+      "measure": [
+        {
+          "name": "totalprice",
+          "type": "int4",
+          "expression": "sum(totalprice)"
+        }
+      ],
+      "timeGrain": []
+    }
+  ],
+  "cumulativeMetrics": [
+    {
+      "name": "WeeklyRevenue",
+      "baseObject": "Orders",
+      "measure": {
+        "name": "totalprice",
+        "type": "int4",
+        "operator": "sum",
+        "refColumn": "totalprice"
+      },
+      "window": {
+        "name": "orderdate",
+        "refColumn": "orderdate",
+        "timeUnit": "WEEK",
+        "start": "1993-01-01",
+        "end": "1993-12-31"
+      },
+      "cached": false,
+      "refreshTime": "30m",
+      "description": ""
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "Status",
+      "values": [
+        {
+          "name": "F"
+        },
+        {
+          "name": "O"
+        },
+        {
+          "name": "P"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "useModel",
+      "statement": "select * from Orders"
+    },
+    {
+      "name": "useMetric",
+      "statement": "select * from Revenue"
+    },
+    {
+      "name": "useMetricRollUp",
+      "statement": "select * from roll_up(Revenue, orderdate, YEAR)"
+    },
+    {
+      "name": "useUseMetric",
+      "statement": "select * from useMetric"
+    }
+  ],
+  "macros": [
+    {
+      "name": "concat",
+      "definition": "(arg1: Expression, arg2: Expression) => concat({{ arg1 }}, {{ arg2 }})"
+    },
+    {
+      "name": "callConcat",
+      "definition": "(arg1: Expression, func: Macro) => {{ func(arg1, arg1) }}"
+    }
+  ]
+}

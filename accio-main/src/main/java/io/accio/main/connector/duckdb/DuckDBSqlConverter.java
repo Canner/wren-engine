@@ -14,18 +14,62 @@
 
 package io.accio.main.connector.duckdb;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.SessionContext;
 import io.accio.base.sql.SqlConverter;
-import io.trino.sql.SqlFormatter;
+import io.accio.main.metadata.Metadata;
+import io.accio.main.sql.SqlRewrite;
+import io.accio.main.sql.duckdb.RewriteArray;
+import io.accio.main.sql.duckdb.RewriteFunction;
+import io.airlift.log.Logger;
+import io.trino.sql.tree.Node;
+import org.intellij.lang.annotations.Language;
+
+import javax.inject.Inject;
+
+import java.util.List;
 
 import static io.accio.base.sqlrewrite.Utils.parseSql;
+import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
+import static io.trino.sql.SqlFormatter.formatSql;
+import static java.util.Objects.requireNonNull;
 
 public class DuckDBSqlConverter
         implements SqlConverter
 {
-    @Override
-    public String convert(String sql, SessionContext sessionContext)
+    private static final Logger LOG = Logger.get(DuckDBSqlConverter.class);
+
+    private final Metadata metadata;
+
+    @Inject
+    public DuckDBSqlConverter(Metadata metadata)
     {
-        return SqlFormatter.formatSql(parseSql(sql), SqlFormatter.Dialect.DUCKDB);
+        this.metadata = requireNonNull(metadata, "metadata is null");
+    }
+
+    @Override
+    public String convert(@Language("sql") String sql, SessionContext sessionContext)
+    {
+        Node rewrittenNode = parseSql(sql);
+
+        List<SqlRewrite> sqlRewrites = ImmutableList.of(
+                // DuckDB doesn't support `ARRAY[1,2,3][1]` but `array_value(1,2,3])[1]` is supported
+                RewriteArray.INSTANCE,
+                RewriteFunction.INSTANCE);
+
+        LOG.info("[Input sql]: %s", sql);
+
+        for (SqlRewrite rewrite : sqlRewrites) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Before %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
+            rewrittenNode = rewrite.rewrite(rewrittenNode, metadata);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("After %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
+        }
+        String dialectSql = formatSql(rewrittenNode, DUCKDB);
+        LOG.info("[Dialect sql]: %s", dialectSql);
+        return dialectSql;
     }
 }

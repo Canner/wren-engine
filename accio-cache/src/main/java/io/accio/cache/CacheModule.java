@@ -16,9 +16,7 @@ package io.accio.cache;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
-import io.accio.base.client.duckdb.CacheStorageConfig;
 import io.accio.base.client.duckdb.DuckDBConfig;
-import io.accio.base.client.duckdb.DuckdbClient;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
@@ -32,11 +30,9 @@ public class CacheModule
     {
         configBinder(binder).bindConfig(DuckdbS3StyleStorageConfig.class);
         configBinder(binder).bindConfig(DuckDBConfig.class);
-        binder.bind(CacheStorageConfig.class).to(DuckdbS3StyleStorageConfig.class).in(Scopes.SINGLETON);
         binder.bind(CacheManager.class).in(Scopes.SINGLETON);
-        binder.bind(DuckdbTaskManager.class).in(Scopes.SINGLETON);
+        binder.bind(CacheTaskManager.class).in(Scopes.SINGLETON);
         binder.bind(EventLogger.class).to(Log4jEventLogger.class).in(Scopes.SINGLETON);
-        binder.bind(DuckdbClient.class).in(Scopes.SINGLETON);
         binder.bind(CachedTableMapping.class).to(DefaultCachedTableMapping.class).in(Scopes.SINGLETON);
     }
 }

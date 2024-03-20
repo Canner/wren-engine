@@ -26,7 +26,7 @@ import io.accio.main.web.dto.DeployInputDto;
 import io.accio.main.web.dto.ErrorMessageDto;
 import io.accio.main.web.dto.LineageResult;
 import io.accio.main.web.dto.PreviewDto;
-import io.accio.main.web.dto.PreviewOutputDto;
+import io.accio.main.web.dto.QueryResultDto;
 import io.accio.main.web.dto.SqlAnalysisInputDto;
 import io.accio.main.web.dto.SqlAnalysisOutputDto;
 import io.airlift.http.client.HttpClient;
@@ -56,10 +56,13 @@ import static io.airlift.http.client.Request.Builder.prepareDelete;
 import static io.airlift.http.client.Request.Builder.prepareGet;
 import static io.airlift.http.client.Request.Builder.preparePatch;
 import static io.airlift.http.client.Request.Builder.preparePost;
+import static io.airlift.http.client.Request.Builder.preparePut;
+import static io.airlift.http.client.StaticBodyGenerator.createStaticBodyGenerator;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.listJsonCodec;
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
@@ -82,7 +85,7 @@ public abstract class RequireAccioServer
     private static final JsonCodec<List<SqlAnalysisOutputDto>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(SqlAnalysisOutputDto.class);
     private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
-    private static final JsonCodec<PreviewOutputDto> PREVIEW_OUTPUT_DTO_CODEC = jsonCodec(PreviewOutputDto.class);
+    private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
 
     public RequireAccioServer() {}
 
@@ -153,7 +156,7 @@ public abstract class RequireAccioServer
         return client.execute(request, responseHandler);
     }
 
-    protected PreviewOutputDto preview(PreviewDto previewDto)
+    protected QueryResultDto preview(PreviewDto previewDto)
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/preview"))
@@ -165,7 +168,7 @@ public abstract class RequireAccioServer
         if (response.getStatusCode() != 200) {
             getWebApplicationException(response);
         }
-        return PREVIEW_OUTPUT_DTO_CODEC.fromJson(response.getBody());
+        return QUERY_RESULT_DTO_CODEC.fromJson(response.getBody());
     }
 
     protected void deployMDL(DeployInputDto dto)
@@ -302,6 +305,98 @@ public abstract class RequireAccioServer
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
                 .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(CONFIG_ENTRY_LIST_CODEC, configEntries))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+    }
+
+    protected QueryResultDto queryDuckDB(String statement)
+    {
+        Request request = preparePost()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/query"))
+                .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return QUERY_RESULT_DTO_CODEC.fromJson(response.getBody());
+    }
+
+    protected String getDuckDBInitSQL()
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return response.getBody();
+    }
+
+    protected void setDuckDBInitSQL(String statement)
+    {
+        Request request = preparePut()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+    }
+
+    protected void appendToDuckDBInitSQL(String statement)
+    {
+        Request request = preparePatch()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+    }
+
+    protected String getDuckDBSessionSQL()
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return response.getBody();
+    }
+
+    protected void setDuckDBSessionSQL(String statement)
+    {
+        Request request = preparePut()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+    }
+
+    protected void appendToDuckDBSessionSQL(String statement)
+    {
+        Request request = preparePatch()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());

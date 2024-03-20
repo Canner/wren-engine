@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-package io.accio.main.wireprotocol;
+package io.accio.base.wireprotocol;
 
-import io.accio.base.Column;
 import io.accio.base.ConnectorRecordIterator;
 import io.accio.base.Parameter;
+import io.accio.base.client.Client;
 import io.accio.base.sql.SqlConverter;
 
 import java.util.List;
@@ -27,13 +27,17 @@ public interface PgMetastore
 
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
-    List<Column> describeQuery(String sql, List<Parameter> parameters);
-
     String handlePgType(String type);
-
-    SqlConverter getSqlConverter();
 
     String getPgCatalogName();
 
     boolean isSchemaExist(String schemaName);
+
+    void dropTableIfExists(String name);
+
+    Client getClient();
+
+    SqlConverter getSqlConverter();
+
+    void close();
 }

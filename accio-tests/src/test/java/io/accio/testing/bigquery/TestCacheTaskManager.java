@@ -20,13 +20,20 @@ import io.accio.base.AccioTypes;
 import io.accio.base.AnalyzedMDL;
 import io.accio.base.CatalogSchemaTableName;
 import io.accio.base.client.duckdb.DuckDBConfig;
-import io.accio.base.client.duckdb.DuckdbClient;
+import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.base.client.duckdb.DuckdbS3StyleStorageConfig;
+import io.accio.base.config.AccioConfig;
+import io.accio.base.config.BigQueryConfig;
+import io.accio.base.config.ConfigManager;
+import io.accio.base.config.PostgresConfig;
+import io.accio.base.config.PostgresWireProtocolConfig;
 import io.accio.base.dto.Column;
 import io.accio.base.dto.Model;
 import io.accio.cache.CacheInfoPair;
-import io.accio.cache.DuckdbTaskManager;
+import io.accio.cache.CacheTaskManager;
 import io.accio.cache.TaskInfo;
+import io.accio.main.connector.duckdb.DuckDBSqlConverter;
+import io.accio.main.wireprotocol.PgMetastoreImpl;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -45,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @Test(singleThreaded = true)
-public class TestDuckdbTaskManager
+public class TestCacheTaskManager
         extends AbstractCacheTest
 {
     private static final AccioMDL mdl = AccioMDL.fromManifest(withDefaultCatalogSchema()
@@ -59,12 +66,12 @@ public class TestDuckdbTaskManager
                             true)))
             .build());
     private static final CatalogSchemaTableName ordersName = catalogSchemaTableName(mdl.getCatalog(), mdl.getSchema(), "Orders");
-    private DuckdbTaskManager duckdbTaskManager;
+    private CacheTaskManager cacheTaskManager;
 
     @BeforeClass
     public void setup()
     {
-        duckdbTaskManager = getInstance(Key.get(DuckdbTaskManager.class));
+        cacheTaskManager = getInstance(Key.get(CacheTaskManager.class));
     }
 
     @AfterMethod
@@ -82,18 +89,28 @@ public class TestDuckdbTaskManager
     @Test
     public void testGetMemoryUsage()
     {
-        assertThatCode(duckdbTaskManager::getMemoryUsageBytes).doesNotThrowAnyException();
+        assertThatCode(cacheTaskManager::getMemoryUsageBytes).doesNotThrowAnyException();
     }
 
     @Test
     public void testCheckCacheMemoryLimit()
             throws IOException
     {
-        assertThatCode(() -> duckdbTaskManager.checkCacheMemoryLimit()).doesNotThrowAnyException();
+        assertThatCode(() -> cacheTaskManager.checkCacheMemoryLimit()).doesNotThrowAnyException();
 
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         duckDBConfig.setMaxCacheTableSizeRatio(0);
-        try (DuckdbTaskManager taskManager = new DuckdbTaskManager(duckDBConfig, new DuckdbClient(duckDBConfig, new DuckdbS3StyleStorageConfig()))) {
+
+        ConfigManager configManager = new ConfigManager(
+                new AccioConfig(),
+                new PostgresConfig(),
+                new BigQueryConfig(),
+                duckDBConfig,
+                new PostgresWireProtocolConfig(),
+                new DuckdbS3StyleStorageConfig(),
+                new DuckDBConnectorConfig());
+
+        try (CacheTaskManager taskManager = new CacheTaskManager(duckDBConfig, new PgMetastoreImpl(configManager, getInstance(Key.get(DuckDBSqlConverter.class))))) {
             assertThatCode(taskManager::checkCacheMemoryLimit).hasMessageMatching("Cache memory limit exceeded. Usage: .* bytes, Limit: 0.0 bytes");
         }
     }
@@ -138,11 +155,11 @@ public class TestDuckdbTaskManager
     @Test
     public void testAddCacheQueryTask()
     {
-        assertThat(duckdbTaskManager.addCacheQueryTask(() -> 1)).isEqualTo(1);
+        assertThat(cacheTaskManager.addCacheQueryTask(() -> 1)).isEqualTo(1);
 
         // test timeout
         long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxCacheQueryTimeout();
-        assertThatCode(() -> duckdbTaskManager.addCacheQueryTask(() -> {
+        assertThatCode(() -> cacheTaskManager.addCacheQueryTask(() -> {
             SECONDS.sleep(maxQueryTimeout + 1);
             return 1;
         })).hasMessageContaining("Query time limit exceeded");
@@ -151,11 +168,11 @@ public class TestDuckdbTaskManager
     @Test
     public void testAddCacheQueryDDLTask()
     {
-        assertThatCode(() -> duckdbTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(1))).doesNotThrowAnyException();
+        assertThatCode(() -> cacheTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(1))).doesNotThrowAnyException();
 
         // test timeout
         long maxQueryTimeout = getInstance(Key.get(DuckDBConfig.class)).getMaxCacheQueryTimeout();
-        assertThatCode(() -> duckdbTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(maxQueryTimeout + 1)))
+        assertThatCode(() -> cacheTaskManager.addCacheQueryDDLTask(() -> sleepSeconds(maxQueryTimeout + 1)))
                 .hasMessageContaining("Query time limit exceeded");
     }
 

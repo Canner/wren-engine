@@ -16,7 +16,7 @@ package io.accio.main.pgcatalog.builder;
 
 import io.accio.base.AccioException;
 import io.accio.base.pgcatalog.function.PgFunction;
-import io.accio.main.metadata.Metadata;
+import io.accio.main.connector.bigquery.BigQueryMetadata;
 
 import java.util.Locale;
 
@@ -31,7 +31,7 @@ public class BigQueryPgFunctionBuilder
 {
     private final String pgCatalogName;
 
-    public BigQueryPgFunctionBuilder(Metadata connector)
+    public BigQueryPgFunctionBuilder(BigQueryMetadata connector)
     {
         this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
     }

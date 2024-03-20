@@ -16,15 +16,9 @@ package io.accio.server.module;
 
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
-import io.accio.base.config.PostgresConfig;
+import io.accio.base.client.duckdb.DuckDBConnectorConfig;
 import io.accio.main.connector.duckdb.DuckDBMetadata;
 import io.accio.main.connector.duckdb.DuckDBSqlConverter;
-import io.accio.main.connector.postgres.PostgresCacheService;
-import io.accio.main.pgcatalog.builder.DuckDBFunctionBuilder;
-import io.accio.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
-import io.accio.main.pgcatalog.regtype.PgMetadata;
-import io.accio.main.pgcatalog.regtype.PostgresPgMetadata;
-import io.accio.main.wireprotocol.PgMetastore;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
@@ -35,13 +29,8 @@ public class DuckDBConnectorModule
     @Override
     protected void setup(Binder binder)
     {
+        configBinder(binder).bindConfig(DuckDBConnectorConfig.class);
         binder.bind(DuckDBSqlConverter.class).in(Scopes.SINGLETON);
-        binder.bind(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastoreFunctionBuilder.class).to(DuckDBFunctionBuilder.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetadata.class).to(PostgresPgMetadata.class).in(Scopes.SINGLETON);
-        binder.bind(PostgresCacheService.class).in(Scopes.SINGLETON);
-        binder.bind(PgMetastore.class).to(DuckDBMetadata.class).in(Scopes.SINGLETON);
         binder.bind(DuckDBMetadata.class).in(Scopes.SINGLETON);
-        configBinder(binder).bindConfig(PostgresConfig.class);
     }
 }
