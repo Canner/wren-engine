@@ -69,7 +69,7 @@ import static io.accio.base.config.BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFI
 import static io.accio.base.config.BigQueryConfig.BIGQUERY_PROJECT_ID;
 import static io.accio.base.config.PostgresConfig.POSTGRES_JDBC_URL;
 import static io.accio.base.config.PostgresConfig.POSTGRES_PASSWORD;
-import static io.accio.base.config.PostgresConfig.POSTRES_USER;
+import static io.accio.base.config.PostgresConfig.POSTGRES_USER;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT;
 import static io.accio.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
@@ -169,7 +169,7 @@ public class ConfigManager
         initConfig(BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null), true, false);
         initConfig(BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix(), true, false);
         initConfig(POSTGRES_JDBC_URL, postgresConfig.getJdbcUrl(), true, false);
-        initConfig(POSTRES_USER, postgresConfig.getUser(), true, false);
+        initConfig(POSTGRES_USER, postgresConfig.getUser(), true, false);
         initConfig(POSTGRES_PASSWORD, postgresConfig.getPassword(), true, false);
         initConfig(DUCKDB_CONNECTOR_INIT_SQL_PATH, duckDBConnectorConfig.getInitSQLPath(), false, false);
         initConfig(DUCKDB_CONNECTOR_SESSION_SQL_PATH, duckDBConnectorConfig.getSessionSQLPath(), false, false);
@@ -269,7 +269,7 @@ public class ConfigManager
     {
         PostgresConfig result = new PostgresConfig();
         result.setJdbcUrl(configs.get(POSTGRES_JDBC_URL));
-        result.setUser(configs.get(POSTRES_USER));
+        result.setUser(configs.get(POSTGRES_USER));
         result.setPassword(configs.get(POSTGRES_PASSWORD));
         return result;
     }

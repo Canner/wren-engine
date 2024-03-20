@@ -19,7 +19,7 @@ import io.airlift.configuration.Config;
 public class PostgresConfig
 {
     public static final String POSTGRES_JDBC_URL = "postgres.jdbc.url";
-    public static final String POSTRES_USER = "postgres.user";
+    public static final String POSTGRES_USER = "postgres.user";
     public static final String POSTGRES_PASSWORD = "postgres.password";
     private String jdbcUrl;
     private String user;
@@ -42,7 +42,7 @@ public class PostgresConfig
         return user;
     }
 
-    @Config(POSTRES_USER)
+    @Config(POSTGRES_USER)
     public PostgresConfig setUser(String user)
     {
         this.user = user;
