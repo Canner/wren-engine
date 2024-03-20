@@ -1,23 +1,19 @@
-## What's WrenEngine?
+# WrenEngine
 
-WIP
+# How to use?
 
-## How to build?
+Please refer to the [example](example/README.md) for further details. Start the engine using Docker Compose.
 
-WIP
+# How to build?
 
-## Community
+## Normal Build
 
-- Welcome to our [Discord server](https://discord.gg/ztDz8DCmG4) to give us feedback!
-- If there is any issues, please visit [Github Issues](https://github.com/Canner/wren/issues).
+```bash
+mvn clean install -DskipTests
+```
 
-## Special Thanks
+## Build an executable jar
 
-- [Trino](https://github.com/trinodb/trino)
-
-  Wren's SQL analysis layer is fundamentally based on a modified version of Trino's SQL analysis engine. Trino's clean, readable, and maintainable SQL analysis layer served as a
-  significant inspiration, allowing us to focus more on researching and exploring Wren's syntax and models.
-- [CrateDB](https://github.com/crate/crate)
-
-  Wren's PostgreSQL Wire Protocol is inspired by CrateDB. CrateDB's implementation of the PostgreSQL Wire Protocol is very clear and easy to maintain, which significantly helped
-  us clarify the focus and architecture during the early development stages. This allowed us to concentrate on researching and exploring Wren's syntax and models.
+```bash
+mvn clean package -DskipTests -P exec-jar
+```
