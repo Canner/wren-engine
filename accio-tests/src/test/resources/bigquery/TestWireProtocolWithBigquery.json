@@ -24,7 +24,11 @@
   "models": [
     {
       "name": "Orders",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "tableReference": {
+        "catalog": "canner-cml",
+        "schema": "tpch_tiny",
+        "table": "orders"
+      },
       "columns": [
         {
           "name": "orderkey",

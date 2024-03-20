@@ -18,9 +18,11 @@ import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.AnalyzedMDL;
 import io.accio.base.SessionContext;
+import io.accio.base.dto.Column;
 import io.accio.base.dto.Manifest;
 import io.accio.base.dto.Model;
 import io.accio.base.dto.Relationship;
+import io.accio.base.dto.TableReference;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
@@ -34,73 +36,68 @@ import static io.accio.base.dto.Column.caluclatedColumn;
 import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
-import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
+import static io.accio.base.dto.TableReference.tableReference;
 import static io.accio.base.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class TestModel
+public abstract class AbstractTestModel
         extends AbstractTestFramework
 {
-    private final Model customer;
-    private final Model orders;
-    private final Model lineitem;
-    private final Relationship ordersCustomer;
-    private final Relationship ordersLineitem;
+    protected Model customer;
+    protected Model orders;
+    protected Model lineitem;
 
-    public TestModel()
+    protected final List<Column> customerColumns;
+    protected final List<Column> ordersColumns;
+    protected final List<Column> lineitemColumns;
+    protected final Relationship ordersCustomer;
+    protected final Relationship ordersLineitem;
+
+    public AbstractTestModel()
     {
-        customer = model("Customer",
-                "select * from main.customer",
-                List.of(
-                        column("custkey", INTEGER, null, true),
-                        column("name", VARCHAR, null, true),
-                        column("address", VARCHAR, null, true),
-                        column("nationkey", INTEGER, null, true),
-                        column("phone", VARCHAR, null, true),
-                        column("acctbal", INTEGER, null, true),
-                        column("mktsegment", VARCHAR, null, true),
-                        column("comment", VARCHAR, null, true)),
-                "custkey");
-        orders = model("Orders",
-                "select * from main.orders",
-                List.of(
-                        column("orderkey", INTEGER, null, true),
-                        column("custkey", INTEGER, null, true),
-                        column("orderstatus", VARCHAR, null, true),
-                        column("totalprice", INTEGER, null, true),
-                        column("orderdate", DATE, null, true),
-                        column("orderpriority", VARCHAR, null, true),
-                        column("clerk", VARCHAR, null, true),
-                        column("shippriority", INTEGER, null, true),
-                        column("comment", VARCHAR, null, true),
-                        column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                "orderkey");
-        lineitem = model("Lineitem",
-                "select * from main.lineitem",
-                List.of(
-                        column("orderkey", INTEGER, null, true),
-                        column("partkey", INTEGER, null, true),
-                        column("suppkey", INTEGER, null, true),
-                        column("linenumber", INTEGER, null, true),
-                        column("quantity", INTEGER, null, true),
-                        column("extendedprice", INTEGER, null, true),
-                        column("discount", INTEGER, null, true),
-                        column("tax", INTEGER, null, true),
-                        column("returnflag", VARCHAR, null, true),
-                        column("linestatus", VARCHAR, null, true),
-                        column("shipdate", DATE, null, true),
-                        column("commitdate", DATE, null, true),
-                        column("receiptdate", DATE, null, true),
-                        column("shipinstruct", VARCHAR, null, true),
-                        column("shipmode", VARCHAR, null, true),
-                        column("comment", VARCHAR, null, true),
-                        column("orderkey_linenumber", VARCHAR, null, true, "concat(orderkey, '-', linenumber)")),
-                "orderkey_linenumber");
+        customerColumns = List.of(
+                column("custkey", INTEGER, null, true),
+                column("name", VARCHAR, null, true),
+                column("address", VARCHAR, null, true),
+                column("nationkey", INTEGER, null, true),
+                column("phone", VARCHAR, null, true),
+                column("acctbal", INTEGER, null, true),
+                column("mktsegment", VARCHAR, null, true),
+                column("comment", VARCHAR, null, true));
+        ordersColumns = List.of(
+                column("orderkey", INTEGER, null, true),
+                column("custkey", INTEGER, null, true),
+                column("orderstatus", VARCHAR, null, true),
+                column("totalprice", INTEGER, null, true),
+                column("orderdate", DATE, null, true),
+                column("orderpriority", VARCHAR, null, true),
+                column("clerk", VARCHAR, null, true),
+                column("shippriority", INTEGER, null, true),
+                column("comment", VARCHAR, null, true),
+                column("lineitem", "Lineitem", "OrdersLineitem", true));
+        lineitemColumns = List.of(
+                column("orderkey", INTEGER, null, true),
+                column("partkey", INTEGER, null, true),
+                column("suppkey", INTEGER, null, true),
+                column("linenumber", INTEGER, null, true),
+                column("quantity", INTEGER, null, true),
+                column("extendedprice", INTEGER, null, true),
+                column("discount", INTEGER, null, true),
+                column("tax", INTEGER, null, true),
+                column("returnflag", VARCHAR, null, true),
+                column("linestatus", VARCHAR, null, true),
+                column("shipdate", DATE, null, true),
+                column("commitdate", DATE, null, true),
+                column("receiptdate", DATE, null, true),
+                column("shipinstruct", VARCHAR, null, true),
+                column("shipmode", VARCHAR, null, true),
+                column("comment", VARCHAR, null, true),
+                column("orderkey_linenumber", VARCHAR, null, true, "concat(orderkey, '-', linenumber)"));
         ordersCustomer = relationship("OrdersCustomer", List.of("Orders", "Customer"), MANY_TO_ONE, "Orders.custkey = Customer.custkey");
         ordersLineitem = relationship("OrdersLineitem", List.of("Orders", "Lineitem"), ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey");
     }
@@ -333,6 +330,26 @@ public class TestModel
         AccioMDL mdl = AccioMDL.fromManifest(manifest);
         assertThatThrownBy(() -> query(rewrite("SELECT * FROM notfound", mdl, true)))
                 .hasMessageFindingMatch(".*notfound.*");
+    }
+
+    @Test
+    public void testBuildModelFailed()
+    {
+        assertThatThrownBy(() -> buildFailedModel("select * from main.orders", "Orders", tableReference("memory", "main", "orders")))
+                .hasMessageContaining("either none or more than one of (refSql, baseObject, tableReference) are set");
+        assertThatThrownBy(() -> buildFailedModel(null, "Orders", tableReference("memory", "main", "orders")))
+                .hasMessageContaining("either none or more than one of (refSql, baseObject, tableReference) are set");
+        assertThatThrownBy(() -> buildFailedModel("select * from main.orders", null, tableReference("memory", "main", "orders")))
+                .hasMessageContaining("either none or more than one of (refSql, baseObject, tableReference) are set");
+        assertThatThrownBy(() -> buildFailedModel("select * from main.orders", "Orders", null))
+                .hasMessageContaining("either none or more than one of (refSql, baseObject, tableReference) are set");
+        assertThatThrownBy(() -> buildFailedModel(null, null, null))
+                .hasMessageContaining("either none or more than one of (refSql, baseObject, tableReference) are set");
+    }
+
+    private void buildFailedModel(String refSql, String baseObject, TableReference tableReference)
+    {
+        new Model("failed", refSql, baseObject, tableReference, null, null, false, null, null);
     }
 
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)

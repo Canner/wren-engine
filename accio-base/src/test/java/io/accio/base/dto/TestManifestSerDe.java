@@ -52,6 +52,7 @@ public class TestManifestSerDe
                         new Model("OrdersModel",
                                 "select * from orders",
                                 null,
+                                null,
                                 List.of(
                                         new Column("orderkey", "integer", null, false, true, null,
                                                 ImmutableMap.of("description", "the key of each order")),
@@ -71,6 +72,7 @@ public class TestManifestSerDe
                         new Model("LineitemModel",
                                 "select * from lineitem",
                                 null,
+                                null,
                                 List.of(
                                         new Column("orderkey", "integer", null, false, true, null, null),
                                         new Column("linenumber", "integer", null, false, true, null, null),
@@ -80,8 +82,9 @@ public class TestManifestSerDe
                                 null,
                                 null),
                         new Model("CustomerModel",
-                                "select * from customer",
                                 null,
+                                null,
+                                new TableReference("test-catalog", "test-schema", "customer"),
                                 List.of(
                                         new Column("custkey", "integer", null, false, true, null, null),
                                         new Column("name", "string", null, false, true, null, null),

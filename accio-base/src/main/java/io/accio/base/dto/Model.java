@@ -34,6 +34,7 @@ public class Model
     private final String name;
     private final String refSql;
     private final String baseObject;
+    private final TableReference tableReference;
     private final List<Column> columns;
     private final String primaryKey;
     private final boolean cached;
@@ -47,22 +48,22 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, boolean cached)
     {
-        return new Model(name, refSql, null, columns, null, cached, null, ImmutableMap.of());
+        return new Model(name, refSql, null, null, columns, null, cached, null, ImmutableMap.of());
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
-        return model(name, refSql, columns, primaryKey, null);
-    }
-
-    public static Model model(String name, String refSql, List<Column> columns, String primaryKey, String description)
-    {
-        return new Model(name, refSql, null, columns, primaryKey, false, null, ImmutableMap.of());
+        return new Model(name, refSql, null, null, columns, primaryKey, false, null, ImmutableMap.of());
     }
 
     public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, baseObject, columns, primaryKey, false, null, ImmutableMap.of());
+        return new Model(name, null, baseObject, null, columns, primaryKey, false, null, ImmutableMap.of());
+    }
+
+    public static Model onTableReference(String name, TableReference tableReference, List<Column> columns, String primaryKey)
+    {
+        return new Model(name, null, null, tableReference, columns, primaryKey, false, null, ImmutableMap.of());
     }
 
     @JsonCreator
@@ -70,6 +71,7 @@ public class Model
             @JsonProperty("name") String name,
             @JsonProperty("refSql") String refSql,
             @JsonProperty("baseObject") String baseObject,
+            @JsonProperty("tableReference") TableReference tableReference,
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("primaryKey") String primaryKey,
             @JsonProperty("cached") boolean cached,
@@ -77,15 +79,27 @@ public class Model
             @JsonProperty("properties") Map<String, String> properties)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
-        checkArgument(Stream.of(refSql, baseObject).filter(value -> value == null || value.isEmpty()).count() == 1,
-                "either none or more than one of (refSql, baseObject) are set");
+        checkArgument(Stream.of(refSql, baseObject, tableReference).filter(Model::isNonNullOrNonEmpty).count() == 1,
+                "either none or more than one of (refSql, baseObject, tableReference) are set");
         this.refSql = refSql;
         this.baseObject = baseObject;
+        this.tableReference = tableReference;
         this.columns = columns == null ? List.of() : columns;
         this.primaryKey = primaryKey;
         this.cached = cached;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
         this.properties = properties == null ? ImmutableMap.of() : properties;
+    }
+
+    private static boolean isNonNullOrNonEmpty(Object value)
+    {
+        if (value == null) {
+            return false;
+        }
+        if (value instanceof String) {
+            return !((String) value).isEmpty();
+        }
+        return true;
     }
 
     @JsonProperty
@@ -105,6 +119,12 @@ public class Model
     public String getBaseObject()
     {
         return baseObject;
+    }
+
+    @JsonProperty
+    public TableReference getTableReference()
+    {
+        return tableReference;
     }
 
     @Override
@@ -154,6 +174,7 @@ public class Model
                 Objects.equals(name, that.name) &&
                 Objects.equals(refSql, that.refSql) &&
                 Objects.equals(baseObject, that.baseObject) &&
+                Objects.equals(tableReference, that.tableReference) &&
                 Objects.equals(columns, that.columns) &&
                 Objects.equals(primaryKey, that.primaryKey) &&
                 Objects.equals(refreshTime, that.refreshTime) &&
@@ -163,7 +184,7 @@ public class Model
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, baseObject, columns, primaryKey, properties);
+        return Objects.hash(name, refSql, baseObject, tableReference, columns, primaryKey, properties);
     }
 
     @Override
@@ -173,6 +194,7 @@ public class Model
                 .add("name", name)
                 .add("refSql", refSql)
                 .add("baseObject", baseObject)
+                .add("tableReference", tableReference)
                 .add("columns", columns)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)

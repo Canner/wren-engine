@@ -35,7 +35,9 @@ import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Metric.metric;
 import static io.accio.base.dto.Model.model;
 import static io.accio.base.dto.Model.onBaseObject;
+import static io.accio.base.dto.Model.onTableReference;
 import static io.accio.base.dto.Relationship.relationship;
+import static io.accio.base.dto.TableReference.tableReference;
 import static io.accio.base.dto.TimeGrain.timeGrain;
 import static io.accio.base.dto.TimeUnit.DAY;
 import static io.accio.base.dto.TimeUnit.MONTH;
@@ -55,8 +57,8 @@ public class TestMetric
     {
         manifest = withDefaultCatalogSchema()
                 .setModels(List.of(
-                        model("Orders",
-                                "select * from main.orders",
+                        onTableReference("Orders",
+                                tableReference("memory", "main", "orders"),
                                 List.of(
                                         column("orderkey", INTEGER, null, true),
                                         column("custkey", INTEGER, null, true),
