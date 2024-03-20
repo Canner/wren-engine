@@ -65,8 +65,7 @@ public class TestCreateBigQueryTempTable
                                                 column("shippriority", "int4", null, true),
                                                 column("comment", "varchar", null, true),
                                                 column("customer", "CustomerModel", "OrdersCustomer", true)),
-                                        "orderkey",
-                                        "tpch tiny orders table"),
+                                        "orderkey"),
                                 model("LineitemModel",
                                         "select * from lineitem",
                                         List.of(
@@ -168,8 +167,7 @@ public class TestCreateBigQueryTempTable
                                                 column("c_bool_array4", "bool array", null, true),
                                                 column("c_boolean_array", "boolean[]", null, true),
                                                 column("c_boolean_array2", "boolean array", null, true)),
-                                        "c_boolean",
-                                        "test type table")))
+                                        "c_boolean")))
                         .build());
 
         assertThat(createOrReplaceAllColumn(typeMDL, ACCIO_TEMP_NAME, PG_CATALOG_NAME))
