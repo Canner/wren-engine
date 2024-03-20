@@ -13,5 +13,5 @@ target/
 .checkstyle
 .mvn/timing.properties
 .mvn/maven.config
-accio-server/etc
+wren-server/etc
 /**/var/

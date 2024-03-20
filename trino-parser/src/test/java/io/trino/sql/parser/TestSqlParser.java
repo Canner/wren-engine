@@ -3837,7 +3837,7 @@ public class TestSqlParser
     @Test
     public void testFunctionRelation()
     {
-        assertStatement("SELECT * FROM ROLL_UP(accio.test.metric, col, day)",
+        assertStatement("SELECT * FROM ROLL_UP(wren.test.metric, col, day)",
                 simpleQuery(
                         new Select(
                                 false,
@@ -3850,7 +3850,7 @@ public class TestSqlParser
                                 null,
                                 QualifiedName.of("ROLL_UP"),
                                 ImmutableList.of(
-                                        DereferenceExpression.from(QualifiedName.of("accio", "test", "metric")),
+                                        DereferenceExpression.from(QualifiedName.of("wren", "test", "metric")),
                                         new Identifier("col"),
                                         new Identifier("day")))));
     }

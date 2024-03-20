@@ -8,12 +8,12 @@
         <version>122</version>
     </parent>
 
-    <groupId>io.accio</groupId>
-    <artifactId>accio-root</artifactId>
+    <groupId>io.wren</groupId>
+    <artifactId>wren-root</artifactId>
     <version>0.2.7-SNAPSHOT</version>
 
-    <name>accio</name>
-    <description>Accio</description>
+    <name>WrenEngine</name>
+    <description>WrenEngine</description>
     <packaging>pom</packaging>
 
     <inceptionYear>2022</inceptionYear>
@@ -69,15 +69,15 @@
     </properties>
 
     <modules>
-        <module>accio-base</module>
-        <module>accio-cache</module>
-        <module>accio-main</module>
-        <module>accio-server</module>
-        <module>accio-shaded</module>
-        <module>accio-testing</module>
-        <module>accio-tests</module>
-        <module>accio-validation</module>
         <module>trino-parser</module>
+        <module>wren-base</module>
+        <module>wren-cache</module>
+        <module>wren-main</module>
+        <module>wren-server</module>
+        <module>wren-shaded</module>
+        <module>wren-testing</module>
+        <module>wren-tests</module>
+        <module>wren-validation</module>
     </modules>
 
     <repositories>
@@ -298,60 +298,6 @@
             </dependency>
 
             <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-base</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-cache</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-main</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-server</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-shaded</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-testing</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-tests</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>accio-validation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.accio</groupId>
-                <artifactId>trino-parser</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
                 <version>${netty.version}</version>
@@ -361,6 +307,60 @@
                 <groupId>io.opencensus</groupId>
                 <artifactId>opencensus-api</artifactId>
                 <version>0.31.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>trino-parser</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-base</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-cache</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-main</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-server</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-shaded</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-testing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-tests</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.wren</groupId>
+                <artifactId>wren-validation</artifactId>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>

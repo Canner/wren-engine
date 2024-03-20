@@ -1,16 +1,3 @@
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package io.trino.sql;
 
 import com.google.common.base.CharMatcher;
@@ -449,7 +436,7 @@ public final class ExpressionFormatter
                 return processSliceInBigQuery(node);
             }
 
-            // TODO: `GENERATE_TIMESTAMP_ARRAY` is a bigquery function. We may need to consider the SQL dialect when Accio planning.
+            // TODO: `GENERATE_TIMESTAMP_ARRAY` is a bigquery function. We may need to consider the SQL dialect when Wren planning.
             if ("GENERATE_TIMESTAMP_ARRAY".equalsIgnoreCase(node.getName().toString()) && dialect.equals(DUCKDB)) {
                 return processGenerateTimestampArrayInDuckDB(node);
             }

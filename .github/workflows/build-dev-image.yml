@@ -36,13 +36,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Build Docker image
         run: |
-          ACCIO_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+          WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
           LATEST_COMMIT=$(git log -1 --pretty=%h)
           cd ./docker
-          cp ../accio-server/target/accio-server-${ACCIO_VERSION}-executable.jar ./
+          cp ../wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/canner/accio:main-${LATEST_COMMIT} \
-            --tag ghcr.io/canner/accio:latest \
+            --tag ghcr.io/canner/wren:main-${LATEST_COMMIT} \
+            --tag ghcr.io/canner/wren:latest \
             --push -f ./Dockerfile \
-            --build-arg "ACCIO_VERSION=${ACCIO_VERSION}" .
+            --build-arg "WREN_VERSION=${WREN_VERSION}" .

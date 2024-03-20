@@ -39,7 +39,7 @@ jobs:
           TEST_DUCKDB_STORAGE_ACCESS_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_ACCESS_KEY }}
           TEST_DUCKDB_STORAGE_SECRET_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_SECRET_KEY }}
         run: |
-          ./mvnw test -B --fail-at-end -pl :accio-tests
+          ./mvnw test -B --fail-at-end -pl :wren-tests
 
   # Repo owner has commented /test-with-secrets on a (fork-based) pull request
   integration-fork:
@@ -85,7 +85,7 @@ jobs:
           TEST_DUCKDB_STORAGE_ACCESS_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_ACCESS_KEY }}
           TEST_DUCKDB_STORAGE_SECRET_KEY: ${{ secrets.TEST_DUCKDB_STORAGE_SECRET_KEY }}
         run: |
-          ./mvnw test -B --fail-at-end -pl :accio-tests
+          ./mvnw test -B --fail-at-end -pl :wren-tests
       # Update check run called "integration-fork"
       - uses: actions/github-script@v6
         id: update-check-run

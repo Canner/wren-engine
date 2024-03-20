@@ -29,4 +29,4 @@ jobs:
           ./mvnw clean install -B -DskipTests
       - name: unit tests
         run: |
-          ./mvnw test -B --fail-at-end -pl !:accio-tests
+          ./mvnw test -B --fail-at-end -pl !:wren-tests
