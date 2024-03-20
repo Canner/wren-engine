@@ -93,6 +93,7 @@ public class AccioMDL
                     model.getName(),
                     model.getRefSql(),
                     model.getBaseObject(),
+                    model.getTableReference(),
                     processed,
                     model.getPrimaryKey(),
                     model.isCached(),

@@ -65,10 +65,14 @@ public class ModelSqlRender
         checkArgument(relationable instanceof Model, "relationable must be model");
         Model model = (Model) relationable;
         if (model.getRefSql() != null) {
-            return model.getRefSql();
+            return "(" + model.getRefSql() + ")";
         }
         else if (model.getBaseObject() != null) {
-            return "SELECT * FROM \"" + model.getBaseObject() + "\"";
+            return "(SELECT * FROM \"" + model.getBaseObject() + "\")";
+        }
+        else if (model.getTableReference() != null) {
+
+            return model.getTableReference().toQualifiedName();
         }
         else {
             throw new IllegalArgumentException("cannot get reference sql from model");
@@ -279,6 +283,6 @@ public class ModelSqlRender
                 .filter(column -> column.getRelationship().isEmpty())
                 .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
                 .collect(joining(", "));
-        return format("SELECT %s FROM (%s) AS \"%s\"", selectItems, refSql, model.getName());
+        return format("SELECT %s FROM %s AS \"%s\"", selectItems, refSql, model.getName());
     }
 }
