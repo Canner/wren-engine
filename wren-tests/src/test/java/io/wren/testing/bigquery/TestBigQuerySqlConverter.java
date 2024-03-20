@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.wren.testing;
+package io.wren.testing.bigquery;
 
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
@@ -28,6 +28,7 @@ import io.wren.base.dto.Manifest;
 import io.wren.main.WrenMetastore;
 import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
+import io.wren.testing.AbstractSqlConverterTest;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -39,6 +40,7 @@ import static java.lang.System.getenv;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBigQuerySqlConverter
+        extends AbstractSqlConverterTest
 {
     private static final SessionContext DEFAULT_SESSION_CONTEXT = SessionContext.builder()
             .setCatalog("canner-cml")
@@ -48,7 +50,10 @@ public class TestBigQuerySqlConverter
 
     @BeforeClass
     public void createBigQueryClient()
+            throws Exception
     {
+        prepareConfig();
+
         BigQueryConfig config = new BigQueryConfig();
         config.setProjectId(getenv("TEST_BIG_QUERY_PROJECT_ID"))
                 .setCredentialsKey(getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
