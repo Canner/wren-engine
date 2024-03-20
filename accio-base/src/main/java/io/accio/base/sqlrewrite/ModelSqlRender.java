@@ -218,7 +218,7 @@ public class ModelSqlRender
                 .forEach(column -> collectRelationship(column, baseModel));
         String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
 
-        String modelSubQuery = format("(SELECT %s FROM (%s) AS \"%s\") AS \"%s\"",
+        String modelSubQuery = format("(SELECT %s FROM %s AS \"%s\") AS \"%s\"",
                 modelSubQuerySelectItemsExpression,
                 refSql,
                 baseModel.getName(),
