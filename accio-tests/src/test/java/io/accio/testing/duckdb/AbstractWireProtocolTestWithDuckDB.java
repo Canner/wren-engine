@@ -23,8 +23,11 @@ import io.accio.testing.TestingAccioServer;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+import static io.accio.base.config.AccioConfig.ACCIO_DATASOURCE_TYPE;
 import static io.accio.base.config.AccioConfig.DataSourceType.DUCKDB;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -36,26 +39,36 @@ public abstract class AbstractWireProtocolTestWithDuckDB
     protected TestingAccioServer createAccioServer()
             throws Exception
     {
-        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("accio.datasource.type", DUCKDB.name())
+        ImmutableMap.Builder<String, String> propBuilder = ImmutableMap.<String, String>builder()
+                .put(ACCIO_DATASOURCE_TYPE, DUCKDB.name())
                 .put("pg-wire-protocol.auth.file", requireNonNull(getClass().getClassLoader().getResource("accounts")).getPath());
 
         Path dir = Files.createTempDirectory(getAccioDirectory());
         if (getAccioMDLPath().isPresent()) {
             Files.copy(Path.of(getAccioMDLPath().get()), dir.resolve("mdl.json"));
         }
-        properties.put("accio.directory", dir.toString());
+        propBuilder.put("accio.directory", dir.toString());
+
+        Map<String, String> properties = new HashMap<>(propBuilder.build());
+        properties.putAll(properties());
 
         TestingAccioServer accioServer = TestingAccioServer.builder()
-                .setRequiredConfigs(properties.build())
+                .setRequiredConfigs(properties)
                 .build();
 
-        initDuckDB(accioServer);
+        if (properties.get(ACCIO_DATASOURCE_TYPE).equals(DUCKDB.name())) {
+            initDuckDB(accioServer);
+        }
 
         return accioServer;
     }
 
-    private void initDuckDB(TestingAccioServer accioServer)
+    protected Map<String, String> properties()
+    {
+        return ImmutableMap.of();
+    }
+
+    protected void initDuckDB(TestingAccioServer accioServer)
             throws Exception
     {
         ClassLoader classLoader = getClass().getClassLoader();
