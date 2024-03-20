@@ -17,6 +17,8 @@ package io.accio.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.accio.base.Utils.requireNonNullEmpty;
 import static java.lang.String.format;
@@ -75,6 +77,25 @@ public class TableReference
     private boolean isNullOrEmpty(String str)
     {
         return str == null || str.isEmpty();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        TableReference that = (TableReference) o;
+        return Objects.equals(catalog, that.catalog) && Objects.equals(schema, that.schema) && Objects.equals(table, that.table);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(catalog, schema, table);
     }
 
     @Override
