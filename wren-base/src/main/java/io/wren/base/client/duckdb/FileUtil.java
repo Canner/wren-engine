@@ -25,6 +25,8 @@ import static java.nio.file.StandardOpenOption.APPEND;
 
 public class FileUtil
 {
+    public static final String ARCHIVED = "archived";
+
     private FileUtil() {}
 
     public static void createDir(Path path)
@@ -73,7 +75,7 @@ public class FileUtil
             if (!Files.exists(path)) {
                 return;
             }
-            Path archiveDir = path.getParent().resolve("archive");
+            Path archiveDir = path.getParent().resolve(ARCHIVED);
             if (!Files.exists(archiveDir)) {
                 createDir(archiveDir);
             }
