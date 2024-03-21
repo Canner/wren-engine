@@ -23,6 +23,7 @@ import io.wren.main.metadata.Metadata;
 import io.wren.main.sql.SqlRewrite;
 import io.wren.main.sql.duckdb.RewriteArray;
 import io.wren.main.sql.duckdb.RewriteFunction;
+import io.wren.main.sql.duckdb.RewriteType;
 import org.intellij.lang.annotations.Language;
 
 import javax.inject.Inject;
@@ -53,6 +54,7 @@ public class DuckDBSqlConverter
         Node rewrittenNode = parseSql(sql);
 
         List<SqlRewrite> sqlRewrites = ImmutableList.of(
+                RewriteType.INSTANCE,
                 // DuckDB doesn't support `ARRAY[1,2,3][1]` but `array_value(1,2,3])[1]` is supported
                 RewriteArray.INSTANCE,
                 RewriteFunction.INSTANCE);

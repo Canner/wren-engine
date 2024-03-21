@@ -20,10 +20,13 @@ import io.wren.base.Parameter;
 import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.Client;
 import io.wren.base.client.jdbc.JdbcRecordIterator;
+import io.wren.base.type.ByteaType;
+import io.wren.base.type.JsonType;
 import io.wren.base.type.PGArray;
 import io.wren.base.type.PGType;
 import io.wren.base.type.TimestampType;
 import org.duckdb.DuckDBArray;
+import org.duckdb.DuckDBResultSet;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -60,8 +63,7 @@ public class DuckdbRecordIterator
         ResultSetMetaData resultSetMetaData = jdbcRecordIterator.getResultSetMetaData();
         ImmutableList.Builder<Column> columnBuilder = ImmutableList.builder();
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            int columnType = resultSetMetaData.getColumnType(i);
-            PGType<?> pgType = toPGType(columnType);
+            PGType<?> pgType = toPGType(resultSetMetaData, i);
             columnBuilder.add(new Column(resultSetMetaData.getColumnName(i), pgType));
         }
         this.columns = columnBuilder.build();
@@ -101,8 +103,20 @@ public class DuckdbRecordIterator
             if (pgType instanceof TimestampType) {
                 return ((Timestamp) value).toLocalDateTime();
             }
-            if (pgType.equals(PGArray.VARCHAR_ARRAY)) {
-                return Arrays.stream((Object[]) ((DuckDBArray) value).getArray()).map(Object::toString).collect(toList());
+            if (pgType instanceof ByteaType) {
+                if (value instanceof DuckDBResultSet.DuckDBBlobResult) {
+                    DuckDBResultSet.DuckDBBlobResult blob = (DuckDBResultSet.DuckDBBlobResult) value;
+                    return blob.getBytes(0, (int) blob.length());
+                }
+            }
+            if (pgType instanceof JsonType) {
+                return value.toString();
+            }
+            if (pgType instanceof PGArray) {
+                DuckDBArray duckDBArray = (DuckDBArray) value;
+                return Arrays.stream((Object[]) (duckDBArray).getArray())
+                        .map(innerVal -> convertValue(((PGArray) pgType).getInnerType(), innerVal))
+                        .collect(toList());
             }
             return value;
         }
