@@ -149,8 +149,9 @@ public class PgMetastoreImpl
         try {
             return configManager.getConfig(CacheStorageConfig.class);
         }
-        catch (Exception e) {
-            LOG.warn(e, "%s connector does not support cache storage. Cache is disable.", configManager.getConfig(WrenConfig.class).getDataSourceType().name());
+        catch (Exception ignored) {
+            LOG.debug(ignored, "Failed to get cache storage config");
+            LOG.warn("%s connector does not support cache storage. Cache is disable.", configManager.getConfig(WrenConfig.class).getDataSourceType().name());
             return null;
         }
     }
