@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static io.wren.base.Utils.randomIntString;
+import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
 import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.model;
@@ -105,7 +106,7 @@ public class TestMDLResource
         assertThat(getCurrentManifest().getModels().get(0).getColumns().size()).isEqualTo(1);
         waitUntilReady();
 
-        assertThat(requireNonNull(mdlDir.resolve("archive").toFile().listFiles()).length).isEqualTo(2);
+        assertThat(requireNonNull(mdlDir.resolve(ARCHIVED).toFile().listFiles()).length).isEqualTo(2);
         assertThatNoException().isThrownBy(() -> preview(new PreviewDto(null, "select orderkey from Orders limit 100", null)));
     }
 

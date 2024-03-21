@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static io.wren.base.Utils.checkArgument;
+import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -130,7 +131,7 @@ public class WrenManager
             throws IOException
     {
         cacheManager.removeCacheIfExist(oldWrenMDL.getCatalog(), oldWrenMDL.getSchema());
-        File archived = new File(wrenMDLDirectory.getAbsoluteFile() + "/archive");
+        File archived = new File(wrenMDLDirectory.getAbsoluteFile() + "/" + ARCHIVED);
         if (!archived.exists()) {
             if (!archived.mkdir()) {
                 throw new IOException("Cannot create archive folder");

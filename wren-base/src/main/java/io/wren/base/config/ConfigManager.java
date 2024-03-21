@@ -59,6 +59,7 @@ import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORA
 import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_REGION;
 import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_SECRET_KEY;
 import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_URL_STYLE;
+import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
 import static io.wren.base.config.PostgresConfig.POSTGRES_JDBC_URL;
 import static io.wren.base.config.PostgresConfig.POSTGRES_PASSWORD;
 import static io.wren.base.config.PostgresConfig.POSTGRES_USER;
@@ -386,7 +387,7 @@ public class ConfigManager
             throws IOException
     {
         Path home = new File(configFile).getParentFile().toPath();
-        File archived = home.resolve("archived").toFile();
+        File archived = home.resolve(ARCHIVED).toFile();
         if (!archived.exists()) {
             if (!archived.mkdir()) {
                 throw new IOException("Cannot create archive folder");
