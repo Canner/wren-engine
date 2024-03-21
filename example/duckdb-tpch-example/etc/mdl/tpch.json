@@ -1,0 +1,355 @@
+{
+  "catalog": "wren",
+  "schema": "tpch",
+  "models": [
+    {
+      "name": "Orders",
+      "tableReference": {
+        "catalog": "memory",
+        "schema": "tpch",
+        "table": "orders"
+      },
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "o_orderkey",
+          "type": "integer"
+        },
+        {
+          "name": "custkey",
+          "expression": "o_custkey",
+          "type": "integer"
+        },
+        {
+          "name": "orderstatus",
+          "expression": "o_orderstatus",
+          "type": "varchar"
+        },
+        {
+          "name": "totalprice",
+          "expression": "o_totalprice",
+          "type": "float"
+        },
+        {
+          "name": "orderdate",
+          "expression": "o_orderdate",
+          "type": "date"
+        },
+        {
+          "name": "orderpriority",
+          "expression": "o_orderpriority",
+          "type": "varchar"
+        },
+        {
+          "name": "clerk",
+          "expression": "o_clerk",
+          "type": "varchar"
+        },
+        {
+          "name": "shippriority",
+          "expression": "o_shippriority",
+          "type": "integer"
+        },
+        {
+          "name": "comment",
+          "expression": "o_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "OrdersCustomer"
+        },
+        {
+          "name": "lineitems",
+          "type": "Lineitem",
+          "relationship": "OrdersLineitem"
+        }
+      ],
+      "primaryKey": "orderkey"
+    },
+    {
+      "name": "Customer",
+      "tableReference": {
+        "catalog": "memory",
+        "schema": "tpch",
+        "table": "customer"
+      },
+      "columns": [
+        {
+          "name": "custkey",
+          "expression": "c_custkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "c_name",
+          "type": "varchar"
+        },
+        {
+          "name": "address",
+          "expression": "c_address",
+          "type": "varchar"
+        },
+        {
+          "name": "nationkey",
+          "expression": "c_nationkey",
+          "type": "integer"
+        },
+        {
+          "name": "phone",
+          "expression": "c_phone",
+          "type": "varchar"
+        },
+        {
+          "name": "acctbal",
+          "expression": "c_acctbal",
+          "type": "float"
+        },
+        {
+          "name": "mktsegment",
+          "expression": "c_mktsegment",
+          "type": "varchar"
+        },
+        {
+          "name": "comment",
+          "expression": "c_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "nation",
+          "type": "Nation",
+          "relationship": "CustomerNation"
+        },
+        {
+          "name": "orders",
+          "type": "Orders",
+          "relationship": "OrdersCustomer"
+        }
+      ],
+      "primaryKey": "custkey"
+    },
+    {
+      "name": "Lineitem",
+      "tableReference": {
+        "catalog": "memory",
+        "schema": "tpch",
+        "table": "lineitem"
+      },
+      "columns": [
+        {
+          "name": "orderkey",
+          "expression": "l_orderkey",
+          "type": "integer"
+        },
+        {
+          "name": "linenumber",
+          "expression": "l_linenumber",
+          "type": "integer"
+        },
+        {
+          "name": "partkey",
+          "expression": "l_partkey",
+          "type": "integer"
+        },
+        {
+          "name": "suppkey",
+          "expression": "l_suppkey",
+          "type": "integer"
+        },
+        {
+          "name": "quantity",
+          "expression": "l_quantity",
+          "type": "double"
+        },
+        {
+          "name": "extendedprice",
+          "expression": "l_extendedprice",
+          "type": "double"
+        },
+        {
+          "name": "discount",
+          "expression": "l_discount",
+          "type": "double"
+        },
+        {
+          "name": "tax",
+          "expression": "l_tax",
+          "type": "double"
+        },
+        {
+          "name": "returnflag",
+          "expression": "l_returnflag",
+          "type": "varchar"
+        },
+        {
+          "name": "linestatus",
+          "expression": "l_linestatus",
+          "type": "varchar"
+        },
+        {
+          "name": "shipdate",
+          "expression": "l_shipdate",
+          "type": "date"
+        },
+        {
+          "name": "commitdate",
+          "expression": "l_commitdate",
+          "type": "date"
+        },
+        {
+          "name": "receiptdate",
+          "expression": "l_receiptdate",
+          "type": "date"
+        },
+        {
+          "name": "shipinstruct",
+          "expression": "l_shipinstruct",
+          "type": "varchar"
+        },
+        {
+          "name": "shipmode",
+          "expression": "l_shipmode",
+          "type": "varchar"
+        },
+        {
+          "name": "comment",
+          "expression": "l_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "order_field",
+          "type": "Orders",
+          "relationship": "OrdersLineitem"
+        },
+        {
+          "name": "orderkey_linenumber",
+          "type": "varchar",
+          "expression": "concat(l_orderkey, l_linenumber)"
+        }
+      ],
+      "primaryKey": "orderkey_linenumber"
+    },
+    {
+      "name": "Part",
+      "tableReference": {
+        "catalog": "memory",
+        "schema": "tpch",
+        "table": "part"
+      },
+      "columns": [
+        {
+          "name": "partkey",
+          "expression": "p_partkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "p_name",
+          "type": "varchar"
+        },
+        {
+          "name": "mfgr",
+          "expression": "p_mfgr",
+          "type": "varchar"
+        },
+        {
+          "name": "brand",
+          "expression": "p_brand",
+          "type": "varchar"
+        },
+        {
+          "name": "type",
+          "expression": "p_type",
+          "type": "varchar"
+        },
+        {
+          "name": "size",
+          "expression": "p_size",
+          "type": "integer"
+        },
+        {
+          "name": "container",
+          "expression": "p_container",
+          "type": "varchar"
+        },
+        {
+          "name": "retailprice",
+          "expression": "p_retailprice",
+          "type": "double"
+        },
+        {
+          "name": "comment",
+          "expression": "p_comment",
+          "type": "varchar"
+        }
+      ],
+      "primaryKey": "partkey"
+    },
+    {
+      "name": "Nation",
+      "tableReference": {
+        "catalog": "memory",
+        "schema": "tpch",
+        "table": "nation"
+      },
+      "columns": [
+        {
+          "name": "nationkey",
+          "expression": "n_nationkey",
+          "type": "integer"
+        },
+        {
+          "name": "name",
+          "expression": "n_name",
+          "type": "varchar"
+        },
+        {
+          "name": "regionkey",
+          "expression": "n_regionkey",
+          "type": "integer"
+        },
+        {
+          "name": "comment",
+          "expression": "n_comment",
+          "type": "varchar"
+        },
+        {
+          "name": "customer",
+          "type": "Customer",
+          "relationship": "CustomerNation"
+        }
+      ],
+      "primaryKey": "nationkey"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "OrdersCustomer",
+      "models": [
+        "Orders",
+        "Customer"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Orders.custkey = Customer.custkey"
+    },
+    {
+      "name": "OrdersLineitem",
+      "models": [
+        "Orders",
+        "Lineitem"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "Orders.orderkey = Lineitem.orderkey"
+    },
+    {
+      "name": "CustomerNation",
+      "models": [
+        "Customer",
+        "Nation"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "Customer.nationkey = Nation.nationkey"
+    }
+  ]
+}

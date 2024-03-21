@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  engine:
+    image: ghcr.io/canner/wren-engine:latest
+    platform: ${PLATFORM}
+    ports:
+      - 8080:8080
+      - 7432:7432
+    volumes:
+      - ./etc:/usr/src/app/etc
+      - ./data:/usr/src/app/data
