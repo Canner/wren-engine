@@ -137,6 +137,7 @@ public class ConfigManager
         initConfig(WrenConfig.WREN_DIRECTORY, wrenConfig.getWrenMDLDirectory().getPath(), false, true);
         initConfig(WrenConfig.WREN_DATASOURCE_TYPE, Optional.ofNullable(wrenConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
         initConfig(WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS, Boolean.toString(wrenConfig.getEnableDynamicFields()), false, false);
+        initConfig(WrenConfig.WREN_ENABLE_SQLGLOT, Boolean.toString(wrenConfig.getEnableSQLGlot()), false, false);
         initConfig(DUCKDB_STORAGE_ENDPOINT, duckdbS3StyleStorageConfig.getEndpoint(), false, true);
         initConfig(DUCKDB_STORAGE_ACCESS_KEY, duckdbS3StyleStorageConfig.getAccessKey().orElse(null), true, false);
         initConfig(DUCKDB_STORAGE_SECRET_KEY, duckdbS3StyleStorageConfig.getSecretKey().orElse(null), true, false);
@@ -242,6 +243,7 @@ public class ConfigManager
                 .ifPresent(directory -> result.setWrenMDLDirectory(new File(directory)));
         result.setDataSourceType(WrenConfig.DataSourceType.valueOf(configs.get(WrenConfig.WREN_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
         result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS)));
+        result.setEnableSQLGlot(Boolean.parseBoolean(configs.get(WrenConfig.WREN_ENABLE_SQLGLOT)));
         return result;
     }
 

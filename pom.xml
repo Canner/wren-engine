@@ -78,6 +78,7 @@
         <module>wren-testing</module>
         <module>wren-tests</module>
         <module>wren-validation</module>
+        <module>wren-sql-converter</module>
     </modules>
 
     <repositories>

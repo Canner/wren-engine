@@ -26,12 +26,16 @@ public final class SessionContext
     private final String catalog;
     private final String schema;
     private final boolean enableDynamicField;
+    private final String readDialect;
+    private final String writeDialect;
 
-    private SessionContext(String catalog, String schema, boolean enableDynamicField)
+    private SessionContext(String catalog, String schema, boolean enableDynamicField, String readDialect, String writeDialect)
     {
         this.catalog = catalog;
         this.schema = schema;
         this.enableDynamicField = enableDynamicField;
+        this.readDialect = readDialect;
+        this.writeDialect = writeDialect;
     }
 
     public Optional<String> getCatalog()
@@ -49,11 +53,23 @@ public final class SessionContext
         return enableDynamicField;
     }
 
+    public Optional<String> getReadDialect()
+    {
+        return Optional.ofNullable(readDialect);
+    }
+
+    public Optional<String> getWriteDialect()
+    {
+        return Optional.ofNullable(writeDialect);
+    }
+
     public static class Builder
     {
         private String catalog;
         private String schema;
         private boolean enableDynamic;
+        private String readDialect;
+        private String writeDialect;
 
         public Builder setCatalog(String catalog)
         {
@@ -73,9 +89,21 @@ public final class SessionContext
             return this;
         }
 
+        public Builder setReadDialect(String readDialect)
+        {
+            this.readDialect = readDialect;
+            return this;
+        }
+
+        public Builder setWriteDialect(String writeDialect)
+        {
+            this.writeDialect = writeDialect;
+            return this;
+        }
+
         public SessionContext build()
         {
-            return new SessionContext(catalog, schema, enableDynamic);
+            return new SessionContext(catalog, schema, enableDynamic, readDialect, writeDialect);
         }
     }
 }
