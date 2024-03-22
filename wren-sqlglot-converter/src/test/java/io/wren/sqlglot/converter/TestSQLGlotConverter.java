@@ -12,24 +12,33 @@
  * limitations under the License.
  */
 
-package io.wren.testing.sqlglot;
+package io.wren.sqlglot.converter;
 
 import io.wren.base.SessionContext;
-import io.wren.sql.converter.SQLGlotConverter;
-import io.wren.sql.glot.SQLGlot;
+import io.wren.sqlglot.TestingSQLGlotServer;
+import io.wren.sqlglot.glot.SQLGlot;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestSQLGlot
+public class TestSQLGlotConverter
 {
-    SQLGlotConverter sqlGlotConverter;
+    private SQLGlotConverter sqlGlotConverter;
+    private TestingSQLGlotServer testingSQLGlotServer;
 
     @BeforeClass
     public void setup()
     {
         sqlGlotConverter = new SQLGlotConverter();
+        testingSQLGlotServer = new TestingSQLGlotServer();
+    }
+
+    @AfterMethod
+    public void close()
+    {
+        testingSQLGlotServer.close();
     }
 
     @Test
@@ -73,6 +82,6 @@ public class TestSQLGlot
                 .setWriteDialect(SQLGlot.Dialect.DUCKDB.getDialect())
                 .build();
         assertThat(sqlGlotConverter.convert("SELECT ARRAY[1,2,3][1]", sessionContext))
-                .isEqualTo("SELECT array_value(1, 2, 3)[1]");
+                .isEqualTo("SELECT ([1, 2, 3])[1]");
     }
 }

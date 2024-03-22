@@ -21,7 +21,7 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
-import io.wren.sql.converter.SQLGlotConverter;
+import io.wren.sqlglot.converter.SQLGlotConverter;
 
 import javax.inject.Inject;
 

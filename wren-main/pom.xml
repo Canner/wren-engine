@@ -251,7 +251,7 @@
         </dependency>
         <dependency>
             <groupId>io.wren</groupId>
-            <artifactId>wren-sql-converter</artifactId>
+            <artifactId>wren-sqlglot-converter</artifactId>
             <version>0.3.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>

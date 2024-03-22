@@ -12,24 +12,26 @@
  * limitations under the License.
  */
 
-package io.wren.sql.converter;
+package io.wren.sqlglot.converter;
 
 import io.wren.base.SessionContext;
 import io.wren.base.sql.SqlConverter;
-import io.wren.sql.glot.SQLGlot;
+import io.wren.sqlglot.glot.SQLGlot;
 
 import java.io.IOException;
 
 public class SQLGlotConverter
         implements SqlConverter
 {
+    private SQLGlot sqlGlot = new SQLGlot();
+
     @Override
     public String convert(String sql, SessionContext sessionContext)
     {
         SQLGlot.Dialect readDialect = SQLGlot.Dialect.valueOf(sessionContext.getReadDialect().get().toUpperCase());
         SQLGlot.Dialect writeDialect = SQLGlot.Dialect.valueOf(sessionContext.getWriteDialect().get().toUpperCase());
         try {
-            return SQLGlot.transpile(sql, readDialect, writeDialect);
+            return sqlGlot.transpile(sql, readDialect, writeDialect);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
