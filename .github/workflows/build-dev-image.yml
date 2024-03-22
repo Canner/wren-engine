@@ -43,6 +43,6 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag ghcr.io/canner/wren-engine:main-${LATEST_COMMIT} \
-            --tag ghcr.io/canner/wren-engine:latest \
+            --tag ghcr.io/canner/wren-engine:nightly \
             --push -f ./Dockerfile \
             --build-arg "WREN_VERSION=${WREN_VERSION}" .
