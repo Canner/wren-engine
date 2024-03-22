@@ -16,7 +16,7 @@ jobs:
           token: ${{ secrets.GHCR_TOKEN }}
       - name: Set up Git
         run: |
-          git config --global user.email "fake@cannerdata.com"
+          git config --global user.email "dev@cannerdata.com"
           git config --global user.name "stable-release-bot"
       - name: Maven Prepare Release
         id: maven_prepare_release
