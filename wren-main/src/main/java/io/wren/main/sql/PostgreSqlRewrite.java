@@ -217,7 +217,9 @@ public final class PostgreSqlRewrite
             // handle bytea type with binary value
             if (type.equals("BYTEA") && node.getExpression() instanceof StringLiteral) {
                 String strValue = ((StringLiteral) node.getExpression()).getValue();
-                if (strValue.startsWith("\\x")) {
+                // DuckDB blob format like `\x68\x65\x6c\x6c\x6f` and can not remove `\x`.
+                // Only process the case that has only one `\x` prefix for PostgreSQL.
+                if (strValue.startsWith("\\x") && strValue.split("\\\\x").length - 1 == 1) {
                     node = new Cast(new BinaryLiteral(strValue.substring(2)), node.getType(), node.isSafe(), node.isTypeOnly());
                 }
             }

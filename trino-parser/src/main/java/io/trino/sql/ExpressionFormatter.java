@@ -820,6 +820,15 @@ public final class ExpressionFormatter
                 return result.toString();
             }
 
+            // Format ARRAY<BOOLEAN> To BOOLEAN[] for DuckDB
+            if (node.getName().getCanonicalValue().equals("ARRAY")
+                    && dialect == DUCKDB) {
+                result.delete(0, result.length());
+                result.append(process(node.getArguments().get(0), context));
+                result.append("[]");
+                return result.toString();
+            }
+
             if (!node.getArguments().isEmpty()) {
                 result.append(node.getArguments().stream()
                         .map(this::process)

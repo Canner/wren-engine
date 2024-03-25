@@ -26,6 +26,7 @@ import io.wren.base.client.Client;
 import io.wren.base.client.jdbc.JdbcRecordIterator;
 import io.wren.base.metadata.ColumnMetadata;
 import io.wren.base.metadata.StandardErrorCode;
+import io.wren.base.type.PGType;
 import org.duckdb.DuckDBConnection;
 
 import javax.annotation.Nullable;
@@ -178,9 +179,10 @@ public final class DuckdbClient
 
             ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();
             for (int i = 1; i <= columnCount; i++) {
+                PGType<?> type = toPGType(metaData, i);
                 builder.add(ColumnMetadata.builder()
                         .setName(metaData.getColumnName(i))
-                        .setType(toPGType(metaData.getColumnType(i)))
+                        .setType(type)
                         .build());
             }
             return builder.build();
