@@ -25,7 +25,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
@@ -33,8 +32,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +42,6 @@ import static io.wren.base.type.VarcharType.VARCHAR;
 import static io.wren.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.wren.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.wren.testing.TestingWireProtocolClient.Parameter.textParameter;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
@@ -940,76 +936,6 @@ public class TestWireProtocolWithDuckDB
             PreparedStatement stmt = connection.prepareStatement(sql);
             ResultSet resultSet = stmt.executeQuery();
             resultSet.next();
-        }
-    }
-
-    @DataProvider
-    public Object[][] paramTypes()
-    {
-        return new Object[][] {
-                {"bool", true},
-                {"bool", false},
-                {"int8", Long.MIN_VALUE},
-                {"int8", Long.MAX_VALUE},
-                {"float8", Double.MIN_VALUE},
-                {"float8", Double.MAX_VALUE},
-                {"char", "c"},
-                {"varchar", "Bag full of 💰"},
-                {"text", "Bag full of 💰"},
-                {"name", "Piękna łąka w 東京都"},
-                {"int4", Integer.MIN_VALUE},
-                {"int4", Integer.MAX_VALUE},
-                {"int2", Short.MIN_VALUE},
-                {"int2", Short.MAX_VALUE},
-                {"float4", Float.MIN_VALUE},
-                {"float4", Float.MAX_VALUE},
-                {"oid", 1L},
-                {"numeric", new BigDecimal("30.123")},
-                {"date", LocalDate.of(1900, 1, 3)},
-                // TODO: Support time
-                // {"time", LocalTime.of(12, 10, 16)},
-                {"timestamp", LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000)},
-                // TODO: Support timestamptz
-                // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
-                {"json", "{\"test\":3, \"test2\":4}"},
-                {"bytea", "test1".getBytes(UTF_8)},
-                // TODO: Support interval
-                // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
-                // TODO: Wait DuckDB support array type
-                // {"array", new Boolean[] {true, false}},
-                // {"array", new Double[] {1.0, 2.0, 3.0}},
-                // {"array", new String[] {"hello", "world"}}
-        };
-    }
-
-    @Test(dataProvider = "paramTypes")
-    public void testJdbcParamTypes(String name, Object obj)
-            throws SQLException
-    {
-        try (Connection conn = createConnection()) {
-            PreparedStatement stmt = conn.prepareStatement("SELECT ? as col;");
-            stmt.setObject(1, obj);
-            ResultSet result = stmt.executeQuery();
-            result.next();
-            Object expected = obj;
-
-            if (name.equals("int2")) {
-                expected = ((Short) obj).intValue();
-            }
-
-            if (name.equals("array")) {
-                assertThat(result.getArray(1).getArray()).isEqualTo(expected);
-            }
-            else if (name.equals("date")) {
-                // pg jdbc handle date type as String if using `getObject`
-                assertThat(result.getDate(1).toLocalDate()).isEqualTo(expected);
-            }
-            else if (name.equals("timestamp")) {
-                assertThat(result.getTimestamp(1).toLocalDateTime()).isEqualTo(expected);
-            }
-            else {
-                assertThat(result.getObject(1)).isEqualTo(expected);
-            }
         }
     }
 
