@@ -316,7 +316,7 @@ public abstract class RequireWrenServer
     protected QueryResultDto queryDuckDB(String statement)
     {
         Request request = preparePost()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/query"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/query"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
@@ -330,7 +330,7 @@ public abstract class RequireWrenServer
     protected String getDuckDBInitSQL()
     {
         Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/init-sql"))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
@@ -343,7 +343,7 @@ public abstract class RequireWrenServer
     protected void setDuckDBInitSQL(String statement)
     {
         Request request = preparePut()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/init-sql"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
@@ -356,7 +356,7 @@ public abstract class RequireWrenServer
     protected void appendToDuckDBInitSQL(String statement)
     {
         Request request = preparePatch()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/init-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/init-sql"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
@@ -369,7 +369,7 @@ public abstract class RequireWrenServer
     protected String getDuckDBSessionSQL()
     {
         Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/session-sql"))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
@@ -382,7 +382,7 @@ public abstract class RequireWrenServer
     protected void setDuckDBSessionSQL(String statement)
     {
         Request request = preparePut()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/session-sql"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
@@ -395,7 +395,7 @@ public abstract class RequireWrenServer
     protected void appendToDuckDBSessionSQL(String statement)
     {
         Request request = preparePatch()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/DuckDB/settings/session-sql"))
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/data-source/duckdb/settings/session-sql"))
                 .setBodyGenerator(createStaticBodyGenerator(statement, UTF_8))
                 .build();
 
