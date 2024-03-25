@@ -49,8 +49,7 @@ public class TestSQLGlotConverter
                 .setWriteDialect(DUCKDB)
                 .build();
 
-        assertThat(sqlGlotConverter.convert("SELECT generate_array(1, 10)", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT GENERATE_SERIES(1, 10)");
+        assertConvert(sqlGlotConverter, "SELECT generate_array(1, 10)", "SELECT GENERATE_SERIES(1, 10)");
     }
 
     @Test
@@ -60,8 +59,7 @@ public class TestSQLGlotConverter
                 .setWriteDialect(BIGQUERY)
                 .build();
 
-        assertThat(sqlGlotConverter.convert("SELECT substring('Thomas' from 2 for 3)", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT SUBSTRING('Thomas', 2, 3)");
+        assertConvert(sqlGlotConverter, "SELECT substring('Thomas' from 2 for 3)", "SELECT SUBSTRING('Thomas', 2, 3)");
     }
 
     @Test
@@ -71,8 +69,7 @@ public class TestSQLGlotConverter
                 .setWriteDialect(BIGQUERY)
                 .build();
 
-        assertThat(sqlGlotConverter.convert("SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT id FROM UNNEST([1]) AS id");
+        assertConvert(sqlGlotConverter, "SELECT a.id FROM UNNEST(ARRAY[1]) as a(id)", "SELECT id FROM UNNEST([1]) AS id");
     }
 
     @Test
@@ -82,7 +79,11 @@ public class TestSQLGlotConverter
                 .setWriteDialect(DUCKDB)
                 .build();
 
-        assertThat(sqlGlotConverter.convert("SELECT ARRAY[1,2,3][1]", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT ([1, 2, 3])[1]");
+        assertConvert(sqlGlotConverter, "SELECT ARRAY[1,2,3][1]", "SELECT ([1, 2, 3])[1]");
+    }
+
+    private static void assertConvert(SQLGlotConverter sqlGlotConverter, String sql, String expected)
+    {
+        assertThat(sqlGlotConverter.convert(sql, DEFAULT_SESSION_CONTEXT)).isEqualTo(expected);
     }
 }
