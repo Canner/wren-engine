@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.metadata.StandardErrorCode.NOT_SUPPORTED;
 import static java.util.Locale.ENGLISH;
 
@@ -68,25 +67,26 @@ public final class DuckdbTypes
     public static final DuckdbType VARCHAR = new DuckdbType(Types.VARCHAR, "VARCHAR");
     public static final DuckdbType JSON = new DuckdbType(Types.STRUCT, "JSON");
 
-    private static final List<DuckdbType> duckdbTypes = ImmutableList.of(
-            BOOLEAN,
-            BIGINT,
-            BIT,
-            BLOB,
-            DATE,
-            DOUBLE,
-            REAL,
-            FLOAT,
-            DECIMAL,
-            INTEGER,
-            SMALLINT,
-            TINYINT,
-            INTERVAL,
-            TIME,
-            TIMESTAMP,
-            TIMESTAMP_WITH_TIMEZONE,
-            VARCHAR,
-            JSON);
+    private static final Map<String, DuckdbType> duckdbTypes = ImmutableMap.<String, DuckdbType>builder()
+            .put(BOOLEAN.getName(), BOOLEAN)
+            .put(BIGINT.getName(), BIGINT)
+            .put(BIT.getName(), BIT)
+            .put(BLOB.getName(), BLOB)
+            .put(DATE.getName(), DATE)
+            .put(DOUBLE.getName(), DOUBLE)
+            .put(REAL.getName(), REAL)
+            .put(FLOAT.getName(), FLOAT)
+            .put(DECIMAL.getName(), DECIMAL)
+            .put(INTEGER.getName(), INTEGER)
+            .put(SMALLINT.getName(), SMALLINT)
+            .put(TINYINT.getName(), TINYINT)
+            .put(INTERVAL.getName(), INTERVAL)
+            .put(TIME.getName(), TIME)
+            .put(TIMESTAMP.getName(), TIMESTAMP)
+            .put(TIMESTAMP_WITH_TIMEZONE.getName(), TIMESTAMP_WITH_TIMEZONE)
+            .put(VARCHAR.getName(), VARCHAR)
+            .put(JSON.getName(), JSON)
+            .build();
 
     private static final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()
             .put(BOOLEAN.getJdbcType(), BooleanType.BOOLEAN)
@@ -140,9 +140,7 @@ public final class DuckdbTypes
 
     public static PGType<?> toPGType(String typeName)
     {
-        Optional<? extends PGType<?>> pgType = duckdbTypes.stream()
-                .filter(duckdbType -> duckdbType.getName().equals(getEqualTypeName(typeName)))
-                .findFirst()
+        Optional<? extends PGType<?>> pgType = getDuckDBType(getEqualTypeName(typeName))
                 .map(DuckdbType::getJdbcType)
                 .map(duckdbTypeToPgTypeMap::get);
 
@@ -183,7 +181,12 @@ public final class DuckdbTypes
 
     public static List<String> getDuckDBTypeNames()
     {
-        return duckdbTypes.stream().map(DuckdbType::getName).collect(toImmutableList());
+        return ImmutableList.copyOf(duckdbTypes.keySet());
+    }
+
+    public static Optional<DuckdbType> getDuckDBType(String name)
+    {
+        return Optional.ofNullable(duckdbTypes.get(name));
     }
 
     private DuckdbTypes() {}
