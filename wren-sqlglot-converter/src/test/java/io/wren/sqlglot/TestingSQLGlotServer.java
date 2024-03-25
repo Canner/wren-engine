@@ -20,6 +20,7 @@ import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
@@ -33,10 +34,9 @@ public class TestingSQLGlotServer
 
     public TestingSQLGlotServer()
     {
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "python",
-                "/Users/grieve/CannerData/wren-engine/wren-sqlglot-server/main.py");
-
+        ProcessBuilder processBuilder = new ProcessBuilder("python", "main.py");
+        processBuilder.directory(new File("../wren-sqlglot-server").getAbsoluteFile());
+        processBuilder.inheritIO();
         processBuilder.redirectErrorStream(true);
 
         try {
@@ -46,8 +46,7 @@ public class TestingSQLGlotServer
             throw new RuntimeException(e);
         }
 
-        waitASecond();
-        // waitReady();
+        waitReady();
     }
 
     @Override
@@ -56,35 +55,26 @@ public class TestingSQLGlotServer
         process.destroy();
     }
 
-    private void waitASecond()
-    {
-        try {
-            Thread.sleep(1000);
-        }
-        catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private void waitReady()
     {
-        HttpClient client = new JettyHttpClient();
-        Request request = prepareGet()
-                .setUri(URI.create("http://0.0.0.0:8000/ready"))
-                .build();
-        while (true) {
-            try {
-                StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
-                if (response.getStatusCode() == 200) {
-                    break;
-                }
-            }
-            catch (Exception e) {
+        try (HttpClient client = new JettyHttpClient()) {
+            Request request = prepareGet()
+                    .setUri(URI.create("http://0.0.0.0:8000/ready"))
+                    .build();
+            while (true) {
                 try {
-                    Thread.sleep(100);
+                    StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
+                    if (response.getStatusCode() == 200) {
+                        break;
+                    }
                 }
-                catch (InterruptedException interruptedException) {
-                    throw new RuntimeException(interruptedException);
+                catch (Exception e) {
+                    try {
+                        Thread.sleep(100);
+                    }
+                    catch (InterruptedException interruptedException) {
+                        throw new RuntimeException(interruptedException);
+                    }
                 }
             }
         }
