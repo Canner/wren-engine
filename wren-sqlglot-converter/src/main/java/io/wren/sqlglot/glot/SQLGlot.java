@@ -25,6 +25,7 @@ import io.wren.sqlglot.dto.TranspileDTO;
 
 import javax.ws.rs.WebApplicationException;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 
@@ -33,8 +34,11 @@ import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public class SQLGlot
+        implements Closeable
 {
     public enum Dialect
     {
@@ -57,13 +61,13 @@ public class SQLGlot
     }
 
     private static final JsonCodec<TranspileDTO> TRANSPILE_DTO_JSON_CODEC = jsonCodec(TranspileDTO.class);
-
-    private final HttpClient client;
+    private static final URI BASE_URL = URI.create("http://0.0.0.0:8000/sqlglot/");
 
     public SQLGlot()
     {
         this.client = new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
     }
+    private final HttpClient client;
 
     public String transpile(String sql, Dialect read, Dialect write)
             throws IOException
@@ -71,11 +75,17 @@ public class SQLGlot
         return post("transpile", sql, read, write);
     }
 
+    @Override
+    public void close()
+    {
+        client.close();
+    }
+
     private String post(String api, String sql, Dialect read, Dialect write)
     {
         Request request = preparePost()
-                .setUri(URI.create("http://0.0.0.0:8000/sqlglot/" + api))
-                .setHeader("Content-Type", "application/json")
+                .setUri(BASE_URL.resolve(api))
+                .setHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
         StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
