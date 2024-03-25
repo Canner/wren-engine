@@ -38,7 +38,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
-@Path("/v1/data-source/DuckDB")
+@Path("/v1/data-source/duckdb")
 public class DuckDBResource
 {
     private final DuckDBMetadata metadata;
