@@ -164,17 +164,16 @@ public final class DuckdbClient
         }
     }
 
+    /**
+     * Describe the output of a query. DuckDB won't support to describe a sql with parameters in the select items.
+     * So we ignore the parameters here.
+     */
     @Override
-    public List<ColumnMetadata> describe(String sql, List<Parameter> parameters)
+    public List<ColumnMetadata> describe(String sql, List<Parameter> ignored)
     {
         try (Connection connection = createConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i).getValue());
-            }
-            // workaround for describe duckdb sql
-            preparedStatement.execute();
-            ResultSetMetaData metaData = preparedStatement.getResultSet().getMetaData();
+            ResultSetMetaData metaData = preparedStatement.getMetaData();
             int columnCount = metaData.getColumnCount();
 
             ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();

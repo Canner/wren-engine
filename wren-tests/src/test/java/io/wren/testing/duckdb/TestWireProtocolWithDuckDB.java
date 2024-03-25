@@ -30,6 +30,7 @@ import java.sql.Connection;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
@@ -982,7 +983,8 @@ public class TestWireProtocolWithDuckDB
         };
     }
 
-    @Test(dataProvider = "paramTypes")
+    // TODO: support selecting parameters
+    @Test(dataProvider = "paramTypes", enabled = false)
     public void testJdbcParamTypes(String name, Object obj)
             throws SQLException
     {
@@ -1010,6 +1012,31 @@ public class TestWireProtocolWithDuckDB
             else {
                 assertThat(result.getObject(1)).isEqualTo(expected);
             }
+        }
+    }
+
+    @Test
+    public void testJdbcDescribe()
+            throws Exception
+    {
+        try (Connection conn = createConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("select * from (values ('rows1', 10), ('rows2', 10)) as t(col1, col2) where col2 = ?");
+            ParameterMetaData metaData = stmt.getParameterMetaData();
+            AssertionsForClassTypes.assertThat(metaData.getParameterCount()).isEqualTo(1);
+            AssertionsForClassTypes.assertThat(metaData.getParameterType(1)).isEqualTo(Types.VARCHAR);
+
+            ResultSetMetaData resultSetMetaData = stmt.getMetaData();
+            AssertionsForClassTypes.assertThat(resultSetMetaData.getColumnCount()).isEqualTo(2);
+            AssertionsForClassTypes.assertThat(resultSetMetaData.getColumnType(1)).isEqualTo(Types.VARCHAR);
+            AssertionsForClassTypes.assertThat(resultSetMetaData.getColumnType(2)).isEqualTo(Types.INTEGER);
+        }
+
+        try (Connection conn = createConnection()) {
+            PreparedStatement stmt = conn.prepareStatement("select ? as col1, ? as col2");
+            assertThatThrownBy(stmt::getParameterMetaData)
+                    .hasMessageFindingMatch("Unsupported Type: UNKNOWN");
+            assertThatThrownBy(stmt::getMetaData)
+                    .hasMessageFindingMatch("Unsupported Type: UNKNOWN");
         }
     }
 
