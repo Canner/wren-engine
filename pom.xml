@@ -10,7 +10,7 @@
 
     <groupId>io.wren</groupId>
     <artifactId>wren-root</artifactId>
-    <version>0.3.1-SNAPSHOT</version>
+    <version>0.3.1</version>
 
     <name>WrenEngine</name>
     <description>WrenEngine</description>
@@ -27,7 +27,7 @@
     </licenses>
 
     <scm>
-        <tag>HEAD</tag>
+        <tag>0.3.1</tag>
     </scm>
 
     <properties>
