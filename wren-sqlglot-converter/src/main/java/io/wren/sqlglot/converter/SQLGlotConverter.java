@@ -20,21 +20,60 @@ import io.wren.sqlglot.glot.SQLGlot;
 
 import java.io.IOException;
 
+import static java.util.Objects.requireNonNull;
+
 public class SQLGlotConverter
         implements SqlConverter
 {
-    private SQLGlot sqlGlot = new SQLGlot();
+    private final SQLGlot.Dialect readDialect;
+    private final SQLGlot.Dialect writeDialect;
+    private final SQLGlot sqlGlot;
+
+    private SQLGlotConverter(
+            SQLGlot.Dialect readDialect,
+            SQLGlot.Dialect writeDialect)
+    {
+        this.readDialect = requireNonNull(readDialect, "readDialect is null");
+        this.writeDialect = requireNonNull(writeDialect, "writeDialect is null");
+        this.sqlGlot = new SQLGlot();
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
 
     @Override
     public String convert(String sql, SessionContext sessionContext)
     {
-        SQLGlot.Dialect readDialect = SQLGlot.Dialect.valueOf(sessionContext.getReadDialect().get().toUpperCase());
-        SQLGlot.Dialect writeDialect = SQLGlot.Dialect.valueOf(sessionContext.getWriteDialect().get().toUpperCase());
         try {
             return sqlGlot.transpile(sql, readDialect, writeDialect);
         }
         catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static class Builder
+    {
+        private SQLGlot.Dialect readDialect = SQLGlot.Dialect.TRINO;
+        private SQLGlot.Dialect writeDialect;
+
+        public Builder setReadDialect(SQLGlot.Dialect readDialect)
+        {
+            this.readDialect = readDialect;
+            return this;
+        }
+
+        public Builder setWriteDialect(SQLGlot.Dialect writeDialect)
+        {
+            this.writeDialect = writeDialect;
+            return this;
+        }
+
+        public SQLGlotConverter build()
+        {
+            return new SQLGlotConverter(readDialect, writeDialect);
         }
     }
 }

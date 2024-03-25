@@ -22,6 +22,7 @@ import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
 import io.wren.sqlglot.converter.SQLGlotConverter;
+import io.wren.sqlglot.glot.SQLGlot;
 
 import javax.inject.Inject;
 
@@ -33,10 +34,10 @@ public final class SqlConverterManager
     private final BigQuerySqlConverter bigQuerySqlConverter;
     private final PostgresSqlConverter postgresSqlConverter;
     private final DuckDBSqlConverter duckDBSqlConverter;
-    private final SQLGlotConverter sqlGlotConverter;
     private final ConfigManager configManager;
     private WrenConfig.DataSourceType dataSourceType;
     private SqlConverter delegate;
+    private SQLGlotConverter sqlGlotConverter;
 
     @Inject
     public SqlConverterManager(
@@ -49,26 +50,32 @@ public final class SqlConverterManager
         this.bigQuerySqlConverter = requireNonNull(bigQuerySqlConverter, "bigQuerySqlConverter is null");
         this.postgresSqlConverter = requireNonNull(postgresSqlConverter, "postgresSqlConverter is null");
         this.duckDBSqlConverter = requireNonNull(duckDBSqlConverter, "duckDBSqlConverter is null");
-        this.sqlGlotConverter = new SQLGlotConverter();
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
 
     private void changeDelegate(WrenConfig.DataSourceType dataSourceType)
     {
+        SQLGlot.Dialect dialect;
         switch (dataSourceType) {
             case BIGQUERY:
                 delegate = bigQuerySqlConverter;
+                dialect = SQLGlot.Dialect.BIGQUERY;
                 break;
             case POSTGRES:
                 delegate = postgresSqlConverter;
+                dialect = SQLGlot.Dialect.POSTGRES;
                 break;
             case DUCKDB:
                 delegate = duckDBSqlConverter;
+                dialect = SQLGlot.Dialect.DUCKDB;
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
         }
+        sqlGlotConverter = SQLGlotConverter.builder()
+                .setWriteDialect(dialect)
+                .build();
     }
 
     public void reload()

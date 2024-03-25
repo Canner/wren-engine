@@ -57,7 +57,8 @@ public class SQLGlot
     }
 
     private static final JsonCodec<TranspileDTO> TRANSPILE_DTO_JSON_CODEC = jsonCodec(TranspileDTO.class);
-    private HttpClient client;
+
+    private final HttpClient client;
 
     public SQLGlot()
     {
