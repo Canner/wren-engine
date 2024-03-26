@@ -138,6 +138,11 @@
         </dependency>
 
         <dependency>
+            <groupId>io.wren</groupId>
+            <artifactId>wren-sqlglot-converter</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
         </dependency>
@@ -248,12 +253,6 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.wren</groupId>
-            <artifactId>wren-sqlglot-converter</artifactId>
-            <version>0.3.1-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

@@ -63,11 +63,12 @@ public class SQLGlot
     private static final JsonCodec<TranspileDTO> TRANSPILE_DTO_JSON_CODEC = jsonCodec(TranspileDTO.class);
     private static final URI BASE_URL = URI.create("http://0.0.0.0:8000/sqlglot/");
 
+    private final HttpClient client;
+
     public SQLGlot()
     {
         this.client = new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
     }
-    private final HttpClient client;
 
     public String transpile(String sql, Dialect read, Dialect write)
             throws IOException

@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.wren.sqlglot;
+package io.wren.testing;
 
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.URI;
 
 import static io.airlift.http.client.Request.Builder.prepareGet;
-import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 
 public class TestingSQLGlotServer
         implements Closeable
@@ -63,7 +62,7 @@ public class TestingSQLGlotServer
                     .build();
             while (true) {
                 try {
-                    StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
+                    StringResponseHandler.StringResponse response = client.execute(request, StringResponseHandler.createStringResponseHandler());
                     if (response.getStatusCode() == 200) {
                         break;
                     }
