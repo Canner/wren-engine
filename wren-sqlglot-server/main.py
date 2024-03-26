@@ -10,9 +10,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sqlglot
 import sys
 
+import sqlglot
 import uvicorn
 from fastapi import FastAPI
 
@@ -37,7 +37,10 @@ def read_root():
 
 @app.post("/sqlglot/transpile")
 def transpile(dto: TranspileDTO):
-    return sqlglot.transpile(dto.sql, read=dto.read, write=dto.write)[0]
+    print(dto)
+    transpiled = sqlglot.transpile(dto.sql, read=dto.read, write=dto.write)[0]
+    print('Transpiled:', transpiled)
+    return transpiled
 
 
 if __name__ == "__main__":
