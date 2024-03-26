@@ -60,6 +60,7 @@ public class Analysis
     private final Set<CumulativeMetric> cumulativeMetrics = new HashSet<>();
     private final Set<View> views = new HashSet<>();
     private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
+    private final Map<NodeRef<Expression>, Field> referenceFields = new HashMap<>();
     private final List<SimplePredicate> simplePredicates = new ArrayList<>();
 
     private final Set<Node> requiredSourceNodes = new HashSet<>();
@@ -172,6 +173,16 @@ public class Analysis
     public Multimap<CatalogSchemaTableName, String> getCollectedColumns()
     {
         return collectedColumns;
+    }
+
+    public void addReferenceFields(Map<NodeRef<Expression>, Field> referenceFields)
+    {
+        this.referenceFields.putAll(referenceFields);
+    }
+
+    public Map<NodeRef<Expression>, Field> getReferenceFields()
+    {
+        return referenceFields;
     }
 
     void addTypeCoercion(NodeRef<Node> nodeRef, Node node)

@@ -23,6 +23,9 @@ import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.SubqueryExpression;
+import io.wren.base.SessionContext;
+import io.wren.base.WrenMDL;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,9 +39,9 @@ public class ExpressionAnalyzer
 {
     private ExpressionAnalyzer() {}
 
-    public static ExpressionAnalysis analyze(Scope scope, Expression expression)
+    public static ExpressionAnalysis analyze(Scope scope, Expression expression, SessionContext sessionContext, WrenMDL wrenMDL, Analysis analysis)
     {
-        ExpressionVisitor visitor = new ExpressionVisitor(scope);
+        ExpressionVisitor visitor = new ExpressionVisitor(scope, sessionContext, wrenMDL, analysis);
         visitor.process(expression);
 
         return new ExpressionAnalysis(visitor.getReferenceFields(), visitor.getPredicates(), visitor.isRequireRelation());
@@ -48,13 +51,23 @@ public class ExpressionAnalyzer
             extends DefaultTraversalVisitor<Void>
     {
         private final Scope scope;
+        private final WrenMDL wrenMDL;
+        private final SessionContext sessionContext;
+        private final Analysis analysis;
         private final Map<NodeRef<Expression>, Field> referenceFields = new HashMap<>();
         private final List<ComparisonExpression> predicates = new ArrayList<>();
         private boolean requireRelation;
 
-        public ExpressionVisitor(Scope scope)
+        public ExpressionVisitor(
+                Scope scope,
+                SessionContext sessionContext,
+                WrenMDL wrenMDL,
+                Analysis analysis)
         {
-            this.scope = requireNonNull(scope);
+            this.scope = requireNonNull(scope, "scope is null");
+            this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
+            this.wrenMDL = requireNonNull(wrenMDL, "wrenMDL is null");
+            this.analysis = requireNonNull(analysis, "analysis is null");
         }
 
         @Override
@@ -98,6 +111,13 @@ public class ExpressionAnalyzer
                 return null;
             }
             node.getArguments().forEach(this::process);
+            return null;
+        }
+
+        @Override
+        protected Void visitSubqueryExpression(SubqueryExpression node, Void context)
+        {
+            StatementAnalyzer.analyze(analysis, node.getQuery(), sessionContext, wrenMDL);
             return null;
         }
 
