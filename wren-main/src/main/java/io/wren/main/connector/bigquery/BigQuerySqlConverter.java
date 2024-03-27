@@ -31,7 +31,6 @@ import io.wren.main.sql.bigquery.RewriteArithmetic;
 import io.wren.main.sql.bigquery.RewriteNamesToAlias;
 import io.wren.main.sql.bigquery.RewriteToBigQueryFunction;
 import io.wren.main.sql.bigquery.RewriteToBigQueryType;
-import io.wren.main.sql.bigquery.TransformCorrelatedJoinToJoin;
 import io.wren.main.sql.bigquery.TypeCoercionRewrite;
 import org.intellij.lang.annotations.Language;
 
@@ -71,8 +70,6 @@ public class BigQuerySqlConverter
                 RemoveColumnAliasInAliasRelation.INSTANCE,
                 // bigquery doesn't support column alias in unnest alias relation
                 ReplaceColumnAliasInUnnest.INSTANCE,
-                // bigquery doesn't support correlated join in where clause
-                TransformCorrelatedJoinToJoin.INSTANCE,
                 RewriteToBigQueryFunction.INSTANCE,
                 RewriteToBigQueryType.INSTANCE,
                 // bigquery doesn't support parameter in types in cast
