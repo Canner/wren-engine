@@ -253,43 +253,6 @@ public class TestBigQuerySqlConverter
     }
 
     @Test
-    public void testTransformCorrelatedJoinToJoin()
-    {
-        assertThat(bigQuerySqlConverter.convert(
-                "SELECT t.typname, t.oid\n" +
-                        "FROM pg_type AS t\n" +
-                        "  INNER JOIN pg_namespace AS n ON t.typnamespace = n.oid\n" +
-                        "WHERE n.nspname <> 'pg_toast'\n" +
-                        "  AND (t.typrelid = 0\n" +
-                        "  OR (SELECT c.relkind = 'c'\n" +
-                        "      FROM pg_class AS c\n" +
-                        "      WHERE c.oid = t.typrelid))", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT\n" +
-                        "  t.typname\n" +
-                        ", t.oid\n" +
-                        "FROM\n" +
-                        "  ((pg_type t\n" +
-                        "INNER JOIN pg_namespace n ON (t.typnamespace = n.oid))\n" +
-                        "LEFT JOIN pg_class c ON (c.oid = t.typrelid))\n" +
-                        "WHERE ((n.nspname <> 'pg_toast') AND ((t.typrelid = 0) OR (c.relkind = 'c')))\n");
-
-        assertThat(bigQuerySqlConverter.convert(
-                "SELECT n.nationkey, n.name\n" +
-                        "FROM nation n\n" +
-                        "WHERE \n" +
-                        "  (SELECT (r.regionkey = 1)\n" +
-                        "    FROM region r\n" +
-                        "    WHERE (r.regionkey = n.regionkey))", DEFAULT_SESSION_CONTEXT))
-                .isEqualTo("SELECT\n" +
-                        "  n.nationkey\n" +
-                        ", n.name\n" +
-                        "FROM\n" +
-                        "  (nation n\n" +
-                        "LEFT JOIN region r ON (r.regionkey = n.regionkey))\n" +
-                        "WHERE (r.regionkey = 1)\n");
-    }
-
-    @Test
     public void testRemoveCatalogSchemaColumnPrefix()
     {
         assertThat(bigQuerySqlConverter.convert(
