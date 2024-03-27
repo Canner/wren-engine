@@ -33,11 +33,11 @@ import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.SelectItem;
+import io.trino.sql.tree.SetOperation;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
 import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
-import io.trino.sql.tree.Union;
 import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.trino.sql.tree.With;
@@ -61,11 +61,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static io.wren.base.metadata.StandardErrorCode.TYPE_MISMATCH;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
@@ -314,7 +317,7 @@ public final class StatementAnalyzer
             Scope sourceScope = analyzeFrom(node, scope);
             List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
-            node.getHaving().ifPresent(having -> ExpressionAnalyzer.analyze(sourceScope, having));
+            node.getHaving().ifPresent(having -> analyzeExpression(having, sourceScope));
             node.getLimit().ifPresent(limit -> analysis.setLimit(((Limit) limit).getRowCount()));
             node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems()
                     .forEach(item -> {
@@ -328,6 +331,7 @@ public final class StatementAnalyzer
                         }
                         analysis.addSortItem(new Analysis.SortItemAnalysis(name, item.getOrdering().name()));
                     }));
+            // TODO: this scope is wrong.
             return createAndAssignScope(node, scope, sourceScope);
         }
 
@@ -366,8 +370,7 @@ public final class StatementAnalyzer
         {
             outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
             // TODO: handle when singleColumn is a subquery
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, singleColumn.getExpression());
-            analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            ExpressionAnalysis expressionAnalysis = analyzeExpression(singleColumn.getExpression(), scope);
 
             if (expressionAnalysis.isRequireRelation()) {
                 analysis.addRequiredSourceNode(scope.getRelationId().getSourceNode()
@@ -390,8 +393,7 @@ public final class StatementAnalyzer
 
         private void analyzeWhere(Expression node, Scope scope)
         {
-            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, node);
-            analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            ExpressionAnalysis expressionAnalysis = analyzeExpression(node, scope);
             Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
             expressionAnalysis.getPredicates().stream()
                     .filter(PredicateMatcher.PREDICATE_MATCHER::shapeMatches)
@@ -452,10 +454,30 @@ public final class StatementAnalyzer
         }
 
         @Override
-        protected Scope visitUnion(Union node, Optional<Scope> scope)
+        protected Scope visitSetOperation(SetOperation node, Optional<Scope> scope)
         {
-            // TODO: output scope here isn't right
-            return Scope.builder().parent(scope).build();
+            checkState(node.getRelations().size() >= 2);
+            List<RelationType> relationTypes = node.getRelations().stream()
+                    .map(relation -> process(relation, scope).getRelationType()).collect(toImmutableList());
+            String setOperationName = node.getClass().getSimpleName().toUpperCase(ENGLISH);
+            List<Field> outputFields = relationTypes.get(0).getFields();
+            for (RelationType relationType : relationTypes) {
+                int outputFieldSize = outputFields.size();
+                int descFieldSize = relationType.getFields().size();
+                if (outputFieldSize != descFieldSize) {
+                    throw SemanticExceptions.semanticException(
+                            TYPE_MISMATCH,
+                            node,
+                            "%s query has different number of fields: %d, %d",
+                            setOperationName,
+                            outputFieldSize,
+                            descFieldSize);
+                }
+
+                // TODO: check type compatibility
+            }
+
+            return createAndAssignScope(node, scope, new RelationType(outputFields));
         }
 
         @Override
@@ -467,10 +489,10 @@ public final class StatementAnalyzer
             Scope outputScope = createAndAssignScope(node, scope, relationType);
 
             JoinCriteria criteria = node.getCriteria().orElse(null);
-            // TODO: handle other join types
+            // TODO: handle other join type
             if (criteria instanceof JoinOn) {
                 Expression expression = ((JoinOn) criteria).getExpression();
-                analysis.addCollectedColumns(ExpressionAnalyzer.analyze(outputScope, expression).getCollectedFields());
+                analyzeExpression(expression, outputScope);
                 typeCoercionOptional.ifPresent(typeCoercion -> {
                     Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
                     if (coerced.isPresent()) {
@@ -564,6 +586,14 @@ public final class StatementAnalyzer
                     .build();
             analysis.setScope(node, newScope);
             return newScope;
+        }
+
+        private ExpressionAnalysis analyzeExpression(Expression expression, Scope scope)
+        {
+            ExpressionAnalysis expressionAnalysis = ExpressionAnalyzer.analyze(scope, expression, sessionContext, wrenMDL, analysis);
+            analysis.addCollectedColumns(expressionAnalysis.getCollectedFields());
+            analysis.addReferenceFields(expressionAnalysis.getReferencedFields());
+            return expressionAnalysis;
         }
     }
 }

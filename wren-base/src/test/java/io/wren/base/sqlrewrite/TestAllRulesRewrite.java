@@ -36,6 +36,7 @@ import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.wren.base.sqlrewrite.Utils.SQL_PARSER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestAllRulesRewrite
         extends AbstractTestFramework
@@ -116,6 +117,16 @@ public class TestAllRulesRewrite
                         "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
                 {"select band, cast(price as integer) from useMetric order by band", "values  ('Yorushika', 2553), ('ZUTOMAYO', 4060)"},
                 {"select * from \"Order\"", "values (1, 1), (2, 1), (3, 2), (4, 3)"},
+                {"select name, price from Album where id in (select albumId from \"Order\")",
+                        "values('Gusare', 2560), ('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553)"},
+                {"select name, price from Album where id not in (select albumId from \"Order\")",
+                        "values(1, 1) limit 0"},
+                {"select * from (select name ,price from Album where bandId = 1 union select name, price from Album where bandId = 2) order by price",
+                        "values('HisoHiso Banashi', 1500), ('Dakara boku wa ongaku o yameta', 2553), ('Gusare', 2560)"},
+                {"select * from (select name ,price from Album where bandId = 1 except select name, price from Album where bandId = 2) order by price",
+                        "values('HisoHiso Banashi', 1500), ('Gusare', 2560)"},
+                {"select * from (select name ,price from Album where bandId = 1 intersect select name, price from Album where bandId = 2) order by price",
+                        "values(1, 1) limit 0"}
         };
     }
 
@@ -147,6 +158,14 @@ public class TestAllRulesRewrite
     {
         Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
         assertThat(rewrite(original)).isEqualTo(formatSql(expectedState));
+    }
+
+    // TODO: The scope of QuerySpecification is wrong. Enable it after fixing the scope.
+    @Test(enabled = false)
+    public void testSetOperationColumnNoMatch()
+    {
+        assertThatThrownBy(() -> rewrite("select name, price from Album union select price from Album"))
+                .hasMessageFindingMatch("query has different number of fields: expected 2, found 1");
     }
 
     private String rewrite(String sql)
