@@ -12,6 +12,16 @@ RUN \
 
 ARG WREN_VERSION
 ENV ENV_WREN_VERSION=${WREN_VERSION}
-COPY wren-server-${WREN_VERSION}-executable.jar ./
+ENV WREN_JAR=wren-server-${ENV_WREN_VERSION}-executable.jar
+COPY ${WREN_JAR} ./
 
-CMD ["sh", "-c", "java -Dconfig=etc/config.properties -jar wren-server-${ENV_WREN_VERSION}-executable.jar"]
+
+COPY wren-sqlglot-server/ ./wren-sqlglot-server/
+RUN apt-get install -y python3 python3-pip
+RUN pip3 install -r ./wren-sqlglot-server/requirements.txt
+
+
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
+CMD ./entrypoint.sh ${WREN_JAR}

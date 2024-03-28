@@ -30,6 +30,7 @@ public class TestSQLGlotConverter
         extends AbstractSqlConverterTest
 {
     private static final SessionContext DEFAULT_SESSION_CONTEXT = SessionContext.builder().build();
+
     private TestingSQLGlotServer testingSQLGlotServer;
 
     @BeforeClass

@@ -25,19 +25,18 @@ public class WrenConfig
     public static final String WREN_DIRECTORY = "wren.directory";
     public static final String WREN_DATASOURCE_TYPE = "wren.datasource.type";
     public static final String WREN_ENABLE_DYNAMIC_FIELDS = "wren.experimental-enable-dynamic-fields";
-    public static final String WREN_ENABLE_SQLGLOT = "wren.experimental.enable-sqlglot";
 
     public enum DataSourceType
     {
         BIGQUERY,
         POSTGRES,
         DUCKDB,
+        SNOWFLAKE
     }
 
     private File wrenMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType = DataSourceType.DUCKDB;
     private boolean enableDynamicFields;
-    private boolean enableSQLGlot;
 
     @NotNull
     public File getWrenMDLDirectory()
@@ -73,18 +72,6 @@ public class WrenConfig
     public WrenConfig setEnableDynamicFields(boolean enableDynamicFields)
     {
         this.enableDynamicFields = enableDynamicFields;
-        return this;
-    }
-
-    public boolean getEnableSQLGlot()
-    {
-        return enableSQLGlot;
-    }
-
-    @Config(WREN_ENABLE_SQLGLOT)
-    public WrenConfig setEnableSQLGlot(boolean enableSQLGlot)
-    {
-        this.enableSQLGlot = enableSQLGlot;
         return this;
     }
 }

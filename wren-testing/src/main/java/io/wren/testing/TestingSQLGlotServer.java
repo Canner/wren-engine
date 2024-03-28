@@ -18,11 +18,11 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
 import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
+import io.wren.sqlglot.glot.SQLGlot;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 
 import static io.airlift.http.client.Request.Builder.prepareGet;
 
@@ -58,7 +58,7 @@ public class TestingSQLGlotServer
     {
         try (HttpClient client = new JettyHttpClient()) {
             Request request = prepareGet()
-                    .setUri(URI.create("http://0.0.0.0:8000/ready"))
+                    .setUri(SQLGlot.BASE_URL)
                     .build();
             while (true) {
                 try {
@@ -71,8 +71,8 @@ public class TestingSQLGlotServer
                     try {
                         Thread.sleep(100);
                     }
-                    catch (InterruptedException interruptedException) {
-                        throw new RuntimeException(interruptedException);
+                    catch (InterruptedException ie) {
+                        throw new RuntimeException(ie);
                     }
                 }
             }

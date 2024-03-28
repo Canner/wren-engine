@@ -34,10 +34,10 @@ public final class SqlConverterManager
     private final BigQuerySqlConverter bigQuerySqlConverter;
     private final PostgresSqlConverter postgresSqlConverter;
     private final DuckDBSqlConverter duckDBSqlConverter;
+    private final SqlConverter snowflakeSqlConverter;
     private final ConfigManager configManager;
     private WrenConfig.DataSourceType dataSourceType;
     private SqlConverter delegate;
-    private SQLGlotConverter sqlGlotConverter;
 
     @Inject
     public SqlConverterManager(
@@ -50,32 +50,29 @@ public final class SqlConverterManager
         this.bigQuerySqlConverter = requireNonNull(bigQuerySqlConverter, "bigQuerySqlConverter is null");
         this.postgresSqlConverter = requireNonNull(postgresSqlConverter, "postgresSqlConverter is null");
         this.duckDBSqlConverter = requireNonNull(duckDBSqlConverter, "duckDBSqlConverter is null");
+        this.snowflakeSqlConverter = SQLGlotConverter.builder().setWriteDialect(SQLGlot.Dialect.SNOWFLAKE).build();
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
 
     private void changeDelegate(WrenConfig.DataSourceType dataSourceType)
     {
-        SQLGlot.Dialect dialect;
         switch (dataSourceType) {
             case BIGQUERY:
                 delegate = bigQuerySqlConverter;
-                dialect = SQLGlot.Dialect.BIGQUERY;
                 break;
             case POSTGRES:
                 delegate = postgresSqlConverter;
-                dialect = SQLGlot.Dialect.POSTGRES;
                 break;
             case DUCKDB:
                 delegate = duckDBSqlConverter;
-                dialect = SQLGlot.Dialect.DUCKDB;
+                break;
+            case SNOWFLAKE:
+                delegate = snowflakeSqlConverter;
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
         }
-        sqlGlotConverter = SQLGlotConverter.builder()
-                .setWriteDialect(dialect)
-                .build();
     }
 
     public void reload()
@@ -89,9 +86,6 @@ public final class SqlConverterManager
     @Override
     public String convert(String sql, SessionContext sessionContext)
     {
-        if (configManager.getConfig(WrenConfig.class).getEnableSQLGlot()) {
-            return sqlGlotConverter.convert(sql, sessionContext);
-        }
         return delegate.convert(sql, sessionContext);
     }
 }

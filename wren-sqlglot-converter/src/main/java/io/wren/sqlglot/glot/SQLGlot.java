@@ -28,6 +28,7 @@ import javax.ws.rs.WebApplicationException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Optional;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
@@ -42,10 +43,11 @@ public class SQLGlot
 {
     public enum Dialect
     {
-        TRINO("trino"),
         BIGQUERY("bigquery"),
+        DUCKDB("duckdb"),
         POSTGRES("postgres"),
-        DUCKDB("duckdb");
+        SNOWFLAKE("snowflake"),
+        TRINO("trino");
 
         private final String dialect;
 
@@ -60,8 +62,9 @@ public class SQLGlot
         }
     }
 
+    public static final URI BASE_URL = URI.create("http://0.0.0.0:" + getPort());
+
     private static final JsonCodec<TranspileDTO> TRANSPILE_DTO_JSON_CODEC = jsonCodec(TranspileDTO.class);
-    private static final URI BASE_URL = URI.create("http://0.0.0.0:8000/sqlglot/");
 
     private final HttpClient client;
 
@@ -70,22 +73,17 @@ public class SQLGlot
         this.client = new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
     }
 
-    public String transpile(String sql, Dialect read, Dialect write)
-            throws IOException
-    {
-        return post("transpile", sql, read, write);
-    }
-
     @Override
     public void close()
     {
         client.close();
     }
 
-    private String post(String api, String sql, Dialect read, Dialect write)
+    public String transpile(String sql, Dialect read, Dialect write)
+            throws IOException
     {
         Request request = preparePost()
-                .setUri(BASE_URL.resolve(api))
+                .setUri(BASE_URL.resolve("sqlglot").resolve("transpile"))
                 .setHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
@@ -93,11 +91,16 @@ public class SQLGlot
         if (response.getStatusCode() != 200) {
             throwWebApplicationException(response);
         }
-        return response.getBody().replaceAll("\"", "");
+        return TRANSPILE_DTO_JSON_CODEC.fromJson(response.getBody()).getSql();
     }
 
     private static void throwWebApplicationException(StringResponseHandler.StringResponse response)
     {
         throw new WebApplicationException(response.getBody());
+    }
+
+    public static String getPort()
+    {
+        return Optional.ofNullable(System.getenv("SQLGLOT_PORT")).orElse("8000");
     }
 }

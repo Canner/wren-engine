@@ -1,15 +1,5 @@
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-
+import logging
+import os
 import sys
 
 import sqlglot
@@ -21,27 +11,24 @@ from dto import TranspileDTO
 if sys.version_info < (3, 10):
     sys.exit('Python < 3.10 is not supported')
 
+logging.basicConfig(level=os.getenv('SQLGLOT_LOG_LEVEL', 'INFO'))
+logger = logging.getLogger()
 
 app = FastAPI()
 
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
-
-
-@app.get("/ready")
-def read_root():
-    return "OK"
+    return 'OK'
 
 
 @app.post("/sqlglot/transpile")
 def transpile(dto: TranspileDTO):
-    print(dto)
+    logger.debug('TranspiledDTO: ' + str(dto))
     transpiled = sqlglot.transpile(dto.sql, read=dto.read, write=dto.write)[0]
-    print('Transpiled:', transpiled)
-    return transpiled
+    logger.debug('Transpiled:' + transpiled)
+    return {'sql': transpiled}
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=os.getenv('SQLGLOT_PORT', 8000))
