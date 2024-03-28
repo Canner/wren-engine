@@ -17,7 +17,9 @@ package io.wren.main.wireprotocol;
 import io.netty.channel.Channel;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
+import io.wren.base.WrenException;
 import io.wren.base.type.PGType;
+import io.wren.main.wireprotocol.message.ResponseMessages;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,14 +27,16 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 
-class ResultSetSender
+public class ResultSetSender
         extends BaseResultSender
 {
     private final String query;
     private final Channel channel;
     private final ConnectorRecordIterator connectorRecordIterator;
     private final List<PGType> schema;
+    private final List<Column> columns;
     private final int maxRows;
 
     @Nullable
@@ -41,7 +45,7 @@ class ResultSetSender
     private long localRowCount;
     private long totalRowCount;
 
-    ResultSetSender(String query,
+    public ResultSetSender(String query,
             Channel channel,
             ConnectorRecordIterator connectorRecordIterator,
             int maxRows,
@@ -52,16 +56,22 @@ class ResultSetSender
         this.channel = channel;
         this.connectorRecordIterator = connectorRecordIterator;
         this.schema = connectorRecordIterator.getColumns().stream().map(Column::getType).collect(toImmutableList());
+        this.columns = connectorRecordIterator.getColumns();
         this.maxRows = maxRows;
         this.totalRowCount = previousCount;
         this.formatCodes = formatCodes;
+    }
+
+    public List<Column> getColumns()
+    {
+        return columns;
     }
 
     @Override
     public void sendRow(Object[] row)
     {
         localRowCount++;
-        Messages.sendDataRow(channel, row, schema, formatCodes);
+        ResponseMessages.sendDataRow(channel, row, schema, formatCodes);
         if (localRowCount % 1000 == 0) {
             channel.flush();
         }
@@ -70,7 +80,7 @@ class ResultSetSender
     @Override
     public void batchFinished()
     {
-        Messages.sendPortalSuspended(channel);
+        ResponseMessages.sendPortalSuspended(channel);
     }
 
     @Override
@@ -80,30 +90,44 @@ class ResultSetSender
             super.allFinished(true);
         }
         else {
-            Messages.sendCommandComplete(channel, query, totalRowCount);
+            ResponseMessages.sendCommandComplete(channel, query, totalRowCount);
         }
     }
 
     @Override
     public void fail(@Nonnull Throwable throwable)
     {
-        Messages.sendErrorResponse(channel, throwable).addListener(f -> super.fail(throwable));
+        ResponseMessages.sendErrorResponse(channel, throwable).addListener(f -> super.fail(throwable));
     }
 
-    public long sendResultSet()
-            throws Exception
+    public long getTotalRowCount()
+    {
+        return totalRowCount;
+    }
+
+    /**
+     * Send the result set to the client.
+     *
+     * @return If all finished, return true, otherwise return false.
+     */
+    public boolean sendResultSet()
     {
         while (connectorRecordIterator.hasNext()) {
             sendRow(connectorRecordIterator.next());
             if (maxRows > 0 && connectorRecordIterator.hasNext() && localRowCount % maxRows == 0) {
                 batchFinished();
                 totalRowCount += localRowCount;
-                return totalRowCount;
+                return false;
             }
         }
         totalRowCount += localRowCount;
-        connectorRecordIterator.close();
-        allFinished(false);
-        return totalRowCount;
+        try {
+            connectorRecordIterator.close();
+            allFinished(false);
+            return true;
+        }
+        catch (Exception e) {
+            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
+        }
     }
 }
