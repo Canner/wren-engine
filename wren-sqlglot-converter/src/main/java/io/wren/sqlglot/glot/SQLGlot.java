@@ -24,6 +24,7 @@ import io.airlift.units.Duration;
 import io.wren.sqlglot.dto.TranspileDTO;
 
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.UriBuilder;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -83,7 +84,7 @@ public class SQLGlot
             throws IOException
     {
         Request request = preparePost()
-                .setUri(BASE_URL.resolve("sqlglot").resolve("transpile"))
+                .setUri(UriBuilder.fromUri(BASE_URL).path("sqlglot").path("transpile").build())
                 .setHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
