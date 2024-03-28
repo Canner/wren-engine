@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 
 import java.nio.charset.StandardCharsets;
 
+import static io.wren.base.Utils.checkArgument;
 import static java.lang.Math.toIntExact;
 
 public class IntervalType
@@ -120,8 +121,7 @@ public class IntervalType
     @Override
     public Period readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        // assert valueLength == TYPE_LEN : "length should be " + TYPE_LEN + " because interval is 16. Actual length: " +
-        //         valueLength;
+        checkArgument(valueLength == TYPE_LEN, "length should be %s because interval is 16. Actual length: %s", TYPE_LEN, valueLength);
         long micros = buffer.readLong();
         int days = buffer.readInt();
         int months = buffer.readInt();

@@ -174,7 +174,7 @@ public class WrenDataLineage
             }
         }
         for (CumulativeMetric cumulativeMetric : mdl.listCumulativeMetrics()) {
-            Utils.checkArgument(mdl.isObjectExist(cumulativeMetric.getBaseObject()), format("cumulative metric base object %s not exist", cumulativeMetric.getBaseObject()));
+            Utils.checkArgument(mdl.isObjectExist(cumulativeMetric.getBaseObject()), "cumulative metric base object %s not exist", cumulativeMetric.getBaseObject());
             // handle measure
             sourceColumnsMap.put(
                     QualifiedName.of(cumulativeMetric.getName(), cumulativeMetric.getMeasure().getName()),

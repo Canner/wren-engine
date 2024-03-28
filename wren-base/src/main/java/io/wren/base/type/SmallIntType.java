@@ -20,8 +20,7 @@ import javax.annotation.Nonnull;
 
 import java.nio.charset.StandardCharsets;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
+import static io.wren.base.Utils.checkArgument;
 
 public class SmallIntType
         extends PGType<Short>
@@ -72,7 +71,7 @@ public class SmallIntType
     @Override
     public Short readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("length should be %s because short is int16. Actual length: %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "length should be %s because short is int16. Actual length: %s", TYPE_LEN, valueLength);
         return buffer.readShort();
     }
 

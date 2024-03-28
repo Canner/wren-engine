@@ -433,9 +433,9 @@ public final class StatementAnalyzer
                 Utils.checkArgument(arguments.size() == 3, "rollup function should have 3 arguments");
 
                 QualifiedName tableName = getQualifiedName(arguments.get(0));
-                Utils.checkArgument(tableName != null, format("'%s' cannot be resolved", arguments.get(0)));
-                Utils.checkArgument(arguments.get(1) instanceof Identifier, format("'%s' cannot be resolved", arguments.get(1)));
-                Utils.checkArgument(arguments.get(2) instanceof Identifier, format("'%s' cannot be resolved", arguments.get(2)));
+                Utils.checkArgument(tableName != null, "'%s' cannot be resolved", arguments.get(0));
+                Utils.checkArgument(arguments.get(1) instanceof Identifier, "'%s' cannot be resolved", arguments.get(1));
+                Utils.checkArgument(arguments.get(2) instanceof Identifier, "'%s' cannot be resolved", arguments.get(2));
 
                 CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, tableName);
                 Metric metric = wrenMDL.getMetric(catalogSchemaTableName).orElseThrow(() -> new IllegalArgumentException("Metric not found: " + catalogSchemaTableName));

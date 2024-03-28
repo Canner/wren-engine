@@ -261,7 +261,7 @@ public class ModelSqlRender
                                     .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getQualifiedCondition()))
                                     .collect(joining()));
 
-                    Utils.checkArgument(baseModel.getPrimaryKey() != null, format("primary key in model %s contains relationship shouldn't be null", baseModel.getName()));
+                    Utils.checkArgument(baseModel.getPrimaryKey() != null, "primary key in model %s contains relationship shouldn't be null", baseModel.getName());
                     Function<String, String> tableJoinCondition =
                             (name) -> format("\"%s\".\"%s\" = \"%s\".\"%s\"", baseModel.getName(), baseModel.getPrimaryKey(), name, baseModel.getPrimaryKey());
                     return new SubQueryJoinInfo(
