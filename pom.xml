@@ -641,6 +641,7 @@
                     <excludes>
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
+                        <exclude>TestTPCHWithSnowflake.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
