@@ -15,3 +15,5 @@ target/
 .mvn/maven.config
 wren-server/etc
 /**/var/
+__pycache__/
+venv/
