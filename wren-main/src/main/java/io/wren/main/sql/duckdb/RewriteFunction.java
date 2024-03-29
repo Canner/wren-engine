@@ -18,10 +18,14 @@ import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.sqlrewrite.BaseRewriter;
-import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.sql.SqlRewrite;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static io.wren.main.connector.duckdb.DuckDBMetadata.PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS;
 import static java.util.Locale.ENGLISH;
 
 public class RewriteFunction
@@ -54,13 +58,12 @@ public class RewriteFunction
 
         private QualifiedName resolveFunction(String functionName)
         {
-            String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
-
-            if (DuckDBMetadata.PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.containsKey(funcNameLowerCase)) {
-                return QualifiedName.of(DuckDBMetadata.PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.get(funcNameLowerCase));
+            List<String> funcNameLowerCase = Arrays.stream(functionName.toLowerCase(ENGLISH).split("\\.")).collect(Collectors.toList());
+            QualifiedName qualifiedName = QualifiedName.of(funcNameLowerCase);
+            if (PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.containsKey(qualifiedName.getSuffix())) {
+                return QualifiedName.of(PG_TO_DUCKDB_FUNCTION_NAME_MAPPINGS.get(qualifiedName.getSuffix()));
             }
-
-            return QualifiedName.of(functionName);
+            return qualifiedName;
         }
     }
 }

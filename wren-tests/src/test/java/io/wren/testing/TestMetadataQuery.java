@@ -39,6 +39,7 @@ import static io.wren.base.type.VarcharType.VARCHAR;
 import static io.wren.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestMetadataQuery
         extends AbstractWireProtocolTest
@@ -101,6 +102,34 @@ public class TestMetadataQuery
             result.next();
             assertThat(result.getString(1)).isEqualTo("Orders");
         }
+
+        assertThatNoException().isThrownBy(() -> {
+            try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+                ResultSet result = stmt.executeQuery("with table_privileges as (\n" +
+                        " select\n" +
+                        "   NULL as role,\n" +
+                        "   t.schemaname as schema,\n" +
+                        "   t.objectname as table,\n" +
+                        "   pg_catalog.has_table_privilege(current_user, '\"' || t.schemaname || '\"' || '.' || '\"' || t.objectname || '\"',  'UPDATE') as update,\n" +
+                        "   pg_catalog.has_table_privilege(current_user, '\"' || t.schemaname || '\"' || '.' || '\"' || t.objectname || '\"',  'SELECT') as select,\n" +
+                        "   pg_catalog.has_table_privilege(current_user, '\"' || t.schemaname || '\"' || '.' || '\"' || t.objectname || '\"',  'INSERT') as insert,\n" +
+                        "   pg_catalog.has_table_privilege(current_user, '\"' || t.schemaname || '\"' || '.' || '\"' || t.objectname || '\"',  'DELETE') as delete\n" +
+                        " from (\n" +
+                        "   select schemaname, tablename as objectname from pg_catalog.pg_tables\n" +
+                        "   union\n" +
+                        "   select schemaname, viewname as objectname from pg_catalog.pg_views\n" +
+                        "   union\n" +
+                        "   select schemaname, matviewname as objectname from pg_catalog.pg_matviews\n" +
+                        " ) t\n" +
+                        " where t.schemaname !~ '^pg_'\n" +
+                        "   and t.schemaname <> 'information_schema'\n" +
+                        "   and pg_catalog.has_schema_privilege(current_user, t.schemaname, 'USAGE')\n" +
+                        ")\n" +
+                        "select t.*\n" +
+                        "from table_privileges t");
+                result.next();
+            }
+        });
     }
 
     @Test
