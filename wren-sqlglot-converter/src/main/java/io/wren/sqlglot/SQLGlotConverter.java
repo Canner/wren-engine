@@ -28,16 +28,21 @@
 
 package io.wren.sqlglot;
 
+import io.airlift.log.Logger;
 import io.wren.base.SessionContext;
+import io.wren.base.WrenException;
 import io.wren.base.sql.SqlConverter;
 
 import java.io.IOException;
 
+import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static java.util.Objects.requireNonNull;
 
 public class SQLGlotConverter
         implements SqlConverter
 {
+    private static final Logger LOG = Logger.get(SQLGlotConverter.class);
+
     private final SQLGlot.Dialect readDialect;
     private final SQLGlot.Dialect writeDialect;
     private final SQLGlot sqlGlot;
@@ -60,10 +65,13 @@ public class SQLGlotConverter
     public String convert(String sql, SessionContext sessionContext)
     {
         try {
-            return sqlGlot.transpile(sql, readDialect, writeDialect);
+            LOG.info("[Input sql]: %s", sql);
+            String dialectSql = sqlGlot.transpile(sql, readDialect, writeDialect);
+            LOG.info("[Dialect sql]: %s", dialectSql);
+            return dialectSql;
         }
         catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
         }
     }
 
