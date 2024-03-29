@@ -14,6 +14,8 @@ if sys.version_info < (3, 10):
 logging.basicConfig(level=os.getenv('SQLGLOT_LOG_LEVEL', 'INFO'))
 logger = logging.getLogger()
 
+sqlglot.logger.setLevel(os.getenv('SQLGLOT_LOG_LEVEL', 'ERROR'))
+
 app = FastAPI()
 
 
