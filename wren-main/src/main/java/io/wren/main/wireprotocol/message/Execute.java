@@ -32,7 +32,6 @@ import static io.wren.main.wireprotocol.message.MessageUtils.sendHardWiredSessio
 public class Execute
         implements Plan
 {
-
     /**
      * Execute Message
      * Header:
