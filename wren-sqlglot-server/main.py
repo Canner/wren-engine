@@ -26,9 +26,9 @@ def read_root():
 
 @app.post("/sqlglot/transpile")
 def transpile(dto: TranspileDTO):
-    logger.debug('TranspiledDTO: ' + str(dto))
+    logger.debug(f'TranspiledDTO: {dto}')
     transpiled = sqlglot.transpile(dto.sql, read=dto.read, write=dto.write)[0]
-    logger.debug('Transpiled:' + transpiled)
+    logger.debug(f'Transpiled: {transpiled}')
     return {'sql': transpiled}
 
 
