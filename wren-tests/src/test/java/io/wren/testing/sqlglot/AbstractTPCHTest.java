@@ -22,10 +22,6 @@ import io.wren.testing.TPCH;
 import io.wren.testing.TestingSQLGlotServer;
 import org.testng.annotations.DataProvider;
 
-import java.util.List;
-
-import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
-
 public abstract class AbstractTPCHTest
         extends AbstractTestFramework
 {
@@ -56,6 +52,6 @@ public abstract class AbstractTPCHTest
 
     protected String wrenRewrite(String sql)
     {
-        return WrenPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(wrenMDL, null), List.of(WREN_SQL_REWRITE));
+        return WrenPlanner.rewrite(sql, DEFAULT_SESSION_CONTEXT, new AnalyzedMDL(wrenMDL, null));
     }
 }
