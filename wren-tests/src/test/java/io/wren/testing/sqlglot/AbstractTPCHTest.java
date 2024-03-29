@@ -45,7 +45,7 @@ public abstract class AbstractTPCHTest
     @DataProvider
     protected Object[][] queries()
     {
-        return TPCH.QUERIES.values().stream()
+        return TPCH.QUERIES.stream()
                 .map(query -> new Object[] {query})
                 .toArray(Object[][]::new);
     }

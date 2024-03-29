@@ -14,7 +14,7 @@
 
 package io.wren.testing;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Resources;
 import io.wren.base.WrenTypes;
 import io.wren.base.dto.Column;
@@ -23,46 +23,36 @@ import io.wren.base.dto.Model;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
-import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static org.testng.Assert.assertFalse;
 
 public class TPCH
 {
-    public static final Map<Integer, String> QUERIES = ImmutableMap.<Integer, String>builder()
-            .put(1, getTpchQuery(1, 3))
-            .put(2, getTpchQuery(2, 33, "part type like", "region name"))
-            .put(3, getTpchQuery(3, "market segment", "2013-03-05"))
-            .put(4, getTpchQuery(4, "2013-03-05"))
-            .put(5, getTpchQuery(5, "region name", "2013-03-05"))
-            .put(6, getTpchQuery(6, "2013-03-05", 33, 44))
-            .put(7, getTpchQuery(7, "nation name 1", "nation name 2"))
-            .put(8, getTpchQuery(8, "nation name", "region name", "part type"))
-            .put(9, getTpchQuery(9, "part name like"))
-            .put(10, getTpchQuery(10, "2013-03-05"))
-            .put(11, getTpchQuery(11, "nation name", 33))
-            .put(12, getTpchQuery(12, "ship mode 1", "ship mode 2", "2013-03-05"))
-            .put(13, getTpchQuery(13, "comment like 1", "comment like 2"))
-            .put(14, getTpchQuery(14, "2013-03-05"))
+    public static final List<String> QUERIES = ImmutableList.<String>builder()
+            .add(getTpchQuery(1))
+            .add(getTpchQuery(2))
+            .add(getTpchQuery(3))
+            .add(getTpchQuery(4))
+            .add(getTpchQuery(5))
+            .add(getTpchQuery(6))
+            .add(getTpchQuery(7))
+            .add(getTpchQuery(8))
+            .add(getTpchQuery(9))
+            .add(getTpchQuery(10))
+            .add(getTpchQuery(11))
+            .add(getTpchQuery(12))
+            .add(getTpchQuery(13))
+            .add(getTpchQuery(14))
             // query 15: views not supported
-            .put(16, getTpchQuery(16, "part brand", "part type like", 3, 4, 5, 6, 7, 8, 9, 10))
-            .put(17, getTpchQuery(17, "part brand", "part container"))
-            .put(18, getTpchQuery(18, 33))
-            .put(19, getTpchQuery(19, "part brand 1", "part brand 2", "part brand 3", 11, 22, 33))
-            .put(20, getTpchQuery(20, "part name like", "2013-03-05", "nation name"))
-            .put(21, getTpchQuery(21, "nation name"))
-            .put(22, getTpchQuery(22,
-                    "phone 1",
-                    "phone 2",
-                    "phone 3",
-                    "phone 4",
-                    "phone 5",
-                    "phone 6",
-                    "phone 7"))
+            .add(getTpchQuery(16))
+            .add(getTpchQuery(17))
+            .add(getTpchQuery(18))
+            .add(getTpchQuery(19))
+            .add(getTpchQuery(20))
+            .add(getTpchQuery(21))
+            .add(getTpchQuery(22))
             .build();
 
     public static final String ORDERS_PATH = requireNonNull(TPCH.class.getClassLoader().getResource("tpch/data/orders.parquet")).getPath();
@@ -192,19 +182,6 @@ public class TPCH
                 .collect(toImmutableList());
     }
 
-    private static String getTpchQuery(int query, Object... values)
-    {
-        String sql = getTpchQuery(query);
-
-        for (int i = values.length - 1; i >= 0; i--) {
-            sql = sql.replaceAll(format(":%s", i + 1), String.valueOf(values[i]));
-        }
-
-        assertFalse(sql.matches("(?s).*:[0-9].*"), "Not all bind parameters were replaced: " + sql);
-
-        return fixTpchQuery(sql);
-    }
-
     private static String getTpchQuery(int q)
     {
         return readResource("tpch/queries/" + q + ".sql");
@@ -218,15 +195,5 @@ public class TPCH
         catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String fixTpchQuery(String s)
-    {
-        s = s.replaceFirst("(?m);$", "");
-        s = s.replaceAll("(?m)^:[xo]$", "");
-        s = s.replaceAll("(?m)^:n -1$", "");
-        s = s.replaceAll("(?m)^:n ([0-9]+)$", "LIMIT $1");
-        s = s.replace("day (3)", "day"); // for query 1
-        return s;
     }
 }
