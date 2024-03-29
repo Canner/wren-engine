@@ -15,15 +15,15 @@
 package io.wren.testing.sqlglot;
 
 import io.wren.base.SessionContext;
-import io.wren.sqlglot.SQLGlotConverter;
+import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.AbstractSqlConverterTest;
 import io.wren.testing.TestingSQLGlotServer;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import static io.wren.sqlglot.SQLGlot.Dialect.BIGQUERY;
-import static io.wren.sqlglot.SQLGlot.Dialect.DUCKDB;
+import static io.wren.main.sqlglot.SQLGlot.Dialect.BIGQUERY;
+import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSQLGlotConverter

@@ -75,7 +75,6 @@
         <module>wren-main</module>
         <module>wren-server</module>
         <module>wren-shaded</module>
-        <module>wren-sqlglot-converter</module>
         <module>wren-testing</module>
         <module>wren-tests</module>
         <module>wren-validation</module>
@@ -343,12 +342,6 @@
             <dependency>
                 <groupId>io.wren</groupId>
                 <artifactId>wren-shaded</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.wren</groupId>
-                <artifactId>wren-sqlglot-converter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

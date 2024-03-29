@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.wren.sqlglot.dto;
+package io.wren.main.sqlglot.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -15,7 +15,7 @@
 package io.wren.testing.sqlglot;
 
 import io.wren.base.WrenMDL;
-import io.wren.sqlglot.SQLGlotConverter;
+import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.TPCH;
 import io.wren.testing.TestingSnowflake;
 import org.intellij.lang.annotations.Language;
@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 
-import static io.wren.sqlglot.SQLGlot.Dialect.SNOWFLAKE;
+import static io.wren.main.sqlglot.SQLGlot.Dialect.SNOWFLAKE;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @Test(enabled = false, description = "It requires a Snowflake account.")

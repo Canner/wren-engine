@@ -15,12 +15,12 @@
 package io.wren.testing.sqlglot;
 
 import io.wren.base.WrenMDL;
-import io.wren.sqlglot.SQLGlotConverter;
+import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.TPCH;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.Test;
 
-import static io.wren.sqlglot.SQLGlot.Dialect.DUCKDB;
+import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestTPCHWithDuckDB
