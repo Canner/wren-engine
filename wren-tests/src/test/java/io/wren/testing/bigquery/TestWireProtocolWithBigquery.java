@@ -1086,6 +1086,8 @@ public class TestWireProtocolWithBigquery
     public Object[][] jdbcQuery()
     {
         return new Object[][] {
+                {"SHOW TRANSACTION ISOLATION LEVEL"},
+                {"SELECT * FROM (VALUES ROW ('read uncommitted')) RESPONSE (transaction_isolation)"},
                 {"SELECT t.typlen FROM pg_catalog.pg_type t, pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid AND t.typname='name' AND n.nspname='pg_catalog'"},
                 {"SELECT\n" +
                         "  t.typname\n" +

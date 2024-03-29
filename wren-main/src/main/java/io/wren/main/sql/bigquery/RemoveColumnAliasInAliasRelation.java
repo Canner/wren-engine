@@ -131,7 +131,7 @@ public class RemoveColumnAliasInAliasRelation
         }
         else if (queryBody instanceof Values) {
             Values values = (Values) queryBody;
-            Union union = null;
+            QueryBody body = null;
             ImmutableList.Builder<Relation> newRowsBuilder = ImmutableList.builder();
             for (Expression rowExpr : values.getRows()) {
                 if (rowExpr instanceof Row) {
@@ -150,11 +150,16 @@ public class RemoveColumnAliasInAliasRelation
                             Optional.empty(), Optional.empty(), Optional.empty()));
                 }
                 List<Relation> selects = newRowsBuilder.build();
-                union = new Union(selects, false);
+                if (selects.size() > 1) {
+                    body = new Union(selects, false);
+                }
+                else {
+                    body = (QuerySpecification) selects.get(0);
+                }
             }
             return new Query(
                     query.getWith(),
-                    union,
+                    body,
                     query.getOrderBy(),
                     query.getOffset(),
                     query.getLimit());
