@@ -90,8 +90,7 @@ public class DescribePortalAndExecute
                         maxRows,
                         portal.getRowCount(),
                         resultFormatCodes);
-                FormatCodes.FormatCode[] formatCodes = session.getResultFormatCodes(portalName);
-                ResponseMessages.sendRowDescription(channel, resultSetSender.getColumns(), formatCodes);
+                ResponseMessages.sendRowDescription(channel, resultSetSender.getColumns(), resultFormatCodes);
             }
             catch (Exception e) {
                 LOG.error(e, "Describe portal and execute failed. Caused by %s", e.getMessage());

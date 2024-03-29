@@ -95,7 +95,7 @@ public class SimpleQuery
                     0,
                     0,
                     null);
-            ResponseMessages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
+            ResponseMessages.sendRowDescription(channel, resultSetSender.getColumns(), null);
             resultSetSender.sendResultSet();
             return wireProtocolSession.sync();
         }
