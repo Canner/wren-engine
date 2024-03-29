@@ -51,6 +51,16 @@ public abstract class Describe
         throw new IllegalArgumentException("Invalid describe type: " + (char) type);
     }
 
+    static Describe describeStatement(String statementName)
+    {
+        return new DescribeStatement(statementName);
+    }
+
+    static Describe describePortal(String portalName)
+    {
+        return new DescribePortal(portalName);
+    }
+
     private static final Logger LOG = Logger.get(Describe.class);
     private final String targetName;
 

@@ -53,6 +53,11 @@ public class Parse
         return new Parse(statementName, query, numParams, paramTypes);
     }
 
+    static Parse parse(String statementName, String query, short numParams, int[] paramTypes)
+    {
+        return new Parse(statementName, query, numParams, paramTypes);
+    }
+
     private static final Logger LOG = Logger.get(Parse.class);
 
     private final String statementName;

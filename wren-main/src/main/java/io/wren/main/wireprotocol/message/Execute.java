@@ -29,22 +29,28 @@ import static io.wren.main.wireprotocol.Utils.readCString;
 import static io.wren.main.wireprotocol.message.MessageUtils.isIgnoredCommand;
 import static io.wren.main.wireprotocol.message.MessageUtils.sendHardWiredSessionProperty;
 
-/**
- * Execute Message
- * Header:
- * | 'E' | int32 len
- * <p>
- * Body:
- * | string portalName
- * | int32 maxRows (0 = unlimited)
- */
 public class Execute
         implements Plan
 {
+
+    /**
+     * Execute Message
+     * Header:
+     * | 'E' | int32 len
+     * <p>
+     * Body:
+     * | string portalName
+     * | int32 maxRows (0 = unlimited)
+     */
     public static Execute execute(ByteBuf buffer)
     {
         String portalName = readCString(buffer);
         int maxRows = buffer.readInt();
+        return new Execute(portalName, maxRows);
+    }
+
+    static Execute execute(String portalName, int maxRows)
+    {
         return new Execute(portalName, maxRows);
     }
 

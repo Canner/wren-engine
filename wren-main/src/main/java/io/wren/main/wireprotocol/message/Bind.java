@@ -65,6 +65,11 @@ public class Bind
         return new Bind(portalName, statementName, formatCodes, parameters, resultFormats);
     }
 
+    static Bind bind(String portalName, String statementName, FormatCode[] parameterFormats, List<byte[]> parameters, FormatCode[] resultFormats)
+    {
+        return new Bind(portalName, statementName, parameterFormats, parameters, resultFormats);
+    }
+
     private static List<byte[]> readParameters(ByteBuf buffer)
     {
         int parameterCount = buffer.readShort();
