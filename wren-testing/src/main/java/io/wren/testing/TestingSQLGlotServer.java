@@ -63,7 +63,8 @@ public class TestingSQLGlotServer
             Request request = prepareGet()
                     .setUri(SQLGlot.BASE_URL)
                     .build();
-            while (true) {
+
+            for (int i = 0; i < 10; i++) {
                 try {
                     StringResponseHandler.StringResponse response = client.execute(request, StringResponseHandler.createStringResponseHandler());
                     if (response.getStatusCode() == 200) {
@@ -77,6 +78,11 @@ public class TestingSQLGlotServer
                     catch (InterruptedException ie) {
                         throw new RuntimeException(ie);
                     }
+                        return;
+                    }
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    // Ignore the exception and try again
                 }
             }
         }
