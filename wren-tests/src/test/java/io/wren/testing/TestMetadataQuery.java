@@ -174,6 +174,7 @@ public class TestMetadataQuery
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertParseComplete();
 
@@ -192,6 +193,7 @@ public class TestMetadataQuery
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -212,6 +214,7 @@ public class TestMetadataQuery
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertParseComplete();
 
@@ -230,6 +233,7 @@ public class TestMetadataQuery
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -252,6 +256,7 @@ public class TestMetadataQuery
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertParseComplete();
 
@@ -270,6 +275,7 @@ public class TestMetadataQuery
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
 
             // Execute Level 3
             paramTypes = ImmutableList.of(INTEGER);
