@@ -68,16 +68,6 @@ public class TestingSQLGlotServer
                 try {
                     StringResponseHandler.StringResponse response = client.execute(request, StringResponseHandler.createStringResponseHandler());
                     if (response.getStatusCode() == 200) {
-                        break;
-                    }
-                }
-                catch (Exception e) {
-                    try {
-                        Thread.sleep(100);
-                    }
-                    catch (InterruptedException ie) {
-                        throw new RuntimeException(ie);
-                    }
                         return;
                     }
                     Thread.sleep(1000);
