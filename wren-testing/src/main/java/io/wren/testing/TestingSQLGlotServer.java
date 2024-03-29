@@ -18,7 +18,7 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
 import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
-import io.wren.sqlglot.glot.SQLGlot;
+import io.wren.sqlglot.SQLGlot;
 
 import javax.annotation.PreDestroy;
 
