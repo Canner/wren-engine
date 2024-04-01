@@ -16,18 +16,24 @@ package io.wren.testing.sqlglot;
 
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
+import io.wren.base.config.SQLGlotConfig;
 import io.wren.base.sqlrewrite.WrenPlanner;
+import io.wren.main.sqlglot.SQLGlot;
 import io.wren.testing.AbstractTestFramework;
 import io.wren.testing.TPCH;
 import io.wren.testing.TestingSQLGlotServer;
 import org.testng.annotations.DataProvider;
 
+import static io.wren.base.config.SQLGlotConfig.createConfigWithFreePort;
+
 public abstract class AbstractTPCHTest
         extends AbstractTestFramework
 {
-    private final TestingSQLGlotServer testingSQLGlotServer = new TestingSQLGlotServer();
-
+    private final SQLGlotConfig config = createConfigWithFreePort();
+    private final TestingSQLGlotServer testingSQLGlotServer = new TestingSQLGlotServer(config);
     private final WrenMDL wrenMDL;
+
+    protected final SQLGlot sqlglot = new SQLGlot(config);
 
     protected AbstractTPCHTest()
     {

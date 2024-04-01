@@ -15,6 +15,8 @@
 package io.wren.testing.sqlglot;
 
 import io.wren.base.SessionContext;
+import io.wren.base.config.SQLGlotConfig;
+import io.wren.main.sqlglot.SQLGlot;
 import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.AbstractSqlConverterTest;
 import io.wren.testing.TestingSQLGlotServer;
@@ -22,6 +24,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import static io.wren.base.config.SQLGlotConfig.createConfigWithFreePort;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.BIGQUERY;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,23 +35,28 @@ public class TestSQLGlotConverter
     private static final SessionContext DEFAULT_SESSION_CONTEXT = SessionContext.builder().build();
 
     private TestingSQLGlotServer testingSQLGlotServer;
+    private SQLGlot sqlglot;
 
     @BeforeClass
     public void setup()
     {
-        testingSQLGlotServer = new TestingSQLGlotServer();
+        SQLGlotConfig config = createConfigWithFreePort();
+        testingSQLGlotServer = new TestingSQLGlotServer(config);
+        sqlglot = new SQLGlot(config);
     }
 
     @AfterClass
     public void close()
     {
         testingSQLGlotServer.close();
+        sqlglot.close();
     }
 
     @Test
     public void testGenerateArray()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setReadDialect(BIGQUERY)
                 .setWriteDialect(DUCKDB)
                 .build();
@@ -62,6 +70,7 @@ public class TestSQLGlotConverter
     public void testSubstring()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(BIGQUERY)
                 .build();
 
@@ -74,6 +83,7 @@ public class TestSQLGlotConverter
     public void testArray()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(DUCKDB)
                 .build();
 
@@ -86,6 +96,7 @@ public class TestSQLGlotConverter
     public void testReplaceColumnAliasInUnnest()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(BIGQUERY)
                 .build();
 
@@ -102,6 +113,7 @@ public class TestSQLGlotConverter
     public void testRewriteArithemetic()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(BIGQUERY)
                 .build();
 
@@ -118,6 +130,7 @@ public class TestSQLGlotConverter
     public void testBigQueryGroupByOrdinal()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(BIGQUERY)
                 .build();
 
@@ -130,6 +143,7 @@ public class TestSQLGlotConverter
     public void testDereferenceExpression()
     {
         SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
                 .setWriteDialect(BIGQUERY)
                 .build();
 

@@ -29,17 +29,18 @@ public class SQLGlotConverter
 {
     private static final Logger LOG = Logger.get(SQLGlotConverter.class);
 
+    private final SQLGlot sqlGlot;
     private final SQLGlot.Dialect readDialect;
     private final SQLGlot.Dialect writeDialect;
-    private final SQLGlot sqlGlot;
 
     private SQLGlotConverter(
+            SQLGlot sqlGlot,
             SQLGlot.Dialect readDialect,
             SQLGlot.Dialect writeDialect)
     {
+        this.sqlGlot = requireNonNull(sqlGlot, "sqlGlot is null");
         this.readDialect = requireNonNull(readDialect, "readDialect is null");
         this.writeDialect = requireNonNull(writeDialect, "writeDialect is null");
-        this.sqlGlot = new SQLGlot();
     }
 
     public static Builder builder()
@@ -63,8 +64,15 @@ public class SQLGlotConverter
 
     public static class Builder
     {
+        private SQLGlot sqlGlot;
         private SQLGlot.Dialect readDialect = SQLGlot.Dialect.TRINO;
         private SQLGlot.Dialect writeDialect;
+
+        public Builder setSQLGlot(SQLGlot sqlGlot)
+        {
+            this.sqlGlot = sqlGlot;
+            return this;
+        }
 
         public Builder setReadDialect(SQLGlot.Dialect readDialect)
         {
@@ -80,7 +88,7 @@ public class SQLGlotConverter
 
         public SQLGlotConverter build()
         {
-            return new SQLGlotConverter(readDialect, writeDialect);
+            return new SQLGlotConverter(sqlGlot, readDialect, writeDialect);
         }
     }
 }

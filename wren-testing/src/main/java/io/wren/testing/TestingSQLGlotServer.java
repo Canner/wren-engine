@@ -18,6 +18,7 @@ import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.Request;
 import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
+import io.wren.base.config.SQLGlotConfig;
 import io.wren.main.sqlglot.SQLGlot;
 
 import javax.annotation.PreDestroy;
@@ -35,12 +36,15 @@ import static io.airlift.http.client.Request.Builder.prepareGet;
 public class TestingSQLGlotServer
         implements Closeable
 {
+    private final SQLGlotConfig config;
     private final Path workingDirectory;
     private final File sourceCodeDirectory = new File("../wren-sqlglot-server").getAbsoluteFile();
     private final Process process;
 
-    public TestingSQLGlotServer()
+    public TestingSQLGlotServer(SQLGlotConfig config)
     {
+        this.config = config;
+
         try {
             this.workingDirectory = Files.createTempDirectory("testing-sqlglot-venv");
 
@@ -109,7 +113,7 @@ public class TestingSQLGlotServer
     {
         try (HttpClient client = new JettyHttpClient()) {
             Request request = prepareGet()
-                    .setUri(SQLGlot.BASE_URL)
+                    .setUri(SQLGlot.getBaseUri(config))
                     .build();
 
             for (int i = 0; i < 10; i++) {

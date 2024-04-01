@@ -21,15 +21,16 @@ import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
-import io.wren.sqlglot.dto.TranspileDTO;
+import io.wren.base.config.SQLGlotConfig;
+import io.wren.main.sqlglot.dto.TranspileDTO;
 
+import javax.inject.Inject;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.UriBuilder;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Optional;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
@@ -63,14 +64,15 @@ public class SQLGlot
         }
     }
 
-    public static final URI BASE_URL = URI.create("http://0.0.0.0:" + getPort());
-
     private static final JsonCodec<TranspileDTO> TRANSPILE_DTO_JSON_CODEC = jsonCodec(TranspileDTO.class);
 
+    private final URI baseUri;
     private final HttpClient client;
 
-    public SQLGlot()
+    @Inject
+    public SQLGlot(SQLGlotConfig config)
     {
+        this.baseUri = getBaseUri(config);
         this.client = new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
     }
 
@@ -84,7 +86,7 @@ public class SQLGlot
             throws IOException
     {
         Request request = preparePost()
-                .setUri(UriBuilder.fromUri(BASE_URL).path("sqlglot").path("transpile").build())
+                .setUri(UriBuilder.fromUri(baseUri).path("sqlglot").path("transpile").build())
                 .setHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
@@ -100,8 +102,8 @@ public class SQLGlot
         throw new WebApplicationException(response.getBody());
     }
 
-    public static String getPort()
+    public static URI getBaseUri(SQLGlotConfig config)
     {
-        return Optional.ofNullable(System.getenv("SQLGLOT_PORT")).orElse("8000");
+        return URI.create("http://0.0.0.0:" + config.getPort());
     }
 }

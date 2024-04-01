@@ -31,6 +31,7 @@ public class TestTPCHWithSnowflake
         extends AbstractTPCHTest
 {
     private final SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+            .setSQLGlot(sqlglot)
             .setWriteDialect(SNOWFLAKE)
             .build();
 

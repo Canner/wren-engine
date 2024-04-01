@@ -27,6 +27,7 @@ public class TestTPCHWithDuckDB
         extends AbstractTPCHTest
 {
     private final SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+            .setSQLGlot(sqlglot)
             .setWriteDialect(DUCKDB)
             .build();
 

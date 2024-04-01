@@ -21,8 +21,8 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
-import io.wren.sqlglot.SQLGlot;
-import io.wren.sqlglot.SQLGlotConverter;
+import io.wren.main.sqlglot.SQLGlot;
+import io.wren.main.sqlglot.SQLGlotConverter;
 
 import javax.inject.Inject;
 
@@ -44,13 +44,14 @@ public final class SqlConverterManager
             ConfigManager configManager,
             BigQuerySqlConverter bigQuerySqlConverter,
             PostgresSqlConverter postgresSqlConverter,
-            DuckDBSqlConverter duckDBSqlConverter)
+            DuckDBSqlConverter duckDBSqlConverter,
+            SQLGlot sqlGlot)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
         this.bigQuerySqlConverter = requireNonNull(bigQuerySqlConverter, "bigQuerySqlConverter is null");
         this.postgresSqlConverter = requireNonNull(postgresSqlConverter, "postgresSqlConverter is null");
         this.duckDBSqlConverter = requireNonNull(duckDBSqlConverter, "duckDBSqlConverter is null");
-        this.snowflakeSqlConverter = SQLGlotConverter.builder().setWriteDialect(SQLGlot.Dialect.SNOWFLAKE).build();
+        this.snowflakeSqlConverter = SQLGlotConverter.builder().setSQLGlot(sqlGlot).setWriteDialect(SQLGlot.Dialect.SNOWFLAKE).build();
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
