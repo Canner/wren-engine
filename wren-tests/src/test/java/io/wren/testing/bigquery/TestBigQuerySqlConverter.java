@@ -180,6 +180,20 @@ public class TestBigQuerySqlConverter
         assertThat(bigQuerySqlConverter.convert(
                 "SELECT * FROM (\n" +
                         "    VALUES\n" +
+                        "        (1, 'a')" +
+                        ") AS t (id, name)", DEFAULT_SESSION_CONTEXT))
+                .isEqualTo("SELECT *\n" +
+                        "FROM\n" +
+                        "  (\n" +
+                        "   SELECT\n" +
+                        "     1 id\n" +
+                        "   , 'a' name\n" +
+                        "\n" +
+                        ")  t\n");
+
+        assertThat(bigQuerySqlConverter.convert(
+                "SELECT * FROM (\n" +
+                        "    VALUES\n" +
                         "        (1, 'a'),\n" +
                         "        (2, 'b'),\n" +
                         "        (3, 'c')\n" +

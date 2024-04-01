@@ -907,6 +907,7 @@ public class TestWireProtocolWithPostgres
     public Object[][] jdbcQuery()
     {
         return new Object[][] {
+                {"SHOW TRANSACTION ISOLATION LEVEL"},
                 {"SELECT t.typlen FROM pg_catalog.pg_type t, pg_catalog.pg_namespace n WHERE t.typnamespace=n.oid AND t.typname='name' AND n.nspname='pg_catalog'"},
                 {"SELECT\n" +
                         "  t.typname\n" +

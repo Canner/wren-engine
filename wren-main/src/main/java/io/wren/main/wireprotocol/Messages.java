@@ -25,6 +25,7 @@ import io.wren.base.type.PGType;
 import javax.annotation.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Locale.ENGLISH;
@@ -164,7 +165,7 @@ public class Messages
     static ChannelFuture sendErrorResponse(Channel channel, Throwable throwable)
     {
         PGError error = PGError.fromThrowable(throwable);
-        byte[] msg = error.message().getBytes(UTF_8);
+        byte[] msg = Optional.ofNullable(error.message()).map(message -> message.getBytes(UTF_8)).orElse(new byte[0]);
         byte[] errorCode = error.status().code().getBytes(UTF_8);
         byte[] lineNumber;
         byte[] fileName = null;
