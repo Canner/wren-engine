@@ -123,7 +123,8 @@ public class TestingSQLGlotServer
                         return;
                     }
                     Thread.sleep(1000);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     // Ignore the exception and try again
                 }
             }
