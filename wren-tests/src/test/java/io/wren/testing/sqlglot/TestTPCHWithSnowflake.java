@@ -19,6 +19,7 @@ import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.TPCH;
 import io.wren.testing.TestingSnowflake;
 import org.intellij.lang.annotations.Language;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -30,12 +31,22 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 public class TestTPCHWithSnowflake
         extends AbstractTPCHTest
 {
-    private final SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
-            .setSQLGlot(sqlglot)
-            .setWriteDialect(SNOWFLAKE)
-            .build();
+    private SQLGlotConverter sqlGlotConverter;
+    private TestingSnowflake testingSnowflake;
 
-    private final TestingSnowflake testingSnowflake = new TestingSnowflake();
+    @BeforeClass()
+    public void setup()
+    {
+        super.init();
+        super.prepareSQLGlot();
+
+        sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
+                .setWriteDialect(SNOWFLAKE)
+                .build();
+
+        testingSnowflake = new TestingSnowflake();
+    }
 
     @Override
     protected WrenMDL buildWrenMDL()

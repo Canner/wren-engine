@@ -18,6 +18,7 @@ import io.wren.base.WrenMDL;
 import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.TPCH;
 import org.intellij.lang.annotations.Language;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
@@ -26,22 +27,19 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 public class TestTPCHWithDuckDB
         extends AbstractTPCHTest
 {
-    private final SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
-            .setSQLGlot(sqlglot)
-            .setWriteDialect(DUCKDB)
-            .build();
+    private SQLGlotConverter sqlGlotConverter;
 
-    @Override
-    protected WrenMDL buildWrenMDL()
+    @BeforeClass()
+    public void setup()
     {
-        return WrenMDL.fromManifest(withDefaultCatalogSchema()
-                .setModels(TPCH.getModels("main"))
-                .build());
-    }
+        super.init();
+        super.prepareSQLGlot();
 
-    @Override
-    protected void prepareData()
-    {
+        sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
+                .setWriteDialect(DUCKDB)
+                .build();
+
         exec("create table orders as select * from '" + TPCH.ORDERS_PATH + "'");
         exec("create table lineitem as select * from '" + TPCH.LINEITEM_PATH + "'");
         exec("create table customer as select * from '" + TPCH.CUSTOMER_PATH + "'");
@@ -50,6 +48,14 @@ public class TestTPCHWithDuckDB
         exec("create table supplier as select * from '" + TPCH.SUPPLIER_PATH + "'");
         exec("create table nation as select * from '" + TPCH.NATION_PATH + "'");
         exec("create table region as select * from '" + TPCH.REGION_PATH + "'");
+    }
+
+    @Override
+    protected WrenMDL buildWrenMDL()
+    {
+        return WrenMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(TPCH.getModels("main"))
+                .build());
     }
 
     @Test(dataProvider = "queries")

@@ -29,15 +29,22 @@ import static io.wren.base.config.SQLGlotConfig.createConfigWithFreePort;
 public abstract class AbstractTPCHTest
         extends AbstractTestFramework
 {
-    private final SQLGlotConfig config = createConfigWithFreePort();
-    private final TestingSQLGlotServer testingSQLGlotServer = new TestingSQLGlotServer(config);
     private final WrenMDL wrenMDL;
 
-    protected final SQLGlot sqlglot = new SQLGlot(config);
+    private TestingSQLGlotServer testingSQLGlotServer;
+
+    protected SQLGlot sqlglot;
 
     protected AbstractTPCHTest()
     {
         this.wrenMDL = buildWrenMDL();
+    }
+
+    protected void prepareSQLGlot()
+    {
+        SQLGlotConfig config = createConfigWithFreePort();
+        this.testingSQLGlotServer = new TestingSQLGlotServer(config);
+        this.sqlglot = new SQLGlot(config);
     }
 
     protected abstract WrenMDL buildWrenMDL();
