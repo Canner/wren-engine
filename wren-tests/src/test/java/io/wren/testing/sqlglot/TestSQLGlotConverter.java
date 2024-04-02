@@ -29,6 +29,7 @@ import static io.wren.main.sqlglot.SQLGlot.Dialect.BIGQUERY;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Test(singleThreaded = true)
 public class TestSQLGlotConverter
         extends AbstractSqlConverterTest
 {
