@@ -38,6 +38,7 @@ import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.regtype.RegObjectFactory;
 import io.wren.main.sql.PostgreSqlRewrite;
 import io.wren.main.wireprotocol.auth.Authentication;
+import io.wren.main.wireprotocol.message.Close;
 import io.wren.main.wireprotocol.patterns.PostgreSqlRewriteUtil;
 
 import javax.annotation.Nullable;
@@ -60,9 +61,9 @@ import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.wren.base.metadata.StandardErrorCode.INVALID_PARAMETER_USAGE;
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.wren.main.wireprotocol.PgQueryAnalyzer.isMetadataQuery;
-import static io.wren.main.wireprotocol.PostgresWireProtocol.isIgnoredCommand;
 import static io.wren.main.wireprotocol.PostgresWireProtocolErrorCode.INVALID_PREPARED_STATEMENT_NAME;
 import static io.wren.main.wireprotocol.PreparedStatement.RESERVED_DRY_RUN_NAME;
+import static io.wren.main.wireprotocol.message.MessageUtils.isIgnoredCommand;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
@@ -230,9 +231,9 @@ public class WireProtocolSession
         return Optional.of(metadata.describeQuery(sql, portal.getParameters()));
     }
 
-    public List<Integer> describeStatement(String name)
+    public Optional<List<Integer>> describeStatement(String name)
     {
-        return preparedStatements.get(name).getParamTypeOids();
+        return Optional.ofNullable(preparedStatements.get(name)).map(preparedStatement -> preparedStatement.getParamTypeOids());
     }
 
     /**
@@ -453,16 +454,17 @@ public class WireProtocolSession
         return ended;
     }
 
-    public void close(byte type, String name)
+    public void close(Close.CloseType type, String name)
             throws Exception
     {
         switch (type) {
-            case 'P':
+            case PORTAL:
                 Optional.ofNullable(portals.get(name)).ifPresent(portal -> {
                     portals.remove(name);
                 });
+                LOG.info("Close portal %s", name);
                 break;
-            case 'S':
+            case STATEMENT:
                 Optional.ofNullable(preparedStatements.get(name)).ifPresent(preparedStatement -> {
                     preparedStatements.remove(name);
                     List<String> removedNames = portals.entrySet().stream()
@@ -470,6 +472,7 @@ public class WireProtocolSession
                             .map(Map.Entry::getKey).collect(toImmutableList());
                     removedNames.forEach(portals::remove);
                 });
+                LOG.info("Close statement %s", name);
                 break;
             default:
                 throw new WrenException(INVALID_PARAMETER_USAGE, format("Type %s is invalid. We only support 'P' and 'S'", type));

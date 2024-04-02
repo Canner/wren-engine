@@ -14,7 +14,6 @@
 
 package io.wren.main.wireprotocol;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.log.Logger;
 import io.netty.buffer.ByteBuf;
@@ -23,35 +22,32 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.wren.base.Column;
-import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.WrenException;
-import io.wren.base.type.PGType;
-import io.wren.base.type.PGTypes;
+import io.wren.main.wireprotocol.message.Plan;
+import io.wren.main.wireprotocol.message.ResponseMessages;
 import io.wren.main.wireprotocol.ssl.SslReqHandler;
-import org.apache.commons.lang3.tuple.Pair;
 
-import javax.annotation.Nullable;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.wren.main.wireprotocol.Utils.readCString;
+import static io.wren.main.wireprotocol.Utils.readCharArray;
+import static io.wren.main.wireprotocol.message.Bind.bind;
+import static io.wren.main.wireprotocol.message.Close.close;
+import static io.wren.main.wireprotocol.message.Describe.describe;
+import static io.wren.main.wireprotocol.message.Execute.execute;
+import static io.wren.main.wireprotocol.message.Flush.FLUSH;
+import static io.wren.main.wireprotocol.message.Parse.parse;
+import static io.wren.main.wireprotocol.message.SimpleQuery.simpleQuery;
+import static io.wren.main.wireprotocol.message.Sync.SYNC;
 import static java.lang.String.format;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
 public class PostgresWireProtocol
@@ -65,19 +61,6 @@ public class PostgresWireProtocol
             // Reports whether we with support for 64-bit-integer dates and times.
             .put(PostgresSessionProperties.INTEGER_DATETIMES, "on")
             .build();
-
-    // set (session) property { = | to } { value | 'value' }
-    private static final Pattern SET_STMT_PATTERN = Pattern.compile("(?i)^ *SET( +SESSION)* +(?<property>[a-zA-Z0-9_]+)( *= *| +TO +)(?<value>(.*))");
-    private static final Pattern SET_TRANSACTION_PATTERN = Pattern.compile("SET +(SESSION CHARACTERISTICS AS )? *TRANSACTION");
-    private static final Pattern SET_SESSION_AUTHORIZATION = Pattern.compile("SET (SESSION |LOCAL )?SESSION AUTHORIZATION");
-
-    private static final Set<String> IGNORED_COMMAND = Set.of(
-            "BEGIN",
-            "COMMIT",
-            "DISCARD",
-            "RESET",
-            "CLOSE",
-            "UNLISTEN");
 
     private static final Logger LOG = Logger.get(PostgresWireProtocol.class);
 
@@ -116,28 +99,6 @@ public class PostgresWireProtocol
             int minor = protocol & 0x0000FFFF;
             LOG.debug("protocol %s.%s", major, minor);
         }
-    }
-
-    @Nullable
-    static String readCString(ByteBuf buffer)
-    {
-        byte[] bytes = new byte[buffer.bytesBefore((byte) 0) + 1];
-        if (bytes.length == 0) {
-            return null;
-        }
-        buffer.readBytes(bytes);
-        return new String(bytes, 0, bytes.length - 1, StandardCharsets.UTF_8);
-    }
-
-    @Nullable
-    private static char[] readCharArray(ByteBuf buffer)
-    {
-        byte[] bytes = new byte[buffer.bytesBefore((byte) 0)];
-        if (bytes.length == 0) {
-            return null;
-        }
-        buffer.readBytes(bytes);
-        return StandardCharsets.UTF_8.decode(ByteBuffer.wrap(bytes)).array();
     }
 
     private Properties readStartupMessage(ByteBuf buffer)
@@ -193,11 +154,11 @@ public class PostgresWireProtocol
                 finishAuthentication(channel, password.get());
             }
             else {
-                Messages.sendAuthenticationCleartextPassword(channel);
+                ResponseMessages.sendAuthenticationCleartextPassword(channel);
             }
         }
         else {
-            Messages.sendAuthenticationOK(channel)
+            ResponseMessages.sendAuthenticationOK(channel)
                     .addListener(f -> sendParamsAndRdyForQuery(channel));
         }
     }
@@ -213,401 +174,35 @@ public class PostgresWireProtocol
         try {
             Optional<String> clientUser = wireProtocolSession.getClientUser();
             if (clientUser.isEmpty() || clientUser.get().isEmpty()) {
-                Messages.sendAuthenticationError(channel, "user is empty");
+                ResponseMessages.sendAuthenticationError(channel, "user is empty");
             }
             if (wireProtocolSession.doAuthentication(password)) {
-                Messages.sendAuthenticationOK(channel)
+                ResponseMessages.sendAuthenticationOK(channel)
                         .addListener(f -> sendParamsAndRdyForQuery(channel));
             }
             else {
-                Messages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
+                ResponseMessages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
             }
         }
         catch (Exception e) {
             LOG.error(e);
-            Messages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
+            ResponseMessages.sendAuthenticationError(channel, format("Database %s not found or permission denied", wireProtocolSession.getDefaultDatabase()));
         }
     }
 
     private void sendParamsAndRdyForQuery(Channel channel)
     {
         for (Map.Entry<String, String> config : DEFAULT_PG_CONFIGS.entrySet()) {
-            Messages.sendParameterStatus(channel, config.getKey(), config.getValue());
+            ResponseMessages.sendParameterStatus(channel, config.getKey(), config.getValue());
         }
-        Messages.sendReadyForQuery(channel, TransactionState.IDLE);
-    }
-
-    private void handleSimpleQuery(ByteBuf buffer, final Channel channel)
-    {
-        String statement = readCString(buffer);
-        LOG.debug("get statement: %s", statement);
-        checkArgument(statement != null, "query must not be null");
-
-        List<String> queries = QueryStringSplitter.splitQuery(statement);
-
-        CompletableFuture<?> composedFuture = CompletableFuture.completedFuture(null);
-        for (String query : queries) {
-            composedFuture = composedFuture.thenCompose(result -> handleSingleQuery(query, channel));
-        }
-        composedFuture.whenComplete(new ReadyForQueryCallback(channel, TransactionState.IDLE));
-    }
-
-    private CompletableFuture<?> handleSingleQuery(String statement, Channel channel)
-    {
-        if (statement.isEmpty() || ";".equals(statement.trim())) {
-            Messages.sendEmptyQueryResponse(channel);
-            return CompletableFuture.completedFuture(null);
-        }
-        if (isIgnoredCommand(statement)) {
-            sendHardWiredSessionProperty(statement);
-            Messages.sendCommandComplete(channel, statement, 0);
-            return CompletableFuture.completedFuture(null);
-        }
-        try {
-            wireProtocolSession.parse("", statement, ImmutableList.of());
-            wireProtocolSession.bind("", "", ImmutableList.of(), null);
-            Optional<ConnectorRecordIterator> iterator = wireProtocolSession.execute("").join();
-            if (iterator.isEmpty()) {
-                sendHardWiredSessionProperty(statement);
-                Messages.sendCommandComplete(channel, statement, 0);
-                return CompletableFuture.completedFuture(null);
-            }
-            ResultSetSender resultSetSender = new ResultSetSender(
-                    statement,
-                    channel,
-                    iterator.get(),
-                    0,
-                    0,
-                    null);
-            Messages.sendRowDescription(channel, wireProtocolSession.describePortal("").get(), null);
-            resultSetSender.sendResultSet();
-            return wireProtocolSession.sync();
-        }
-        catch (Exception e) {
-            LOG.error(e, format("Query failed. Statement: %s", statement));
-            Messages.sendErrorResponse(channel, e);
-            CompletableFuture<?> future = CompletableFuture.completedFuture(null);
-            future.completeExceptionally(e);
-            return future;
-        }
-    }
-
-    public static boolean isIgnoredCommand(String statement)
-    {
-        Optional<String> command = Arrays.stream(statement.toUpperCase(ENGLISH).split(" |;"))
-                .filter(split -> !split.isEmpty())
-                .findFirst();
-
-        if ((command.isPresent() && IGNORED_COMMAND.contains(command.get())) ||
-                SET_TRANSACTION_PATTERN.matcher(statement).find() || SET_SESSION_AUTHORIZATION.matcher(statement).find()) {
-            return true;
-        }
-
-        Matcher matcher = SET_STMT_PATTERN.matcher(statement);
-        return matcher.find() && PostgresSessionProperties.isIgnoredSessionProperties(matcher.group("property"));
-    }
-
-    public static Optional<Pair<String, String>> parseSetStmt(String statement)
-    {
-        Matcher matcher = SET_STMT_PATTERN.matcher(statement.split(";")[0]);
-        if (matcher.find()) {
-            String property = matcher.group("property");
-            String val = matcher.group("value");
-            return Optional.of(Pair.of(property, PostgresSessionProperties.formatValue(val, PostgresSessionProperties.UNQUOTE_STRATEGY)));
-        }
-        return Optional.empty();
-    }
-
-    private void sendHardWiredSessionProperty(String statement)
-    {
-        Optional<Pair<String, String>> property = parseSetStmt(statement);
-        if (property.isPresent() && PostgresSessionProperties.isHardWiredSessionProperty(property.get().getKey())) {
-            Messages.sendParameterStatus(channel, property.get().getKey(), property.get().getValue());
-        }
-    }
-
-    /**
-     * Parse Message
-     * header:
-     * | 'P' | int32 len
-     * <p>
-     * body:
-     * | string statementName | string query | int16 numParamTypes |
-     * foreach param:
-     * | int32 type_oid (zero = unspecified)
-     */
-    private void handleParseMessage(ByteBuf buffer, final Channel channel)
-    {
-        String query = null;
-        try {
-            String statementName = readCString(buffer);
-            query = readCString(buffer);
-            checkArgument(statementName != null, "statement name can't be null");
-            checkArgument(query != null, "query can't be null");
-            short numParams = buffer.readShort();
-            List<Integer> paramTypes = new ArrayList<>(numParams);
-            for (int i = 0; i < numParams; i++) {
-                int oid = buffer.readInt();
-                paramTypes.add(PGTypes.oidToPgType(oid).oid());
-            }
-            LOG.debug("Create prepared statement %s query: %s", statementName, query);
-            wireProtocolSession.parse(statementName, query, paramTypes);
-            Messages.sendParseComplete(channel);
-        }
-        catch (Exception e) {
-            LOG.error(e, "Parse query failed. Query: %s", query);
-            Messages.sendErrorResponse(channel, e);
-        }
-    }
-
-    /**
-     * Bind Message
-     * Header:
-     * | 'B' | int32 len
-     * <p>
-     * Body:
-     * <pre>
-     * | string portalName | string statementName
-     * | int16 numFormatCodes
-     *      foreach
-     *      | int16 formatCode
-     * | int16 numParams
-     *      foreach
-     *      | int32 valueLength
-     *      | byteN value
-     * | int16 numResultColumnFormatCodes
-     *      foreach
-     *      | int16 formatCode
-     * </pre>
-     */
-    private void handleBindMessage(ByteBuf buffer, Channel channel)
-    {
-        String statementName = null;
-        try {
-            String portalName = readCString(buffer);
-            statementName = readCString(buffer);
-            FormatCodes.FormatCode[] formatCodes = FormatCodes.fromBuffer(buffer);
-            List<Object> params = readParameters(buffer, statementName, formatCodes);
-            FormatCodes.FormatCode[] resultFormatCodes = FormatCodes.fromBuffer(buffer);
-            wireProtocolSession.bind(portalName, statementName, params, resultFormatCodes);
-            Messages.sendBindComplete(channel);
-        }
-        catch (Exception e) {
-            LOG.error(format("Bind query failed. Statement: %s. Root cause is %s", wireProtocolSession.getOriginalStatement(statementName), e));
-            Messages.sendErrorResponse(channel, e);
-        }
-    }
-
-    private List<Object> readParameters(ByteBuf buffer, String statementName, FormatCodes.FormatCode[] formatCodes)
-    {
-        short numParams = buffer.readShort();
-        List<Object> params = new ArrayList<>(); // use `ArrayList` to handle `null` elements.
-        for (int i = 0; i < numParams; i++) {
-            int valueLength = buffer.readInt();
-            if (valueLength == -1) {
-                params.add(null);
-            }
-            else {
-                int paramType = wireProtocolSession.getParamTypeOid(statementName, i);
-                PGType<?> pgType = PGTypes.oidToPgType(paramType);
-                FormatCodes.FormatCode formatCode = FormatCodes.getFormatCode(formatCodes, i);
-                switch (formatCode) {
-                    case TEXT:
-                        params.add(pgType.readTextValue(buffer, valueLength));
-                        break;
-                    case BINARY:
-                        params.add(pgType.readBinaryValue(buffer, valueLength));
-                        break;
-                    default:
-                        throw new WrenException(GENERIC_INTERNAL_ERROR,
-                                format("Unsupported format code '%d' for param '%s'", formatCode.ordinal(), paramType));
-                }
-            }
-        }
-        return params;
-    }
-
-    /**
-     * Execute Message
-     * Header:
-     * | 'E' | int32 len
-     * <p>
-     * Body:
-     * | string portalName
-     * | int32 maxRows (0 = unlimited)
-     */
-    private void handleExecute(ByteBuf buffer, Channel channel)
-    {
-        String portalName = readCString(buffer);
-        int maxRows = buffer.readInt();
-        String statement = "uninitialized statement";
-
-        LOG.info("Execute portal: %s", portalName);
-        try {
-            Portal portal = wireProtocolSession.getPortal(portalName);
-
-            statement = portal.getPreparedStatement().getOriginalStatement();
-            if (statement.isEmpty()) {
-                Messages.sendEmptyQueryResponse(channel);
-                return;
-            }
-            if (isIgnoredCommand(statement)) {
-                sendHardWiredSessionProperty(statement);
-                Messages.sendCommandComplete(channel, statement, 0);
-                return;
-            }
-
-            if (!portal.isSuspended()) {
-                Optional<ConnectorRecordIterator> connectorRecordIterable = wireProtocolSession.execute(portalName).join();
-                if (connectorRecordIterable.isEmpty()) {
-                    sendHardWiredSessionProperty(statement);
-                    Messages.sendCommandComplete(channel, statement, 0);
-                    return;
-                }
-                portal.setConnectorRecordIterator(connectorRecordIterable.get());
-            }
-
-            ConnectorRecordIterator connectorRecordIterable = portal.getConnectorRecordIterator();
-            FormatCodes.FormatCode[] resultFormatCodes = wireProtocolSession.getResultFormatCodes(portalName);
-            ResultSetSender resultSetSender = new ResultSetSender(
-                    statement,
-                    channel,
-                    connectorRecordIterable,
-                    maxRows,
-                    portal.getRowCount(),
-                    resultFormatCodes);
-            portal.setRowCount(resultSetSender.sendResultSet());
-        }
-        catch (Exception e) {
-            LOG.error(e, format("Execute query failed. Statement: %s. Root cause is %s", statement, e.getMessage()));
-            Messages.sendErrorResponse(channel, e);
-        }
-    }
-
-    private void handleSync(final Channel channel)
-    {
-        try {
-            ReadyForQueryCallback readyForQueryCallback = new ReadyForQueryCallback(channel, TransactionState.IDLE);
-            wireProtocolSession.sync().whenComplete(readyForQueryCallback);
-        }
-        catch (Throwable t) {
-            LOG.error(format("Sync failed. Root cause is %s", t.getMessage()));
-            Messages.sendErrorResponse(channel, t);
-            Messages.sendReadyForQuery(channel, TransactionState.FAILED_TRANSACTION);
-        }
-    }
-
-    /**
-     * Describe Message
-     * Header:
-     * | 'D' | int32 len
-     * <p>
-     * Body:
-     * | 'S' = prepared statement or 'P' = portal
-     * | string nameOfPortalOrStatement
-     */
-    private void handleDescribeMessage(ByteBuf buffer, Channel channel)
-    {
-        try {
-            byte type = buffer.readByte();
-            String portalOrStatement = readCString(buffer);
-
-            // TODO: check parameter's size equal to parameter type's size
-            switch (type) {
-                case 'P':
-                    Optional<List<Column>> columns = wireProtocolSession.describePortal(portalOrStatement);
-                    if (columns.isPresent()) {
-                        FormatCodes.FormatCode[] formatCodes = wireProtocolSession.getResultFormatCodes(portalOrStatement);
-                        Messages.sendRowDescription(channel, columns.get(), formatCodes);
-                        break;
-                    }
-                    Messages.sendNoData(channel);
-                    break;
-                case 'S':
-                    List<Integer> paramTypes = wireProtocolSession.describeStatement(portalOrStatement);
-                    Messages.sendParameterDescription(channel, paramTypes);
-                    Optional<List<Column>> described = wireProtocolSession.dryRunAfterDescribeStatement(
-                            portalOrStatement, paramTypes.stream().map(ignore -> "null").collect(toImmutableList()),
-                            null);
-                    if (described.isEmpty()) {
-                        Messages.sendNoData(channel);
-                    }
-                    else {
-                        // dry run for getting the row description
-                        Messages.sendRowDescription(channel, described.get(),
-                                described.get().stream().map(ignore -> FormatCodes.FormatCode.TEXT).collect(toImmutableList()).toArray(new FormatCodes.FormatCode[0]));
-                    }
-                    break;
-                default:
-                    throw new WrenException(GENERIC_INTERNAL_ERROR, format("Type %s is invalid. We only support 'P' and 'S'.", type));
-            }
-        }
-        catch (Exception e) {
-            LOG.error(format("Describe message failed. Root cause is %s", e.getMessage()));
-            Messages.sendErrorResponse(channel, e);
-        }
-    }
-
-    /**
-     * Flush Message
-     * | 'H' | int32 len
-     * <p>
-     * Flush forces the backend to deliver any data pending in it's output buffers.
-     */
-    private void handleFlush(Channel channel)
-    {
-        try {
-            channel.flush();
-        }
-        catch (Throwable t) {
-            LOG.error(format("Flush failed. Root cause is %s", t.getMessage()));
-            Messages.sendErrorResponse(channel, t);
-        }
-    }
-
-    /**
-     * | 'C' | int32 len | byte portalOrStatement | string portalOrStatementName |
-     */
-    private void handleClose(ByteBuf buffer, Channel channel)
-    {
-        byte type = buffer.readByte();
-        String portalOrStatementName = readCString(buffer);
-        LOG.info("Close %s", portalOrStatementName);
-        try {
-            wireProtocolSession.close(type, portalOrStatementName);
-        }
-        catch (Exception e) {
-            LOG.error(format("Close failed. Root cause is %s", e.getMessage()));
-        }
-        Messages.sendCloseComplete(channel);
-    }
-
-    private static class ReadyForQueryCallback
-            implements BiConsumer<Object, Throwable>
-    {
-        private final Channel channel;
-        private final TransactionState transactionState;
-
-        private ReadyForQueryCallback(Channel channel, TransactionState transactionState)
-        {
-            this.channel = channel;
-            this.transactionState = transactionState;
-        }
-
-        @Override
-        public void accept(Object result, Throwable t)
-        {
-            boolean clientInterrupted = t instanceof ClientInterrupted
-                    || (t != null && t.getCause() instanceof ClientInterrupted);
-            if (!clientInterrupted) {
-                Messages.sendReadyForQuery(channel, transactionState);
-            }
-        }
+        ResponseMessages.sendReadyForQuery(channel, TransactionState.IDLE);
     }
 
     private class MessageHandler
             extends SimpleChannelInboundHandler<ByteBuf>
     {
+        private final Queue<Plan> messageQueue = new ArrayDeque<>();
+
         @Override
         public void channelRegistered(ChannelHandlerContext ctx)
         {
@@ -657,42 +252,62 @@ public class PostgresWireProtocol
         private void dispatchMessage(ByteBuf buffer, Channel channel)
         {
             LOG.debug("channel dispatch message. msgType: %s", msgType);
-            switch (msgType) {
-                case 'Q': // Query (simple)
-                    handleSimpleQuery(buffer, channel);
-                    return;
-                case 'P':
-                    handleParseMessage(buffer, channel);
-                    return;
-                case 'p':
-                    handlePassword(buffer, channel);
-                    return;
-                case 'B':
-                    handleBindMessage(buffer, channel);
-                    return;
-                case 'D':
-                    handleDescribeMessage(buffer, channel);
-                    return;
-                case 'E':
-                    handleExecute(buffer, channel);
-                    return;
-                case 'H':
-                    handleFlush(channel);
-                    return;
-                case 'S':
-                    handleSync(channel);
-                    return;
-                case 'C':
-                    handleClose(buffer, channel);
-                    return;
-                case 'X': // Terminate (called when jdbc connection is closed)
-                    channel.close();
-                    return;
-                default:
-                    Messages.sendErrorResponse(
-                            channel,
-                            new WrenException(GENERIC_INTERNAL_ERROR, "Unsupported messageType: " + msgType));
+            try {
+                switch (msgType) {
+                    case 'Q': // Query (simple)
+                        simpleQuery(buffer).commit(commitPlans(), channel, wireProtocolSession);
+                        return;
+                    case 'P':
+                        messageQueue.add(parse(buffer));
+                        return;
+                    case 'p':
+                        handlePassword(buffer, channel);
+                        return;
+                    case 'B':
+                        messageQueue.add(bind(buffer));
+                        return;
+                    case 'D':
+                        messageQueue.add(describe(buffer));
+                        return;
+                    case 'E':
+                        messageQueue.add(execute(buffer));
+                        return;
+                    case 'H':
+                        FLUSH.commit(commitPlans(), channel, wireProtocolSession);
+                        return;
+                    case 'S':
+                        SYNC.commit(commitPlans(), channel, wireProtocolSession);
+                        return;
+                    case 'C':
+                        close(buffer).commit(commitPlans(), channel, wireProtocolSession);
+                        return;
+                    case 'X': // Terminate (called when jdbc connection is closed)
+                        channel.close();
+                        return;
+                    default:
+                        ResponseMessages.sendErrorResponse(
+                                channel,
+                                new WrenException(GENERIC_INTERNAL_ERROR, "Unsupported messageType: " + msgType));
+                }
             }
+            catch (Exception e) {
+                LOG.error(e, "Error processing message: %s", msgType);
+                ResponseMessages.sendErrorResponse(channel, e);
+            }
+        }
+
+        /**
+         * Consume the messageQueue and plan all existed messages.
+         *
+         * @return planned future
+         */
+        private CompletableFuture<?> commitPlans()
+        {
+            CompletableFuture<?> start = CompletableFuture.completedFuture(null);
+            MessagePlanner.plan(messageQueue)
+                    .stream().map(plan -> plan.execute(channel, wireProtocolSession))
+                    .forEach(start::thenRun);
+            return start;
         }
 
         @Override

@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
 
 public class IntegerType
         extends PGType<Integer>
@@ -73,7 +72,7 @@ public class IntegerType
     @Override
     public Integer readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("length should be %s because int is int32. Actual length: %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "length should be %s because int is int32. Actual length: %s", TYPE_LEN, valueLength);
         return buffer.readInt();
     }
 

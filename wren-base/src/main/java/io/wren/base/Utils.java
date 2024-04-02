@@ -29,10 +29,10 @@ public class Utils
     private static final SecureRandom random = new SecureRandom();
     private static final int RANDOM_SUFFIX_LENGTH = 10;
 
-    public static void checkArgument(boolean expression, String errorMessage)
+    public static void checkArgument(boolean expression, String errorMessagePattern, Object... errorMessageArgs)
     {
         if (!expression) {
-            throw new IllegalArgumentException(errorMessage);
+            throw new IllegalArgumentException(String.format(errorMessagePattern, errorMessageArgs));
         }
     }
 

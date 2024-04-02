@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
 
 public class BooleanType
         extends PGType<Boolean>
@@ -85,7 +84,7 @@ public class BooleanType
     @Override
     public Boolean readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("length should be %s boolean is just a byte. Actual length: %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "length should be %s boolean is just a byte. Actual length: %s", TYPE_LEN, valueLength);
         byte value = buffer.readByte();
         switch (value) {
             case 0:

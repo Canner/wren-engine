@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.wren.main.wireprotocol;
+package io.wren.main.wireprotocol.message;
 
 import java.util.ArrayList;
 import java.util.List;

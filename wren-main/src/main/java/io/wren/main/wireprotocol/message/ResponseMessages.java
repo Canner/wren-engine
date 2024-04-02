@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package io.wren.main.wireprotocol;
+package io.wren.main.wireprotocol.message;
 
 import io.airlift.log.Logger;
 import io.netty.buffer.ByteBuf;
@@ -21,6 +21,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.wren.base.Column;
 import io.wren.base.type.PGType;
+import io.wren.main.wireprotocol.FormatCodes;
+import io.wren.main.wireprotocol.PGError;
+import io.wren.main.wireprotocol.PGErrorStatus;
+import io.wren.main.wireprotocol.TransactionState;
 
 import javax.annotation.Nullable;
 
@@ -43,13 +47,13 @@ import static java.util.Locale.ENGLISH;
  * <p>
  * See https://www.postgresql.org/docs/9.2/static/protocol-message-formats.html
  */
-public class Messages
+public class ResponseMessages
 {
-    private static final Logger LOGGER = Logger.get(Messages.class);
+    private static final Logger LOGGER = Logger.get(ResponseMessages.class);
 
     private static final byte[] METHOD_NAME_CLIENT_AUTH = "ClientAuthentication".getBytes(UTF_8);
 
-    private Messages() {}
+    private ResponseMessages() {}
 
     public static ChannelFuture sendAuthenticationOK(Channel channel)
     {
@@ -70,7 +74,7 @@ public class Messages
      * @param query :the query
      * @param rowCount : number of rows in the result set or number of rows affected by the DML statement
      */
-    static ChannelFuture sendCommandComplete(Channel channel, String query, long rowCount)
+    public static ChannelFuture sendCommandComplete(Channel channel, String query, long rowCount)
     {
         query = query.trim().split(" |;|\n\t|\n", 2)[0].toUpperCase(ENGLISH);
         String commandTag = buildCommandTag(query, rowCount);
@@ -104,7 +108,7 @@ public class Messages
      * block; or 'E' if in a failed transaction block (queries will be
      * rejected until block is ended).
      */
-    static void sendReadyForQuery(Channel channel, TransactionState transactionState)
+    public static void sendReadyForQuery(Channel channel, TransactionState transactionState)
     {
         ByteBuf buffer = channel.alloc().buffer(6);
         buffer.writeByte('Z');
@@ -135,7 +139,7 @@ public class Messages
      * - integer_datetimes,
      * - standard_conforming_string
      */
-    static void sendParameterStatus(Channel channel, final String name, final String value)
+    public static void sendParameterStatus(Channel channel, final String name, final String value)
     {
         byte[] nameBytes = name.getBytes(UTF_8);
         byte[] valueBytes = value.getBytes(UTF_8);
@@ -152,7 +156,7 @@ public class Messages
         }
     }
 
-    static void sendAuthenticationError(Channel channel, String message)
+    public static void sendAuthenticationError(Channel channel, String message)
     {
         LOGGER.warn(message);
         byte[] msg = message.getBytes(UTF_8);
@@ -162,7 +166,7 @@ public class Messages
                 METHOD_NAME_CLIENT_AUTH, errorCode);
     }
 
-    static ChannelFuture sendErrorResponse(Channel channel, Throwable throwable)
+    public static ChannelFuture sendErrorResponse(Channel channel, Throwable throwable)
     {
         PGError error = PGError.fromThrowable(throwable);
         byte[] msg = Optional.ofNullable(error.message()).map(message -> message.getBytes(UTF_8)).orElse(new byte[0]);
@@ -265,7 +269,7 @@ public class Messages
      * The value of the column, in the format indicated by the associated format code. n is the above length.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    static void sendDataRow(Channel channel, Object[] row, List<PGType> schema, @Nullable FormatCodes.FormatCode[] formatCodes)
+    public static void sendDataRow(Channel channel, Object[] row, List<PGType> schema, @Nullable FormatCodes.FormatCode[] formatCodes)
     {
         int length = 4 + 2;
 
@@ -422,7 +426,7 @@ public class Messages
      * EmptyQueryResponse
      * | 'I' | int32 len |
      */
-    static void sendEmptyQueryResponse(Channel channel)
+    public static void sendEmptyQueryResponse(Channel channel)
     {
         sendShortMsg(channel, 'I', "sentEmptyQueryResponse");
     }
@@ -451,7 +455,7 @@ public class Messages
         }
     }
 
-    static ChannelFuture sendPortalSuspended(Channel channel)
+    public static ChannelFuture sendPortalSuspended(Channel channel)
     {
         ByteBuf buffer = channel.alloc().buffer(5);
         buffer.writeByte('s');
@@ -468,7 +472,7 @@ public class Messages
      * CloseComplete
      * | '3' | int32 len |
      */
-    static void sendCloseComplete(Channel channel)
+    public static void sendCloseComplete(Channel channel)
     {
         sendShortMsg(channel, '3', "sentCloseComplete");
     }
@@ -487,7 +491,7 @@ public class Messages
      *
      * @param channel The channel to write to.
      */
-    static void sendAuthenticationCleartextPassword(Channel channel)
+    public static void sendAuthenticationCleartextPassword(Channel channel)
     {
         ByteBuf buffer = channel.alloc().buffer(9);
         buffer.writeByte('R');

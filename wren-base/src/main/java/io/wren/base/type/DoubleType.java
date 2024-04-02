@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
 
 public class DoubleType
         extends PGType<Double>
@@ -72,7 +71,7 @@ public class DoubleType
     @Override
     public Double readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("length should be %s because double is int64. Actual length: %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "length should be %s because double is int64. Actual length: %s", TYPE_LEN, valueLength);
         return buffer.readDouble();
     }
 

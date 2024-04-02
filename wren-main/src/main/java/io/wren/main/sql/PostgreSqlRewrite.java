@@ -59,7 +59,6 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.QueryUtil.functionCall;
-import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Locale.ROOT;
 
@@ -118,7 +117,7 @@ public final class PostgreSqlRewrite
             node.getExpressions().forEach(expression -> {
                 if (isColumnAlias(expression, selectFieldInfos)) {
                     List<FieldInfo> selected = selectFieldInfos.stream().filter(fieldInfo -> fieldInfo.getAlias().equals(expression)).collect(toImmutableList());
-                    checkArgument(selected.size() == 1, format("GROUP BY \"%s\" is ambiguous", expression));
+                    checkArgument(selected.size() == 1, "GROUP BY \"%s\" is ambiguous", expression);
                     builder.add(selected.get(0).getExpression());
                     return;
                 }

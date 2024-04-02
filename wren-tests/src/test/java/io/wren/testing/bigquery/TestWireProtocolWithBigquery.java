@@ -276,6 +276,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertParseComplete();
 
@@ -294,11 +295,13 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
 
             // reuse the parsed prepared statement
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertBindComplete();
 
@@ -308,6 +311,7 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -328,6 +332,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertParseComplete();
 
@@ -346,11 +351,13 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
 
             // reuse the parsed prepared statement
             protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
+            protocolClient.sendSync();
 
             protocolClient.assertBindComplete();
 
@@ -360,6 +367,7 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -373,7 +381,9 @@ public class TestWireProtocolWithBigquery
             assertDefaultPgConfigResponse(protocolClient);
             protocolClient.assertReadyForQuery('I');
             protocolClient.sendNullParse("");
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("query can't be null");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -388,10 +398,14 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertReadyForQuery('I');
             protocolClient.sendParse("teststmt", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?",
                     ImmutableList.of(999));
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("No oid mapping from '999' to pg_type");
+            protocolClient.assertReadyForQuery('I');
 
             protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter("10", INTEGER)));
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("prepared statement teststmt not found");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 

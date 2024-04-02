@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
 
 public class OidType
         extends PGType<Long>
@@ -65,7 +64,7 @@ public class OidType
     @Override
     public Long readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("length should be %s because oid is int32. Actual length: %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "length should be %s because oid is int32. Actual length: %s", TYPE_LEN, valueLength);
         return buffer.readLong();
     }
 

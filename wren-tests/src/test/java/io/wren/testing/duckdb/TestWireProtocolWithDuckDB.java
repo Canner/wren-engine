@@ -129,7 +129,9 @@ public class TestWireProtocolWithDuckDB
             assertDefaultPgConfigResponse(protocolClient);
             protocolClient.assertReadyForQuery('I');
             protocolClient.sendNullParse("");
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("query can't be null");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -144,10 +146,14 @@ public class TestWireProtocolWithDuckDB
             protocolClient.assertReadyForQuery('I');
             protocolClient.sendParse("teststmt", "select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?",
                     ImmutableList.of(999));
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("No oid mapping from '999' to pg_type");
+            protocolClient.assertReadyForQuery('I');
 
             protocolClient.sendBind("exec1", "teststmt", ImmutableList.of(textParameter("10", INTEGER)));
+            protocolClient.sendSync();
             protocolClient.assertErrorMessage("prepared statement teststmt not found");
+            protocolClient.assertReadyForQuery('I');
         }
     }
 
@@ -984,8 +990,7 @@ public class TestWireProtocolWithDuckDB
         };
     }
 
-    // TODO: support selecting parameters
-    @Test(dataProvider = "paramTypes", enabled = false)
+    @Test(dataProvider = "paramTypes")
     public void testJdbcParamTypes(String name, Object obj)
             throws SQLException
     {

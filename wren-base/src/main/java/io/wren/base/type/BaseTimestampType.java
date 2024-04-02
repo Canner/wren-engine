@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import javax.annotation.Nonnull;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
 
 abstract class BaseTimestampType
         extends PGType
@@ -55,7 +54,7 @@ abstract class BaseTimestampType
     @Override
     public Object readBinaryValue(ByteBuf buffer, int valueLength)
     {
-        checkArgument(valueLength == TYPE_LEN, format("valueLength must be %s because timestamp is a 64 bit long. Actual length is %s", TYPE_LEN, valueLength));
+        checkArgument(valueLength == TYPE_LEN, "valueLength must be %s because timestamp is a 64 bit long. Actual length is %s", TYPE_LEN, valueLength);
         long microSecondsSince2K = buffer.readLong();
         return PgDatetimeUtils.toTrinoTimestamp(microSecondsSince2K);
     }
