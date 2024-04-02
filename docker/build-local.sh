@@ -14,9 +14,11 @@ WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -Dforce
 popd
 
 WORK_DIR="$(mktemp -d)"
-cp ${SOURCE_DIR}/wren-server/target/wren-server-${WREN_VERSION}-executable.jar ${WORK_DIR}
+cp ${SOURCE_DIR}wren-server/target/wren-server-${WREN_VERSION}-executable.jar ${WORK_DIR}
+cp -r ${SOURCE_DIR}wren-sqlglot-server ${WORK_DIR}
+cp ./entrypoint.sh ${WORK_DIR}
 
-CONTAINER="wren:${WREN_VERSION}"
+CONTAINER="wren-engine:${WREN_VERSION}"
 
 docker build ${WORK_DIR} --pull --platform linux/amd64 -f Dockerfile -t ${CONTAINER}-amd64 --build-arg "WREN_VERSION=${WREN_VERSION}"
 docker build ${WORK_DIR} --pull --platform linux/arm64 -f Dockerfile -t ${CONTAINER}-arm64 --build-arg "WREN_VERSION=${WREN_VERSION}"

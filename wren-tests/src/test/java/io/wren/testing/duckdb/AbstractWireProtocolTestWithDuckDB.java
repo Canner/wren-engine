@@ -73,7 +73,7 @@ public abstract class AbstractWireProtocolTestWithDuckDB
     {
         ClassLoader classLoader = getClass().getClassLoader();
         String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
-        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("duckdb/data")).getPath());
+        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
         DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
         metadata.setInitSQL(initSQL);
         metadata.reload();

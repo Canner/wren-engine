@@ -33,8 +33,25 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>http-client</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.snowflake</groupId>
+            <artifactId>snowpark</artifactId>
+            <version>1.10.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.xml.bind</groupId>
+                    <artifactId>jaxb-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -45,6 +62,16 @@
         <dependency>
             <groupId>io.wren</groupId>
             <artifactId>wren-base</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.wren</groupId>
+            <artifactId>wren-main</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
         </dependency>
 
         <dependency>

@@ -39,6 +39,7 @@ import io.wren.server.module.DuckDBConnectorModule;
 import io.wren.server.module.MainModule;
 import io.wren.server.module.PostgresConnectorModule;
 import io.wren.server.module.PostgresWireProtocolModule;
+import io.wren.server.module.SQLGlotModule;
 import io.wren.server.module.WebModule;
 
 import java.io.Closeable;
@@ -89,7 +90,8 @@ public class TestingWrenServer
                 new DuckDBConnectorModule(),
                 new WrenModule(),
                 new CacheModule(),
-                new WebModule()));
+                new WebModule(),
+                new SQLGlotModule()));
 
         injector = app
                 .doNotInitializeLogging()

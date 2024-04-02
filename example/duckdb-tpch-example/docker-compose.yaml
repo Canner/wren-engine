@@ -10,3 +10,5 @@ services:
     volumes:
       - ./etc:/usr/src/app/etc
       - ./data:/usr/src/app/data
+    environment:
+      - SQLGLOT_PORT=8000
