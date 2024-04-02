@@ -1,12 +1,15 @@
 import logging
 import os
 import sys
+from importlib import import_module
 
 import sqlglot
 import uvicorn
 from fastapi import FastAPI
 
 from dto import TranspileDTO
+
+import_module("sqlglot")
 
 if sys.version_info < (3, 10):
     sys.exit('Python < 3.10 is not supported')
