@@ -31,15 +31,11 @@ import javax.ws.rs.core.UriBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.ExecutorService;
 
-import static io.airlift.concurrent.Threads.threadsNamed;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -73,9 +69,6 @@ public class SQLGlot
     private final URI baseUri;
     private final HttpClient client;
 
-    // SQLGlot does not support concurrent requests in the python
-    private final ExecutorService executor = newFixedThreadPool(1, threadsNamed("SQLGlot-%s"));
-
     @Inject
     public SQLGlot(SQLGlotConfig config)
     {
@@ -98,18 +91,11 @@ public class SQLGlot
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
 
-        return supplyAsync(() -> {
-            try {
-                StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
-                if (response.getStatusCode() != 200) {
-                    throwWebApplicationException(response);
-                }
-                return TRANSPILE_DTO_JSON_CODEC.fromJson(response.getBody()).getSql();
-            }
-            catch (Exception e) {
-                throw new WebApplicationException(e);
-            }
-        }, executor).join();
+        StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            throwWebApplicationException(response);
+        }
+        return TRANSPILE_DTO_JSON_CODEC.fromJson(response.getBody()).getSql();
     }
 
     private static void throwWebApplicationException(StringResponseHandler.StringResponse response)
