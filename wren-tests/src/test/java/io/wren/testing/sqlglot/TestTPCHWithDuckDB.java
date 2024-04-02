@@ -31,7 +31,7 @@ public class TestTPCHWithDuckDB
 {
     private SQLGlotConverter sqlGlotConverter;
 
-    @BeforeClass()
+    @BeforeClass
     public void setup()
     {
         super.init();

@@ -34,7 +34,7 @@ public class TestTPCHWithSnowflake
     private SQLGlotConverter sqlGlotConverter;
     private TestingSnowflake testingSnowflake;
 
-    @BeforeClass()
+    @BeforeClass
     public void setup()
     {
         super.init();
