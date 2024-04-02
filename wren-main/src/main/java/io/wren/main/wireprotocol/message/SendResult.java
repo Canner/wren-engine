@@ -25,9 +25,9 @@ public class SendResult
         implements Plan
 {
     private static final Logger LOG = Logger.get(SendResult.class.getName());
-    private final DescribePortalAndExecute parent;
+    private final ExecuteAndSendRowDescription parent;
 
-    public SendResult(DescribePortalAndExecute parent)
+    public SendResult(ExecuteAndSendRowDescription parent)
     {
         this.parent = parent;
     }

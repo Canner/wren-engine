@@ -63,7 +63,7 @@ public class TestMessagePlanner
         List<Plan> planned = MessagePlanner.plan(new ArrayDeque<>(actual));
         assertThat(planned.contains(describePortal)).isFalse();
         assertThat(planned.contains(execute)).isFalse();
-        assertThat(planned).anyMatch(p -> p instanceof DescribePortalAndExecute);
+        assertThat(planned).anyMatch(p -> p instanceof ExecuteAndSendRowDescription);
         assertThat(planned).anyMatch(p -> p instanceof SendResult);
 
         Plan anotherParse = parse("test", "select * from test", (short) 0, new int[0]);
@@ -75,16 +75,16 @@ public class TestMessagePlanner
         assertThat(planned.contains(anotherDescribePortal)).isTrue();
         assertThat(planned.contains(describePortal)).isFalse();
         assertThat(planned.contains(execute)).isFalse();
-        assertThat(planned.get(5)).isInstanceOf(DescribePortalAndExecute.class);
+        assertThat(planned.get(5)).isInstanceOf(ExecuteAndSendRowDescription.class);
         assertThat(planned.get(6)).isInstanceOf(SendResult.class);
-        assertThat(((DescribePortalAndExecute) planned.get(5)).getPortalName()).isEqualTo("");
+        assertThat(((ExecuteAndSendRowDescription) planned.get(5)).getPortalName()).isEqualTo("");
 
         actual = List.of(parse, bind, describePortal, parse, bind, describePortal, execute);
         planned = MessagePlanner.plan(new ArrayDeque<>(actual));
         assertThat(planned.size()).isEqualTo(7);
         assertThat(planned.contains(describePortal)).isTrue();
         assertThat(planned.indexOf(describePortal)).isEqualTo(2);
-        assertThat(planned.get(5)).isInstanceOf(DescribePortalAndExecute.class);
+        assertThat(planned.get(5)).isInstanceOf(ExecuteAndSendRowDescription.class);
         assertThat(planned.get(6)).isInstanceOf(SendResult.class);
     }
 }

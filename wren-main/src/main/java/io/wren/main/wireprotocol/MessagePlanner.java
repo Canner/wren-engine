@@ -15,8 +15,8 @@
 package io.wren.main.wireprotocol;
 
 import io.wren.main.wireprotocol.message.Describe;
-import io.wren.main.wireprotocol.message.DescribePortalAndExecute;
 import io.wren.main.wireprotocol.message.Execute;
+import io.wren.main.wireprotocol.message.ExecuteAndSendRowDescription;
 import io.wren.main.wireprotocol.message.Plan;
 import io.wren.main.wireprotocol.message.SendResult;
 
@@ -45,9 +45,9 @@ public class MessagePlanner
                 Execute execute = (Execute) message;
                 IndexedDescribePortal indexedDescribePortal = portalDescriptions.get(execute.getPortalName());
                 if (indexedDescribePortal != null) {
-                    DescribePortalAndExecute describePortalAndExecute = new DescribePortalAndExecute(execute);
-                    plans.set(indexedDescribePortal.index, describePortalAndExecute);
-                    plans.add(new SendResult(describePortalAndExecute));
+                    ExecuteAndSendRowDescription executeAndSendRowDescription = new ExecuteAndSendRowDescription(execute);
+                    plans.set(indexedDescribePortal.index, executeAndSendRowDescription);
+                    plans.add(new SendResult(executeAndSendRowDescription));
                     i++;
                     continue;
                 }

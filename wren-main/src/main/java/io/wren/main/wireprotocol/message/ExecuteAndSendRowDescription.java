@@ -27,15 +27,15 @@ import java.util.Optional;
 import static io.wren.main.wireprotocol.message.MessageUtils.isIgnoredCommand;
 import static io.wren.main.wireprotocol.message.MessageUtils.sendHardWiredSessionProperty;
 
-public class DescribePortalAndExecute
+public class ExecuteAndSendRowDescription
         implements Plan
 {
-    private static final Logger LOG = Logger.get(DescribePortalAndExecute.class.getName());
+    private static final Logger LOG = Logger.get(ExecuteAndSendRowDescription.class.getName());
     private final String portalName;
     private final int maxRows;
     private ResultSetSender resultSetSender;
 
-    public DescribePortalAndExecute(Execute parent)
+    public ExecuteAndSendRowDescription(Execute parent)
     {
         this.portalName = parent.getPortalName();
         this.maxRows = parent.getMaxRows();
