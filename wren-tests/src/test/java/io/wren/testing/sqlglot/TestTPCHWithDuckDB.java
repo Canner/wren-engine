@@ -22,6 +22,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
+import static java.lang.String.format;
+import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestTPCHWithDuckDB
@@ -40,14 +42,9 @@ public class TestTPCHWithDuckDB
                 .setWriteDialect(DUCKDB)
                 .build();
 
-        exec("create table orders as select * from '" + TPCH.ORDERS_PATH + "'");
-        exec("create table lineitem as select * from '" + TPCH.LINEITEM_PATH + "'");
-        exec("create table customer as select * from '" + TPCH.CUSTOMER_PATH + "'");
-        exec("create table part as select * from '" + TPCH.PART_PATH + "'");
-        exec("create table partsupp as select * from '" + TPCH.PARTSUPP_PATH + "'");
-        exec("create table supplier as select * from '" + TPCH.SUPPLIER_PATH + "'");
-        exec("create table nation as select * from '" + TPCH.NATION_PATH + "'");
-        exec("create table region as select * from '" + TPCH.REGION_PATH + "'");
+        for (TPCH.Table table : TPCH.Table.values()) {
+            exec(format("create table %s as select * from '%s'", table.name().toLowerCase(ENGLISH), TPCH.getDataPath(table)));
+        }
     }
 
     @Override
