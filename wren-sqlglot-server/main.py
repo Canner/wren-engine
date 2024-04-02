@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from dto import TranspileDTO
 
+# Preload sqlglot to avoid concurrency issues
 import_module("sqlglot")
 
 if sys.version_info < (3, 10):
