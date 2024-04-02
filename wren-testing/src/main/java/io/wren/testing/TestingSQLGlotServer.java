@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static io.airlift.http.client.Request.Builder.prepareGet;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class TestingSQLGlotServer
         implements Closeable
@@ -98,7 +99,10 @@ public class TestingSQLGlotServer
     private void createVirtualEnvironment(String python)
             throws IOException, InterruptedException
     {
-        new ProcessBuilder(python, "-m", "venv", workingDirectory.toString()).start().waitFor();
+        boolean success = new ProcessBuilder(python, "-m", "venv", workingDirectory.toString()).start().waitFor(10, SECONDS);
+        if (!success) {
+            throw new RuntimeException("Failed to create virtual environment");
+        }
     }
 
     private void installDependencies()
@@ -106,7 +110,10 @@ public class TestingSQLGlotServer
     {
         ProcessBuilder processBuilder = new ProcessBuilder(resolve("bin", "python"), "-m", "pip", "install", "-r", "requirements.txt");
         processBuilder.directory(sourceCodeDirectory);
-        processBuilder.start().waitFor();
+        boolean success = processBuilder.start().waitFor(10, SECONDS);
+        if (!success) {
+            throw new RuntimeException("Failed to install dependencies");
+        }
     }
 
     private void waitReady()
@@ -128,6 +135,7 @@ public class TestingSQLGlotServer
                     // Ignore the exception and try again
                 }
             }
+            throw new RuntimeException("SQLGlot server is not ready");
         }
     }
 
