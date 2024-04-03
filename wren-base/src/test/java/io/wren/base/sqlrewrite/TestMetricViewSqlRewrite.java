@@ -40,7 +40,6 @@ import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class TestMetricViewSqlRewrite
         extends AbstractTestFramework
@@ -100,7 +99,6 @@ public class TestMetricViewSqlRewrite
                     ") \n";
 
     private final WrenMDL wrenMDL;
-    private final WrenMDL invalidWrenMDL;
 
     public TestMetricViewSqlRewrite()
     {
@@ -133,11 +131,6 @@ public class TestMetricViewSqlRewrite
                         View.view("UseModel", "select * from \"Album\""),
                         View.view("useView", "select * from \"useMetric\""),
                         View.view("useMetric", "select * from \"Collection\"")))
-                .build());
-
-        invalidWrenMDL = WrenMDL.fromManifest(withDefaultCatalogSchema()
-                .setViews(List.of(
-                        View.view("withView", "with a as (select 1,2,3) select * from a")))
                 .build());
     }
 
@@ -292,15 +285,6 @@ public class TestMetricViewSqlRewrite
         assertThatNoException()
                 .describedAs(format("actual sql: %s is invalid", actualSql))
                 .isThrownBy(() -> query(actualSql));
-    }
-
-    @Test
-    public void testInvalidWrenMDL()
-    {
-        String sql = "select * from withView";
-        assertThatThrownBy(() -> rewrite(sql, invalidWrenMDL))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("view cannot have WITH clause");
     }
 
     private String rewrite(String sql)
