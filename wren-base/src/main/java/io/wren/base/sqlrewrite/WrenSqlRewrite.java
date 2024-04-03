@@ -148,9 +148,7 @@ public class WrenSqlRewrite
             CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(name).get();
             descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, wrenMDL));
         }
-        else {
-            throw new IllegalArgumentException(name + " not found in mdl");
-        }
+        // If the table is not found in mdl, it could be a remote table or a CTE.
     }
 
     private void addDescriptor(String name, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
@@ -167,9 +165,7 @@ public class WrenSqlRewrite
             CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(name).get();
             descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, wrenMDL));
         }
-        else {
-            throw new IllegalArgumentException(name + " not found in mdl");
-        }
+        // If the table is not found in mdl, it could be a remote table or a CTE.
     }
 
     private Statement apply(

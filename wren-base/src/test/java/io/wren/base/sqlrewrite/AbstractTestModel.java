@@ -312,6 +312,24 @@ public abstract class AbstractTestModel
     }
 
     @Test
+    public void testCustomCTE()
+    {
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(customer, orders, lineitem))
+                .build();
+        WrenMDL mdl = WrenMDL.fromManifest(manifest);
+        assertThatCode(() -> query(rewrite("WITH cte AS (SELECT * FROM Orders) SELECT * FROM cte", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("WITH cte AS (SELECT * FROM Orders) SELECT * FROM cte", mdl, false)))
+                .doesNotThrowAnyException();
+
+        assertThatCode(() -> query(rewrite("WITH cte AS (SELECT * FROM Orders), cte2 as (SELECT * FROM cte) SELECT * FROM cte2", mdl, true)))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> query(rewrite("WITH cte AS (SELECT * FROM Orders), cte2 as (SELECT * FROM cte) SELECT * FROM cte2", mdl, false)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     public void testSelectNotFound()
     {
         Manifest manifest = withDefaultCatalogSchema()
