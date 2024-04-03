@@ -65,10 +65,7 @@ public final class Utils
 
     public static Query parseView(String sql)
     {
-        Query query = (Query) parseSql(sql);
-        // TODO: we don't support view have WITH clause yet
-        io.wren.base.Utils.checkArgument(query.getWith().isEmpty(), "view cannot have WITH clause");
-        return query;
+        return (Query) parseSql(sql);
     }
 
     public static Expression parseExpression(String expression)
