@@ -84,7 +84,7 @@ public class SQLGlot
             throws IOException
     {
         Request request = preparePost()
-                .setUri(baseUri.resolve("sqlglot").resolve("transpile"))
+                .setUri(baseUri.resolve("sqlglot/transpile"))
                 .setHeader(CONTENT_TYPE, APPLICATION_JSON_TYPE.toString())
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
