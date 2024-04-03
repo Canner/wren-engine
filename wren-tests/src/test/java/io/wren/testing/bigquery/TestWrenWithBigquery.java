@@ -269,4 +269,23 @@ public class TestWrenWithBigquery
             assertThat(count).isEqualTo(100);
         }
     }
+
+    @Test
+    public void testQueryCte()
+    {
+        assertThatNoException().isThrownBy(() -> {
+            try (Connection connection = createConnection()) {
+                PreparedStatement stmt = connection.prepareStatement("with cte as (select * from Orders) select * from cte");
+                ResultSet resultSet = stmt.executeQuery();
+                resultSet.next();
+            }
+
+            // test type correction rewrite
+            try (Connection connection = createConnection()) {
+                PreparedStatement stmt = connection.prepareStatement("with cte as (select * from Orders) select * from cte join Orders on cte.orderkey = Orders.orderkey");
+                ResultSet resultSet = stmt.executeQuery();
+                resultSet.next();
+            }
+        });
+    }
 }

@@ -77,7 +77,8 @@ public class TestView
                         View.view("view1", "select * from CountOrders"),
                         View.view("view2", "select * from view1"),
                         View.view("oneDimCount", "select custkey from CountOrders"),
-                        View.view("oneDimCount2", "select * from oneDimCount")))
+                        View.view("oneDimCount2", "select * from oneDimCount"),
+                        View.view("cteInView", "with cte as (select * from CountOrders) select * from cte")))
                 .build());
 
         List.of(true, false).forEach(enableDynamicFields -> {
@@ -100,6 +101,9 @@ public class TestView
                     .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
             assertThat(query(rewrite("SELECT custkey FROM oneDimCount2 WHERE custkey = 370", mdl, enableDynamicFields)))
                     .isEqualTo(query(rewrite("SELECT custkey FROM CountOrders WHERE custkey = 370", mdl, enableDynamicFields)));
+
+            assertThat(query(rewrite("SELECT custkey, count FROM cteInView WHERE custkey = 370", mdl, enableDynamicFields)))
+                    .isEqualTo(query(rewrite("SELECT custkey, count FROM CountOrders WHERE custkey = 370", mdl, false)));
         });
     }
 
@@ -148,6 +152,25 @@ public class TestView
                 .hasMessageContaining("found issue in view")
                 .getCause()
                 .hasMessageContaining("loops not allowed");
+    }
+
+    @Test
+    public void testCustomCTE()
+    {
+        WrenMDL mdl = WrenMDL.fromManifest(withDefaultCatalogSchema()
+                .setModels(List.of(orders))
+                .setViews(List.of(
+                        View.view("view1", "select * from orders"),
+                        View.view("view2", "with cte as (select * from view1) select * from cte")))
+                .build());
+        assertThat(query(rewrite("WITH cte AS (SELECT * FROM view1) SELECT * FROM cte", mdl, false)))
+                .isEqualTo(query(rewrite("SELECT * FROM orders", mdl, false)));
+        assertThat(query(rewrite("WITH cte AS (SELECT * FROM view1) SELECT * FROM cte", mdl, true)))
+                .isEqualTo(query(rewrite("SELECT * FROM orders", mdl, false)));
+        assertThat(query(rewrite("WITH cte as (SELECT * FROM view2) SELECT * FROM cte", mdl, false)))
+                .isEqualTo(query(rewrite("SELECT * FROM orders", mdl, false)));
+        assertThat(query(rewrite("WITH cte as (SELECT * FROM view2) SELECT * FROM cte", mdl, true)))
+                .isEqualTo(query(rewrite("SELECT * FROM orders", mdl, false)));
     }
 
     private String rewrite(String sql, WrenMDL wrenMDL, boolean enableDynamicField)
