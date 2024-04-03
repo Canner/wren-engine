@@ -318,6 +318,12 @@ public class ExpressionTypeAnalyzer
     {
         String objectName = field.getTableName().getSchemaTableName().getTableName();
         String columnName = field.getColumnName();
+
+        // TODO: support to analyze the column type of CTE.
+        // It could be a remote table or a custom CTE.
+        if (!mdl.isObjectExist(objectName)) {
+            return null;
+        }
         return PGTypes.nameToPgType(mdl.getColumnType(objectName, columnName)).orElse(null);
     }
 
