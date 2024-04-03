@@ -15,7 +15,7 @@
 package io.wren.testing.bigquery;
 
 import org.testng.annotations.DataProvider;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

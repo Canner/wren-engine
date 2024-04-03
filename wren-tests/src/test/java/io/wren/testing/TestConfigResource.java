@@ -21,7 +21,7 @@ import io.wren.base.config.ConfigManager;
 import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,8 +43,8 @@ import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.testing.AbstractTestFramework.withDefaultCatalogSchema;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestConfigResource
         extends RequireWrenServer

@@ -15,11 +15,10 @@ package io.wren.testing;
 
 import io.wren.base.metadata.StandardErrorCode;
 import io.wren.main.web.dto.ErrorMessageDto;
+import jakarta.ws.rs.WebApplicationException;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.assertj.core.api.ThrowableAssert;
 import org.intellij.lang.annotations.Language;
-
-import javax.ws.rs.WebApplicationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;

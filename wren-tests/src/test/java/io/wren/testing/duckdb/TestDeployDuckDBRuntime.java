@@ -16,7 +16,7 @@ package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
 import io.wren.testing.TestingPostgreSqlServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -31,7 +31,7 @@ import static io.wren.base.config.PostgresConfig.POSTGRES_USER;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.DataSourceType.POSTGRES;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Test(singleThreaded = true)
 public class TestDeployDuckDBRuntime

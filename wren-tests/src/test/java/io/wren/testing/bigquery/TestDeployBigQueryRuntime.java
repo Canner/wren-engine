@@ -17,7 +17,7 @@ package io.wren.testing.bigquery;
 import com.google.common.collect.ImmutableMap;
 import io.wren.base.dto.Manifest;
 import io.wren.testing.TestingWrenServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,8 +29,8 @@ import java.util.List;
 import static io.wren.base.config.ConfigManager.ConfigEntry.configEntry;
 import static io.wren.testing.WebApplicationExceptionAssert.assertWebApplicationException;
 import static java.lang.System.getenv;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Test(singleThreaded = true)
 public class TestDeployBigQueryRuntime

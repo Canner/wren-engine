@@ -16,7 +16,7 @@ package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
 import io.wren.testing.TestingWrenServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

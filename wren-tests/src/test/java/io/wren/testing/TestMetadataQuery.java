@@ -20,8 +20,7 @@ import io.wren.base.WrenMDL;
 import io.wren.base.dto.Manifest;
 import io.wren.base.type.PGType;
 import io.wren.base.type.PGTypes;
-import org.assertj.core.api.AssertionsForClassTypes;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -179,17 +178,17 @@ public class TestMetadataQuery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -219,17 +218,17 @@ public class TestMetadataQuery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -261,17 +260,17 @@ public class TestMetadataQuery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -290,17 +289,17 @@ public class TestMetadataQuery
             protocolClient.assertParseComplete();
 
             actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             fields = protocolClient.assertAndGetRowDescriptionFields();
             actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertBindComplete();
 
             fields2 = protocolClient.assertAndGetRowDescriptionFields();
             actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");

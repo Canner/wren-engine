@@ -21,7 +21,7 @@ import io.wren.cache.PathInfo;
 import io.wren.main.connector.CacheServiceManager;
 import io.wren.main.metadata.Metadata;
 import io.wren.testing.TestingWrenServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.util.Optional;
 

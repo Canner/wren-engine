@@ -22,7 +22,7 @@ import io.wren.testing.AbstractSqlConverterTest;
 import io.wren.testing.TestingSQLGlotServer;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import static io.wren.base.config.SQLGlotConfig.createConfigWithFreePort;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.BIGQUERY;

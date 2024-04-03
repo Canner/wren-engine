@@ -35,7 +35,7 @@ import io.wren.validation.NotNullValidation;
 import io.wren.validation.RelationshipValidation;
 import io.wren.validation.ValidationResult;
 import org.testng.annotations.AfterClass;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.util.List;
 

@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
 import io.wren.testing.TestingWrenServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

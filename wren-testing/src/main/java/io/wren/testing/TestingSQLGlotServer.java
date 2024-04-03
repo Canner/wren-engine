@@ -21,8 +21,6 @@ import io.airlift.http.client.jetty.JettyHttpClient;
 import io.wren.base.config.SQLGlotConfig;
 import io.wren.main.sqlglot.SQLGlot;
 
-import javax.annotation.PreDestroy;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -70,7 +68,6 @@ public class TestingSQLGlotServer
         waitReady();
     }
 
-    @PreDestroy
     @Override
     public void close()
     {

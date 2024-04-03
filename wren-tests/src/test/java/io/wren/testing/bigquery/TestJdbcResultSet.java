@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import org.postgresql.util.PGInterval;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
 import java.sql.Connection;

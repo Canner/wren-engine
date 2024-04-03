@@ -15,7 +15,7 @@
 package io.wren.testing.bigquery;
 
 import org.testng.annotations.DataProvider;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -37,7 +37,7 @@ import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Test(singleThreaded = true)
 public class TestBigQueryCache

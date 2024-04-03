@@ -25,7 +25,7 @@ import org.postgresql.core.BaseConnection;
 import org.postgresql.jdbc.PgArray;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
 import java.sql.Array;

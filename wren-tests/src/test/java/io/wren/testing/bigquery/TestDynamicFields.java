@@ -16,7 +16,7 @@ package io.wren.testing.bigquery;
 
 import com.google.common.collect.ImmutableMap;
 import io.wren.testing.TestingWrenServer;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,7 +31,7 @@ import java.util.List;
 import static io.wren.base.Utils.randomIntString;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDynamicFields
         extends AbstractWireProtocolTestWithBigQuery

@@ -24,7 +24,7 @@ import io.wren.base.dto.Relationship;
 import io.wren.base.dto.TimeUnit;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.LineageResult;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
