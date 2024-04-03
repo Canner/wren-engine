@@ -21,7 +21,7 @@ import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

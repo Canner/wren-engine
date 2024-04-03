@@ -27,7 +27,7 @@ import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.testing.AbstractSqlConverterTest;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

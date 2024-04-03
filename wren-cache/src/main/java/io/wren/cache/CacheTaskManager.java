@@ -15,13 +15,11 @@
 package io.wren.cache;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.WrenException;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.wireprotocol.PgMetastore;
-
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -109,7 +107,6 @@ public class CacheTaskManager
         }
     }
 
-    @PreDestroy
     @Override
     public void close()
             throws IOException

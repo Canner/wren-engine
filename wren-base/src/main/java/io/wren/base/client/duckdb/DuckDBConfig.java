@@ -30,9 +30,8 @@ package io.wren.base.client.duckdb;
 
 import io.airlift.configuration.Config;
 import io.airlift.units.DataSize;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 public class DuckDBConfig
 {

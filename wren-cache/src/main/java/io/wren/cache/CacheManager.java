@@ -16,6 +16,7 @@ package io.wren.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
@@ -36,9 +37,7 @@ import io.wren.base.sqlrewrite.WrenPlanner;
 import io.wren.base.wireprotocol.PgMetastore;
 import io.wren.cache.dto.CachedTable;
 
-import javax.annotation.PreDestroy;
-import javax.inject.Inject;
-
+import java.io.Closeable;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +74,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 
 public class CacheManager
+        implements Closeable
 {
     private static final Logger LOG = Logger.get(CacheManager.class);
     private static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
@@ -295,8 +295,8 @@ public class CacheManager
         return retryScheduledFutures.containsKey(catalogSchemaTableName);
     }
 
-    @PreDestroy
-    public void stop()
+    @Override
+    public void close()
     {
         refreshExecutor.shutdownNow();
         retryExecutor.shutdownNow();

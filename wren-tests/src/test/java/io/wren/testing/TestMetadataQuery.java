@@ -21,7 +21,7 @@ import io.wren.base.dto.Manifest;
 import io.wren.base.type.PGType;
 import io.wren.base.type.PGTypes;
 import org.assertj.core.api.AssertionsForClassTypes;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -17,7 +17,7 @@ package io.wren.testing.bigquery;
 import com.google.common.collect.ImmutableMap;
 import io.wren.base.dto.Manifest;
 import io.wren.testing.TestingWrenServer;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

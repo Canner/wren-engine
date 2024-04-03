@@ -22,7 +22,7 @@ import io.wren.base.dto.CacheInfo;
 import io.wren.cache.CacheInfoPair;
 import io.wren.cache.TaskInfo;
 import io.wren.main.WrenMetastore;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.Optional;

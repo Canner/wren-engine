@@ -15,6 +15,7 @@
 package io.wren.main.connector.postgres;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
@@ -29,8 +30,6 @@ import io.wren.connector.postgres.PostgresRecordIterator;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.NoopPgFunctionBuilder;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

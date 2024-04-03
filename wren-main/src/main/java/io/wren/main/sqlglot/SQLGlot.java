@@ -14,6 +14,7 @@
 
 package io.wren.main.sqlglot;
 
+import com.google.inject.Inject;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
 import io.airlift.http.client.Request;
@@ -23,22 +24,19 @@ import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
 import io.wren.base.config.SQLGlotConfig;
 import io.wren.main.sqlglot.dto.TranspileDTO;
-
-import javax.inject.Inject;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.UriBuilder;
+import jakarta.ws.rs.WebApplicationException;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 
+import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public class SQLGlot
         implements Closeable
@@ -86,8 +84,8 @@ public class SQLGlot
             throws IOException
     {
         Request request = preparePost()
-                .setUri(UriBuilder.fromUri(baseUri).path("sqlglot").path("transpile").build())
-                .setHeader(CONTENT_TYPE, APPLICATION_JSON)
+                .setUri(baseUri.resolve("sqlglot").resolve("transpile"))
+                .setHeader(CONTENT_TYPE, APPLICATION_JSON_TYPE.toString())
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
 

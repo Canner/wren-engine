@@ -29,6 +29,7 @@
 package io.wren.main;
 
 import com.google.common.collect.Streams;
+import com.google.inject.Inject;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.SessionContext;
@@ -37,8 +38,6 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.base.sqlrewrite.WrenPlanner;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.web.dto.QueryResultDto;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

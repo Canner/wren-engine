@@ -14,14 +14,13 @@
 
 package io.wren.main.connector;
 
+import com.google.inject.Inject;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
 import io.wren.cache.CacheService;
 import io.wren.cache.PathInfo;
 import io.wren.main.connector.bigquery.BigQueryCacheService;
 import io.wren.main.connector.postgres.PostgresCacheService;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 

@@ -17,7 +17,7 @@ package io.wren.testing.duckdb;
 import com.google.common.collect.ImmutableMap;
 import io.wren.testing.AbstractWireProtocolTypeTest;
 import io.wren.testing.TestingWrenServer;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;

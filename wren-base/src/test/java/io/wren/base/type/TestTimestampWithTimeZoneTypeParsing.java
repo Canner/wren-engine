@@ -31,7 +31,7 @@ package io.wren.base.type;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestTimestampWithTimeZoneTypeParsing
 {

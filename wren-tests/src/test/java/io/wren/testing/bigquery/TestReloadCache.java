@@ -21,7 +21,7 @@ import io.wren.cache.CacheInfoPair;
 import io.wren.cache.TaskInfo;
 import io.wren.cache.dto.CachedTable;
 import io.wren.main.web.dto.DeployInputDto;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -23,7 +23,7 @@ import io.wren.main.web.dto.ColumnPredicateDto;
 import io.wren.main.web.dto.PredicateDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.SqlAnalysisOutputDto;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

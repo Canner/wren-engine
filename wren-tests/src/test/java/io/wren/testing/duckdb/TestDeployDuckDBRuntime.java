@@ -16,7 +16,7 @@ package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
 import io.wren.testing.TestingPostgreSqlServer;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.ResultSet;

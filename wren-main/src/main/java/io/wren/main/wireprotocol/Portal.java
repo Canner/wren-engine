@@ -21,10 +21,9 @@ import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.type.PGType;
 import io.wren.base.type.PGTypes;
+import jakarta.validation.constraints.NotNull;
 
 import javax.annotation.Nullable;
-import javax.annotation.PreDestroy;
-import javax.validation.constraints.NotNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -155,8 +154,6 @@ public class Portal
                 .toString();
     }
 
-    // TODO: make sure this annotation works.
-    @PreDestroy
     protected void close()
     {
         if (connectorRecordIterator != null) {

@@ -14,6 +14,7 @@
 
 package io.wren.main.wireprotocol;
 
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
@@ -32,8 +33,6 @@ import io.wren.base.wireprotocol.PgMetastore;
 import io.wren.cache.DuckdbRecordIterator;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

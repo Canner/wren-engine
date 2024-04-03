@@ -20,7 +20,7 @@ import io.wren.base.dto.Manifest;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.web.dto.QueryResultDto;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;

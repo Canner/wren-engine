@@ -15,7 +15,7 @@
 package io.wren.testing.bigquery;
 
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.sql.Connection;

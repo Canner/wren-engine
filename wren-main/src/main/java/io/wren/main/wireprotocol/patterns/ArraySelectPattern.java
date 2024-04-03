@@ -16,7 +16,8 @@ package io.wren.main.wireprotocol.patterns;
 
 import io.wren.base.WrenException;
 
-import java.util.Stack;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,7 +54,7 @@ public class ArraySelectPattern
 
     private static int getBackBracketIndex(String stmt, int frontBracket)
     {
-        Stack<Character> brackets = new Stack<>();
+        Deque<Character> brackets = new ArrayDeque<>();
         for (int i = frontBracket; i < stmt.length(); i++) {
             switch (stmt.charAt(i)) {
                 case '(':
@@ -61,7 +62,7 @@ public class ArraySelectPattern
                     break;
                 case ')':
                     brackets.pop();
-                    if (brackets.empty()) {
+                    if (brackets.isEmpty()) {
                         return i;
                     }
             }

@@ -15,6 +15,7 @@
 package io.wren.main.connector.duckdb;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
@@ -38,8 +39,6 @@ import io.wren.connector.StorageClient;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.DuckDBFunctionBuilder;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
-
-import javax.inject.Inject;
 
 import java.io.IOException;
 import java.nio.file.Files;

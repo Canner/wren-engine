@@ -19,7 +19,7 @@ import io.wren.main.sqlglot.SQLGlotConverter;
 import io.wren.testing.TPCH;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
 import static java.lang.String.format;

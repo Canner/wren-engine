@@ -14,12 +14,11 @@
 
 package io.wren.main.pgcatalog.builder;
 
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.wren.base.pgcatalog.function.PgFunction;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.metadata.MetadataManager;
-
-import javax.inject.Inject;
 
 import static java.util.Objects.requireNonNull;
 

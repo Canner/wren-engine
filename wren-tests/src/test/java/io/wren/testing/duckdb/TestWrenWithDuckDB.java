@@ -15,7 +15,7 @@
 package io.wren.testing.duckdb;
 
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

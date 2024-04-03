@@ -17,10 +17,9 @@ package io.wren.main.web;
 import io.airlift.log.Logger;
 import io.wren.base.WrenException;
 import io.wren.main.web.dto.ErrorMessageDto;
-
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.ext.ExceptionMapper;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -28,10 +27,10 @@ import java.util.function.BiConsumer;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
+import static jakarta.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static java.lang.String.format;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
-import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
 public final class WrenExceptionMapper
         implements ExceptionMapper<Throwable>

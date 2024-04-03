@@ -14,18 +14,17 @@
 
 package io.wren.main.web;
 
+import com.google.inject.Inject;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.WrenException;
 import io.wren.base.metadata.SchemaTableName;
 import io.wren.cache.CacheManager;
-
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
+import jakarta.ws.rs.core.Response;
 
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;

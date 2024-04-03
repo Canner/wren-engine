@@ -49,7 +49,6 @@ import org.elasticsearch.transport.BindTransportException;
 import org.elasticsearch.transport.netty4.Netty4OpenChannelsHandler;
 
 import javax.annotation.Nullable;
-import javax.annotation.PreDestroy;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -252,8 +251,6 @@ public class PostgresNetty
                         " with distinct ports and none of them matched the publish address (" + publishInetAddress + "). ");
     }
 
-    // TODO: make sure this annotation works.
-    @PreDestroy
     protected void close()
     {
         for (Channel channel : serverChannels) {

@@ -32,6 +32,7 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
@@ -52,8 +53,6 @@ import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.BigQueryPgFunctionBuilder;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 import org.jheaps.annotations.VisibleForTesting;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Map;

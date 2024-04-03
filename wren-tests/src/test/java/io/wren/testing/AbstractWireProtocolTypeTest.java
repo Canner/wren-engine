@@ -19,7 +19,7 @@ import com.google.common.collect.ImmutableList;
 import io.wren.base.type.PGArray;
 import org.postgresql.util.PGInterval;
 import org.postgresql.util.PGobject;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.sql.Array;

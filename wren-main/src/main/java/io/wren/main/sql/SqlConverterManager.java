@@ -14,6 +14,7 @@
 
 package io.wren.main.sql;
 
+import com.google.inject.Inject;
 import io.wren.base.SessionContext;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
@@ -23,8 +24,6 @@ import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
 import io.wren.main.sqlglot.SQLGlot;
 import io.wren.main.sqlglot.SQLGlotConverter;
-
-import javax.inject.Inject;
 
 import static java.util.Objects.requireNonNull;
 

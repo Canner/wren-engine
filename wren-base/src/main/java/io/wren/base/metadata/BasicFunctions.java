@@ -19,13 +19,12 @@ import io.wren.base.type.DateType;
 import io.wren.base.type.VarcharType;
 
 import static io.wren.base.metadata.Function.Argument.argument;
-import static io.wren.base.metadata.Function.builder;
 
 public class BasicFunctions
 {
     private BasicFunctions() {}
 
-    public static final Function DATE_TRUNC = builder()
+    public static final Function DATE_TRUNC = Function.builder()
             .setName("date_trunc")
             .setArguments(ImmutableList.of(argument("field", VarcharType.VARCHAR), argument("source", DateType.DATE)))
             .setReturnType(DateType.DATE)

@@ -16,6 +16,7 @@ package io.wren.base.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.wren.base.WrenException;
@@ -23,8 +24,6 @@ import io.wren.base.client.duckdb.CacheStorageConfig;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
 import io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig;
-
-import javax.inject.Inject;
 
 import java.io.File;
 import java.io.FileWriter;

@@ -15,6 +15,7 @@
 package io.wren.main.connector.postgres;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Node;
 import io.wren.base.SessionContext;
@@ -22,8 +23,6 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.sql.SqlRewrite;
 import io.wren.main.sql.postgres.RewriteToPostgresType;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

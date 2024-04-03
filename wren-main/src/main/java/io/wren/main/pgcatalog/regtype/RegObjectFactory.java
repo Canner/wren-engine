@@ -15,8 +15,7 @@
 package io.wren.main.pgcatalog.regtype;
 
 import com.google.common.collect.ImmutableMap;
-
-import javax.inject.Inject;
+import com.google.inject.Inject;
 
 import java.util.Map;
 import java.util.Optional;

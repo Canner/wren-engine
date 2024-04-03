@@ -48,7 +48,7 @@ public class Server
         Bootstrap app = new Bootstrap(modules.build());
 
         try {
-            Injector injector = app.strictConfig().initialize();
+            Injector injector = app.initialize();
 
             configure(injector);
 

@@ -30,7 +30,7 @@ import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.testing.AbstractSqlConverterTest;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.List;
 

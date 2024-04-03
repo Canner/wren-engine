@@ -21,7 +21,7 @@ import io.wren.base.config.ConfigManager;
 import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

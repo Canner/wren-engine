@@ -23,7 +23,7 @@ import io.wren.base.dto.Column;
 import io.wren.base.dto.Model;
 import io.wren.cache.TaskInfo;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.Optional;

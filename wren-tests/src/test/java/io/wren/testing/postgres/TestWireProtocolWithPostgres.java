@@ -22,7 +22,7 @@ import io.wren.testing.TestingWireProtocolClient;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;

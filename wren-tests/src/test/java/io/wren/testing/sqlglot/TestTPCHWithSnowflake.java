@@ -20,7 +20,7 @@ import io.wren.testing.TPCH;
 import io.wren.testing.TestingSnowflake;
 import org.intellij.lang.annotations.Language;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.io.IOException;
 
