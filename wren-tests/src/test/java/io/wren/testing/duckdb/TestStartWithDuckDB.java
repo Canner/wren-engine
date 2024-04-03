@@ -15,12 +15,9 @@
 package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
-import io.wren.base.dto.Manifest;
 import io.wren.testing.TestingWrenServer;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -28,64 +25,43 @@ import java.util.Map;
 import static io.wren.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_INIT_SQL_PATH;
 import static io.wren.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_SESSION_SQL_PATH;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
-import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
+import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 public class TestStartWithDuckDB
 {
-    private Path mdlDir;
-    private ImmutableMap.Builder<String, String> baseProperties;
-
-    @BeforeMethod
-    public void setup()
-    {
-        try {
-            mdlDir = Files.createTempDirectory("wren-mdl");
-            Path wrenMDLFilePath = mdlDir.resolve("duckdb_mdl.json");
-            Manifest initial = Manifest.builder()
-                    .setCatalog("memory")
-                    .setSchema("tpch")
-                    .build();
-            Files.write(wrenMDLFilePath, MANIFEST_JSON_CODEC.toJsonBytes(initial));
-            baseProperties = ImmutableMap.<String, String>builder()
-                    .put("wren.datasource.type", DUCKDB.name())
-                    .put("wren.directory", mdlDir.toAbsolutePath().toString());
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Test
     public void testStart()
             throws Exception
     {
+        Path mdlDir = Files.createTempDirectory("wren-mdl");
         String initSqlPath = mdlDir.resolve("init.sql").toAbsolutePath().toString();
         Files.writeString(Path.of(initSqlPath), "CREATE SCHEMA tpch;");
         String sessionSqlPath = mdlDir.resolve("session.sql").toAbsolutePath().toString();
         Files.writeString(Path.of(sessionSqlPath), "SET s3_region = 'us-east-2';");
 
-        baseProperties
+        assertServerStart(ImmutableMap.<String, String>builder()
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
                 .put(DUCKDB_CONNECTOR_INIT_SQL_PATH, initSqlPath)
-                .put(DUCKDB_CONNECTOR_SESSION_SQL_PATH, sessionSqlPath);
-
-        assertServerStart(baseProperties.build());
+                .put(DUCKDB_CONNECTOR_SESSION_SQL_PATH, sessionSqlPath)
+                .build());
     }
 
     @Test
     public void testStartWithIllegalInitSql()
             throws Exception
     {
+        Path mdlDir = Files.createTempDirectory("wren-mdl");
         String initSqlPath = mdlDir.resolve("init.sql").toAbsolutePath().toString();
         Files.writeString(Path.of(initSqlPath), "Illegal SQL");
         String sessionSqlPath = mdlDir.resolve("session.sql").toAbsolutePath().toString();
         Files.writeString(Path.of(sessionSqlPath), "Illegal SQL");
 
-        baseProperties
+        assertServerStart(ImmutableMap.<String, String>builder()
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
                 .put(DUCKDB_CONNECTOR_INIT_SQL_PATH, initSqlPath)
-                .put(DUCKDB_CONNECTOR_SESSION_SQL_PATH, sessionSqlPath);
-
-        assertServerStart(baseProperties.build());
+                .put(DUCKDB_CONNECTOR_SESSION_SQL_PATH, sessionSqlPath)
+                .build());
     }
 
     private void assertServerStart(Map<String, String> props)
