@@ -1,4 +1,4 @@
-FROM azul/zulu-openjdk:11.0.22
+FROM eclipse-temurin:21
 LABEL maintainer="https://www.canner.io/"
 WORKDIR /usr/src/app
 
