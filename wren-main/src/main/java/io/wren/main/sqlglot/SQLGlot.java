@@ -31,15 +31,11 @@ import javax.ws.rs.core.UriBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.ExecutorService;
 
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
-import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
-import static io.wren.main.sqlglot.SQLGlot.Dialect.TRINO;
-import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -72,14 +68,12 @@ public class SQLGlot
 
     private final URI baseUri;
     private final HttpClient client;
-    private boolean sqlGlotServerReady;
 
     @Inject
     public SQLGlot(SQLGlotConfig config)
     {
         this.baseUri = getBaseUri(config);
         this.client = new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
-        probeSQLGlotServer();
     }
 
     @Override
@@ -102,33 +96,6 @@ public class SQLGlot
             throwWebApplicationException(response);
         }
         return TRANSPILE_DTO_JSON_CODEC.fromJson(response.getBody()).getSql();
-    }
-
-    private void probeSQLGlotServer()
-    {
-        ExecutorService executor = newFixedThreadPool(1);
-        executor.submit(() -> {
-            sqlGlotServerReady = checkSQLGlotServer();
-            if (sqlGlotServerReady) {
-                executor.shutdown();
-            }
-        });
-    }
-
-    private boolean checkSQLGlotServer()
-    {
-        Request request = preparePost()
-                .setUri(UriBuilder.fromUri(baseUri).path("sqlglot").path("transpile").build())
-                .setHeader(CONTENT_TYPE, APPLICATION_JSON)
-                .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO("SELECT 1", TRINO.getDialect(), DUCKDB.getDialect())))
-                .build();
-        try {
-            StringResponseHandler.StringResponse response = client.execute(request, createStringResponseHandler());
-            return response.getStatusCode() != 200;
-        }
-        catch (Exception e) {
-            return false;
-        }
     }
 
     private static void throwWebApplicationException(StringResponseHandler.StringResponse response)
