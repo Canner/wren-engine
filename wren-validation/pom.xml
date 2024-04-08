@@ -5,7 +5,7 @@
     <parent>
         <artifactId>wren-root</artifactId>
         <groupId>io.wren</groupId>
-        <version>0.3.2-SNAPSHOT</version>
+        <version>0.3.2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
