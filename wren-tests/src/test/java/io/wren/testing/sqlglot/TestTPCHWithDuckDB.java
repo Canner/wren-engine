@@ -26,7 +26,7 @@ import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-@Test(singleThreaded = true)
+@Test
 public class TestTPCHWithDuckDB
         extends AbstractTPCHTest
 {

@@ -16,6 +16,9 @@ logger = logging.getLogger()
 
 sqlglot.logger.setLevel(os.getenv('SQLGLOT_LOG_LEVEL', 'ERROR'))
 
+# Pre run to avoid deadlock when concurrent loading modules
+sqlglot.transpile('SELECT ARRAY[1,2,3][1]', read='trino', write='duckdb')
+
 app = FastAPI()
 
 
