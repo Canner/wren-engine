@@ -763,8 +763,7 @@
                                     -Xep:UnnecessaryOptionalGet:ERROR
                                     -Xep:UnusedVariable:ERROR
                                     -Xep:UseEnumSwitch:ERROR
-                                    -Xep:ZoneIdOfZ:ERROR
-                                </arg>
+                                    -Xep:ZoneIdOfZ:ERROR</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
