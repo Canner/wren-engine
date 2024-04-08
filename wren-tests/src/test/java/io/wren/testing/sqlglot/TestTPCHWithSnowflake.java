@@ -27,7 +27,7 @@ import java.io.IOException;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.SNOWFLAKE;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-@Test(singleThreaded = true, enabled = false, description = "It requires a Snowflake account.")
+@Test(enabled = false, description = "It requires a Snowflake account.")
 public class TestTPCHWithSnowflake
         extends AbstractTPCHTest
 {
