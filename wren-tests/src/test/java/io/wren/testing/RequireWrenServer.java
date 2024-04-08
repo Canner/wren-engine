@@ -37,12 +37,11 @@ import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.SqlAnalysisOutputDto;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,6 +50,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.prepareDelete;
 import static io.airlift.http.client.Request.Builder.prepareGet;
@@ -64,7 +64,6 @@ import static io.airlift.json.JsonCodec.listJsonCodec;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 public abstract class RequireWrenServer
 {
@@ -160,7 +159,7 @@ public abstract class RequireWrenServer
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/preview"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(PREVIEW_DTO_CODEC, previewDto))
                 .build();
 
@@ -175,7 +174,7 @@ public abstract class RequireWrenServer
     {
         Request request = preparePost()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/deploy"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(DEPLOY_INPUT_DTO_JSON_CODEC, dto))
                 .build();
 
@@ -234,7 +233,7 @@ public abstract class RequireWrenServer
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/lineage/column"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(COLUMN_LINEAGE_INPUT_DTO_CODEC, inputDto))
                 .build();
 
@@ -249,7 +248,7 @@ public abstract class RequireWrenServer
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/analysis/sql"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(SQL_ANALYSIS_INPUT_DTO_CODEC, inputDto))
                 .build();
 
@@ -290,7 +289,7 @@ public abstract class RequireWrenServer
     {
         Request request = prepareDelete()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
@@ -303,7 +302,7 @@ public abstract class RequireWrenServer
     {
         Request request = preparePatch()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/config"))
-                .setHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(CONFIG_ENTRY_LIST_CODEC, configEntries))
                 .build();
 
@@ -418,7 +417,7 @@ public abstract class RequireWrenServer
 
         throw new WebApplicationException(
                 Response.status(response.getStatusCode())
-                        .type(APPLICATION_JSON)
+                        .type(MediaType.APPLICATION_JSON_TYPE)
                         .entity(errorMessageDto)
                         .build());
     }

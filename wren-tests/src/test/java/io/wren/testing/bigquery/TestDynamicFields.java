@@ -31,7 +31,7 @@ import java.util.List;
 import static io.wren.base.Utils.randomIntString;
 import static java.lang.String.format;
 import static java.lang.System.getenv;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDynamicFields
         extends AbstractWireProtocolTestWithBigQuery

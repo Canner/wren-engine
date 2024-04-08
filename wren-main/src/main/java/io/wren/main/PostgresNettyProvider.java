@@ -15,6 +15,8 @@
 package io.wren.main;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.base.sql.SqlConverter;
@@ -27,9 +29,6 @@ import io.wren.main.wireprotocol.PostgresNetty;
 import io.wren.main.wireprotocol.auth.Authentication;
 import io.wren.main.wireprotocol.ssl.SslContextProvider;
 import org.elasticsearch.common.network.NetworkService;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
 
 import static java.util.Objects.requireNonNull;
 

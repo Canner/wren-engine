@@ -16,10 +16,9 @@ package io.wren.main.pgcatalog.regtype;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import com.google.inject.Inject;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.main.metadata.Metadata;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

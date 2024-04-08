@@ -20,7 +20,6 @@ import io.wren.base.type.PGType;
 import io.wren.base.type.PGTypes;
 import io.wren.main.wireprotocol.PostgresWireProtocol;
 import io.wren.testing.TestingWireProtocolClient;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.intellij.lang.annotations.Language;
 import org.postgresql.util.PGInterval;
 import org.testng.annotations.DataProvider;
@@ -76,7 +75,7 @@ import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestWireProtocolWithBigquery
         extends AbstractWireProtocolTestWithBigQuery
@@ -134,17 +133,17 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertDataRow("rows2,10");
@@ -175,17 +174,17 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, VARCHAR));
 
             protocolClient.assertDataRow("rows1,rows11");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -220,17 +219,17 @@ public class TestWireProtocolWithBigquery
             PGType expectedType = getDescriptionExpectedType(pgType);
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(ImmutableList.of(pgType));
+            assertThat(actualParamTypes).isEqualTo(ImmutableList.of(pgType));
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(expectedType));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(expectedType));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(expectedType));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(expectedType));
 
             protocolClient.assertDataRow(expected);
             protocolClient.assertCommandComplete("SELECT 1");
@@ -281,17 +280,17 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -307,7 +306,7 @@ public class TestWireProtocolWithBigquery
 
             fields2 = protocolClient.assertAndGetRowDescriptionFields();
             actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
             protocolClient.assertDataRow("bigint");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -337,17 +336,17 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertParseComplete();
 
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertBindComplete();
 
             List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -363,7 +362,7 @@ public class TestWireProtocolWithBigquery
 
             fields2 = protocolClient.assertAndGetRowDescriptionFields();
             actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
+            assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR, INTEGER));
 
             protocolClient.assertDataRow("pg_type,14");
             protocolClient.assertCommandComplete("SELECT 1");
@@ -426,7 +425,7 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertParseComplete();
             List<PGType<?>> fields = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(fields.size()).isZero();
+            assertThat(fields.size()).isZero();
             protocolClient.assertNoData();
 
             protocolClient.assertBindComplete();
@@ -459,7 +458,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -496,7 +495,7 @@ public class TestWireProtocolWithBigquery
 
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-            AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
+            assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR, BIGINT));
 
             protocolClient.assertDataRow("rows1,10");
             protocolClient.assertPortalPortalSuspended();
@@ -560,14 +559,14 @@ public class TestWireProtocolWithBigquery
         List<PGType<?>> paramTypes = ImmutableList.of(INTEGER);
         protocolClient.assertParseComplete();
         List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-        AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+        assertThat(actualParamTypes).isEqualTo(paramTypes);
         List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
         List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-        AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
+        assertThat(actualTypes).isEqualTo(ImmutableList.of(VARCHAR));
         protocolClient.assertBindComplete();
         List<TestingWireProtocolClient.Field> fields2 = protocolClient.assertAndGetRowDescriptionFields();
         List<PGType<?>> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-        AssertionsForClassTypes.assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
+        assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
         protocolClient.assertDataRow(expected);
         protocolClient.assertCommandComplete("SELECT 1");
     }
@@ -638,7 +637,7 @@ public class TestWireProtocolWithBigquery
 
             protocolClient.assertParseComplete();
             List<PGType<?>> actualParamTypes = protocolClient.assertAndGetParameterDescription();
-            AssertionsForClassTypes.assertThat(actualParamTypes).isEqualTo(paramTypes);
+            assertThat(actualParamTypes).isEqualTo(paramTypes);
             assertFields(protocolClient, ImmutableList.of(VARCHAR));
             protocolClient.assertBindComplete();
             assertFields(protocolClient, ImmutableList.of(VARCHAR));
@@ -653,7 +652,7 @@ public class TestWireProtocolWithBigquery
     {
         List<TestingWireProtocolClient.Field> fields = client.assertAndGetRowDescriptionFields();
         List<PGType<?>> actualTypes = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
-        AssertionsForClassTypes.assertThat(actualTypes).isEqualTo(types);
+        assertThat(actualTypes).isEqualTo(types);
     }
 
     @Test
@@ -744,7 +743,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.assertCommandComplete("BEGIN");
             List<TestingWireProtocolClient.Field> fields = protocolClient.assertAndGetRowDescriptionFields();
             List<PGType<?>> types = fields.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(Collectors.toList());
-            AssertionsForClassTypes.assertThat(types).isEqualTo(ImmutableList.of(BIGINT, BIGINT, BIGINT));
+            assertThat(types).isEqualTo(ImmutableList.of(BIGINT, BIGINT, BIGINT));
             protocolClient.assertDataRow("1,2,3");
             protocolClient.assertDataRow("2,4,6");
             protocolClient.assertCommandComplete("SELECT 2");
@@ -884,7 +883,7 @@ public class TestWireProtocolWithBigquery
                 count++;
             }
 
-            AssertionsForClassTypes.assertThat(count).isEqualTo(3);
+            assertThat(count).isEqualTo(3);
         }
     }
 
@@ -897,13 +896,13 @@ public class TestWireProtocolWithBigquery
             stmt.setInt(1, 10);
             ResultSet result = stmt.executeQuery();
             result.next();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.getInt(2)).isEqualTo(10);
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.getInt(2)).isEqualTo(10);
             long count = 1;
             while (result.next()) {
                 count++;
             }
-            AssertionsForClassTypes.assertThat(count).isEqualTo(2);
+            assertThat(count).isEqualTo(2);
         }
 
         try (Connection conn = createConnection()) {
@@ -913,7 +912,7 @@ public class TestWireProtocolWithBigquery
             while (result.next()) {
                 count++;
             }
-            AssertionsForClassTypes.assertThat(count).isEqualTo(2);
+            assertThat(count).isEqualTo(2);
         }
 
         try (Connection conn = createConnection()) {
@@ -923,8 +922,8 @@ public class TestWireProtocolWithBigquery
             assertThatThrownBy(() -> stmt.executeQuery("BEGIN")).hasMessageFindingMatch(".*No results were returned by the query.*");
 
             ResultSet result = stmt.executeQuery("select count(*) from (values ('rows1', 10), ('rows2', 10)) as t(col1, col2) ");
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getLong(1)).isEqualTo(2);
+            assertThat(result.next()).isTrue();
+            assertThat(result.getLong(1)).isEqualTo(2);
 
             assertThatThrownBy(() -> stmt.executeQuery("COMMIT")).hasMessageFindingMatch(".*No results were returned by the query.*");
         }
@@ -939,9 +938,9 @@ public class TestWireProtocolWithBigquery
             stmt.setString(1, "rows1");
             stmt.setInt(2, 10);
             ParameterMetaData metaData = stmt.getParameterMetaData();
-            AssertionsForClassTypes.assertThat(metaData.getParameterCount()).isEqualTo(2);
-            AssertionsForClassTypes.assertThat(metaData.getParameterType(1)).isEqualTo(Types.VARCHAR);
-            AssertionsForClassTypes.assertThat(metaData.getParameterType(2)).isEqualTo(Types.INTEGER);
+            assertThat(metaData.getParameterCount()).isEqualTo(2);
+            assertThat(metaData.getParameterType(1)).isEqualTo(Types.VARCHAR);
+            assertThat(metaData.getParameterType(2)).isEqualTo(Types.INTEGER);
         }
     }
 
@@ -954,18 +953,18 @@ public class TestWireProtocolWithBigquery
             stmt.setString(1, "rows1");
             stmt.setInt(2, 10);
             ResultSet result = stmt.executeQuery();
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.getInt(2)).isEqualTo(10);
+            assertThat(result.next()).isFalse();
 
             stmt.setString(1, "rows2");
             stmt.setInt(2, 10);
             ResultSet result2 = stmt.executeQuery();
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows2");
-            AssertionsForClassTypes.assertThat(result2.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result2.next()).isFalse();
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows2");
+            assertThat(result2.getInt(2)).isEqualTo(10);
+            assertThat(result2.next()).isFalse();
         }
     }
 
@@ -978,19 +977,19 @@ public class TestWireProtocolWithBigquery
             stmt.setString(1, "rows1");
             stmt.setInt(2, 10);
             ResultSet result = stmt.executeQuery();
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.getInt(2)).isEqualTo(10);
+            assertThat(result.next()).isFalse();
 
             PreparedStatement stmt2 = conn.prepareStatement("select * from (values ('rows1', 10), ('rows2', 10)) as t(col1, col2) where col1 = ? and col2 = ?");
             stmt2.setString(1, "rows2");
             stmt2.setInt(2, 10);
             ResultSet result2 = stmt2.executeQuery();
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows2");
-            AssertionsForClassTypes.assertThat(result2.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result2.next()).isFalse();
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows2");
+            assertThat(result2.getInt(2)).isEqualTo(10);
+            assertThat(result2.next()).isFalse();
         }
     }
 
@@ -1006,9 +1005,9 @@ public class TestWireProtocolWithBigquery
             stateWithTwoParams.setString(1, "rows1");
             stateWithTwoParams.setInt(2, 10);
             ResultSet result = stateWithTwoParams.executeQuery();
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.getInt(2)).isEqualTo(10);
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.getInt(2)).isEqualTo(10);
 
             // prepare one parameter statement
             PreparedStatement stateWtihOneParam = conn.prepareStatement("select * from (values ('rows1', 10), ('rows2', 20)) as t(col1, col2) where col2 = ?");
@@ -1016,38 +1015,38 @@ public class TestWireProtocolWithBigquery
             // create portal2
             stateWtihOneParam.setInt(1, 10);
             ResultSet result2 = stateWtihOneParam.executeQuery();
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result2.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result2.next()).isFalse();
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows1");
+            assertThat(result2.getInt(2)).isEqualTo(10);
+            assertThat(result2.next()).isFalse();
 
             // create portal3
             stateWtihOneParam.setInt(1, 20);
             ResultSet result3 = stateWtihOneParam.executeQuery();
-            AssertionsForClassTypes.assertThat(result3.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result3.getString(1)).isEqualTo("rows2");
+            assertThat(result3.next()).isTrue();
+            assertThat(result3.getString(1)).isEqualTo("rows2");
             // assert it used statement 2
-            AssertionsForClassTypes.assertThat(result3.getInt(2)).isEqualTo(20);
-            AssertionsForClassTypes.assertThat(result3.next()).isFalse();
+            assertThat(result3.getInt(2)).isEqualTo(20);
+            assertThat(result3.next()).isFalse();
 
             // assert portal1 is available.
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.getInt(2)).isEqualTo(10);
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.getInt(2)).isEqualTo(10);
+            assertThat(result.next()).isFalse();
 
             // assert statement1 available.
             // create portal4
             stateWithTwoParams.setString(1, "rows2");
             stateWithTwoParams.setInt(2, 20);
             ResultSet result4 = stateWithTwoParams.executeQuery();
-            AssertionsForClassTypes.assertThat(result4.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result4.getString(1)).isEqualTo("rows2");
-            AssertionsForClassTypes.assertThat(result4.getInt(2)).isEqualTo(20);
-            AssertionsForClassTypes.assertThat(result4.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result4.getString(1)).isEqualTo("rows2");
-            AssertionsForClassTypes.assertThat(result4.getInt(2)).isEqualTo(20);
-            AssertionsForClassTypes.assertThat(result4.next()).isFalse();
+            assertThat(result4.next()).isTrue();
+            assertThat(result4.getString(1)).isEqualTo("rows2");
+            assertThat(result4.getInt(2)).isEqualTo(20);
+            assertThat(result4.next()).isTrue();
+            assertThat(result4.getString(1)).isEqualTo("rows2");
+            assertThat(result4.getInt(2)).isEqualTo(20);
+            assertThat(result4.next()).isFalse();
         }
     }
 
@@ -1063,9 +1062,9 @@ public class TestWireProtocolWithBigquery
             stmt.setInt(1, 10);
             stmt.setMaxRows(1);
             ResultSet result = stmt.executeQuery();
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.next()).isFalse();
         }
     }
 
@@ -1080,19 +1079,19 @@ public class TestWireProtocolWithBigquery
             stmt.setInt(1, 10);
             stmt.setMaxRows(1);
             ResultSet result = stmt.executeQuery();
-            AssertionsForClassTypes.assertThat(result.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result.next()).isTrue();
+            assertThat(result.getString(1)).isEqualTo("rows1");
+            assertThat(result.next()).isFalse();
             PreparedStatement stmt2 = conn.prepareStatement("select * from (values ('rows1', 10), ('rows2', 10), ('rows3', 10)) as t(col1, col2) where col2 = ?");
             stmt2.setInt(1, 10);
             ResultSet result2 = stmt2.executeQuery();
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows1");
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows2");
-            AssertionsForClassTypes.assertThat(result2.next()).isTrue();
-            AssertionsForClassTypes.assertThat(result2.getString(1)).isEqualTo("rows3");
-            AssertionsForClassTypes.assertThat(result.next()).isFalse();
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows1");
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows2");
+            assertThat(result2.next()).isTrue();
+            assertThat(result2.getString(1)).isEqualTo("rows3");
+            assertThat(result.next()).isFalse();
         }
     }
 
@@ -1234,7 +1233,7 @@ public class TestWireProtocolWithBigquery
                 ZonedDateTime zdt = (ZonedDateTime) obj;
                 Timestamp timestamp = (Timestamp) result.getObject(1);
                 LocalDateTime utcTime = timestamp.toLocalDateTime();
-                AssertionsForClassTypes.assertThat(utcTime.atZone(UTC)).isEqualTo(zdt);
+                assertThat(utcTime.atZone(UTC)).isEqualTo(zdt);
                 return;
             }
 

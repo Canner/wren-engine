@@ -15,28 +15,27 @@
 package io.wren.main.web;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.WrenException;
 import io.wren.base.client.duckdb.FileUtil;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.web.dto.QueryResultDto;
-
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.PATCH;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Path("/v1/data-source/duckdb")
 public class DuckDBResource

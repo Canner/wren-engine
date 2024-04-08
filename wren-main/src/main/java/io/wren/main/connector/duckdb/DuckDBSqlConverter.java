@@ -15,6 +15,7 @@
 package io.wren.main.connector.duckdb;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Node;
 import io.wren.base.SessionContext;
@@ -25,8 +26,6 @@ import io.wren.main.sql.duckdb.RewriteArray;
 import io.wren.main.sql.duckdb.RewriteFunction;
 import io.wren.main.sql.duckdb.RewriteType;
 import org.intellij.lang.annotations.Language;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

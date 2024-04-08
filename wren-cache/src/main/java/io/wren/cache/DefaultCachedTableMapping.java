@@ -13,10 +13,9 @@
  */
 package io.wren.cache;
 
+import com.google.inject.Inject;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.wireprotocol.PgMetastore;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Map;

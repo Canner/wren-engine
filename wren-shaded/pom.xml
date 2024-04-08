@@ -10,6 +10,7 @@
 
     <artifactId>wren-shaded</artifactId>
     <name>wren-shaded</name>
+    <description>WrenEngine - Shaded</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
@@ -55,10 +56,10 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <phase>package</phase>
                         <configuration>
                             <createSourcesJar>true</createSourcesJar>
                             <filters>

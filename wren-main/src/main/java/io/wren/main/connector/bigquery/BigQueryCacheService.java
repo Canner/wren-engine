@@ -14,13 +14,12 @@
 
 package io.wren.main.connector.bigquery;
 
+import com.google.inject.Inject;
 import io.wren.base.WrenException;
 import io.wren.base.config.BigQueryConfig;
 import io.wren.cache.CacheService;
 import io.wren.cache.PathInfo;
 import io.wren.main.metadata.Metadata;
-
-import javax.inject.Inject;
 
 import java.util.Optional;
 import java.util.regex.Matcher;

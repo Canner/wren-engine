@@ -14,6 +14,7 @@
 
 package io.wren.main.metadata;
 
+import com.google.inject.Inject;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
@@ -26,8 +27,6 @@ import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.postgres.PostgresMetadata;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

@@ -15,6 +15,7 @@
 package io.wren.main.connector.bigquery;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Node;
 import io.wren.base.SessionContext;
@@ -33,8 +34,6 @@ import io.wren.main.sql.bigquery.RewriteToBigQueryFunction;
 import io.wren.main.sql.bigquery.RewriteToBigQueryType;
 import io.wren.main.sql.bigquery.TypeCoercionRewrite;
 import org.intellij.lang.annotations.Language;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

@@ -12,4 +12,6 @@
  * limitations under the License.
  */
 
+package io.wren;
+
 public class Dummy {}

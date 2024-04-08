@@ -29,8 +29,8 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.wren.base.sqlrewrite.EnumRewrite.ENUM_REWRITE;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestEnumRewrite
         extends AbstractTestFramework

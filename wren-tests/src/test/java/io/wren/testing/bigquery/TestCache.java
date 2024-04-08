@@ -43,7 +43,7 @@ import static io.wren.base.type.IntegerType.INTEGER;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Test(singleThreaded = true)
 public class TestCache

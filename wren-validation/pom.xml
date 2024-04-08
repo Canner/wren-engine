@@ -3,14 +3,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>wren-root</artifactId>
         <groupId>io.wren</groupId>
+        <artifactId>wren-root</artifactId>
         <version>0.3.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>wren-validation</artifactId>
     <name>wren-validation</name>
+    <description>WrenEngine - Validation</description>
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>

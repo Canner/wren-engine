@@ -14,6 +14,7 @@
 
 package io.wren.main.web;
 
+import com.google.inject.Inject;
 import io.trino.sql.ExpressionFormatter;
 import io.trino.sql.SqlFormatter;
 import io.trino.sql.tree.Expression;
@@ -28,14 +29,12 @@ import io.wren.main.web.dto.ColumnPredicateDto;
 import io.wren.main.web.dto.PredicateDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.SqlAnalysisOutputDto;
-
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,9 +43,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Path("/v1/analysis")
 public class AnalysisResource

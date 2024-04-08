@@ -14,6 +14,7 @@
 
 package io.wren.main;
 
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenException;
@@ -22,8 +23,6 @@ import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
 import io.wren.cache.CacheManager;
 import io.wren.main.pgcatalog.PgCatalogManager;
-
-import javax.inject.Inject;
 
 import java.io.File;
 import java.io.IOException;

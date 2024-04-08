@@ -14,6 +14,7 @@
 
 package io.wren.main.web;
 
+import com.google.inject.Inject;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.sql.SqlConverter;
 import io.wren.cache.CacheService;
@@ -21,16 +22,14 @@ import io.wren.main.connector.CacheServiceManager;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.metadata.MetadataManager;
 import io.wren.main.sql.SqlConverterManager;
-
-import javax.inject.Inject;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.PATCH;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;

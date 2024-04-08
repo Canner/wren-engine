@@ -149,34 +149,34 @@ public class TestManifestSerDe
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "", "schema", "test");
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("catalog is null or empty");
+        }).cause().hasMessageFindingMatch("catalog is null or empty");
 
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "test", "schema", "");
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("schema is null or empty");
+        }).cause().hasMessageFindingMatch("schema is null or empty");
 
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models", List.of(Map.of("name", "")));
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("name is null or empty");
+        }).cause().hasMessageFindingMatch("name is null or empty");
 
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models",
                     List.of(Map.of("name", "test", "columns", List.of(Map.of("name", "")))));
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("name is null or empty");
+        }).cause().hasMessageFindingMatch("name is null or empty");
 
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "models",
                     List.of(Map.of("name", "test", "columns", List.of(Map.of("name", "test", "type", "")))));
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("type is null or empty");
+        }).cause().hasMessageFindingMatch("type is null or empty");
 
         assertThatThrownBy(() -> {
             Map<String, Object> json = Map.of("catalog", "test", "schema", "test", "relationships",
                     List.of(Map.of("name", "")));
             Manifest.MANIFEST_JSON_CODEC.fromJson(STRING_TO_STRING_MAP_CODEC.toJson(json));
-        }).getCause().hasMessageFindingMatch("name is null or empty");
+        }).cause().hasMessageFindingMatch("name is null or empty");
     }
 }

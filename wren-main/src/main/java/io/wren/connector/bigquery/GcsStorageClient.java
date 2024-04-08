@@ -19,9 +19,8 @@ import com.google.cloud.storage.StorageBatch;
 import com.google.cloud.storage.StorageBatchResult;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import io.wren.connector.StorageClient;
-
-import javax.inject.Inject;
 
 import java.util.List;
 

@@ -28,6 +28,7 @@
 
 package io.wren.main.web;
 
+import com.google.inject.Inject;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
@@ -35,14 +36,12 @@ import io.wren.base.sqlrewrite.WrenDataLineage;
 import io.wren.main.WrenMetastore;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.LineageResult;
-
-import javax.inject.Inject;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -50,9 +49,9 @@ import java.util.stream.Collectors;
 
 import static io.wren.base.Utils.checkArgument;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Path("/v1/lineage")
 public class LineageResource

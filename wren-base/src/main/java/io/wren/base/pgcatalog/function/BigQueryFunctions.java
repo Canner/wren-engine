@@ -23,7 +23,6 @@ import java.util.List;
 
 import static io.wren.base.metadata.Function.Argument.argument;
 import static io.wren.base.pgcatalog.function.PgFunction.Language.SQL;
-import static io.wren.base.pgcatalog.function.PgFunction.builder;
 import static io.wren.base.type.AnyType.ANY;
 import static io.wren.base.type.TimestampType.TIMESTAMP;
 
@@ -33,7 +32,7 @@ public final class BigQueryFunctions
 
     // TODO Support more date/time format https://www.postgresql.org/docs/13/functions-formatting.html#FUNCTIONS-FORMATTING-DATETIME-TABLE
     // TODO Support more timezone, now only support UTC
-    public static final PgFunction PG_TO_CHAR = builder()
+    public static final PgFunction PG_TO_CHAR = PgFunction.builder()
             .setName("to_char")
             .setLanguage(SQL)
             .setDefinition("WITH to_char AS (SELECT " +
@@ -49,7 +48,7 @@ public final class BigQueryFunctions
             .setReturnType(VarcharType.VARCHAR)
             .build();
 
-    public static final PgFunction NOW = builder()
+    public static final PgFunction NOW = PgFunction.builder()
             .setName("now")
             .setLanguage(SQL)
             .setDefinition("SELECT CURRENT_DATETIME")
@@ -57,7 +56,7 @@ public final class BigQueryFunctions
             .build();
 
     // TODO This is a mock function, need to be implemented
-    public static final PgFunction PG_EXPANDARRAY = builder()
+    public static final PgFunction PG_EXPANDARRAY = PgFunction.builder()
             .setName("_pg_expandarray")
             .setLanguage(SQL)
             .setDefinition("CASE WHEN (array_length(int_arr) > 0) THEN cast((int_arr[0], 1) as row(x int, n int)) ELSE NULL END")
@@ -67,7 +66,7 @@ public final class BigQueryFunctions
 
     // TODO If the input is a string only include number, it will be parsed as a number. So substring('123' from '1') would get the wrong answer '123', actual should be '1'
     // https://github.com/Canner/wren/issues/329
-    public static final PgFunction SUBSTR = builder()
+    public static final PgFunction SUBSTR = PgFunction.builder()
             .setName("substr")
             .setLanguage(SQL)
             .setDefinition("SELECT " +

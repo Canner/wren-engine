@@ -14,13 +14,12 @@
 
 package io.wren.main.wireprotocol;
 
+import com.google.inject.Inject;
 import io.trino.sql.tree.Statement;
 import io.wren.cache.ExtraRewriter;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.regtype.RegObjectFactory;
 import io.wren.main.sql.PostgreSqlRewrite;
-
-import javax.inject.Inject;
 
 import static java.util.Objects.requireNonNull;
 
