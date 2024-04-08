@@ -35,7 +35,7 @@ import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
 import static io.airlift.http.client.Request.Builder.preparePost;
 import static io.airlift.http.client.StringResponseHandler.createStringResponseHandler;
 import static io.airlift.json.JsonCodec.jsonCodec;
-import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class SQLGlot
@@ -85,7 +85,7 @@ public class SQLGlot
     {
         Request request = preparePost()
                 .setUri(baseUri.resolve("sqlglot/transpile"))
-                .setHeader(CONTENT_TYPE, APPLICATION_JSON_TYPE.toString())
+                .setHeader(CONTENT_TYPE, APPLICATION_JSON)
                 .setBodyGenerator(jsonBodyGenerator(TRANSPILE_DTO_JSON_CODEC, new TranspileDTO(sql, read.getDialect(), write.getDialect())))
                 .build();
 
