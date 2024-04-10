@@ -39,6 +39,11 @@ On the other hand, the ***semantic engine - Wren Engine***, operates behind the 
 
 The semantic engine enables more sophisticated handling of data semantics, ensuring that the semantic layer can effectively meet users' diverse needs, facilitating more informed decision-making and strategic insights.
 
+## 🚧 Project Status
+Wren Engine is currently in the alpha version. The project team is actively working on progress and aiming to release new versions at least biweekly.
+
+Full documentation is also working in progress and will soon be released.
+
 ## ⭐️ Community
 
 - Welcome to our [Discord server](https://discord.gg/5DvshJqG8Z) to give us feedback!
