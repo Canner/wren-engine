@@ -436,6 +436,12 @@
             </dependency>
 
             <dependency>
+                <groupId>net.snowflake</groupId>
+                <artifactId>snowflake-jdbc</artifactId>
+                <version>3.15.0</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
                 <version>${dep.antlr.version}</version>
@@ -687,6 +693,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Required for Apache arrow in the Snowflake (See https://arrow.apache.org/docs/java/install.html#java-compatibility) -->
+                    <argLine>--add-opens=java.base/java.nio=ALL-UNNAMED</argLine>
                     <failIfNoTests>false</failIfNoTests>
                     <includes>
                         <!-- Tests classes should start with "Test", but we do also want to include tests incorrectly named, with "Test" at the end -->
@@ -698,6 +706,8 @@
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
                         <exclude>TestTPCHWithSnowflake.java</exclude>
+                        <exclude>TestDeploySnowflakeRuntime</exclude>
+                        <exclude>TestWrenWithSnowflake.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

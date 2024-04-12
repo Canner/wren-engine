@@ -28,6 +28,7 @@ import static io.wren.main.sql.PgOidTypeTableInfo.REGPROC;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
+@Deprecated
 public class BigQueryPgMetadata
         extends PgMetadata
 {

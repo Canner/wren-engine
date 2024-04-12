@@ -22,8 +22,7 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
-import io.wren.main.sqlglot.SQLGlot;
-import io.wren.main.sqlglot.SQLGlotConverter;
+import io.wren.main.connector.snowflake.SnowflakeSqlConverter;
 
 import static java.util.Objects.requireNonNull;
 
@@ -33,7 +32,7 @@ public final class SqlConverterManager
     private final BigQuerySqlConverter bigQuerySqlConverter;
     private final PostgresSqlConverter postgresSqlConverter;
     private final DuckDBSqlConverter duckDBSqlConverter;
-    private final SqlConverter snowflakeSqlConverter;
+    private final SnowflakeSqlConverter snowflakeSqlConverter;
     private final ConfigManager configManager;
     private WrenConfig.DataSourceType dataSourceType;
     private SqlConverter delegate;
@@ -44,13 +43,13 @@ public final class SqlConverterManager
             BigQuerySqlConverter bigQuerySqlConverter,
             PostgresSqlConverter postgresSqlConverter,
             DuckDBSqlConverter duckDBSqlConverter,
-            SQLGlot sqlGlot)
+            SnowflakeSqlConverter snowflakeSqlConverter)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
         this.bigQuerySqlConverter = requireNonNull(bigQuerySqlConverter, "bigQuerySqlConverter is null");
         this.postgresSqlConverter = requireNonNull(postgresSqlConverter, "postgresSqlConverter is null");
         this.duckDBSqlConverter = requireNonNull(duckDBSqlConverter, "duckDBSqlConverter is null");
-        this.snowflakeSqlConverter = SQLGlotConverter.builder().setSQLGlot(sqlGlot).setWriteDialect(SQLGlot.Dialect.SNOWFLAKE).build();
+        this.snowflakeSqlConverter = requireNonNull(snowflakeSqlConverter, "snowflakeSqlConverter is null");
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }

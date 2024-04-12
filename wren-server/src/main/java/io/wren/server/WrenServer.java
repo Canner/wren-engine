@@ -31,6 +31,7 @@ import io.wren.server.module.MainModule;
 import io.wren.server.module.PostgresConnectorModule;
 import io.wren.server.module.PostgresWireProtocolModule;
 import io.wren.server.module.SQLGlotModule;
+import io.wren.server.module.SnowflakeConnectorModule;
 import io.wren.server.module.WebModule;
 
 public class WrenServer
@@ -55,6 +56,7 @@ public class WrenServer
                 new BigQueryConnectorModule(),
                 new PostgresConnectorModule(),
                 new DuckDBConnectorModule(),
+                new SnowflakeConnectorModule(),
                 new WrenModule(),
                 new CacheModule(),
                 new WebModule(),

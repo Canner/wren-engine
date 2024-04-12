@@ -69,7 +69,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class RequireWrenServer
 {
-    private TestingWrenServer wrenServer;
+    protected TestingWrenServer wrenServer;
     protected Closer closer = Closer.create();
     protected HttpClient client;
 
@@ -97,9 +97,14 @@ public abstract class RequireWrenServer
             throws Exception
     {
         this.wrenServer = createWrenServer();
-        this.client = closer.register(new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS))));
+        this.client = closer.register(createHttpClient());
         closer.register(wrenServer);
         prepare();
+    }
+
+    protected static JettyHttpClient createHttpClient()
+    {
+        return new JettyHttpClient(new HttpClientConfig().setIdleTimeout(new Duration(20, SECONDS)));
     }
 
     protected abstract TestingWrenServer createWrenServer()

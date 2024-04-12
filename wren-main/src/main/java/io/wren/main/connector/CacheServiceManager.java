@@ -56,6 +56,7 @@ public final class CacheServiceManager
                 break;
             case POSTGRES:
             case DUCKDB:
+            case SNOWFLAKE:
                 delegate = postgresCacheService;
                 break;
             default:

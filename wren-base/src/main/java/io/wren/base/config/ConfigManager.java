@@ -66,6 +66,13 @@ import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AU
 import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT;
 import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_DATABASE;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_JDBC_URL;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_PASSWORD;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_ROLE;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_SCHEMA;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_USER;
+import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_WAREHOUSE;
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -81,6 +88,7 @@ public class ConfigManager
     private Optional<PostgresWireProtocolConfig> postgresWireProtocolConfig;
     private Optional<DuckdbS3StyleStorageConfig> duckdbS3StyleStorageConfig;
     private Optional<DuckDBConnectorConfig> duckDBConnectorConfig;
+    private Optional<SnowflakeConfig> snowflakeConfig;
 
     private final Map<String, String> configs = new HashMap<>();
     // All configs set by user and config files. It's used to sync with config file.
@@ -97,7 +105,8 @@ public class ConfigManager
             DuckDBConfig duckDBConfig,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnectorConfig duckDBConnectorConfig)
+            DuckDBConnectorConfig duckDBConnectorConfig,
+            SnowflakeConfig snowflakeConfig)
     {
         this.wrenConfig = Optional.of(wrenConfig);
         this.postgresConfig = Optional.of(postgresConfig);
@@ -106,6 +115,7 @@ public class ConfigManager
         this.postgresWireProtocolConfig = Optional.of(postgresWireProtocolConfig);
         this.duckdbS3StyleStorageConfig = Optional.of(duckdbS3StyleStorageConfig);
         this.duckDBConnectorConfig = Optional.of(duckDBConnectorConfig);
+        this.snowflakeConfig = Optional.of(snowflakeConfig);
 
         initConfig(
                 wrenConfig,
@@ -114,7 +124,8 @@ public class ConfigManager
                 duckDBConfig,
                 postgresWireProtocolConfig,
                 duckdbS3StyleStorageConfig,
-                duckDBConnectorConfig);
+                duckDBConnectorConfig,
+                snowflakeConfig);
 
         try {
             setConfigs.putAll(loadPropertiesFrom(configFile));
@@ -131,7 +142,8 @@ public class ConfigManager
             DuckDBConfig duckDBConfig,
             PostgresWireProtocolConfig postgresWireProtocolConfig,
             DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnectorConfig duckDBConnectorConfig)
+            DuckDBConnectorConfig duckDBConnectorConfig,
+            SnowflakeConfig snowflakeConfig)
     {
         initConfig(WrenConfig.WREN_DIRECTORY, wrenConfig.getWrenMDLDirectory().getPath(), false, true);
         initConfig(WrenConfig.WREN_DATASOURCE_TYPE, Optional.ofNullable(wrenConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
@@ -164,6 +176,13 @@ public class ConfigManager
         initConfig(POSTGRES_PASSWORD, postgresConfig.getPassword(), true, false);
         initConfig(DUCKDB_CONNECTOR_INIT_SQL_PATH, duckDBConnectorConfig.getInitSQLPath(), false, false);
         initConfig(DUCKDB_CONNECTOR_SESSION_SQL_PATH, duckDBConnectorConfig.getSessionSQLPath(), false, false);
+        initConfig(SNOWFLAKE_JDBC_URL, snowflakeConfig.getJdbcUrl(), true, false);
+        initConfig(SNOWFLAKE_USER, snowflakeConfig.getUser(), true, false);
+        initConfig(SNOWFLAKE_PASSWORD, snowflakeConfig.getPassword(), true, false);
+        initConfig(SNOWFLAKE_DATABASE, snowflakeConfig.getDatabase().orElse(null), true, false);
+        initConfig(SNOWFLAKE_SCHEMA, snowflakeConfig.getSchema().orElse(null), true, false);
+        initConfig(SNOWFLAKE_WAREHOUSE, snowflakeConfig.getWarehouse().orElse(null), true, false);
+        initConfig(SNOWFLAKE_ROLE, snowflakeConfig.getRole().orElse(null), true, false);
     }
 
     private void initConfig(String key, String value, boolean requiredReload, boolean isStatic)
@@ -228,6 +247,13 @@ public class ConfigManager
             return (T) duckDBConnectorConfig.orElseGet(() -> {
                 DuckDBConnectorConfig result = getDuckDBConnectorConfig();
                 duckDBConnectorConfig = Optional.of(result);
+                return result;
+            });
+        }
+        if (config == SnowflakeConfig.class) {
+            return (T) snowflakeConfig.orElseGet(() -> {
+                SnowflakeConfig result = getSnowflakeConfig();
+                snowflakeConfig = Optional.of(result);
                 return result;
             });
         }
@@ -307,6 +333,19 @@ public class ConfigManager
         return result;
     }
 
+    private SnowflakeConfig getSnowflakeConfig()
+    {
+        SnowflakeConfig config = new SnowflakeConfig();
+        config.setJdbcUrl(configs.get(SNOWFLAKE_JDBC_URL));
+        config.setUser(configs.get(SNOWFLAKE_USER));
+        config.setPassword(configs.get(SNOWFLAKE_PASSWORD));
+        config.setDatabase(configs.get(SNOWFLAKE_DATABASE));
+        config.setSchema(configs.get(SNOWFLAKE_SCHEMA));
+        config.setWarehouse(configs.get(SNOWFLAKE_WAREHOUSE));
+        config.setRole(configs.get(SNOWFLAKE_ROLE));
+        return config;
+    }
+
     public synchronized boolean setConfigs(List<ConfigEntry> configEntries, boolean reset)
     {
         if (reset) {
@@ -366,7 +405,8 @@ public class ConfigManager
                 new DuckDBConfig(),
                 new PostgresWireProtocolConfig(),
                 new DuckdbS3StyleStorageConfig(),
-                new DuckDBConnectorConfig());
+                new DuckDBConnectorConfig(),
+                new SnowflakeConfig());
     }
 
     private void syncFile(Map<String, String> updated)

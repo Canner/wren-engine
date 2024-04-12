@@ -22,6 +22,7 @@ import io.wren.base.config.BigQueryConfig;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.PostgresConfig;
 import io.wren.base.config.PostgresWireProtocolConfig;
+import io.wren.base.config.SnowflakeConfig;
 import io.wren.base.config.WrenConfig;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
@@ -54,7 +55,8 @@ public class TestDuckDBSqlConverter
                 new DuckDBConfig(),
                 new PostgresWireProtocolConfig(),
                 new DuckdbS3StyleStorageConfig(),
-                new DuckDBConnectorConfig());
+                new DuckDBConnectorConfig(),
+                new SnowflakeConfig());
 
         DuckDBMetadata metadata = new DuckDBMetadata(configManager);
 

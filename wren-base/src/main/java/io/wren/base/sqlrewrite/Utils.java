@@ -169,7 +169,7 @@ public final class Utils
                         "group by 1\n" +
                         "order by 1\n";
 
-        String castingDateSpine = format("select cast(metric_time as %s) as metric_time from %s", windowType, DateSpineInfo.NAME);
+        String castingDateSpine = format("select cast(metric_time as %s) as metric_time from \"%s\"", windowType, DateSpineInfo.NAME);
         String windowRange = format("d.metric_time - %s", cumulativeMetric.getWindow().getTimeUnit().getIntervalExpression());
         String selectFromModel = format("select %s as measure_field, %s as metric_time from %s",
                 cumulativeMetric.getMeasure().getRefColumn(),
