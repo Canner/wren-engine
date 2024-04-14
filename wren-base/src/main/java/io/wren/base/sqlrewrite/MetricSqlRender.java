@@ -43,6 +43,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static io.wren.base.sqlrewrite.Utils.parseQuery;
+import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
@@ -56,17 +57,19 @@ public class MetricSqlRender
     private final Set<String> requiredDims;
     private final Set<String> requiredMeasures;
 
-    public MetricSqlRender(Metric metric, WrenMDL mdl)
+    public MetricSqlRender(RelationableReference reference, WrenMDL mdl)
     {
-        super(metric, mdl);
+        super(reference, mdl);
+        Metric metric = (Metric) reference.getRelationable().get();
         this.requiredDims = metric.getDimension().stream().map(Column::getName).collect(toImmutableSet());
         this.requiredMeasures = metric.getMeasure().stream().map(Column::getName).collect(toImmutableSet());
     }
 
-    public MetricSqlRender(Metric metric, WrenMDL mdl, Set<String> requiredFields)
+    public MetricSqlRender(RelationableReference reference, WrenMDL mdl, Set<String> requiredFields)
     {
-        super(metric, mdl);
+        super(reference, mdl);
         requireNonNull(requiredFields);
+        Metric metric = (Metric) reference.getRelationable().get();
         this.requiredDims = metric.getDimension().stream()
                 .map(Column::getName)
                 .filter(requiredFields::contains)
@@ -86,36 +89,37 @@ public class MetricSqlRender
     @Override
     public RelationInfo render()
     {
-        Optional<Model> metricBaseModel = mdl.getModel(relationable.getBaseObject());
+        String baseObject = reference.getRelationable().get().getBaseObject();
+        Optional<Model> metricBaseModel = mdl.getModel(baseObject);
         // metric on model
         if (metricBaseModel.isPresent()) {
             return render(metricBaseModel.orElseThrow(() -> new IllegalArgumentException("model not found")));
         }
         // metric on metric
-        Optional<Metric> metricBaseMetric = mdl.getMetric(relationable.getBaseObject());
+        Optional<Metric> metricBaseMetric = mdl.getMetric(baseObject);
         if (metricBaseMetric.isPresent()) {
             return renderBasedOnMetric(metricBaseMetric.orElseThrow(() -> new IllegalArgumentException("metric not found")).getName());
         }
         // metric on cumulative metric
-        Optional<CumulativeMetric> metricBaseCumulativeMetric = mdl.getCumulativeMetric(relationable.getBaseObject());
+        Optional<CumulativeMetric> metricBaseCumulativeMetric = mdl.getCumulativeMetric(baseObject);
         if (metricBaseCumulativeMetric.isPresent()) {
             return renderBasedOnMetric(metricBaseCumulativeMetric.orElseThrow(() -> new IllegalArgumentException("metric not found")).getName());
         }
         throw new IllegalArgumentException("invalid metric, cannot render metric sql");
     }
 
-    private RelationInfo renderBasedOnMetric(String metricName)
+    private RelationInfo renderBasedOnMetric(String baseMetricName)
     {
-        Metric metric = (Metric) relationable;
+        Metric metric = (Metric) reference.getRelationable().get();
         List<String> selectItems = metric.getColumns().stream()
                 .filter(column -> isRequiredColumn(column.getName()))
                 .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
                 .collect(toList());
         addCountAllIfNeeded();
-        String sql = getQuerySql(Joiner.on(", ").join(selectItems), metricName);
+        String sql = getQuerySql(Joiner.on(", ").join(selectItems), baseMetricName);
         return new RelationInfo(
-                relationable,
-                Set.of(metricName),
+                reference,
+                Set.of(baseMetricName),
                 parseQuery(sql));
     }
 
@@ -139,7 +143,7 @@ public class MetricSqlRender
     @Override
     protected String getSelectItemsExpression(Column column, Optional<String> relationableBase)
     {
-        Metric metric = (Metric) relationable;
+        Metric metric = (Metric) reference.getRelationable().get();
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
         Model baseModel = mdl.getModel(metric.getBaseObject()).orElseThrow(() -> new IllegalArgumentException(format("cannot find model %s", metric.getBaseObject())));
         Expression expression = parseExpression(column.getSqlExpression());
@@ -165,7 +169,7 @@ public class MetricSqlRender
                     .orElseThrow(() -> new IllegalArgumentException("measure column must have expression"))))), column.getName());
         }
 
-        return format("\"%s\".%s AS \"%s\"", relationable.getBaseObject(), column.getSqlExpression(), column.getName());
+        return format("\"%s\".%s AS \"%s\"", reference.getRelationable().get().getBaseObject(), column.getSqlExpression(), column.getName());
     }
 
     @Override
@@ -241,11 +245,11 @@ public class MetricSqlRender
     private RelationInfo render(Model baseModel)
     {
         requireNonNull(baseModel, "baseModel is null");
-        relationable.getColumns().stream()
+        reference.getRelationable().get().getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
                 .filter(column -> isRequiredColumn(column.getName()))
                 .forEach(column -> selectItems.add(getSelectItemsExpression(column, Optional.empty())));
-        relationable.getColumns().stream()
+        reference.getRelationable().get().getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
                 .forEach(column -> collectRelationship(column, baseModel));
         addCountAllIfNeeded();
@@ -268,7 +272,7 @@ public class MetricSqlRender
         tableJoinsSql.append("\n");
 
         return new RelationInfo(
-                relationable,
+                reference,
                 requiredObjects,
                 parseQuery(getQuerySql(join(", ", selectItems), tableJoinsSql.toString())));
     }

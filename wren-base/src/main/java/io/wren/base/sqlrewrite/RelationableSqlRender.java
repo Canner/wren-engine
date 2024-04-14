@@ -30,12 +30,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static io.wren.base.Utils.checkArgument;
+import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.util.Objects.requireNonNull;
 
 // TODO: Turn this into interface
 public abstract class RelationableSqlRender
 {
-    protected final Relationable relationable;
+    protected final RelationableReference reference;
     protected final WrenMDL mdl;
     protected final String refSql;
     // collect dependent models
@@ -48,14 +50,15 @@ public abstract class RelationableSqlRender
     // key is column name in model, value is column expression, this map store columns not use relationships
     protected final Map<String, String> columnWithoutRelationships = new LinkedHashMap<>();
 
-    public RelationableSqlRender(Relationable relationable, WrenMDL mdl)
+    public RelationableSqlRender(RelationableReference reference, WrenMDL mdl)
     {
-        this.relationable = requireNonNull(relationable);
+        this.reference = requireNonNull(reference);
         this.mdl = requireNonNull(mdl);
-        this.refSql = initRefSql(relationable);
+        checkArgument(reference.getRelationable().isPresent(), "relationable is not present");
+        this.refSql = initRefSql(reference.getRelationable().get());
         this.requiredObjects = new HashSet<>();
-        if (relationable.getBaseObject() != null) {
-            requiredObjects.add(relationable.getBaseObject());
+        if (reference.getRelationable().get().getBaseObject() != null) {
+            requiredObjects.add(reference.getRelationable().get().getBaseObject());
         }
     }
 

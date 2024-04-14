@@ -21,50 +21,48 @@ import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationable;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
+import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class RelationInfo
         implements QueryDescriptor
 {
-    private final Relationable relationable;
+    private final RelationableReference reference;
     private final Set<String> requiredObjects;
     private final Query query;
 
-    public static RelationInfo get(Relationable relationable, WrenMDL mdl, Set<String> requiredFields)
+    public static RelationInfo get(RelationableReference reference, WrenMDL mdl, Set<String> requiredFields)
     {
-        if (relationable instanceof Model) {
-            return new ModelSqlRender(relationable, mdl, requiredFields).render();
-        }
-        else if (relationable instanceof Metric) {
-            return new MetricSqlRender((Metric) relationable, mdl, requiredFields).render();
-        }
-        else {
-            throw new IllegalArgumentException(format("cannot get relation info from relationable %s", relationable));
-        }
+        return reference.getRelationable().map(relationable -> switch (relationable) {
+            case Model model -> model.getBaseObject() == null ?
+                    new ModelRelationSqlRender(reference, mdl, requiredFields).render() :
+                    new DerivedModelSqlRender(reference, mdl, requiredFields).render();
+            case Metric _ -> new MetricSqlRender(reference, mdl, requiredFields).render();
+            default -> null;
+        }).orElseThrow(() -> new IllegalArgumentException(format("cannot get relation info from relationable %s", reference)));
     }
 
-    public static RelationInfo get(Relationable relationable, WrenMDL mdl)
+    public static RelationInfo get(RelationableReference reference, WrenMDL mdl)
     {
-        if (relationable instanceof Model) {
-            return new ModelSqlRender(relationable, mdl).render();
-        }
-        else if (relationable instanceof Metric) {
-            return new MetricSqlRender((Metric) relationable, mdl).render();
-        }
-        else {
-            throw new IllegalArgumentException(format("cannot get relation info from relationable %s", relationable));
-        }
+        return reference.getRelationable().map(relationable -> switch (relationable) {
+            case Model model -> model.getBaseObject() == null ?
+                    new ModelRelationSqlRender(reference, mdl).render() :
+                    new DerivedModelSqlRender(reference, mdl).render();
+            case Metric _ -> new MetricSqlRender(reference, mdl).render();
+            default -> null;
+        }).orElseThrow(() -> new IllegalArgumentException(format("cannot get relation info from relationable %s", reference)));
     }
 
     RelationInfo(
-            Relationable relationable,
+            RelationableReference reference,
             Set<String> requiredModels,
             Query query)
     {
-        this.relationable = requireNonNull(relationable);
+        this.reference = requireNonNull(reference);
         this.requiredObjects = requireNonNull(requiredModels);
         this.query = requireNonNull(query);
     }
@@ -80,15 +78,21 @@ public class RelationInfo
     }
 
     @Override
+    public Optional<Relationable> getRelationable()
+    {
+        return reference.getRelationable();
+    }
+
+    @Override
     public int hashCode()
     {
-        return Objects.hash(relationable, requiredObjects, query);
+        return Objects.hash(reference, requiredObjects, query);
     }
 
     @Override
     public String getName()
     {
-        return relationable.getName();
+        return reference.getName();
     }
 
     @Override
@@ -101,7 +105,7 @@ public class RelationInfo
             return false;
         }
         RelationInfo relationInfo = (RelationInfo) o;
-        return Objects.equals(relationable, relationInfo.relationable)
+        return Objects.equals(reference, relationInfo.reference)
                 && Objects.equals(requiredObjects, relationInfo.requiredObjects)
                 && Objects.equals(query, relationInfo.query);
     }

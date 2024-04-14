@@ -26,6 +26,7 @@ import io.wren.base.dto.EnumDefinition;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.Relationable;
 import io.wren.base.dto.Relationship;
 import io.wren.base.dto.View;
 import io.wren.base.jinjava.JinjavaExpressionProcessor;
@@ -310,5 +311,20 @@ public class WrenMDL
                 || getMetric(name).isPresent()
                 || getCumulativeMetric(name).isPresent()
                 || getView(name).isPresent();
+    }
+
+    public Optional<Relationable> getRelationable(String name)
+    {
+        Optional<Model> modelOptional = getModel(name);
+        if (modelOptional.isPresent()) {
+            return Optional.of(modelOptional.get());
+        }
+
+        Optional<Metric> metricOptional = getMetric(name);
+        if (metricOptional.isPresent()) {
+            return Optional.of(metricOptional.get());
+        }
+
+        return Optional.empty();
     }
 }

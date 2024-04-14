@@ -16,7 +16,9 @@ package io.wren.base.sqlrewrite;
 
 import io.trino.sql.tree.Query;
 import io.wren.base.dto.DateSpine;
+import io.wren.base.dto.Relationable;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static io.wren.base.sqlrewrite.Utils.createDateSpineQuery;
@@ -55,5 +57,11 @@ public class DateSpineInfo
     public Query getQuery()
     {
         return query;
+    }
+
+    @Override
+    public Optional<Relationable> getRelationable()
+    {
+        return Optional.empty();
     }
 }

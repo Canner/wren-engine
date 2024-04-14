@@ -17,7 +17,9 @@ package io.wren.base.sqlrewrite;
 import io.trino.sql.tree.Query;
 import io.wren.base.WrenMDL;
 import io.wren.base.dto.CumulativeMetric;
+import io.wren.base.dto.Relationable;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -60,5 +62,11 @@ public class CumulativeMetricInfo
     public Query getQuery()
     {
         return query;
+    }
+
+    @Override
+    public Optional<Relationable> getRelationable()
+    {
+        return Optional.empty();
     }
 }

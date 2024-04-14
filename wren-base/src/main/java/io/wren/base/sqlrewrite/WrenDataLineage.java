@@ -30,6 +30,7 @@ import io.wren.base.dto.Column;
 import io.wren.base.dto.CumulativeMetric;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.Relationable;
 import io.wren.base.dto.Relationship;
 import io.wren.base.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.wren.base.sqlrewrite.analyzer.ExpressionRelationshipInfo;
@@ -42,11 +43,14 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
+import static io.wren.base.sqlrewrite.ModelInfo.ORIGINAL_SUFFIX;
+import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
@@ -61,6 +65,8 @@ public class WrenDataLineage
     // key: column name, value: source columns name. format in QualifiedName is modelName.columnName
     private final Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap;
     private final Map<QualifiedName, List<Vertex>> requiredFields;
+    private final Map<QualifiedName, ColumnInfo> columnInfoMap = new HashMap<>();
+    private final Map<String, RelationableReference> relationableReferenceMap = new HashMap<>();
 
     public static WrenDataLineage analyze(WrenMDL mdl)
     {
@@ -90,7 +96,7 @@ public class WrenDataLineage
     }
 
     @VisibleForTesting
-    LinkedHashMap<String, Set<String>> getRequiredFields(QualifiedName columnName)
+    LinkedHashMap<RelationableReference, Set<String>> getRequiredFields(QualifiedName columnName)
     {
         return getRequiredFields(ImmutableList.of(columnName));
     }
@@ -102,18 +108,18 @@ public class WrenDataLineage
      * @return {@code LinkedHashMap<String, Set<String>>} which key is table name, value is a set of column names.
      * The order of the entry is the order of CTE generation. That's why use LinkedHashMap.
      */
-    public LinkedHashMap<String, Set<String>> getRequiredFields(List<QualifiedName> columnNames)
+    public LinkedHashMap<RelationableReference, Set<String>> getRequiredFields(List<QualifiedName> columnNames)
     {
         // make sure there is no model dependency cycle in given columnNames.
         DirectedAcyclicGraph<Vertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
-        Map<String, Vertex> vertexes = new HashMap<>();
+        Map<RelationableReference, Vertex> vertexes = new HashMap<>();
         requiredFields.entrySet().stream()
                 .filter(e -> columnNames.contains(e.getKey()))
                 .forEach(e -> {
                     List<Vertex> nodes = ImmutableList.copyOf(e.getValue());
                     for (int i = 1; i < nodes.size(); i++) {
-                        String from = nodes.get(i - 1).getName();
-                        String to = nodes.get(i).getName();
+                        RelationableReference from = nodes.get(i - 1).getReference();
+                        RelationableReference to = nodes.get(i).getReference();
                         Vertex vertexFrom = vertexes.computeIfAbsent(from, (ignored) -> new Vertex(from));
                         Vertex vertexTo = vertexes.computeIfAbsent(to, (ignored) -> new Vertex(to));
                         graph.addVertex(vertexFrom);
@@ -129,13 +135,16 @@ public class WrenDataLineage
                     }
                 });
 
-        LinkedHashMap<String, Set<String>> result = new LinkedHashMap<>();
-        graph.iterator().forEachRemaining(vertex -> result.put(vertex.getName(), vertex.getColumnNames()));
+        LinkedHashMap<RelationableReference, Set<String>> result = new LinkedHashMap<>();
+        graph.iterator().forEachRemaining(vertex -> result.put(vertex.getReference(), vertex.getColumnNames()));
         // add back column names to requiredFields
         columnNames.forEach(fullColumnName -> {
-            Set<String> names = Optional.ofNullable(result.get(getTable(fullColumnName))).orElseGet(HashSet::new);
+            RelationableReference reference = Optional.ofNullable(columnInfoMap.get(fullColumnName))
+                    .flatMap(columnInfo -> Optional.ofNullable(relationableReferenceMap.get(getTable(columnInfo.sqlName))))
+                    .orElse(new RelationableReference(Optional.empty(), getTable(fullColumnName), false));
+            Set<String> names = Optional.ofNullable(result.get(reference)).orElseGet(HashSet::new);
             names.add(getColumn(fullColumnName));
-            result.put(getTable(fullColumnName), names);
+            result.put(reference, names);
         });
         return result;
     }
@@ -144,6 +153,10 @@ public class WrenDataLineage
     {
         Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap = new HashMap<>();
         for (Model model : mdl.listModels()) {
+            relationableReferenceMap.put(model.getName(), new RelationableReference(Optional.of(model), model.getName(), false));
+            if (model.getBaseObject() == null) {
+                relationableReferenceMap.put(model.getName() + ORIGINAL_SUFFIX, new RelationableReference(Optional.of(model), model.getName() + ORIGINAL_SUFFIX, true));
+            }
             for (Column column : model.getColumns()) {
                 SetMultimap<String, String> sourceColumns = getSourceColumns(mdl, model, column);
                 sourceColumnsMap.put(
@@ -156,9 +169,13 @@ public class WrenDataLineage
                                                 .collect(toImmutableSet()))
                                 .flatMap(Set::stream)
                                 .collect(toImmutableSet()));
+                QualifiedName name = QualifiedName.of(model.getName(), column.getName());
+                QualifiedName sqlName = useOriginal(column, model.getBaseObject() != null) ? name : QualifiedName.of(model.getName() + ORIGINAL_SUFFIX, column.getName());
+                columnInfoMap.put(name, new ColumnInfo(model, column, sqlName, name));
             }
         }
         for (Metric metric : mdl.listMetrics()) {
+            relationableReferenceMap.put(metric.getName(), new RelationableReference(Optional.of(metric), metric.getName(), false));
             for (Column column : metric.getColumns()) {
                 SetMultimap<String, String> sourceColumns = getSourceColumns(mdl, metric, column);
                 sourceColumnsMap.put(
@@ -171,6 +188,8 @@ public class WrenDataLineage
                                                 .collect(toImmutableSet()))
                                 .flatMap(Set::stream)
                                 .collect(toImmutableSet()));
+                QualifiedName name = QualifiedName.of(metric.getName(), column.getName());
+                columnInfoMap.put(name, new ColumnInfo(metric, column, name, name));
             }
         }
         for (CumulativeMetric cumulativeMetric : mdl.listCumulativeMetrics()) {
@@ -192,7 +211,7 @@ public class WrenDataLineage
         Map<QualifiedName, List<Vertex>> columnLineages = new HashMap<>();
         sourceColumnsMap.forEach(((column, sourceColumns) -> {
             DirectedAcyclicGraph<Vertex, Object> graph = new DirectedAcyclicGraph<>(Object.class);
-            Map<String, Vertex> vertexes = new HashMap<>();
+            Map<RelationableReference, Vertex> vertexes = new HashMap<>();
             collectRequiredFields(column, graph, vertexes);
             columnLineages.put(column, ImmutableList.copyOf(graph.iterator()));
         }));
@@ -203,7 +222,7 @@ public class WrenDataLineage
     private void collectRequiredFields(
             QualifiedName qualifiedName,
             DirectedAcyclicGraph<Vertex, Object> graph,
-            Map<String, Vertex> vertexes)
+            Map<RelationableReference, Vertex> vertexes)
     {
         if (!sourceColumnsMap.containsKey(qualifiedName)) {
             return;
@@ -212,14 +231,18 @@ public class WrenDataLineage
         String targetTable = getTable(qualifiedName);
         String targetColumn = getColumn(qualifiedName);
         Set<QualifiedName> sourceColumns = sourceColumnsMap.get(qualifiedName);
-        Vertex targetVertex = vertexes.computeIfAbsent(targetTable, (ignored) -> new Vertex(targetTable));
+        String tableName = useOriginal(qualifiedName) ? targetTable : targetTable + ORIGINAL_SUFFIX;
+        RelationableReference relationableReference = relationableReferenceMap.get(tableName);
+
+        Vertex targetVertex = vertexes.computeIfAbsent(relationableReference, (ignored) -> new Vertex(relationableReference));
         graph.addVertex(targetVertex);
         // sometimes we can't analyze lineage from column expression e.g. count(*), while the column itself may depend on another object (e.g. metric/model...)
         // so we still need detect baseObject here.
         if (sourceColumns.isEmpty()) {
-            String baseObject = getBaseObject(mdl, targetTable);
-            if (mdl.isObjectExist(baseObject)) {
-                Vertex sourceVertex = vertexes.computeIfAbsent(baseObject, (ignored) -> new Vertex(baseObject));
+            String baseObjectName = getBaseObject(mdl, targetTable);
+            Optional<RelationableReference> referenceOptional = Optional.ofNullable(relationableReferenceMap.get(baseObjectName));
+            referenceOptional.ifPresent(reference -> {
+                Vertex sourceVertex = vertexes.computeIfAbsent(reference, (ignored) -> new Vertex(reference));
                 graph.addVertex(sourceVertex);
                 try {
                     graph.addEdge(sourceVertex, targetVertex);
@@ -227,20 +250,20 @@ public class WrenDataLineage
                 catch (GraphCycleProhibitedException ex) {
                     throw new IllegalArgumentException(format("found cycle: %s column: %s", targetTable, targetColumn));
                 }
-            }
+            });
         }
         sourceColumns.forEach(fullSourceColumnName -> {
-            String sourceTableName = getTable(fullSourceColumnName);
+            String sourceTargetTable = getTable(fullSourceColumnName);
             String sourceColumnName = getColumn(fullSourceColumnName);
-            Vertex sourceVertex = vertexes.computeIfAbsent(sourceTableName, (ignored) -> new Vertex(sourceTableName));
+            String sourceTableName = useOriginal(fullSourceColumnName) ? sourceTargetTable : sourceTargetTable + ORIGINAL_SUFFIX;
+            RelationableReference sourceRelationReference = relationableReferenceMap.get(sourceTableName);
+            Vertex sourceVertex = vertexes.computeIfAbsent(sourceRelationReference, (ignored) -> new Vertex(sourceRelationReference));
             graph.addVertex(sourceVertex);
-            if (!skipAddEdge(fullSourceColumnName, qualifiedName)) {
-                try {
-                    graph.addEdge(sourceVertex, targetVertex);
-                }
-                catch (GraphCycleProhibitedException ex) {
-                    throw new IllegalArgumentException(format("found cycle: %s column: %s", targetTable, targetColumn));
-                }
+            try {
+                graph.addEdge(sourceVertex, targetVertex);
+            }
+            catch (GraphCycleProhibitedException ex) {
+                throw new IllegalArgumentException(format("found cycle: %s column: %s", targetTable, targetColumn));
             }
             sourceVertex.columnNames.add(sourceColumnName);
             // recursively create column lineage
@@ -248,39 +271,87 @@ public class WrenDataLineage
         });
     }
 
-    private boolean skipAddEdge(QualifiedName sourceColumn, QualifiedName targetColumn)
+    public Optional<RelationableReference> getRelationableReference(String name)
     {
-        // calculated field could be dependent on non-calculated field in the same model
-        return getTable(sourceColumn).equals(getTable(targetColumn))
-                && isCalculated(targetColumn)
-                && !isCalculated(sourceColumn);
+        return Optional.ofNullable(relationableReferenceMap.get(name));
     }
 
-    private boolean isCalculated(QualifiedName fullColumnName)
+    public Optional<ColumnInfo> getColumnInfo(String name)
     {
-        return mdl.getModel(getTable(fullColumnName))
-                .map(Model::getColumns)
-                .orElseGet(ImmutableList::of)
-                .stream()
-                .filter(column -> column.getName().equals(getColumn(fullColumnName)))
-                .anyMatch(Column::isCalculated);
+        return Optional.ofNullable(columnInfoMap.get(QualifiedName.of(name)));
+    }
+
+    private boolean useOriginal(QualifiedName qualifiedName)
+    {
+        Optional<ColumnInfo> columnInfo = Optional.ofNullable(columnInfoMap.get(qualifiedName));
+        return columnInfo.isPresent() && useOriginal(columnInfo.get().column, columnInfo.get().relationable.getBaseObject() != null);
+    }
+
+    private boolean useOriginal(Column column, boolean isDerived)
+    {
+        return column.isCalculated() || isDerived;
     }
 
     public static class Vertex
     {
-        private final String name;
+        private final RelationableReference reference;
         private final Set<String> columnNames;
 
-        public Vertex(String name)
+        public Vertex(RelationableReference reference)
         {
-            this(name, new HashSet<>());
+            this(reference, new HashSet<>());
         }
 
         @VisibleForTesting
-        public Vertex(String name, Set<String> columnNames)
+        public Vertex(RelationableReference reference, Set<String> columnNames)
         {
-            this.name = requireNonNull(name);
+            this.reference = requireNonNull(reference);
             this.columnNames = requireNonNull(columnNames);
+        }
+
+        public RelationableReference getReference()
+        {
+            return reference;
+        }
+
+        public Set<String> getColumnNames()
+        {
+            return columnNames;
+        }
+    }
+
+    public static class ColumnInfo
+    {
+        private final Relationable relationable;
+        private final Column column;
+        private final QualifiedName sqlName;
+        private final QualifiedName name;
+
+        public ColumnInfo(Relationable relationable, Column column, QualifiedName sqlName, QualifiedName name)
+        {
+            this.relationable = requireNonNull(relationable, "relationable is null");
+            this.column = requireNonNull(column, "column is null");
+            this.sqlName = requireNonNull(sqlName, "sqlName is null");
+            this.name = requireNonNull(name, "name is null");
+        }
+    }
+
+    public static class RelationableReference
+    {
+        private final Optional<Relationable> relationable;
+        private final String name;
+        private final boolean isOriginal;
+
+        public RelationableReference(Optional<Relationable> relationable, String name, boolean isOriginal)
+        {
+            this.relationable = requireNonNull(relationable, "relationable is null");
+            this.name = requireNonNull(name, "name is null");
+            this.isOriginal = isOriginal;
+        }
+
+        public Optional<Relationable> getRelationable()
+        {
+            return relationable;
         }
 
         public String getName()
@@ -288,9 +359,34 @@ public class WrenDataLineage
             return name;
         }
 
-        public Set<String> getColumnNames()
+        public boolean isOriginal()
         {
-            return columnNames;
+            return isOriginal;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            RelationableReference reference = (RelationableReference) o;
+            return isOriginal == reference.isOriginal && Objects.equals(name, reference.name);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(name, isOriginal);
+        }
+
+        @Override
+        public String toString()
+        {
+            return name;
         }
     }
 
@@ -309,7 +405,7 @@ public class WrenDataLineage
         Expression expression;
         // TODO: current column expression allow not empty (i.e. its expression is the same as column name)
         //  we should not directly use dto object, instead, we should convert them into another object. and fill the expression in every column.
-        expression = io.wren.base.sqlrewrite.Utils.parseExpression(column.getSqlExpression());
+        expression = parseExpression(column.getSqlExpression());
         Analyzer analyzer = new Analyzer(mdl, model, column);
         analyzer.process(expression);
         return analyzer.getSourceColumns();
@@ -320,7 +416,7 @@ public class WrenDataLineage
         Expression expression;
         // TODO: current column expression allow not empty (i.e. its expression is the same as column name)
         //  we should not directly use dto object, instead, we should convert them into another object. and fill the expression in every column.
-        expression = io.wren.base.sqlrewrite.Utils.parseExpression(column.getSqlExpression());
+        expression = parseExpression(column.getSqlExpression());
         MetricAnalyzer analyzer = new MetricAnalyzer(mdl, metric, column);
         analyzer.process(expression);
         return analyzer.getSourceColumns();

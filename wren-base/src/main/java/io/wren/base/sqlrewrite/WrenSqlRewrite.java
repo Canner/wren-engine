@@ -26,7 +26,6 @@ import io.trino.sql.tree.WithQuery;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
-import io.wren.base.Utils;
 import io.wren.base.WrenMDL;
 import io.wren.base.dto.CumulativeMetric;
 import io.wren.base.dto.Metric;
@@ -47,7 +46,10 @@ import java.util.Set;
 
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.wren.base.Utils.checkArgument;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
+import static io.wren.base.sqlrewrite.WithRewriter.getWithQuery;
+import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -58,7 +60,7 @@ public class WrenSqlRewrite
 
     private WrenSqlRewrite() {}
 
-    private static LinkedHashMap<String, Set<String>> getTableRequiredFields(WrenDataLineage dataLineage, Analysis analysis)
+    private static LinkedHashMap<RelationableReference, Set<String>> getTableRequiredFields(WrenDataLineage dataLineage, WrenMDL mdl, Analysis analysis)
     {
         List<QualifiedName> collectedColumns = analysis.getCollectedColumns().asMap().entrySet().stream()
                 .map(e ->
@@ -88,42 +90,53 @@ public class WrenSqlRewrite
         //  we should always enable this setting.
         if (sessionContext.isEnableDynamicField()) {
             Set<CatalogSchemaTableName> visitedTables = analysis.getTables().stream().filter(table -> wrenMDL.getView(table).isEmpty()).collect(toSet());
-            LinkedHashMap<String, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getWrenDataLineage(), analysis).entrySet().stream()
-                    .filter(e -> wrenMDL.getView(e.getKey()).isEmpty())
+            LinkedHashMap<RelationableReference, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getWrenDataLineage(), analyzedMDL.getWrenMDL(), analysis).entrySet().stream()
+                    .filter(e -> wrenMDL.getView(e.getKey().getName()).isEmpty())
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
 
             ImmutableList.Builder<QueryDescriptor> descriptorsBuilder = ImmutableList.builder();
-            tableRequiredFields.forEach((name, value) -> {
-                addDescriptor(name, value, wrenMDL, descriptorsBuilder);
-                visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
+            tableRequiredFields.forEach((reference, value) -> {
+                addDescriptor(reference, value, analyzedMDL.getWrenMDL(), descriptorsBuilder);
+                visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(reference.getName())));
             });
 
             // Some node be applied `count(*)` which won't be collected but its source is required.
             analysis.getRequiredSourceNodes().forEach(node ->
-                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).ifPresent(name -> {
-                        addDescriptor(name, wrenMDL, descriptorsBuilder);
-                        visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
+                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).flatMap(name -> analyzedMDL.getWrenDataLineage().getRelationableReference(name)).ifPresent(reference -> {
+                        addDescriptor(reference, analyzedMDL.getWrenMDL(), descriptorsBuilder);
+                        visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(reference.getName())));
                     }));
 
             List<WithQuery> withQueries = new ArrayList<>();
+            List<QueryDescriptor> descriptors = descriptorsBuilder.build();
             // add date spine if needed
             if (tableRequiredFields.keySet().stream()
+                    .map(RelationableReference::getName)
                     .map(wrenMDL::getCumulativeMetric)
                     .anyMatch(Optional::isPresent)) {
-                withQueries.add(WithRewriter.getWithQuery(DateSpineInfo.get(wrenMDL.getDateSpine())));
+                withQueries.add(getWithQuery(DateSpineInfo.get(wrenMDL.getDateSpine())));
             }
-            descriptorsBuilder.build().forEach(queryDescriptor -> withQueries.add(WithRewriter.getWithQuery(queryDescriptor)));
+            descriptors.forEach(queryDescriptor -> withQueries.add(getWithQuery(queryDescriptor)));
 
             // If a selected table lacks any required fields, create a dummy with query for it.
             visitedTables.stream().filter(table -> wrenMDL.isObjectExist(table.getSchemaTableName().getTableName()))
-                    .forEach(dummy -> withQueries.add(WithRewriter.getWithQuery(new DummyInfo(dummy.getSchemaTableName().getTableName()))));
+                    .forEach(dummy -> withQueries.add(getWithQuery(new DummyInfo(dummy.getSchemaTableName().getTableName()))));
 
             Node rewriteWith = new WithRewriter(withQueries).process(root);
             return (Statement) new Rewriter(wrenMDL, analysis).process(rewriteWith);
         }
         else {
-            Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream().map(model -> RelationInfo.get(model, wrenMDL)).collect(toSet());
-            Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream().map(metric -> RelationInfo.get(metric, wrenMDL)).collect(toSet());
+            WrenDataLineage wrenDataLineage = analyzedMDL.getWrenDataLineage();
+            Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream()
+                    .map(model -> wrenDataLineage.getRelationableReference(model.getName()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(model -> RelationInfo.get(model, analyzedMDL.getWrenMDL())).collect(toSet());
+            Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream()
+                    .map(metric -> wrenDataLineage.getRelationableReference(metric.getName()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(metric -> RelationInfo.get(metric, analyzedMDL.getWrenMDL())).collect(toSet());
             Set<QueryDescriptor> cumulativeMetricDescriptors = analysis.getCumulativeMetrics().stream().map(metric -> CumulativeMetricInfo.get(metric, wrenMDL)).collect(toSet());
             allDescriptors = ImmutableSet.<QueryDescriptor>builder()
                     .addAll(modelDescriptors)
@@ -134,35 +147,43 @@ public class WrenSqlRewrite
         }
     }
 
-    private void addDescriptor(String name, Set<String> requiredFields, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
+    private void addDescriptor(RelationableReference reference, Set<String> requiredFields, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
     {
-        if (wrenMDL.getModel(name).isPresent()) {
-            Model model = wrenMDL.getModel(name).get();
-            descriptorsBuilder.add(RelationInfo.get(model, wrenMDL, requiredFields));
+        if (reference.isOriginal() && reference.getRelationable().isPresent()) {
+            descriptorsBuilder.add(ModelInfo.get((Model) reference.getRelationable().get()));
         }
-        else if (wrenMDL.getMetric(name).isPresent()) {
-            Metric metric = wrenMDL.getMetric(name).get();
-            descriptorsBuilder.add(RelationInfo.get(metric, wrenMDL, requiredFields));
+        else {
+            reference.getRelationable().map(relationable ->
+                    switch (relationable) {
+                        case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
+                        case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
+                        default -> throw new IllegalStateException("Unexpected value: " + relationable);
+                    });
         }
-        else if (wrenMDL.getCumulativeMetric(name).isPresent()) {
-            CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(name).get();
+
+        if (wrenMDL.getCumulativeMetric(reference.getName()).isPresent()) {
+            CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(reference.getName()).get();
             descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, wrenMDL));
         }
         // If the table is not found in mdl, it could be a remote table or a CTE.
     }
 
-    private void addDescriptor(String name, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
+    private void addDescriptor(RelationableReference reference, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
     {
-        if (wrenMDL.getModel(name).isPresent()) {
-            Model model = wrenMDL.getModel(name).get();
-            descriptorsBuilder.add(RelationInfo.get(model, wrenMDL));
+        if (reference.isOriginal() && reference.getRelationable().isPresent()) {
+            descriptorsBuilder.add(ModelInfo.get((Model) reference.getRelationable().get()));
         }
-        else if (wrenMDL.getMetric(name).isPresent()) {
-            Metric metric = wrenMDL.getMetric(name).get();
-            descriptorsBuilder.add(RelationInfo.get(metric, wrenMDL));
+        else {
+            reference.getRelationable().map(relationable ->
+                    switch (relationable) {
+                        case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
+                        case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
+                        default -> throw new IllegalStateException("Unexpected value: " + relationable);
+                    });
         }
-        else if (wrenMDL.getCumulativeMetric(name).isPresent()) {
-            CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(name).get();
+
+        if (wrenMDL.getCumulativeMetric(reference.getName()).isPresent()) {
+            CumulativeMetric cumulativeMetric = wrenMDL.getCumulativeMetric(reference.getName()).get();
             descriptorsBuilder.add(CumulativeMetricInfo.get(cumulativeMetric, wrenMDL));
         }
         // If the table is not found in mdl, it could be a remote table or a CTE.
@@ -185,10 +206,18 @@ public class WrenSqlRewrite
         requiredQueryDescriptors.forEach(queryDescriptor -> descriptorMap.put(queryDescriptor.getName(), queryDescriptor));
 
         List<WithQuery> withQueries = new ArrayList<>();
+
+        // add required original models to with query
+        requiredQueryDescriptors.stream().filter(queryDescriptor -> queryDescriptor.getRelationable().filter(relationable -> relationable instanceof Model).isPresent())
+                .map(queryDescriptor -> (Model) queryDescriptor.getRelationable().get())
+                .filter(model -> model.getBaseObject() == null)
+                .map(ModelInfo::get)
+                .forEach(modelInfo -> withQueries.add(getWithQuery(modelInfo)));
+
         graph.iterator().forEachRemaining(objectName -> {
             QueryDescriptor queryDescriptor = descriptorMap.get(objectName);
-            Utils.checkArgument(queryDescriptor != null, objectName + " not found in query descriptors");
-            withQueries.add(WithRewriter.getWithQuery(queryDescriptor));
+            checkArgument(queryDescriptor != null, STR."\{objectName} not found in query descriptors");
+            withQueries.add(getWithQuery(queryDescriptor));
         });
 
         Node rewriteWith = new WithRewriter(withQueries).process(root);

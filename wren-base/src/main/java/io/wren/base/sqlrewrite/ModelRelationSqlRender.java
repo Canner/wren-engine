@@ -34,59 +34,47 @@ import java.util.function.Function;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.wren.base.sqlrewrite.ModelInfo.ORIGINAL_SUFFIX;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static io.wren.base.sqlrewrite.Utils.parseQuery;
+import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 
-public class ModelSqlRender
+public class ModelRelationSqlRender
         extends RelationableSqlRender
 {
     private final Set<String> requiredFields;
 
-    public ModelSqlRender(Relationable relationable, WrenMDL mdl, Set<String> requiredFields)
+    public ModelRelationSqlRender(RelationableReference reference, WrenMDL mdl, Set<String> requiredFields)
     {
-        super(relationable, mdl);
+        super(reference, mdl);
         this.requiredFields = requireNonNull(requiredFields);
     }
 
-    public ModelSqlRender(Relationable relationable, WrenMDL mdl)
+    public ModelRelationSqlRender(RelationableReference reference, WrenMDL mdl)
     {
-        super(relationable, mdl);
-        this.requiredFields = relationable.getColumns().stream().map(Column::getName).collect(toImmutableSet());
+        super(reference, mdl);
+        this.requiredFields = reference.getRelationable().get().getColumns().stream().map(Column::getName).collect(toImmutableSet());
     }
 
     @Override
     protected String initRefSql(Relationable relationable)
     {
-        Utils.checkArgument(relationable instanceof Model, "relationable must be model");
-        Model model = (Model) relationable;
-        if (model.getRefSql() != null) {
-            return "(" + model.getRefSql() + ")";
-        }
-        else if (model.getBaseObject() != null) {
-            return "(SELECT * FROM \"" + model.getBaseObject() + "\")";
-        }
-        else if (model.getTableReference() != null) {
-            return model.getTableReference().toQualifiedName();
-        }
-        else {
-            throw new IllegalArgumentException("cannot get reference sql from model");
-        }
+        return STR."\"\{addOriginalSuffix(relationable.getName())}\"";
     }
 
     @Override
     public RelationInfo render()
     {
-        requireNonNull(relationable, "model is null");
-        if (relationable.getColumns().isEmpty()) {
-            return new RelationInfo(relationable, Set.of(), parseQuery(refSql));
+        if (reference.getRelationable().get().getColumns().isEmpty()) {
+            return new RelationInfo(reference, Set.of(), parseQuery(refSql));
         }
 
-        return render((Model) relationable);
+        return render((Model) reference.getRelationable().get());
     }
 
     @Override
@@ -109,7 +97,7 @@ public class ModelSqlRender
         if (relationalBase.isPresent()) {
             return format("\"%s\".\"%s\" AS \"%s\"", relationalBase.get(), column.getName(), column.getName());
         }
-        return format("\"%s\".\"%s\" AS \"%s\"", relationable.getName(), column.getName(), column.getName());
+        return format("\"%s\".\"%s\" AS \"%s\"", reference.getRelationable().get().getName(), column.getName(), column.getName());
     }
 
     @Override
@@ -157,7 +145,7 @@ public class ModelSqlRender
     }
 
     // only accept to-one relationship(s) in this method
-    private List<SubQueryJoinInfo> getToOneRelationshipsQuery(Model baseModel, Collection<CalculatedFieldRelationshipInfo> relationshipInfos)
+    protected List<SubQueryJoinInfo> getToOneRelationshipsQuery(Model baseModel, Collection<CalculatedFieldRelationshipInfo> relationshipInfos)
     {
         List<CalculatedFieldRelationshipInfo> toOneRelationships = relationshipInfos.stream()
                 .filter(relationshipInfo -> !relationshipInfo.isAggregated())
@@ -203,28 +191,21 @@ public class ModelSqlRender
                         tableJoinCondition.apply(getRelationableAlias(baseModel.getName()))));
     }
 
-    private RelationInfo render(Model baseModel)
+    protected RelationInfo render(Model baseModel)
     {
         requireNonNull(baseModel, "baseModel is null");
-        relationable.getColumns().stream()
+        baseModel.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
                 .forEach(column -> {
                     selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-                    columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", relationable.getName(), column.getName()));
+                    columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", reference.getRelationable().get().getName(), column.getName()));
                 });
 
-        relationable.getColumns().stream()
+        baseModel.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
                 .forEach(column -> collectRelationship(column, baseModel));
-        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
 
-        String modelSubQuery = format("(SELECT %s FROM %s AS \"%s\") AS \"%s\"",
-                modelSubQuerySelectItemsExpression,
-                refSql,
-                baseModel.getName(),
-                baseModel.getName());
-
-        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
+        StringBuilder tableJoinsSql = new StringBuilder(getModelSubQuery(baseModel));
         if (!calculatedRequiredRelationshipInfos.isEmpty()) {
             tableJoinsSql.append(
                     getCalculatedSubQuery(baseModel, calculatedRequiredRelationshipInfos).stream()
@@ -234,15 +215,23 @@ public class ModelSqlRender
         tableJoinsSql.append("\n");
 
         return new RelationInfo(
-                relationable,
+                reference,
                 requiredObjects,
                 parseQuery(getQuerySql(join(", ", selectItems), tableJoinsSql.toString())));
+    }
+
+    protected String getModelSubQuery(Model baseModel)
+    {
+        return format("(SELECT * FROM %s AS \"%s\") AS \"%s\"",
+                refSql,
+                baseModel.getName(),
+                baseModel.getName());
     }
 
     // accept to-one relationship(s) and at least one to-many relationship in this method, and use group by model primary key
     // to aggregate the query result as to-many relationship could lead to duplicate rows. Here we didn't check if there
     // is an aggregation function or not, we should add aggregation function in expression to avoid sql syntax error.
-    private List<SubQueryJoinInfo> getToManyRelationshipsQuery(Model baseModel, Collection<CalculatedFieldRelationshipInfo> relationshipInfos)
+    protected List<SubQueryJoinInfo> getToManyRelationshipsQuery(Model baseModel, Collection<CalculatedFieldRelationshipInfo> relationshipInfos)
     {
         return relationshipInfos.stream()
                 .filter(CalculatedFieldRelationshipInfo::isAggregated)
@@ -275,13 +264,13 @@ public class ModelSqlRender
                 .collect(toImmutableList());
     }
 
-    private String getBaseModelSql(Model model)
+    protected static String addOriginalSuffix(String modelName)
     {
-        String selectItems = model.getColumns().stream()
-                .filter(column -> !column.isCalculated())
-                .filter(column -> column.getRelationship().isEmpty())
-                .map(column -> format("%s AS \"%s\"", column.getSqlExpression(), column.getName()))
-                .collect(joining(", "));
-        return format("SELECT %s FROM %s AS \"%s\"", selectItems, refSql, model.getName());
+        return modelName + ORIGINAL_SUFFIX;
+    }
+
+    protected String getBaseModelSql(Model model)
+    {
+        return format("SELECT * FROM %s AS \"%s\"", refSql, model.getName());
     }
 }

@@ -17,10 +17,12 @@ package io.wren.base.sqlrewrite;
 import io.trino.sql.tree.Query;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.SessionContext;
+import io.wren.base.dto.Relationable;
 import io.wren.base.dto.View;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static io.wren.base.sqlrewrite.Utils.parseView;
@@ -66,5 +68,11 @@ public class ViewInfo
     public Query getQuery()
     {
         return query;
+    }
+
+    @Override
+    public Optional<Relationable> getRelationable()
+    {
+        return Optional.empty();
     }
 }

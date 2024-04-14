@@ -25,13 +25,14 @@ import java.util.List;
 
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.wren.base.sqlrewrite.EnumRewrite.ENUM_REWRITE;
+import static io.wren.base.sqlrewrite.GenerateViewRewrite.GENERATE_VIEW_REWRITE;
 import static io.wren.base.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
 import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 
 public class WrenPlanner
 {
     public static final List<WrenRule> ALL_RULES = List.of(
-            GenerateViewRewrite.GENERATE_VIEW_REWRITE,
+            GENERATE_VIEW_REWRITE,
             METRIC_ROLLUP_REWRITE,
             WREN_SQL_REWRITE,
             ENUM_REWRITE);
