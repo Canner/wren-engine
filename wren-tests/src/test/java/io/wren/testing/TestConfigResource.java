@@ -46,6 +46,7 @@ import static io.wren.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@Test(singleThreaded = true, description = "Every test will effect each other, so we need to run them in single thread.")
 public class TestConfigResource
         extends RequireWrenServer
 {
