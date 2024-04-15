@@ -551,8 +551,11 @@ public class TestWrenDataLineage
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
                 Column.caluclatedColumn("discount_extended_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount + orders.lineitem.extendedprice)"));
+        Model newOrders = addColumnsToModel(
+                orders,
+                Column.column("lineitem", "Lineitem", "OrdersLineitem", true));
         Manifest manifest = withDefaultCatalogSchema()
-                .setModels(List.of(newCustomer, orders, lineitem))
+                .setModels(List.of(newCustomer, newOrders, lineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
                 .build();
         WrenMDL mdl = WrenMDL.fromManifest(manifest);

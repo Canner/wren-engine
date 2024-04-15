@@ -19,6 +19,7 @@ import io.trino.sql.tree.Expression;
 import io.wren.base.dto.JoinType;
 
 import java.util.List;
+import java.util.Objects;
 
 public class PlannedRelationship
 {
@@ -62,5 +63,27 @@ public class PlannedRelationship
     public List<RelationableReference> getRequriedRelationables()
     {
         return ImmutableList.of(from, to);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        PlannedRelationship that = (PlannedRelationship) o;
+        return Objects.equals(from, that.from) &&
+                Objects.equals(to, that.to) &&
+                Objects.equals(qualifiedCondition, that.qualifiedCondition) &&
+                joinType == that.joinType;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(from, to, qualifiedCondition, joinType);
     }
 }

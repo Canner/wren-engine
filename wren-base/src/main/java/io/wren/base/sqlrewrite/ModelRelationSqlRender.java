@@ -21,9 +21,9 @@ import io.wren.base.WrenMDL;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationable;
-import io.wren.base.dto.Relationship;
 import io.wren.base.sqlrewrite.analyzer.ExpressionRelationshipAnalyzer;
 import io.wren.base.sqlrewrite.analyzer.ExpressionRelationshipInfo;
+import io.wren.base.sqlrewrite.analyzer.RelationshipColumnInfo;
 
 import java.util.Collection;
 import java.util.List;
@@ -160,18 +160,19 @@ public class ModelRelationSqlRender
                         info.getAlias()))
                 .collect(joining(", "));
 
-        List<Relationship> requiredRelationships = toOneRelationships.stream()
+        List<PlannedRelationship> requiredRelationships = toOneRelationships.stream()
                 .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
                 .flatMap(List::stream)
-                .map(ExpressionRelationshipInfo::getRelationships)
+                .map(ExpressionRelationshipInfo::getRelationshipColumnInfos)
                 .flatMap(List::stream)
+                .map(RelationshipColumnInfo::getPlannedRelationship)
                 .distinct()
                 .collect(toImmutableList());
         String tableJoins = format("(%s) AS \"%s\" %s",
                 getBaseModelSql(baseModel),
                 baseModel.getName(),
                 requiredRelationships.stream()
-                        .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getQualifiedCondition()))
+                        .map(relationship -> format(" LEFT JOIN \"%s\" \"%s\" ON %s", relationship.getTo().getName(), relationship.getTo().getRelationable().get().getName(), relationship.getQualifiedCondition()))
                         .collect(joining()));
 
         Function<String, String> tableJoinCondition =
@@ -237,14 +238,20 @@ public class ModelRelationSqlRender
                             RelationshipRewriter.rewrite(relationshipInfo.getExpressionRelationshipInfo(), parseExpression(relationshipInfo.getColumn().getSqlExpression())),
                             relationshipInfo.getAlias());
 
+                    List<PlannedRelationship> requiredRelationships = relationshipInfos.stream()
+                            .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
+                            .flatMap(List::stream)
+                            .map(ExpressionRelationshipInfo::getRelationshipColumnInfos)
+                            .flatMap(List::stream)
+                            .map(RelationshipColumnInfo::getPlannedRelationship)
+                            .distinct()
+                            .collect(toImmutableList());
+
                     String tableJoins = format("(%s) AS \"%s\" %s",
                             getBaseModelSql(baseModel),
                             baseModel.getName(),
-                            relationshipInfo.getExpressionRelationshipInfo().stream()
-                                    .map(ExpressionRelationshipInfo::getRelationships)
-                                    .flatMap(List::stream)
-                                    .distinct()
-                                    .map(relationship -> format(" LEFT JOIN \"%s\" ON %s", relationship.getModels().get(1), relationship.getQualifiedCondition()))
+                            requiredRelationships.stream()
+                                    .map(relationship -> format(" LEFT JOIN \"%s\" \"%s\" ON %s", relationship.getTo(), relationship.getTo().getRelationable().get().getName(), relationship.getQualifiedCondition()))
                                     .collect(joining()));
 
                     Utils.checkArgument(baseModel.getPrimaryKey() != null, "primary key in model %s contains relationship shouldn't be null", baseModel.getName());
