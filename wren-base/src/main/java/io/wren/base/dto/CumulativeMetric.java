@@ -27,7 +27,7 @@ import static io.wren.base.Utils.requireNonNullEmpty;
 import static java.util.Objects.requireNonNull;
 
 public class CumulativeMetric
-        implements CacheInfo
+        implements CacheInfo, Dataset
 {
     public static CumulativeMetric cumulativeMetric(
             String name,

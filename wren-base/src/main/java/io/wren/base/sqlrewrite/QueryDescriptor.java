@@ -21,7 +21,6 @@ import io.wren.base.WrenMDL;
 import io.wren.base.dto.CumulativeMetric;
 import io.wren.base.dto.Relationable;
 import io.wren.base.dto.View;
-import io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 
 import java.util.Optional;
 import java.util.Set;
@@ -39,8 +38,7 @@ public interface QueryDescriptor
     static QueryDescriptor of(String name, AnalyzedMDL analyzedMDL, SessionContext sessionContext)
     {
         WrenMDL mdl = analyzedMDL.getWrenMDL();
-        WrenDataLineage wrenDataLineage = analyzedMDL.getWrenDataLineage();
-        Optional<RelationableReference> relationableReference = wrenDataLineage.getRelationableReference(name);
+        Optional<RelationableReference> relationableReference = mdl.getRelationableReference(name);
         if (relationableReference.isPresent()) {
             return RelationInfo.get(relationableReference.get(), analyzedMDL.getWrenMDL());
         }

@@ -21,7 +21,6 @@ import io.wren.base.dto.Relationable;
 import java.util.Set;
 
 import static io.wren.base.Utils.checkArgument;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 

@@ -49,7 +49,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.Utils.checkArgument;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.WithRewriter.getWithQuery;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -60,7 +59,7 @@ public class WrenSqlRewrite
 
     private WrenSqlRewrite() {}
 
-    private static LinkedHashMap<RelationableReference, Set<String>> getTableRequiredFields(WrenDataLineage dataLineage, WrenMDL mdl, Analysis analysis)
+    private static LinkedHashMap<RelationableReference, Set<String>> getTableRequiredFields(WrenDataLineage dataLineage, Analysis analysis)
     {
         List<QualifiedName> collectedColumns = analysis.getCollectedColumns().asMap().entrySet().stream()
                 .map(e ->
@@ -90,7 +89,7 @@ public class WrenSqlRewrite
         //  we should always enable this setting.
         if (sessionContext.isEnableDynamicField()) {
             Set<CatalogSchemaTableName> visitedTables = analysis.getTables().stream().filter(table -> wrenMDL.getView(table).isEmpty()).collect(toSet());
-            LinkedHashMap<RelationableReference, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getWrenDataLineage(), analyzedMDL.getWrenMDL(), analysis).entrySet().stream()
+            LinkedHashMap<RelationableReference, Set<String>> tableRequiredFields = getTableRequiredFields(analyzedMDL.getWrenDataLineage(), analysis).entrySet().stream()
                     .filter(e -> wrenMDL.getView(e.getKey().getName()).isEmpty())
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
 
@@ -102,7 +101,7 @@ public class WrenSqlRewrite
 
             // Some node be applied `count(*)` which won't be collected but its source is required.
             analysis.getRequiredSourceNodes().forEach(node ->
-                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).flatMap(name -> analyzedMDL.getWrenDataLineage().getRelationableReference(name)).ifPresent(reference -> {
+                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).flatMap(wrenMDL::getRelationableReference).ifPresent(reference -> {
                         addDescriptor(reference, analyzedMDL.getWrenMDL(), descriptorsBuilder);
                         visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(reference.getName())));
                     }));
@@ -126,14 +125,13 @@ public class WrenSqlRewrite
             return (Statement) new Rewriter(wrenMDL, analysis).process(rewriteWith);
         }
         else {
-            WrenDataLineage wrenDataLineage = analyzedMDL.getWrenDataLineage();
             Set<QueryDescriptor> modelDescriptors = analysis.getModels().stream()
-                    .map(model -> wrenDataLineage.getRelationableReference(model.getName()))
+                    .map(model -> wrenMDL.getRelationableReference(model.getName()))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .map(model -> RelationInfo.get(model, analyzedMDL.getWrenMDL())).collect(toSet());
             Set<QueryDescriptor> metricDescriptors = analysis.getMetrics().stream()
-                    .map(metric -> wrenDataLineage.getRelationableReference(metric.getName()))
+                    .map(metric -> wrenMDL.getRelationableReference(metric.getName()))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .map(metric -> RelationInfo.get(metric, analyzedMDL.getWrenMDL())).collect(toSet());

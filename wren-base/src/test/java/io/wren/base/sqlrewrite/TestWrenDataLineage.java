@@ -40,7 +40,6 @@ import java.util.Set;
 import static io.wren.base.sqlrewrite.AbstractTestFramework.addColumnsToModel;
 import static io.wren.base.sqlrewrite.AbstractTestFramework.withDefaultCatalogSchema;
 import static io.wren.base.sqlrewrite.ModelInfo.ORIGINAL_SUFFIX;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
@@ -84,8 +83,7 @@ public class TestWrenDataLineage
                         Column.column("orderpriority", WrenTypes.VARCHAR, null, true),
                         Column.column("clerk", WrenTypes.VARCHAR, null, true),
                         Column.column("shippriority", WrenTypes.INTEGER, null, true),
-                        Column.column("comment", WrenTypes.VARCHAR, null, true),
-                        Column.column("lineitem", "Lineitem", "OrdersLineitem", true)),
+                        Column.column("comment", WrenTypes.VARCHAR, null, true)),
                 "orderkey");
         lineitem = Model.model("Lineitem",
                 "select * from main.lineitem",

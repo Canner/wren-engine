@@ -22,6 +22,7 @@ import io.wren.base.WrenMDL;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationship;
+import io.wren.base.sqlrewrite.PlannedRelationship;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,6 +110,7 @@ public class ExpressionRelationshipAnalyzer
     public static Optional<ExpressionRelationshipInfo> createRelationshipInfo(QualifiedName qualifiedName, Model model, WrenMDL mdl)
     {
         List<RelationshipColumnInfo> relationshipColumnInfos = new ArrayList<>();
+        Model from;
         Model current = model;
         Relationship baseModelRelationship = null;
 
@@ -125,13 +127,19 @@ public class ExpressionRelationshipAnalyzer
 
             Column relationshipColumn = relationshipColumnOpt.get();
             Relationship relationship = getRelationshipFromMDL(relationshipColumn, mdl);
-            relationshipColumnInfos.add(new RelationshipColumnInfo(current, relationshipColumn, relationship));
             if (current == model) {
                 baseModelRelationship = relationship;
             }
-
+            from = current;
             current = getNextModel(relationshipColumn, mdl);
             checkForCycle(current, model);
+
+            relationshipColumnInfos.add(new RelationshipColumnInfo(current, relationshipColumn, relationship,
+                    new PlannedRelationship(
+                            mdl.getRelationableReference(from.getName()).orElseThrow(() -> new NoSuchElementException("from relationable not found")),
+                            mdl.getRelationableReference(current.getName()).orElseThrow(() -> new NoSuchElementException("to relationable not found")),
+                            relationship.getQualifiedCondition(),
+                            relationship.getJoinType())));
         }
 
         return Optional.empty();

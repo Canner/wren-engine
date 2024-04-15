@@ -15,7 +15,6 @@
 package io.wren.base.sqlrewrite.analyzer;
 
 import io.trino.sql.tree.QualifiedName;
-import io.wren.base.Utils;
 import io.wren.base.dto.Relationship;
 
 import java.util.List;
@@ -23,6 +22,7 @@ import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.wren.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class ExpressionRelationshipInfo
@@ -48,7 +48,7 @@ public class ExpressionRelationshipInfo
         this.baseModelRelationship = requireNonNull(baseModelRelationship);
         this.relationshipColumnInfos = requireNonNull(relationshipColumnInfos);
         this.relationships = relationshipColumnInfos.stream().map(RelationshipColumnInfo::getNormalizedRelationship).collect(toImmutableList());
-        Utils.checkArgument(relationshipParts.size() + remainingParts.size() == qualifiedName.getParts().size(), "mismatch part size");
+        checkArgument(relationshipParts.size() + remainingParts.size() == qualifiedName.getParts().size(), "mismatch part size");
     }
 
     public QualifiedName getQualifiedName()

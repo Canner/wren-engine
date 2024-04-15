@@ -43,7 +43,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static io.wren.base.sqlrewrite.Utils.parseQuery;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;

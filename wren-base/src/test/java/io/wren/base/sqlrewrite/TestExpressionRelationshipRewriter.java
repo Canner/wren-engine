@@ -141,7 +141,12 @@ public class TestExpressionRelationshipRewriter
                                 List.of(new RelationshipColumnInfo(
                                         orders,
                                         orders.getColumns().stream().filter(c -> c.getName().equals("customer")).findAny().orElseThrow(),
-                                        ordersCustomer)),
+                                        ordersCustomer,
+                                        new PlannedRelationship(
+                                                mdl.getRelationableReference("Orders").get(),
+                                                mdl.getRelationableReference("Customer").get(),
+                                                ordersCustomer.getQualifiedCondition(),
+                                                ordersCustomer.getJoinType()))),
                                 ordersCustomer));
 
         assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())

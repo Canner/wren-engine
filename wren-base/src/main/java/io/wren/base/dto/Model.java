@@ -29,7 +29,7 @@ import static io.wren.base.Utils.checkArgument;
 import static io.wren.base.Utils.requireNonNullEmpty;
 
 public class Model
-        implements CacheInfo, Relationable
+        implements CacheInfo, Relationable, Dataset
 {
     private final String name;
     private final String refSql;

@@ -17,12 +17,14 @@ package io.wren.base.sqlrewrite.analyzer;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationship;
+import io.wren.base.sqlrewrite.PlannedRelationship;
 
 import static java.util.Objects.requireNonNull;
 
 public class RelationshipColumnInfo
 {
     private final Column column;
+    private final PlannedRelationship plannedRelationship;
     private final Relationship normalizedRelationship;
     private final Model model;
 
@@ -33,10 +35,11 @@ public class RelationshipColumnInfo
      * @param column the column that indicate to the relationship column
      * @param relationship the relationship defined in the column
      */
-    public RelationshipColumnInfo(Model model, Column column, Relationship relationship)
+    public RelationshipColumnInfo(Model model, Column column, Relationship relationship, PlannedRelationship plannedRelationship)
     {
         this.model = requireNonNull(model);
         this.column = requireNonNull(column);
+        this.plannedRelationship = requireNonNull(plannedRelationship);
         // reverse the models order in relationship if needed
         this.normalizedRelationship = reverseIfNeeded(relationship, column.getType());
     }
@@ -62,5 +65,10 @@ public class RelationshipColumnInfo
             return relationship;
         }
         return Relationship.reverse(relationship);
+    }
+
+    public PlannedRelationship getPlannedRelationship()
+    {
+        return plannedRelationship;
     }
 }

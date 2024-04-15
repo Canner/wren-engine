@@ -18,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.hubspot.jinjava.Jinjava;
+import io.trino.sql.tree.QualifiedName;
 import io.wren.base.dto.CacheInfo;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.CumulativeMetric;
@@ -26,11 +27,13 @@ import io.wren.base.dto.EnumDefinition;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.QualifiedReference;
 import io.wren.base.dto.Relationable;
 import io.wren.base.dto.Relationship;
 import io.wren.base.dto.View;
 import io.wren.base.jinjava.JinjavaExpressionProcessor;
 import io.wren.base.jinjava.JinjavaUtils;
+import io.wren.base.sqlrewrite.RelationableReference;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +44,7 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.wren.base.macro.Parameter.TYPE.MACRO;
+import static io.wren.base.sqlrewrite.ModelInfo.ORIGINAL_SUFFIX;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.UnaryOperator.identity;
 import static java.util.stream.Collectors.joining;
@@ -59,6 +63,8 @@ public class WrenMDL
     private final Map<String, Metric> metrics;
     private final Map<String, CumulativeMetric> cumulativeMetrics;
     private final Map<String, Relationship> relationships;
+    private final Map<QualifiedName, QualifiedReference> referenceMap;
+    private final Map<String, RelationableReference> relationableReferenceMap;
 
     public static WrenMDL fromJson(String manifest)
             throws JsonProcessingException
@@ -81,6 +87,19 @@ public class WrenMDL
         this.metrics = listMetrics().stream().collect(toImmutableMap(Metric::getName, identity()));
         this.cumulativeMetrics = listCumulativeMetrics().stream().collect(toImmutableMap(CumulativeMetric::getName, identity()));
         this.relationships = listRelationships().stream().collect(toImmutableMap(Relationship::getName, identity()));
+        ImmutableMap.Builder<QualifiedName, QualifiedReference> referenceMapBuilder = ImmutableMap.builder();
+        listModels().forEach(model -> model.getColumns()
+                .forEach(column -> referenceMapBuilder.put(QualifiedName.of(model.getName(), column.getName()), new QualifiedReference(model, column))));
+        listMetrics().forEach(metric -> metric.getColumns()
+                .forEach(column -> referenceMapBuilder.put(QualifiedName.of(metric.getName(), column.getName()), new QualifiedReference(metric, column))));
+        // TODO: add mapping for view and cumulative metric
+        this.referenceMap = referenceMapBuilder.build();
+        ImmutableMap.Builder<String, RelationableReference> relationableReferenceBuilder = ImmutableMap.builder();
+        listModels().forEach(model -> relationableReferenceBuilder.put(model.getName(), new RelationableReference(Optional.of(model), model.getName(), false)));
+        listModels().stream().filter(model -> model.getBaseObject() == null)
+                .forEach(model -> relationableReferenceBuilder.put(model.getName() + ORIGINAL_SUFFIX, new RelationableReference(Optional.of(model), model.getName() + ORIGINAL_SUFFIX, true)));
+        listMetrics().forEach(metric -> relationableReferenceBuilder.put(metric.getName(), new RelationableReference(Optional.of(metric), metric.getName(), false)));
+        this.relationableReferenceMap = relationableReferenceBuilder.build();
     }
 
     private Manifest renderManifest(Manifest original)
@@ -89,7 +108,7 @@ public class WrenMDL
                 .filter(macro -> macro.getParameters().stream().noneMatch(parameter -> parameter.getType() == MACRO))
                 .map(JinjavaUtils::getMacroTag).collect(joining("\n"));
         List<Model> renderedModels = original.getModels().stream().map(model -> {
-            List<io.wren.base.dto.Column> processed = model.getColumns().stream().map(column -> renderExpression(column, macroTags, original)).collect(toList());
+            List<Column> processed = model.getColumns().stream().map(column -> renderExpression(column, macroTags, original)).collect(toList());
             return new Model(
                     model.getName(),
                     model.getRefSql(),
@@ -119,7 +138,7 @@ public class WrenMDL
                 .build();
     }
 
-    private io.wren.base.dto.Column renderExpression(io.wren.base.dto.Column original, String macroTags, Manifest unProcessedManifest)
+    private Column renderExpression(Column original, String macroTags, Manifest unProcessedManifest)
     {
         if (original.getExpression().isEmpty()) {
             return original;
@@ -127,7 +146,7 @@ public class WrenMDL
 
         String withTag = macroTags + JinjavaExpressionProcessor.process(original.getSqlExpression(), unProcessedManifest.getMacros());
         String expression = JINJAVA.render(withTag, ImmutableMap.of());
-        return new io.wren.base.dto.Column(original.getName(),
+        return new Column(original.getName(),
                 original.getType(),
                 original.getRelationship().orElse(null),
                 original.isCalculated(),
@@ -251,19 +270,29 @@ public class WrenMDL
         return Optional.empty();
     }
 
-    public static Optional<io.wren.base.dto.Column> getRelationshipColumn(Model model, String name)
+    public static Optional<Column> getRelationshipColumn(Model model, String name)
     {
         return getColumn(model, name)
                 .filter(column -> column.getRelationship().isPresent());
     }
 
-    private static Optional<io.wren.base.dto.Column> getColumn(Model model, String name)
+    private static Optional<Column> getColumn(Model model, String name)
     {
         requireNonNull(model);
         requireNonNull(name);
         return model.getColumns().stream()
                 .filter(column -> column.getName().equals(name))
                 .findAny();
+    }
+
+    public Optional<QualifiedReference> getQualifiedReference(QualifiedName name)
+    {
+        return Optional.ofNullable(referenceMap.get(name));
+    }
+
+    public Optional<RelationableReference> getRelationableReference(String name)
+    {
+        return Optional.ofNullable(relationableReferenceMap.get(name));
     }
 
     public String getColumnType(String objectName, String columnName)

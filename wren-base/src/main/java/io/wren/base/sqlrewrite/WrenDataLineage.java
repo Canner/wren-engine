@@ -43,7 +43,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -66,7 +65,6 @@ public class WrenDataLineage
     private final Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap;
     private final Map<QualifiedName, List<Vertex>> requiredFields;
     private final Map<QualifiedName, ColumnInfo> columnInfoMap = new HashMap<>();
-    private final Map<String, RelationableReference> relationableReferenceMap = new HashMap<>();
 
     public static WrenDataLineage analyze(WrenMDL mdl)
     {
@@ -140,7 +138,7 @@ public class WrenDataLineage
         // add back column names to requiredFields
         columnNames.forEach(fullColumnName -> {
             RelationableReference reference = Optional.ofNullable(columnInfoMap.get(fullColumnName))
-                    .flatMap(columnInfo -> Optional.ofNullable(relationableReferenceMap.get(getTable(columnInfo.sqlName))))
+                    .flatMap(columnInfo -> mdl.getRelationableReference(getTable(columnInfo.sqlName)))
                     .orElse(new RelationableReference(Optional.empty(), getTable(fullColumnName), false));
             Set<String> names = Optional.ofNullable(result.get(reference)).orElseGet(HashSet::new);
             names.add(getColumn(fullColumnName));
@@ -153,10 +151,6 @@ public class WrenDataLineage
     {
         Map<QualifiedName, Set<QualifiedName>> sourceColumnsMap = new HashMap<>();
         for (Model model : mdl.listModels()) {
-            relationableReferenceMap.put(model.getName(), new RelationableReference(Optional.of(model), model.getName(), false));
-            if (model.getBaseObject() == null) {
-                relationableReferenceMap.put(model.getName() + ORIGINAL_SUFFIX, new RelationableReference(Optional.of(model), model.getName() + ORIGINAL_SUFFIX, true));
-            }
             for (Column column : model.getColumns()) {
                 SetMultimap<String, String> sourceColumns = getSourceColumns(mdl, model, column);
                 sourceColumnsMap.put(
@@ -175,7 +169,6 @@ public class WrenDataLineage
             }
         }
         for (Metric metric : mdl.listMetrics()) {
-            relationableReferenceMap.put(metric.getName(), new RelationableReference(Optional.of(metric), metric.getName(), false));
             for (Column column : metric.getColumns()) {
                 SetMultimap<String, String> sourceColumns = getSourceColumns(mdl, metric, column);
                 sourceColumnsMap.put(
@@ -232,7 +225,8 @@ public class WrenDataLineage
         String targetColumn = getColumn(qualifiedName);
         Set<QualifiedName> sourceColumns = sourceColumnsMap.get(qualifiedName);
         String tableName = useOriginal(qualifiedName) ? targetTable : targetTable + ORIGINAL_SUFFIX;
-        RelationableReference relationableReference = relationableReferenceMap.get(tableName);
+        RelationableReference relationableReference = mdl.getRelationableReference(tableName)
+                .orElseThrow(() -> new IllegalArgumentException(format("table %s not found", tableName)));
 
         Vertex targetVertex = vertexes.computeIfAbsent(relationableReference, (ignored) -> new Vertex(relationableReference));
         graph.addVertex(targetVertex);
@@ -240,7 +234,7 @@ public class WrenDataLineage
         // so we still need detect baseObject here.
         if (sourceColumns.isEmpty()) {
             String baseObjectName = getBaseObject(mdl, targetTable);
-            Optional<RelationableReference> referenceOptional = Optional.ofNullable(relationableReferenceMap.get(baseObjectName));
+            Optional<RelationableReference> referenceOptional = mdl.getRelationableReference(baseObjectName);
             referenceOptional.ifPresent(reference -> {
                 Vertex sourceVertex = vertexes.computeIfAbsent(reference, (ignored) -> new Vertex(reference));
                 graph.addVertex(sourceVertex);
@@ -256,7 +250,8 @@ public class WrenDataLineage
             String sourceTargetTable = getTable(fullSourceColumnName);
             String sourceColumnName = getColumn(fullSourceColumnName);
             String sourceTableName = useOriginal(fullSourceColumnName) ? sourceTargetTable : sourceTargetTable + ORIGINAL_SUFFIX;
-            RelationableReference sourceRelationReference = relationableReferenceMap.get(sourceTableName);
+            RelationableReference sourceRelationReference = mdl.getRelationableReference(sourceTableName)
+                    .orElseThrow(() -> new IllegalArgumentException(format("table %s not found", sourceTableName)));
             Vertex sourceVertex = vertexes.computeIfAbsent(sourceRelationReference, (ignored) -> new Vertex(sourceRelationReference));
             graph.addVertex(sourceVertex);
             try {
@@ -269,11 +264,6 @@ public class WrenDataLineage
             // recursively create column lineage
             collectRequiredFields(fullSourceColumnName, graph, vertexes);
         });
-    }
-
-    public Optional<RelationableReference> getRelationableReference(String name)
-    {
-        return Optional.ofNullable(relationableReferenceMap.get(name));
     }
 
     public Optional<ColumnInfo> getColumnInfo(String name)
@@ -333,60 +323,6 @@ public class WrenDataLineage
             this.column = requireNonNull(column, "column is null");
             this.sqlName = requireNonNull(sqlName, "sqlName is null");
             this.name = requireNonNull(name, "name is null");
-        }
-    }
-
-    public static class RelationableReference
-    {
-        private final Optional<Relationable> relationable;
-        private final String name;
-        private final boolean isOriginal;
-
-        public RelationableReference(Optional<Relationable> relationable, String name, boolean isOriginal)
-        {
-            this.relationable = requireNonNull(relationable, "relationable is null");
-            this.name = requireNonNull(name, "name is null");
-            this.isOriginal = isOriginal;
-        }
-
-        public Optional<Relationable> getRelationable()
-        {
-            return relationable;
-        }
-
-        public String getName()
-        {
-            return name;
-        }
-
-        public boolean isOriginal()
-        {
-            return isOriginal;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            RelationableReference reference = (RelationableReference) o;
-            return isOriginal == reference.isOriginal && Objects.equals(name, reference.name);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(name, isOriginal);
-        }
-
-        @Override
-        public String toString()
-        {
-            return name;
         }
     }
 

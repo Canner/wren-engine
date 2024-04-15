@@ -37,12 +37,10 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.ModelInfo.ORIGINAL_SUFFIX;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static io.wren.base.sqlrewrite.Utils.parseQuery;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toSet;
 
 public class ModelRelationSqlRender
         extends RelationableSqlRender
@@ -112,13 +110,11 @@ public class ModelRelationSqlRender
             CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo = new CalculatedFieldRelationshipInfo(column, relationshipInfos);
             calculatedRequiredRelationshipInfos.add(calculatedFieldRelationshipInfo);
             // Collect all required models in relationships
-            requiredObjects.addAll(relationshipInfos.stream()
-                    .map(ExpressionRelationshipInfo::getRelationships)
-                    .flatMap(List::stream)
-                    .map(Relationship::getModels)
-                    .flatMap(List::stream)
-                    .filter(modelName -> !modelName.equals(baseModel.getName()))
-                    .collect(toSet()));
+            relationshipInfos.forEach(info -> info.getRelationshipColumnInfos().stream()
+                    .flatMap(relationshipColumnInfo -> relationshipColumnInfo.getPlannedRelationship().getRequriedRelationables().stream()
+                            .map(RelationableReference::getName)
+                            .filter(name -> !name.equals(baseModel.getName())))
+                    .forEach(requiredObjects::add));
 
             // Add select items based on the type of column
             if (calculatedFieldRelationshipInfo.isAggregated()) {
@@ -203,7 +199,8 @@ public class ModelRelationSqlRender
 
         baseModel.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
-                .forEach(column -> collectRelationship(column, baseModel));
+                .forEach(column ->
+                        collectRelationship(column, baseModel));
 
         StringBuilder tableJoinsSql = new StringBuilder(getModelSubQuery(baseModel));
         if (!calculatedRequiredRelationshipInfos.isEmpty()) {

@@ -25,6 +25,7 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.wren.base.Utils.requireNonNullEmpty;
 
 public class View
+        implements Dataset
 {
     private final String name;
     private final String statement;

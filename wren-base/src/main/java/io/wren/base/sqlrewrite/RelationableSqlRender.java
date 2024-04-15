@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.wren.base.Utils.checkArgument;
-import static io.wren.base.sqlrewrite.WrenDataLineage.RelationableReference;
 import static java.util.Objects.requireNonNull;
 
 // TODO: Turn this into interface

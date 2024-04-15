@@ -31,7 +31,7 @@ import static io.wren.base.Utils.requireNonNullEmpty;
 import static java.util.Objects.requireNonNull;
 
 public class Metric
-        implements CacheInfo, Relationable
+        implements CacheInfo, Relationable, Dataset
 {
     private final String name;
     private final String baseObject;
