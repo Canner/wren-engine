@@ -27,7 +27,6 @@ import static java.util.stream.Collectors.joining;
 public class DerivedModelSqlRender
         extends ModelRelationSqlRender
 {
-
     public DerivedModelSqlRender(RelationableReference reference, WrenMDL mdl, Set<String> requiredFields)
     {
         super(reference, mdl, requiredFields);

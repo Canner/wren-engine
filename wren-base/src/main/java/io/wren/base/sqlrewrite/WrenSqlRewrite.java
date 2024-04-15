@@ -151,12 +151,11 @@ public class WrenSqlRewrite
             descriptorsBuilder.add(ModelInfo.get((Model) reference.getRelationable().get()));
         }
         else {
-            reference.getRelationable().map(relationable ->
-                    switch (relationable) {
-                        case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
-                        case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
-                        default -> throw new IllegalStateException("Unexpected value: " + relationable);
-                    });
+            reference.getRelationable().map(relationable -> switch (relationable) {
+                case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
+                case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL, requiredFields));
+                default -> throw new IllegalStateException("Unexpected value: " + relationable);
+            });
         }
 
         if (wrenMDL.getCumulativeMetric(reference.getName()).isPresent()) {
@@ -172,12 +171,11 @@ public class WrenSqlRewrite
             descriptorsBuilder.add(ModelInfo.get((Model) reference.getRelationable().get()));
         }
         else {
-            reference.getRelationable().map(relationable ->
-                    switch (relationable) {
-                        case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
-                        case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
-                        default -> throw new IllegalStateException("Unexpected value: " + relationable);
-                    });
+            reference.getRelationable().map(relationable -> switch (relationable) {
+                case Model _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
+                case Metric _ -> descriptorsBuilder.add(RelationInfo.get(reference, wrenMDL));
+                default -> throw new IllegalStateException("Unexpected value: " + relationable);
+            });
         }
 
         if (wrenMDL.getCumulativeMetric(reference.getName()).isPresent()) {

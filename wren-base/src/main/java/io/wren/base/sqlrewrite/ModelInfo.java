@@ -34,7 +34,7 @@ public class ModelInfo
         return new ModelInfo(model);
     }
 
-    public static String ORIGINAL_SUFFIX = "_original";
+    public static final String ORIGINAL_SUFFIX = "_original";
 
     private final String name;
     private final Query query;
