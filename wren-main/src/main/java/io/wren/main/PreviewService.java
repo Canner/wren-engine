@@ -31,6 +31,7 @@ package io.wren.main;
 import com.google.common.collect.Streams;
 import com.google.inject.Inject;
 import io.wren.base.AnalyzedMDL;
+import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
@@ -78,6 +79,36 @@ public class PreviewService
             catch (Exception e) {
                 throw new RuntimeException(e);
             }
+        });
+    }
+
+    public CompletableFuture<String> dryPlan(WrenMDL mdl, String sql, boolean isModelingOnly)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            SessionContext sessionContext = SessionContext.builder()
+                    .setCatalog(mdl.getCatalog())
+                    .setSchema(mdl.getSchema())
+                    .build();
+
+            String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
+            if (isModelingOnly) {
+                return planned;
+            }
+            return sqlConverter.convert(planned, sessionContext);
+        });
+    }
+
+    public CompletableFuture<List<Column>> dryRun(WrenMDL mdl, String sql)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            SessionContext sessionContext = SessionContext.builder()
+                    .setCatalog(mdl.getCatalog())
+                    .setSchema(mdl.getSchema())
+                    .build();
+
+            String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
+            String converted = sqlConverter.convert(planned, sessionContext);
+            return metadata.describeQuery(converted, List.of());
         });
     }
 }

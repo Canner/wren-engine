@@ -15,10 +15,12 @@
 package io.wren.testing;
 
 import com.google.common.collect.ImmutableMap;
+import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.base.type.BigIntType;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
+import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
 import org.testng.annotations.Test;
@@ -140,5 +142,68 @@ public class TestMDLResource
 
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
                 .hasErrorMessageMatches(".*Table \"Orders\" must be qualified with a dataset.*");
+    }
+
+    @Test
+    public void testDryRunAndDryPlan()
+    {
+        Manifest previewManifest = Manifest.builder()
+                .setCatalog("canner-cml")
+                .setSchema("tpch_tiny")
+                .setModels(List.of(
+                        model("Customer", "SELECT * FROM \"canner-cml\".tpch_tiny.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey")))))
+                .build();
+
+        PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", null);
+        List<Column> dryRun = dryRun(testDefaultDto1);
+        assertThat(dryRun.size()).isEqualTo(1);
+        assertThat(dryRun.get(0).getName()).isEqualTo("custkey");
+
+        DryPlanDto dryPlanDto = new DryPlanDto(previewManifest, "select custkey from Customer limit 200", false);
+        String dryPlan = dryPlan(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  `Customer` AS (
+                   SELECT `Customer`.`custkey` `custkey`
+                   FROM
+                     (
+                      SELECT c_custkey `custkey`
+                      FROM
+                        (
+                         SELECT *
+                         FROM
+                           `canner-cml`.tpch_tiny.customer
+                      )  `Customer`
+                   )  `Customer`
+                )\s
+                SELECT custkey
+                FROM
+                  Customer
+                LIMIT 200
+                """);
+
+        dryPlanDto = new DryPlanDto(previewManifest, "select custkey from Customer limit 200", true);
+        dryPlan = dryPlan(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "Customer" AS (
+                   SELECT "Customer"."custkey" "custkey"
+                   FROM
+                     (
+                      SELECT c_custkey "custkey"
+                      FROM
+                        (
+                         SELECT *
+                         FROM
+                           "canner-cml".tpch_tiny.customer
+                      )  "Customer"
+                   )  "Customer"
+                )\s
+                SELECT custkey
+                FROM
+                  Customer
+                LIMIT 200
+                """);
     }
 }

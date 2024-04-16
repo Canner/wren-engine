@@ -26,11 +26,13 @@ import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.config.ConfigManager;
+import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.cache.TaskInfo;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.DeployInputDto;
+import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
@@ -85,6 +87,8 @@ public abstract class RequireWrenServer
     private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
+    private static final JsonCodec<List<Column>> COLUMN_LIST_CODEC = listJsonCodec(Column.class);
+    private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
 
     public RequireWrenServer() {}
 
@@ -168,6 +172,36 @@ public abstract class RequireWrenServer
             getWebApplicationException(response);
         }
         return QUERY_RESULT_DTO_CODEC.fromJson(response.getBody());
+    }
+
+    protected List<Column> dryRun(PreviewDto previewDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/dry-run"))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(PREVIEW_DTO_CODEC, previewDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return COLUMN_LIST_CODEC.fromJson(response.getBody());
+    }
+
+    protected String dryPlan(DryPlanDto dryPlanDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/dry-plan"))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(DRY_PLAN_DTO_CODEC, dryPlanDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return response.getBody();
     }
 
     protected void deployMDL(DeployInputDto dto)

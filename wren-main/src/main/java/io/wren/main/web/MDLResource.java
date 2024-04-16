@@ -20,6 +20,7 @@ import io.wren.main.PreviewService;
 import io.wren.main.WrenManager;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
+import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.PreviewDto;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -105,6 +106,44 @@ public class MDLResource
                         mdl,
                         previewDto.getSql(),
                         Optional.ofNullable(previewDto.getLimit()).orElse(100L))
+                .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    @GET
+    @Path("/dry-plan")
+    @Consumes(APPLICATION_JSON)
+    @Produces(APPLICATION_JSON)
+    public void dryPlan(
+            DryPlanDto dryPlanDto,
+            @Suspended AsyncResponse asyncResponse)
+    {
+        WrenMDL mdl;
+        if (dryPlanDto.getManifest() == null) {
+            mdl = wrenManager.getAnalyzedMDL().getWrenMDL();
+        }
+        else {
+            mdl = WrenMDL.fromManifest(dryPlanDto.getManifest());
+        }
+        previewService.dryPlan(mdl, dryPlanDto.getSql(), dryPlanDto.isModelingOnly())
+                .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    @GET
+    @Path("/dry-run")
+    @Consumes(APPLICATION_JSON)
+    @Produces(APPLICATION_JSON)
+    public void dryRun(
+            PreviewDto previewDto,
+            @Suspended AsyncResponse asyncResponse)
+    {
+        WrenMDL mdl;
+        if (previewDto.getManifest() == null) {
+            mdl = wrenManager.getAnalyzedMDL().getWrenMDL();
+        }
+        else {
+            mdl = WrenMDL.fromManifest(previewDto.getManifest());
+        }
+        previewService.dryRun(mdl, previewDto.getSql())
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }
