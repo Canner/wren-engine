@@ -29,6 +29,7 @@ import io.wren.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -140,9 +141,19 @@ public class PgCatalogManager
                         mdl.getColumnType(metric.getName(), metric.getWindow().getName()));
                 sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
-            mdl.listViews().stream().map(view -> new DescribedView(view.getName(), previewService.dryRun(mdl, view.getStatement()).join())).forEach(describedView -> {
-                String cols = describedView.columns.stream().map(column -> format("\"%s\" %s", column.getName(), column.getType().typName())).collect(joining(","));
-                sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), describedView.name, cols));
+            mdl.listViews().stream().map(view -> {
+                try {
+                    return Optional.of(new DescribedView(view.getName(), previewService.dryRun(mdl, view.getStatement()).join()));
+                }
+                catch (Exception e) {
+                    LOG.error(e, "Failed to describe view %s", view.getName());
+                    return Optional.empty();
+                }
+            }).forEach(describedViewOptional -> {
+                describedViewOptional.map(view -> (DescribedView) view).ifPresent(describedView -> {
+                    String cols = describedView.columns.stream().map(column -> format("\"%s\" %s", column.getName(), column.getType().typName())).collect(joining(","));
+                    sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), describedView.name, cols));
+                });
             });
             String syncSql = sb.toString();
             LOG.info("Sync PG Metastore DDL:\n %s", syncSql);
