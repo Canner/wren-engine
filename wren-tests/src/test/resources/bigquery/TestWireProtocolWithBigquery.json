@@ -202,5 +202,11 @@
       ],
       "timeGrain": []
     }
+  ],
+  "views": [
+    {
+      "name": "selectOrders",
+      "statement": "select * from Orders"
+    }
   ]
 }

@@ -29,5 +29,11 @@
       ],
       "primaryKey": "nationkey"
     }
+  ],
+  "views": [
+    {
+      "name": "selectNation",
+      "statement": "select * from Nation"
+    }
   ]
 }

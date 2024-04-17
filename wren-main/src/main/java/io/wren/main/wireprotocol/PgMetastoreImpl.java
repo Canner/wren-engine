@@ -37,6 +37,7 @@ import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import java.util.List;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.wren.base.type.PGTypes.nameToPgType;
 import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -111,10 +112,8 @@ public class PgMetastoreImpl
         if (type.startsWith("_")) {
             return format("%s[]", handlePgType(type.substring(1)));
         }
-        else if (!DuckdbTypes.getDuckDBTypeNames().contains(type)) {
-            return "VARCHAR";
-        }
-        return type;
+        return DuckdbTypes.toDuckdbType(nameToPgType(type)
+                .orElse(VarcharType.VARCHAR)).getName();
     }
 
     @Override
