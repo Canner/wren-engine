@@ -37,7 +37,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
         extends AbstractWireProtocolTest
 {
     protected static final Manifest DEFAULT_MANIFEST = Manifest.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .build();
     private static final Logger LOG = Logger.get(AbstractWireProtocolTestWithBigQuery.class);
@@ -81,7 +81,7 @@ public abstract class AbstractWireProtocolTestWithBigQuery
     @Override
     protected String getDefaultCatalog()
     {
-        return "canner-cml";
+        return "wrenai";
     }
 
     @Override

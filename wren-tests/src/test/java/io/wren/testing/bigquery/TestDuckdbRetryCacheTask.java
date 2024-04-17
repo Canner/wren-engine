@@ -41,7 +41,7 @@ public class TestDuckdbRetryCacheTask
             .setModels(List.of(
                     Model.model(
                             "Orders",
-                            "select * from \"canner-cml\".tpch_tiny.orders",
+                            "select * from wrenai.tpch_tiny.orders",
                             List.of(
                                     Column.column("orderkey", WrenTypes.VARCHAR, null, false, "o_orderkey"),
                                     Column.column("custkey", WrenTypes.VARCHAR, null, false, "o_custkey")),

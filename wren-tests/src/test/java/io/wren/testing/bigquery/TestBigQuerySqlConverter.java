@@ -43,7 +43,7 @@ public class TestBigQuerySqlConverter
         extends AbstractSqlConverterTest
 {
     private static final SessionContext DEFAULT_SESSION_CONTEXT = SessionContext.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .build();
     private BigQuerySqlConverter bigQuerySqlConverter;
@@ -70,8 +70,8 @@ public class TestBigQuerySqlConverter
 
         BigQueryMetadata bigQueryMetadata = new BigQueryMetadata(configManager);
         WrenMetastore wrenMetastore = new WrenMetastore();
-        wrenMetastore.setWrenMDL(WrenMDL.fromManifest(Manifest.builder().setCatalog("canner-cml").setSchema("tpch_tiny")
-                .setModels(List.of(model("Orders", "select * from \"canner-cml\".\"tpch_tiny\".\"orders\"",
+        wrenMetastore.setWrenMDL(WrenMDL.fromManifest(Manifest.builder().setCatalog("wrenai").setSchema("tpch_tiny")
+                .setModels(List.of(model("Orders", "select * from wrenai.\"tpch_tiny\".\"orders\"",
                         List.of(column("custkey", "integer", null, true, "o_custkey"))))).build()), null);
         bigQuerySqlConverter = new BigQuerySqlConverter(bigQueryMetadata, wrenMetastore);
     }

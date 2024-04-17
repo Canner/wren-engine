@@ -118,7 +118,7 @@ public class TestWireProtocolTypeWithBigQuery
     @Override
     protected String getDefaultCatalog()
     {
-        return "canner-cml";
+        return "wrenai";
     }
 
     @Override

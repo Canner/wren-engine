@@ -52,7 +52,7 @@ public class TestCache
     private static final Function<String, String> dropTableStatement = (tableName) -> format("BEGIN TRANSACTION;DROP TABLE IF EXISTS %s;COMMIT;", tableName);
     private final Supplier<WrenMDL> wrenMDL = () -> getInstance(Key.get(WrenMetastore.class)).getAnalyzedMDL().getWrenMDL();
     private final SessionContext defaultSessionContext = SessionContext.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .build();
 
@@ -75,7 +75,7 @@ public class TestCache
                 "   , sum(o_totalprice) revenue\n" +
                 "   FROM\n" +
                 "     `%s.%s.%s`\n" +
-                "   GROUP BY o_custkey", "canner-cml", "tpch_tiny", "orders"));
+                "   GROUP BY o_custkey", "wrenai", "tpch_tiny", "orders"));
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
 
@@ -203,7 +203,7 @@ public class TestCache
                 "   , o_orderstatus orderstatus\n" +
                 "   , o_totalprice totalprice\n" +
                 "   , o_orderdate orderdate" +
-                " from `canner-cml`.tpch_tiny.orders");
+                " from `wrenai`.tpch_tiny.orders");
         assertThat(duckdbResult.size()).isEqualTo(bqResult.size());
         assertThat(Arrays.deepEquals(duckdbResult.toArray(), bqResult.toArray())).isTrue();
     }

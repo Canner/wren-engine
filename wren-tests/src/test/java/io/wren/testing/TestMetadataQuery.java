@@ -46,7 +46,7 @@ public class TestMetadataQuery
     @Override
     protected String getDefaultCatalog()
     {
-        return "canner-cml";
+        return "wrenai";
     }
 
     @Override

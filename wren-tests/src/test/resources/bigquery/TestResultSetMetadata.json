@@ -1,10 +1,10 @@
 {
-  "catalog": "canner-cml",
+  "catalog": "wrenai",
   "schema": "tpch_tiny",
   "models": [
     {
       "name": "Nation",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.nation",
+      "refSql": "select * from wrenai.tpch_tiny.nation",
       "columns": [
         {
           "name": "nationkey",

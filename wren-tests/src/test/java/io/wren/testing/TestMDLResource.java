@@ -48,17 +48,17 @@ public class TestMDLResource
     private Path wrenMDLFilePath;
     private Path mdlDir;
     private Manifest initial = Manifest.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .setModels(List.of(
-                    model("Orders", "SELECT * FROM \"canner-cml\".tpch_tiny.orders", List.of(column("orderkey", "integer", null, false, "o_orderkey")))))
+                    model("Orders", "SELECT * FROM wrenai.tpch_tiny.orders", List.of(column("orderkey", "integer", null, false, "o_orderkey")))))
             .build();
 
     private Manifest updated = Manifest.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .setModels(List.of(
-                    model("Orders", "SELECT * FROM \"canner-cml\".tpch_tiny.orders",
+                    model("Orders", "SELECT * FROM wrenai.tpch_tiny.orders",
                             List.of(column("orderkey", "integer", null, false, "o_orderkey"),
                                     column("custkey", "integer", null, false, "o_custkey")))))
             .build();
@@ -116,10 +116,10 @@ public class TestMDLResource
     public void testPreview()
     {
         Manifest previewManifest = Manifest.builder()
-                .setCatalog("canner-cml")
+                .setCatalog("wrenai")
                 .setSchema("tpch_tiny")
                 .setModels(List.of(
-                        model("Customer", "SELECT * FROM \"canner-cml\".tpch_tiny.customer",
+                        model("Customer", "SELECT * FROM wrenai.tpch_tiny.customer",
                                 List.of(column("custkey", "integer", null, false, "c_custkey")))))
                 .build();
 
@@ -148,10 +148,10 @@ public class TestMDLResource
     public void testDryRunAndDryPlan()
     {
         Manifest previewManifest = Manifest.builder()
-                .setCatalog("canner-cml")
+                .setCatalog("wrenai")
                 .setSchema("tpch_tiny")
                 .setModels(List.of(
-                        model("Customer", "SELECT * FROM \"canner-cml\".tpch_tiny.customer",
+                        model("Customer", "SELECT * FROM \"wrenai\".tpch_tiny.customer",
                                 List.of(column("custkey", "integer", null, false, "c_custkey")))))
                 .build();
 
@@ -173,7 +173,7 @@ public class TestMDLResource
                         (
                          SELECT *
                          FROM
-                           `canner-cml`.tpch_tiny.customer
+                           `wrenai`.tpch_tiny.customer
                       )  `Customer`
                    )  `Customer`
                 )\s
@@ -196,7 +196,7 @@ public class TestMDLResource
                         (
                          SELECT *
                          FROM
-                           "canner-cml".tpch_tiny.customer
+                           "wrenai".tpch_tiny.customer
                       )  "Customer"
                    )  "Customer"
                 )\s

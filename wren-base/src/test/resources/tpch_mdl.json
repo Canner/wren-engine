@@ -1,10 +1,10 @@
 {
-  "catalog": "canner-cml",
+  "catalog": "wrenai",
   "schema": "tpch_tiny",
   "models": [
     {
       "name": "Orders",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "refSql": "select * from wrenai.tpch_tiny.orders",
       "columns": [
         {
           "name": "orderkey",
@@ -46,7 +46,7 @@
     },
     {
       "name": "Customer",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "refSql": "select * from wrenai.tpch_tiny.customer",
       "columns": [
         {
           "name": "custkey",
@@ -78,7 +78,7 @@
     },
     {
       "name": "Lineitem",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.lineitem",
+      "refSql": "select * from wrenai.tpch_tiny.lineitem",
       "columns": [
         {
           "name": "orderkey",
@@ -130,7 +130,7 @@
     },
     {
       "name": "Part",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.part",
+      "refSql": "select * from wrenai.tpch_tiny.part",
       "columns": [
         {
           "name": "partkey",
@@ -147,7 +147,7 @@
     },
     {
       "name": "Nation",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.nation",
+      "refSql": "select * from wrenai.tpch_tiny.nation",
       "columns": [
         {
           "name": "nationkey",
@@ -189,7 +189,7 @@
     },
     {
       "name": "Region",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.region",
+      "refSql": "select * from wrenai.tpch_tiny.region",
       "columns": [
         {
           "name": "regionkey",
