@@ -1479,6 +1479,11 @@ public class TestWireProtocolWithBigquery
                 ResultSet resultSet = stmt.executeQuery("SELECT * FROM \"selectOrders\"");
                 resultSet.next();
             });
+
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT * FROM \"selectOrders\" WHERE orderkey = 111");
+                resultSet.next();
+            });
             ResultSet viewResultSet = conn.getMetaData().getTables(null, null, "selectOrders", null);
             assertThat(viewResultSet.next()).isTrue();
             // TODO: jdbc describe wrong type

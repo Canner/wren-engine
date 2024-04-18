@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static io.wren.base.Utils.checkArgument;
+import static io.wren.base.type.AnyType.ANY;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
@@ -96,7 +97,7 @@ public class LineageResource
                             .map(entry -> new LineageResult(
                                     entry.getKey(),
                                     entry.getValue().stream().map(column ->
-                                            new LineageResult.Column(column, Map.of("type", mdl.getColumnType(entry.getKey(), column)))).collect(toList())))
+                                            new LineageResult.Column(column, Map.of("type", mdl.getColumnType(entry.getKey(), column).orElse(ANY.typName())))).collect(toList())))
                             .collect(Collectors.toList());
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));

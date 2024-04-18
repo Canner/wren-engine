@@ -324,7 +324,7 @@ public class ExpressionTypeAnalyzer
         if (!mdl.isObjectExist(objectName)) {
             return null;
         }
-        return PGTypes.nameToPgType(mdl.getColumnType(objectName, columnName)).orElse(null);
+        return mdl.getColumnType(objectName, columnName).flatMap(PGTypes::nameToPgType).orElse(null);
     }
 
     @Override
