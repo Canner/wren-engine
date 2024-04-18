@@ -69,11 +69,33 @@ public class SnowflakeTypes
             .put(VARCHAR.getJdbcType(), VarcharType.VARCHAR)
             .build();
 
+    private static final Map<PGType<?>, String> pgTypeToSFTypeMap = ImmutableMap.<PGType<?>, String>builder()
+            .put(BooleanType.BOOLEAN, BOOLEAN.getName())
+            .put(BigIntType.BIGINT, BIGINT.getName())
+            .put(ByteaType.BYTEA, BINARY.getName())
+            .put(DateType.DATE, DATE.getName())
+            .put(DoubleType.DOUBLE, DOUBLE.getName())
+            .put(NumericType.NUMERIC, DECIMAL.getName())
+            .put(RealType.REAL, FLOAT.getName())
+            .put(SmallIntType.SMALLINT, SMALLINT.getName())
+            .put(IntegerType.INTEGER, INTEGER.getName())
+            .put(TinyIntType.TINYINT, TINYINT.getName())
+            .put(TimestampType.TIMESTAMP, TIMESTAMP.getName())
+            .put(TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE.getName())
+            .put(VarcharType.VARCHAR, VARCHAR.getName())
+            .build();
+
     private SnowflakeTypes() {}
 
     public static PGType<?> toPGType(int type)
     {
         return Optional.ofNullable(sfTypeToPgTypeMap.get(type))
+                .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "Unsupported Type: " + type));
+    }
+
+    public static String toSFType(PGType<?> type)
+    {
+        return Optional.ofNullable(pgTypeToSFTypeMap.get(type))
                 .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "Unsupported Type: " + type));
     }
 }

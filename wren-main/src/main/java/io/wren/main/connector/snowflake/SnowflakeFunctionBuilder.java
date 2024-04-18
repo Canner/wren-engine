@@ -20,6 +20,7 @@ import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.base.pgcatalog.function.PgFunction.Language.SQL;
+import static io.wren.main.connector.snowflake.SnowflakeTypes.toSFType;
 import static java.lang.String.format;
 
 public class SnowflakeFunctionBuilder
@@ -37,16 +38,16 @@ public class SnowflakeFunctionBuilder
     private String generateCreateSqlFunction(PgFunction pgFunction)
     {
         StringBuilder parameterBuilder = new StringBuilder();
-        if (pgFunction.getArguments().isPresent()) {
-            for (PgFunction.Argument argument : pgFunction.getArguments().get()) {
+        pgFunction.getArguments().ifPresent(arguments -> {
+            for (PgFunction.Argument argument : arguments) {
                 parameterBuilder
-                        .append(argument.getName())
-                        .append(", ");
+                        .append(argument.getName()).append(" ")
+                        .append(toSFType(argument.getType()))
+                        .append(",");
             }
-            parameterBuilder.delete(parameterBuilder.length() - 2, parameterBuilder.length());
-        }
-
-        return format("CREATE OR REPLACE FUNCTION %s(%s) AS (%s);",
+            parameterBuilder.setLength(parameterBuilder.length() - 1);
+        });
+        return format("CREATE OR REPLACE FUNCTION %s(%s) AS $$ %s $$;",
                 pgFunction.getName(),
                 parameterBuilder,
                 pgFunction.getDefinition());
