@@ -1,10 +1,10 @@
 {
-  "catalog": "canner-cml",
+  "catalog": "wrenai",
   "schema": "tpch_tiny",
   "models": [
     {
       "name": "Orders",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "refSql": "select * from wrenai.tpch_tiny.orders",
       "columns": [
         {
           "name": "orderkey",
@@ -42,7 +42,7 @@
     },
     {
       "name": "Customer",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "refSql": "select * from wrenai.tpch_tiny.customer",
       "columns": [
         {
           "name": "custkey",
@@ -64,7 +64,7 @@
     },
     {
       "name": "RemoveCustomer",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "refSql": "select * from wrenai.tpch_tiny.customer",
       "columns": [
         {
           "name": "custkey",

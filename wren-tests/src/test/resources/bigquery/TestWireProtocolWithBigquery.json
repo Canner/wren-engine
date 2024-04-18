@@ -1,5 +1,5 @@
 {
-  "catalog": "canner-cml",
+  "catalog": "wrenai",
   "schema": "tpch_tiny",
   "relationships": [
     {
@@ -25,7 +25,7 @@
     {
       "name": "Orders",
       "tableReference": {
-        "catalog": "canner-cml",
+        "catalog": "wrenai",
         "schema": "tpch_tiny",
         "table": "orders"
       },
@@ -65,7 +65,7 @@
     },
     {
       "name": "Lineitem",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.lineitem",
+      "refSql": "select * from wrenai.tpch_tiny.lineitem",
       "columns": [
         {
           "name": "orderkey",
@@ -112,7 +112,7 @@
     },
     {
       "name": "Table",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.customer",
+      "refSql": "select * from wrenai.tpch_tiny.customer",
       "columns": [
         {
           "name": "select",
@@ -140,7 +140,7 @@
     },
     {
       "name": "Order",
-      "refSql": "select * from \"canner-cml\".tpch_tiny.orders",
+      "refSql": "select * from wrenai.tpch_tiny.orders",
       "columns": [
         {
           "name": "alter",

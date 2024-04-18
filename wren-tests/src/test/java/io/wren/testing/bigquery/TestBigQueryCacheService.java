@@ -46,7 +46,7 @@ public class TestBigQueryCacheService
             "     (\n" +
             "      SELECT *\n" +
             "      FROM\n" +
-            "        canner-cml.tpch_tiny.orders\n" +
+            "        wrenai.tpch_tiny.orders\n" +
             "   ) \n" +
             ") \n" +
             ", Revenue AS (\n" +

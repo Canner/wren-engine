@@ -45,7 +45,7 @@ import static org.testng.Assert.assertTrue;
 public class TestResultSetMetadata
         extends AbstractWireProtocolTestWithBigQuery
 {
-    private static final String TEST_CATALOG = "canner-cml";
+    private static final String TEST_CATALOG = "wrenai";
 
     @Override
     protected Optional<String> getWrenMDLPath()
@@ -127,7 +127,7 @@ public class TestResultSetMetadata
             throws Exception
     {
         HostAndPort hostAndPort = server().getPgHostAndPort();
-        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "canner-cml");
+        String url = format("jdbc:postgresql://%s:%s/%s", hostAndPort.getHost(), hostAndPort.getPort(), "wrenai");
         try (Connection connection = this.createConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
             assertEquals(metaData.getURL(), url);
@@ -153,7 +153,7 @@ public class TestResultSetMetadata
     {
         try (Connection connection = this.createConnection()) {
             ResultSet rs = connection.getMetaData().getCatalogs();
-            assertThat(readRows(rs)).isEqualTo(List.of(List.of("canner-cml")));
+            assertThat(readRows(rs)).isEqualTo(List.of(List.of("wrenai")));
             ResultSetMetaData metadata = rs.getMetaData();
             assertEquals(metadata.getColumnCount(), 1);
             assertEquals(metadata.getColumnLabel(1), "TABLE_CAT");

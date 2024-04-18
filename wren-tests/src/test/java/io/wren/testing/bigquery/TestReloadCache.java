@@ -68,7 +68,7 @@ public class TestReloadCache
             throws IOException, ExecutionException, InterruptedException, TimeoutException
     {
         String beforeName = "Revenue";
-        CatalogSchemaTableName beforeCatalogSchemaTableName = new CatalogSchemaTableName("canner-cml", "tpch_tiny", beforeName);
+        CatalogSchemaTableName beforeCatalogSchemaTableName = new CatalogSchemaTableName("wrenai", "tpch_tiny", beforeName);
         Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(beforeName);
         assertThat(cacheInfoPairOptional).isPresent();
         String beforeMappingName = cacheInfoPairOptional.get().getRequiredTableName();
@@ -76,7 +76,7 @@ public class TestReloadCache
 
         deployMDL("cache/cache_reload_2_mdl.json");
         waitUntilReady();
-        waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue_After"));
+        waitUntilFinished(catalogSchemaTableName("wrenai", "tpch_tiny", "Revenue_After"));
         assertCache("Revenue_After");
 
         List<Object[]> tables = queryDuckdb("show tables");
@@ -87,13 +87,13 @@ public class TestReloadCache
 
         deployMDL("cache/cache_reload_1_mdl.json");
         waitUntilReady();
-        waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue"));
+        waitUntilFinished(catalogSchemaTableName("wrenai", "tpch_tiny", "Revenue"));
 
-        List<TaskInfo> taskInfos = getTaskInfo("canner-cml", "tpch_tiny");
+        List<TaskInfo> taskInfos = getTaskInfo("wrenai", "tpch_tiny");
         assertThat(taskInfos.size()).isEqualTo(1);
         TaskInfo taskInfo = taskInfos.get(0);
         assertCache("Revenue");
-        assertThat(taskInfo.getCatalogName()).isEqualTo("canner-cml");
+        assertThat(taskInfo.getCatalogName()).isEqualTo("wrenai");
         assertThat(taskInfo.getSchemaName()).isEqualTo("tpch_tiny");
         assertThat(taskInfo.getTaskStatus()).isEqualTo(DONE);
         assertThat(taskInfo.getStartTime()).isNotNull();
@@ -108,7 +108,7 @@ public class TestReloadCache
 
         deployMDL("cache/cache_reload_3_mdl.json");
         waitUntilReady();
-        taskInfo = waitUntilFinished(catalogSchemaTableName("canner-cml", "tpch_tiny", "Revenue_Fake"));
+        taskInfo = waitUntilFinished(catalogSchemaTableName("wrenai", "tpch_tiny", "Revenue_Fake"));
         cachedTable = taskInfo.getCachedTable();
         assertThat(cachedTable.getErrorMessage()).isPresent();
         assertThat(taskInfo.getEndTime()).isAfter(taskInfo.getStartTime());
@@ -127,7 +127,7 @@ public class TestReloadCache
 
     private void assertCache(String name)
     {
-        CatalogSchemaTableName mapping = new CatalogSchemaTableName("canner-cml", "tpch_tiny", name);
+        CatalogSchemaTableName mapping = new CatalogSchemaTableName("wrenai", "tpch_tiny", name);
         Optional<CacheInfoPair> cacheInfoPairOptional = getDefaultCacheInfoPair(name);
         assertThat(cacheInfoPairOptional).isPresent();
         String mappingName = cacheInfoPairOptional.get().getRequiredTableName();

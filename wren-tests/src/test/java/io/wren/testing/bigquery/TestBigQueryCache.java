@@ -61,13 +61,13 @@ public class TestBigQueryCache
     }
 
     /*
-     * CREATE TABLE `canner-cml.cml_temp.cache_bigquery_type`(
+     * CREATE TABLE `wrenai.cml_temp.cache_bigquery_type`(
      * c_string STRING, c_bytes BYTES, c_integer INT64, c_float FLOAT64, c_numeric NUMERIC,
      * c_bignumeric BIGNUMERIC, c_boolean BOOL, c_timestamp TIMESTAMP, c_date DATE, c_datetime DATETIME,
      * c_time TIME, c_geography GEOGRAPHY, c_json JSON, c_interval INTERVAL, c_struct STRUCT<s1 INT64, s2 STRING>,
      * c_array_string ARRAY<STRING>);
      *
-     * INSERT INTO `canner-cml.cml_temp.cache_bigquery_type`(
+     * INSERT INTO `wrenai.cml_temp.cache_bigquery_type`(
      * c_string, c_bytes, c_integer, c_float, c_numeric,
      * c_bignumeric, c_boolean, c_timestamp, c_date, c_datetime,
      * c_time, c_geography, c_json, c_interval,
@@ -82,7 +82,7 @@ public class TestBigQueryCache
     public void testType()
             throws SQLException
     {
-        String mappingName = cachedTableMapping.get().getCacheInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = cachedTableMapping.get().getCacheInfoPair("wrenai", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -153,7 +153,7 @@ public class TestBigQueryCache
     public void testTypesInPredicate(String columnName, Object value)
             throws SQLException
     {
-        String mappingName = cachedTableMapping.get().getCacheInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = cachedTableMapping.get().getCacheInfoPair("wrenai", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
@@ -191,7 +191,7 @@ public class TestBigQueryCache
     public void testTypesInPredicateWithPreparedStatement(String columnName, Object value)
             throws SQLException
     {
-        String mappingName = cachedTableMapping.get().getCacheInfoPair("canner-cml", "cml_temp", "PrintBigQueryType").getRequiredTableName();
+        String mappingName = cachedTableMapping.get().getCacheInfoPair("wrenai", "cml_temp", "PrintBigQueryType").getRequiredTableName();
         List<Object[]> tables = queryDuckdb("show tables");
 
         Set<String> tableNames = tables.stream().map(table -> table[0].toString()).collect(toImmutableSet());
