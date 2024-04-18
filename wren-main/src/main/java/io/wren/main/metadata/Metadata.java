@@ -18,7 +18,6 @@ import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.connector.StorageClient;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
@@ -28,15 +27,7 @@ public interface Metadata
 {
     void createSchema(String name);
 
-    boolean isSchemaExist(String name);
-
     void dropSchemaIfExists(String name);
-
-    List<String> listSchemas();
-
-    List<TableMetadata> listTables(String schemaName);
-
-    List<String> listFunctionNames(String schemaName);
 
     QualifiedName resolveFunction(String functionName, int numArgument);
 
@@ -49,8 +40,6 @@ public interface Metadata
     List<Column> describeQuery(String sql, List<Parameter> parameters);
 
     boolean isPgCompatible();
-
-    String getMetadataSchemaName();
 
     String getPgCatalogName();
 

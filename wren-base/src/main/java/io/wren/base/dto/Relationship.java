@@ -234,11 +234,6 @@ public class Relationship
         private final String name;
         private final boolean isDescending;
 
-        public static SortKey sortKey(String name, Ordering ordering)
-        {
-            return new SortKey(name, ordering);
-        }
-
         @JsonCreator
         public SortKey(
                 @JsonProperty("name") String name,

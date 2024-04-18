@@ -24,7 +24,6 @@ import io.wren.base.WrenException;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.SnowflakeConfig;
 import io.wren.base.config.WrenConfig;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.connector.StorageClient;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
@@ -131,44 +130,8 @@ public class SnowflakeMetadata
     @Override
     public void close() {}
 
-    @Deprecated
-    @Override
-    public boolean isSchemaExist(String name)
-    {
-        throw new UnsupportedOperationException("Unnecessary method");
-    }
-
-    @Deprecated
-    @Override
-    public List<String> listSchemas()
-    {
-        throw new UnsupportedOperationException("Unnecessary method");
-    }
-
-    @Deprecated
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        throw new UnsupportedOperationException("Unnecessary method");
-    }
-
-    @Deprecated
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        throw new UnsupportedOperationException("Unnecessary method");
-    }
-
-    @Deprecated
     @Override
     public QualifiedName resolveFunction(String functionName, int numArgument)
-    {
-        throw new UnsupportedOperationException("Unnecessary method");
-    }
-
-    @Deprecated
-    @Override
-    public String getMetadataSchemaName()
     {
         throw new UnsupportedOperationException("Unnecessary method");
     }

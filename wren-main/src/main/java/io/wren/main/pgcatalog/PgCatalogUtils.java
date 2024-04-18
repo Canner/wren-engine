@@ -17,7 +17,6 @@ package io.wren.main.pgcatalog;
 public final class PgCatalogUtils
 {
     public static final String PG_CATALOG_NAME = "pg_catalog";
-    public static final String WREN_TEMP_NAME = "wren_temp";
 
     private PgCatalogUtils() {}
 }

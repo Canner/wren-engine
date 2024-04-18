@@ -21,7 +21,6 @@ import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.connector.StorageClient;
 import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
@@ -89,33 +88,9 @@ public final class MetadataManager
     }
 
     @Override
-    public boolean isSchemaExist(String name)
-    {
-        return delegate.isSchemaExist(name);
-    }
-
-    @Override
     public void dropSchemaIfExists(String name)
     {
         delegate.dropSchemaIfExists(name);
-    }
-
-    @Override
-    public List<String> listSchemas()
-    {
-        return delegate.listSchemas();
-    }
-
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        return delegate.listTables(schemaName);
-    }
-
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        return delegate.listFunctionNames(schemaName);
     }
 
     @Override
@@ -152,12 +127,6 @@ public final class MetadataManager
     public boolean isPgCompatible()
     {
         return delegate.isPgCompatible();
-    }
-
-    @Override
-    public String getMetadataSchemaName()
-    {
-        return delegate.getMetadataSchemaName();
     }
 
     @Override

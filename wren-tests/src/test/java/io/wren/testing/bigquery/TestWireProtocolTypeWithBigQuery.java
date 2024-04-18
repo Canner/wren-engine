@@ -108,7 +108,6 @@ public class TestWireProtocolTypeWithBigQuery
             Metadata metadata = getInstance(Key.get(Metadata.class));
             BigQueryClient bigQueryClient = getInstance(Key.get(BigQueryClient.class));
             bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
-            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
         }
         catch (Exception ex) {
             LOG.error(ex, "cleanup bigquery schema failed");

@@ -22,7 +22,6 @@ import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.WrenException;
-import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.duckdb.CacheStorageConfig;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
@@ -30,10 +29,8 @@ import io.wren.base.client.duckdb.DuckDBSettingSQL;
 import io.wren.base.client.duckdb.DuckdbClient;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.base.type.DateType;
 import io.wren.base.type.PGType;
-import io.wren.base.type.VarcharType;
 import io.wren.cache.DuckdbRecordIterator;
 import io.wren.connector.StorageClient;
 import io.wren.main.metadata.Metadata;
@@ -53,7 +50,6 @@ import java.util.function.Consumer;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.wren.main.pgcatalog.PgCatalogUtils.WREN_TEMP_NAME;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -80,18 +76,6 @@ public class DuckDBMetadata
     }
 
     @Override
-    public boolean isSchemaExist(String name)
-    {
-        try (AutoCloseableIterator iter = duckdbClient
-                .query("SELECT 1 FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", List.of(new Parameter(VarcharType.VARCHAR, name)))) {
-            return iter.hasNext();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
     public void createSchema(String name)
     {
         duckdbClient.executeDDL("CREATE SCHEMA " + name);
@@ -101,24 +85,6 @@ public class DuckDBMetadata
     public void dropSchemaIfExists(String name)
     {
         duckdbClient.executeDDL("DROP SCHEMA " + name);
-    }
-
-    @Override
-    public List<String> listSchemas()
-    {
-        return null;
-    }
-
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        return null;
-    }
-
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        return null;
     }
 
     @Override
@@ -162,12 +128,6 @@ public class DuckDBMetadata
     public boolean isPgCompatible()
     {
         return true;
-    }
-
-    @Override
-    public String getMetadataSchemaName()
-    {
-        return WREN_TEMP_NAME;
     }
 
     @Override

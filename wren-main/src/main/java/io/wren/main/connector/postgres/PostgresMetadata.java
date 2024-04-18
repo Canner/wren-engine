@@ -14,7 +14,6 @@
 
 package io.wren.main.connector.postgres;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
@@ -23,7 +22,6 @@ import io.wren.base.Parameter;
 import io.wren.base.WrenException;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.PostgresConfig;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.connector.StorageClient;
 import io.wren.connector.postgres.PostgresClient;
 import io.wren.connector.postgres.PostgresRecordIterator;
@@ -35,8 +33,6 @@ import java.util.List;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.wren.main.pgcatalog.PgCatalogUtils.WREN_TEMP_NAME;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -65,54 +61,6 @@ public class PostgresMetadata
     public void dropSchemaIfExists(String name)
     {
         postgresClient.executeDDL("DROP SCHEMA IF NOT EXISTS " + name);
-    }
-
-    @Override
-    public boolean isSchemaExist(String name)
-    {
-        try (PostgresRecordIterator iterator = PostgresRecordIterator.of(postgresClient, format("select count(*) = 1 from pg_catalog.pg_namespace where nspname = '%s'", name))) {
-            return (boolean) iterator.next()[0];
-        }
-        catch (Exception e) {
-            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
-        }
-    }
-
-    @Override
-    public List<String> listSchemas()
-    {
-        try (PostgresRecordIterator iterator = PostgresRecordIterator.of(postgresClient, "select distinct nspanme from pg_catalog.pg_namespace'")) {
-            ImmutableList.Builder<String> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add((String) iterator.next()[0]);
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
-        }
-    }
-
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        return postgresClient.listTable(schemaName);
-    }
-
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        try (PostgresRecordIterator iterator = PostgresRecordIterator.of(postgresClient, "select distinct proname from pg_catalog.pg_proc where pronamespace =" +
-                "(select oid from pg_catalog.pg_namespace where nspname = 'pg_catalog' OR nspname = '" + schemaName + "')")) {
-            ImmutableList.Builder<String> builder = ImmutableList.builder();
-            while (iterator.hasNext()) {
-                builder.add((String) iterator.next()[0]);
-            }
-            return builder.build();
-        }
-        catch (Exception e) {
-            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
-        }
     }
 
     @Override
@@ -161,12 +109,6 @@ public class PostgresMetadata
     public boolean isPgCompatible()
     {
         return true;
-    }
-
-    @Override
-    public String getMetadataSchemaName()
-    {
-        return WREN_TEMP_NAME;
     }
 
     @Override
