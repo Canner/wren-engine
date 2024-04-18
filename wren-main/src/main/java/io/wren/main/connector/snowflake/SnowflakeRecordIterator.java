@@ -54,7 +54,6 @@ public class SnowflakeRecordIterator
     {
         try {
             this.connection = connection;
-
             statement = connection.prepareStatement(sql);
 
             for (int i = 0; i < parameters.size(); i++) {
@@ -62,13 +61,9 @@ public class SnowflakeRecordIterator
             }
 
             resultSet = statement.executeQuery();
-
             ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-
             this.columnCount = resultSetMetaData.getColumnCount();
-
             this.columns = buildColumns(resultSetMetaData);
-
             hasNext = resultSet.next();
         }
         catch (SQLException e) {
