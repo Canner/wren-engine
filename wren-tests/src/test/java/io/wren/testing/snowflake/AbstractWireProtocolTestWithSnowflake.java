@@ -45,7 +45,7 @@ public abstract class AbstractWireProtocolTestWithSnowflake
     protected TestingSQLGlotServer testingSQLGlotServer;
 
     protected static final Manifest DEFAULT_MANIFEST = Manifest.builder()
-            .setCatalog("canner-cml")
+            .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .build();
 
@@ -103,7 +103,7 @@ public abstract class AbstractWireProtocolTestWithSnowflake
     @Override
     protected String getDefaultCatalog()
     {
-        return "canner-cml";
+        return "wrenai";
     }
 
     @Override

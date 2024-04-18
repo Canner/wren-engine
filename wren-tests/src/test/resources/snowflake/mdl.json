@@ -1,5 +1,5 @@
 {
-  "catalog": "canner-cml",
+  "catalog": "wrenai",
   "schema": "tpch_tiny",
   "models": [
     {
