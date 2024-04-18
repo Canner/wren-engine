@@ -21,7 +21,6 @@ import io.wren.base.Parameter;
 import io.wren.base.WrenException;
 import io.wren.base.config.SnowflakeConfig;
 import io.wren.connector.postgres.PostgresClient;
-import net.snowflake.client.jdbc.SnowflakeDriver;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -51,8 +50,6 @@ public class SnowflakeClient
     {
         try {
             Class.forName("net.snowflake.client.jdbc.SnowflakeDriver");
-            // TODO: Remove this line, it just use dependency to avoid dependency analyze failure
-            SnowflakeDriver driver = new SnowflakeDriver();
         }
         catch (ClassNotFoundException e) {
             throw new RuntimeException(e);

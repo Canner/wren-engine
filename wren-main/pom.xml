@@ -178,11 +178,6 @@
         </dependency>
 
         <dependency>
-            <groupId>net.snowflake</groupId>
-            <artifactId>snowflake-jdbc</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
@@ -243,6 +238,12 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>net.snowflake</groupId>
+            <artifactId>snowflake-jdbc</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
