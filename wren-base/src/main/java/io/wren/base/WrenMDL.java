@@ -270,7 +270,7 @@ public class WrenMDL
                 .findAny();
     }
 
-    public String getColumnType(String objectName, String columnName)
+    public Optional<String> getColumnType(String objectName, String columnName)
     {
         if (!isObjectExist(objectName)) {
             throw new IllegalArgumentException("Dataset " + objectName + " not found");
@@ -279,26 +279,27 @@ public class WrenMDL
             return getModel(objectName).get().getColumns().stream()
                     .filter(column -> columnName.equals(column.getName()))
                     .map(io.wren.base.dto.Column::getType)
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
+                    .findAny();
         }
         else if (getMetric(objectName).isPresent()) {
             return getMetric(objectName).get().getColumns().stream()
                     .filter(column -> columnName.equals(column.getName()))
                     .map(Column::getType)
-                    .findAny()
-                    .orElseThrow(() -> new IllegalArgumentException("Column " + columnName + " not found in " + objectName));
+                    .findAny();
         }
         else if (getCumulativeMetric(objectName).isPresent()) {
             CumulativeMetric cumulativeMetric = getCumulativeMetric(objectName).get();
             if (cumulativeMetric.getMeasure().getName().equals(columnName)) {
-                return cumulativeMetric.getMeasure().getType();
+                return Optional.of(cumulativeMetric.getMeasure().getType());
             }
             if (cumulativeMetric.getWindow().getName().equals(columnName)) {
                 return getColumnType(cumulativeMetric.getBaseObject(), cumulativeMetric.getWindow().getRefColumn());
             }
         }
-        throw new IllegalArgumentException("Dataset " + objectName + " is not a model, metric or cumulative metric");
+        else if (getView(objectName).isPresent()) {
+            return Optional.empty();
+        }
+        throw new IllegalArgumentException("Dataset " + objectName + " is not a model, metric, cumulative metric or view");
     }
 
     public DateSpine getDateSpine()

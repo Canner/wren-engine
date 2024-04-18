@@ -138,7 +138,8 @@ public class PgCatalogManager
                         metric.getMeasure().getName(),
                         pgMetastore.handlePgType(metric.getMeasure().getType()),
                         metric.getWindow().getName(),
-                        mdl.getColumnType(metric.getName(), metric.getWindow().getName()));
+                        mdl.getColumnType(metric.getName(), metric.getWindow().getName())
+                                .orElseThrow(() -> new IllegalArgumentException("Unknown window column type")));
                 sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
             mdl.listViews()
