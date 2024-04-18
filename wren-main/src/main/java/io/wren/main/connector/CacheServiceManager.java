@@ -18,6 +18,7 @@ import com.google.inject.Inject;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
 import io.wren.cache.CacheService;
+import io.wren.cache.NOPCacheService;
 import io.wren.cache.PathInfo;
 import io.wren.main.connector.bigquery.BigQueryCacheService;
 import io.wren.main.connector.postgres.PostgresCacheService;
@@ -32,6 +33,7 @@ public final class CacheServiceManager
     private final ConfigManager configManager;
     private final BigQueryCacheService bigQueryCacheService;
     private final PostgresCacheService postgresCacheService;
+    private final CacheService nopCacheService;
     private WrenConfig.DataSourceType dataSourceType;
     private CacheService delegate;
 
@@ -39,10 +41,12 @@ public final class CacheServiceManager
     public CacheServiceManager(
             ConfigManager configManager,
             BigQueryCacheService bigQueryCacheService,
-            PostgresCacheService postgresCacheService)
+            PostgresCacheService postgresCacheService,
+            NOPCacheService nopCacheService)
     {
         this.postgresCacheService = requireNonNull(postgresCacheService, "postgresCacheService is null");
         this.bigQueryCacheService = requireNonNull(bigQueryCacheService, "bigQueryCacheService is null");
+        this.nopCacheService = requireNonNull(nopCacheService, "nopCacheService is null");
         this.configManager = requireNonNull(configManager, "configManager is null");
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
@@ -55,8 +59,11 @@ public final class CacheServiceManager
                 delegate = bigQueryCacheService;
                 break;
             case POSTGRES:
-            case DUCKDB:
                 delegate = postgresCacheService;
+                break;
+            case DUCKDB:
+            case SNOWFLAKE:
+                delegate = nopCacheService;
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);

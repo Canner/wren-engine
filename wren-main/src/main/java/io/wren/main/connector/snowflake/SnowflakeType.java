@@ -12,11 +12,26 @@
  * limitations under the License.
  */
 
-package io.wren.main.pgcatalog;
+package io.wren.main.connector.snowflake;
 
-public final class PgCatalogUtils
+public class SnowflakeType
 {
-    public static final String PG_CATALOG_NAME = "pg_catalog";
+    private final int jdbcType;
+    private final String name;
 
-    private PgCatalogUtils() {}
+    SnowflakeType(int jdbcType, String name)
+    {
+        this.jdbcType = jdbcType;
+        this.name = name;
+    }
+
+    int getJdbcType()
+    {
+        return jdbcType;
+    }
+
+    String getName()
+    {
+        return name;
+    }
 }

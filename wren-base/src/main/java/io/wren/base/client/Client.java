@@ -21,9 +21,14 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 public interface Client
 {
-    AutoCloseableIterator<Object[]> query(String sql);
+    default AutoCloseableIterator<Object[]> query(String sql)
+    {
+        return query(sql, emptyList());
+    }
 
     AutoCloseableIterator<Object[]> query(String sql, List<Parameter> parameters);
 

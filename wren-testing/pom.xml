@@ -39,17 +39,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.snowflake</groupId>
-            <artifactId>snowpark</artifactId>
-            <version>1.10.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.xml.bind</groupId>
-                    <artifactId>jaxb-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>http-client</artifactId>
         </dependency>

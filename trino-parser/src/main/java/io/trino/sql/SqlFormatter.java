@@ -169,7 +169,7 @@ public final class SqlFormatter
         DEFAULT,
         BIGQUERY,
         DUCKDB,
-        POSTGRES,
+        POSTGRES
     }
 
     private SqlFormatter() {}

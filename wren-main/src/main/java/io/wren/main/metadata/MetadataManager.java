@@ -21,11 +21,11 @@ import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.connector.StorageClient;
 import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.postgres.PostgresMetadata;
+import io.wren.main.connector.snowflake.SnowflakeMetadata;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import java.util.List;
@@ -39,6 +39,7 @@ public final class MetadataManager
     private final BigQueryMetadata bigQueryMetadata;
     private final PostgresMetadata postgresMetadata;
     private final DuckDBMetadata duckDBMetadata;
+    private final SnowflakeMetadata snowflakeMetadata;
 
     private WrenConfig.DataSourceType dataSourceType;
     private Metadata delegate;
@@ -48,12 +49,14 @@ public final class MetadataManager
             ConfigManager configManager,
             BigQueryMetadata bigQueryMetadata,
             PostgresMetadata postgresMetadata,
-            DuckDBMetadata duckDBMetadata)
+            DuckDBMetadata duckDBMetadata,
+            SnowflakeMetadata snowflakeMetadata)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
         this.bigQueryMetadata = requireNonNull(bigQueryMetadata, "bigQueryMetadata is null");
         this.postgresMetadata = requireNonNull(postgresMetadata, "postgresMetadata is null");
         this.duckDBMetadata = requireNonNull(duckDBMetadata, "duckDBMetadata is null");
+        this.snowflakeMetadata = requireNonNull(snowflakeMetadata, "snowflakeMetadata is null");
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
@@ -70,6 +73,9 @@ public final class MetadataManager
             case DUCKDB:
                 delegate = duckDBMetadata;
                 break;
+            case SNOWFLAKE:
+                delegate = snowflakeMetadata;
+                break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
         }
@@ -82,33 +88,9 @@ public final class MetadataManager
     }
 
     @Override
-    public boolean isSchemaExist(String name)
-    {
-        return delegate.isSchemaExist(name);
-    }
-
-    @Override
     public void dropSchemaIfExists(String name)
     {
         delegate.dropSchemaIfExists(name);
-    }
-
-    @Override
-    public List<String> listSchemas()
-    {
-        return delegate.listSchemas();
-    }
-
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        return delegate.listTables(schemaName);
-    }
-
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        return delegate.listFunctionNames(schemaName);
     }
 
     @Override
@@ -145,12 +127,6 @@ public final class MetadataManager
     public boolean isPgCompatible()
     {
         return delegate.isPgCompatible();
-    }
-
-    @Override
-    public String getMetadataSchemaName()
-    {
-        return delegate.getMetadataSchemaName();
     }
 
     @Override

@@ -24,6 +24,8 @@ import static java.lang.System.getenv;
 
 public class SQLGlotConfig
 {
+    public static final String SQLGLOT_PORT = "sqlglot.port";
+
     private int port = Optional.ofNullable(getenv("SQLGLOT_PORT"))
             .map(Integer::parseInt)
             .orElse(8000);
@@ -33,7 +35,7 @@ public class SQLGlotConfig
         return port;
     }
 
-    @Config("sqlglot.port")
+    @Config(SQLGLOT_PORT)
     public void setPort(int port)
     {
         this.port = port;

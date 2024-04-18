@@ -1,0 +1,388 @@
+{
+  "catalog": "wrenai",
+  "schema": "tpch_tiny",
+  "models": [
+    {
+      "name": "ORDERS",
+      "refSql": "SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.ORDERS",
+      "columns": [
+        {
+          "name": "ORDERKEY",
+          "expression": "O_ORDERKEY",
+          "type": "int4"
+        },
+        {
+          "name": "CUSTKEY",
+          "expression": "O_CUSTKEY",
+          "type": "int4"
+        },
+        {
+          "name": "ORDERSTATUS",
+          "expression": "O_ORDERSTATUS",
+          "type": "OrderStatus"
+        },
+        {
+          "name": "TOTALPRICE",
+          "expression": "O_TOTALPRICE",
+          "type": "float8"
+        },
+        {
+          "name": "caseSensitive",
+          "type": "int4",
+          "expression": "1"
+        },
+        {
+          "name": "NATION_NAME",
+          "isCalculated": true,
+          "expression": "CUSTOMER.NATION.NAME",
+          "type": "varchar"
+        },
+        {
+          "name": "CUSTOMER",
+          "type": "CUSTOMER",
+          "relationship": "ORDERS_CUSTOMER"
+        },
+        {
+          "name": "ORDERDATE",
+          "expression": "O_ORDERDATE",
+          "type": "date"
+        },
+        {
+          "name": "LINEITEM",
+          "type": "LINEITEM",
+          "relationship": "ORDERS_LINEITEM"
+        }
+      ],
+      "primaryKey": "ORDERKEY"
+    },
+    {
+      "name": "CUSTOMER",
+      "refSql": "SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER",
+      "columns": [
+        {
+          "name": "CUSTKEY",
+          "expression": "C_CUSTKEY",
+          "type": "int4"
+        },
+        {
+          "name": "NATIONKEY",
+          "expression": "C_NATIONKEY",
+          "type": "integer"
+        },
+        {
+          "name": "NAME",
+          "expression": "C_NAME",
+          "type": "varchar"
+        },
+        {
+          "name": "ORDERS",
+          "type": "ORDERS",
+          "relationship": "ORDERS_CUSTOMER"
+        },
+        {
+          "name": "NATION",
+          "type": "NATION",
+          "relationship": "CUSTOMER_NATION"
+        },
+        {
+          "name": "CUSTKEY_NAME",
+          "type": "varchar",
+          "expression": "{{ CONCAT('C_CUSTKEY', 'C_NAME') }} "
+        },
+        {
+          "name": "CUSTKEY_CALL_CONCAT",
+          "type": "varchar",
+          "expression": "{{ CALL_CONCAT('C_CUSTKEY', CONCAT) }} "
+        }
+      ],
+      "primaryKey": "CUSTKEY"
+    },
+    {
+      "name": "LINEITEM",
+      "refSql": "SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.LINEITEM",
+      "columns": [
+        {
+          "name": "ORDERKEY",
+          "expression": "L_ORDERKEY",
+          "type": "int4"
+        },
+        {
+          "name": "PARTKEY",
+          "expression": "L_PARTKEY",
+          "type": "int4"
+        },
+        {
+          "name": "LINENUMBER",
+          "expression": "L_LINENUMBER",
+          "type": "int4"
+        },
+        {
+          "name": "EXTENDEDPRICE",
+          "expression": "L_EXTENDEDPRICE",
+          "type": "float8"
+        },
+        {
+          "name": "DISCOUNT",
+          "expression": "L_DISCOUNT",
+          "type": "float8"
+        },
+        {
+          "name": "SHIPDATE",
+          "expression": "L_SHIPDATE",
+          "type": "date"
+        },
+        {
+          "name": "COMMENT",
+          "expression": "L_COMMENT",
+          "type": "varchar"
+        },
+        {
+          "name": "CONSTANT",
+          "type": "int4",
+          "expression": "1"
+        },
+        {
+          "name": "PART",
+          "type": "PART",
+          "relationship": "LINEITEM_PART"
+        },
+        {
+          "name": "ORDERKEY_LINENUMBER",
+          "type": "varchar",
+          "expression": "CONCAT(L_ORDERKEY, L_LINENUMBER)"
+        }
+      ],
+      "primaryKey": "ORDERKEY_LINENUMBER"
+    },
+    {
+      "name": "PART",
+      "refSql": "SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.PART",
+      "columns": [
+        {
+          "name": "PARTKEY",
+          "expression": "P_PARTKEY",
+          "type": "int4"
+        },
+        {
+          "name": "NAME",
+          "expression": "P_NAME",
+          "type": "varchar"
+        }
+      ],
+      "primaryKey": "PARTKEY"
+    },
+    {
+      "name": "NATION",
+      "refSql": "SELECT * FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.NATION",
+      "columns": [
+        {
+          "name": "NATIONKEY",
+          "expression": "N_NATIONKEY",
+          "type": "int4"
+        },
+        {
+          "name": "NAME",
+          "expression": "N_NAME",
+          "type": "varchar"
+        },
+        {
+          "name": "COMMENT",
+          "expression": "N_COMMENT",
+          "type": "varchar"
+        },
+        {
+          "name": "CUSTOMER",
+          "type": "CUSTOMER",
+          "relationship": "CUSTOMER_NATION"
+        }
+      ],
+      "primaryKey": "NATIONKEY"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "ORDERS_CUSTOMER",
+      "models": [
+        "ORDERS",
+        "CUSTOMER"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "ORDERS.CUSTKEY = CUSTOMER.CUSTKEY"
+    },
+    {
+      "name": "ORDERS_LINEITEM",
+      "models": [
+        "ORDERS",
+        "LINEITEM"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "ORDERS.ORDERKEY = LINEITEM.ORDERKEY"
+    },
+    {
+      "name": "LINEITEM_PART",
+      "models": [
+        "LINEITEM",
+        "PART"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "LINEITEM.PARTKEY = PART.PARTKEY"
+    },
+    {
+      "name": "CUSTOMER_NATION",
+      "models": [
+        "CUSTOMER",
+        "NATION"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "CUSTOMER.NATIONKEY = NATION.NATIONKEY"
+    }
+  ],
+  "metrics": [
+    {
+      "name": "REVENUE",
+      "baseObject": "ORDERS",
+      "dimension": [
+        {
+          "name": "CUSTOMER",
+          "type": "int4",
+          "expression": "CUSTOMER.NAME"
+        }
+      ],
+      "measure": [
+        {
+          "name": "TOTALPRICE",
+          "type": "int4",
+          "expression": "SUM(TOTALPRICE)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "ORDERDATE",
+          "refColumn": "ORDERDATE",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CUSTOMER_REVENUE",
+      "baseObject": "CUSTOMER",
+      "dimension": [
+        {
+          "name": "CUSTKEY",
+          "type": "int4",
+          "expression": "CUSTKEY"
+        }
+      ],
+      "measure": [
+        {
+          "name": "TOTALPRICE",
+          "type": "int4",
+          "expression": "sum(ORDERS.TOTALPRICE)"
+        }
+      ],
+      "timeGrain": [
+        {
+          "name": "ORDERDATE",
+          "refColumn": "ORDERDATE",
+          "dateParts": [
+            "YEAR",
+            "MONTH"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CUSTOMER_DAILY_REVENUE",
+      "baseObject": "ORDERS",
+      "dimension": [
+        {
+          "name": "CUSTOMER",
+          "type": "int4",
+          "expression": "CUSTOMER.NAME"
+        },
+        {
+          "name": "DATE",
+          "type": "int4",
+          "expression": "ORDERDATE"
+        }
+      ],
+      "measure": [
+        {
+          "name": "TOTALPRICE",
+          "type": "int4",
+          "expression": "SUM(TOTALPRICE)"
+        }
+      ],
+      "timeGrain": []
+    }
+  ],
+  "cumulativeMetrics": [
+    {
+      "name": "WEEKLY_REVENUE",
+      "baseObject": "ORDERS",
+      "measure": {
+        "name": "TOTALPRICE",
+        "type": "int4",
+        "operator": "SUM",
+        "refColumn": "TOTALPRICE"
+      },
+      "window": {
+        "name": "ORDERDATE",
+        "refColumn": "ORDERDATE",
+        "timeUnit": "WEEK",
+        "start": "1993-01-01",
+        "end": "1993-12-31"
+      },
+      "cached": false,
+      "refreshTime": "30m",
+      "description": ""
+    }
+  ],
+  "enumDefinitions": [
+    {
+      "name": "STATUS",
+      "values": [
+        {
+          "name": "F"
+        },
+        {
+          "name": "O"
+        },
+        {
+          "name": "P"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "USE_MODEL",
+      "statement": "SELECT * FROM ORDERS"
+    },
+    {
+      "name": "USE_METRIC",
+      "statement": "SELECT * FROM REVENUE"
+    },
+    {
+      "name": "USE_METRIC_ROLLUP",
+      "statement": "SELECT * FROM ROLLUP(REVENUE, ORDERDATE, YEAR)"
+    },
+    {
+      "name": "USE_USE_METRIC",
+      "statement": "SELECT * FROM USE_METRIC"
+    }
+  ],
+  "macros": [
+    {
+      "name": "CONCAT",
+      "definition": "(arg1: Expression, arg2: Expression) => CONCAT({{ arg1 }}, {{ arg2 }})"
+    },
+    {
+      "name": "CALL_CONCAT",
+      "definition": "(arg1: Expression, func: Macro) => {{ func(arg1, arg1) }}"
+    }
+  ]
+}

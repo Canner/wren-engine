@@ -75,6 +75,11 @@ public class TestingSQLGlotServer
         workingDirectory.toFile().delete();
     }
 
+    public int getPort()
+    {
+        return config.getPort();
+    }
+
     private String getPythonCommand()
     {
         return Stream.of("python", "python3")

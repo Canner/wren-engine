@@ -27,6 +27,7 @@ import org.testng.annotations.Test;
 import static io.wren.base.config.SQLGlotConfig.createConfigWithFreePort;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.BIGQUERY;
 import static io.wren.main.sqlglot.SQLGlot.Dialect.DUCKDB;
+import static io.wren.main.sqlglot.SQLGlot.Dialect.SNOWFLAKE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Test
@@ -91,6 +92,33 @@ public class TestSQLGlotConverter
         assertConvert(sqlGlotConverter,
                 "SELECT ARRAY[1,2,3][1]",
                 "SELECT ([1, 2, 3])[1]");
+    }
+
+    @Test(enabled = false, description = "SQLGlot does not correctly handle GENERATE_TIMESTAMP_ARRAY for Snowflake")
+    public void testGenerateTimestampArray()
+    {
+        SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
+                .setReadDialect(BIGQUERY)
+                .setWriteDialect(SNOWFLAKE)
+                .build();
+
+        assertConvert(sqlGlotConverter,
+                "SELECT GENERATE_TIMESTAMP_ARRAY('2016-10-05 00:00:00', '2016-10-07 00:00:00', INTERVAL 1 DAY) AS timestamp_array;",
+                "UNSUPPORTED");
+    }
+
+    @Test(enabled = false, description = "SQLGlot does not correctly handle UNNEST for Snowflake")
+    public void testUnnest()
+    {
+        SQLGlotConverter sqlGlotConverter = SQLGlotConverter.builder()
+                .setSQLGlot(sqlglot)
+                .setWriteDialect(SNOWFLAKE)
+                .build();
+
+        assertConvert(sqlGlotConverter,
+                "SELECT * FROM UNNEST(ARRAY[1, 2, 3])",
+                "SELECT value::INTEGER FROM TABLE(FLATTEN(input => PARSE_JSON('[1, 2, 3]')));");
     }
 
     @Test

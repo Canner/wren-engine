@@ -12,11 +12,19 @@
  * limitations under the License.
  */
 
-package io.wren.main.pgcatalog;
+package io.wren.cache;
 
-public final class PgCatalogUtils
+import java.util.Optional;
+
+public class NOPCacheService
+        implements CacheService
 {
-    public static final String PG_CATALOG_NAME = "pg_catalog";
+    @Override
+    public Optional<PathInfo> createCache(String catalog, String schema, String name, String statement)
+    {
+        return Optional.empty();
+    }
 
-    private PgCatalogUtils() {}
+    @Override
+    public void deleteTarget(PathInfo pathInfo) {}
 }

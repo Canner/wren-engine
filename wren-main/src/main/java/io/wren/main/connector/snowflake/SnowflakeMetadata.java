@@ -12,67 +12,65 @@
  * limitations under the License.
  */
 
-package io.wren.main.connector.postgres;
+package io.wren.main.connector.snowflake;
 
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.WrenException;
 import io.wren.base.config.ConfigManager;
-import io.wren.base.config.PostgresConfig;
+import io.wren.base.config.SnowflakeConfig;
+import io.wren.base.config.WrenConfig;
 import io.wren.connector.StorageClient;
-import io.wren.connector.postgres.PostgresClient;
-import io.wren.connector.postgres.PostgresRecordIterator;
 import io.wren.main.metadata.Metadata;
-import io.wren.main.pgcatalog.builder.NoopPgFunctionBuilder;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import java.util.List;
 
+import static io.wren.base.config.WrenConfig.DataSourceType.SNOWFLAKE;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
+import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 
-public class PostgresMetadata
+public class SnowflakeMetadata
         implements Metadata
 {
+    private static final Logger LOG = Logger.get(SnowflakeMetadata.class);
     private final ConfigManager configManager;
     private final PgFunctionBuilder pgFunctionBuilder;
-    private PostgresClient postgresClient;
+    private SnowflakeClient client;
 
     @Inject
-    public PostgresMetadata(ConfigManager configManager)
+    public SnowflakeMetadata(ConfigManager configManager)
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
-        this.postgresClient = new PostgresClient(configManager.getConfig(PostgresConfig.class));
-        this.pgFunctionBuilder = new NoopPgFunctionBuilder();
+        if (configManager.getConfig(WrenConfig.class).getDataSourceType() == SNOWFLAKE) {
+            this.client = new SnowflakeClient(configManager.getConfig(SnowflakeConfig.class));
+        }
+        this.pgFunctionBuilder = new SnowflakeFunctionBuilder();
     }
 
     @Override
     public void createSchema(String name)
     {
-        postgresClient.executeDDL("CREATE SCHEMA IF NOT EXISTS " + name);
+        client.execute(format("CREATE SCHEMA %s", name));
     }
 
     @Override
     public void dropSchemaIfExists(String name)
     {
-        postgresClient.executeDDL("DROP SCHEMA IF NOT EXISTS " + name);
-    }
-
-    @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
-    {
-        return QualifiedName.of(functionName);
+        client.execute(format("DROP SCHEMA IF EXISTS %s", name));
     }
 
     @Override
     public String getDefaultCatalog()
     {
-        try (PostgresRecordIterator iterator = PostgresRecordIterator.of(postgresClient, "select current_database()")) {
+        try (SnowflakeRecordIterator iterator = client.query("SELECT current_database()", emptyList())) {
             return (String) iterator.next()[0];
         }
         catch (Exception e) {
@@ -83,32 +81,32 @@ public class PostgresMetadata
     @Override
     public void directDDL(String sql)
     {
-        postgresClient.executeDDL(sql);
+        client.execute(sql);
     }
 
     @Override
     public ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters)
     {
         try {
-            return new PostgresConnectorRecordIterator(PostgresRecordIterator.of(postgresClient, sql, parameters));
+            return client.query(sql, parameters);
         }
         catch (Exception e) {
-            throw new WrenException(GENERIC_INTERNAL_ERROR, e);
+            LOG.error(e);
+            LOG.error("Failed SQL: %s", sql);
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public List<Column> describeQuery(String sql, List<Parameter> parameters)
     {
-        return postgresClient.describe(sql, parameters).stream()
-                .map(columnMetadata -> new Column(columnMetadata.getName(), columnMetadata.getType()))
-                .collect(toList());
+        return client.describe(sql, parameters);
     }
 
     @Override
     public boolean isPgCompatible()
     {
-        return true;
+        return false;
     }
 
     @Override
@@ -120,21 +118,27 @@ public class PostgresMetadata
     @Override
     public void reload()
     {
-        this.postgresClient = new PostgresClient(configManager.getConfig(PostgresConfig.class));
+        this.client = new SnowflakeClient(configManager.getConfig(SnowflakeConfig.class));
     }
 
     @Override
-    public StorageClient getCacheStorageClient()
+    public PgFunctionBuilder getPgFunctionBuilder()
     {
-        throw new UnsupportedOperationException("Postgres does not support cache storage client");
+        return pgFunctionBuilder;
     }
 
     @Override
     public void close() {}
 
     @Override
-    public PgFunctionBuilder getPgFunctionBuilder()
+    public QualifiedName resolveFunction(String functionName, int numArgument)
     {
-        return pgFunctionBuilder;
+        throw new UnsupportedOperationException("Unnecessary method");
+    }
+
+    @Override
+    public StorageClient getCacheStorageClient()
+    {
+        throw new UnsupportedOperationException("Does not support cache storage client");
     }
 }

@@ -21,29 +21,23 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
 import com.google.cloud.bigquery.JobStatistics;
-import com.google.cloud.bigquery.Routine;
-import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Streams;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
-import io.wren.base.WrenException;
 import io.wren.base.config.BigQueryConfig;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.metadata.SchemaTableName;
-import io.wren.base.metadata.TableMetadata;
 import io.wren.base.pgcatalog.function.DataSourceFunctionRegistry;
 import io.wren.connector.StorageClient;
 import io.wren.connector.bigquery.BigQueryClient;
@@ -59,10 +53,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
 import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
-import static io.wren.main.pgcatalog.PgCatalogUtils.WREN_TEMP_NAME;
-import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 
@@ -76,7 +67,6 @@ public class BigQueryMetadata
     private final Map<String, String> pgToBqFunctionNameMappings;
 
     private String location;
-    private String metadataSchemaName;
     private String pgCatalogName;
 
     private final ConfigManager configManager;
@@ -102,7 +92,6 @@ public class BigQueryMetadata
         BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
         this.pgToBqFunctionNameMappings = initPgNameToBqFunctions();
         this.location = bigQueryConfig.getLocation().orElse(null);
-        this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + WREN_TEMP_NAME;
         this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
         this.functionRegistry = new DataSourceFunctionRegistry();
         this.pgFunctionBuilder = new BigQueryPgFunctionBuilder(this);
@@ -132,59 +121,6 @@ public class BigQueryMetadata
     }
 
     @Override
-    public boolean isSchemaExist(String name)
-    {
-        return getDataset(name).isPresent();
-    }
-
-    @Override
-    public List<String> listSchemas()
-    {
-        // TODO: https://github.com/Canner/canner-metric-layer/issues/47
-        //  Getting full dataset information is a heavy cost. It's better to find another way to list dataset by region.
-        return Streams.stream(bigQueryClient.listDatasets(bigQueryClient.getProjectId()))
-                .map(bigQueryClient::getDataSet)
-                .filter(dataset -> location.equalsIgnoreCase(dataset.getLocation()))
-                .map(dataset -> dataset.getDatasetId().getDataset())
-                .collect(toImmutableList());
-    }
-
-    @Override
-    public List<TableMetadata> listTables(String schemaName)
-    {
-        Optional<Dataset> dataset = getDataset(schemaName);
-        if (dataset.isEmpty()) {
-            throw new WrenException(NOT_FOUND, format("Dataset %s is not found", schemaName));
-        }
-        Iterable<Table> result = bigQueryClient.listTables(dataset.get().getDatasetId());
-        return Streams.stream(result)
-                .map(table -> {
-                    TableMetadata.Builder builder = TableMetadata.builder(
-                            new SchemaTableName(table.getTableId().getDataset(), table.getTableId().getTable()));
-                    Table fullTable = bigQueryClient.getTable(table.getTableId());
-                    // TODO: type mapping
-                    fullTable.getDefinition().getSchema().getFields()
-                            .forEach(field -> builder.column(field.getName(), BigQueryType.toPGType(field)));
-                    return builder.build();
-                })
-                .collect(toImmutableList());
-    }
-
-    @Override
-    public List<String> listFunctionNames(String schemaName)
-    {
-        Optional<Dataset> dataset = getDataset(schemaName);
-        if (dataset.isEmpty()) {
-            throw new WrenException(NOT_FOUND, format("Dataset %s is not found", schemaName));
-        }
-        Iterable<Routine> routines = bigQueryClient.listRoutines(dataset.get().getDatasetId());
-        if (routines == null) {
-            throw new WrenException(NOT_FOUND, format("Dataset %s doesn't contain any routines.", dataset.get().getDatasetId()));
-        }
-        return Streams.stream(routines).map(routine -> routine.getRoutineId().getRoutine()).collect(toImmutableList());
-    }
-
-    @Override
     public QualifiedName resolveFunction(String functionName, int numArgument)
     {
         String funcNameLowerCase = functionName.toLowerCase(ENGLISH);
@@ -211,11 +147,6 @@ public class BigQueryMetadata
             LOG.error(ex, "Failed SQL: %s", sql);
             throw ex;
         }
-    }
-
-    private Optional<Dataset> getDataset(String name)
-    {
-        return Optional.ofNullable(bigQueryClient.getDataset(name));
     }
 
     @Override
@@ -261,12 +192,6 @@ public class BigQueryMetadata
     }
 
     @Override
-    public String getMetadataSchemaName()
-    {
-        return metadataSchemaName;
-    }
-
-    @Override
     public String getPgCatalogName()
     {
         return pgCatalogName;
@@ -279,7 +204,6 @@ public class BigQueryMetadata
         cacheStorageClient = createGcsStorageClient();
         BigQueryConfig bigQueryConfig = configManager.getConfig(BigQueryConfig.class);
         this.location = bigQueryConfig.getLocation().orElse(null);
-        this.metadataSchemaName = bigQueryConfig.getMetadataSchemaPrefix() + WREN_TEMP_NAME;
         this.pgCatalogName = bigQueryConfig.getMetadataSchemaPrefix() + PG_CATALOG_NAME;
     }
 
