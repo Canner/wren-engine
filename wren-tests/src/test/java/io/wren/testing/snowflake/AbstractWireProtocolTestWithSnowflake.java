@@ -15,8 +15,11 @@
 package io.wren.testing.snowflake;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Key;
+import io.airlift.log.Logger;
 import io.wren.base.config.SQLGlotConfig;
 import io.wren.base.dto.Manifest;
+import io.wren.main.connector.snowflake.SnowflakeMetadata;
 import io.wren.testing.AbstractWireProtocolTest;
 import io.wren.testing.TestingSQLGlotServer;
 import io.wren.testing.TestingWrenServer;
@@ -48,6 +51,8 @@ public abstract class AbstractWireProtocolTestWithSnowflake
             .setCatalog("wrenai")
             .setSchema("tpch_tiny")
             .build();
+
+    private static final Logger LOG = Logger.get(AbstractWireProtocolTestWithSnowflake.class);
 
     @Override
     protected TestingWrenServer createWrenServer()
@@ -110,5 +115,17 @@ public abstract class AbstractWireProtocolTestWithSnowflake
     protected String getDefaultSchema()
     {
         return "tpch_tiny";
+    }
+
+    @Override
+    protected void cleanup()
+    {
+        try {
+            SnowflakeMetadata snowflakeMetadata = getInstance(Key.get(SnowflakeMetadata.class));
+            snowflakeMetadata.dropSchemaIfExists(snowflakeMetadata.getPgCatalogName());
+        }
+        catch (Exception ex) {
+            LOG.error(ex, "Cleanup pg_catalog in the Snowflake failed");
+        }
     }
 }
