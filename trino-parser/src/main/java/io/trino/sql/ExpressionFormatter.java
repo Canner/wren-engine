@@ -104,7 +104,6 @@ import static io.trino.sql.SqlFormatter.Dialect.BIGQUERY;
 import static io.trino.sql.SqlFormatter.Dialect.DEFAULT;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.Dialect.POSTGRES;
-import static io.trino.sql.SqlFormatter.Dialect.SNOWFLAKE;
 import static io.trino.sql.SqlFormatter.formatName;
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.trino.sql.tree.ComparisonExpression.Operator.EQUAL;
@@ -128,7 +127,7 @@ public final class ExpressionFormatter
 
     private static String formatIdentifier(String s, Dialect dialect)
     {
-        if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES || dialect == SNOWFLAKE) {
+        if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
             return '"' + s.replace("\"", "\"\"") + '"';
         }
         else if (dialect == BIGQUERY) {

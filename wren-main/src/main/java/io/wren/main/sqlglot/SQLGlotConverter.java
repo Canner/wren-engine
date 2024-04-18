@@ -52,9 +52,9 @@ public class SQLGlotConverter
     public String convert(String sql, SessionContext sessionContext)
     {
         try {
-            LOG.info("SQLGlotConverter [Input sql]: %s, write dialect: %s", sql, writeDialect);
+            LOG.debug("[Input sql]: %s, write dialect: %s", sql, writeDialect);
             String dialectSql = sqlGlot.transpile(sql, readDialect, writeDialect);
-            LOG.info("SQLGlotConverter [Dialect sql]: %s", dialectSql);
+            LOG.debug("[Dialect sql]: %s", dialectSql);
             return dialectSql;
         }
         catch (IOException e) {

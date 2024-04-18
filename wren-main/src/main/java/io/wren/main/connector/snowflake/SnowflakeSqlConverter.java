@@ -14,16 +14,19 @@
 
 package io.wren.main.connector.snowflake;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.sql.tree.Node;
 import io.wren.base.SessionContext;
 import io.wren.base.sql.SqlConverter;
+import io.wren.main.sql.SqlRewrite;
 import io.wren.main.sqlglot.SQLGlot;
 import io.wren.main.sqlglot.SQLGlotConverter;
 import org.intellij.lang.annotations.Language;
 
-import static io.trino.sql.SqlFormatter.Dialect.SNOWFLAKE;
+import java.util.List;
+
 import static io.trino.sql.SqlFormatter.formatSql;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
 
@@ -47,9 +50,26 @@ public class SnowflakeSqlConverter
     public String convert(@Language("sql") String sql, SessionContext sessionContext)
     {
         Node rewrittenNode = parseSql(sql);
-        LOG.info("SnowflakeSqlConverter [Input sql]: %s", sql);
-        String dialectSql = sqlGlotConverter.convert(formatSql(rewrittenNode, SNOWFLAKE), sessionContext);
-        LOG.info("SnowflakeSqlConverter [Dialect sql]: %s", dialectSql);
-        return dialectSql;
+
+        LOG.info("[Input sql]: %s", sql);
+
+        // TODO: Add more rewrites
+        List<SqlRewrite> sqlRewrites = ImmutableList.of();
+
+        for (SqlRewrite rewrite : sqlRewrites) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Before %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
+            rewrittenNode = rewrite.rewrite(rewrittenNode, null);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("After %s: %s", rewrite.getClass().getSimpleName(), formatSql(rewrittenNode));
+            }
+        }
+
+        String sqlGlotConverted = sqlGlotConverter.convert(formatSql(rewrittenNode), sessionContext);
+
+        LOG.info("[Dialect sql]: %s", sqlGlotConverted);
+
+        return sqlGlotConverted;
     }
 }
