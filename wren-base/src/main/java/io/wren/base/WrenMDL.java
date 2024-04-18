@@ -250,6 +250,11 @@ public class WrenMDL
         return Optional.empty();
     }
 
+    public List<View> listViews()
+    {
+        return manifest.getViews();
+    }
+
     public static Optional<io.wren.base.dto.Column> getRelationshipColumn(Model model, String name)
     {
         return getColumn(model, name)

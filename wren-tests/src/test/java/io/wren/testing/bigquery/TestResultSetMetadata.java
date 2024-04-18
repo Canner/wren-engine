@@ -658,6 +658,20 @@ public class TestResultSetMetadata
         }
     }
 
+    @Test
+    public void testGetView()
+            throws Exception
+    {
+        try (Connection connection = createConnection()) {
+            ResultSet rs = connection.getMetaData().getTables(null, null, "selectNation", null);
+            assertThat(readRows(rs)).contains(asList(null, "tpch_tiny", "selectNation", "TABLE", null, "", "", "", "", ""));
+
+            ResultSet viewColumns = connection.getMetaData().getColumns(null, "tpch_tiny", "selectNation", null);
+            ResultSet modelColumns = connection.getMetaData().getColumns(null, "tpch_tiny", "Nation", null);
+            assertThat(readRows(viewColumns).size()).isEqualTo(readRows(modelColumns).size());
+        }
+    }
+
     public static ResultSetAssert assertResultSet(ResultSet resultSet)
     {
         return new ResultSetAssert(resultSet);

@@ -1469,4 +1469,36 @@ public class TestWireProtocolWithBigquery
         //     });
         // }
     }
+
+    @Test
+    public void testView()
+            throws Exception
+    {
+        try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
+            assertThatNoException().isThrownBy(() -> {
+                ResultSet resultSet = stmt.executeQuery("SELECT * FROM \"selectOrders\"");
+                resultSet.next();
+            });
+            ResultSet viewResultSet = conn.getMetaData().getTables(null, null, "selectOrders", null);
+            assertThat(viewResultSet.next()).isTrue();
+            // TODO: jdbc describe wrong type
+            // assertThat(getColumnType(conn.getMetaData().getColumns(null, null, "selectOrders", "orderkey")))
+            //         .isEqualTo(Types.BIGINT);
+            // assertThat(getColumnType(conn.getMetaData().getColumns(null, null, "selectOrders", "custkey")))
+            //         .isEqualTo(Types.BIGINT);
+            // assertThat(getColumnType(conn.getMetaData().getColumns(null, null, "selectOrders", "orderstatus")))
+            //         .isEqualTo(Types.VARCHAR);
+            // assertThat(getColumnType(conn.getMetaData().getColumns(null, null, "selectOrders", "totalprice")))
+            //         .isEqualTo(Types.DOUBLE);
+            // assertThat(getColumnType(conn.getMetaData().getColumns(null, null, "selectOrders", "orderdate")))
+            //         .isEqualTo(Types.DATE);
+        }
+    }
+
+    private int getColumnType(ResultSet resultSet)
+            throws SQLException
+    {
+        resultSet.next();
+        return resultSet.getInt("DATA_TYPE");
+    }
 }

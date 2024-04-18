@@ -14,7 +14,6 @@
 
 package io.wren.testing.bigquery;
 
-import com.google.cloud.bigquery.DatasetId;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.airlift.log.Logger;
@@ -96,8 +95,6 @@ public abstract class AbstractWireProtocolTestWithBigQuery
         try {
             BigQueryMetadata metadata = getInstance(Key.get(BigQueryMetadata.class));
             BigQueryClient bigQueryClient = metadata.getBigQueryClient();
-            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getPgCatalogName()));
-            bigQueryClient.dropDatasetWithAllContent(DatasetId.of(getDefaultCatalog(), metadata.getMetadataSchemaName()));
         }
         catch (Exception ex) {
             LOG.error(ex, "cleanup bigquery schema failed");

@@ -16,15 +16,20 @@ package io.wren.main.pgcatalog;
 
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
+import io.wren.base.Column;
 import io.wren.base.WrenMDL;
 import io.wren.base.pgcatalog.function.DataSourceFunctionRegistry;
 import io.wren.base.pgcatalog.function.PgMetastoreFunctionRegistry;
 import io.wren.base.wireprotocol.PgMetastore;
+import io.wren.main.PreviewService;
 import io.wren.main.WrenMetastore;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilderManager;
 import io.wren.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
 import org.apache.commons.lang3.StringUtils;
+
+import java.util.List;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -34,7 +39,6 @@ public class PgCatalogManager
 {
     private static final Logger LOG = Logger.get(PgCatalogManager.class);
 
-    protected final String metadataSchemaName;
     protected final String pgCatalogName;
 
     private final Metadata connector;
@@ -44,23 +48,25 @@ public class PgCatalogManager
     private final PgMetastoreFunctionBuilder pgMetastoreFunctionBuilder;
     private final PgMetastore pgMetastore;
     private final WrenMetastore wrenMetastore;
+    private final PreviewService previewService;
 
     @Inject
     public PgCatalogManager(
             Metadata connector,
             PgFunctionBuilderManager pgFunctionBuilderManager,
             PgMetastore pgMetastore,
-            WrenMetastore wrenMetastore)
+            WrenMetastore wrenMetastore,
+            PreviewService previewService)
     {
         this.connector = requireNonNull(connector, "connector is null");
         this.pgFunctionBuilderManager = requireNonNull(pgFunctionBuilderManager, "pgFunctionBuilderManager is null");
-        this.metadataSchemaName = requireNonNull(connector.getMetadataSchemaName());
         this.pgCatalogName = requireNonNull(connector.getPgCatalogName());
         this.dataSourceFunctionRegistry = new DataSourceFunctionRegistry();
         this.metastoreFunctionRegistry = new PgMetastoreFunctionRegistry();
         this.pgMetastore = requireNonNull(pgMetastore, "pgMetastore is null");
         this.pgMetastoreFunctionBuilder = new PgMetastoreFunctionBuilder(pgMetastore);
         this.wrenMetastore = requireNonNull(wrenMetastore, "wrenMetastore is null");
+        this.previewService = requireNonNull(previewService, "previewService is null");
     }
 
     public void initPgCatalog()
@@ -135,6 +141,24 @@ public class PgCatalogManager
                         mdl.getColumnType(metric.getName(), metric.getWindow().getName()));
                 sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), metric.getName(), cols));
             });
+            mdl.listViews()
+                    .stream()
+                    .map(view -> {
+                        try {
+                            return Optional.of(new DescribedView(view.getName(), previewService.dryRun(mdl, view.getStatement()).join()));
+                        }
+                        catch (Exception e) {
+                            LOG.error(e, "Failed to describe view %s", view.getName());
+                            return Optional.empty();
+                        }
+                    })
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(describedView -> (DescribedView) describedView)
+                    .forEach(describedView -> {
+                        String cols = describedView.columns.stream().map(column -> format("\"%s\" %s", column.getName(), column.getType().typName())).collect(joining(","));
+                        sb.append(format("CREATE TABLE IF NOT EXISTS \"%s\".\"%s\" (%s);\n", mdl.getSchema(), describedView.name, cols));
+                    });
             String syncSql = sb.toString();
             LOG.info("Sync PG Metastore DDL:\n %s", syncSql);
             if (!syncSql.isEmpty()) {
@@ -144,6 +168,18 @@ public class PgCatalogManager
         catch (Exception e) {
             // won't throw exception to avoid the sever start failed.
             LOG.error(e, "Failed to sync PG Metastore");
+        }
+    }
+
+    static class DescribedView
+    {
+        private final String name;
+        private final List<Column> columns;
+
+        public DescribedView(String name, List<Column> columns)
+        {
+            this.name = name;
+            this.columns = columns;
         }
     }
 }
