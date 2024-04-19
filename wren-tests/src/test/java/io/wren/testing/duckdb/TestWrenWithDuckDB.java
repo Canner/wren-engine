@@ -35,7 +35,8 @@ public class TestWrenWithDuckDB
                 {"SELECT * FROM Orders"},
                 {"SELECT * FROM Orders WHERE orderkey > 100"},
                 {"SELECT * FROM Orders a JOIN Customer b ON a.custkey = b.custkey"},
-                {"SELECT * FROM Orders WHERE nation_name IS NOT NULL"}
+                {"SELECT * FROM Orders WHERE nation_name IS NOT NULL"},
+                {"SELECT sum(orderkey) FROM Orders"}, // DuckDB always returns HUGEINT when aggregating integers
         };
     }
 

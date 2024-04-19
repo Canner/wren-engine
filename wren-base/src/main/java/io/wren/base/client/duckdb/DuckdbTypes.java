@@ -46,9 +46,10 @@ import static java.util.Locale.ENGLISH;
 
 public final class DuckdbTypes
 {
-    // other types LIST, ENUM, HUGEINT, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP
+    // other types LIST, ENUM, UTINYINT, USMALLINT, STRUCT, UUID, JSON, UINTEGER, UBIGINT, INTERVAL, MAP
     public static final DuckdbType BOOLEAN = new DuckdbType(Types.BOOLEAN, "BOOLEAN");
     public static final DuckdbType BIGINT = new DuckdbType(Types.BIGINT, "BIGINT");
+    public static final DuckdbType HUGEINT = new DuckdbType(Types.DECIMAL, "HUGEINT");
     public static final DuckdbType BIT = new DuckdbType(Types.BIT, "BIT");
     public static final DuckdbType BLOB = new DuckdbType(Types.BLOB, "BLOB");
     public static final DuckdbType DATE = new DuckdbType(Types.DATE, "DATE");
@@ -86,6 +87,7 @@ public final class DuckdbTypes
             .put(TIMESTAMP_WITH_TIMEZONE.getName(), TIMESTAMP_WITH_TIMEZONE)
             .put(VARCHAR.getName(), VARCHAR)
             .put(JSON.getName(), JSON)
+            .put(HUGEINT.getName(), HUGEINT)
             .build();
 
     private static final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()

@@ -19,11 +19,12 @@ import io.netty.buffer.ByteBuf;
 import javax.annotation.Nonnull;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.math.MathContext;
 import java.nio.charset.StandardCharsets;
 
 public class NumericType
-        extends PGType<BigDecimal>
+        extends PGType<Number>
 {
     static final int OID = 1700;
 
@@ -61,7 +62,17 @@ public class NumericType
     }
 
     @Override
-    public int writeAsBinary(ByteBuf buffer, @Nonnull BigDecimal value)
+    public int writeAsBinary(ByteBuf buffer, @Nonnull Number value)
+    {
+        return switch (value) {
+            case BigDecimal bigDecimal -> writeAsBinary(buffer, bigDecimal);
+            // TODO: customize the handling of BigInteger for performance.
+            case BigInteger bigInteger -> writeAsBinary(buffer, new BigDecimal(bigInteger));
+            default -> throw new IllegalArgumentException("Unsupported numeric type: " + value.getClass().getName());
+        };
+    }
+
+    private int writeAsBinary(ByteBuf buffer, @Nonnull BigDecimal value)
     {
         // Taken from https://github.com/cockroachdb/cockroach/blob/master/pkg/sql/pgwire/types.go#L336
         // and https://github.com/postgres/postgres/blob/master/src/backend/utils/adt/numeric.c#L6760.
@@ -174,13 +185,13 @@ public class NumericType
     }
 
     @Override
-    public byte[] encodeAsUTF8Text(@Nonnull BigDecimal value)
+    public byte[] encodeAsUTF8Text(@Nonnull Number value)
     {
         return value.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
-    public BigDecimal decodeUTF8Text(byte[] bytes)
+    public Number decodeUTF8Text(byte[] bytes)
     {
         return new BigDecimal(new String(bytes, StandardCharsets.UTF_8));
     }
