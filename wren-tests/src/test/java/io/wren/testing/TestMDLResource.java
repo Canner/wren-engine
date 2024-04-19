@@ -15,9 +15,13 @@
 package io.wren.testing;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
+import com.google.inject.Key;
 import io.wren.base.dto.Column;
+import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
-import io.wren.base.type.BigIntType;
+import io.wren.base.type.IntegerType;
+import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
@@ -30,14 +34,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static io.wren.base.Utils.randomIntString;
 import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
+import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
+import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
+import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
+import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
+import static io.wren.base.dto.Column.caluclatedColumn;
 import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.model;
+import static io.wren.base.dto.Relationship.relationship;
 import static io.wren.testing.WebApplicationExceptionAssert.assertWebApplicationException;
-import static java.lang.String.format;
-import static java.lang.System.getenv;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -49,22 +57,23 @@ public class TestMDLResource
     private Path mdlDir;
     private Manifest initial = Manifest.builder()
             .setCatalog("wrenai")
-            .setSchema("tpch_tiny")
+            .setSchema("tpch")
             .setModels(List.of(
-                    model("Orders", "SELECT * FROM wrenai.tpch_tiny.orders", List.of(column("orderkey", "integer", null, false, "o_orderkey")))))
+                    model("Orders", "SELECT * FROM tpch.orders", List.of(column("orderkey", "integer", null, false, "o_orderkey")))))
             .build();
 
     private Manifest updated = Manifest.builder()
             .setCatalog("wrenai")
-            .setSchema("tpch_tiny")
+            .setSchema("tpch")
             .setModels(List.of(
-                    model("Orders", "SELECT * FROM wrenai.tpch_tiny.orders",
+                    model("Orders", "SELECT * FROM tpch.orders",
                             List.of(column("orderkey", "integer", null, false, "o_orderkey"),
                                     column("custkey", "integer", null, false, "o_custkey")))))
             .build();
 
     @Override
     protected TestingWrenServer createWrenServer()
+            throws Exception
     {
         try {
             mdlDir = Files.createTempDirectory("wrenmdls");
@@ -76,16 +85,26 @@ public class TestMDLResource
         }
 
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
-                .put("bigquery.project-id", getenv("TEST_BIG_QUERY_PROJECT_ID"))
-                .put("bigquery.location", "asia-east1")
-                .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
-                .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
-                .put("wren.directory", mdlDir.toAbsolutePath().toString())
-                .put("wren.datasource.type", "bigquery");
+                .put(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString())
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
+                .put(WREN_ENABLE_DYNAMIC_FIELDS, "true");
 
-        return TestingWrenServer.builder()
+        TestingWrenServer testing = TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();
+        initDuckDB(testing);
+        return testing;
+    }
+
+    protected void initDuckDB(TestingWrenServer wrenServer)
+            throws Exception
+    {
+        ClassLoader classLoader = getClass().getClassLoader();
+        String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
+        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
+        DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
+        metadata.setInitSQL(initSQL);
+        metadata.reload();
     }
 
     @Test
@@ -117,9 +136,9 @@ public class TestMDLResource
     {
         Manifest previewManifest = Manifest.builder()
                 .setCatalog("wrenai")
-                .setSchema("tpch_tiny")
+                .setSchema("tpch")
                 .setModels(List.of(
-                        model("Customer", "SELECT * FROM wrenai.tpch_tiny.customer",
+                        model("Customer", "SELECT * FROM tpch.customer",
                                 List.of(column("custkey", "integer", null, false, "c_custkey")))))
                 .build();
 
@@ -128,7 +147,7 @@ public class TestMDLResource
         assertThat(testDefault.getData().size()).isEqualTo(100);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("custkey");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(BigIntType.BIGINT);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(IntegerType.INTEGER);
 
         PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", null);
         QueryResultDto preview1 = preview(testDefaultDto1);
@@ -141,7 +160,7 @@ public class TestMDLResource
         assertThat(preview2.getColumns().size()).isEqualTo(1);
 
         assertWebApplicationException(() -> preview(new PreviewDto(previewManifest, "select orderkey from Orders limit 100", null)))
-                .hasErrorMessageMatches(".*Table \"Orders\" must be qualified with a dataset.*");
+                .hasErrorMessageMatches(".*Orders does not exist.*\n.*\n.*\n.*");
     }
 
     @Test
@@ -149,60 +168,139 @@ public class TestMDLResource
     {
         Manifest previewManifest = Manifest.builder()
                 .setCatalog("wrenai")
-                .setSchema("tpch_tiny")
+                .setSchema("tpch")
                 .setModels(List.of(
-                        model("Customer", "SELECT * FROM \"wrenai\".tpch_tiny.customer",
-                                List.of(column("custkey", "integer", null, false, "c_custkey")))))
+                        model("Customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey"),
+                                        column("name", "varchar", null, false, "c_name"))),
+                        model("Orders", "SELECT * FROM tpch.orders",
+                                List.of(column("orderkey", "integer", null, false, "o_orderkey"),
+                                        column("custkey", "integer", null, false, "o_custkey"),
+                                        column("customer", "Customer", "CustomerOrders", false),
+                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                "orderkey")))
+                .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.ONE_TO_MANY, "Customer.custkey = Orders.custkey")))
                 .build();
 
-        PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", null);
+        PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select orderkey from Orders limit 200", null);
         List<Column> dryRun = dryRun(testDefaultDto1);
         assertThat(dryRun.size()).isEqualTo(1);
-        assertThat(dryRun.get(0).getName()).isEqualTo("custkey");
+        assertThat(dryRun.get(0).getName()).isEqualTo("orderkey");
 
-        DryPlanDto dryPlanDto = new DryPlanDto(previewManifest, "select custkey from Customer limit 200", false);
+        DryPlanDto dryPlanDto = new DryPlanDto(previewManifest, "select orderkey from Orders limit 200", false);
         String dryPlan = dryPlan(dryPlanDto);
         assertThat(dryPlan).isEqualTo("""
                 WITH
-                  `Customer` AS (
-                   SELECT `Customer`.`custkey` `custkey`
+                  "Orders" AS (
+                   SELECT
+                     "Orders"."orderkey" "orderkey"
+                   , "Orders"."custkey" "custkey"
                    FROM
                      (
-                      SELECT c_custkey `custkey`
+                      SELECT
+                        o_orderkey "orderkey"
+                      , o_custkey "custkey"
                       FROM
                         (
                          SELECT *
                          FROM
-                           `wrenai`.tpch_tiny.customer
-                      )  `Customer`
-                   )  `Customer`
+                           tpch.orders
+                      )  "Orders"
+                   )  "Orders"
                 )\s
-                SELECT custkey
+                SELECT orderkey
                 FROM
-                  Customer
+                  Orders
                 LIMIT 200
                 """);
 
-        dryPlanDto = new DryPlanDto(previewManifest, "select custkey from Customer limit 200", true);
+        dryPlanDto = new DryPlanDto(previewManifest, "select orderkey from Orders limit 200", true);
+        dryPlan = dryPlan(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "Orders" AS (
+                   SELECT
+                     "Orders"."orderkey" "orderkey"
+                   , "Orders"."custkey" "custkey"
+                   FROM
+                     (
+                      SELECT
+                        o_orderkey "orderkey"
+                      , o_custkey "custkey"
+                      FROM
+                        (
+                         SELECT *
+                         FROM
+                           tpch.orders
+                      )  "Orders"
+                   )  "Orders"
+                )\s
+                SELECT orderkey
+                FROM
+                  Orders
+                LIMIT 200
+                """);
+
+        dryPlanDto = new DryPlanDto(previewManifest, "select customer_name from Orders limit 200", false);
         dryPlan = dryPlan(dryPlanDto);
         assertThat(dryPlan).isEqualTo("""
                 WITH
                   "Customer" AS (
-                   SELECT "Customer"."custkey" "custkey"
+                   SELECT
+                     "Customer"."custkey" "custkey"
+                   , "Customer"."name" "name"
                    FROM
                      (
-                      SELECT c_custkey "custkey"
+                      SELECT
+                        c_custkey "custkey"
+                      , c_name "name"
                       FROM
                         (
                          SELECT *
                          FROM
-                           "wrenai".tpch_tiny.customer
+                           tpch.customer
                       )  "Customer"
                    )  "Customer"
                 )\s
-                SELECT custkey
+                , "Orders" AS (
+                   SELECT
+                     "Orders"."orderkey" "orderkey"
+                   , "Orders"."custkey" "custkey"
+                   , "Orders_relationsub"."customer_name" "customer_name"
+                   FROM
+                     ((
+                      SELECT
+                        o_orderkey "orderkey"
+                      , o_custkey "custkey"
+                      FROM
+                        (
+                         SELECT *
+                         FROM
+                           tpch.orders
+                      )  "Orders"
+                   )  "Orders"
+                   LEFT JOIN (
+                      SELECT
+                        "Orders"."orderkey"
+                      , "Customer"."name" "customer_name"
+                      FROM
+                        ((
+                         SELECT
+                           o_orderkey "orderkey"
+                         , o_custkey "custkey"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.orders
+                         )  "Orders"
+                      )  "Orders"
+                      LEFT JOIN "Customer" ON ("Customer"."custkey" = "Orders"."custkey"))
+                   )  "Orders_relationsub" ON ("Orders"."orderkey" = "Orders_relationsub"."orderkey"))
+                )\s
+                SELECT customer_name
                 FROM
-                  Customer
+                  Orders
                 LIMIT 200
                 """);
     }
