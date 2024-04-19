@@ -77,7 +77,7 @@ public class CacheManager
         implements Closeable
 {
     private static final Logger LOG = Logger.get(CacheManager.class);
-    private static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
+    private static final ParsingOptions PARSE_AS_DOUBLE = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE);
     private final ExtraRewriter extraRewriter;
     private final CacheService cacheService;
     private final SqlParser sqlParser;
@@ -190,7 +190,7 @@ public class CacheManager
                     format("select * from %s", cacheInfo.getName()),
                     sessionContext,
                     analyzedMDL);
-            Statement parsedStatement = sqlParser.createStatement(wrenRewritten, PARSE_AS_DECIMAL);
+            Statement parsedStatement = sqlParser.createStatement(wrenRewritten, PARSE_AS_DOUBLE);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
 
             createCache(mdl, cacheInfo, sessionContext, rewrittenStatement, duckdbTableName);

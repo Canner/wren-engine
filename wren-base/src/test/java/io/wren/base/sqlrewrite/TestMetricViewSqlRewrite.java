@@ -32,7 +32,7 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.sqlrewrite.GenerateViewRewrite.GENERATE_VIEW_REWRITE;
 import static io.wren.base.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
 import static io.wren.base.sqlrewrite.Utils.SQL_PARSER;
@@ -279,7 +279,7 @@ public class TestMetricViewSqlRewrite
     @Test(dataProvider = "metricCases")
     public void testMetricSqlRewrite(String original, String expected)
     {
-        Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DECIMAL));
+        Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DOUBLE));
         String actualSql = rewrite(original);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
         assertThatNoException()

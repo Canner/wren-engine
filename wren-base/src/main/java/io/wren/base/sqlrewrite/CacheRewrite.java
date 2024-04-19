@@ -47,7 +47,7 @@ import java.util.function.Function;
 
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.sqlrewrite.Utils.analyzeFrom;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
@@ -69,7 +69,7 @@ public class CacheRewrite
             WrenMDL wrenMDL)
     {
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
             CacheAnalysis aggregationAnalysis = new CacheAnalysis();
             Statement rewritten = (Statement) new Rewriter(sessionContext, converter, wrenMDL, aggregationAnalysis).process(statement, Optional.empty());
             if (rewritten instanceof Query

@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.WrenMDL.EMPTY;
 import static io.wren.base.WrenMDL.fromManifest;
@@ -61,11 +61,11 @@ public class TestStatementAnalyzer
     public void testValues()
     {
         SessionContext sessionContext = SessionContext.builder().build();
-        Statement statement = SQL_PARSER.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL));
+        Statement statement = SQL_PARSER.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DOUBLE));
         Analysis analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
 
-        statement = SQL_PARSER.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL));
+        statement = SQL_PARSER.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DOUBLE));
         analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
     }
@@ -74,7 +74,7 @@ public class TestStatementAnalyzer
     public void testGetTableWithoutWithTable()
     {
         SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
-        Statement statement = SQL_PARSER.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL));
+        Statement statement = SQL_PARSER.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DOUBLE));
         Analysis analysis = new Analysis(statement);
         analyze(analysis,
                 statement,
@@ -147,7 +147,7 @@ public class TestStatementAnalyzer
 
     private Analysis analyzeSql(String sql, Manifest manifest)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
         Analysis analysis = new Analysis(statement);
         analyze(
                 analysis,
@@ -175,7 +175,7 @@ public class TestStatementAnalyzer
                 .build();
 
         Function<String, Scope> analyzeSql = (sql) -> {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
             Analysis analysis = new Analysis(statement);
             return analyze(
                     analysis,

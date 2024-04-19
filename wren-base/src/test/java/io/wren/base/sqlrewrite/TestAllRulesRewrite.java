@@ -33,7 +33,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.sqlrewrite.Utils.SQL_PARSER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -156,7 +156,7 @@ public class TestAllRulesRewrite
     @Test(dataProvider = "noRewriteCase")
     public void testWrenNoRewrite(String original)
     {
-        Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DECIMAL));
+        Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DOUBLE));
         assertThat(rewrite(original)).isEqualTo(formatSql(expectedState));
     }
 

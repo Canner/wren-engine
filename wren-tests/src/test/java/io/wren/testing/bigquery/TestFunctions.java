@@ -45,8 +45,8 @@ public class TestFunctions
                 {"select pg_get_expr('test', 1)", "test", false},
                 {"select pg_get_expr('test', 1, true)", "test", false},
                 // TODO: Which expected value should be ? 1.0 or 1
-                // We use PARSE_AS_DECIMAL in WireProtocolSession#parse as default, all decimal literal will be parsed as Decimal type
-                {"select trunc(1.1)", "1", false},
+                // We use PARSE_AS_DOUBLE in WireProtocolSession#parse as default, all decimal literal will be parsed as double type
+                {"select trunc(1.1)", "1.0", false},
                 {"select substr('testString', 0, 4)", "test", false},
                 {"select concat('T.P.', ' ', 'Bar')", "T.P. Bar", false},
                 {"select regexp_like('pg_temp_table', '^pg_temp_')", "t", false},

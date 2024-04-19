@@ -35,7 +35,7 @@ import java.util.List;
 
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.dto.Model.model;
 
 public abstract class AbstractTestFramework
@@ -83,7 +83,7 @@ public abstract class AbstractTestFramework
 
     protected List<List<Object>> query(@Language("SQL") String sql)
     {
-        sql = formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL)), DUCKDB);
+        sql = formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE)), DUCKDB);
         try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(sql)) {
             ImmutableList.Builder<List<Object>> builder = ImmutableList.builder();
             while (iterator.hasNext()) {
