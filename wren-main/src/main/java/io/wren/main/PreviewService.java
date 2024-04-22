@@ -35,6 +35,8 @@ import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
+import io.wren.base.config.ConfigManager;
+import io.wren.base.config.WrenConfig;
 import io.wren.base.sql.SqlConverter;
 import io.wren.base.sqlrewrite.WrenPlanner;
 import io.wren.main.metadata.Metadata;
@@ -51,22 +53,27 @@ public class PreviewService
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
+    private final ConfigManager configManager;
 
     @Inject
     public PreviewService(
             Metadata metadata,
-            SqlConverter sqlConverter)
+            SqlConverter sqlConverter,
+            ConfigManager configManager)
     {
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
+        this.configManager = requireNonNull(configManager, "configManager is null");
     }
 
     public CompletableFuture<QueryResultDto> preview(WrenMDL mdl, String sql, long limit)
     {
         return CompletableFuture.supplyAsync(() -> {
+            WrenConfig config = configManager.getConfig(WrenConfig.class);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
                     .setSchema(mdl.getSchema())
+                    .setEnableDynamic(config.getEnableDynamicFields())
                     .build();
 
             String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
@@ -85,9 +92,11 @@ public class PreviewService
     public CompletableFuture<String> dryPlan(WrenMDL mdl, String sql, boolean isModelingOnly)
     {
         return CompletableFuture.supplyAsync(() -> {
+            WrenConfig config = configManager.getConfig(WrenConfig.class);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
                     .setSchema(mdl.getSchema())
+                    .setEnableDynamic(config.getEnableDynamicFields())
                     .build();
 
             String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
@@ -101,9 +110,11 @@ public class PreviewService
     public CompletableFuture<List<Column>> dryRun(WrenMDL mdl, String sql)
     {
         return CompletableFuture.supplyAsync(() -> {
+            WrenConfig config = configManager.getConfig(WrenConfig.class);
             SessionContext sessionContext = SessionContext.builder()
                     .setCatalog(mdl.getCatalog())
                     .setSchema(mdl.getSchema())
+                    .setEnableDynamic(config.getEnableDynamicFields())
                     .build();
 
             String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));

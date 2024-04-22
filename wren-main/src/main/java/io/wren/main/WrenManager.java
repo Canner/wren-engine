@@ -137,7 +137,7 @@ public class WrenManager
             }
         }
         Files.copy(wrenMDLFile.toPath(),
-                archived.toPath().resolve(wrenMDLFile.getName() + "." + LocalDateTime.now().format(DateTimeFormatter.ofPattern("uuuuMMddHHmmss"))));
+                archived.toPath().resolve(wrenMDLFile.getName() + "." + LocalDateTime.now().format(DateTimeFormatter.ofPattern("uuuuMMddHHmmssnnnn"))));
     }
 
     public boolean checkStatus()
