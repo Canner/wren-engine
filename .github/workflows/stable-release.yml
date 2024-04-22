@@ -18,6 +18,12 @@ jobs:
         run: |
           git config --global user.email "dev@cannerdata.com"
           git config --global user.name "stable-release-bot"
+      - name: Set up JDK 21
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
       - name: Maven Prepare Release
         id: maven_prepare_release
         run: |
@@ -31,12 +37,6 @@ jobs:
           git push
           git push origin $version_number
           echo "version_number=$version_number" >> $GITHUB_OUTPUT
-      - name: Set up JDK 21
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: 'maven'
       - name: Build
         run: |
           ./mvnw clean install -B -DskipTests -P exec-jar
