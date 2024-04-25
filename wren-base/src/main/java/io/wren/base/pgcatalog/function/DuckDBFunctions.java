@@ -112,6 +112,14 @@ public class DuckDBFunctions
             .setImplemented(true)
             .build();
 
+    public static final PgFunction FORMAT_TYPE = PgFunction.builder()
+            .setName("format_type")
+            .setLanguage(PgFunction.Language.SQL)
+            .setDefinition("(select format_pg_type(logical_type, t.type_name) from duckdb_types() t where t.type_name=lower(tname)) || case when typemod>0 then concat('(', typemod//1000, ',', typemod%1000, ')') else '' end")
+            .setArguments(List.of(argument("tname", VarcharType.VARCHAR), argument("typemod", IntegerType.INTEGER)))
+            .setReturnType(VarcharType.VARCHAR)
+            .build();
+
     public static final PgFunction PG_GET_FUNCTION_RESULT = PgFunction.builder()
             .setName("pg_get_function_result")
             .setLanguage(PgFunction.Language.SQL)
