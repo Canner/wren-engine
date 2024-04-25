@@ -45,6 +45,7 @@ import static io.wren.base.type.VarcharType.VARCHAR;
 import static io.wren.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.wren.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.wren.testing.TestingWireProtocolClient.Parameter.textParameter;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -978,8 +979,7 @@ public class TestWireProtocolWithDuckDB
                 // TODO: Support timestamptz
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
-                // TODO: duckdb 0.10.2 exists issue about bytea type
-                // {"bytea", "test1".getBytes(UTF_8)},
+                {"bytea", "test1".getBytes(UTF_8)},
                 // TODO: Support interval
                 // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
                 // TODO: Wait DuckDB support array type

@@ -113,9 +113,8 @@ public class TestWireProtocolTypeWithDuckDB
                 .executeSuite();
     }
 
-    // TODO: duckdb 0.10.2 exists issue about bytea type
     @Override
-    @Test(enabled = false)
+    @Test
     public void testBytea()
     {
         createTypeTest()
