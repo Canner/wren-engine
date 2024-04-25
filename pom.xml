@@ -481,7 +481,7 @@
             <dependency>
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
-                <version>0.10.1</version>
+                <version>0.10.2</version>
             </dependency>
 
             <dependency>
@@ -779,7 +779,8 @@
                                     -Xep:UnnecessaryOptionalGet:ERROR
                                     -Xep:UnusedVariable:ERROR
                                     -Xep:UseEnumSwitch:ERROR
-                                    -Xep:ZoneIdOfZ:ERROR</arg>
+                                    -Xep:ZoneIdOfZ:ERROR
+                                </arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>

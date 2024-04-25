@@ -383,6 +383,10 @@
     {
       "name": "useUseMetric",
       "statement": "select * from useMetric"
+    },
+    {
+      "name": "sameCte",
+      "statement": "with sameCte as (select * from Orders) select * from sameCte"
     }
   ],
   "macros": [
