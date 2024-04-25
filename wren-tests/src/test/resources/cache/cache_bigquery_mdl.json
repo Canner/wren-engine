@@ -73,10 +73,6 @@
           "type": "string"
         },
         {
-          "name": "c_bytes",
-          "type": "bytea"
-        },
-        {
           "name": "c_integer",
           "type": "integer"
         },
