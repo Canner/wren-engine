@@ -160,6 +160,9 @@ public final class DuckdbTypes
         if (typeName.toLowerCase(ENGLISH).startsWith("decimal")) {
             return DECIMAL.toString();
         }
+        if (typeName.toLowerCase(ENGLISH).startsWith("timestamp")) {
+            return TIMESTAMP.toString();
+        }
         if (typeName.endsWith("[]")) {
             return typeName.substring(0, typeName.length() - 2);
         }

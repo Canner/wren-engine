@@ -371,7 +371,7 @@ public abstract class AbstractWireProtocolTypeTest
     protected static <E> DataType<List<E>> arrayDataType(DataType<E> elementType, PGArray insertType)
     {
         return dataType(
-                insertType.typName(),
+                format("ARRAY(%s)", elementType.getInsertType()),
                 insertType,
                 valuesList -> "array" + valuesList.stream().map(elementType::toLiteral).collect(toList()));
     }
