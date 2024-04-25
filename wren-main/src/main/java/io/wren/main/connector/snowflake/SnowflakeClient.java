@@ -27,11 +27,12 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Properties;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
-import static io.wren.main.connector.snowflake.SnowflakeTypes.toPGType;
+import static io.wren.main.connector.snowflake.SnowflakeType.toPGType;
 import static java.util.Objects.requireNonNull;
 
 public class SnowflakeClient
@@ -63,7 +64,13 @@ public class SnowflakeClient
         config.getWarehouse().ifPresent(warehouse -> props.setProperty("warehouse", warehouse));
         config.getRole().ifPresent(role -> props.setProperty("role", role));
 
-        return DriverManager.getConnection(config.getJdbcUrl(), props);
+        Connection connection = DriverManager.getConnection(config.getJdbcUrl(), props);
+
+        Statement statement = connection.createStatement();
+        statement.execute("ALTER SESSION SET TIMEZONE='UTC'");
+        statement.execute("ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DD HH24:MI:SS.FF'");
+
+        return connection;
     }
 
     public void execute(String sql)
