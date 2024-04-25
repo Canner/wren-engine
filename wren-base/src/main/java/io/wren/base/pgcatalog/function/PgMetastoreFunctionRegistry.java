@@ -29,7 +29,6 @@ import static io.wren.base.pgcatalog.function.DuckDBFunctions.ARRAY_RECV;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.ARRAY_UPPER;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.CURRENT_DATABASE;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.CURRENT_SCHEMAS;
-import static io.wren.base.pgcatalog.function.DuckDBFunctions.FORMAT_TYPE;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.GENERATE_ARRAY;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.PG_EXPANDARRAY;
 import static io.wren.base.pgcatalog.function.DuckDBFunctions.PG_GET_EXPR;
@@ -51,7 +50,6 @@ public final class PgMetastoreFunctionRegistry
             .add(ARRAY_OUT)
             .add(ARRAY_RECV)
             .add(ARRAY_UPPER)
-            .add(FORMAT_TYPE)
             .add(PG_GET_FUNCTION_RESULT)
             .add(REGEXP_LIKE)
             .add(GENERATE_ARRAY)
