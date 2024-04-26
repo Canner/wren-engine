@@ -23,6 +23,7 @@ import io.wren.base.type.CharType;
 import io.wren.base.type.DateType;
 import io.wren.base.type.DoubleType;
 import io.wren.base.type.IntegerType;
+import io.wren.base.type.IntervalType;
 import io.wren.base.type.JsonType;
 import io.wren.base.type.NumericType;
 import io.wren.base.type.PGType;
@@ -122,6 +123,7 @@ public final class DuckdbTypes
             .put(DateType.DATE, DATE)
             .put(TimestampType.TIMESTAMP, TIMESTAMP)
             .put(TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE)
+            .put(IntervalType.INTERVAL, INTERVAL)
             .put(JsonType.JSON, JSON)
             .build();
 

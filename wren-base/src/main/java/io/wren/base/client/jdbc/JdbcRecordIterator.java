@@ -55,7 +55,7 @@ public class JdbcRecordIterator
         for (int i = 1; i <= columnCount; i++) {
             if (resultSet.getMetaData().getColumnType(i) == Types.BLOB) {
                 Blob blob = resultSet.getBlob(i);
-                byte[] bytes = blob.getBytes(0, (int) blob.length());
+                byte[] bytes = blob.getBytes(1, (int) blob.length());
                 builder.add(bytes);
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.SMALLINT) {

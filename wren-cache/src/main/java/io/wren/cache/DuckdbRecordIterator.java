@@ -106,7 +106,7 @@ public class DuckdbRecordIterator
             if (pgType instanceof ByteaType) {
                 if (value instanceof DuckDBResultSet.DuckDBBlobResult) {
                     DuckDBResultSet.DuckDBBlobResult blob = (DuckDBResultSet.DuckDBBlobResult) value;
-                    return blob.getBytes(0, (int) blob.length());
+                    return blob.getBytes(1, (int) blob.length());
                 }
             }
             if (pgType instanceof JsonType) {
