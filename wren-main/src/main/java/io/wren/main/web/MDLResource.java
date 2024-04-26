@@ -15,22 +15,27 @@
 package io.wren.main.web;
 
 import com.google.inject.Inject;
+import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
 import io.wren.main.PreviewService;
+import io.wren.main.ValidationService;
 import io.wren.main.WrenManager;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.PreviewDto;
+import io.wren.main.web.dto.ValidateDto;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
 import jakarta.ws.rs.core.Response;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -43,13 +48,16 @@ public class MDLResource
 {
     private final WrenManager wrenManager;
     private final PreviewService previewService;
+    private final ValidationService validationService;
 
     @Inject
     public MDLResource(WrenManager wrenManager,
-            PreviewService previewService)
+            PreviewService previewService,
+            ValidationService validationService)
     {
         this.wrenManager = requireNonNull(wrenManager, "wrenManager is null");
         this.previewService = requireNonNull(previewService, "previewService is null");
+        this.validationService = requireNonNull(validationService, "validationService is null");
     }
 
     @POST
@@ -144,6 +152,26 @@ public class MDLResource
             mdl = WrenMDL.fromManifest(previewDto.getManifest());
         }
         previewService.dryRun(mdl, previewDto.getSql())
+                .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    @POST
+    @Path("/validate/{ruleName}")
+    @Consumes(APPLICATION_JSON)
+    @Produces(APPLICATION_JSON)
+    public void validate(
+            @PathParam("ruleName") String ruleName,
+            ValidateDto validateDto,
+            @Suspended AsyncResponse asyncResponse)
+    {
+        AnalyzedMDL analyzedMDL = wrenManager.getAnalyzedMDL();
+        Map<String, Object> parameters = Map.of();
+        if (validateDto != null) {
+            parameters = validateDto.getParameters() != null ? validateDto.getParameters() : parameters;
+            analyzedMDL = validateDto.getManifest() != null ? new AnalyzedMDL(WrenMDL.fromManifest(validateDto.getManifest()), null) : analyzedMDL;
+        }
+
+        validationService.validate(ruleName, parameters, analyzedMDL)
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }

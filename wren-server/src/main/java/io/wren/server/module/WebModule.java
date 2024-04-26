@@ -18,6 +18,7 @@ import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.wren.main.PreviewService;
+import io.wren.main.ValidationService;
 import io.wren.main.pgcatalog.PgCatalogManager;
 import io.wren.main.web.AnalysisResource;
 import io.wren.main.web.CacheResource;
@@ -44,5 +45,6 @@ public class WebModule
         jaxrsBinder(binder).bindInstance(new WrenExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
+        binder.bind(ValidationService.class).in(Scopes.SINGLETON);
     }
 }

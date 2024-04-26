@@ -29,6 +29,7 @@ import io.wren.base.config.ConfigManager;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.cache.TaskInfo;
+import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.DeployInputDto;
@@ -39,6 +40,7 @@ import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.SqlAnalysisOutputDto;
+import io.wren.main.web.dto.ValidateDto;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -89,6 +91,8 @@ public abstract class RequireWrenServer
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
     private static final JsonCodec<List<Column>> COLUMN_LIST_CODEC = listJsonCodec(Column.class);
     private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
+    private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
+    private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
 
     public RequireWrenServer() {}
 
@@ -441,6 +445,21 @@ public abstract class RequireWrenServer
         if (response.getStatusCode() != 200) {
             getWebApplicationException(response);
         }
+    }
+
+    protected List<ValidationResult> validate(String ruleName, ValidateDto validateDto)
+    {
+        Request request = preparePost()
+                .setUri(server().getHttpServerBasedUrl().resolve(format("/v1/mdl/validate/%s", ruleName)))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(VALIDATE_DTO_CODEC, validateDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return VALIDATION_RESULT_LIST_CODEC.fromJson(response.getBody());
     }
 
     public static void getWebApplicationException(StringResponseHandler.StringResponse response)
