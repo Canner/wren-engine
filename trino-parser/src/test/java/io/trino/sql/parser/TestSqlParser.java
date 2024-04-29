@@ -225,7 +225,7 @@ import static io.trino.sql.parser.ParserAssert.assertStatementIsInvalid;
 import static io.trino.sql.parser.ParserAssert.expression;
 import static io.trino.sql.parser.ParserAssert.rowPattern;
 import static io.trino.sql.parser.ParserAssert.statement;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.REJECT;
 import static io.trino.sql.parser.TreeNodes.columnDefinition;
 import static io.trino.sql.parser.TreeNodes.dateTimeType;
@@ -384,9 +384,9 @@ public class TestSqlParser
         assertExpression("-1.1E5", new DoubleLiteral("-1.1E5"));
         assertExpression("-1.1E-5", new DoubleLiteral("-1.1E-5"));
 
-        assertExpression(".1", new DoubleLiteral(".1"));
-        assertExpression("1.2", new DoubleLiteral("1.2"));
-        assertExpression("-1.2", new DoubleLiteral("-1.2"));
+        assertExpression(".1", new DecimalLiteral(".1"));
+        assertExpression("1.2", new DecimalLiteral("1.2"));
+        assertExpression("-1.2", new DecimalLiteral("-1.2"));
     }
 
     @Test
@@ -919,10 +919,10 @@ public class TestSqlParser
         assertExpression("DECIMAL '+.34'", new DecimalLiteral("+.34"));
         assertExpression("DECIMAL '-.34'", new DecimalLiteral("-.34"));
 
-        assertExpression("123.", new DoubleLiteral("123."));
-        assertExpression("123.0", new DoubleLiteral("123.0"));
-        assertExpression(".5", new DoubleLiteral(".5"));
-        assertExpression("123.5", new DoubleLiteral("123.5"));
+        assertExpression("123.", new DecimalLiteral("123."));
+        assertExpression("123.0", new DecimalLiteral("123.0"));
+        assertExpression(".5", new DecimalLiteral(".5"));
+        assertExpression("123.5", new DecimalLiteral("123.5"));
 
         assertInvalidDecimalExpression("123.", "Unexpected decimal literal: 123.");
         assertInvalidDecimalExpression("123.0", "Unexpected decimal literal: 123.0");
@@ -3881,7 +3881,7 @@ public class TestSqlParser
     {
         requireNonNull(expression, "expression is null");
         requireNonNull(expected, "expected is null");
-        assertParsed(expression, expected, SQL_PARSER.createExpression(expression, new ParsingOptions(AS_DOUBLE)));
+        assertParsed(expression, expected, SQL_PARSER.createExpression(expression, new ParsingOptions(AS_DECIMAL)));
     }
 
     private static void assertParsed(String input, Node expected, Node parsed)

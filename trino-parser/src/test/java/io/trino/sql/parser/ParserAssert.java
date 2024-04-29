@@ -27,7 +27,7 @@ import org.assertj.core.presentation.StandardRepresentation;
 import java.util.function.Function;
 
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class ParserAssert
@@ -67,12 +67,12 @@ public class ParserAssert
 
     private static Expression createExpression(String expression)
     {
-        return new SqlParser().createExpression(expression, new ParsingOptions(AS_DOUBLE));
+        return new SqlParser().createExpression(expression, new ParsingOptions(AS_DECIMAL));
     }
 
     private static Statement createStatement(String statement)
     {
-        return new SqlParser().createStatement(statement, new ParsingOptions(AS_DOUBLE));
+        return new SqlParser().createStatement(statement, new ParsingOptions(AS_DECIMAL));
     }
 
     public static ThrowableAssertAlternative<ParsingException> assertExpressionIsInvalid(String sql)
