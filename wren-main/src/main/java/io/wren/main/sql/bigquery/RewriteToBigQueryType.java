@@ -18,7 +18,9 @@ import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CharLiteral;
+import io.trino.sql.tree.DataType;
 import io.trino.sql.tree.DataTypeParameter;
+import io.trino.sql.tree.DateTimeDataType;
 import io.trino.sql.tree.DecimalLiteral;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionCall;
@@ -31,6 +33,7 @@ import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.StringLiteral;
 import io.trino.sql.tree.TypeParameter;
+import io.wren.base.WrenException;
 import io.wren.base.sqlrewrite.BaseRewriter;
 import io.wren.base.type.PGArray;
 import io.wren.main.metadata.Metadata;
@@ -40,6 +43,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.base.sqlrewrite.Utils.parseType;
 import static io.wren.base.type.PGArray.allArray;
 import static io.wren.connector.bigquery.BigQueryType.toBqType;
@@ -92,14 +96,15 @@ public class RewriteToBigQueryType
         protected Node visitCast(Cast node, Void context)
         {
             // Cast the value of the array first, because BigQuery is strict, for example we can't cast array<decimal> to array<float64>.
-            // So we do the thing like, CAST(ARRAY[true, false] AS _BOOL) -> CAST(ARRAY[CAST(true AS BOOLEAN, CAST(false AS BOOLEAN)] AS ARRAY<BOOLEAN>)
-            if (node.getExpression() instanceof ArrayConstructor) {
-                ArrayConstructor arrayConstructor = (ArrayConstructor) node.getExpression();
-                PGArray pgArray = getPgArrayType(node.getType().toString());
+            // So we do the thing like, CAST(ARRAY[true, false] AS ARRAY(boolean)) -> CAST(ARRAY[CAST(true AS BOOLEAN, CAST(false AS BOOLEAN)] AS ARRAY<BOOLEAN>)
+            if (node.getExpression() instanceof ArrayConstructor arrayConstructor &&
+                    isArray(node.getType())) {
+                DataType innerType = getArrayInnerType(node.getType());
+                DataType bqType = getBqType(innerType);
                 List<Expression> values = arrayConstructor.getValues().stream()
                         .map(value -> new Cast(
                                 visitAndCast(value, context),
-                                visitAndCast(parseType(pgArray.getInnerType().typName()), context)))
+                                bqType))
                         .collect(Collectors.toList());
                 if (arrayConstructor.getLocation().isPresent()) {
                     return new Cast(
@@ -112,6 +117,35 @@ public class RewriteToBigQueryType
                         visitAndCast(node.getType(), context));
             }
             return super.visitCast(node, context);
+        }
+
+        private boolean isArray(DataType type)
+        {
+            if (type instanceof GenericDataType genericDataType) {
+                return genericDataType.getName().getCanonicalValue().equalsIgnoreCase("ARRAY");
+            }
+            return false;
+        }
+
+        private DataType getArrayInnerType(DataType type)
+        {
+            if (type instanceof GenericDataType genericDataType &&
+                    genericDataType.getArguments().getFirst() instanceof TypeParameter typeParameter) {
+                return typeParameter.getValue();
+            }
+            throw new WrenException(GENERIC_INTERNAL_ERROR, "Invalid array type: " + type);
+        }
+
+        private DataType getBqType(DataType type)
+        {
+            String typeName = type.toString();
+            if (type instanceof GenericDataType gdType) {
+                typeName = toBigQueryGenericDataType(gdType).getName().getCanonicalValue();
+            }
+            if (type instanceof DateTimeDataType dtType) {
+                typeName = dtType.getType().name();
+            }
+            return parseType(typeName);
         }
 
         @Override
@@ -189,7 +223,9 @@ public class RewriteToBigQueryType
                 case "JSON":
                     return new GenericDataType(nodeLocation, new Identifier("JSON"), parameters);
                 case "ARRAY":
-                    return new GenericDataType(nodeLocation, new Identifier("ARRAY"), parameters);
+                    DataType innerType = getArrayInnerType(genericDataType);
+                    DataType bqType = getBqType(innerType);
+                    return new GenericDataType(nodeLocation, new Identifier("ARRAY"), List.of(new TypeParameter(bqType)));
                 case "DATE":
                     return new GenericDataType(nodeLocation, new Identifier("DATE"), parameters);
                 case "INTERVAL":

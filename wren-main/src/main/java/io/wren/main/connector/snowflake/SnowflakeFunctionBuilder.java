@@ -20,7 +20,7 @@ import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.base.pgcatalog.function.PgFunction.Language.SQL;
-import static io.wren.main.connector.snowflake.SnowflakeTypes.toSFType;
+import static io.wren.main.connector.snowflake.SnowflakeType.toSFType;
 import static java.lang.String.format;
 
 public class SnowflakeFunctionBuilder

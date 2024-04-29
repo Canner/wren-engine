@@ -16,9 +16,7 @@ package io.wren.base.sqlrewrite;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.log.Logger;
 import io.trino.sql.SqlFormatter;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlBaseLexer;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Identifier;
@@ -47,8 +45,8 @@ import java.util.function.Function;
 
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.wren.base.sqlrewrite.Utils.analyzeFrom;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
@@ -58,7 +56,6 @@ public class CacheRewrite
 {
     private static final Logger LOG = Logger.get(CacheRewrite.class);
     private static final Set<String> KEYWORDS = ImmutableSet.copyOf(SqlBaseLexer.ruleNames);
-    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private CacheRewrite() {}
 
@@ -69,7 +66,7 @@ public class CacheRewrite
             WrenMDL wrenMDL)
     {
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Statement statement = parseSql(sql);
             CacheAnalysis aggregationAnalysis = new CacheAnalysis();
             Statement rewritten = (Statement) new Rewriter(sessionContext, converter, wrenMDL, aggregationAnalysis).process(statement, Optional.empty());
             if (rewritten instanceof Query

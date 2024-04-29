@@ -21,6 +21,7 @@ import io.trino.sql.tree.Node;
 import io.wren.base.SessionContext;
 import io.wren.base.sql.SqlConverter;
 import io.wren.main.sql.SqlRewrite;
+import io.wren.main.sql.snowflake.RewriteCastStringAsByteaWithHexEncode;
 import io.wren.main.sqlglot.SQLGlot;
 import io.wren.main.sqlglot.SQLGlotConverter;
 import org.intellij.lang.annotations.Language;
@@ -53,8 +54,9 @@ public class SnowflakeSqlConverter
 
         LOG.info("[Input sql]: %s", sql);
 
-        // TODO: Add more rewrites
-        List<SqlRewrite> sqlRewrites = ImmutableList.of();
+        // We may use custom dialect of SqlGlot instead of this
+        List<SqlRewrite> sqlRewrites = ImmutableList.of(
+                RewriteCastStringAsByteaWithHexEncode.INSTANCE);
 
         for (SqlRewrite rewrite : sqlRewrites) {
             if (LOG.isDebugEnabled()) {

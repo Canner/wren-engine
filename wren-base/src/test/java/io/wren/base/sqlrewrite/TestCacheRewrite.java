@@ -14,8 +14,6 @@
 package io.wren.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
@@ -39,13 +37,12 @@ import java.util.function.Function;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestCacheRewrite
 {
-    private SqlParser sqlParser;
     private WrenMDL wrenMDL;
 
     private static final Map<CatalogSchemaTableName, String> METRIC_CACHE_NAME_MAPPING =
@@ -60,7 +57,6 @@ public class TestCacheRewrite
     @BeforeClass
     public void init()
     {
-        sqlParser = new SqlParser();
         wrenMDL = WrenMDL.fromManifest(AbstractTestFramework.withDefaultCatalogSchema()
                 .setModels(List.of(
                         Model.model("Album",
@@ -462,8 +458,8 @@ public class TestCacheRewrite
                 defaultSchema,
                 tableConverter).orElseThrow(() -> new AssertionError("No rewrite result"));
 
-        Statement expect = sqlParser.createStatement(expectSql, new ParsingOptions(AS_DECIMAL));
-        Statement actualStatement = sqlParser.createStatement(result, new ParsingOptions(AS_DECIMAL));
+        Statement expect = parseSql(expectSql);
+        Statement actualStatement = parseSql(result);
         assertThat(result).isEqualTo(formatSql(expect, DUCKDB));
         assertThat(actualStatement).isEqualTo(expect);
     }

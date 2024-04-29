@@ -15,8 +15,6 @@
 package io.wren.testing;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.wren.base.SessionContext;
 import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.duckdb.DuckDBConfig;
@@ -35,12 +33,11 @@ import java.util.List;
 
 import static io.trino.sql.SqlFormatter.Dialect.DUCKDB;
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.wren.base.dto.Model.model;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 
 public abstract class AbstractTestFramework
 {
-    private static final SqlParser SQL_PARSER = new SqlParser();
     public static final SessionContext DEFAULT_SESSION_CONTEXT =
             SessionContext.builder().setCatalog("wren").setSchema("test").build();
     private DuckdbClient duckdbClient;
@@ -83,7 +80,7 @@ public abstract class AbstractTestFramework
 
     protected List<List<Object>> query(@Language("SQL") String sql)
     {
-        sql = formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL)), DUCKDB);
+        sql = formatSql(parseSql(sql), DUCKDB);
         try (AutoCloseableIterator<Object[]> iterator = duckdbClient.query(sql)) {
             ImmutableList.Builder<List<Object>> builder = ImmutableList.builder();
             while (iterator.hasNext()) {

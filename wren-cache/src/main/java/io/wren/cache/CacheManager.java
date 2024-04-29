@@ -18,7 +18,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
@@ -58,6 +57,7 @@ import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.metadata.StandardErrorCode.EXCEEDED_GLOBAL_MEMORY_LIMIT;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.cache.EventLogger.Level.ERROR;
 import static io.wren.cache.EventLogger.Level.INFO;
 import static io.wren.cache.TaskInfo.TaskStatus.DONE;
@@ -77,7 +77,6 @@ public class CacheManager
         implements Closeable
 {
     private static final Logger LOG = Logger.get(CacheManager.class);
-    private static final ParsingOptions PARSE_AS_DECIMAL = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL);
     private final ExtraRewriter extraRewriter;
     private final CacheService cacheService;
     private final SqlParser sqlParser;
@@ -190,7 +189,7 @@ public class CacheManager
                     format("select * from %s", cacheInfo.getName()),
                     sessionContext,
                     analyzedMDL);
-            Statement parsedStatement = sqlParser.createStatement(wrenRewritten, PARSE_AS_DECIMAL);
+            Statement parsedStatement = parseSql(wrenRewritten);
             Statement rewrittenStatement = extraRewriter.rewrite(parsedStatement);
 
             createCache(mdl, cacheInfo, sessionContext, rewrittenStatement, duckdbTableName);

@@ -17,8 +17,6 @@ package io.wren.base.sqlrewrite.analyzer;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.GenericLiteral;
@@ -42,10 +40,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DECIMAL;
 import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.WrenMDL.EMPTY;
 import static io.wren.base.WrenMDL.fromManifest;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static io.wren.base.sqlrewrite.analyzer.StatementAnalyzer.analyze;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,7 +51,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestStatementAnalyzer
         extends AbstractTestFramework
 {
-    private static final SqlParser SQL_PARSER = new SqlParser();
     private static final SessionContext DEFAULT_SESSION_CONTEXT =
             SessionContext.builder().setCatalog("test").setSchema("test").build();
 
@@ -61,11 +58,11 @@ public class TestStatementAnalyzer
     public void testValues()
     {
         SessionContext sessionContext = SessionContext.builder().build();
-        Statement statement = SQL_PARSER.createStatement("VALUES(1, 'a')", new ParsingOptions(AS_DECIMAL));
+        Statement statement = parseSql("VALUES(1, 'a')");
         Analysis analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
 
-        statement = SQL_PARSER.createStatement("SELECT * FROM (VALUES(1, 'a'))", new ParsingOptions(AS_DECIMAL));
+        statement = parseSql("SELECT * FROM (VALUES(1, 'a'))");
         analysis = new Analysis(statement);
         analyze(analysis, statement, sessionContext, EMPTY);
     }
@@ -74,7 +71,7 @@ public class TestStatementAnalyzer
     public void testGetTableWithoutWithTable()
     {
         SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
-        Statement statement = SQL_PARSER.createStatement("WITH a AS (SELECT * FROM People) SELECT * FROM a", new ParsingOptions(AS_DECIMAL));
+        Statement statement = parseSql("WITH a AS (SELECT * FROM People) SELECT * FROM a");
         Analysis analysis = new Analysis(statement);
         analyze(analysis,
                 statement,
@@ -147,7 +144,7 @@ public class TestStatementAnalyzer
 
     private Analysis analyzeSql(String sql, Manifest manifest)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+        Statement statement = parseSql(sql);
         Analysis analysis = new Analysis(statement);
         analyze(
                 analysis,
@@ -175,7 +172,7 @@ public class TestStatementAnalyzer
                 .build();
 
         Function<String, Scope> analyzeSql = (sql) -> {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DECIMAL));
+            Statement statement = parseSql(sql);
             Analysis analysis = new Analysis(statement);
             return analyze(
                     analysis,

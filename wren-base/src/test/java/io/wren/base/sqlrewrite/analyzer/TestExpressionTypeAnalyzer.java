@@ -27,7 +27,6 @@ import io.wren.base.type.DateType;
 import io.wren.base.type.DoubleType;
 import io.wren.base.type.IntegerType;
 import io.wren.base.type.IntervalType;
-import io.wren.base.type.NumericType;
 import io.wren.base.type.PGArray;
 import io.wren.base.type.RealType;
 import io.wren.base.type.RecordType;
@@ -76,7 +75,7 @@ public class TestExpressionTypeAnalyzer
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("TIMESTAMP '2023-10-29 00:00:00.000000'"))).isEqualTo(TimestampType.TIMESTAMP);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("REAL '3.5'"))).isEqualTo(RealType.REAL);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("x'65683F'"))).isEqualTo(ByteaType.BYTEA);
-        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1.1"))).isEqualTo(NumericType.NUMERIC);
+        assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("1.1"))).isEqualTo(DoubleType.DOUBLE);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("10.3e0"))).isEqualTo(DoubleType.DOUBLE);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("false"))).isEqualTo(BooleanType.BOOLEAN);
         assertThat(analyze(EMPTY_MDL, EMPTY_SCOPE, parseExpression("cast(1.1 as DOUBLE)"))).isEqualTo(DoubleType.DOUBLE);

@@ -18,13 +18,12 @@ import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -138,19 +137,12 @@ public class SnowflakeRecordIterator
     private Object dataHandle(int columnType, int i)
             throws SQLException
     {
-        // TODO: Unsure data type handle is correct
-        if (columnType == Types.BLOB) {
-            Blob blob = resultSet.getBlob(i);
-            return blob.getBytes(0, (int) blob.length());
-        }
-        if (columnType == Types.SMALLINT) {
-            return resultSet.getShort(i);
-        }
-        if (columnType == Types.TIMESTAMP) {
-            return resultSet.getTimestamp(i).toLocalDateTime();
-        }
-        if (columnType == Types.DATE) {
+        if (columnType == java.sql.Types.DATE) {
             return resultSet.getDate(i).toLocalDate();
+        }
+        if (columnType == java.sql.Types.TIMESTAMP) {
+            String timestamp = resultSet.getString(i);
+            return Timestamp.valueOf(timestamp).toLocalDateTime();
         }
         return resultSet.getObject(i);
     }

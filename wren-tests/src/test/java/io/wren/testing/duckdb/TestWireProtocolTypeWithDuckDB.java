@@ -133,7 +133,7 @@ public class TestWireProtocolTypeWithDuckDB
                 .addInput(arrayDataType(bigintDataType(), INT8_ARRAY), asList(123_456_789_012L, 1_234_567_890L))
                 .addInput(arrayDataType(realDataType(), FLOAT4_ARRAY), asList(123.45f, 1.2345f))
                 .addInput(arrayDataType(doubleDataType(), FLOAT8_ARRAY), asList(123.45d, 1.2345d))
-                .addInput(arrayDataType(decimalDataType(3, 1), NUMERIC_ARRAY), asList(new BigDecimal("1.000"), new BigDecimal("1.100"))) // DuckDB defaults precision = 18 and scale = 3
+                .addInput(arrayDataType(decimalDataType(3, 1), NUMERIC_ARRAY), asList(new BigDecimal("1.0"), new BigDecimal("1.1"))) // DuckDB defaults precision = 18 and scale = 3
                 .addInput(arrayDataType(varcharDataType(), VARCHAR_ARRAY), asList("hello", "world"))
                 .addInput(arrayDataType(charDataType(), CHAR_ARRAY), asList("h", "w"))
                 // We don't support bytea[] in DuckDB

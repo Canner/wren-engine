@@ -812,21 +812,22 @@ public final class ExpressionFormatter
             StringBuilder result = new StringBuilder();
             result.append(node.getName());
 
-            if (node.getName().getCanonicalValue().equals("ARRAY")
-                    && dialect == BIGQUERY) {
-                result.append("<");
-                result.append(process(node.getArguments().get(0), context));
-                result.append(">");
-                return result.toString();
-            }
-
-            // Format ARRAY<BOOLEAN> To BOOLEAN[] for DuckDB
-            if (node.getName().getCanonicalValue().equals("ARRAY")
-                    && dialect == DUCKDB) {
-                result.delete(0, result.length());
-                result.append(process(node.getArguments().get(0), context));
-                result.append("[]");
-                return result.toString();
+            if (node.getName().getCanonicalValue().equals("ARRAY")) {
+                switch (dialect) {
+                    case BIGQUERY:
+                        // Format to ARRAY<BOOLEAN>
+                        result.append("<");
+                        result.append(process(node.getArguments().get(0), context));
+                        result.append(">");
+                        return result.toString();
+                    case POSTGRES:
+                    case DUCKDB:
+                        // Format to BOOLEAN[]
+                        result.delete(0, result.length());
+                        result.append(process(node.getArguments().get(0), context));
+                        result.append("[]");
+                        return result.toString();
+                }
             }
 
             if (!node.getArguments().isEmpty()) {
