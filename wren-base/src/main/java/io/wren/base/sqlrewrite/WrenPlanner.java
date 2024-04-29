@@ -15,7 +15,6 @@
 package io.wren.base.sqlrewrite;
 
 import io.trino.sql.SqlFormatter;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
@@ -23,9 +22,9 @@ import io.wren.base.SessionContext;
 
 import java.util.List;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.sqlrewrite.EnumRewrite.ENUM_REWRITE;
 import static io.wren.base.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 
 public class WrenPlanner
@@ -46,10 +45,10 @@ public class WrenPlanner
 
     public static String rewrite(String sql, SessionContext sessionContext, AnalyzedMDL analyzedMDL, List<WrenRule> rules)
     {
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+        Statement statement = parseSql(sql);
         for (WrenRule rule : rules) {
             // we will replace or rewrite sql node in sql rewrite, to avoid rewrite rules affect each other, format and parse sql before each rewrite
-            statement = rule.apply(SQL_PARSER.createStatement(SqlFormatter.formatSql(statement), new ParsingOptions(AS_DOUBLE)), sessionContext, analyzedMDL);
+            statement = rule.apply(parseSql(SqlFormatter.formatSql(statement)), sessionContext, analyzedMDL);
         }
         return SqlFormatter.formatSql(statement);
     }

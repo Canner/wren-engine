@@ -15,8 +15,6 @@
 package io.wren.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
@@ -31,7 +29,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -361,10 +359,8 @@ public class TestModelSqlRewrite
 
     private static void assertSqlEquals(String actual, String expected)
     {
-        SqlParser sqlParser = new SqlParser();
-        ParsingOptions parsingOptions = new ParsingOptions(AS_DOUBLE);
-        Statement actualStmt = sqlParser.createStatement(actual, parsingOptions);
-        Statement expectedStmt = sqlParser.createStatement(expected, parsingOptions);
+        Statement actualStmt = parseSql(actual);
+        Statement expectedStmt = parseSql(expected);
         assertThat(formatSql(actualStmt))
                 .isEqualTo(formatSql(expectedStmt));
     }

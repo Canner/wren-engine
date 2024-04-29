@@ -14,7 +14,6 @@
 
 package io.wren.base.sqlrewrite;
 
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
@@ -33,8 +32,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 
 import static io.trino.sql.SqlFormatter.formatSql;
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
-import static io.wren.base.sqlrewrite.Utils.SQL_PARSER;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -156,7 +154,7 @@ public class TestAllRulesRewrite
     @Test(dataProvider = "noRewriteCase")
     public void testWrenNoRewrite(String original)
     {
-        Statement expectedState = SQL_PARSER.createStatement(original, new ParsingOptions(AS_DOUBLE));
+        Statement expectedState = parseSql(original);
         assertThat(rewrite(original)).isEqualTo(formatSql(expectedState));
     }
 

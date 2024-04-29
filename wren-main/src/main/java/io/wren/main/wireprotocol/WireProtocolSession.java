@@ -17,7 +17,6 @@ package io.wren.main.wireprotocol;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.trino.sql.SqlFormatter;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.Deallocate;
 import io.trino.sql.tree.Statement;
@@ -60,6 +59,7 @@ import static io.trino.execution.ParameterExtractor.getParameterCount;
 import static io.trino.execution.sql.SqlFormatterUtil.getFormattedSql;
 import static io.wren.base.metadata.StandardErrorCode.INVALID_PARAMETER_USAGE;
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.main.wireprotocol.PgQueryAnalyzer.isMetadataQuery;
 import static io.wren.main.wireprotocol.PostgresWireProtocolErrorCode.INVALID_PREPARED_STATEMENT_NAME;
 import static io.wren.main.wireprotocol.PreparedStatement.RESERVED_DRY_RUN_NAME;
@@ -74,7 +74,6 @@ public class WireProtocolSession
 
     private static final List<Class<?>> SESSION_COMMAND = ImmutableList.of(Deallocate.class);
 
-    public static final ParsingOptions PARSE_AS_DOUBLE = new ParsingOptions(ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE);
     private static final String ALL = "all";
 
     private Properties properties;
@@ -287,7 +286,7 @@ public class WireProtocolSession
                 .build();
         try {
             Statement metadataQueryStatement = MetastoreSqlRewrite.rewrite(regObjectFactory,
-                    sqlParser.createStatement(statementPreRewritten, PARSE_AS_DOUBLE));
+                    parseSql(statementPreRewritten));
             String converted = pgMetastore.getSqlConverter().convert(SqlFormatter.formatSql(metadataQueryStatement), sessionContext);
             createMetadataQueryPreparedStatement(statementName, statement, converted, paramTypes, QueryLevel.METASTORE_SEMI);
         }
@@ -313,7 +312,7 @@ public class WireProtocolSession
                 analyzedMDL);
         // TODO: support set session property
         // validateSetSessionProperty(statementPreRewritten);
-        Statement parsedStatement = sqlParser.createStatement(wrenRewritten, PARSE_AS_DOUBLE);
+        Statement parsedStatement = parseSql(wrenRewritten);
         Statement rewrittenStatement = PostgreSqlRewrite.rewrite(regObjectFactory, metadata.getDefaultCatalog(), metadata.getPgCatalogName(), parsedStatement);
         List<Integer> rewrittenParamTypes = rewriteParameters(rewrittenStatement, paramTypes);
         preparedStatements.put(statementName,

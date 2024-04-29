@@ -91,7 +91,7 @@ public final class Utils
     public static Query parseQuery(String sql)
     {
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+            Statement statement = parseSql(sql);
             if (statement instanceof Query) {
                 return (Query) statement;
             }
@@ -106,7 +106,7 @@ public final class Utils
     {
         String sql = getMetricRollupSql(metricRollupInfo);
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+            Statement statement = parseSql(sql);
             if (statement instanceof Query) {
                 return (Query) statement;
             }
@@ -121,7 +121,7 @@ public final class Utils
     {
         String sql = getCumulativeMetricSql(cumulativeMetric, wrenMDL);
         try {
-            Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+            Statement statement = parseSql(sql);
             if (statement instanceof Query) {
                 return (Query) statement;
             }
@@ -324,7 +324,7 @@ public final class Utils
     {
         // TODO: `GENERATE_TIMESTAMP_ARRAY` is a bigquery function. We may need to consider the SQL dialect when Wren planning.
         String sql = format("SELECT * FROM UNNEST(GENERATE_TIMESTAMP_ARRAY(TIMESTAMP '%s', TIMESTAMP '%s', %s)) t(metric_time)", dateSpine.getStart(), dateSpine.getEnd(), dateSpine.getUnit().getIntervalExpression());
-        Statement statement = SQL_PARSER.createStatement(sql, new ParsingOptions(AS_DOUBLE));
+        Statement statement = parseSql(sql);
         if (statement instanceof Query) {
             return (Query) statement;
         }

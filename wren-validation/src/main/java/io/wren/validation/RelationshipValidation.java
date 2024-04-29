@@ -14,8 +14,6 @@
 
 package io.wren.validation;
 
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Query;
@@ -35,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.util.stream.Collectors.toUnmodifiableList;
@@ -160,8 +158,7 @@ public class RelationshipValidation
 
     private ComparisonExpression getConditionNode(String condition)
     {
-        SqlParser sqlParser = new SqlParser();
-        Query statement = (Query) sqlParser.createStatement("SELECT " + condition, new ParsingOptions(AS_DOUBLE));
+        Query statement = (Query) parseSql("SELECT " + condition);
         return (ComparisonExpression)
                 ((SingleColumn) ((QuerySpecification) statement.getQueryBody()).getSelect().getSelectItems().get(0)).getExpression();
     }

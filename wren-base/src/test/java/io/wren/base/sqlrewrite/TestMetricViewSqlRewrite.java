@@ -15,7 +15,6 @@
 package io.wren.base.sqlrewrite;
 
 import io.trino.sql.SqlFormatter;
-import io.trino.sql.parser.ParsingOptions;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.WrenMDL;
@@ -32,10 +31,9 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.trino.sql.parser.ParsingOptions.DecimalLiteralTreatment.AS_DOUBLE;
 import static io.wren.base.sqlrewrite.GenerateViewRewrite.GENERATE_VIEW_REWRITE;
 import static io.wren.base.sqlrewrite.MetricRollupRewrite.METRIC_ROLLUP_REWRITE;
-import static io.wren.base.sqlrewrite.Utils.SQL_PARSER;
+import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -279,7 +277,7 @@ public class TestMetricViewSqlRewrite
     @Test(dataProvider = "metricCases")
     public void testMetricSqlRewrite(String original, String expected)
     {
-        Statement expectedState = SQL_PARSER.createStatement(expected, new ParsingOptions(AS_DOUBLE));
+        Statement expectedState = parseSql(expected);
         String actualSql = rewrite(original);
         assertThat(actualSql).isEqualTo(SqlFormatter.formatSql(expectedState));
         assertThatNoException()
