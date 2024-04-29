@@ -14,6 +14,7 @@
 
 package io.wren.main.sql.snowflake;
 
+import io.trino.sql.tree.ArrayConstructor;
 import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.DataType;
 import io.trino.sql.tree.Expression;
@@ -30,12 +31,16 @@ import io.wren.main.sql.SqlRewrite;
 import java.util.List;
 import java.util.Optional;
 
-public class RewriteCast
+/**
+ * Snowflake does not support casting string to bytea.
+ * This rewriter rewrites the cast to bytea with function HEX_ENCODE.
+ */
+public class RewriteCastStringAsByteaWithHexEncode
         implements SqlRewrite
 {
-    public static final RewriteCast INSTANCE = new RewriteCast();
+    public static final RewriteCastStringAsByteaWithHexEncode INSTANCE = new RewriteCastStringAsByteaWithHexEncode();
 
-    private RewriteCast() {}
+    private RewriteCastStringAsByteaWithHexEncode() {}
 
     @Override
     public Node rewrite(Node node, Metadata metadata)
@@ -46,35 +51,38 @@ public class RewriteCast
     private static class CastRewriter
             extends BaseRewriter<Void>
     {
-        private boolean targetDataTypeIsBytea;
-
         @Override
         protected Node visitCast(Cast node, Void context)
         {
-            targetDataTypeIsBytea = isBytea(node.getType()) || isArrayBytea(node.getType());
+            Expression expression = node.getExpression();
+
+            if (isBytea(node.getType()) && expression instanceof StringLiteral) {
+                expression = hexEncode(expression);
+            }
+
+            if (isArrayBytea(node.getType()) &&
+                    expression instanceof ArrayConstructor arrCtor &&
+                    arrCtor.getValues().stream().allMatch(StringLiteral.class::isInstance)) {
+                expression = new ArrayConstructor(
+                        arrCtor.getLocation().get(),
+                        arrCtor.getValues().stream()
+                                .map(this::hexEncode)
+                                .toList());
+            }
 
             if (node.getLocation().isPresent()) {
                 return new Cast(
                         node.getLocation().get(),
-                        visitAndCast(node.getExpression(), context),
+                        visitAndCast(expression, context),
                         visitAndCast(node.getType(), context),
                         node.isSafe(),
                         node.isTypeOnly());
             }
             return new Cast(
-                    visitAndCast(node.getExpression(), context),
+                    visitAndCast(expression, context),
                     visitAndCast(node.getType(), context),
                     node.isSafe(),
                     node.isTypeOnly());
-        }
-
-        @Override
-        protected Node visitStringLiteral(StringLiteral node, Void context)
-        {
-            if (targetDataTypeIsBytea) {
-                return hexEncode(node);
-            }
-            return super.visitStringLiteral(node, context);
         }
 
         private boolean isBytea(DataType type)
