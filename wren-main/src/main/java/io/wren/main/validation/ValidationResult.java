@@ -12,11 +12,13 @@
  * limitations under the License.
  */
 
-package io.wren.validation;
+package io.wren.main.validation;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.airlift.units.Duration;
 
 import javax.annotation.Nullable;
-
-import java.time.Duration;
 
 import static java.lang.String.format;
 
@@ -56,7 +58,12 @@ public class ValidationResult
     private final Duration duration;
     private final String message;
 
-    public ValidationResult(String name, Status status, Duration duration, @Nullable String message)
+    @JsonCreator
+    public ValidationResult(
+            @JsonProperty("name") String name,
+            @JsonProperty("status") Status status,
+            @JsonProperty("duration") Duration duration,
+            @JsonProperty("message") @Nullable String message)
     {
         this.name = name;
         this.status = status;
@@ -64,6 +71,7 @@ public class ValidationResult
         this.message = message;
     }
 
+    @JsonProperty
     public String getName()
     {
         return name;
@@ -79,16 +87,19 @@ public class ValidationResult
         return format("%s:%s", ruleName, modelName);
     }
 
+    @JsonProperty
     public Status getStatus()
     {
         return status;
     }
 
+    @JsonProperty
     public Duration getDuration()
     {
         return duration;
     }
 
+    @JsonProperty
     @Nullable
     public String getMessage()
     {

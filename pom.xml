@@ -35,7 +35,6 @@
         <module>wren-shaded</module>
         <module>wren-testing</module>
         <module>wren-tests</module>
-        <module>wren-validation</module>
     </modules>
 
     <scm>

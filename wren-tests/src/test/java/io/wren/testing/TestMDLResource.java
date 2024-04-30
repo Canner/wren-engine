@@ -22,11 +22,14 @@ import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
 import io.wren.base.type.IntegerType;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
+import io.wren.main.validation.ColumnIsValid;
+import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
+import io.wren.main.web.dto.ValidateDto;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -44,6 +47,7 @@ import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.model;
 import static io.wren.base.dto.Relationship.relationship;
+import static io.wren.main.validation.ColumnIsValid.COLUMN_IS_VALID;
 import static io.wren.testing.WebApplicationExceptionAssert.assertWebApplicationException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -303,5 +307,89 @@ public class TestMDLResource
                   Orders
                 LIMIT 200
                 """);
+    }
+
+    @Test
+    public void testValidation()
+    {
+        List<ValidationResult> validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters("Orders", "orderkey")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Orders:orderkey");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.PASS);
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters("Orders", "notfound")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Orders:notfound");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.FAIL);
+        assertThat(validations.getFirst().getMessage()).isNotEmpty();
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters(null, "orderkey")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Model name is required");
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters("", "orderkey")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Model name is required");
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters("Orders", null)));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Orders");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Column name is required");
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters("Orders", "")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Orders");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Column name is required");
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, ColumnIsValid.parameters(null, null)));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Model name is required");
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(null, null));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Model name is required");
+
+        validations = validate(COLUMN_IS_VALID, null);
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.ERROR);
+        assertThat(validations.getFirst().getMessage()).isEqualTo("Model name is required");
+
+        assertWebApplicationException(() -> validate("notfound", new ValidateDto(null, ColumnIsValid.parameters("Orders", ""))))
+                .hasHTTPStatus(404)
+                .hasErrorMessageMatches(".*Validation rule not found: .*");
+    }
+
+    @Test
+    public void testValidationWithMDL()
+    {
+        Manifest previewManifest = Manifest.builder()
+                .setCatalog("wrenai")
+                .setSchema("tpch")
+                .setModels(List.of(
+                        model("Customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey")))))
+                .build();
+
+        List<ValidationResult> validations = validate(COLUMN_IS_VALID, new ValidateDto(previewManifest, ColumnIsValid.parameters("Customer", "custkey")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Customer:custkey");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.PASS);
+
+        validations = validate(COLUMN_IS_VALID, new ValidateDto(previewManifest, ColumnIsValid.parameters("Orders", "custkey")));
+        assertThat(validations.size()).isEqualTo(1);
+        assertThat(validations.getFirst().getName()).isEqualTo("column_is_valid:Orders:custkey");
+        assertThat(validations.getFirst().getStatus()).isEqualTo(ValidationResult.Status.FAIL);
+        assertThat(validations.getFirst().getMessage()).isNotEmpty();
     }
 }

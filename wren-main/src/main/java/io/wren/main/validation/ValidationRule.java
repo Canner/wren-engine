@@ -12,15 +12,17 @@
  * limitations under the License.
  */
 
-package io.wren.validation;
+package io.wren.main.validation;
 
-import io.wren.base.WrenMDL;
-import io.wren.base.client.Client;
+import io.wren.base.AnalyzedMDL;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public abstract class ValidationRule
+public interface ValidationRule
 {
-    public abstract List<CompletableFuture<ValidationResult>> validate(Client client, WrenMDL wrenMDL);
+    String getRuleName();
+
+    List<CompletableFuture<ValidationResult>> validate(AnalyzedMDL analyzedMDL, Map<String, Object> parameters);
 }
