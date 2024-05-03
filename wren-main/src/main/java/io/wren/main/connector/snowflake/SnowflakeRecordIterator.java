@@ -19,14 +19,17 @@ import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.wren.main.connector.snowflake.SnowflakeClient.buildColumns;
@@ -138,12 +141,17 @@ public class SnowflakeRecordIterator
             throws SQLException
     {
         if (columnType == java.sql.Types.DATE) {
-            return resultSet.getDate(i).toLocalDate();
+            return handleDate(resultSet.getDate(i));
         }
         if (columnType == java.sql.Types.TIMESTAMP) {
             String timestamp = resultSet.getString(i);
-            return Timestamp.valueOf(timestamp).toLocalDateTime();
+            return timestamp == null ? null : Timestamp.valueOf(timestamp).toLocalDateTime();
         }
         return resultSet.getObject(i);
+    }
+
+    private static LocalDate handleDate(Date date)
+    {
+        return Optional.ofNullable(date).map(Date::toLocalDate).orElse(null);
     }
 }

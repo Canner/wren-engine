@@ -26,6 +26,8 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,14 +66,15 @@ public class PostgresRecordIterator
         for (int i = 1; i <= columnCount; i++) {
             if (resultSet.getMetaData().getColumnType(i) == Types.BLOB) {
                 Blob blob = resultSet.getBlob(i);
-                byte[] bytes = blob.getBytes(0, (int) blob.length());
-                builder.add(bytes);
+                builder.add(blob == null ? null : blob.getBytes(0, (int) blob.length()));
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.SMALLINT) {
-                builder.add(resultSet.getShort(i));
+                short value = resultSet.getShort(i);
+                builder.add(resultSet.wasNull() ? null : value);
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
-                builder.add(resultSet.getTimestamp(i).toLocalDateTime());
+                Timestamp timestamp = resultSet.getTimestamp(i);
+                builder.add(handleTimestamp(timestamp));
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.ARRAY) {
                 List<Object> objArray = Optional.ofNullable(resultSet.getArray(i))
@@ -82,10 +85,10 @@ public class PostgresRecordIterator
                                         return getPgObjectValue((PGobject) obj);
                                     }
                                     if (obj instanceof Timestamp) {
-                                        return ((Timestamp) obj).toLocalDateTime();
+                                        return handleTimestamp((Timestamp) obj);
                                     }
                                     if (obj instanceof Date) {
-                                        return ((Date) obj).toLocalDate();
+                                        return handleDate((Date) obj);
                                     }
                                     return obj;
                                 }).collect(Collectors.toList());
@@ -97,7 +100,8 @@ public class PostgresRecordIterator
                 builder.add(objArray);
             }
             else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
-                builder.add(resultSet.getDate(i).toLocalDate());
+                Date date = resultSet.getDate(i);
+                builder.add(handleDate(date));
             }
             else {
                 Object obj = resultSet.getObject(i);
@@ -122,6 +126,16 @@ public class PostgresRecordIterator
             }
         }
         return builder.toArray();
+    }
+
+    private static LocalDateTime handleTimestamp(Timestamp timestamp)
+    {
+        return Optional.ofNullable(timestamp).map(Timestamp::toLocalDateTime).orElse(null);
+    }
+
+    private static LocalDate handleDate(Date date)
+    {
+        return Optional.ofNullable(date).map(Date::toLocalDate).orElse(null);
     }
 
     public Object getPgObjectValue(PGobject pgObject)

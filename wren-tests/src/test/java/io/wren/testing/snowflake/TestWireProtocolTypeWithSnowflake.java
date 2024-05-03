@@ -152,14 +152,15 @@ public class TestWireProtocolTypeWithSnowflake
                         value -> formatArray(value.stream().map(Timestamp::valueOf).map(Timestamp::toString).toList()))
                 .addInput(arrayDataType(dateDataType(), DATE_ARRAY), asList(LocalDate.of(2019, 1, 1), LocalDate.of(2019, 1, 2)),
                         value -> formatArray(value.stream().map(Date::valueOf).map(Date::toString).toList()))
+                .addInput(arrayDataType(textDataType(), VARCHAR_ARRAY), null)
                 .executeSuite();
     }
 
     /**
      * Format array to string for Snowflake jdbc output
      * "[
-     *   "hello",
-     *   "world"
+     * "hello",
+     * "world"
      * ]"
      */
     private String formatArray(List<?> arr)
@@ -189,6 +190,7 @@ public class TestWireProtocolTypeWithSnowflake
     {
         createTypeTest()
                 .addInput(bigintDataType(), 123_456_789_012L, BigDecimal::new)
+                .addInput(bigintDataType(), null)
                 .executeSuite();
     }
 
@@ -199,6 +201,7 @@ public class TestWireProtocolTypeWithSnowflake
     {
         createTypeTest()
                 .addInput(integerDataType(), 1_234_567_890, BigDecimal::new)
+                .addInput(integerDataType(), null)
                 .executeSuite();
     }
 
@@ -209,6 +212,7 @@ public class TestWireProtocolTypeWithSnowflake
     {
         createTypeTest()
                 .addInput(smallintDataType(), (short) 32_456, BigDecimal::new)
+                .addInput(smallintDataType(), null)
                 .executeSuite();
     }
 
@@ -238,6 +242,7 @@ public class TestWireProtocolTypeWithSnowflake
                 .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"))
                 .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
                 .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"))
+                .addInput(decimalDataType(38, 10), null)
                 .executeSuite();
     }
 
@@ -248,6 +253,7 @@ public class TestWireProtocolTypeWithSnowflake
     {
         createTypeTest()
                 .addInput(realDataType(), 123.45f, value -> 123.45d)
+                .addInput(realDataType(), null)
                 .executeSuite();
     }
 
@@ -263,6 +269,8 @@ public class TestWireProtocolTypeWithSnowflake
                 .addInput(varcharDataType(10485760), "text_f")
                 .addInput(varcharDataType(), "unbounded")
                 .addInput(textDataType(), "wren_text")
+                .addInput(textDataType(), null)
+                .addInput(varcharDataType(), null)
                 .executeSuite();
     }
 
@@ -274,6 +282,7 @@ public class TestWireProtocolTypeWithSnowflake
         createTypeTest()
                 .addInput(byteaDataType(), "hello", value -> value.getBytes(UTF_8))
                 .addInput(byteaDataType(), "\\x68656c6c6f", ignored -> "hello".getBytes(UTF_8))
+                .addInput(byteaDataType(), null)
                 .executeSuite();
     }
 

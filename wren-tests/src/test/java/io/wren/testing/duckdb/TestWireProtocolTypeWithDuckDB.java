@@ -25,6 +25,8 @@ import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.type.PGArray.BOOL_ARRAY;
@@ -110,6 +112,7 @@ public class TestWireProtocolTypeWithDuckDB
                 .addInput(decimalDataType(38, 0), new BigDecimal("27182818284590452353602874713526624977"))
                 .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
                 .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"))
+                .addInput(decimalDataType(38, 10), null)
                 .executeSuite();
     }
 
@@ -120,12 +123,15 @@ public class TestWireProtocolTypeWithDuckDB
         createTypeTest()
                 .addInput(byteaDataType(), "hello", value -> value.getBytes(UTF_8))
                 .addInput(byteaDataType(), "\\x68\\x65\\x6c\\x6c\\x6f", ignored -> "hello".getBytes(UTF_8))
+                .addInput(byteaDataType(), null)
                 .executeSuite();
     }
 
     @Test
     public void testArray()
     {
+        List<String> nullList = new ArrayList<>();
+        nullList.add(null);
         createTypeTest()
                 .addInput(arrayDataType(booleanDataType(), BOOL_ARRAY), asList(true, false))
                 .addInput(arrayDataType(smallintDataType(), INT2_ARRAY), asList((short) 1, (short) 2))
@@ -145,6 +151,8 @@ public class TestWireProtocolTypeWithDuckDB
                         value -> value.stream().map(Timestamp::valueOf).collect(toList()))
                 .addInput(arrayDataType(dateDataType(), DATE_ARRAY), asList(LocalDate.of(2019, 1, 1), LocalDate.of(2019, 1, 2)),
                         value -> value.stream().map(Date::valueOf).collect(toList()))
+                .addInput(arrayDataType(textDataType(), VARCHAR_ARRAY), null)
+                .addInput(arrayDataType(textDataType(), VARCHAR_ARRAY), nullList)
                 // TODO support interval
                 .executeSuite();
     }
@@ -164,7 +172,8 @@ public class TestWireProtocolTypeWithDuckDB
                 .addInput(varcharDataType(65535), "text_d")
                 .addInput(varcharDataType(10485760), "text_f")
                 .addInput(varcharDataType(), "unbounded")
-                .addInput(textDataType(), "wren_text");
+                .addInput(textDataType(), "wren_text")
+                .addInput(varcharDataType(10), null);
     }
 
     @Test(enabled = false, description = "DuckDB does not support unicode")

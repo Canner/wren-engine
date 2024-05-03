@@ -50,6 +50,7 @@ import static io.wren.base.type.PGArray.FLOAT8_ARRAY;
 import static io.wren.base.type.PGArray.INT2_ARRAY;
 import static io.wren.base.type.PGArray.INT4_ARRAY;
 import static io.wren.base.type.PGArray.INT8_ARRAY;
+import static io.wren.base.type.PGArray.INTERVAL_ARRAY;
 import static io.wren.base.type.PGArray.JSON_ARRAY;
 import static io.wren.base.type.PGArray.NUMERIC_ARRAY;
 import static io.wren.base.type.PGArray.TIMESTAMP_ARRAY;
@@ -100,6 +101,7 @@ public abstract class AbstractWireProtocolTypeTest
         createTypeTest()
                 .addInput(booleanDataType(), true)
                 .addInput(booleanDataType(), false)
+                .addInput(booleanDataType(), null)
                 .executeSuite();
     }
 
@@ -108,6 +110,7 @@ public abstract class AbstractWireProtocolTypeTest
     {
         createTypeTest()
                 .addInput(smallintDataType(), (short) 32_456, value -> (int) value)
+                .addInput(smallintDataType(), null)
                 .executeSuite();
     }
 
@@ -116,6 +119,7 @@ public abstract class AbstractWireProtocolTypeTest
     {
         createTypeTest()
                 .addInput(integerDataType(), 1_234_567_890)
+                .addInput(integerDataType(), null)
                 .executeSuite();
     }
 
@@ -124,6 +128,7 @@ public abstract class AbstractWireProtocolTypeTest
     {
         createTypeTest()
                 .addInput(bigintDataType(), 123_456_789_012L)
+                .addInput(bigintDataType(), null)
                 .executeSuite();
     }
 
@@ -132,6 +137,7 @@ public abstract class AbstractWireProtocolTypeTest
     {
         createTypeTest()
                 .addInput(doubleDataType(), 123.45d)
+                .addInput(doubleDataType(), null)
                 .executeSuite();
     }
 
@@ -140,6 +146,7 @@ public abstract class AbstractWireProtocolTypeTest
     {
         createTypeTest()
                 .addInput(realDataType(), 123.45f)
+                .addInput(realDataType(), null)
                 .executeSuite();
     }
 
@@ -149,6 +156,7 @@ public abstract class AbstractWireProtocolTypeTest
         createTypeTest()
                 .addInput(charDataType(), "c")
                 .addInput(charDataType(9), "test char")
+                .addInput(charDataType(), null)
                 .executeSuite();
     }
 
@@ -158,6 +166,7 @@ public abstract class AbstractWireProtocolTypeTest
         createTypeTest()
                 .addInput(byteaDataType(), "hello", value -> value.getBytes(UTF_8))
                 .addInput(byteaDataType(), "\\x68656c6c6f", ignored -> "hello".getBytes(UTF_8))
+                .addInput(byteaDataType(), null)
                 .executeSuite();
     }
 
@@ -199,7 +208,10 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(varcharDataType(10485760), "text_f")
                 .addInput(varcharDataType(), "unbounded")
                 .addInput(textDataType(), "wren_text")
-                .addInput(nameDataType(), "wren_name");
+                .addInput(nameDataType(), "wren_name")
+                .addInput(varcharDataType(), null)
+                .addInput(textDataType(), null)
+                .addInput(nameDataType(), null);
     }
 
     @Test
@@ -212,7 +224,8 @@ public abstract class AbstractWireProtocolTypeTest
     private WireProtocolTypeTest unicodeVarcharDateTypeTest()
     {
         return unicodeDataTypeTest(DataType::varcharDataType)
-                .addInput(varcharDataType(), "\u041d\u0443, \u043f\u043e\u0433\u043e\u0434\u0438!");
+                .addInput(varcharDataType(), "\u041d\u0443, \u043f\u043e\u0433\u043e\u0434\u0438!")
+                .addInput(varcharDataType(), null);
     }
 
     private WireProtocolTypeTest unicodeDataTypeTest(Function<Integer, DataType<String>> dataTypeFactory)
@@ -224,7 +237,8 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(dataTypeFactory.apply(sampleUnicodeText.length()), sampleUnicodeText)
                 .addInput(dataTypeFactory.apply(32), sampleUnicodeText)
                 .addInput(dataTypeFactory.apply(20000), sampleUnicodeText)
-                .addInput(dataTypeFactory.apply(1), sampleFourByteUnicodeCharacter);
+                .addInput(dataTypeFactory.apply(1), sampleFourByteUnicodeCharacter)
+                .addInput(dataTypeFactory.apply(32), null);
     }
 
     @Test
@@ -252,12 +266,15 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
                 .addInput(decimalDataType(39, 9), new BigDecimal("271828182845904523536028747130.526624977"))
                 .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"))
+                .addInput(decimalDataType(38, 10), null)
                 .executeSuite();
     }
 
     @Test
     public void testArray()
     {
+        List<String> nullArray = new ArrayList<>(1);
+        nullArray.add(null);
         // basic types
         createTypeTest()
                 .addInput(arrayDataType(booleanDataType(), BOOL_ARRAY), asList(true, false))
@@ -277,6 +294,8 @@ public abstract class AbstractWireProtocolTypeTest
                         value -> value.stream().map(Timestamp::valueOf).collect(toList()))
                 .addInput(arrayDataType(dateDataType(), DATE_ARRAY), asList(LocalDate.of(2019, 1, 1), LocalDate.of(2019, 1, 2)),
                         value -> value.stream().map(Date::valueOf).collect(toList()))
+                .addInput(arrayDataType(intervalType(), INTERVAL_ARRAY), null)
+                .addInput(arrayDataType(varcharDataType(), VARCHAR_ARRAY), nullArray)
                 // TODO support interval
                 .executeSuite();
     }
@@ -304,7 +323,8 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(dateDataType(), LocalDate.of(2017, 1, 1), toJdbcTimestamp) // winter on northern hemisphere (possible DST on southern hemisphere)
                 .addInput(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInJvmZone, toJdbcTimestamp)
                 .addInput(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInSomeZone, toJdbcTimestamp)
-                .addInput(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone, toJdbcTimestamp);
+                .addInput(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone, toJdbcTimestamp)
+                .addInput(dateDataType(), null);
         testCases.executeSuite();
     }
 
@@ -322,6 +342,7 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(timestampDataType(3), timeGapInVilnius, Timestamp::valueOf)
                 .addInput(timestampDataType(3), timeGapInKathmandu, Timestamp::valueOf)
                 .addInput(timestampDataType(6), LocalDateTime.of(2023, 4, 24, 17, 43, 3, 123_456_000), Timestamp::valueOf)
+                .addInput(timestampDataType(6), null)
                 .executeSuite();
     }
 
@@ -337,6 +358,7 @@ public abstract class AbstractWireProtocolTypeTest
                 .addInput(intervalType(), "'10:20:30.52' HOUR TO SECOND", value -> toPGInterval("10:20:30.520"))
                 .addInput(intervalType(), "'1-2' YEAR TO MONTH", value -> toPGInterval("1 year 2 mons"))
                 .addInput(intervalType(), "'1 5:30' DAY TO MINUTE", value -> toPGInterval("1 day 05:30:00"))
+                .addInput(intervalType(), null)
                 .executeSuite();
     }
 
@@ -483,7 +505,7 @@ public abstract class AbstractWireProtocolTypeTest
 
         private String literalInExplicitCast(WireProtocolTypeTest.Input<?> input)
         {
-            if (input.getInsertType().startsWith("decimal")) {
+            if (input.getInsertType().startsWith("decimal") && !input.isNullValue()) {
                 return format("CAST('%s' AS %s)", input.toLiteral(), input.getInsertType());
             }
             return format("CAST(%s AS %s)", input.toLiteral(), input.getInsertType());
@@ -523,6 +545,11 @@ public abstract class AbstractWireProtocolTypeTest
             public String toLiteral()
             {
                 return dataType.toLiteral(value);
+            }
+
+            public boolean isNullValue()
+            {
+                return value == null;
             }
         }
     }

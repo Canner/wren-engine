@@ -100,6 +100,9 @@ public class DuckdbRecordIterator
     private Object convertValue(PGType<?> pgType, Object value)
     {
         try {
+            if (value == null) {
+                return null;
+            }
             if (pgType instanceof TimestampType) {
                 return ((Timestamp) value).toLocalDateTime();
             }
