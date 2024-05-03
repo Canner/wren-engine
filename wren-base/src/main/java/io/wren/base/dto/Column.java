@@ -156,7 +156,7 @@ public class Column
                 .add("notNull", notNull)
                 .add("isCalculated", isCalculated)
                 .add("relationship", relationship)
-                .add("expression", relationship)
+                .add("expression", expression)
                 .add("properties", properties)
                 .toString();
     }
