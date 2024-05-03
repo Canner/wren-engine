@@ -143,7 +143,7 @@ public class MetricSqlRender
         boolean isMeasure = metric.getMeasure().stream().anyMatch(measure -> measure.getName().equals(column.getName()));
         Model baseModel = mdl.getModel(metric.getBaseObject()).orElseThrow(() -> new IllegalArgumentException(format("cannot find model %s", metric.getBaseObject())));
         Expression expression = parseExpression(column.getSqlExpression());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+        Set<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel).stream().collect(toImmutableSet());
 
         if (!relationshipInfos.isEmpty() && relationableBase.isPresent()) {
             Expression newExpression = (Expression) RelationshipRewriter.relationshipAware(relationshipInfos, relationableBase.get(), expression);
@@ -175,7 +175,7 @@ public class MetricSqlRender
             return;
         }
         Expression expression = parseExpression(column.getSqlExpression());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+        Set<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (!relationshipInfos.isEmpty()) {
             calculatedRequiredRelationshipInfos.add(new CalculatedFieldRelationshipInfo(column, relationshipInfos));
             // collect all required models in relationships
@@ -206,7 +206,7 @@ public class MetricSqlRender
 
         String requiredExpressions = relationshipInfos.stream()
                 .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
-                .flatMap(List::stream)
+                .flatMap(Set::stream)
                 .map(RelationshipRewriter::toDereferenceExpression)
                 .map(Expression::toString)
                 .distinct()
@@ -214,7 +214,7 @@ public class MetricSqlRender
 
         List<Relationship> requiredRelationships = relationshipInfos.stream()
                 .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
-                .flatMap(List::stream)
+                .flatMap(Set::stream)
                 .map(ExpressionRelationshipInfo::getRelationships)
                 .flatMap(List::stream)
                 .distinct()

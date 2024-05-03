@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.util.Objects.requireNonNull;
@@ -35,7 +36,7 @@ public class RelationshipRewriter
 {
     private final Map<QualifiedName, DereferenceExpression> replacements;
 
-    public static Node rewrite(List<ExpressionRelationshipInfo> relationshipInfos, Expression expression)
+    public static Node rewrite(Set<ExpressionRelationshipInfo> relationshipInfos, Expression expression)
     {
         requireNonNull(relationshipInfos);
         HashMap<QualifiedName, DereferenceExpression> replacements = new HashMap<>();
@@ -44,7 +45,7 @@ public class RelationshipRewriter
                 .process(expression);
     }
 
-    public static Node relationshipAware(List<ExpressionRelationshipInfo> relationshipInfos, String relationshipPrefix, Expression expression)
+    public static Node relationshipAware(Set<ExpressionRelationshipInfo> relationshipInfos, String relationshipPrefix, Expression expression)
     {
         requireNonNull(relationshipInfos);
         return new RelationshipRewriter(relationshipInfos.stream()

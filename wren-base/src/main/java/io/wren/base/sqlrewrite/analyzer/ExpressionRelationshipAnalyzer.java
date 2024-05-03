@@ -14,6 +14,7 @@
 
 package io.wren.base.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableSet;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -24,9 +25,11 @@ import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationship;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
@@ -45,7 +48,7 @@ public class ExpressionRelationshipAnalyzer
      * @param model the model that expression belongs to
      * @return ExpressionRelationshipInfo
      */
-    public static List<ExpressionRelationshipInfo> getToOneRelationships(Expression expression, WrenMDL mdl, Model model)
+    public static Set<ExpressionRelationshipInfo> getToOneRelationships(Expression expression, WrenMDL mdl, Model model)
     {
         RelationshipCollector collector = new RelationshipCollector(mdl, model, false);
         collector.process(expression);
@@ -60,7 +63,7 @@ public class ExpressionRelationshipAnalyzer
      * @param model the model that expression belongs to
      * @return ExpressionRelationshipInfo
      */
-    public static List<ExpressionRelationshipInfo> getRelationships(Expression expression, WrenMDL mdl, Model model)
+    public static Set<ExpressionRelationshipInfo> getRelationships(Expression expression, WrenMDL mdl, Model model)
     {
         RelationshipCollector collector = new RelationshipCollector(mdl, model, true);
         collector.process(expression);
@@ -73,7 +76,7 @@ public class ExpressionRelationshipAnalyzer
         private final WrenMDL wrenMDL;
         private final Model model;
         private final boolean allowToManyRelationship;
-        private final List<ExpressionRelationshipInfo> relationships = new ArrayList<>();
+        private final Set<ExpressionRelationshipInfo> relationships = new HashSet<>();
 
         public RelationshipCollector(WrenMDL wrenMDL, Model model, boolean allowToManyRelationship)
         {
@@ -82,9 +85,9 @@ public class ExpressionRelationshipAnalyzer
             this.allowToManyRelationship = allowToManyRelationship;
         }
 
-        public List<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
+        public Set<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
         {
-            return relationships;
+            return ImmutableSet.copyOf(relationships);
         }
 
         @Override

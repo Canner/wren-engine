@@ -81,10 +81,10 @@ public abstract class RelationableSqlRender
     public static class CalculatedFieldRelationshipInfo
     {
         private final Column column;
-        private final List<ExpressionRelationshipInfo> expressionRelationshipInfo;
+        private final Set<ExpressionRelationshipInfo> expressionRelationshipInfo;
         private final boolean isAggregated;
 
-        public CalculatedFieldRelationshipInfo(Column column, List<ExpressionRelationshipInfo> expressionRelationshipInfo)
+        public CalculatedFieldRelationshipInfo(Column column, Set<ExpressionRelationshipInfo> expressionRelationshipInfo)
         {
             this.column = requireNonNull(column);
             this.expressionRelationshipInfo = requireNonNull(expressionRelationshipInfo);
@@ -105,7 +105,7 @@ public abstract class RelationableSqlRender
             return column;
         }
 
-        public List<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
+        public Set<ExpressionRelationshipInfo> getExpressionRelationshipInfo()
         {
             return expressionRelationshipInfo;
         }

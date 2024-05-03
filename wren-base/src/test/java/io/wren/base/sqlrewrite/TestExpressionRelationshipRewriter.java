@@ -30,8 +30,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,6 +62,7 @@ public class TestExpressionRelationshipRewriter
     {
         return new Object[][] {
                 {"customer.custkey", "\"Customer\".\"custkey\"", List.of(ordersCustomer)},
+                {"customer.custkey + customer.custkey", "(\"Customer\".\"custkey\" + \"Customer\".\"custkey\")", List.of(ordersCustomer)},
                 {"customer.nation.name", "\"Nation\".\"name\"", List.of(ordersCustomer, customerNation)},
                 {"customer.nation.nationkey + 1", "(\"Nation\".\"nationkey\" + 1)", List.of(ordersCustomer, customerNation)},
                 {"concat('#', customer.nation.name)", "concat('#', \"Nation\".\"name\")", List.of(ordersCustomer, customerNation)},
@@ -72,7 +75,7 @@ public class TestExpressionRelationshipRewriter
     public void testGetToOneRelationshipsRewrite(String actual, String expected, List<Relationship> relationships)
     {
         Expression expression = parseExpression(actual);
-        List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, orders);
+        Set<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getToOneRelationships(expression, mdl, orders);
         assertThat(expressionRelationshipInfos.stream().map(ExpressionRelationshipInfo::getRelationships).flatMap(List::stream).collect(toImmutableList()))
                 .containsExactlyInAnyOrderElementsOf(relationships);
         assertThat(RelationshipRewriter.rewrite(expressionRelationshipInfos, expression).toString()).isEqualTo(expected);
@@ -83,6 +86,7 @@ public class TestExpressionRelationshipRewriter
     {
         return new Object[][] {
                 {"customer.custkey", "\"Customer\".\"custkey\"", List.of(Relationship.reverse(customerNation))},
+                {"customer.custkey + customer.custkey", "(\"Customer\".\"custkey\" + \"Customer\".\"custkey\")", List.of(Relationship.reverse(customerNation))},
                 {"customer.orders.totalprice", "\"Orders\".\"totalprice\"", List.of(Relationship.reverse(customerNation), Relationship.reverse(ordersCustomer))},
                 {"customer.orders.totalprice + 1", "(\"Orders\".\"totalprice\" + 1)", List.of(Relationship.reverse(customerNation), Relationship.reverse(ordersCustomer))},
                 {"sum(customer.custkey, customer.orders.orderkey)", "sum(\"Customer\".\"custkey\", \"Orders\".\"orderkey\")",
@@ -94,7 +98,7 @@ public class TestExpressionRelationshipRewriter
     public void testGetRelationshipsRewrite(String actual, String expected, List<Relationship> relationships)
     {
         Expression expression = parseExpression(actual);
-        List<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, nation);
+        Set<ExpressionRelationshipInfo> expressionRelationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, nation);
         assertThat(expressionRelationshipInfos.stream().map(ExpressionRelationshipInfo::getRelationships).flatMap(List::stream).collect(toImmutableList()))
                 .containsExactlyInAnyOrderElementsOf(relationships);
         assertThat(RelationshipRewriter.rewrite(expressionRelationshipInfos, expression).toString()).isEqualTo(expected);
@@ -131,19 +135,24 @@ public class TestExpressionRelationshipRewriter
     @Test
     public void testMetricMeasureRelationship()
     {
-        List<ExpressionRelationshipInfo> infos = ExpressionRelationshipAnalyzer.getRelationships(parseExpression("sum(customer.name)"), mdl, orders);
-        assertThat(infos)
-                .containsExactlyInAnyOrder(
-                        new ExpressionRelationshipInfo(
-                                QualifiedName.of("customer", "name"),
-                                List.of("customer"),
-                                List.of("name"),
-                                List.of(new RelationshipColumnInfo(
-                                        orders,
-                                        orders.getColumns().stream().filter(c -> c.getName().equals("customer")).findAny().orElseThrow(),
-                                        ordersCustomer)),
-                                ordersCustomer));
+        Set<ExpressionRelationshipInfo> infos = ExpressionRelationshipAnalyzer.getRelationships(parseExpression("sum(customer.name)"), mdl, orders).stream().collect(toImmutableSet());
 
+        ExpressionRelationshipInfo expected = new ExpressionRelationshipInfo(
+                QualifiedName.of("customer", "name"),
+                List.of("customer"),
+                List.of("name"),
+                List.of(new RelationshipColumnInfo(
+                        orders,
+                        orders.getColumns().stream().filter(c -> c.getName().equals("customer")).findAny().orElseThrow(),
+                        ordersCustomer)),
+                ordersCustomer);
+        assertThat(infos).containsExactlyInAnyOrder(expected);
+
+        assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())
+                .isEqualTo("sum(\"count_of_customer\".\"name\")");
+
+        infos = ExpressionRelationshipAnalyzer.getRelationships(parseExpression("sum(customer.name) + sum(customer.name)"), mdl, orders).stream().collect(toImmutableSet());
+        assertThat(infos).containsExactlyInAnyOrder(expected);
         assertThat(RelationshipRewriter.relationshipAware(infos, "count_of_customer", parseExpression("sum(customer.name)")).toString())
                 .isEqualTo("sum(\"count_of_customer\".\"name\")");
     }
