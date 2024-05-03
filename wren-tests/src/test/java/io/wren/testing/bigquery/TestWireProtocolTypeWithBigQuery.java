@@ -133,6 +133,7 @@ public class TestWireProtocolTypeWithBigQuery
     {
         createTypeTest()
                 .addInput(integerDataType(), 1_234_567_890, value -> (long) value)
+                .addInput(integerDataType(), null)
                 .executeSuite();
     }
 
@@ -143,6 +144,7 @@ public class TestWireProtocolTypeWithBigQuery
     {
         createTypeTest()
                 .addInput(smallintDataType(), (short) 32_456, value -> (long) value)
+                .addInput(smallintDataType(), null)
                 .executeSuite();
     }
 
@@ -153,6 +155,7 @@ public class TestWireProtocolTypeWithBigQuery
     {
         createTypeTest()
                 .addInput(realDataType(), 123.45f, value -> Double.valueOf(value.toString()))
+                .addInput(realDataType(), null)
                 .executeSuite();
     }
 
@@ -185,6 +188,7 @@ public class TestWireProtocolTypeWithBigQuery
                 .addInput(decimalDataType(38, 9), new BigDecimal("27182818284590452353602874713.526624977"))
                 .addInput(decimalDataType(39, 9), new BigDecimal("271828182845904523536028747130.526624977"))
                 .addInput(decimalDataType(38, 10), new BigDecimal("2718281828459045235360287471.3526624977"))
+                .addInput(decimalDataType(38, 10), null)
                 .executeSuite();
     }
 
@@ -193,6 +197,7 @@ public class TestWireProtocolTypeWithBigQuery
     public void testArray()
     {
         // basic types
+        // bigquery array can't contain null value. We don't need to test null array here.
         createTypeTest()
                 .addInput(arrayDataType(booleanDataType(), BOOL_ARRAY), asList(true, false))
                 .addInput(arrayDataType(smallintDataType(), INT2_ARRAY), asList((short) 1, (short) 2), value -> asList(1L, 2L))
