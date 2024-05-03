@@ -111,6 +111,14 @@ public class TestMetric
                                         Column.column("totalprice", WrenTypes.INTEGER, null, true, "sum(orders.totalprice)")),
                                 List.of(
                                         TimeGrain.timeGrain("orderdata", "orderdate", List.of(TimeUnit.DAY, TimeUnit.MONTH, TimeUnit.YEAR)))),
+                        Metric.metric("TotalpriceByCustomerYear", "Customer",
+                                List.of(
+                                        Column.column("name", WrenTypes.VARCHAR, null, true),
+                                        Column.column("orderdate", WrenTypes.DATE, null, true, "date_trunc('YEAR', orders.orderdate)")),
+                                List.of(
+                                        Column.column("totalprice", WrenTypes.INTEGER, null, true, "sum(orders.totalprice)")),
+                                List.of(
+                                        TimeGrain.timeGrain("orderdata", "orderdate", List.of(TimeUnit.DAY, TimeUnit.MONTH, TimeUnit.YEAR)))),
                         Metric.metric("TotalpriceByCustomerBaseOrders", "Orders",
                                 List.of(
                                         Column.column("name", WrenTypes.VARCHAR, null, true, "customer.name"),
@@ -119,6 +127,13 @@ public class TestMetric
                                         Column.column("totalprice", WrenTypes.INTEGER, null, true, "sum(totalprice)")),
                                 List.of(
                                         TimeGrain.timeGrain("orderdata", "orderdate", List.of(TimeUnit.DAY, TimeUnit.MONTH, TimeUnit.YEAR)))),
+                        Metric.metric("TotalpriceByCustomerBaseOrdersYear", "Orders",
+                                List.of(
+                                        Column.column("name", WrenTypes.VARCHAR, null, true, "customer.name"),
+                                        Column.column("orderdate", WrenTypes.DATE, null, true, "date_trunc('YEAR', orderdate)")),
+                                List.of(
+                                        Column.column("totalprice", WrenTypes.INTEGER, null, true, "sum(totalprice)")),
+                                List.of()),
                         Metric.metric("NumberCustomerByDate", "Orders",
                                 List.of(Column.column("orderdate", WrenTypes.DATE, null, true)),
                                 List.of(Column.column("count_of_customer", WrenTypes.INTEGER, null, true, "count(distinct customer.name)")),
@@ -360,6 +375,27 @@ public class TestMetric
         assertThat(query(rewrite("SELECT sum_count FROM CountOrders2 WHERE orderstatus = 'F'", true)))
                 .isEqualTo(query("WITH output AS (SELECT orderstatus, CAST(count(*) AS HUGEINT) AS sum_count FROM orders WHERE orderstatus = 'F' GROUP BY 1)\n" +
                         "SELECT sum_count FROM output"));
+    }
+
+    @Test
+    public void testInvokeFunctionInDimension()
+    {
+        assertThat(query(rewrite("SELECT name, orderdate, totalprice FROM TotalpriceByCustomerYear WHERE name = 'Customer#000001276' ORDER BY 1, 2", true)))
+                .isEqualTo(query("""
+                        SELECT name, date_trunc('YEAR', orderdate), sum(totalprice)
+                        FROM orders JOIN customer ON orders.custkey = customer.custkey
+                        WHERE name = 'Customer#000001276'
+                        GROUP BY 1, 2
+                        ORDER BY 1, 2
+                        """));
+        assertThat(query(rewrite("SELECT name, orderdate, totalprice FROM TotalpriceByCustomerBaseOrdersYear WHERE name = 'Customer#000001276' ORDER BY 1, 2", true)))
+                .isEqualTo(query("""
+                        SELECT name, date_trunc('YEAR', orderdate), sum(totalprice)
+                        FROM orders JOIN customer ON orders.custkey = customer.custkey
+                        WHERE name = 'Customer#000001276'
+                        GROUP BY 1, 2
+                        ORDER BY 1, 2
+                        """));
     }
 
     private String rewrite(String sql)

@@ -16,7 +16,6 @@ package io.wren.base.sqlrewrite;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import io.trino.sql.SqlFormatter;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.ExpressionRewriter;
@@ -41,6 +40,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static io.trino.sql.SqlFormatter.formatSql;
 import static io.wren.base.sqlrewrite.Utils.parseExpression;
 import static io.wren.base.sqlrewrite.Utils.parseQuery;
 import static java.lang.String.format;
@@ -151,21 +151,31 @@ public class MetricSqlRender
         }
 
         if (isMeasure) {
-            return format("%s AS \"%s\"", SqlFormatter.formatSql(ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
-            {
-                @Override
-                public Expression rewriteIdentifier(Identifier node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
-                {
-                    if (baseModel.getColumns().stream().anyMatch(c -> c.getName().equalsIgnoreCase(node.getValue()))) {
-                        return new DereferenceExpression(new Identifier(baseModel.getName(), true), new Identifier(node.getValue(), true));
-                    }
-                    return node;
-                }
-            }, Utils.parseExpression(column.getExpression()
-                    .orElseThrow(() -> new IllegalArgumentException("measure column must have expression"))))), column.getName());
+            return format("%s AS \"%s\"",
+                    awareModel(column.getExpression().orElseThrow(() -> new IllegalArgumentException("measure column must have expression")), baseModel), column.getName());
         }
 
-        return format("\"%s\".%s AS \"%s\"", relationable.getBaseObject(), column.getSqlExpression(), column.getName());
+        return format("%s AS \"%s\"", awareModel(column.getSqlExpression(), baseModel), column.getName());
+    }
+
+    private String awareModel(String expression, Model baseModel)
+    {
+        return formatSql(awareModel(parseExpression(expression), baseModel));
+    }
+
+    private Expression awareModel(Expression expression, Model baseModel)
+    {
+        return ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
+        {
+            @Override
+            public Expression rewriteIdentifier(Identifier node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
+            {
+                if (baseModel.getColumns().stream().anyMatch(c -> c.getName().equalsIgnoreCase(node.getValue()))) {
+                    return new DereferenceExpression(new Identifier(baseModel.getName(), true), new Identifier(node.getValue(), true));
+                }
+                return node;
+            }
+        }, expression);
     }
 
     @Override

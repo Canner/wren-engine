@@ -109,6 +109,20 @@ public class TestWrenWithDuckDB
             }
             assertThat(count).isEqualTo(100);
         }
+
+        try (Connection connection = createConnection()) {
+            PreparedStatement stmt = connection.prepareStatement("select customer, month, totalprice from CustomerMonthlyRevenue limit 100");
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
+            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
+            int count = 1;
+
+            while (resultSet.next()) {
+                count++;
+            }
+            assertThat(count).isEqualTo(100);
+        }
     }
 
     // TODO: support metric roll up relationship
