@@ -116,7 +116,7 @@ public class ModelSqlRender
     protected void collectRelationship(Column column, Model baseModel)
     {
         Expression expression = parseExpression(column.getSqlExpression());
-        List<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
+        Set<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
         if (column.isCalculated() && relationshipInfos.size() > 0) {
             if (!requiredFields.contains(column.getName())) {
                 return;
@@ -159,9 +159,9 @@ public class ModelSqlRender
     // only accept to-one relationship(s) in this method
     private List<SubQueryJoinInfo> getToOneRelationshipsQuery(Model baseModel, Collection<CalculatedFieldRelationshipInfo> relationshipInfos)
     {
-        List<CalculatedFieldRelationshipInfo> toOneRelationships = relationshipInfos.stream()
+        Set<CalculatedFieldRelationshipInfo> toOneRelationships = relationshipInfos.stream()
                 .filter(relationshipInfo -> !relationshipInfo.isAggregated())
-                .collect(toImmutableList());
+                .collect(toImmutableSet());
 
         if (toOneRelationships.isEmpty()) {
             return ImmutableList.of();
@@ -178,7 +178,7 @@ public class ModelSqlRender
 
         List<Relationship> requiredRelationships = toOneRelationships.stream()
                 .map(CalculatedFieldRelationshipInfo::getExpressionRelationshipInfo)
-                .flatMap(List::stream)
+                .flatMap(Set::stream)
                 .map(ExpressionRelationshipInfo::getRelationships)
                 .flatMap(List::stream)
                 .distinct()
