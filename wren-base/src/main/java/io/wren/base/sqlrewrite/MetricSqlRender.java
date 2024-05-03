@@ -193,7 +193,7 @@ public class MetricSqlRender
         }
         else {
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-            columnWithoutRelationships.put(column.getName(), column.getSqlExpression());
+            calculatedScopeSelectItems.put(column.getName(), column.getSqlExpression());
         }
     }
 
@@ -250,7 +250,7 @@ public class MetricSqlRender
                 .forEach(column -> collectRelationship(column, baseModel));
         addCountAllIfNeeded();
 
-        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
+        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(calculatedScopeSelectItems);
 
         String modelSubQuery = format("(SELECT %s FROM (%s) AS \"%s\") AS \"%s\"",
                 modelSubQuerySelectItemsExpression,

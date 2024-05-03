@@ -46,7 +46,7 @@ public abstract class RelationableSqlRender
     // It is used to compose join conditions in model sql.
     protected final List<CalculatedFieldRelationshipInfo> calculatedRequiredRelationshipInfos = new ArrayList<>();
     // key is column name in model, value is column expression, this map store columns not use relationships
-    protected final Map<String, String> columnWithoutRelationships = new LinkedHashMap<>();
+    protected final Map<String, String> calculatedScopeSelectItems = new LinkedHashMap<>();
 
     public RelationableSqlRender(Relationable relationable, WrenMDL mdl)
     {
