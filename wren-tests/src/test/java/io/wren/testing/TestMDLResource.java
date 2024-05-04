@@ -202,13 +202,19 @@ public class TestMDLResource
                    FROM
                      (
                       SELECT
-                        o_orderkey "orderkey"
-                      , o_custkey "custkey"
+                        "Orders"."orderkey" "orderkey"
+                      , "Orders"."custkey" "custkey"
                       FROM
                         (
-                         SELECT *
+                         SELECT
+                           o_orderkey "orderkey"
+                         , o_custkey "custkey"
                          FROM
-                           tpch.orders
+                           (
+                            SELECT *
+                            FROM
+                              tpch.orders
+                         )  "Orders"
                       )  "Orders"
                    )  "Orders"
                 )\s
@@ -229,13 +235,19 @@ public class TestMDLResource
                    FROM
                      (
                       SELECT
-                        o_orderkey "orderkey"
-                      , o_custkey "custkey"
+                        "Orders"."orderkey" "orderkey"
+                      , "Orders"."custkey" "custkey"
                       FROM
                         (
-                         SELECT *
+                         SELECT
+                           o_orderkey "orderkey"
+                         , o_custkey "custkey"
                          FROM
-                           tpch.orders
+                           (
+                            SELECT *
+                            FROM
+                              tpch.orders
+                         )  "Orders"
                       )  "Orders"
                    )  "Orders"
                 )\s
@@ -256,13 +268,19 @@ public class TestMDLResource
                    FROM
                      (
                       SELECT
-                        c_custkey "custkey"
-                      , c_name "name"
+                        "Customer"."custkey" "custkey"
+                      , "Customer"."name" "name"
                       FROM
                         (
-                         SELECT *
+                         SELECT
+                           c_custkey "custkey"
+                         , c_name "name"
                          FROM
-                           tpch.customer
+                           (
+                            SELECT *
+                            FROM
+                              tpch.customer
+                         )  "Customer"
                       )  "Customer"
                    )  "Customer"
                 )\s
@@ -274,13 +292,19 @@ public class TestMDLResource
                    FROM
                      ((
                       SELECT
-                        o_orderkey "orderkey"
-                      , o_custkey "custkey"
+                        "Orders"."orderkey" "orderkey"
+                      , "Orders"."custkey" "custkey"
                       FROM
                         (
-                         SELECT *
+                         SELECT
+                           o_orderkey "orderkey"
+                         , o_custkey "custkey"
                          FROM
-                           tpch.orders
+                           (
+                            SELECT *
+                            FROM
+                              tpch.orders
+                         )  "Orders"
                       )  "Orders"
                    )  "Orders"
                    LEFT JOIN (
