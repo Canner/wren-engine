@@ -30,7 +30,7 @@ public abstract class AbstractWireProtocolTestWithPostgres
             .setCatalog("tpch")
             .setSchema("tpch")
             .build();
-    private TestingPostgreSqlServer testingPostgreSqlServer;
+    protected TestingPostgreSqlServer testingPostgreSqlServer;
 
     @Override
     protected TestingWrenServer createWrenServer()
@@ -43,6 +43,7 @@ public abstract class AbstractWireProtocolTestWithPostgres
                 .put("wren.datasource.type", "POSTGRES");
 
         try {
+            prepareData();
             Path dir = Files.createTempDirectory(getWrenDirectory());
             if (getWrenMDLPath().isPresent()) {
                 Files.copy(Path.of(getWrenMDLPath().get()), dir.resolve("mdl.json"));
@@ -59,6 +60,8 @@ public abstract class AbstractWireProtocolTestWithPostgres
                 .setRequiredConfigs(properties.build())
                 .build();
     }
+
+    protected void prepareData() {}
 
     @Override
     protected String getDefaultCatalog()
