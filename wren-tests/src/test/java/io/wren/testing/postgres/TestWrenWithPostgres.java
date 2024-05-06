@@ -54,6 +54,12 @@ public class TestWrenWithPostgres
     @Override
     protected void prepareData()
     {
+        String customer = requireNonNull(getClass().getClassLoader().getResource("tpch/data/customer.parquet")).getPath();
+        injectTableToPostgres(List.of(new TestingData("customer", customer)));
+    }
+
+    private void injectTableToPostgres(List<TestingData> dataList)
+    {
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         DuckDBSettingSQL duckDBSettingSQL = new DuckDBSettingSQL();
 
@@ -75,8 +81,9 @@ public class TestWrenWithPostgres
                 .setDuckDBSettingSQL(duckDBSettingSQL)
                 .build();
         try {
-            String customer = requireNonNull(getClass().getClassLoader().getResource("tpch/data/customer.parquet")).getPath();
-            duckdbClient.executeDDL("create table db.tpch.customer as select * from '" + customer + "'");
+            for (TestingData data : dataList) {
+                duckdbClient.executeDDL(format("create table db.tpch.%s as select * from '%s'", data.tableName, data.resourcePath));
+            }
         }
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -85,6 +92,8 @@ public class TestWrenWithPostgres
             duckdbClient.close();
         }
     }
+
+    private record TestingData(String tableName, String resourcePath) {}
 
     @Test
     public void testCalculatedScope()
