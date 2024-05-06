@@ -37,12 +37,6 @@
         </dependency>
 
         <dependency>
-            <groupId>io.wren</groupId>
-            <artifactId>wren-validation</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.jgrapht</groupId>
             <artifactId>jgrapht-core</artifactId>
             <scope>runtime</scope>
