@@ -116,6 +116,11 @@ public class TestingPostgreSqlServer
         return PASSWORD;
     }
 
+    public String getDatabase()
+    {
+        return DATABASE;
+    }
+
     public Properties getProperties()
     {
         Properties properties = new Properties();
@@ -128,6 +133,16 @@ public class TestingPostgreSqlServer
     public String getJdbcUrl()
     {
         return String.format("jdbc:postgresql://%s:%s/%s", dockerContainer.getContainerIpAddress(), dockerContainer.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT), DATABASE);
+    }
+
+    public String getHost()
+    {
+        return dockerContainer.getContainerIpAddress();
+    }
+
+    public String getPort()
+    {
+        return String.valueOf(dockerContainer.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT));
     }
 
     @Override

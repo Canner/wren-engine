@@ -117,33 +117,40 @@ public class ModelSqlRender
     {
         Expression expression = parseExpression(column.getSqlExpression());
         Set<ExpressionRelationshipInfo> relationshipInfos = ExpressionRelationshipAnalyzer.getRelationships(expression, mdl, baseModel);
-        if (column.isCalculated() && relationshipInfos.size() > 0) {
-            if (!requiredFields.contains(column.getName())) {
-                return;
-            }
-            CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo = new CalculatedFieldRelationshipInfo(column, relationshipInfos);
-            calculatedRequiredRelationshipInfos.add(calculatedFieldRelationshipInfo);
-            // Collect all required models in relationships
-            requiredObjects.addAll(relationshipInfos.stream()
-                    .map(ExpressionRelationshipInfo::getRelationships)
-                    .flatMap(List::stream)
-                    .map(Relationship::getModels)
-                    .flatMap(List::stream)
-                    .filter(modelName -> !modelName.equals(baseModel.getName()))
-                    .collect(toSet()));
+        if (column.isCalculated()) {
+            if (!relationshipInfos.isEmpty()) {
+                if (!requiredFields.contains(column.getName())) {
+                    return;
+                }
+                CalculatedFieldRelationshipInfo calculatedFieldRelationshipInfo = new CalculatedFieldRelationshipInfo(column, relationshipInfos);
+                calculatedRequiredRelationshipInfos.add(calculatedFieldRelationshipInfo);
+                // Collect all required models in relationships
+                requiredObjects.addAll(relationshipInfos.stream()
+                        .map(ExpressionRelationshipInfo::getRelationships)
+                        .flatMap(List::stream)
+                        .map(Relationship::getModels)
+                        .flatMap(List::stream)
+                        .filter(modelName -> !modelName.equals(baseModel.getName()))
+                        .collect(toSet()));
 
-            // Add select items based on the type of column
-            if (calculatedFieldRelationshipInfo.isAggregated()) {
-                selectItems.add(getSelectItemsExpression(column, Optional.of(calculatedFieldRelationshipInfo.getAlias())));
+                // Add select items based on the type of column
+                if (calculatedFieldRelationshipInfo.isAggregated()) {
+                    selectItems.add(getSelectItemsExpression(column, Optional.of(calculatedFieldRelationshipInfo.getAlias())));
+                }
+                else {
+                    selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
+                }
             }
             else {
-                selectItems.add(getSelectItemsExpression(column, Optional.of(getRelationableAlias(baseModel.getName()))));
+                // calculated field without relationship
+                selectItems.add(getSelectItemsExpression(column, Optional.empty()));
+                calculatedScopeSelectItems.put(column.getName(), column.getSqlExpression());
             }
         }
         else {
-            // No relationships, add select item with no alias
+            // normal column got from base model sql
             selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-            columnWithoutRelationships.put(column.getName(), column.getSqlExpression());
+            calculatedScopeSelectItems.put(column.getName(), format("\"%s\".\"%s\"", baseModel.getName(), column.getName()));
         }
     }
 
@@ -209,32 +216,35 @@ public class ModelSqlRender
         relationable.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isEmpty())
                 .forEach(column -> {
+                    // normal column got from base model sql
                     selectItems.add(getSelectItemsExpression(column, Optional.empty()));
-                    columnWithoutRelationships.put(column.getName(), format("\"%s\".\"%s\"", relationable.getName(), column.getName()));
+                    calculatedScopeSelectItems.put(column.getName(), format("\"%s\".\"%s\"", baseModel.getName(), column.getName()));
                 });
 
-        relationable.getColumns().stream()
+        baseModel.getColumns().stream()
                 .filter(column -> column.getRelationship().isEmpty() && column.getExpression().isPresent())
                 .forEach(column -> collectRelationship(column, baseModel));
-        String modelSubQuerySelectItemsExpression = getModelSubQuerySelectItemsExpression(columnWithoutRelationships);
-
-        String modelSubQuery = format("(SELECT %s FROM %s AS \"%s\") AS \"%s\"",
-                modelSubQuerySelectItemsExpression,
-                refSql,
+        String baseModelSql = getBaseModelSql(baseModel);
+        String calculatedFieldsWithoutRelationship = getModelSubQuerySelectItemsExpression(calculatedScopeSelectItems);
+        String calculatedSubQuery = format("""
+                        (SELECT %s FROM (%s) AS "%s") AS "%s"
+                        """,
+                calculatedFieldsWithoutRelationship,
+                baseModelSql,
                 baseModel.getName(),
                 baseModel.getName());
 
-        StringBuilder tableJoinsSql = new StringBuilder(modelSubQuery);
+        StringBuilder tableJoinsSql = new StringBuilder(calculatedSubQuery);
         if (!calculatedRequiredRelationshipInfos.isEmpty()) {
             tableJoinsSql.append(
                     getCalculatedSubQuery(baseModel, calculatedRequiredRelationshipInfos).stream()
-                            .map(info -> format("\nLEFT JOIN (%s) AS \"%s\" ON %s", info.getSql(), info.getSubqueryAlias(), info.getJoinCriteria()))
+                            .map(info -> format("LEFT JOIN (%s) AS \"%s\" ON %s", info.getSql(), info.getSubqueryAlias(), info.getJoinCriteria()))
                             .collect(joining("")));
         }
         tableJoinsSql.append("\n");
 
         return new RelationInfo(
-                relationable,
+                baseModel,
                 requiredObjects,
                 parseQuery(getQuerySql(join(", ", selectItems), tableJoinsSql.toString())));
     }
