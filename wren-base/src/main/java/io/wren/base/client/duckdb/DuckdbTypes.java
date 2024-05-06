@@ -18,14 +18,17 @@ import com.google.common.collect.ImmutableMap;
 import io.wren.base.WrenException;
 import io.wren.base.type.BigIntType;
 import io.wren.base.type.BooleanType;
+import io.wren.base.type.BpCharType;
 import io.wren.base.type.ByteaType;
 import io.wren.base.type.CharType;
 import io.wren.base.type.DateType;
 import io.wren.base.type.DoubleType;
+import io.wren.base.type.InetType;
 import io.wren.base.type.IntegerType;
 import io.wren.base.type.IntervalType;
 import io.wren.base.type.JsonType;
 import io.wren.base.type.NumericType;
+import io.wren.base.type.OidType;
 import io.wren.base.type.PGType;
 import io.wren.base.type.PGTypes;
 import io.wren.base.type.RealType;
@@ -33,6 +36,7 @@ import io.wren.base.type.SmallIntType;
 import io.wren.base.type.TimestampType;
 import io.wren.base.type.TimestampWithTimeZoneType;
 import io.wren.base.type.TinyIntType;
+import io.wren.base.type.UuidType;
 import io.wren.base.type.VarcharType;
 
 import java.sql.ResultSetMetaData;
@@ -68,6 +72,7 @@ public final class DuckdbTypes
     public static final DuckdbType TIMESTAMP_WITH_TIMEZONE = new DuckdbType(Types.TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIMEZONE");
     public static final DuckdbType VARCHAR = new DuckdbType(Types.VARCHAR, "VARCHAR");
     public static final DuckdbType JSON = new DuckdbType(Types.STRUCT, "JSON");
+    public static final DuckdbType UUID = new DuckdbType(Types.JAVA_OBJECT, "UUID");
 
     private static final Map<String, DuckdbType> duckdbTypes = ImmutableMap.<String, DuckdbType>builder()
             .put(BOOLEAN.getName(), BOOLEAN)
@@ -89,6 +94,7 @@ public final class DuckdbTypes
             .put(VARCHAR.getName(), VARCHAR)
             .put(JSON.getName(), JSON)
             .put(HUGEINT.getName(), HUGEINT)
+            .put(UUID.getName(), UUID)
             .build();
 
     private static final Map<Integer, PGType<?>> duckdbTypeToPgTypeMap = ImmutableMap.<Integer, PGType<?>>builder()
@@ -108,6 +114,7 @@ public final class DuckdbTypes
             .put(JSON.getJdbcType(), JsonType.JSON)
             .build();
 
+    // TODO: RECORD, HSTORE
     private static final Map<PGType<?>, DuckdbType> pgTypeToDuckdbTypeMap = ImmutableMap.<PGType<?>, DuckdbType>builder()
             .put(BooleanType.BOOLEAN, BOOLEAN)
             .put(ByteaType.BYTEA, BLOB)
@@ -119,12 +126,18 @@ public final class DuckdbTypes
             .put(DoubleType.DOUBLE, DOUBLE)
             .put(NumericType.NUMERIC, DECIMAL)
             .put(VarcharType.VARCHAR, VARCHAR)
+            .put(VarcharType.TextType.TEXT, VARCHAR)
+            .put(VarcharType.NameType.NAME, VARCHAR)
             .put(CharType.CHAR, VARCHAR)
             .put(DateType.DATE, DATE)
             .put(TimestampType.TIMESTAMP, TIMESTAMP)
             .put(TimestampWithTimeZoneType.TIMESTAMP_WITH_TIMEZONE, TIMESTAMP_WITH_TIMEZONE)
             .put(IntervalType.INTERVAL, INTERVAL)
             .put(JsonType.JSON, JSON)
+            .put(UuidType.UUID, UUID)
+            .put(OidType.OID_INSTANCE, BIGINT)
+            .put(InetType.INET, VARCHAR)
+            .put(BpCharType.BPCHAR, VARCHAR)
             .build();
 
     /**
@@ -177,13 +190,13 @@ public final class DuckdbTypes
     public static PGType<?> toPGType(int type)
     {
         return Optional.ofNullable(duckdbTypeToPgTypeMap.get(type))
-                .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "Unsupported Type: " + type));
+                .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "DuckDB unsupported Type: " + type));
     }
 
     public static DuckdbType toDuckdbType(PGType<?> type)
     {
         return Optional.ofNullable(pgTypeToDuckdbTypeMap.get(type))
-                .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "Unsupported Type: " + type));
+                .orElseThrow(() -> new WrenException(NOT_SUPPORTED, "DuckDB unsupported Type: " + type));
     }
 
     public static List<String> getDuckDBTypeNames()
