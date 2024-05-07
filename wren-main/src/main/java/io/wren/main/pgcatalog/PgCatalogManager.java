@@ -26,6 +26,7 @@ import io.wren.main.WrenMetastore;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.pgcatalog.builder.PgFunctionBuilderManager;
 import io.wren.main.pgcatalog.builder.PgMetastoreFunctionBuilder;
+import io.wren.main.pgcatalog.exception.DeployException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -70,6 +71,7 @@ public class PgCatalogManager
     }
 
     public void initPgCatalog()
+            throws DeployException
     {
         if (!connector.isPgCompatible()) {
             createOrReplaceSchema(pgCatalogName);
@@ -94,7 +96,7 @@ public class PgCatalogManager
 
     public void dropSchema(String name)
     {
-        pgMetastore.directDDL(format("DROP SCHEMA IF EXISTS %s CASCADE;", name));
+        pgMetastore.directDDL(format("DROP SCHEMA IF EXISTS \"%s\" CASCADE;", name));
     }
 
     private void createOrReplaceSchema(String name)
@@ -114,13 +116,14 @@ public class PgCatalogManager
     }
 
     public void syncPgMetastore()
+            throws DeployException
     {
         try {
             WrenMDL mdl = wrenMetastore.getAnalyzedMDL().getWrenMDL();
             StringBuilder sb = new StringBuilder();
             if (StringUtils.isNotEmpty(mdl.getSchema())) {
                 sb.append(format("DROP SCHEMA IF EXISTS \"%s\" CASCADE;\n", mdl.getSchema()));
-                sb.append("CREATE SCHEMA IF NOT EXISTS ").append(mdl.getSchema()).append(";\n");
+                sb.append(format("CREATE SCHEMA IF NOT EXISTS \"%s\";\n", mdl.getSchema()));
             }
             mdl.listModels().forEach(model -> {
                 String cols = model.getColumns().stream()
@@ -169,6 +172,7 @@ public class PgCatalogManager
         catch (Exception e) {
             // won't throw exception to avoid the sever start failed.
             LOG.error(e, "Failed to sync PG Metastore");
+            throw new DeployException("Failed to sync PG Metastore", e);
         }
     }
 

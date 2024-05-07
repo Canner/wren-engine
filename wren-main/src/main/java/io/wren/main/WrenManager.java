@@ -23,6 +23,7 @@ import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
 import io.wren.cache.CacheManager;
 import io.wren.main.pgcatalog.PgCatalogManager;
+import io.wren.main.pgcatalog.exception.DeployException;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +38,7 @@ import static io.wren.base.Utils.checkArgument;
 import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
+import static io.wren.base.metadata.StandardErrorCode.GENERIC_USER_ERROR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -79,7 +81,7 @@ public class WrenManager
     }
 
     private void deployWrenMDLFromDir(File[] mdlFiles)
-            throws IOException
+            throws IOException, DeployException
     {
         List<File> mdls = Arrays.stream(mdlFiles)
                 .filter(file -> file.getName().endsWith(".json"))
@@ -92,7 +94,7 @@ public class WrenManager
     }
 
     private void deployWrenMDLFromFile(String version)
-            throws IOException
+            throws IOException, DeployException
     {
         String json = Files.readString(wrenMDLFile.toPath());
         wrenMetastore.setWrenMDL(WrenMDL.fromManifest(MANIFEST_JSON_CODEC.fromJson(json)), version);
@@ -118,9 +120,14 @@ public class WrenManager
             LOG.error(e, "Failed to archive WrenMDL file");
             throw new WrenException(GENERIC_INTERNAL_ERROR, e);
         }
+        catch (DeployException e) {
+            LOG.error(e, "Failed to deploy WrenMDL");
+            throw new WrenException(GENERIC_USER_ERROR, e);
+        }
     }
 
     private void deploy()
+            throws DeployException
     {
         cacheManager.createTask(getAnalyzedMDL());
         pgCatalogManager.initPgCatalog();

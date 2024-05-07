@@ -42,6 +42,7 @@ public final class PGTypes
 
     static {
         TYPE_TABLE.put(BOOLEAN.oid(), BOOLEAN);
+        TYPE_TABLE.put(TinyIntType.TINYINT.oid(), TinyIntType.TINYINT);
         TYPE_TABLE.put(SmallIntType.SMALLINT.oid(), SmallIntType.SMALLINT);
         TYPE_TABLE.put(IntegerType.INTEGER.oid(), IntegerType.INTEGER);
         TYPE_TABLE.put(BigIntType.BIGINT.oid(), BigIntType.BIGINT);
@@ -90,6 +91,8 @@ public final class PGTypes
         TYPE_NAME_TABLE.put("INTEGER", IntegerType.INTEGER);
         TYPE_NAME_TABLE.put("SMALLINT", SmallIntType.SMALLINT);
         TYPE_NAME_TABLE.put("BIGINT", BigIntType.BIGINT);
+        TYPE_NAME_TABLE.put("STRING", VarcharType.VARCHAR);
+        TYPE_NAME_TABLE.put("DECIMAL", NumericType.NUMERIC);
     }
 
     public static Iterable<PGType<?>> pgTypes()

@@ -17,6 +17,8 @@ package io.wren.testing.duckdb;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.inject.Key;
+import io.wren.base.WrenMDL;
+import io.wren.base.dto.Manifest;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.testing.AbstractWireProtocolTest;
 import io.wren.testing.TestingWrenServer;
@@ -46,6 +48,10 @@ public abstract class AbstractWireProtocolTestWithDuckDB
         Path dir = Files.createTempDirectory(getWrenDirectory());
         if (getWrenMDLPath().isPresent()) {
             Files.copy(Path.of(getWrenMDLPath().get()), dir.resolve("mdl.json"));
+        }
+        else {
+            Files.write(dir.resolve("manifest.json"),
+                    Manifest.MANIFEST_JSON_CODEC.toJsonBytes(getManifest().orElse(WrenMDL.EMPTY.getManifest())));
         }
         propBuilder.put("wren.directory", dir.toString());
 
@@ -79,9 +85,9 @@ public abstract class AbstractWireProtocolTestWithDuckDB
         metadata.reload();
     }
 
-    protected Optional<String> getWrenMDLPath()
+    protected Optional<Manifest> getManifest()
     {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+        return Optional.empty();
     }
 
     @Override

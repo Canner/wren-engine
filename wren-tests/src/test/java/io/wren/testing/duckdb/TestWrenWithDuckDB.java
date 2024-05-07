@@ -20,7 +20,9 @@ import org.testng.annotations.Test;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Optional;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +30,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestWrenWithDuckDB
         extends AbstractWireProtocolTestWithDuckDB
 {
+    @Override
+    protected Optional<String> getWrenMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+    }
+
     @DataProvider
     public Object[][] queryModel()
     {
