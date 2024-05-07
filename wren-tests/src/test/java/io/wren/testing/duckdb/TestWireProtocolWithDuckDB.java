@@ -987,7 +987,7 @@ public class TestWireProtocolWithDuckDB
                 // TODO: Support timestamptz
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
-                {"bytea", "test1" .getBytes(UTF_8)},
+                {"bytea", "test1".getBytes(UTF_8)},
                 // TODO: Support interval
                 // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
                 // TODO: Wait DuckDB support array type
