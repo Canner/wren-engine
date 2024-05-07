@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.wren.base.config.ConfigManager.ConfigEntry.configEntry;
 import static io.wren.base.config.PostgresConfig.POSTGRES_JDBC_URL;
@@ -31,6 +32,7 @@ import static io.wren.base.config.PostgresConfig.POSTGRES_USER;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.DataSourceType.POSTGRES;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @Test(singleThreaded = true)
@@ -38,6 +40,12 @@ public class TestDeployDuckDBRuntime
         extends AbstractWireProtocolTestWithDuckDB
 {
     TestingPostgreSqlServer testingPostgreSqlServer;
+
+    @Override
+    protected Optional<String> getWrenMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+    }
 
     @Override
     protected Map<String, String> properties()

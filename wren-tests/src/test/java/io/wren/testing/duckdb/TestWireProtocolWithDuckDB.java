@@ -37,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -46,12 +47,19 @@ import static io.wren.testing.TestingWireProtocolClient.DescribeType.PORTAL;
 import static io.wren.testing.TestingWireProtocolClient.DescribeType.STATEMENT;
 import static io.wren.testing.TestingWireProtocolClient.Parameter.textParameter;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestWireProtocolWithDuckDB
         extends AbstractWireProtocolTestWithDuckDB
 {
+    @Override
+    protected Optional<String> getWrenMDLPath()
+    {
+        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+    }
+
     @Test
     public void testSimpleQuery()
             throws IOException
@@ -979,7 +987,7 @@ public class TestWireProtocolWithDuckDB
                 // TODO: Support timestamptz
                 // {"timestamptz", ZonedDateTime.of(LocalDateTime.of(1900, 1, 3, 12, 10, 16, 123000000), ZoneId.of("America/Los_Angeles"))},
                 {"json", "{\"test\":3, \"test2\":4}"},
-                {"bytea", "test1".getBytes(UTF_8)},
+                {"bytea", "test1" .getBytes(UTF_8)},
                 // TODO: Support interval
                 // {"interval", new PGInterval(1, 5, -3, 7, 55, 20)},
                 // TODO: Wait DuckDB support array type
