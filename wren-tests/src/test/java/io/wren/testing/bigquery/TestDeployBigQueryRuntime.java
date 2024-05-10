@@ -50,6 +50,7 @@ public class TestDeployBigQueryRuntime
                 Files.write(dir.resolve("manifest.json"), Manifest.MANIFEST_JSON_CODEC.toJsonBytes(DEFAULT_MANIFEST));
             }
             properties.put("wren.directory", dir.toString());
+            properties.put("pg-wire-protocol.enabled", "true");
         }
         catch (Exception ex) {
             throw new RuntimeException(ex);

@@ -45,7 +45,8 @@ public class TestDynamicFields
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("wren.datasource.type", "bigquery")
-                .put("wren.experimental-enable-dynamic-fields", "true");
+                .put("wren.experimental-enable-dynamic-fields", "true")
+                .put("pg-wire-protocol.enabled", "true");
 
         try {
             Path dir = Files.createTempDirectory(getWrenDirectory());

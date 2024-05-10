@@ -54,6 +54,7 @@ public abstract class AbstractWireProtocolTestWithDuckDB
                     Manifest.MANIFEST_JSON_CODEC.toJsonBytes(getManifest().orElse(WrenMDL.EMPTY.getManifest())));
         }
         propBuilder.put("wren.directory", dir.toString());
+        propBuilder.put("pg-wire-protocol.enabled", "true");
 
         Map<String, String> properties = new HashMap<>(propBuilder.build());
         properties.putAll(properties());

@@ -92,7 +92,8 @@ public abstract class AbstractCacheTest
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("duckdb.storage.access-key", getenv("TEST_DUCKDB_STORAGE_ACCESS_KEY"))
                 .put("duckdb.storage.secret-key", getenv("TEST_DUCKDB_STORAGE_SECRET_KEY"))
-                .put("wren.datasource.type", "bigquery");
+                .put("wren.datasource.type", "bigquery")
+                .put("pg-wire-protocol.enabled", "true");
 
         return properties;
     }

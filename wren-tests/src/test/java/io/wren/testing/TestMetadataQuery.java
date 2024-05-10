@@ -79,7 +79,8 @@ public class TestMetadataQuery
         }
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("wren.datasource.type", "DUCKDB")
-                .put("wren.directory", dir.toString());
+                .put("wren.directory", dir.toString())
+                .put("pg-wire-protocol.enabled", "true");
 
         return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())
