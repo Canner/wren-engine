@@ -29,6 +29,7 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.cache.CacheModule;
 import io.wren.main.WrenModule;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
@@ -53,6 +54,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
 public class TestingWrenServer
@@ -85,13 +87,13 @@ public class TestingWrenServer
                 new JaxrsModule(),
                 new EventModule(),
                 new MainModule(),
-                new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
                 new PostgresConnectorModule(),
                 new DuckDBConnectorModule(),
                 new SnowflakeConnectorModule(),
                 new WrenModule(),
-                new CacheModule(),
+                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new CacheModule()),
+                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new PostgresWireProtocolModule(new EmptyTlsDataProvider())),
                 new WebModule(),
                 new SQLGlotModule()));
 

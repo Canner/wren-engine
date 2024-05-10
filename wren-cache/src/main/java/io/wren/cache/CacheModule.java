@@ -24,7 +24,7 @@ public class CacheModule
     @Override
     protected void setup(Binder binder)
     {
-        binder.bind(CacheManager.class).in(Scopes.SINGLETON);
+        binder.bind(CacheManager.class).to(CacheManagerImpl.class).in(Scopes.SINGLETON);
         binder.bind(CacheTaskManager.class).in(Scopes.SINGLETON);
         binder.bind(EventLogger.class).to(Log4jEventLogger.class).in(Scopes.SINGLETON);
         binder.bind(CachedTableMapping.class).to(DefaultCachedTableMapping.class).in(Scopes.SINGLETON);
