@@ -72,7 +72,8 @@ public class TestConfigResource
 
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString())
-                .put(WREN_DATASOURCE_TYPE, DUCKDB.name());
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
+                .put("pg-wire-protocol.enabled", "true");
 
         return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())

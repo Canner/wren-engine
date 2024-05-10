@@ -60,8 +60,7 @@ public class TestDuckdbRetryCacheTask
     {
         return ImmutableMap.<String, String>builder()
                 .putAll(super.getProperties().build())
-                .put("duckdb.max-cache-table-size-ratio", "0")
-                .put("pg-wire-protocol.enabled", "true");
+                .put("duckdb.max-cache-table-size-ratio", "0");
     }
 
     @Test
