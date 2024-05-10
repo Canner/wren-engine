@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "ibis-server"
+version = "0.1.0"
+description = ""
+authors = ["Grieve <grieve54706@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "0.110.0"
+pydantic = "2.6.4"
+uvicorn = {extras = ["standard"], version = "0.29.0"}
+ibis-framework = {extras = ["bigquery", "postgres", "snowflake"], version = "9.0.0"}
+google-auth = "2.29.0"
+pytest = "8.2.0"
+httpx = "0.27.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
