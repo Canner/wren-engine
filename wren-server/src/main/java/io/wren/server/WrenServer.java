@@ -21,6 +21,7 @@ import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.cache.CacheModule;
 import io.wren.main.WrenModule;
 import io.wren.main.server.Server;
@@ -33,6 +34,8 @@ import io.wren.server.module.PostgresWireProtocolModule;
 import io.wren.server.module.SQLGlotModule;
 import io.wren.server.module.SnowflakeConnectorModule;
 import io.wren.server.module.WebModule;
+
+import static io.airlift.configuration.ConditionalModule.conditionalModule;
 
 public class WrenServer
         extends Server
@@ -52,13 +55,13 @@ public class WrenServer
                 new JaxrsModule(),
                 new EventModule(),
                 new MainModule(),
-                new PostgresWireProtocolModule(new EmptyTlsDataProvider()),
                 new BigQueryConnectorModule(),
                 new PostgresConnectorModule(),
                 new DuckDBConnectorModule(),
                 new SnowflakeConnectorModule(),
                 new WrenModule(),
-                new CacheModule(),
+                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new CacheModule()),
+                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new PostgresWireProtocolModule(new EmptyTlsDataProvider())),
                 new WebModule(),
                 new SQLGlotModule());
     }

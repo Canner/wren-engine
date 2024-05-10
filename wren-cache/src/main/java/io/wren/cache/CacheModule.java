@@ -17,10 +17,6 @@ package io.wren.cache;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.wren.base.client.duckdb.DuckDBConfig;
-import io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig;
-
-import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class CacheModule
         extends AbstractConfigurationAwareModule
@@ -28,8 +24,6 @@ public class CacheModule
     @Override
     protected void setup(Binder binder)
     {
-        configBinder(binder).bindConfig(DuckdbS3StyleStorageConfig.class);
-        configBinder(binder).bindConfig(DuckDBConfig.class);
         binder.bind(CacheManager.class).in(Scopes.SINGLETON);
         binder.bind(CacheTaskManager.class).in(Scopes.SINGLETON);
         binder.bind(EventLogger.class).to(Log4jEventLogger.class).in(Scopes.SINGLETON);

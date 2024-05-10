@@ -17,6 +17,7 @@ package io.wren.server.module;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
@@ -30,6 +31,7 @@ public class DuckDBConnectorModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(DuckDBConnectorConfig.class);
+        configBinder(binder).bindConfig(DuckDBConfig.class);
         binder.bind(DuckDBSqlConverter.class).in(Scopes.SINGLETON);
         binder.bind(DuckDBMetadata.class).in(Scopes.SINGLETON);
     }

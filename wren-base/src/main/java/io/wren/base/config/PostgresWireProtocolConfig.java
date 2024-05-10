@@ -20,6 +20,7 @@ import java.io.File;
 
 public class PostgresWireProtocolConfig
 {
+    public static final String PG_WIRE_PROTOCOL_ENABLED = "pg-wire-protocol.enabled";
     public static final String PG_WIRE_PROTOCOL_SSL_ENABLED = "pg-wire-protocol.ssl.enabled";
     public static final String PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT = "pg-wire-protocol.netty.thread.count";
     public static final String PG_WIRE_PROTOCOL_AUTH_FILE = "pg-wire-protocol.auth.file";
@@ -29,6 +30,7 @@ public class PostgresWireProtocolConfig
     private boolean sslEnable;
     private int nettyThreadCount;
     private File authFile = new File("etc/accounts");
+    private boolean pgWireProtocolEnabled;
 
     @NotNull
     public String getPort()
@@ -79,5 +81,16 @@ public class PostgresWireProtocolConfig
     {
         this.authFile = authFile;
         return this;
+    }
+
+    @Config(PG_WIRE_PROTOCOL_ENABLED)
+    public void setPgWireProtocolEnabled(boolean pgWireProtocolEnabled)
+    {
+        this.pgWireProtocolEnabled = pgWireProtocolEnabled;
+    }
+
+    public boolean isPgWireProtocolEnabled()
+    {
+        return pgWireProtocolEnabled;
     }
 }
