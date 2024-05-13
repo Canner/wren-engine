@@ -339,9 +339,6 @@ public final class ExpressionFormatter
         @Override
         protected String visitTimestampLiteral(TimestampLiteral node, Void context)
         {
-            if (dialect == DUCKDB) {
-                return "'" + node.getValue() + "'";
-            }
             return "TIMESTAMP '" + node.getValue() + "'";
         }
 
