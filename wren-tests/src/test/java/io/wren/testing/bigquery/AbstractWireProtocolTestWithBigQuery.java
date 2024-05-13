@@ -52,7 +52,8 @@ public abstract class AbstractWireProtocolTestWithBigQuery
                 .put("bigquery.credentials-key", getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"))
                 .put("bigquery.metadata.schema.prefix", format("test_%s_", randomIntString()))
                 .put("pg-wire-protocol.auth.file", requireNonNull(getClass().getClassLoader().getResource("accounts")).getPath())
-                .put("wren.datasource.type", "bigquery");
+                .put("wren.datasource.type", "bigquery")
+                .put("pg-wire-protocol.enabled", "true");
 
         try {
             Path dir = Files.createTempDirectory(getWrenDirectory());

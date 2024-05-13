@@ -17,6 +17,7 @@ package io.wren.server.module;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.wren.base.config.BigQueryConfig;
 import io.wren.main.connector.bigquery.BigQueryCacheService;
 import io.wren.main.connector.bigquery.BigQueryMetadata;
@@ -31,6 +32,7 @@ public class BigQueryConnectorModule
     protected void setup(Binder binder)
     {
         configBinder(binder).bindConfig(BigQueryConfig.class);
+        configBinder(binder).bindConfig(DuckdbS3StyleStorageConfig.class);
         binder.bind(BigQuerySqlConverter.class).in(Scopes.SINGLETON);
         binder.bind(BigQueryCacheService.class).in(Scopes.SINGLETON);
         binder.bind(BigQueryMetadata.class).in(Scopes.SINGLETON);

@@ -17,7 +17,14 @@ package io.wren.main;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
+import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.base.config.WrenConfig;
+import io.wren.cache.CacheManager;
+import io.wren.cache.CacheManagerImpl;
+import io.wren.cache.NoOpCacheManager;
+import io.wren.main.pgcatalog.NoOpPgCatalogManager;
+import io.wren.main.pgcatalog.PgCatalogManager;
+import io.wren.main.pgcatalog.PgCatalogManagerImpl;
 
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
@@ -27,8 +34,17 @@ public class WrenModule
     @Override
     protected void setup(Binder binder)
     {
+        PostgresWireProtocolConfig config = buildConfigObject(PostgresWireProtocolConfig.class);
         configBinder(binder).bindConfig(WrenConfig.class);
         binder.bind(WrenManager.class).in(Scopes.SINGLETON);
         binder.bind(WrenMetastore.class).in(Scopes.SINGLETON);
+        if (config.isPgWireProtocolEnabled()) {
+            binder.bind(CacheManager.class).to(CacheManagerImpl.class).in(Scopes.SINGLETON);
+            binder.bind(PgCatalogManager.class).to(PgCatalogManagerImpl.class).in(Scopes.SINGLETON);
+        }
+        else {
+            binder.bind(CacheManager.class).to(NoOpCacheManager.class).in(Scopes.SINGLETON);
+            binder.bind(PgCatalogManager.class).to(NoOpPgCatalogManager.class).in(Scopes.SINGLETON);
+        }
     }
 }

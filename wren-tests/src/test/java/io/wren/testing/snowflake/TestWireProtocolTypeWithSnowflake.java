@@ -112,7 +112,8 @@ public class TestWireProtocolTypeWithSnowflake
                 .put(SNOWFLAKE_PASSWORD, getenv("SNOWFLAKE_PASSWORD"))
                 .put(SNOWFLAKE_DATABASE, "SNOWFLAKE_SAMPLE_DATA")
                 .put(SNOWFLAKE_SCHEMA, "TPCH_SF1")
-                .put(SQLGLOT_PORT, String.valueOf(testingSQLGlotServer.getPort()));
+                .put(SQLGLOT_PORT, String.valueOf(testingSQLGlotServer.getPort()))
+                .put("pg-wire-protocol.enabled", "true");
 
         return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())

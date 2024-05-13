@@ -68,7 +68,8 @@ public class TestWireProtocolTypeWithDuckDB
     {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("wren.datasource.type", DUCKDB.name())
-                .put("wren.directory", Files.createTempDirectory(getWrenDirectory()).toString());
+                .put("wren.directory", Files.createTempDirectory(getWrenDirectory()).toString())
+                .put("pg-wire-protocol.enabled", "true");
 
         return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())

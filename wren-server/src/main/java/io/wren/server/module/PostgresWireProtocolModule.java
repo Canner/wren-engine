@@ -23,6 +23,7 @@ import io.wren.base.wireprotocol.PgMetastore;
 import io.wren.cache.ExtraRewriter;
 import io.wren.main.PostgresNettyProvider;
 import io.wren.main.pgcatalog.PgCatalogManager;
+import io.wren.main.pgcatalog.PgCatalogManagerImpl;
 import io.wren.main.pgcatalog.regtype.PgMetadata;
 import io.wren.main.pgcatalog.regtype.PostgresPgMetadata;
 import io.wren.main.pgcatalog.regtype.RegObjectFactory;
@@ -52,7 +53,7 @@ public class PostgresWireProtocolModule
         binder.bind(SqlParser.class).in(Scopes.SINGLETON);
         binder.bind(TlsDataProvider.class).toInstance(tlsDataProvider);
         binder.bind(SslContextProvider.class).in(Scopes.SINGLETON);
-        binder.bind(PgCatalogManager.class).in(Scopes.SINGLETON);
+        binder.bind(PgCatalogManager.class).to(PgCatalogManagerImpl.class).in(Scopes.SINGLETON);
         binder.bind(RegObjectFactory.class).in((Scopes.SINGLETON));
         binder.bind(PostgresNetty.class).toProvider(PostgresNettyProvider.class).in(Scopes.SINGLETON);
         // for cache extra rewrite

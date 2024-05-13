@@ -39,7 +39,8 @@ public class TestWireProtocolTypeWithPostgres
                 .put("postgres.jdbc.url", testingPostgreSqlServer.getJdbcUrl())
                 .put("postgres.user", testingPostgreSqlServer.getUser())
                 .put("postgres.password", testingPostgreSqlServer.getPassword())
-                .put("wren.datasource.type", "POSTGRES");
+                .put("wren.datasource.type", "POSTGRES")
+                .put("pg-wire-protocol.enabled", "true");
 
         try {
             Path dir = Files.createTempDirectory(getWrenDirectory());

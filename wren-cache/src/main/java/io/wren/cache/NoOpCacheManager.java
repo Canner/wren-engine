@@ -12,26 +12,9 @@
  * limitations under the License.
  */
 
-package io.wren.main.pgcatalog;
+package io.wren.cache;
 
-import io.wren.main.pgcatalog.exception.DeployException;
-
-public interface PgCatalogManager
+public class NoOpCacheManager
+        implements CacheManager
 {
-    default void initPgCatalog()
-            throws DeployException
-    {}
-
-    default void initPgFunctions() {}
-
-    default void dropSchema(String name) {}
-
-    default boolean checkRequired()
-    {
-        return true;
-    }
-
-    default void syncPgMetastore()
-            throws DeployException
-    {}
 }

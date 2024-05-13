@@ -14,24 +14,7 @@
 
 package io.wren.main.pgcatalog;
 
-import io.wren.main.pgcatalog.exception.DeployException;
-
-public interface PgCatalogManager
+public class NoOpPgCatalogManager
+        implements PgCatalogManager
 {
-    default void initPgCatalog()
-            throws DeployException
-    {}
-
-    default void initPgFunctions() {}
-
-    default void dropSchema(String name) {}
-
-    default boolean checkRequired()
-    {
-        return true;
-    }
-
-    default void syncPgMetastore()
-            throws DeployException
-    {}
 }
