@@ -207,6 +207,34 @@ public abstract class AbstractFunctionTest
         assertThatNoException().isThrownBy(() -> execute(sql));
     }
 
+    @DataProvider
+    public Object[][] operators()
+    {
+        return new Object[][] {
+                {"select 1 + 1"},
+                {"select 1 - 1"},
+                {"select 2 * 2"},
+                {"select 4 / 2"},
+                // {"select 11 % 10"},
+                // {"select a1[1] from (values (array[1,2,3])) t(a1)"},
+                // {"select a1 || a1 from (values (array[1,2,3])) t(a1)"},
+                {"select '123' || '456'"},
+                {"select 2 < 2"},
+                {"select 2 > 2"},
+                {"select 2 >= 2"},
+                {"select 2 <= 2"},
+                {"select 2 = 2"},
+                {"select 2 <> 2"},
+                {"select 2 != 2"},
+        };
+    }
+
+    @Test(dataProvider = "operators")
+    public void testOperators(String sql)
+    {
+        assertThatNoException().isThrownBy(() -> execute(sql));
+    }
+
     protected void execute(String sql)
     {
         preview(new PreviewDto(null, sql, 100L));
