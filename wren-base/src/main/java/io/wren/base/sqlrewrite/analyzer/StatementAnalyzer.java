@@ -316,7 +316,6 @@ public final class StatementAnalyzer
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
             QueryAnalysis.Builder queryAnalysisBuilder = QueryAnalysis.builder();
-            analysis.addQueryAnalysis(NodeRef.of(node), queryAnalysisBuilder);
             Scope sourceScope = analyzeFrom(node, scope);
             List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));

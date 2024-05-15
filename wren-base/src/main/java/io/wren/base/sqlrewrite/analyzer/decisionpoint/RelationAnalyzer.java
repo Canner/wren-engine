@@ -58,6 +58,7 @@ public class RelationAnalyzer
         @Override
         protected RelationAnalysis visitSetOperation(SetOperation node, Void context)
         {
+            // TODO: implement this
             // except, intersect, union
             return super.visitSetOperation(node, context);
         }
@@ -65,24 +66,28 @@ public class RelationAnalyzer
         @Override
         protected RelationAnalysis visitValues(Values node, Void context)
         {
+            // TODO: implement this
             return super.visitValues(node, context);
         }
 
         @Override
         protected RelationAnalysis visitFunctionRelation(FunctionRelation node, Void context)
         {
+            // TODO: implement this
             return super.visitFunctionRelation(node, context);
         }
 
         @Override
         protected RelationAnalysis visitTableSubquery(TableSubquery node, Void context)
         {
+            // TODO: implement this
             return super.visitTableSubquery(node, context);
         }
 
         @Override
         protected RelationAnalysis visitQuerySpecification(QuerySpecification node, Void context)
         {
+            // TODO: implement this
             return super.visitQuerySpecification(node, context);
         }
 
@@ -134,24 +139,28 @@ public class RelationAnalyzer
         @Override
         protected RelationAnalysis visitSampledRelation(SampledRelation node, Void context)
         {
+            // TODO: implement this
             return super.visitSampledRelation(node, context);
         }
 
         @Override
         protected RelationAnalysis visitPatternRecognitionRelation(PatternRecognitionRelation node, Void context)
         {
+            // TODO: implement this
             return super.visitPatternRecognitionRelation(node, context);
         }
 
         @Override
         protected RelationAnalysis visitUnnest(Unnest node, Void context)
         {
+            // TODO: implement this
             return super.visitUnnest(node, context);
         }
 
         @Override
         protected RelationAnalysis visitLateral(Lateral node, Void context)
         {
+            // TODO: implement this
             return super.visitLateral(node, context);
         }
     }
