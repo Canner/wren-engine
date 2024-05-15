@@ -25,8 +25,9 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
-import io.trino.sql.tree.Limit;
+import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.LongLiteral;
+import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
@@ -51,6 +52,7 @@ import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.TimeUnit;
 import io.wren.base.dto.View;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.base.sqlrewrite.analyzer.matcher.PredicateMatcher;
 
 import javax.annotation.Nullable;
@@ -66,7 +68,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static io.wren.base.metadata.StandardErrorCode.TYPE_MISMATCH;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
-import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -314,11 +315,12 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
+            QueryAnalysis.Builder queryAnalysisBuilder = QueryAnalysis.builder();
+            analysis.addQueryAnalysis(NodeRef.of(node), queryAnalysisBuilder);
             Scope sourceScope = analyzeFrom(node, scope);
             List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
             node.getHaving().ifPresent(having -> analyzeExpression(having, sourceScope));
-            node.getLimit().ifPresent(limit -> analysis.setLimit(((Limit) limit).getRowCount()));
             node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems()
                     .forEach(item -> {
                         QualifiedName name;
@@ -329,7 +331,6 @@ public final class StatementAnalyzer
                         else {
                             name = getQualifiedName(item.getSortKey());
                         }
-                        analysis.addSortItem(new Analysis.SortItemAnalysis(name, item.getOrdering().name()));
                     }));
             // TODO: this scope is wrong.
             return createAndAssignScope(node, scope, sourceScope);
@@ -399,13 +400,6 @@ public final class StatementAnalyzer
                     .filter(PredicateMatcher.PREDICATE_MATCHER::shapeMatches)
                     .forEach(comparisonExpression -> {
                         Expression expression = comparisonExpression.getLeft();
-                        Optional.ofNullable(fields.get(NodeRef.of(expression)))
-                                .ifPresent(field -> analysis.addSimplePredicate(
-                                        new SimplePredicate(
-                                                field.getTableName(),
-                                                field.getColumnName(),
-                                                comparisonExpression.getOperator(),
-                                                comparisonExpression.getRight())));
                     });
             typeCoercionOptional.flatMap(typeCoercion -> typeCoercion.coerceExpression(node, scope))
                     .ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(node), expression));
@@ -489,21 +483,33 @@ public final class StatementAnalyzer
             Scope outputScope = createAndAssignScope(node, scope, relationType);
 
             JoinCriteria criteria = node.getCriteria().orElse(null);
-            // TODO: handle other join type
-            if (criteria instanceof JoinOn) {
-                Expression expression = ((JoinOn) criteria).getExpression();
-                analyzeExpression(expression, outputScope);
-                typeCoercionOptional.ifPresent(typeCoercion -> {
-                    Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
-                    if (coerced.isPresent()) {
-                        JoinOn newJoinOn = new JoinOn(coerced.get());
-                        Join newJoin = node.getLocation().isPresent() ?
-                                new Join(node.getLocation().get(), node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn)) :
-                                new Join(node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn));
-                        analysis.addTypeCoercion(NodeRef.of(node), newJoin);
-                    }
-                });
+
+            switch (criteria) {
+                case JoinOn joinOn:
+                    Expression expression = joinOn.getExpression();
+                    analyzeExpression(expression, outputScope);
+                    typeCoercionOptional.ifPresent(typeCoercion -> {
+                        Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
+                        if (coerced.isPresent()) {
+                            JoinOn newJoinOn = new JoinOn(coerced.get());
+                            Join newJoin = node.getLocation().isPresent() ?
+                                    new Join(node.getLocation().get(), node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn)) :
+                                    new Join(node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn));
+                            analysis.addTypeCoercion(NodeRef.of(node), newJoin);
+                        }
+                    });
+                    break;
+                case JoinUsing joinUsing:
+                    joinUsing.getColumns().forEach(column -> analyzeExpression(column, outputScope));
+                    break;
+                case NaturalJoin ignored:
+                    break;
+                case null:
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected value: " + criteria);
             }
+
             // TODO: output scope here isn't right
             return createAndAssignScope(node, scope, relationType);
         }
