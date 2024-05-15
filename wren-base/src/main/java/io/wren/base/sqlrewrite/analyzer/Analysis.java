@@ -30,18 +30,14 @@ import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationship;
 import io.wren.base.dto.View;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.MoreObjects.toStringHelper;
-import static io.trino.sql.tree.ComparisonExpression.Operator;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -61,14 +57,11 @@ public class Analysis
     private final Set<View> views = new HashSet<>();
     private final Multimap<CatalogSchemaTableName, String> collectedColumns = HashMultimap.create();
     private final Map<NodeRef<Expression>, Field> referenceFields = new HashMap<>();
-    private final List<SimplePredicate> simplePredicates = new ArrayList<>();
 
     private final Set<Node> requiredSourceNodes = new HashSet<>();
 
     private final Map<NodeRef<Node>, QualifiedName> sourceNodeNames = new HashMap<>();
     private final Map<NodeRef<Node>, Node> typeCoercionMap = new HashMap<>();
-    private Expression limit;
-    private final List<SortItemAnalysis> sortItems = new ArrayList<>();
 
     public Analysis(Statement statement)
     {
@@ -160,16 +153,6 @@ public class Analysis
         fields.forEach(field -> collectedColumns.put(field.getTableName(), field.getColumnName()));
     }
 
-    void addSimplePredicate(SimplePredicate simplePredicate)
-    {
-        simplePredicates.add(simplePredicate);
-    }
-
-    public List<SimplePredicate> getSimplePredicates()
-    {
-        return simplePredicates;
-    }
-
     public Multimap<CatalogSchemaTableName, String> getCollectedColumns()
     {
         return collectedColumns;
@@ -193,26 +176,6 @@ public class Analysis
     public Map<NodeRef<Node>, Node> getTypeCoercionMap()
     {
         return typeCoercionMap;
-    }
-
-    public Optional<Expression> getLimit()
-    {
-        return Optional.ofNullable(limit);
-    }
-
-    public void setLimit(Expression limit)
-    {
-        this.limit = limit;
-    }
-
-    public List<SortItemAnalysis> getSortItems()
-    {
-        return sortItems;
-    }
-
-    public void addSortItem(SortItemAnalysis sortItem)
-    {
-        sortItems.add(sortItem);
     }
 
     public Scope getScope(Node node)
@@ -263,132 +226,5 @@ public class Analysis
     public void addSourceNodeName(NodeRef<Node> nodeRef, QualifiedName name)
     {
         sourceNodeNames.put(nodeRef, name);
-    }
-
-    /**
-     * A placeholder to record predicates like c1 = 'foo', c2 >= 1
-     */
-    public static class SimplePredicate
-    {
-        CatalogSchemaTableName tableName;
-        String columnName;
-        String operator;
-        String value;
-
-        public SimplePredicate(
-                CatalogSchemaTableName tableName,
-                String columnName,
-                Operator operator,
-                Expression value)
-        {
-            this.tableName = requireNonNull(tableName);
-            this.columnName = requireNonNull(columnName);
-            this.operator = requireNonNull(operator).getValue();
-            this.value = requireNonNull(value).toString();
-        }
-
-        public CatalogSchemaTableName getTableName()
-        {
-            return tableName;
-        }
-
-        public String getColumnName()
-        {
-            return columnName;
-        }
-
-        public String getOperator()
-        {
-            return operator;
-        }
-
-        public String getValue()
-        {
-            return value;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            SimplePredicate that = (SimplePredicate) o;
-            return Objects.equals(tableName, that.tableName) &&
-                    Objects.equals(columnName, that.columnName) &&
-                    Objects.equals(operator, that.operator) &&
-                    Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(tableName, columnName, operator, value);
-        }
-
-        @Override
-        public String toString()
-        {
-            return toStringHelper(this)
-                    .add("tableName", tableName)
-                    .add("columnName", columnName)
-                    .add("operator", operator)
-                    .add("value", value)
-                    .toString();
-        }
-    }
-
-    public static class SortItemAnalysis
-    {
-        private QualifiedName sortKey;
-        private String ordering;
-
-        public SortItemAnalysis(QualifiedName sortKey, String ordering)
-        {
-            this.sortKey = sortKey;
-            this.ordering = ordering;
-        }
-
-        public QualifiedName getSortKey()
-        {
-            return sortKey;
-        }
-
-        public String getOrdering()
-        {
-            return ordering;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            SortItemAnalysis that = (SortItemAnalysis) o;
-            return Objects.equals(sortKey, that.sortKey) &&
-                    Objects.equals(ordering, that.ordering);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(sortKey, ordering);
-        }
-
-        @Override
-        public String toString()
-        {
-            return toStringHelper(this)
-                    .add("sortKey", sortKey)
-                    .add("ordering", ordering)
-                    .toString();
-        }
     }
 }

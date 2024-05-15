@@ -27,7 +27,6 @@ import io.wren.main.web.AnalysisResource;
 import io.wren.main.web.CacheResource;
 import io.wren.main.web.ConfigResource;
 import io.wren.main.web.DuckDBResource;
-import io.wren.main.web.LineageResource;
 import io.wren.main.web.MDLResource;
 import io.wren.main.web.WrenExceptionMapper;
 
@@ -41,7 +40,6 @@ public class WebModule
     {
         PostgresWireProtocolConfig config = buildConfigObject(PostgresWireProtocolConfig.class);
         jaxrsBinder(binder).bind(MDLResource.class);
-        jaxrsBinder(binder).bind(LineageResource.class);
         jaxrsBinder(binder).bind(AnalysisResource.class);
         jaxrsBinder(binder).bind(ConfigResource.class);
         jaxrsBinder(binder).bind(DuckDBResource.class);
