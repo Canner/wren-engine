@@ -14,15 +14,15 @@
 
 package io.wren.testing;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.trino.sql.tree.SortItem;
+import io.wren.base.WrenTypes;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
-import io.wren.base.dto.Model;
-import io.wren.main.web.dto.ColumnPredicateDto;
-import io.wren.main.web.dto.PredicateDto;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
-import io.wren.main.web.dto.SqlAnalysisOutputDto;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -30,27 +30,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static io.wren.base.WrenTypes.DATE;
-import static io.wren.base.WrenTypes.INTEGER;
-import static io.wren.base.WrenTypes.VARCHAR;
-import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
-import static io.wren.base.dto.Model.model;
-import static io.wren.testing.AbstractTestFramework.withDefaultCatalogSchema;
+import static io.wren.base.dto.Model.onTableReference;
+import static io.wren.base.dto.TableReference.tableReference;
+import static io.wren.testing.AbstractTestFramework.DEFAULT_SESSION_CONTEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestAnalysisResource
         extends RequireWrenServer
 {
-    private Model customer;
+    private Manifest manifest;
 
     @Override
     protected TestingWrenServer createWrenServer()
     {
         initData();
-        Manifest manifest = withDefaultCatalogSchema()
-                .setModels(List.of(customer))
-                .build();
 
         Path mdlDir;
         try {
@@ -73,111 +67,113 @@ public class TestAnalysisResource
 
     private void initData()
     {
-        customer = model("Customer",
-                "select * from main.customer",
-                List.of(
-                        column("custkey", INTEGER, null, true),
-                        column("name", VARCHAR, null, true),
-                        column("address", VARCHAR, null, true),
-                        column("nationkey", INTEGER, null, true),
-                        column("phone", VARCHAR, null, true),
-                        column("acctbal", INTEGER, null, true),
-                        column("mktsegment", VARCHAR, null, true),
-                        column("comment", VARCHAR, null, true)),
-                "custkey");
+        List<Column> customerColumns = List.of(
+                Column.column("custkey", WrenTypes.INTEGER, null, true),
+                Column.column("name", WrenTypes.VARCHAR, null, true),
+                Column.column("address", WrenTypes.VARCHAR, null, true),
+                Column.column("nationkey", WrenTypes.INTEGER, null, true),
+                Column.column("phone", WrenTypes.VARCHAR, null, true),
+                Column.column("acctbal", WrenTypes.INTEGER, null, true),
+                Column.column("mktsegment", WrenTypes.VARCHAR, null, true),
+                Column.column("comment", WrenTypes.VARCHAR, null, true));
+        List<Column> ordersColumns = List.of(
+                Column.column("orderkey", WrenTypes.INTEGER, null, true),
+                Column.column("custkey", WrenTypes.INTEGER, null, true),
+                Column.column("orderstatus", WrenTypes.VARCHAR, null, true),
+                Column.column("totalprice", WrenTypes.INTEGER, null, true),
+                Column.column("orderdate", WrenTypes.DATE, null, true),
+                Column.column("orderpriority", WrenTypes.VARCHAR, null, true),
+                Column.column("clerk", WrenTypes.VARCHAR, null, true),
+                Column.column("shippriority", WrenTypes.INTEGER, null, true),
+                Column.column("comment", WrenTypes.VARCHAR, null, true));
+        List<Column> lineitemColumns = List.of(
+                Column.column("orderkey", WrenTypes.INTEGER, null, true),
+                Column.column("partkey", WrenTypes.INTEGER, null, true),
+                Column.column("suppkey", WrenTypes.INTEGER, null, true),
+                Column.column("linenumber", WrenTypes.INTEGER, null, true),
+                Column.column("quantity", WrenTypes.INTEGER, null, true),
+                Column.column("extendedprice", WrenTypes.INTEGER, null, true),
+                Column.column("discount", WrenTypes.INTEGER, null, true),
+                Column.column("tax", WrenTypes.INTEGER, null, true),
+                Column.column("returnflag", WrenTypes.VARCHAR, null, true),
+                Column.column("linestatus", WrenTypes.VARCHAR, null, true),
+                Column.column("shipdate", WrenTypes.DATE, null, true),
+                Column.column("commitdate", WrenTypes.DATE, null, true),
+                Column.column("receiptdate", WrenTypes.DATE, null, true),
+                Column.column("shipinstruct", WrenTypes.VARCHAR, null, true),
+                Column.column("shipmode", WrenTypes.VARCHAR, null, true),
+                Column.column("comment", WrenTypes.VARCHAR, null, true));
+
+        manifest = Manifest.builder()
+                .setCatalog(DEFAULT_SESSION_CONTEXT.getCatalog().orElseThrow())
+                .setSchema(DEFAULT_SESSION_CONTEXT.getSchema().orElseThrow())
+                .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, "custkey"),
+                        onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, "orderkey"),
+                        onTableReference("lineitem", tableReference(null, "main", "lineitem"), lineitemColumns, null)))
+                .build();
     }
 
     @Test
-    public void testAnalysisSqlDefaultManifest()
+    public void testBasic()
     {
-        List<SqlAnalysisOutputDto> results = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM Customer WHERE custkey >= 100 AND custkey <= 123 OR name != 'foo'"));
-        assertThat(results.size()).isEqualTo(1);
+        List<QueryAnalysis> result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getAlias()).isNull();
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
+        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
+            assertThat(tableRelation.getTableName()).isEqualTo("customer");
+        }
 
-        List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("Customer",
-                        List.of(new ColumnPredicateDto("custkey", List.of(new PredicateDto(">=", "100"), new PredicateDto("<=", "123"))),
-                                new ColumnPredicateDto("name", List.of(new PredicateDto("<>", "'foo'")))),
-                        null,
-                        null))
-                .build();
+        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select custkey, count(*) from customer group by 1"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getAlias()).isNull();
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(2);
+        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
+            assertThat(tableRelation.getTableName()).isEqualTo("customer");
+        }
+        assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
 
-        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
-    }
+        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer c join orders o on c.custkey = o.custkey"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+        assertThat(result.get(0).getRelation().getAlias()).isNull();
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(17);
+        if (result.get(0).getRelation() instanceof RelationAnalysis.JoinRelation joinRelation) {
+            assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getCriteria()).isEqualTo("ON (c.custkey = o.custkey)");
+        }
 
-    @Test
-    public void testAnalysisSqlCustomManifest()
-    {
-        Manifest manifest = Manifest.builder()
-                .setCatalog("test")
-                .setSchema("test")
-                .setModels(ImmutableList.of(
-                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), column("c2", INTEGER, null, true))),
-                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), column("c2", DATE, null, true)))))
-                .build();
+        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getAlias()).isNull();
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
+        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
+            assertThat(tableRelation.getTableName()).isEqualTo("customer");
+        }
+        assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.OR);
+        if (result.get(0).getFilter() instanceof FilterAnalysis.LogicalAnalysis logicalAnalysis) {
+            assertThat(logicalAnalysis.getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
+            assertThat(logicalAnalysis.getRight().getType()).isEqualTo(FilterAnalysis.Type.AND);
+        }
 
-        List<SqlAnalysisOutputDto> results = getSqlAnalysis(
-                new SqlAnalysisInputDto(manifest,
-                        "SELECT t1.c1, t2.c1, t2.c2 FROM table_1 t1 JOIN table_2 t2 ON t1.c2 = t2.c1\n" +
-                                "WHERE t1.c1 = 'foo' AND t1.c2 >= 123 OR t2.c1 != 'bar' OR t2.c2 < DATE '2020-01-01'"));
-        assertThat(results.size()).isEqualTo(2);
+        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(3);
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
+        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("name");
+        assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo("nationkey");
 
-        List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("table_1",
-                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("=", "'foo'"))),
-                                new ColumnPredicateDto("c2", List.of(new PredicateDto(">=", "123")))),
-                        null,
-                        null))
-                .add(new SqlAnalysisOutputDto("table_2",
-                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto("<>", "'bar'"))),
-                                new ColumnPredicateDto("c2", List.of(new PredicateDto("<", "DATE '2020-01-01'")))),
-                        null,
-                        null))
-                .build();
-
-        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
-    }
-
-    @Test
-    public void testAnalyzesSqlWithLimitAndOrdering()
-    {
-        Manifest manifest = Manifest.builder()
-                .setCatalog("test")
-                .setSchema("test")
-                .setModels(ImmutableList.of(
-                        model("table_1", "SELECT * FROM foo", ImmutableList.of(varcharColumn("c1"), column("c2", INTEGER, null, true))),
-                        model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), column("c2", DATE, null, true)))))
-                .build();
-
-        List<SqlAnalysisOutputDto> results = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM table_1 WHERE c1 > 10 ORDER BY c1 LIMIT 10"));
-        assertThat(results.size()).isEqualTo(1);
-        List<SqlAnalysisOutputDto> expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("table_1",
-                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto(">", "10")))),
-                        "10",
-                        List.of(new SqlAnalysisOutputDto.SortItem("c1", "ASCENDING"))))
-                .build();
-        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
-
-        results = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM table_1 WHERE c1 > 10 ORDER BY c1 DESC LIMIT 10"));
-        assertThat(results.size()).isEqualTo(1);
-        expected = ImmutableList.<SqlAnalysisOutputDto>builder()
-                .add(new SqlAnalysisOutputDto("table_1",
-                        List.of(new ColumnPredicateDto("c1", List.of(new PredicateDto(">", "10")))),
-                        "10",
-                        List.of(new SqlAnalysisOutputDto.SortItem("c1", "DESCENDING"))))
-                .build();
-        assertThat(results).containsExactlyInAnyOrderElementsOf(expected);
-    }
-
-    @Test
-    public void testSqlAnalysisEmpty()
-    {
-        assertThat(getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM Customer")).size()).isEqualTo(0);
-        assertThat(getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey = 123 FROM Customer")).size()).isEqualTo(0);
-    }
-
-    private static Column varcharColumn(String name)
-    {
-        return column(name, "VARCHAR", null, false, null);
+        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey, name FROM customer ORDER BY 1 ASC, 2 DESC"));
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getSortings().size()).isEqualTo(2);
+        assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
+        assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING);
+        assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
+        assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING);
     }
 }

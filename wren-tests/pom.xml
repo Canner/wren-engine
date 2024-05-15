@@ -116,6 +116,11 @@
 
         <dependency>
             <groupId>io.wren</groupId>
+            <artifactId>trino-parser</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.wren</groupId>
             <artifactId>wren-base</artifactId>
         </dependency>
 

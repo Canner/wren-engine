@@ -15,20 +15,13 @@
 package io.wren.main.web;
 
 import com.google.inject.Inject;
-import io.trino.sql.ExpressionFormatter;
-import io.trino.sql.SqlFormatter;
-import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
-import io.wren.base.sqlrewrite.analyzer.Analysis;
-import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
 import io.wren.main.WrenMetastore;
-import io.wren.main.web.dto.ColumnPredicateDto;
-import io.wren.main.web.dto.PredicateDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
-import io.wren.main.web.dto.SqlAnalysisOutputDto;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -36,16 +29,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
-import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.groupingBy;
 
 @Path("/v1/analysis")
 public class AnalysisResource
@@ -78,46 +67,11 @@ public class AnalysisResource
                         mdl = WrenMDL.fromManifest(inputDto.getManifest());
                     }
                     Statement statement = parseSql(inputDto.getSql());
-                    Analysis analysis = new Analysis(statement);
-                    StatementAnalyzer.analyze(
-                            analysis,
+                    return DecisionPointAnalyzer.analyze(
                             statement,
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
                             mdl);
-                    return toSqlAnalysisOutputDto(analysis);
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
-    }
-
-    private static List<SqlAnalysisOutputDto> toSqlAnalysisOutputDto(Analysis analysis)
-    {
-        return analysis.getSimplePredicates().stream()
-                .collect(
-                        // group by table name
-                        groupingBy(predicate -> predicate.getTableName().getSchemaTableName().getTableName(),
-                                // then group by column name
-                                groupingBy(SimplePredicate::getColumnName)))
-                .entrySet()
-                .stream()
-                .map(e ->
-                        new SqlAnalysisOutputDto(
-                                e.getKey(),
-                                e.getValue().entrySet().stream()
-                                        .map(columns ->
-                                                new ColumnPredicateDto(
-                                                        columns.getKey(),
-                                                        columns.getValue().stream()
-                                                                .map(predicate -> new PredicateDto(predicate.getOperator(), predicate.getValue()))
-                                                                .collect(toImmutableList())))
-                                        .collect(toImmutableList()),
-                                analysis.getLimit().map(AnalysisResource::formatExpression).orElse(null),
-                                analysis.getSortItems().stream()
-                                        .map(item -> new SqlAnalysisOutputDto.SortItem(item.getSortKey().toString(), item.getOrdering())).collect(toImmutableList())))
-                .collect(toImmutableList());
-    }
-
-    private static String formatExpression(Expression expression)
-    {
-        return ExpressionFormatter.formatExpression(expression, SqlFormatter.Dialect.DEFAULT);
     }
 }
