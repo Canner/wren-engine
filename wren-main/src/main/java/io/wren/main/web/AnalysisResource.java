@@ -20,7 +20,15 @@ import io.wren.base.AnalyzedMDL;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
 import io.wren.main.WrenMetastore;
+import io.wren.main.web.dto.QueryAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.ColumnAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.FilterAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.RelationAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.SortItemAnalysisDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -70,8 +78,65 @@ public class AnalysisResource
                     return DecisionPointAnalyzer.analyze(
                             statement,
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
-                            mdl);
+                            mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    private static QueryAnalysisDto toQueryAnalysisDto(QueryAnalysis queryAnalysis)
+    {
+        return new QueryAnalysisDto(
+                queryAnalysis.getSelectItems().stream().map(AnalysisResource::toColumnAnalysisDto).toList(),
+                toRelationAnalysisDto(queryAnalysis.getRelation()),
+                toFilterAnalysisDto(queryAnalysis.getFilter()),
+                queryAnalysis.getGroupByKeys(),
+                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList());
+    }
+
+    private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)
+    {
+        return new ColumnAnalysisDto(columnAnalysis.getAliasName(), columnAnalysis.getExpression(), columnAnalysis.getProperties());
+    }
+
+    private static FilterAnalysisDto toFilterAnalysisDto(FilterAnalysis filterAnalysis)
+    {
+        return switch (filterAnalysis) {
+            case FilterAnalysis.ExpressionAnalysis exprAnalysis -> new FilterAnalysisDto(exprAnalysis.getType().name(), null, null, exprAnalysis.getNode());
+            case FilterAnalysis.LogicalAnalysis logicalAnalysis ->
+                    new FilterAnalysisDto(logicalAnalysis.getType().name(), toFilterAnalysisDto(logicalAnalysis.getLeft()), toFilterAnalysisDto(logicalAnalysis.getRight()), null);
+            case null -> null;
+            default -> throw new IllegalArgumentException("Unsupported filter analysis: " + filterAnalysis);
+        };
+    }
+
+    private static RelationAnalysisDto toRelationAnalysisDto(RelationAnalysis relationAnalysis)
+    {
+        return switch (relationAnalysis) {
+            case RelationAnalysis.TableRelation tableRelation ->
+                    new RelationAnalysisDto(tableRelation.getType().name(), tableRelation.getAlias(), null, null, null, tableRelation.getTableName(), null);
+            case RelationAnalysis.JoinRelation joinRelation -> new RelationAnalysisDto(
+                    joinRelation.getType().name(),
+                    joinRelation.getAlias(),
+                    toRelationAnalysisDto(joinRelation.getLeft()),
+                    toRelationAnalysisDto(joinRelation.getRight()),
+                    joinRelation.getCriteria(),
+                    null,
+                    null);
+            case RelationAnalysis.SubqueryRelation subqueryRelation -> new RelationAnalysisDto(
+                    subqueryRelation.getType().name(),
+                    subqueryRelation.getAlias(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    subqueryRelation.getBody().stream().map(AnalysisResource::toQueryAnalysisDto).toList());
+            case null -> null;
+            default -> throw new IllegalArgumentException("Unsupported relation analysis: " + relationAnalysis);
+        };
+    }
+
+    private static SortItemAnalysisDto toSortItemAnalysisDto(QueryAnalysis.SortItemAnalysis sortItemAnalysis)
+    {
+        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name());
     }
 }

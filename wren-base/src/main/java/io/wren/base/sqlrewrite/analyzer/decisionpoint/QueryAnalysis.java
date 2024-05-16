@@ -15,7 +15,6 @@
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.sql.tree.SortItem;
 
 import java.util.ArrayList;
@@ -36,7 +35,6 @@ public class QueryAnalysis
     private final List<List<String>> groupByKeys;
     private final List<SortItemAnalysis> sortings;
 
-    @JsonCreator
     public QueryAnalysis(
             List<ColumnAnalysis> selectItems,
             RelationAnalysis relation,
@@ -44,38 +42,33 @@ public class QueryAnalysis
             List<List<String>> groupByKeys,
             List<SortItemAnalysis> sortings)
     {
-        this.selectItems = selectItems;
+        this.selectItems = selectItems == null ? List.of() : List.copyOf(selectItems);
         this.relation = relation;
         this.filter = filter;
-        this.groupByKeys = groupByKeys;
-        this.sortings = sortings;
+        this.groupByKeys = groupByKeys == null ? List.of() : List.copyOf(groupByKeys);
+        this.sortings = sortings == null ? List.of() : List.copyOf(sortings);
     }
 
-    @JsonProperty
     public List<ColumnAnalysis> getSelectItems()
     {
         return selectItems;
     }
 
-    @JsonProperty
     public RelationAnalysis getRelation()
     {
         return relation;
     }
 
-    @JsonProperty
     public FilterAnalysis getFilter()
     {
         return filter;
     }
 
-    @JsonProperty
     public List<List<String>> getGroupByKeys()
     {
         return groupByKeys;
     }
 
-    @JsonProperty
     public List<SortItemAnalysis> getSortings()
     {
         return sortings;
@@ -95,19 +88,16 @@ public class QueryAnalysis
             this.properties = properties;
         }
 
-        @JsonProperty
         public Optional<String> getAliasName()
         {
             return aliasName;
         }
 
-        @JsonProperty
         public String getExpression()
         {
             return expression;
         }
 
-        @JsonProperty
         public Map<String, String> getProperties()
         {
             return properties;
@@ -119,20 +109,17 @@ public class QueryAnalysis
         private final String expression;
         private final SortItem.Ordering ordering;
 
-        @JsonCreator
         public SortItemAnalysis(String expression, SortItem.Ordering ordering)
         {
             this.expression = expression;
             this.ordering = ordering;
         }
 
-        @JsonProperty
         public String getExpression()
         {
             return expression;
         }
 
-        @JsonProperty
         public SortItem.Ordering getOrdering()
         {
             return ordering;

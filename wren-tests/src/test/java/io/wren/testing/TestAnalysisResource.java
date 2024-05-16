@@ -20,8 +20,8 @@ import io.wren.base.WrenTypes;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
-import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
+import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import org.testng.annotations.Test;
 
@@ -116,50 +116,41 @@ public class TestAnalysisResource
     @Test
     public void testBasic()
     {
-        List<QueryAnalysis> result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer"));
+        List<QueryAnalysisDto> result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer"));
         assertThat(result.size()).isEqualTo(1);
-        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
-        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
-            assertThat(tableRelation.getTableName()).isEqualTo("customer");
-        }
+        assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select custkey, count(*) from customer group by 1"));
         assertThat(result.size()).isEqualTo(1);
-        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(2);
-        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
-            assertThat(tableRelation.getTableName()).isEqualTo("customer");
-        }
+        assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer c join orders o on c.custkey = o.custkey"));
         assertThat(result.size()).isEqualTo(1);
-        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(17);
-        if (result.get(0).getRelation() instanceof RelationAnalysis.JoinRelation joinRelation) {
-            assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
-            assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
-            assertThat(joinRelation.getCriteria()).isEqualTo("ON (c.custkey = o.custkey)");
-        }
+        assertThat(result.get(0).getRelation().getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
+        assertThat(result.get(0).getRelation().getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
+        assertThat(result.get(0).getRelation().getCriteria()).isEqualTo("ON (c.custkey = o.custkey)");
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
         assertThat(result.size()).isEqualTo(1);
-        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
-        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
-            assertThat(tableRelation.getTableName()).isEqualTo("customer");
-        }
-        assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.OR);
-        if (result.get(0).getFilter() instanceof FilterAnalysis.LogicalAnalysis logicalAnalysis) {
-            assertThat(logicalAnalysis.getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
-            assertThat(logicalAnalysis.getRight().getType()).isEqualTo(FilterAnalysis.Type.AND);
-        }
+        assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
+
+        assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.OR.name());
+        assertThat(result.get(0).getFilter().getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR.name());
+        assertThat(result.get(0).getFilter().getRight().getType()).isEqualTo(FilterAnalysis.Type.AND.name());
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey"));
         assertThat(result.size()).isEqualTo(1);
@@ -172,8 +163,8 @@ public class TestAnalysisResource
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSortings().size()).isEqualTo(2);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
-        assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING);
+        assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING.name());
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
-        assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING);
+        assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING.name());
     }
 }

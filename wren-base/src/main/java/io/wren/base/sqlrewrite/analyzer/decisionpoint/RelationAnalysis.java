@@ -14,27 +14,10 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import java.util.List;
 
 import static io.wren.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = RelationAnalysis.TableRelation.class, name = "TABLE"),
-        @JsonSubTypes.Type(value = RelationAnalysis.SubqueryRelation.class, name = "SUBQUERY"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "INNER_JOIN"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "LEFT_JOIN"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "RIGHT_JOIN"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "FULL_JOIN"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "CROSS_JOIN"),
-        @JsonSubTypes.Type(value = RelationAnalysis.JoinRelation.class, name = "IMPLICIT_JOIN"),
-})
 
 public abstract class RelationAnalysis
 {
@@ -80,7 +63,6 @@ public abstract class RelationAnalysis
         return type;
     }
 
-    @JsonProperty
     public String getAlias()
     {
         return alias;
@@ -93,7 +75,6 @@ public abstract class RelationAnalysis
         private final RelationAnalysis right;
         private final String criteria;
 
-        @JsonCreator
         public JoinRelation(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria)
         {
             super(type, alias);
@@ -102,19 +83,16 @@ public abstract class RelationAnalysis
             this.criteria = criteria;
         }
 
-        @JsonProperty
         public RelationAnalysis getLeft()
         {
             return left;
         }
 
-        @JsonProperty
         public RelationAnalysis getRight()
         {
             return right;
         }
 
-        @JsonProperty
         public String getCriteria()
         {
             return criteria;
@@ -126,14 +104,12 @@ public abstract class RelationAnalysis
     {
         private final String tableName;
 
-        @JsonCreator
         public TableRelation(String tableName, String alias)
         {
             super(Type.TABLE, alias);
             this.tableName = requireNonNull(tableName, "tableName is null");
         }
 
-        @JsonProperty
         public String getTableName()
         {
             return tableName;
@@ -145,14 +121,12 @@ public abstract class RelationAnalysis
     {
         private final List<QueryAnalysis> body;
 
-        @JsonCreator
         public SubqueryRelation(String alias, List<QueryAnalysis> body)
         {
             super(Type.SUBQUERY, alias);
             this.body = requireNonNull(body, "body is null");
         }
 
-        @JsonProperty
         public List<QueryAnalysis> getBody()
         {
             return body;

@@ -38,6 +38,7 @@ import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
+import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.ValidateDto;
@@ -93,7 +94,7 @@ public abstract class RequireWrenServer
     private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
     private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
     private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
-    private static final JsonCodec<List<QueryAnalysis>> QUERY_ANALYSIS_LIST_CODEC = listJsonCodec(QueryAnalysis.class);
+    private static final JsonCodec<List<QueryAnalysisDto>> QUERY_ANALYSIS_DTO_LIST_CODEC = listJsonCodec(QueryAnalysisDto.class);
 
     public RequireWrenServer() {}
 
@@ -273,7 +274,7 @@ public abstract class RequireWrenServer
         }).get(60, TimeUnit.SECONDS);
     }
 
-    protected List<QueryAnalysis> getSqlAnalysis(SqlAnalysisInputDto inputDto)
+    protected List<QueryAnalysisDto> getSqlAnalysis(SqlAnalysisInputDto inputDto)
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/analysis/sql"))
@@ -285,7 +286,7 @@ public abstract class RequireWrenServer
         if (response.getStatusCode() != 200) {
             getWebApplicationException(response);
         }
-        return QUERY_ANALYSIS_LIST_CODEC.fromJson(response.getBody());
+        return QUERY_ANALYSIS_DTO_LIST_CODEC.fromJson(response.getBody());
     }
 
     protected List<ConfigManager.ConfigEntry> getConfigs()

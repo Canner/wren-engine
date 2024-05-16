@@ -14,19 +14,8 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import static java.util.Objects.requireNonNull;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = FilterAnalysis.ExpressionAnalysis.class, name = "EXPR"),
-        @JsonSubTypes.Type(value = FilterAnalysis.LogicalAnalysis.class, name = "AND"),
-        @JsonSubTypes.Type(value = FilterAnalysis.LogicalAnalysis.class, name = "OR"),
-})
 public abstract class FilterAnalysis
 {
     public static FilterAnalysis and(FilterAnalysis left, FilterAnalysis right)
@@ -51,7 +40,7 @@ public abstract class FilterAnalysis
         EXPR
     }
 
-    private Type type;
+    private final Type type;
 
     public FilterAnalysis(Type type)
     {
@@ -69,7 +58,6 @@ public abstract class FilterAnalysis
         private final FilterAnalysis left;
         private final FilterAnalysis right;
 
-        @JsonCreator
         public LogicalAnalysis(Type type, FilterAnalysis left, FilterAnalysis right)
         {
             super(type);
@@ -77,13 +65,11 @@ public abstract class FilterAnalysis
             this.right = requireNonNull(right, "right is null");
         }
 
-        @JsonProperty
         public FilterAnalysis getLeft()
         {
             return left;
         }
 
-        @JsonProperty
         public FilterAnalysis getRight()
         {
             return right;
@@ -95,14 +81,12 @@ public abstract class FilterAnalysis
     {
         private final String node;
 
-        @JsonCreator
         public ExpressionAnalysis(String node)
         {
             super(Type.EXPR);
             this.node = requireNonNull(node, "node is null");
         }
 
-        @JsonProperty
         public String getNode()
         {
             return node;
