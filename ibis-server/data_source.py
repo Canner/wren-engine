@@ -29,6 +29,7 @@ class DataSource(StrEnum):
         return ibis.postgres.connect(
             user=dto.user,
             password=dto.password,
+            database=dto.database,
             host=dto.host,
             port=dto.port,
         )

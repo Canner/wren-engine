@@ -9,6 +9,7 @@ class IbisDTO(BaseModel):
 class PostgresDTO(IbisDTO):
     host: str = Field(examples=["localhost"])
     port: int = Field(default=5432)
+    database: str
     user: str
     password: str
 
