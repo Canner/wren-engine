@@ -416,12 +416,16 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
+        assertThat(result.get(0).getGroupByKeys().get(0).size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("c.custkey");
 
         statement = parseSql("SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(3);
+        assertThat(result.get(0).getGroupByKeys().get(0).size()).isEqualTo(1);
+        assertThat(result.get(0).getGroupByKeys().get(1).size()).isEqualTo(1);
+        assertThat(result.get(0).getGroupByKeys().get(2).size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
         assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("name");
         assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo("nationkey");
