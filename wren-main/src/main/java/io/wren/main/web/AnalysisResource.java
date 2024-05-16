@@ -15,20 +15,21 @@
 package io.wren.main.web;
 
 import com.google.inject.Inject;
-import io.trino.sql.ExpressionFormatter;
-import io.trino.sql.SqlFormatter;
-import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.Statement;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
-import io.wren.base.sqlrewrite.analyzer.Analysis;
-import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
 import io.wren.main.WrenMetastore;
-import io.wren.main.web.dto.ColumnPredicateDto;
-import io.wren.main.web.dto.PredicateDto;
+import io.wren.main.web.dto.QueryAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.ColumnAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.FilterAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.RelationAnalysisDto;
+import io.wren.main.web.dto.QueryAnalysisDto.SortItemAnalysisDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
-import io.wren.main.web.dto.SqlAnalysisOutputDto;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -36,16 +37,12 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
-import static io.wren.base.sqlrewrite.analyzer.Analysis.SimplePredicate;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.groupingBy;
 
 @Path("/v1/analysis")
 public class AnalysisResource
@@ -78,46 +75,68 @@ public class AnalysisResource
                         mdl = WrenMDL.fromManifest(inputDto.getManifest());
                     }
                     Statement statement = parseSql(inputDto.getSql());
-                    Analysis analysis = new Analysis(statement);
-                    StatementAnalyzer.analyze(
-                            analysis,
+                    return DecisionPointAnalyzer.analyze(
                             statement,
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
-                            mdl);
-                    return toSqlAnalysisOutputDto(analysis);
+                            mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
                 })
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
-    private static List<SqlAnalysisOutputDto> toSqlAnalysisOutputDto(Analysis analysis)
+    private static QueryAnalysisDto toQueryAnalysisDto(QueryAnalysis queryAnalysis)
     {
-        return analysis.getSimplePredicates().stream()
-                .collect(
-                        // group by table name
-                        groupingBy(predicate -> predicate.getTableName().getSchemaTableName().getTableName(),
-                                // then group by column name
-                                groupingBy(SimplePredicate::getColumnName)))
-                .entrySet()
-                .stream()
-                .map(e ->
-                        new SqlAnalysisOutputDto(
-                                e.getKey(),
-                                e.getValue().entrySet().stream()
-                                        .map(columns ->
-                                                new ColumnPredicateDto(
-                                                        columns.getKey(),
-                                                        columns.getValue().stream()
-                                                                .map(predicate -> new PredicateDto(predicate.getOperator(), predicate.getValue()))
-                                                                .collect(toImmutableList())))
-                                        .collect(toImmutableList()),
-                                analysis.getLimit().map(AnalysisResource::formatExpression).orElse(null),
-                                analysis.getSortItems().stream()
-                                        .map(item -> new SqlAnalysisOutputDto.SortItem(item.getSortKey().toString(), item.getOrdering())).collect(toImmutableList())))
-                .collect(toImmutableList());
+        return new QueryAnalysisDto(
+                queryAnalysis.getSelectItems().stream().map(AnalysisResource::toColumnAnalysisDto).toList(),
+                toRelationAnalysisDto(queryAnalysis.getRelation()),
+                toFilterAnalysisDto(queryAnalysis.getFilter()),
+                queryAnalysis.getGroupByKeys(),
+                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList());
     }
 
-    private static String formatExpression(Expression expression)
+    private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)
     {
-        return ExpressionFormatter.formatExpression(expression, SqlFormatter.Dialect.DEFAULT);
+        return new ColumnAnalysisDto(columnAnalysis.getAliasName(), columnAnalysis.getExpression(), columnAnalysis.getProperties());
+    }
+
+    private static FilterAnalysisDto toFilterAnalysisDto(FilterAnalysis filterAnalysis)
+    {
+        return switch (filterAnalysis) {
+            case FilterAnalysis.ExpressionAnalysis exprAnalysis -> new FilterAnalysisDto(exprAnalysis.getType().name(), null, null, exprAnalysis.getNode());
+            case FilterAnalysis.LogicalAnalysis logicalAnalysis ->
+                    new FilterAnalysisDto(logicalAnalysis.getType().name(), toFilterAnalysisDto(logicalAnalysis.getLeft()), toFilterAnalysisDto(logicalAnalysis.getRight()), null);
+            case null -> null;
+            default -> throw new IllegalArgumentException("Unsupported filter analysis: " + filterAnalysis);
+        };
+    }
+
+    private static RelationAnalysisDto toRelationAnalysisDto(RelationAnalysis relationAnalysis)
+    {
+        return switch (relationAnalysis) {
+            case RelationAnalysis.TableRelation tableRelation ->
+                    new RelationAnalysisDto(tableRelation.getType().name(), tableRelation.getAlias(), null, null, null, tableRelation.getTableName(), null);
+            case RelationAnalysis.JoinRelation joinRelation -> new RelationAnalysisDto(
+                    joinRelation.getType().name(),
+                    joinRelation.getAlias(),
+                    toRelationAnalysisDto(joinRelation.getLeft()),
+                    toRelationAnalysisDto(joinRelation.getRight()),
+                    joinRelation.getCriteria(),
+                    null,
+                    null);
+            case RelationAnalysis.SubqueryRelation subqueryRelation -> new RelationAnalysisDto(
+                    subqueryRelation.getType().name(),
+                    subqueryRelation.getAlias(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    subqueryRelation.getBody().stream().map(AnalysisResource::toQueryAnalysisDto).toList());
+            case null -> null;
+            default -> throw new IllegalArgumentException("Unsupported relation analysis: " + relationAnalysis);
+        };
+    }
+
+    private static SortItemAnalysisDto toSortItemAnalysisDto(QueryAnalysis.SortItemAnalysis sortItemAnalysis)
+    {
+        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name());
     }
 }

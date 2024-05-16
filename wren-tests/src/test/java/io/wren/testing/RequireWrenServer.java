@@ -28,6 +28,7 @@ import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.cache.TaskInfo;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
@@ -37,9 +38,9 @@ import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
+import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
-import io.wren.main.web.dto.SqlAnalysisOutputDto;
 import io.wren.main.web.dto.ValidateDto;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
@@ -85,7 +86,7 @@ public abstract class RequireWrenServer
     private static final JsonCodec<ColumnLineageInputDto> COLUMN_LINEAGE_INPUT_DTO_CODEC = jsonCodec(ColumnLineageInputDto.class);
     private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
     private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
-    private static final JsonCodec<List<SqlAnalysisOutputDto>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(SqlAnalysisOutputDto.class);
+    private static final JsonCodec<List<QueryAnalysis>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(QueryAnalysis.class);
     private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
@@ -93,6 +94,7 @@ public abstract class RequireWrenServer
     private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
     private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
     private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
+    private static final JsonCodec<List<QueryAnalysisDto>> QUERY_ANALYSIS_DTO_LIST_CODEC = listJsonCodec(QueryAnalysisDto.class);
 
     public RequireWrenServer() {}
 
@@ -272,22 +274,7 @@ public abstract class RequireWrenServer
         }).get(60, TimeUnit.SECONDS);
     }
 
-    protected List<LineageResult> getColumnLineage(ColumnLineageInputDto inputDto)
-    {
-        Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/lineage/column"))
-                .setHeader(CONTENT_TYPE, "application/json")
-                .setBodyGenerator(jsonBodyGenerator(COLUMN_LINEAGE_INPUT_DTO_CODEC, inputDto))
-                .build();
-
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 200) {
-            getWebApplicationException(response);
-        }
-        return MODEL_LINEAGE_RESULT_LIST_CODEC.fromJson(response.getBody());
-    }
-
-    protected List<SqlAnalysisOutputDto> getSqlAnalysis(SqlAnalysisInputDto inputDto)
+    protected List<QueryAnalysisDto> getSqlAnalysis(SqlAnalysisInputDto inputDto)
     {
         Request request = prepareGet()
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/analysis/sql"))
@@ -299,7 +286,7 @@ public abstract class RequireWrenServer
         if (response.getStatusCode() != 200) {
             getWebApplicationException(response);
         }
-        return SQL_ANALYSIS_OUTPUT_LIST_CODEC.fromJson(response.getBody());
+        return QUERY_ANALYSIS_DTO_LIST_CODEC.fromJson(response.getBody());
     }
 
     protected List<ConfigManager.ConfigEntry> getConfigs()
