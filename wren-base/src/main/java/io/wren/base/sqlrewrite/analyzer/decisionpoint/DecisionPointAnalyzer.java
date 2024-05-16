@@ -42,6 +42,7 @@ import java.util.Optional;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionExpressionAnalyzer.DEFAULT_ANALYSIS;
+import static java.util.Objects.requireNonNull;
 
 public class DecisionPointAnalyzer
 {
@@ -51,7 +52,7 @@ public class DecisionPointAnalyzer
     {
         Analysis analysis = new Analysis(query);
         StatementAnalyzer.analyze(analysis, query, sessionContext, mdl);
-        Visitor visitor = new Visitor(analysis, sessionContext);
+        Visitor visitor = new Visitor(analysis, sessionContext, mdl);
         visitor.process(query);
         return visitor.queries;
     }
@@ -61,12 +62,14 @@ public class DecisionPointAnalyzer
     {
         private final Analysis analysis;
         private final SessionContext sessionContext;
+        private final WrenMDL mdl;
         private final List<QueryAnalysis> queries = new ArrayList<>();
 
-        public Visitor(Analysis analysis, SessionContext sessionContext)
+        public Visitor(Analysis analysis, SessionContext sessionContext, WrenMDL mdl)
         {
-            this.analysis = analysis;
-            this.sessionContext = sessionContext;
+            this.analysis = requireNonNull(analysis, "analysis is null");
+            this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
+            this.mdl = requireNonNull(mdl, "mdl is null");
         }
 
         @Override
@@ -75,7 +78,7 @@ public class DecisionPointAnalyzer
             QueryAnalysis.Builder builder = QueryAnalysis.builder();
             Context context = new Context(builder, analysis.getScope(node));
             process(node.getSelect(), context);
-            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from)));
+            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl)));
             node.getWhere().ifPresent(where -> builder.setFilter(FilterAnalyzer.analyze(where)));
 
             if (node.getGroupBy().isPresent()) {

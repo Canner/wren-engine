@@ -33,6 +33,10 @@ import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
+import io.wren.base.SessionContext;
+import io.wren.base.WrenMDL;
+
+import java.util.List;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -41,14 +45,23 @@ public class RelationAnalyzer
 {
     private RelationAnalyzer() {}
 
-    public static RelationAnalysis analyze(Relation relation)
+    public static RelationAnalysis analyze(Relation relation, SessionContext sessionContext, WrenMDL wrenMDL)
     {
-        return new Visitor().process(relation, null);
+        return new Visitor(sessionContext, wrenMDL).process(relation, null);
     }
 
     static class Visitor
             extends AstVisitor<RelationAnalysis, Void>
     {
+        private final SessionContext sessionContext;
+        private final WrenMDL wrenMDL;
+
+        public Visitor(SessionContext sessionContext, WrenMDL wrenMDL)
+        {
+            this.sessionContext = sessionContext;
+            this.wrenMDL = wrenMDL;
+        }
+
         @Override
         protected RelationAnalysis visitTable(Table node, Void context)
         {
@@ -60,28 +73,28 @@ public class RelationAnalyzer
         {
             // TODO: implement this
             // except, intersect, union
-            return super.visitSetOperation(node, context);
+            throw new UnsupportedOperationException("Analyze Set operation is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitValues(Values node, Void context)
         {
             // TODO: implement this
-            return super.visitValues(node, context);
+            throw new UnsupportedOperationException("Analyze Values is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitFunctionRelation(FunctionRelation node, Void context)
         {
             // TODO: implement this
-            return super.visitFunctionRelation(node, context);
+            throw new UnsupportedOperationException("Analyze FunctionRelation is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitTableSubquery(TableSubquery node, Void context)
         {
-            // TODO: implement this
-            return super.visitTableSubquery(node, context);
+            List<QueryAnalysis> analyses = DecisionPointAnalyzer.analyze(node.getQuery(), sessionContext, wrenMDL);
+            return new RelationAnalysis.SubqueryRelation(null, analyses);
         }
 
         @Override
@@ -140,28 +153,28 @@ public class RelationAnalyzer
         protected RelationAnalysis visitSampledRelation(SampledRelation node, Void context)
         {
             // TODO: implement this
-            return super.visitSampledRelation(node, context);
+            throw new UnsupportedOperationException("Analyze SampledRelation is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitPatternRecognitionRelation(PatternRecognitionRelation node, Void context)
         {
             // TODO: implement this
-            return super.visitPatternRecognitionRelation(node, context);
+            throw new UnsupportedOperationException("Analyze PatternRecognitionRelation is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitUnnest(Unnest node, Void context)
         {
             // TODO: implement this
-            return super.visitUnnest(node, context);
+            throw new UnsupportedOperationException("Analyze Unnest is not supported yet");
         }
 
         @Override
         protected RelationAnalysis visitLateral(Lateral node, Void context)
         {
             // TODO: implement this
-            return super.visitLateral(node, context);
+            throw new UnsupportedOperationException("Analyze Lateral is not supported yet");
         }
     }
 }

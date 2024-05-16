@@ -19,6 +19,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+import java.util.List;
+
 import static io.wren.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -47,7 +49,7 @@ public abstract class RelationAnalysis
         return new TableRelation(tableName, alias);
     }
 
-    static SubqueryRelation subquery(String alias, QueryAnalysis body)
+    static SubqueryRelation subquery(String alias, List<QueryAnalysis> body)
     {
         return new SubqueryRelation(alias, body);
     }
@@ -142,17 +144,17 @@ public abstract class RelationAnalysis
     public static class SubqueryRelation
             extends RelationAnalysis
     {
-        private final QueryAnalysis body;
+        private final List<QueryAnalysis> body;
 
         @JsonCreator
-        public SubqueryRelation(String alias, QueryAnalysis body)
+        public SubqueryRelation(String alias, List<QueryAnalysis> body)
         {
             super(Type.SUBQUERY, alias);
             this.body = requireNonNull(body, "body is null");
         }
 
         @JsonProperty
-        public QueryAnalysis getBody()
+        public List<QueryAnalysis> getBody()
         {
             return body;
         }

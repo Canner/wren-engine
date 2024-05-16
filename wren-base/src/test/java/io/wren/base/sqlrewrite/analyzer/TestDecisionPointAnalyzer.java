@@ -438,4 +438,46 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
         assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING);
     }
+
+    @Test
+    public void testMultipleQuery()
+    {
+        Statement statement = parseSql("WITH t1 as (SELECT * FROM customer) SELECT * FROM t1");
+        List<QueryAnalysis> result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(2);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(0).getRelation().getAlias()).isNull();
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
+        if (result.get(0).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
+            assertThat(tableRelation.getTableName()).isEqualTo("customer");
+        }
+
+        assertThat(result.get(1).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        assertThat(result.get(1).getRelation().getAlias()).isNull();
+        assertThat(result.get(1).getSelectItems().size()).isEqualTo(8);
+        if (result.get(1).getRelation() instanceof RelationAnalysis.TableRelation tableRelation) {
+            assertThat(tableRelation.getTableName()).isEqualTo("t1");
+        }
+    }
+
+    @Test
+    public void testSubQuery()
+    {
+        Statement statement = parseSql("SELECT * FROM (SELECT * FROM customer) t1");
+        List<QueryAnalysis> result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.SUBQUERY);
+        assertThat(result.get(0).getRelation().getAlias()).isEqualTo("t1");
+
+        statement = parseSql("SELECT * FROM (WITH t1 AS (SELECT * FROM customer) SELECT * FROM t1) t2");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.SUBQUERY);
+        assertThat(result.get(0).getRelation().getAlias()).isEqualTo("t2");
+        if (result.get(0).getRelation() instanceof RelationAnalysis.SubqueryRelation subQueryRelation) {
+            assertThat(subQueryRelation.getBody().size()).isEqualTo(2);
+            assertThat(subQueryRelation.getBody().get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(subQueryRelation.getBody().get(1).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+        }
+    }
 }
