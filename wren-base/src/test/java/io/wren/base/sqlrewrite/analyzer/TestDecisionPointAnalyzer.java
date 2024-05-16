@@ -145,6 +145,18 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSelectItems().get(0).getAliasName().get()).isEqualTo("ckey");
         assertThat(result.get(0).getSelectItems().get(1).getExpression()).isEqualTo("orderkey");
         assertThat(result.get(0).getSelectItems().get(1).getAliasName().get()).isEqualTo("okey");
+
+        statement = parseSql("SELECT * FROM remote_customer");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("*");
+
+        statement = parseSql("SELECT c.* FROM remote_customer c");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("c.*");
     }
 
     @Test

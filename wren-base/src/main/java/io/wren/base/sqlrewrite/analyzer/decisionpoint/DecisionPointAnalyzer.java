@@ -32,6 +32,7 @@ import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
+import io.wren.base.sqlrewrite.analyzer.Field;
 import io.wren.base.sqlrewrite.analyzer.Scope;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 
@@ -42,6 +43,7 @@ import java.util.Optional;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionExpressionAnalyzer.DEFAULT_ANALYSIS;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class DecisionPointAnalyzer
@@ -95,19 +97,32 @@ public class DecisionPointAnalyzer
         @Override
         protected Void visitAllColumns(AllColumns node, Context context)
         {
+            List<Field> scopedFields = context.scope.getRelationType().getFields();
             if (node.getTarget().isPresent()) {
                 String target = formatExpression(node.getTarget().get(), SqlFormatter.Dialect.DEFAULT);
                 CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, QualifiedName.of(List.of(target.split("\\."))));
-                context.scope.getRelationType().getFields().stream()
-                        .filter(field -> field.getRelationAlias().filter(alias -> alias.toString().equals(target)).isPresent() || field.getTableName().equals(catalogSchemaTableName))
-                        .forEach(field -> {
-                            context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
-                        });
+                if (scopedFields.isEmpty()) {
+                    // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
+                    context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), format("%s.*", target), DEFAULT_ANALYSIS.toMap()));
+                }
+                else {
+                    scopedFields.stream()
+                            .filter(field -> field.getRelationAlias().filter(alias -> alias.toString().equals(target)).isPresent() || field.getTableName().equals(catalogSchemaTableName))
+                            .forEach(field -> {
+                                context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
+                            });
+                }
             }
             else {
-                context.scope.getRelationType().getFields().forEach(field -> {
-                    context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
-                });
+                if (scopedFields.isEmpty()) {
+                    // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
+                    context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), "*", DEFAULT_ANALYSIS.toMap()));
+                }
+                else {
+                    scopedFields.forEach(field -> {
+                        context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
+                    });
+                }
             }
             return null;
         }

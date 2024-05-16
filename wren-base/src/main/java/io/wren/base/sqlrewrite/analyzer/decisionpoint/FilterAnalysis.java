@@ -58,7 +58,6 @@ public abstract class FilterAnalysis
         this.type = requireNonNull(type, "type is null");
     }
 
-    @JsonProperty
     public Type getType()
     {
         return type;

@@ -75,7 +75,6 @@ public abstract class RelationAnalysis
         this.alias = alias;
     }
 
-    @JsonProperty
     public Type getType()
     {
         return type;
