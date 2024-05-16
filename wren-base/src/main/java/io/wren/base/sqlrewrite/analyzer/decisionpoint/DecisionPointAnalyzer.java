@@ -147,7 +147,9 @@ public class DecisionPointAnalyzer
                         QueryAnalysis.ColumnAnalysis field = context.builder.getSelectItems().get((int) ((LongLiteral) expression).getValue() - 1);
                         keys.add(field.getAliasName().orElse(field.getExpression()));
                     }
-                    keys.add(formatExpression(expression, SqlFormatter.Dialect.DEFAULT));
+                    else {
+                        keys.add(formatExpression(expression, SqlFormatter.Dialect.DEFAULT));
+                    }
                 }
                 groups.add(keys.build());
             }
