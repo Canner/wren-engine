@@ -78,6 +78,7 @@ public class TestMacro
                                         Column.column("custkey_callAddOne", WrenTypes.INTEGER, null, true, "{{callAddOne('custkey')}}"),
                                         Column.column("custkey_pass1Macro", WrenTypes.INTEGER, null, true, "{{pass1Macro('custkey', addOne)}}"),
                                         Column.column("custkey_pass2Macro", WrenTypes.INTEGER, null, true, "{{pass2Macro('custkey', addOne, addTwo)}}"),
+                                        Column.column("custkey_sum_addOne", WrenTypes.INTEGER, null, true, "{{addOne('sum(custkey)')}}"),
                                         Column.column("name", WrenTypes.VARCHAR, null, true)),
                                 "pk")))
                 .setMacros(List.of(
@@ -96,6 +97,7 @@ public class TestMacro
         assertThat(modelOptional.get().getColumns().get(3).getExpression().get()).isEqualTo("custkey + 1");
         assertThat(modelOptional.get().getColumns().get(4).getExpression().get()).isEqualTo("custkey + 1");
         assertThat(modelOptional.get().getColumns().get(5).getExpression().get()).isEqualTo("custkey + 1 + custkey + 2");
+        assertThat(modelOptional.get().getColumns().get(6).getExpression().get()).isEqualTo("sum(custkey) + 1");
     }
 
     @Test
