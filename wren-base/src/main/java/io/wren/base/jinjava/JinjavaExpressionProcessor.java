@@ -14,24 +14,24 @@
 
 package io.wren.base.jinjava;
 
-import io.trino.sql.SqlFormatter;
-import io.trino.sql.parser.ParsingOptions;
-import io.trino.sql.parser.SqlParser;
+import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.ExpressionRewriter;
 import io.trino.sql.tree.ExpressionTreeRewriter;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.QualifiedName;
+import io.wren.base.WrenException;
 import io.wren.base.dto.Macro;
 import io.wren.base.macro.Parameter;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import static io.trino.sql.SqlFormatter.formatSql;
+import static io.wren.base.metadata.StandardErrorCode.SYNTAX_ERROR;
+import static io.wren.base.sqlrewrite.Utils.parseExpression;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -49,10 +49,6 @@ public class JinjavaExpressionProcessor
     {
         return new JinjavaExpressionProcessor(source, caller, macros).processInternal();
     }
-
-    private static final Pattern FUNCTION_CALL_PATTERN = Pattern.compile("([a-zA-Z_][a-zA-Z0-9_]*)\\(([^)]*)\\)(\\.[^)]*\\))?");
-
-    private static final SqlParser SQL_PARSER = new SqlParser();
 
     private final String source;
     private final StringBuilder resultBuffer;
@@ -85,7 +81,7 @@ public class JinjavaExpressionProcessor
                         resultBuffer.append(c);
                     }
                     else if (inExpression) {
-                        throw new IllegalArgumentException("Nested expression is not supported");
+                        throw new WrenException(SYNTAX_ERROR, format("Generating macro failed: Nested expression is not supported for macro: %s", source));
                     }
                     else {
                         inExpression = true;
@@ -102,7 +98,7 @@ public class JinjavaExpressionProcessor
                         resultBuffer.append(c);
                     }
                     else if (!inExpression) {
-                        throw new IllegalArgumentException("Unmatched }}");
+                        throw new WrenException(SYNTAX_ERROR, format("Generating macro failed: Unmatched }} in %s", source));
                     }
                     else {
                         inExpression = false;
@@ -162,29 +158,47 @@ public class JinjavaExpressionProcessor
 
     private String processExpression(String expression)
     {
-        Matcher matcher = FUNCTION_CALL_PATTERN.matcher(expression);
-        if (matcher.find()) {
-            String functionName = matcher.group(1);
-            List<Expression> arguments = Arrays.stream(matcher.group(2).split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(this::createExpression)
-                    .collect(toList());
+        Expression macroExpression = parseExpression(expression);
+        return Optional.ofNullable(new Processor(macros, callerInfo).process(macroExpression, null))
+                .orElseThrow(() -> new WrenException(SYNTAX_ERROR, format("Failed to apply macro to %s in %s", expression, source)));
+    }
+
+    static class Processor
+            extends AstVisitor<String, Void>
+    {
+        private final List<Macro> macros;
+        private Optional<CallerInfo> callerInfo = Optional.empty();
+
+        public Processor(List<Macro> macros, Optional<CallerInfo> callerInfo)
+        {
+            this.macros = macros;
+            this.callerInfo = callerInfo;
+        }
+
+        @Override
+        protected String visitIdentifier(Identifier node, Void context)
+        {
+            return format("{{ %s }}", formatSql(node));
+        }
+
+        @Override
+        protected String visitFunctionCall(FunctionCall node, Void context)
+        {
+            String functionName = node.getName().toString();
+            List<Expression> arguments = node.getArguments();
             Optional<Macro> callee = macros.stream()
                     .filter(m -> m.getName().equals(functionName))
                     .filter(m -> m.getParameters().stream().anyMatch(p -> p.getType() == Parameter.TYPE.MACRO))
                     .findAny();
             if (callee.isPresent()) {
-                String processed = process(
+                return JinjavaExpressionProcessor.process(
                         callee.get().getBody(),
                         new CallerInfo(callee.get(), arguments),
                         macros);
-                return matcher.replaceFirst(processed);
             }
 
             if (callerInfo.isPresent()) {
                 Macro caller = callerInfo.get().getCaller();
-                Expression tree = createExpression(expression);
                 Expression processed = ExpressionTreeRewriter.rewriteWith(new ExpressionRewriter<>()
                 {
                     @Override
@@ -235,16 +249,11 @@ public class JinjavaExpressionProcessor
                                 newValue,
                                 context);
                     }
-                }, tree);
-                return "{{" + SqlFormatter.formatSql(processed) + "}}";
+                }, node);
+                return format("{{ %s }}", formatSql(processed));
             }
+            return format("{{ %s }}", formatSql(node));
         }
-        return "{{" + expression + "}}";
-    }
-
-    private Expression createExpression(String expression)
-    {
-        return SQL_PARSER.createExpression(expression, new ParsingOptions());
     }
 
     static class CallerInfo
