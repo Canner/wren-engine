@@ -6,6 +6,8 @@ use datafusion::{config::ConfigOptions, error::DataFusionError, optimizer::analy
 
 use crate::{logical_plan::{rule::{ModelAnalyzeRule, ModelGenerationRule}, wren_context_provider::WrenContextProvider}, mdl::manifest::{Manifest, Model}};
 
+
+// This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
 }
@@ -13,6 +15,10 @@ pub struct WrenMDL {
 impl WrenMDL {
     pub fn new(manifest: Manifest) -> Self {
         WrenMDL { manifest }
+    }
+
+    pub fn new_ref(manifest: Manifest) -> Arc<Self> {
+        Arc::new(WrenMDL::new(manifest))
     }
 
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {

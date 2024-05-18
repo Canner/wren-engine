@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
+// This is the main struct that holds all the information about the manifest
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
     pub catalog: String,
