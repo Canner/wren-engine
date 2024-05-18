@@ -19,7 +19,7 @@ pub struct WrenContextProvider {
 impl WrenContextProvider {
     pub fn new(mdl: &WrenMDL) -> Self {
         let mut tables = HashMap::new();
-        mdl.manifest.models.iter().for_each(|(model)| {
+        mdl.manifest.models.iter().for_each(|model| {
             let name = model.name.clone();
             tables.insert(name.clone(), create_table_source(model));
         });
