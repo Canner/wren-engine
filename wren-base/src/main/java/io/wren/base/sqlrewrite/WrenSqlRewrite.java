@@ -92,18 +92,19 @@ public class WrenSqlRewrite
                     .filter(e -> wrenMDL.getView(e.getKey()).isEmpty())
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
 
+            // Some node be applied `count(*)` which won't be collected but its source is required.
+            analysis.getRequiredSourceNodes().forEach(node -> {
+                String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString).orElse(null);
+                if (!tableRequiredFields.containsKey(tableName)) {
+                    tableRequiredFields.put(tableName, new HashSet<>());
+                }
+            });
+
             ImmutableList.Builder<QueryDescriptor> descriptorsBuilder = ImmutableList.builder();
             tableRequiredFields.forEach((name, value) -> {
                 addDescriptor(name, value, wrenMDL, descriptorsBuilder);
                 visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
             });
-
-            // Some node be applied `count(*)` which won't be collected but its source is required.
-            analysis.getRequiredSourceNodes().forEach(node ->
-                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).ifPresent(name -> {
-                        addDescriptor(name, wrenMDL, descriptorsBuilder);
-                        visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
-                    }));
 
             List<WithQuery> withQueries = new ArrayList<>();
             // add date spine if needed
