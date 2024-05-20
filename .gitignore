@@ -17,3 +17,4 @@ wren-server/etc
 /**/var/
 __pycache__/
 venv/
+**/poetry.lock

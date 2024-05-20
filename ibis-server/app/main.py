@@ -1,13 +1,12 @@
 import os
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, RedirectResponse
 
-import routers
+from app.routers import ibis
 
 app = FastAPI()
-app.include_router(routers.ibis_router)
+app.include_router(ibis.router)
 
 
 @app.get("/")
@@ -28,5 +27,8 @@ async def exception_handler(request, exc: Exception):
     )
 
 
-if __name__ == "__main__":
-    uvicorn.run("main:app", host='0.0.0.0', port=int(os.getenv('IBIS_PORT', 8000)), reload=True)
+def start():
+    import sys
+    reload = True if '--dev' in sys.argv else False
+    import uvicorn
+    uvicorn.run("app.main:app", host='0.0.0.0', port=int(os.getenv('IBIS_PORT', 8000)), reload=reload)

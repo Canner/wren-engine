@@ -3,8 +3,8 @@ from json import loads
 
 from fastapi import APIRouter
 
-from data_source import DataSource
-from dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
+from app.data_source import DataSource
+from app.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 
 logger = logging.getLogger()
 router = APIRouter(prefix="/v2/ibis")

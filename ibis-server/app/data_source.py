@@ -5,7 +5,7 @@ from json import loads
 import ibis
 from google.oauth2 import service_account
 
-from dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
+from app.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 
 
 class DataSource(StrEnum):
