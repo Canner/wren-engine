@@ -75,3 +75,40 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use crate::mdl::manifest::Manifest;
+    use crate::mdl::{self, WrenMDL};
+
+    #[test]
+    fn test_projection_scan() {
+        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+        .iter()
+        .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
+        let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let wren_mdl = Arc::new(WrenMDL::new(mdl));
+
+        let sql: &str = "select orderkey from orders";
+        let planned = mdl::transform_sql(Arc::clone(&wren_mdl), sql).unwrap();
+        assert_eq!(planned, r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_custkey" AS "custkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders""#);
+    }
+
+    #[test]
+    fn test_projection_filter_scan() {
+        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+        .iter()
+        .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
+        let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let wren_mdl = Arc::new(WrenMDL::new(mdl));
+
+        let sql: &str = "select orderkey from orders where orders.totalprice > 10";
+        let planned = mdl::transform_sql(Arc::clone(&wren_mdl), sql).unwrap();
+        assert_eq!(planned, r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_custkey" AS "custkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#);
+    }
+}

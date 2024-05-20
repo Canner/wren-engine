@@ -1,7 +1,7 @@
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFField, DFSchema, DFSchemaRef, Result};
-use datafusion::logical_expr::Extension;
+use datafusion::logical_expr::{table_scan, Extension, Filter};
 use datafusion::logical_expr::{
     col, Expr, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
     UserDefinedLogicalNodeCore,
@@ -33,22 +33,49 @@ impl ModelAnalyzeRule {
             ..
         }) = plan.clone()
         {
-            if let LogicalPlan::TableScan(table_scan) = input.as_ref() {
-                if let Some(model) = self
+            match input.as_ref() {
+                LogicalPlan::TableScan(table_scan) => {
+                    if let Some(model) = self
                     .mdl
                     .get_model(&table_scan.table_name.to_string().as_str())
-                {
-                    let model = LogicalPlan::Extension(Extension {
-                        node: Arc::new(ModelPlanNode::new(
-                            model,
-                            expr.clone(),
-                            // TODO: maybe we shouldn't clone the table_scan here
-                            LogicalPlan::TableScan(table_scan.clone()),
-                        )),
-                    });
-                    let result = Projection::new_from_schema(Arc::new(model), schema);
-                    return Ok(Transformed::yes(LogicalPlan::Projection(result)));
-                }
+                    {
+                        let model = LogicalPlan::Extension(Extension {
+                            node: Arc::new(ModelPlanNode::new(
+                                model,
+                                expr.clone(),
+                                // TODO: maybe we shouldn't clone the table_scan here
+                                LogicalPlan::TableScan(table_scan.clone()),
+                            )),
+                        });
+                        let result = Projection::new_from_schema(Arc::new(model), schema);
+                        return Ok(Transformed::yes(LogicalPlan::Projection(result)));
+                    }
+                },
+                LogicalPlan::Filter(filter) => {
+                    if let LogicalPlan::TableScan(table_scan) = filter.input.as_ref() {
+                        if let Some(model) = self
+                        .mdl
+                        .get_model(&table_scan.table_name.to_string().as_str())
+                        {
+                            let model = LogicalPlan::Extension(Extension {
+                                node: Arc::new(ModelPlanNode::new(
+                                    model,
+                                    expr.clone(),
+                                    // TODO: maybe we shouldn't clone the table_scan here
+                                    LogicalPlan::TableScan(table_scan.clone()),
+                                )),
+                            });
+                            let result= LogicalPlan::Filter(Filter::try_new(filter.predicate.clone(), Arc::new(model)).unwrap());
+                            let result = Projection::new_from_schema(Arc::new(result), schema);
+                            return Ok(Transformed::yes(LogicalPlan::Projection(result)));
+                        }
+                    }
+                },
+                LogicalPlan::Aggregate(agg) => {
+                    // TODO:
+                    return Ok(Transformed::no(plan));
+                },
+                _ => return Ok(Transformed::no(plan)),
             }
         }
         return Ok(Transformed::no(plan));
@@ -57,7 +84,7 @@ impl ModelAnalyzeRule {
 
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up(&|plan| -> Result<Transformed<LogicalPlan>> {
+        plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
             self.analyze_model_internal(plan)
         })
         .data()
@@ -214,7 +241,7 @@ impl ModelGenerationRule {
 
 impl AnalyzerRule for ModelGenerationRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up(&|plan| -> Result<Transformed<LogicalPlan>> {
+        plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
             self.generate_model_internal(plan)
         })
         .data()
