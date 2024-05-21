@@ -28,9 +28,11 @@ import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.Utils;
 import io.wren.base.WrenMDL;
+import io.wren.base.dto.Column;
 import io.wren.base.dto.CumulativeMetric;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.Relationable;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -47,6 +49,7 @@ import java.util.Set;
 
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toMap;
@@ -98,7 +101,9 @@ public class WrenSqlRewrite
                 String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString)
                         .orElseThrow(() -> new IllegalArgumentException(format("source node name not found: %s", node)));
                 if (!tableRequiredFields.containsKey(tableName)) {
-                    tableRequiredFields.put(tableName, new HashSet<>());
+                    Relationable relationable = wrenMDL.getRelationable(tableName)
+                            .orElseThrow(() -> new IllegalArgumentException(format("dataset not found: %s", tableName)));
+                    tableRequiredFields.put(tableName, relationable.getColumns().stream().map(Column::getName).collect(toImmutableSet()));
                 }
             });
 
