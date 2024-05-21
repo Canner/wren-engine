@@ -8,5 +8,5 @@
 
 ## Start the server
 - Execute `make start` to start the server
-- Execute `make dev` to start the server in development mode
+- Execute `make dev` to start the server in development mode. It will auto-reload after the code is edited.
 - Default port is `8000`, you can change it by setting the environment variable `IBIS_PORT`
