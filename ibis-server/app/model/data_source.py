@@ -3,9 +3,8 @@ from enum import StrEnum
 from json import loads
 
 import ibis
+from app.model.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 from google.oauth2 import service_account
-
-from app.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 
 
 class DataSource(StrEnum):
