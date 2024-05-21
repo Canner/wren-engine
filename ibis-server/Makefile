@@ -1,11 +1,11 @@
 install:
 	poetry install
 
-start:
-	poetry run start
+run:
+	poetry run fastapi run
 
 dev:
-	poetry run start --dev
+	poetry run fastapi dev
 
 test:
 	poetry run pytest
