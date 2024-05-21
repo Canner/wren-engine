@@ -2,7 +2,7 @@
 name = "ibis-server"
 version = "0.1.0"
 description = ""
-authors = ["Grieve <grieve54706@gmail.com>"]
+authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
 packages = [{ include = "app" }]
 
