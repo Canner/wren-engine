@@ -19,11 +19,15 @@ import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SubqueryExpression;
+import io.trino.sql.tree.Window;
+import io.trino.sql.tree.WindowOperation;
+import io.trino.sql.tree.WindowSpecification;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 
@@ -111,6 +115,9 @@ public class ExpressionAnalyzer
                 return null;
             }
             node.getArguments().forEach(this::process);
+            node.getWindow().ifPresent(this::analyzeWindow);
+            node.getFilter().ifPresent(this::process);
+            node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems().forEach(sortItem -> process(sortItem.getSortKey())));
             return null;
         }
 
@@ -119,6 +126,25 @@ public class ExpressionAnalyzer
         {
             StatementAnalyzer.analyze(analysis, node.getQuery(), sessionContext, wrenMDL);
             return null;
+        }
+
+        @Override
+        protected Void visitWindowOperation(WindowOperation node, Void context)
+        {
+            analyzeWindow(node.getWindow());
+            return null;
+        }
+
+        private void analyzeWindow(Window window)
+        {
+            if (window instanceof WindowSpecification windowSpecification) {
+                windowSpecification.getPartitionBy().forEach(this::process);
+                windowSpecification.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems().forEach(sortItem -> process(sortItem.getSortKey())));
+                windowSpecification.getFrame().ifPresent(frame -> {
+                    frame.getStart().getValue().ifPresent(this::process);
+                    frame.getEnd().flatMap(FrameBound::getValue).ifPresent(this::process);
+                });
+            }
         }
 
         public Map<NodeRef<Expression>, Field> getReferenceFields()

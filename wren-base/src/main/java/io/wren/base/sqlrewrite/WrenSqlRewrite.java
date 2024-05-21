@@ -48,6 +48,7 @@ import java.util.Set;
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -94,7 +95,8 @@ public class WrenSqlRewrite
 
             // Some node be applied `count(*)` which won't be collected but its source is required.
             analysis.getRequiredSourceNodes().forEach(node -> {
-                String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString).orElse(null);
+                String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString)
+                        .orElseThrow(() -> new IllegalArgumentException(format("source node name not found: %s", node)));
                 if (!tableRequiredFields.containsKey(tableName)) {
                     tableRequiredFields.put(tableName, new HashSet<>());
                 }

@@ -20,6 +20,7 @@ import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
+import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
@@ -41,6 +42,7 @@ import io.trino.sql.tree.Table;
 import io.trino.sql.tree.TableSubquery;
 import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
+import io.trino.sql.tree.WindowSpecification;
 import io.trino.sql.tree.With;
 import io.trino.sql.tree.WithQuery;
 import io.wren.base.CatalogSchemaTableName;
@@ -52,13 +54,10 @@ import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.TimeUnit;
 import io.wren.base.dto.View;
-import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
-import io.wren.base.sqlrewrite.analyzer.matcher.PredicateMatcher;
 
 import javax.annotation.Nullable;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -315,27 +314,24 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitQuerySpecification(QuerySpecification node, Optional<Scope> scope)
         {
-            QueryAnalysis.Builder queryAnalysisBuilder = QueryAnalysis.builder();
             Scope sourceScope = analyzeFrom(node, scope);
-            List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
+            analyzeSelect(node, sourceScope);
             node.getWhere().ifPresent(where -> analyzeWhere(where, sourceScope));
             node.getHaving().ifPresent(having -> analyzeExpression(having, sourceScope));
+            node.getWindows().forEach(window -> analyzeWindowSpecification(window.getWindow(), sourceScope));
+            node.getGroupBy().ifPresent(groupBy -> groupBy.getGroupingElements().forEach(groupingElement -> {
+                groupingElement.getExpressions().forEach(expression -> analyzeExpression(expression, sourceScope));
+            }));
             node.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems()
                     .forEach(item -> {
-                        QualifiedName name;
-                        if (item.getSortKey() instanceof LongLiteral) {
-                            long index = ((LongLiteral) item.getSortKey()).getValue() - 1;
-                            name = getQualifiedName(outputExpressions.get((int) index));
-                        }
-                        else {
-                            name = getQualifiedName(item.getSortKey());
+                        if (!(item.getSortKey() instanceof LongLiteral)) {
+                            analyzeExpression(item.getSortKey(), sourceScope);
                         }
                     }));
-            // TODO: this scope is wrong.
             return createAndAssignScope(node, scope, sourceScope);
         }
 
-        private List<Expression> analyzeSelect(QuerySpecification node, Scope scope)
+        private void analyzeSelect(QuerySpecification node, Scope scope)
         {
             ImmutableList.Builder<Expression> outputExpressions = ImmutableList.builder();
             for (SelectItem item : node.getSelect().getSelectItems()) {
@@ -349,7 +345,7 @@ public final class StatementAnalyzer
                     throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
                 }
             }
-            return outputExpressions.build();
+            outputExpressions.build();
         }
 
         private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
@@ -394,14 +390,19 @@ public final class StatementAnalyzer
         private void analyzeWhere(Expression node, Scope scope)
         {
             ExpressionAnalysis expressionAnalysis = analyzeExpression(node, scope);
-            Map<NodeRef<Expression>, Field> fields = expressionAnalysis.getReferencedFields();
-            expressionAnalysis.getPredicates().stream()
-                    .filter(PredicateMatcher.PREDICATE_MATCHER::shapeMatches)
-                    .forEach(comparisonExpression -> {
-                        Expression expression = comparisonExpression.getLeft();
-                    });
             typeCoercionOptional.flatMap(typeCoercion -> typeCoercion.coerceExpression(node, scope))
                     .ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(node), expression));
+        }
+
+        private void analyzeWindowSpecification(WindowSpecification windowSpecification, Scope scope)
+        {
+            windowSpecification.getExistingWindowName().ifPresent(name -> analyzeExpression(name, scope));
+            windowSpecification.getPartitionBy().forEach(expression -> analyzeExpression(expression, scope));
+            windowSpecification.getOrderBy().ifPresent(orderBy -> orderBy.getSortItems().forEach(item -> analyzeExpression(item.getSortKey(), scope)));
+            windowSpecification.getFrame().ifPresent(frame -> {
+                frame.getStart().getValue().ifPresent(start -> analyzeExpression(start, scope));
+                frame.getEnd().flatMap(FrameBound::getValue).ifPresent(end -> analyzeExpression(end, scope));
+            });
         }
 
         @Override
@@ -517,7 +518,8 @@ public final class StatementAnalyzer
         protected Scope visitAliasedRelation(AliasedRelation relation, Optional<Scope> scope)
         {
             Scope relationScope = process(relation.getRelation(), scope);
-
+            relationScope.getRelationId().getSourceNode().flatMap(analysis::getSourceNodeNames)
+                    .ifPresent(names -> analysis.addSourceNodeName(NodeRef.of(relation), names));
             List<Field> fields = relationScope.getRelationType().getFields();
             // if scope is a data source scope, we should get the fields from MDL
             if (relationScope.isDataSourceScope()) {
