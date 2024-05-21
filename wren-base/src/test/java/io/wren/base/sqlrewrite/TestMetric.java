@@ -36,6 +36,7 @@ import static io.wren.base.sqlrewrite.WrenSqlRewrite.WREN_SQL_REWRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestMetric
         extends AbstractTestFramework
@@ -355,6 +356,10 @@ public class TestMetric
         // apply count(custkey) on metric
         assertThat(query(rewrite("SELECT count(custkey) FROM CountOrders ORDER BY 1", true)))
                 .isEqualTo(query("WITH output AS (SELECT custkey, count(*) FROM orders GROUP BY 1) SELECT count(custkey) FROM output"));
+
+        assertThatThrownBy(() -> query(rewrite("SELECT count(custkey) FROM notfound ORDER BY 1", true)))
+                .rootCause()
+                .hasMessageMatching(".*Table with name notfound does not exist(.|\\n)*");
     }
 
     @Test
@@ -420,6 +425,8 @@ public class TestMetric
                 .setSchema("test")
                 .setEnableDynamic(enableDynamicField)
                 .build();
-        return WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(wrenMDL, null), List.of(WREN_SQL_REWRITE));
+        String result = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(wrenMDL, null), List.of(WREN_SQL_REWRITE));
+        System.out.println(result);
+        return result;
     }
 }

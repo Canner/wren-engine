@@ -188,6 +188,31 @@ public abstract class AbstractTestModel
                         "WHERE l.orderkey = 44995");
 
         assertQuery(mdl, "SELECT count(*) FROM Lineitem", "SELECT count(*) FROM lineitem");
+        assertQuery(mdl, "SELECT count(*) FROM Lineitem WHERE orderkey = 44995",
+                "SELECT count(*) FROM lineitem WHERE orderkey = 44995");
+        assertQuery(mdl, "SELECT count(*) FROM Lineitem l WHERE l.orderkey = 44995",
+                "SELECT count(*) FROM lineitem l WHERE l.orderkey = 44995");
+
+        assertQuery(mdl, "SELECT col_1 FROM Lineitem ORDER BY col_2", "SELECT (totalprice + totalprice) AS col_1\n" +
+                "FROM lineitem l\n" +
+                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
+                "ORDER BY concat(l.orderkey, '#', c.custkey)");
+        assertQuery(mdl, "SELECT count(*) FROM Lineitem group by col_1, col_2 order by 1", "SELECT count(*)\n" +
+                "FROM lineitem l\n" +
+                "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                "LEFT JOIN customer c ON o.custkey = c.custkey\n" +
+                "GROUP BY (totalprice + totalprice), concat(l.orderkey, '#', c.custkey)\n" +
+                "ORDER BY 1");
+        assertQuery(mdl, "SELECT rank() over (order by col_1) FROM Lineitem",
+                "SELECT rank() OVER (ORDER BY (totalprice + totalprice))\n" +
+                        "FROM lineitem l\n" +
+                        "LEFT JOIN orders o ON l.orderkey = o.orderkey");
+        assertQuery(mdl, "SELECT count(f1) FROM (SELECT lag(extendedprice) over (partition by col_2) as f1 FROM Lineitem)",
+                "SELECT count(f1) FROM (SELECT lag(extendedprice) OVER (PARTITION BY concat(l.orderkey, '#', c.custkey)) as f1\n" +
+                        "FROM lineitem l\n" +
+                        "LEFT JOIN orders o ON l.orderkey = o.orderkey\n" +
+                        "LEFT JOIN customer c ON o.custkey = c.custkey)");
     }
 
     @Test

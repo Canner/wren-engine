@@ -26,6 +26,7 @@ import io.wren.base.dto.EnumDefinition;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.Relationable;
 import io.wren.base.dto.Relationship;
 import io.wren.base.dto.View;
 import io.wren.base.jinjava.JinjavaExpressionProcessor;
@@ -255,13 +256,13 @@ public class WrenMDL
         return manifest.getViews();
     }
 
-    public static Optional<io.wren.base.dto.Column> getRelationshipColumn(Model model, String name)
+    public static Optional<Column> getRelationshipColumn(Model model, String name)
     {
         return getColumn(model, name)
                 .filter(column -> column.getRelationship().isPresent());
     }
 
-    private static Optional<io.wren.base.dto.Column> getColumn(Model model, String name)
+    private static Optional<Column> getColumn(Model model, String name)
     {
         requireNonNull(model);
         requireNonNull(name);
@@ -316,5 +317,12 @@ public class WrenMDL
                 || getMetric(name).isPresent()
                 || getCumulativeMetric(name).isPresent()
                 || getView(name).isPresent();
+    }
+
+    public Optional<Relationable> getRelationable(String name)
+    {
+        return getModel(name)
+                .map(model -> (Relationable) model)
+                .or(() -> getMetric(name).map(metric -> (Relationable) metric));
     }
 }

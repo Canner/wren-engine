@@ -28,9 +28,11 @@ import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.Utils;
 import io.wren.base.WrenMDL;
+import io.wren.base.dto.Column;
 import io.wren.base.dto.CumulativeMetric;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
+import io.wren.base.dto.Relationable;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -47,7 +49,9 @@ import java.util.Set;
 
 import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -92,18 +96,22 @@ public class WrenSqlRewrite
                     .filter(e -> wrenMDL.getView(e.getKey()).isEmpty())
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
 
+            // Some node be applied `count(*)` which won't be collected but its source is required.
+            analysis.getRequiredSourceNodes().forEach(node -> {
+                String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString)
+                        .orElseThrow(() -> new IllegalArgumentException(format("source node name not found: %s", node)));
+                if (!tableRequiredFields.containsKey(tableName)) {
+                    Relationable relationable = wrenMDL.getRelationable(tableName)
+                            .orElseThrow(() -> new IllegalArgumentException(format("dataset not found: %s", tableName)));
+                    tableRequiredFields.put(tableName, relationable.getColumns().stream().map(Column::getName).collect(toImmutableSet()));
+                }
+            });
+
             ImmutableList.Builder<QueryDescriptor> descriptorsBuilder = ImmutableList.builder();
             tableRequiredFields.forEach((name, value) -> {
                 addDescriptor(name, value, wrenMDL, descriptorsBuilder);
                 visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
             });
-
-            // Some node be applied `count(*)` which won't be collected but its source is required.
-            analysis.getRequiredSourceNodes().forEach(node ->
-                    analysis.getSourceNodeNames(node).map(QualifiedName::toString).ifPresent(name -> {
-                        addDescriptor(name, wrenMDL, descriptorsBuilder);
-                        visitedTables.remove(toCatalogSchemaTableName(sessionContext, QualifiedName.of(name)));
-                    }));
 
             List<WithQuery> withQueries = new ArrayList<>();
             // add date spine if needed
