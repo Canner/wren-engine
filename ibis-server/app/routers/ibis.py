@@ -1,10 +1,9 @@
 import logging
 from json import loads
 
+from app.model.data_source import DataSource
+from app.model.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 from fastapi import APIRouter
-
-from data_source import DataSource
-from dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
 
 logger = logging.getLogger()
 router = APIRouter(prefix="/v2/ibis")

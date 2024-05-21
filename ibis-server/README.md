@@ -2,11 +2,11 @@
 
 ## Environment Setup
 - Python 3.11
-- `python -m venv venv`
-- `source venv/bin/activate`
-- `pip install -r requirements.txt`
-- Execute `pytest` to run the tests
+- Install `poetry` with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
+- Execute `make install` to install the dependencies
+- Execute `make test` to run the tests
 
 ## Start the server
-- Execute `python main.py` to start the server
+- Execute `make start` to start the server
+- Execute `make dev` to start the server in development mode. It will auto-reload after the code is edited.
 - Default port is `8000`, you can change it by setting the environment variable `IBIS_PORT`

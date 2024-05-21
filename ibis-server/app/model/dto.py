@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 
 class IbisDTO(BaseModel):
     sql: str
-    pass
 
 
 class PostgresDTO(IbisDTO):
@@ -25,4 +24,5 @@ class SnowflakeDTO(IbisDTO):
     password: str
     account: str
     database: str
-    sf_schema: str = Field(alias="schema", default=None)  # Use `sf_schema` to avoid `schema` shadowing in parent BaseModel
+    # Use `sf_schema` to avoid `schema` shadowing in parent BaseModel
+    sf_schema: str = Field(alias="schema", default=None)
