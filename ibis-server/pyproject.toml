@@ -8,7 +8,7 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = "0.110.0"
+fastapi = "0.111.0"
 pydantic = "2.6.4"
 uvicorn = {extras = ["standard"], version = "0.29.0"}
 ibis-framework = {extras = ["bigquery", "postgres", "snowflake"], version = "9.0.0"}
