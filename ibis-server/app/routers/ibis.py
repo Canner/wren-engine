@@ -21,5 +21,5 @@ def to_json(df) -> dict:
 @router.post("/{data_source}/query")
 def query(data_source: DataSource, dto: IbisDTO) -> dict:
     logger.debug(f'DTO: {dto}')
-    rewritten_sql = Rewriter(dto.manifest).rewrite(dto.sql)
+    rewritten_sql = Rewriter.rewrite(dto.manifest_str, dto.sql)
     return to_json(data_source.get_connection(dto.connection_info).sql(rewritten_sql, dialect='trino').to_pandas())

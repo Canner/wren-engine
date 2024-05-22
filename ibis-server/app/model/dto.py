@@ -7,12 +7,11 @@ from app.model.data_source import (
     BigQueryConnectionInfo,
     SnowflakeConnectionInfo
 )
-from app.model.mdl import Manifest
 
 
 class IbisDTO(BaseModel):
     sql: str
-    manifest: Manifest
+    manifest_str: str = Field(alias="manifestStr")
 
 
 class PostgresDTO(IbisDTO):

@@ -28,6 +28,7 @@ import io.wren.main.web.CacheResource;
 import io.wren.main.web.ConfigResource;
 import io.wren.main.web.DuckDBResource;
 import io.wren.main.web.MDLResource;
+import io.wren.main.web.MDLResourceV2;
 import io.wren.main.web.WrenExceptionMapper;
 
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
@@ -40,6 +41,7 @@ public class WebModule
     {
         PostgresWireProtocolConfig config = buildConfigObject(PostgresWireProtocolConfig.class);
         jaxrsBinder(binder).bind(MDLResource.class);
+        jaxrsBinder(binder).bind(MDLResourceV2.class);
         jaxrsBinder(binder).bind(AnalysisResource.class);
         jaxrsBinder(binder).bind(ConfigResource.class);
         jaxrsBinder(binder).bind(DuckDBResource.class);
