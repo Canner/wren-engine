@@ -5,6 +5,10 @@
 - Install `poetry` with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
 - Execute `make install` to install the dependencies
 - Execute `make test` to run the tests
+- Create `.env` file and fill in the environment variables
+
+## Environment Variables
+- `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren engine
 
 ## Start the server
 - Execute `make run` to start the server
