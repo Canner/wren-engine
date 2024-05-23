@@ -55,6 +55,7 @@ impl ModelAnalyzeRule {
             LogicalPlan::Aggregate(aggregate) => {
                 let mut accum = HashSet::new();
                 let _ = utils::exprlist_to_columns(&aggregate.aggr_expr, &mut accum);
+                let _ = utils::exprlist_to_columns(&aggregate.group_expr, &mut accum);
                 let mut buffer = used_columns.borrow_mut();
                 accum.iter().for_each(|expr| {
                     buffer.push_back(Expr::Column(expr.clone()));

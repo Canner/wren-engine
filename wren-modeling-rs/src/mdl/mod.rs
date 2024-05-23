@@ -135,7 +135,7 @@ impl ColumnReference {
     }
 }
 
-enum Dataset {
+pub enum Dataset {
     Model(Arc<Model>),
     Metric(Arc<Metric>),
 }
