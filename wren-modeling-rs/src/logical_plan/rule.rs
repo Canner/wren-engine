@@ -1,11 +1,11 @@
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{DFField, DFSchema, DFSchemaRef, Result};
-use datafusion::logical_expr::{table_scan, utils, Extension, Filter};
+use datafusion::common::{Column, DFField, DFSchema, DFSchemaRef, Result};
 use datafusion::logical_expr::{
     col, Expr, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
     UserDefinedLogicalNodeCore,
 };
+use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use std::cell::RefCell;
 use std::collections::{vec_deque, HashSet, VecDeque};
@@ -26,7 +26,11 @@ impl ModelAnalyzeRule {
         Self { mdl }
     }
 
-    fn analyze_model_internal(&self, plan: LogicalPlan, used_columns: &RefCell<VecDeque<Expr>>) -> Result<Transformed<LogicalPlan>> {
+    fn analyze_model_internal(
+        &self,
+        plan: LogicalPlan,
+        used_columns: &RefCell<VecDeque<Expr>>,
+    ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::Projection(projection) => {
                 projection.expr.iter().for_each(|expr| {
@@ -38,7 +42,7 @@ impl ModelAnalyzeRule {
                     });
                 });
                 return Ok(Transformed::no(LogicalPlan::Projection(projection)));
-            },
+            }
             LogicalPlan::Filter(filter) => {
                 let mut acuum = HashSet::new();
                 let _ = utils::expr_to_columns(&filter.predicate, &mut acuum);
@@ -47,7 +51,7 @@ impl ModelAnalyzeRule {
                     buffer.push_back(Expr::Column(expr.clone()));
                 });
                 return Ok(Transformed::no(LogicalPlan::Filter(filter)));
-            },
+            }
             LogicalPlan::Aggregate(aggregate) => {
                 let mut accum = HashSet::new();
                 let _ = utils::exprlist_to_columns(&aggregate.aggr_expr, &mut accum);
@@ -56,9 +60,12 @@ impl ModelAnalyzeRule {
                     buffer.push_back(Expr::Column(expr.clone()));
                 });
                 return Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)));
-            },
+            }
             LogicalPlan::TableScan(table_scan) => {
-                if let Some(model) = self.mdl.get_model(&table_scan.table_name.to_string().as_str()) {
+                if let Some(model) = self
+                    .mdl
+                    .get_model(&table_scan.table_name.to_string().as_str())
+                {
                     dbg!(used_columns.borrow());
                     let model = LogicalPlan::Extension(Extension {
                         node: Arc::new(ModelPlanNode::new(
@@ -73,9 +80,7 @@ impl ModelAnalyzeRule {
                     Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
                 }
             }
-            _ => {
-                return Ok(Transformed::no(plan))
-            },
+            _ => return Ok(Transformed::no(plan)),
         }
     }
 }
@@ -108,7 +113,7 @@ impl ModelPlanNode {
         requried_fields: Vec<Expr>,
         original_table_scan: LogicalPlan,
     ) -> Self {
-        let schema_ref = create_df_schema(Arc::clone(&model));
+        let schema_ref = create_df_schema(Arc::clone(&model), requried_fields.clone());
         Self {
             model_name: model.name.clone(),
             requried_fields,
@@ -118,20 +123,25 @@ impl ModelPlanNode {
     }
 }
 
-fn create_df_schema(model: Arc<Model>) -> DFSchemaRef {
-    let fields: Vec<DFField> = model
-        .columns
+fn create_df_schema(model: Arc<Model>, required_fields: Vec<Expr>) -> DFSchemaRef {
+    let fields: Vec<DFField> = required_fields
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type);
+            let column_ref = model
+                .columns
+                .iter()
+                .find(|col| format!("{}.{}", model.name, col.name) == column.to_string())
+                .expect(&format!("Column {} not found in {}", column, &model.name));
+            let data_type = map_data_type(&column_ref.r#type);
             DFField::new(
                 Some(model.name.clone()),
-                &column.name,
+                &column_ref.name,
                 data_type,
-                column.no_null,
+                column_ref.no_null,
             )
         })
         .collect();
+
     DFSchemaRef::new(
         DFSchema::new_with_metadata(fields, HashMap::new()).expect("create schema failed"),
     )
@@ -194,18 +204,21 @@ impl ModelGenerationRule {
                     let mut exprs = vec_deque::VecDeque::new();
 
                     // required fields should be qulified with table name
-                    model_plan.requried_fields.iter().filter(|expr| {
-                        self.mdl.qualifed_references.contains_key(&expr.to_string())
-                    }).for_each(|expr| {
-                        let qualifed_ref = self.mdl.qualifed_references.get(&expr.to_string()).unwrap();
-                        let column_ref = qualifed_ref.get_column();
-                        let expr_plan = if let Some(expression) = &column_ref.expression {
-                            col(expression).alias(column_ref.name.clone())
-                        } else {
-                            col(column_ref.name.clone())
-                        };
-                        exprs.push_back(expr_plan);
-                    });
+                    model_plan
+                        .requried_fields
+                        .iter()
+                        .filter(|expr| self.mdl.qualifed_references.contains_key(&expr.to_string()))
+                        .for_each(|expr| {
+                            let qualifed_ref =
+                                self.mdl.qualifed_references.get(&expr.to_string()).unwrap();
+                            let column_ref = qualifed_ref.get_column();
+                            let expr_plan = if let Some(expression) = &column_ref.expression {
+                                col(expression).alias(column_ref.name.clone())
+                            } else {
+                                col(column_ref.name.clone())
+                            };
+                            exprs.push_back(expr_plan);
+                        });
 
                     let table_scan = match &model_plan.original_table_scan {
                         LogicalPlan::TableScan(original_scan) => {

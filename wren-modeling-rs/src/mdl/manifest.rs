@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +17,7 @@ pub struct Manifest {
     pub views: Vec<Arc<View>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub name: String,
@@ -35,10 +35,10 @@ pub struct Model {
     #[serde(default)]
     pub refresh_time: String,
     #[serde(default)]
-    pub properties: HashMap<String, String>,
+    pub properties: Vec<(String, String)>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Column {
     pub name: String,
@@ -52,10 +52,10 @@ pub struct Column {
     #[serde(default)]
     pub expression: Option<String>,
     #[serde(default)]
-    pub properties: HashMap<String, String>,
+    pub properties: Vec<(String, String)>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Relationship {
     pub name: String,
@@ -63,11 +63,11 @@ pub struct Relationship {
     pub join_type: JoinType,
     pub condition: String,
     #[serde(default)]
-    pub properties: HashMap<String, String>,
+    pub properties: Vec<(String, String)>,
 }
 
 // handle case insensitive
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum JoinType {
     OneToOne,
@@ -76,7 +76,7 @@ pub enum JoinType {
     ManyToMany,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Metric {
     pub name: String,
@@ -86,10 +86,10 @@ pub struct Metric {
     pub time_grain: Vec<TimeGrain>,
     pub cached: bool,
     pub refresh_time: String,
-    pub properties: HashMap<String, String>,
+    pub properties: Vec<(String, String)>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeGrain {
     pub name: String,
@@ -97,7 +97,7 @@ pub struct TimeGrain {
     pub date_parts: Vec<TimeUnit>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub enum TimeUnit {
     Year,
     Month,
@@ -107,9 +107,9 @@ pub enum TimeUnit {
     Second,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct View {
     pub name: String,
     pub statement: String,
-    pub properties: HashMap<String, String>,
+    pub properties: Vec<(String, String)>,
 }
