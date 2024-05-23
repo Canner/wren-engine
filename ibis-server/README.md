@@ -14,3 +14,7 @@
 - Execute `make run` to start the server
 - Execute `make dev` to start the server in development mode. It will auto-reload after the code is edited.
 - Default port is `8000`, you can change it by `make run PORT=8001` or `make dev PORT=8001`
+
+## Docker
+- Build the image: `make docker-build`
+- Run the container: `make docker-run`

@@ -13,3 +13,9 @@ dev:
 
 test:
 	poetry run pytest
+
+docker-build:
+	docker image build . -t ibis-server
+
+docker-run:
+	docker run -it --rm -p 8000:8000 --env-file .env ibis-server
