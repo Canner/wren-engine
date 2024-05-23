@@ -1,13 +1,14 @@
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFField, DFSchema, DFSchemaRef, Result};
-use datafusion::logical_expr::{table_scan, Extension, Filter};
+use datafusion::logical_expr::{table_scan, utils, Extension, Filter};
 use datafusion::logical_expr::{
     col, Expr, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
     UserDefinedLogicalNodeCore,
 };
 use datafusion::optimizer::analyzer::AnalyzerRule;
-use std::collections::vec_deque;
+use std::cell::RefCell;
+use std::collections::{vec_deque, HashSet, VecDeque};
 use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 
 use crate::mdl::manifest::Model;
@@ -25,67 +26,65 @@ impl ModelAnalyzeRule {
         Self { mdl }
     }
 
-    fn analyze_model_internal(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
-        if let LogicalPlan::Projection(Projection {
-            input,
-            expr,
-            schema,
-            ..
-        }) = plan.clone()
-        {
-            match input.as_ref() {
-                LogicalPlan::TableScan(table_scan) => {
-                    if let Some(model) = self
-                    .mdl
-                    .get_model(&table_scan.table_name.to_string().as_str())
-                    {
-                        let model = LogicalPlan::Extension(Extension {
-                            node: Arc::new(ModelPlanNode::new(
-                                model,
-                                expr.clone(),
-                                // TODO: maybe we shouldn't clone the table_scan here
-                                LogicalPlan::TableScan(table_scan.clone()),
-                            )),
-                        });
-                        let result = Projection::new_from_schema(Arc::new(model), schema);
-                        return Ok(Transformed::yes(LogicalPlan::Projection(result)));
-                    }
-                },
-                LogicalPlan::Filter(filter) => {
-                    if let LogicalPlan::TableScan(table_scan) = filter.input.as_ref() {
-                        if let Some(model) = self
-                        .mdl
-                        .get_model(&table_scan.table_name.to_string().as_str())
-                        {
-                            let model = LogicalPlan::Extension(Extension {
-                                node: Arc::new(ModelPlanNode::new(
-                                    model,
-                                    expr.clone(),
-                                    // TODO: maybe we shouldn't clone the table_scan here
-                                    LogicalPlan::TableScan(table_scan.clone()),
-                                )),
-                            });
-                            let result= LogicalPlan::Filter(Filter::try_new(filter.predicate.clone(), Arc::new(model)).unwrap());
-                            let result = Projection::new_from_schema(Arc::new(result), schema);
-                            return Ok(Transformed::yes(LogicalPlan::Projection(result)));
-                        }
-                    }
-                },
-                LogicalPlan::Aggregate(agg) => {
-                    // TODO:
-                    return Ok(Transformed::no(plan));
-                },
-                _ => return Ok(Transformed::no(plan)),
+    fn analyze_model_internal(&self, plan: LogicalPlan, used_columns: &RefCell<VecDeque<Expr>>) -> Result<Transformed<LogicalPlan>> {
+        match plan {
+            LogicalPlan::Projection(projection) => {
+                projection.expr.iter().for_each(|expr| {
+                    let mut buffer = used_columns.borrow_mut();
+                    let mut acuum = HashSet::new();
+                    let _ = utils::expr_to_columns(expr, &mut acuum);
+                    acuum.iter().for_each(|expr| {
+                        buffer.push_back(Expr::Column(expr.clone()));
+                    });
+                });
+                return Ok(Transformed::no(LogicalPlan::Projection(projection)));
+            },
+            LogicalPlan::Filter(filter) => {
+                let mut acuum = HashSet::new();
+                let _ = utils::expr_to_columns(&filter.predicate, &mut acuum);
+                let mut buffer = used_columns.borrow_mut();
+                acuum.iter().for_each(|expr| {
+                    buffer.push_back(Expr::Column(expr.clone()));
+                });
+                return Ok(Transformed::no(LogicalPlan::Filter(filter)));
+            },
+            LogicalPlan::Aggregate(aggregate) => {
+                let mut accum = HashSet::new();
+                let _ = utils::exprlist_to_columns(&aggregate.aggr_expr, &mut accum);
+                let mut buffer = used_columns.borrow_mut();
+                accum.iter().for_each(|expr| {
+                    buffer.push_back(Expr::Column(expr.clone()));
+                });
+                return Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)));
+            },
+            LogicalPlan::TableScan(table_scan) => {
+                if let Some(model) = self.mdl.get_model(&table_scan.table_name.to_string().as_str()) {
+                    dbg!(used_columns.borrow());
+                    let model = LogicalPlan::Extension(Extension {
+                        node: Arc::new(ModelPlanNode::new(
+                            model,
+                            used_columns.borrow().iter().cloned().collect(),
+                            LogicalPlan::TableScan(table_scan.clone()),
+                        )),
+                    });
+                    used_columns.borrow_mut().clear();
+                    Ok(Transformed::yes(model))
+                } else {
+                    Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
+                }
             }
+            _ => {
+                return Ok(Transformed::no(plan))
+            },
         }
-        return Ok(Transformed::no(plan));
     }
 }
 
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
+        let used_columns = RefCell::new(VecDeque::new());
         plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
-            self.analyze_model_internal(plan)
+            self.analyze_model_internal(plan, &used_columns)
         })
         .data()
     }
@@ -191,17 +190,21 @@ impl ModelGenerationRule {
                             .expect("Model not found"),
                     );
                     // support table reference
-
+                    dbg!(model_plan);
                     let mut exprs = vec_deque::VecDeque::new();
 
-                    model.columns.iter().for_each(|column| {
-                        if let Some(expression) = &column.expression {
-                            let expr_plan = col(expression).alias(column.name.clone());
-                            exprs.push_back(expr_plan);
+                    // required fields should be qulified with table name
+                    model_plan.requried_fields.iter().filter(|expr| {
+                        self.mdl.qualifed_references.contains_key(&expr.to_string())
+                    }).for_each(|expr| {
+                        let qualifed_ref = self.mdl.qualifed_references.get(&expr.to_string()).unwrap();
+                        let column_ref = qualifed_ref.get_column();
+                        let expr_plan = if let Some(expression) = &column_ref.expression {
+                            col(expression).alias(column_ref.name.clone())
                         } else {
-                            let expr_plan = col(column.name.clone());
-                            exprs.push_back(expr_plan);
-                        }
+                            col(column_ref.name.clone())
+                        };
+                        exprs.push_back(expr_plan);
                     });
 
                     let table_scan = match &model_plan.original_table_scan {
