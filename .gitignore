@@ -18,3 +18,4 @@ wren-server/etc
 __pycache__/
 venv/
 **/poetry.lock
+**/.env*

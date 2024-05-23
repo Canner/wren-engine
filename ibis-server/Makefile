@@ -6,10 +6,10 @@ define port-command
 endef
 
 run:
-	@poetry run fastapi run $(call port-command)
+	poetry run fastapi run $(call port-command)
 
 dev:
-	@poetry run fastapi dev $(call port-command)
+	poetry run fastapi dev $(call port-command)
 
 test:
 	poetry run pytest

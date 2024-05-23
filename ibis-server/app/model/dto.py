@@ -1,28 +1,29 @@
+from typing import Union
+
 from pydantic import BaseModel, Field
+
+from app.model.data_source import (
+    PostgresConnectionInfo,
+    BigQueryConnectionInfo,
+    SnowflakeConnectionInfo
+)
 
 
 class IbisDTO(BaseModel):
     sql: str
+    manifest_str: str = Field(alias="manifestStr")
 
 
 class PostgresDTO(IbisDTO):
-    host: str = Field(examples=["localhost"])
-    port: int = Field(default=5432)
-    database: str
-    user: str
-    password: str
+    connection_info: PostgresConnectionInfo = Field(alias="connectionInfo")
 
 
 class BigQueryDTO(IbisDTO):
-    project_id: str
-    dataset_id: str
-    credentials: str = Field(description="Base64 encode `credentials.json`")
+    connection_info: BigQueryConnectionInfo = Field(alias="connectionInfo")
 
 
 class SnowflakeDTO(IbisDTO):
-    user: str
-    password: str
-    account: str
-    database: str
-    # Use `sf_schema` to avoid `schema` shadowing in parent BaseModel
-    sf_schema: str = Field(alias="schema", default=None)
+    connection_info: SnowflakeConnectionInfo = Field(alias="connectionInfo")
+
+
+IbisDTO = Union[PostgresDTO, BigQueryDTO, SnowflakeDTO]
