@@ -27,11 +27,7 @@ class DataSource(StrEnum):
 
     @staticmethod
     def get_postgres_connection(info: 'PostgresConnectionInfo') -> BaseBackend:
-        if info.jdbc_url:
-            resource = info.jdbc_url.removeprefix("jdbc:")
-        else:
-            resource = f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
-        return ibis.connect(resource)
+        return ibis.connect(info.connection_url or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}")
 
     @staticmethod
     def get_bigquery_connection(info: 'BigQueryConnectionInfo') -> BaseBackend:
@@ -60,7 +56,7 @@ class PostgresConnectionInfo(BaseModel):
     database: Optional[str] = None
     user: Optional[str] = None
     password: Optional[str] = None
-    jdbc_url: Optional[str] = None
+    connection_url: Optional[str] = Field(alias="connectionUrl", default=None)
 
 
 class BigQueryConnectionInfo(BaseModel):
