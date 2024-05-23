@@ -1,7 +1,7 @@
 import base64
 from enum import StrEnum, auto
 from json import loads
-from typing import Union
+from typing import Union, Optional
 
 import ibis
 from google.oauth2 import service_account
@@ -27,13 +27,11 @@ class DataSource(StrEnum):
 
     @staticmethod
     def get_postgres_connection(info: 'PostgresConnectionInfo') -> BaseBackend:
-        return ibis.postgres.connect(
-            user=info.user,
-            password=info.password,
-            database=info.database,
-            host=info.host,
-            port=info.port,
-        )
+        if info.jdbc_url:
+            resource = info.jdbc_url.removeprefix("jdbc:")
+        else:
+            resource = f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        return ibis.connect(resource)
 
     @staticmethod
     def get_bigquery_connection(info: 'BigQueryConnectionInfo') -> BaseBackend:
@@ -57,11 +55,12 @@ class DataSource(StrEnum):
 
 
 class PostgresConnectionInfo(BaseModel):
-    host: str = Field(examples=["localhost"])
-    port: int = Field(default=5432)
-    database: str
-    user: str
-    password: str
+    host: Optional[str] = Field(examples=["localhost"], default=None)
+    port: Optional[int] = Field(default=5432)
+    database: Optional[str] = None
+    user: Optional[str] = None
+    password: Optional[str] = None
+    jdbc_url: Optional[str] = None
 
 
 class BigQueryConnectionInfo(BaseModel):
