@@ -14,8 +14,13 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.DefaultExpressionTraversalVisitor;
+import io.trino.sql.tree.DereferenceExpression;
+import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FunctionRelation;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Join;
@@ -25,6 +30,7 @@ import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.PatternRecognitionRelation;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.SampledRelation;
@@ -35,9 +41,15 @@ import io.trino.sql.tree.Unnest;
 import io.trino.sql.tree.Values;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
+import io.wren.base.sqlrewrite.analyzer.Analysis;
+import io.wren.base.sqlrewrite.analyzer.Scope;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
+import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -45,9 +57,9 @@ public class RelationAnalyzer
 {
     private RelationAnalyzer() {}
 
-    public static RelationAnalysis analyze(Relation relation, SessionContext sessionContext, WrenMDL wrenMDL)
+    public static RelationAnalysis analyze(Relation relation, SessionContext sessionContext, WrenMDL wrenMDL, Analysis analysis)
     {
-        return new Visitor(sessionContext, wrenMDL).process(relation, null);
+        return new Visitor(sessionContext, wrenMDL, analysis).process(relation, null);
     }
 
     static class Visitor
@@ -55,11 +67,13 @@ public class RelationAnalyzer
     {
         private final SessionContext sessionContext;
         private final WrenMDL wrenMDL;
+        private final Analysis analysis;
 
-        public Visitor(SessionContext sessionContext, WrenMDL wrenMDL)
+        public Visitor(SessionContext sessionContext, WrenMDL wrenMDL, Analysis analysis)
         {
             this.sessionContext = sessionContext;
             this.wrenMDL = wrenMDL;
+            this.analysis = analysis;
         }
 
         @Override
@@ -109,9 +123,14 @@ public class RelationAnalyzer
         {
             RelationAnalysis left = process(node.getLeft(), context);
             RelationAnalysis right = process(node.getRight(), context);
+
+            Scope scope = analysis.getScope(node);
+            List<RelationAnalysis.ExprSource> exprSources = node.getCriteria().map(criteria -> analyzeCriteria(criteria, scope))
+                    .orElse(null);
             return new RelationAnalysis.JoinRelation(
                     RelationAnalysis.Type.valueOf(format("%s_JOIN", node.getType())),
-                    null, left, right, node.getCriteria().map(this::formatCriteria).orElse(null));
+                    null, left, right, node.getCriteria().map(this::formatCriteria).orElse(null),
+                    exprSources);
         }
 
         private String formatCriteria(JoinCriteria criteria)
@@ -135,6 +154,24 @@ public class RelationAnalyzer
             return builder.toString();
         }
 
+        private List<RelationAnalysis.ExprSource> analyzeCriteria(JoinCriteria criteria, Scope scope)
+        {
+            Set<RelationAnalysis.ExprSource> exprSources = new HashSet<>();
+            switch (criteria) {
+                case JoinOn joinOn:
+                    exprSources.addAll(ExpressionSourceAnalyzer.analyze(joinOn.getExpression(), scope));
+                    break;
+                case JoinUsing joinUsing:
+                    joinUsing.getColumns().forEach(column -> exprSources.addAll(ExpressionSourceAnalyzer.analyze(column, scope)));
+                    break;
+                case NaturalJoin ignored:
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported join criteria: " + criteria);
+            }
+            return ImmutableList.copyOf(exprSources);
+        }
+
         @Override
         protected RelationAnalysis visitAliasedRelation(AliasedRelation node, Void context)
         {
@@ -143,7 +180,7 @@ public class RelationAnalyzer
             return switch (relationAnalysis) {
                 case RelationAnalysis.TableRelation tableRelation -> RelationAnalysis.table(tableRelation.getTableName(), node.getAlias().getValue());
                 case RelationAnalysis.JoinRelation joinRelation ->
-                        RelationAnalysis.join(joinRelation.getType(), node.getAlias().getValue(), joinRelation.getLeft(), joinRelation.getRight(), joinRelation.getCriteria());
+                        RelationAnalysis.join(joinRelation.getType(), node.getAlias().getValue(), joinRelation.getLeft(), joinRelation.getRight(), joinRelation.getCriteria(), joinRelation.getExprSources());
                 case RelationAnalysis.SubqueryRelation subqueryRelation -> RelationAnalysis.subquery(node.getAlias().getValue(), subqueryRelation.getBody());
                 default -> throw new IllegalStateException("Unexpected value: " + relationAnalysis);
             };
@@ -175,6 +212,42 @@ public class RelationAnalyzer
         {
             // TODO: implement this
             throw new UnsupportedOperationException("Analyze Lateral is not supported yet");
+        }
+    }
+
+    static class ExpressionSourceAnalyzer
+            extends DefaultExpressionTraversalVisitor<Void>
+    {
+        static Set<RelationAnalysis.ExprSource> analyze(Expression expression, Scope scope)
+        {
+            ExpressionSourceAnalyzer analyzer = new ExpressionSourceAnalyzer(scope);
+            analyzer.process(expression, null);
+            return ImmutableSet.copyOf(analyzer.exprSources);
+        }
+
+        private final Scope scope;
+        private final Set<RelationAnalysis.ExprSource> exprSources = new HashSet<>();
+
+        public ExpressionSourceAnalyzer(Scope scope)
+        {
+            this.scope = scope;
+        }
+
+        @Override
+        protected Void visitIdentifier(Identifier node, Void context)
+        {
+            scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
+                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getTableName().getSchemaTableName().getTableName())));
+            return null;
+        }
+
+        @Override
+        protected Void visitDereferenceExpression(DereferenceExpression node, Void context)
+        {
+            Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
+                    scope.getRelationType().resolveFields(qualifiedName)
+                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getTableName().getSchemaTableName().getTableName()))));
+            return null;
         }
     }
 }

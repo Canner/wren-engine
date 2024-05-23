@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -115,9 +116,18 @@ public class QueryAnalysisDto
         private String criteria;
         private String tableName;
         private List<QueryAnalysisDto> body;
+        private List<ExprSourceDto> exprSources;
 
         @JsonCreator
-        public RelationAnalysisDto(String type, String alias, RelationAnalysisDto left, RelationAnalysisDto right, String criteria, String tableName, List<QueryAnalysisDto> body)
+        public RelationAnalysisDto(
+                String type,
+                String alias,
+                RelationAnalysisDto left,
+                RelationAnalysisDto right,
+                String criteria,
+                String tableName,
+                List<QueryAnalysisDto> body,
+                List<ExprSourceDto> exprSources)
         {
             this.type = type;
             this.alias = alias;
@@ -126,6 +136,7 @@ public class QueryAnalysisDto
             this.criteria = criteria;
             this.tableName = tableName;
             this.body = body;
+            this.exprSources = exprSources;
         }
 
         @JsonProperty
@@ -168,6 +179,12 @@ public class QueryAnalysisDto
         public List<QueryAnalysisDto> getBody()
         {
             return body;
+        }
+
+        @JsonProperty
+        public List<ExprSourceDto> getExprSources()
+        {
+            return exprSources;
         }
     }
 
@@ -236,6 +253,50 @@ public class QueryAnalysisDto
         public String getOrdering()
         {
             return ordering;
+        }
+    }
+
+    public static class ExprSourceDto
+    {
+        private String expression;
+        private String sourceDataset;
+
+        @JsonCreator
+        public ExprSourceDto(String expression, String sourceDataset)
+        {
+            this.expression = expression;
+            this.sourceDataset = sourceDataset;
+        }
+
+        @JsonProperty
+        public String getExpression()
+        {
+            return expression;
+        }
+
+        @JsonProperty
+        public String getSourceDataset()
+        {
+            return sourceDataset;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            ExprSourceDto that = (ExprSourceDto) o;
+            return Objects.equals(expression, that.expression) && Objects.equals(sourceDataset, that.sourceDataset);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(expression, sourceDataset);
         }
     }
 }

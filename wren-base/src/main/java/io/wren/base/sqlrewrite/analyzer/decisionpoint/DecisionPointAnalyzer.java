@@ -80,7 +80,7 @@ public class DecisionPointAnalyzer
             QueryAnalysis.Builder builder = QueryAnalysis.builder();
             Context context = new Context(builder, analysis.getScope(node));
             process(node.getSelect(), context);
-            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl)));
+            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl, analysis)));
             node.getWhere().ifPresent(where -> builder.setFilter(FilterAnalyzer.analyze(where)));
 
             if (node.getGroupBy().isPresent()) {
