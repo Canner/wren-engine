@@ -33,6 +33,7 @@ import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis.TableRela
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static io.wren.base.dto.Model.onTableReference;
 import static io.wren.base.dto.TableReference.tableReference;
@@ -180,6 +181,7 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getAlias()).isNull();
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
+            assertThat(joinRelation.getExprSources()).isEmpty();
         }
         else {
             throw new AssertionError("wrong type");
@@ -218,6 +220,23 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (customer.custkey = orders.custkey)");
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("customer.custkey", "customer"),
+                    new RelationAnalysis.ExprSource("orders.custkey", "orders")));
+        }
+        else {
+            throw new AssertionError("wrong type");
+        }
+
+        statement = parseSql("SELECT * FROM (customer c JOIN orders o ON c.custkey = o.custkey) join_relation");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        if (result.get(0).getRelation() instanceof JoinRelation) {
+            JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("c.custkey", "customer"),
+                    new RelationAnalysis.ExprSource("o.custkey", "orders")));
         }
         else {
             throw new AssertionError("wrong type");
@@ -238,6 +257,9 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("lineitem");
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (orders.orderkey = lineitem.orderkey)");
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("lineitem.orderkey", "lineitem"),
+                    new RelationAnalysis.ExprSource("orders.orderkey", "orders")));
         }
         else {
             throw new AssertionError("wrong type");
@@ -257,6 +279,9 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo("USING (custkey)");
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("custkey", "customer"),
+                    new RelationAnalysis.ExprSource("custkey", "orders")));
         }
         else {
             throw new AssertionError("wrong type");
@@ -276,6 +301,28 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("customer");
             assertThat(joinRelation.getCriteria()).isEqualTo("USING (custkey, name)");
+        }
+        else {
+            throw new AssertionError("wrong type");
+        }
+
+        statement = parseSql("SELECT * FROM (customer JOIN (SELECT 1 as custkey, 'xxx' as name) orders(custkey, name) ON customer.custkey = orders.custkey) join_relation");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getRelation().getAlias()).isEqualTo("join_relation");
+        assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+        if (result.get(0).getRelation() instanceof JoinRelation) {
+            JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
+            assertThat(joinRelation.getLeft().getAlias()).isNull();
+            assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(((TableRelation) joinRelation.getLeft()).getTableName()).isEqualTo("customer");
+            assertThat(joinRelation.getRight().getAlias()).isEqualTo("orders");
+            assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.SUBQUERY);
+            assertThat(((SubqueryRelation) joinRelation.getRight()).getBody().size()).isEqualTo(1);
+            assertThat(joinRelation.getCriteria()).isEqualTo("ON (customer.custkey = orders.custkey)");
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(1);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("customer.custkey", "customer")));
         }
         else {
             throw new AssertionError("wrong type");
