@@ -25,19 +25,22 @@
 
 > Wren Engine is the semantic engine for LLMs, the backbone of the semantic layer. 
 
-👉 Check out our website: https://getwren.ai
+Useful links
+- [WrenAI Website](https://getwren.ai)
+- [Wren Engine Documentation](https://docs.getwren.ai/engine/get_started/what_is)
 
 ## 🎯 Our Mission
 
-Wren Engine's mission is to provide the semantic engine for LLMs, serving as the backbone of the semantic layer and delivering business context to BI and LLMs.
+Wren Engine is open sourced and it is design as a standalone semantic engine, which you can easily implement with any AI agents, you can use it as a general semantic engine for the semantic layer.
 
-## 🤔 Benefits using Wren Engine
+<img src="./misc/wren_engine_flow.png">
 
-The semantic layer serves as an intermediary, translating complex data structures into a business-friendly format, enabling end-users to interact with data using familiar terminology without needing to understand the underlying technical complexities. It simplifies the user experience by mapping business terms to data sources, defining relationships, and incorporating predefined calculations and aggregations.
+## 🤔 Concepts
 
-On the other hand, the ***semantic engine - Wren Engine***, operates behind the scenes, powering the semantic layer with advanced capabilities to design, interpret, and manage the **modeling definition language**. This engine is responsible for the intricate processing that defines and maps metadata, schema, terminology, data relationships, and the logic behind calculations and aggregations through an analytics-as-code design approach, in which developers can define how the semantic layer operates in a structured way.  By leveraging a semantic engine, organizations can ensure that their semantic layer is developer-friendly that is intelligently designed to reflect the nuanced relationships and dynamics within their data.
-
-The semantic engine enables more sophisticated handling of data semantics, ensuring that the semantic layer can effectively meet users' diverse needs, facilitating more informed decision-making and strategic insights.
+- [Introducing Wren Engine](https://docs.getwren.ai/engine/get_started/what_is)
+- [What is semantics?](https://docs.getwren.ai/engine/concept/what_is_semantics)
+- [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/engine/concept/what_is_mdl)
+- [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/engine/concept/benefits_llm)
 
 ## 🚧 Project Status
 Wren Engine is currently in the alpha version. The project team is actively working on progress and aiming to release new versions at least biweekly.
@@ -49,6 +52,9 @@ Full documentation is also working in progress and will soon be released.
 - Welcome to our [Discord server](https://discord.gg/5DvshJqG8Z) to give us feedback!
 - If there is any issues, please visit [Github Issues](https://github.com/Canner/wren-engine/issues).
 
+## 🚀 Get Started
+
+Check out our latest documentation to get a [Quick start](https://docs.getwren.ai/engine/get_started/quickstart).
 
 ## 🙌 How to build?
 
