@@ -254,21 +254,23 @@ public final class StatementAnalyzer
                                 .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression())).map(QualifiedName::toString))
                                 .orElse(singleColumn.getExpression().toString());
                         if (scope.isPresent()) {
-                            scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()))
-                                    .ifPresent(f -> fields.add(Field.builder()
-                                            .columnName(name)
-                                            .name(name)
-                                            .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
-                                            .sourceModelName(f.getSourceDatasetName().orElse(null))
-                                            .build()));
+                            Optional<Field> fieldOptional = scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
+                            if (fieldOptional.isPresent()) {
+                                Field f = fieldOptional.get();
+                                fields.add(Field.builder()
+                                        .columnName(name)
+                                        .name(name)
+                                        .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                        .sourceModelName(f.getSourceDatasetName().orElse(null))
+                                        .build());
+                                continue;
+                            }
                         }
-                        else {
-                            fields.add(Field.builder()
-                                    .columnName(name)
-                                    .name(name)
-                                    .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
-                                    .build());
-                        }
+                        fields.add(Field.builder()
+                                .columnName(name)
+                                .name(name)
+                                .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                .build());
                     }
                 }
             }
