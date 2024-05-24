@@ -64,9 +64,6 @@ jobs:
             --build-arg "WREN_VERSION=${WREN_VERSION}" .
   prepare-ibis-version:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ibis-server
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,7 +74,7 @@ jobs:
           git config --global user.name "stable-release-bot"
       - uses: actions/setup-python@v5
         with:
-          python-version-file: pyproject.toml
+          python-version-file: ./ibis-server/pyproject.toml
       - uses: abatilo/actions-poetry@v3
         with:
           poetry-version: 1.7.1
