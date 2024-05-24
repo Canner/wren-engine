@@ -196,28 +196,25 @@ impl ModelPlanNode {
 }
 
 fn create_df_schema(model: Arc<Model>, required_fields: Vec<Expr>) -> DFSchemaRef {
-    let fields = required_fields
+    let fields = model
+        .columns
         .iter()
-        .map(|expr| match expr {
-            Expr::Column(column) => Some(column),
-            _ => None,
-        })
-        .filter(|some_column| some_column.is_some())
-        .map(|column| {
-            model.columns.iter().find(|col| {
-                format!("{}.{}", model.name, col.name) == column.as_ref().unwrap().flat_name()
+        .filter(|column| {
+            required_fields.iter().any(|expr| {
+                if let Expr::Column(column_expr) = expr {
+                    column_expr.flat_name() == format!("{}.{}", model.name, column.name)
+                } else {
+                    false
+                }
             })
         })
-        .filter(|some_column| some_column.is_some())
-        .map(|some_column| {
-            let column_ref = some_column.unwrap();
-            let data_type = map_data_type(&column_ref.r#type);
+        .map(|column| {
             (
                 Some(TableReference::bare(model.name.clone())),
                 Arc::new(Field::new(
-                    column_ref.name.clone(),
-                    data_type,
-                    column_ref.no_null,
+                    &column.name,
+                    map_data_type(&column.r#type),
+                    column.no_null,
                 )),
             )
         })

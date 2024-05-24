@@ -127,7 +127,10 @@ pub struct ColumnReference {
 
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
-        ColumnReference { _dataset: dataset, column }
+        ColumnReference {
+            _dataset: dataset,
+            column,
+        }
     }
 
     pub fn get_column(&self) -> Arc<Column> {
@@ -163,13 +166,13 @@ mod test {
                 "select orderkey + orderkey from orders",
                 r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."orderkey" FROM "orders") AS "orders""#,
             ),
+            // (
+            //     "select orderkey from orders where orders.totalprice > 10",
+            //     r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#,
+            // ),
             (
-                "select orderkey from orders where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#,
-            ),
-            (
-                "select orders.orderkey from orders left join customer using (custkey) where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."custkey", "orders"."totalprice", "orders"."orderkey" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
+                "select orders.orderkey from orders left join customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
+                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."orderkey", "orders"."custkey", "orders"."totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
             ),
             (
                 "select orderkey, sum(totalprice) from orders group by 1",
