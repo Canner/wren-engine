@@ -239,7 +239,8 @@ public class RelationAnalyzer
         protected Void visitIdentifier(Identifier node, Void context)
         {
             scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
-                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getTableName().getSchemaTableName().getTableName())));
+                    .stream().filter(field -> field.getSourceDatasetName().isPresent())
+                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getSourceDatasetName().get())));
             return null;
         }
 
@@ -248,7 +249,8 @@ public class RelationAnalyzer
         {
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
                     scope.getRelationType().resolveFields(qualifiedName)
-                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getTableName().getSchemaTableName().getTableName()))));
+                            .stream().filter(field -> field.getSourceDatasetName().isPresent())
+                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get()))));
             return null;
         }
     }

@@ -31,15 +31,23 @@ public class QueryAnalysisDto
     private FilterAnalysisDto filter;
     private List<List<String>> groupByKeys;
     private List<SortItemAnalysisDto> sortings;
+    private boolean isSubqueryOrCte;
 
     @JsonCreator
-    public QueryAnalysisDto(List<ColumnAnalysisDto> selectItems, RelationAnalysisDto relation, FilterAnalysisDto filter, List<List<String>> groupByKeys, List<SortItemAnalysisDto> sortings)
+    public QueryAnalysisDto(
+            List<ColumnAnalysisDto> selectItems,
+            RelationAnalysisDto relation,
+            FilterAnalysisDto filter,
+            List<List<String>> groupByKeys,
+            List<SortItemAnalysisDto> sortings,
+            boolean isSubqueryOrCte)
     {
         this.selectItems = selectItems;
         this.relation = relation;
         this.filter = filter;
         this.groupByKeys = groupByKeys;
         this.sortings = sortings;
+        this.isSubqueryOrCte = isSubqueryOrCte;
     }
 
     @JsonProperty
@@ -70,6 +78,12 @@ public class QueryAnalysisDto
     public List<SortItemAnalysisDto> getSortings()
     {
         return sortings;
+    }
+
+    @JsonProperty("isSubqueryOrCte")
+    public boolean isSubqueryOrCte()
+    {
+        return isSubqueryOrCte;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

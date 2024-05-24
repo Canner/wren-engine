@@ -535,6 +535,46 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(3);
         assertThat(result.stream().filter(QueryAnalysis::isSubqueryOrCte).toList().size()).isEqualTo(2);
+        QueryAnalysis mainBody = result.stream().filter(q -> !q.isSubqueryOrCte()).findFirst().get();
+        mainBody.getRelation().getType().equals(RelationAnalysis.Type.INNER_JOIN);
+        if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+        }
+
+        statement = parseSql("""
+                WITH t1 as (SELECT * FROM customer), t2 as (SELECT * FROM orders)
+                SELECT * FROM t1 JOIN t2 ON t1.custkey = t2.custkey
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        assertThat(result.stream().filter(QueryAnalysis::isSubqueryOrCte).toList().size()).isEqualTo(2);
+        mainBody = result.stream().filter(q -> !q.isSubqueryOrCte()).findFirst().get();
+        mainBody.getRelation().getType().equals(RelationAnalysis.Type.INNER_JOIN);
+        if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+        }
+
+        statement = parseSql("""
+                WITH "t1" as (SELECT "custkey", "name" FROM "customer"), t2 as (SELECT "orderkey", "custkey" FROM "orders")
+                SELECT * FROM "t1" JOIN "t2" ON "t1"."custkey" = "t2"."custkey"
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        assertThat(result.stream().filter(QueryAnalysis::isSubqueryOrCte).toList().size()).isEqualTo(2);
+        mainBody = result.stream().filter(q -> !q.isSubqueryOrCte()).findFirst().get();
+        mainBody.getRelation().getType().equals(RelationAnalysis.Type.INNER_JOIN);
+        if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
+            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+        }
     }
 
     @Test

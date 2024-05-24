@@ -90,7 +90,8 @@ public class AnalysisResource
                 toRelationAnalysisDto(queryAnalysis.getRelation()),
                 toFilterAnalysisDto(queryAnalysis.getFilter()),
                 queryAnalysis.getGroupByKeys(),
-                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList());
+                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList(),
+                queryAnalysis.isSubqueryOrCte());
     }
 
     private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)

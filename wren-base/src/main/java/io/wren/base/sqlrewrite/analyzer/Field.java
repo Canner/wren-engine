@@ -32,18 +32,21 @@ public class Field
     private final Optional<QualifiedName> relationAlias;
     private final CatalogSchemaTableName tableName;
     private final String columnName;
+    private final Optional<String> sourceDatasetName;
     private final Optional<String> name;
 
     private Field(
             QualifiedName relationAlias,
             CatalogSchemaTableName tableName,
             String columnName,
-            String name)
+            String name,
+            String sourceDatasetName)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.tableName = requireNonNull(tableName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
+        this.sourceDatasetName = Optional.ofNullable(sourceDatasetName);
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -64,6 +67,11 @@ public class Field
     public Optional<String> getName()
     {
         return name;
+    }
+
+    public Optional<String> getSourceDatasetName()
+    {
+        return sourceDatasetName;
     }
 
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
@@ -110,6 +118,7 @@ public class Field
                 ", tableName=" + tableName +
                 ", columnName='" + columnName + '\'' +
                 ", name=" + name +
+                ", sourceDatasetName=" + sourceDatasetName +
                 '}';
     }
 
@@ -124,6 +133,7 @@ public class Field
         private CatalogSchemaTableName tableName;
         private String columnName;
         private String name;
+        private String sourceModelName;
 
         public Builder() {}
 
@@ -133,6 +143,7 @@ public class Field
             this.tableName = field.tableName;
             this.columnName = field.columnName;
             this.name = field.name.orElse(null);
+            this.sourceModelName = field.sourceDatasetName.orElse(null);
             return this;
         }
 
@@ -160,9 +171,15 @@ public class Field
             return this;
         }
 
+        public Builder sourceModelName(String sourceModelName)
+        {
+            this.sourceModelName = sourceModelName;
+            return this;
+        }
+
         public Field build()
         {
-            return new Field(relationAlias, tableName, columnName, name);
+            return new Field(relationAlias, tableName, columnName, name, sourceModelName);
         }
     }
 }
