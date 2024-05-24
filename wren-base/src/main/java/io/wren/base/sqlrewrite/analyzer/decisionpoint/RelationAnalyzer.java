@@ -107,7 +107,9 @@ public class RelationAnalyzer
         @Override
         protected RelationAnalysis visitTableSubquery(TableSubquery node, Void context)
         {
-            List<QueryAnalysis> analyses = DecisionPointAnalyzer.analyze(node.getQuery(), sessionContext, wrenMDL);
+            List<QueryAnalysis> analyses = DecisionPointAnalyzer.analyze(node.getQuery(), sessionContext, wrenMDL)
+                    .stream().map(analysis -> QueryAnalysis.Builder.from(analysis).setSubqueryOrCte(true).build())
+                    .toList();
             return new RelationAnalysis.SubqueryRelation(null, analyses);
         }
 

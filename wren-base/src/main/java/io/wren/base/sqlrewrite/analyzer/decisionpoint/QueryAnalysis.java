@@ -34,19 +34,22 @@ public class QueryAnalysis
     private final FilterAnalysis filter;
     private final List<List<String>> groupByKeys;
     private final List<SortItemAnalysis> sortings;
+    private final boolean isSubqueryOrCte;
 
     public QueryAnalysis(
             List<ColumnAnalysis> selectItems,
             RelationAnalysis relation,
             FilterAnalysis filter,
             List<List<String>> groupByKeys,
-            List<SortItemAnalysis> sortings)
+            List<SortItemAnalysis> sortings,
+            boolean isSubqueryOrCte)
     {
         this.selectItems = selectItems == null ? List.of() : List.copyOf(selectItems);
         this.relation = relation;
         this.filter = filter;
         this.groupByKeys = groupByKeys == null ? List.of() : List.copyOf(groupByKeys);
         this.sortings = sortings == null ? List.of() : List.copyOf(sortings);
+        this.isSubqueryOrCte = isSubqueryOrCte;
     }
 
     public List<ColumnAnalysis> getSelectItems()
@@ -72,6 +75,11 @@ public class QueryAnalysis
     public List<SortItemAnalysis> getSortings()
     {
         return sortings;
+    }
+
+    public boolean isSubqueryOrCte()
+    {
+        return isSubqueryOrCte;
     }
 
     public static class ColumnAnalysis
@@ -133,6 +141,19 @@ public class QueryAnalysis
         private FilterAnalysis filter;
         private List<List<String>> groupByKeys;
         private List<SortItemAnalysis> sortings;
+        private boolean isSubqueryOrCte;
+
+        public static Builder from(QueryAnalysis queryAnalysis)
+        {
+            Builder builder = new Builder();
+            builder.selectItems.addAll(queryAnalysis.selectItems);
+            builder.relation = queryAnalysis.relation;
+            builder.filter = queryAnalysis.filter;
+            builder.groupByKeys = queryAnalysis.groupByKeys;
+            builder.sortings = queryAnalysis.sortings;
+            builder.isSubqueryOrCte = queryAnalysis.isSubqueryOrCte;
+            return builder;
+        }
 
         public Builder addSelectItem(ColumnAnalysis selectItem)
         {
@@ -164,6 +185,12 @@ public class QueryAnalysis
             return this;
         }
 
+        public Builder setSubqueryOrCte(boolean subqueryOrCte)
+        {
+            isSubqueryOrCte = subqueryOrCte;
+            return this;
+        }
+
         public List<ColumnAnalysis> getSelectItems()
         {
             return selectItems;
@@ -171,7 +198,7 @@ public class QueryAnalysis
 
         public QueryAnalysis build()
         {
-            return new QueryAnalysis(selectItems, relation, filter, groupByKeys, sortings);
+            return new QueryAnalysis(selectItems, relation, filter, groupByKeys, sortings, isSubqueryOrCte);
         }
     }
 }

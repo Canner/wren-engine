@@ -513,6 +513,7 @@ public class TestDecisionPointAnalyzer
         Statement statement = parseSql("WITH t1 as (SELECT * FROM customer) SELECT * FROM t1");
         List<QueryAnalysis> result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(2);
+        assertThat(result.stream().filter(QueryAnalysis::isSubqueryOrCte).toList().size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
@@ -526,6 +527,14 @@ public class TestDecisionPointAnalyzer
         if (result.get(1).getRelation() instanceof TableRelation tableRelation) {
             assertThat(tableRelation.getTableName()).isEqualTo("t1");
         }
+
+        statement = parseSql("""
+                WITH t1 as (SELECT custkey, name FROM customer), t2 as (SELECT orderkey, custkey FROM orders)
+                SELECT * FROM t1 JOIN t2 ON t1.custkey = t2.custkey
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        assertThat(result.stream().filter(QueryAnalysis::isSubqueryOrCte).toList().size()).isEqualTo(2);
     }
 
     @Test
@@ -544,6 +553,7 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getRelation().getAlias()).isEqualTo("t2");
         if (result.get(0).getRelation() instanceof SubqueryRelation subQueryRelation) {
             assertThat(subQueryRelation.getBody().size()).isEqualTo(2);
+            assertThat(subQueryRelation.getBody().get(0).isSubqueryOrCte()).isTrue();
             assertThat(subQueryRelation.getBody().get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(subQueryRelation.getBody().get(1).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
         }
