@@ -126,5 +126,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/canner/wren-engine-ibis:${TAG_NAME}
+            ghcr.io/canner/wren-engine-ibis:$TAG_NAME
             ghcr.io/canner/wren-engine-ibis:latest

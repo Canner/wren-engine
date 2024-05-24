@@ -57,7 +57,7 @@ jobs:
       - id: prepare_tag
         run: |
           LATEST_COMMIT=$(git log -1 --pretty=%h)
-          echo "tag_name=main-${LATEST_COMMIT}" >> $GITHUB_ENV
+          echo "tag_name=${LATEST_COMMIT}" >> $GITHUB_ENV
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -77,5 +77,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/canner/wren-engine-ibis:${TAG_NAME}
+            ghcr.io/canner/wren-engine-ibis:$TAG_NAME
             ghcr.io/canner/wren-engine-ibis:nightly
