@@ -15,7 +15,7 @@ test:
 	poetry run pytest
 
 docker-build:
-	docker image build . -t ibis-server
+	docker image build . -t wren-engine-ibis
 
 docker-run:
-	docker run -it --rm -p 8000:8000 --env-file .env ibis-server
+	docker run -it --rm -p 8000:8000 --env-file .env wren-engine-ibis
