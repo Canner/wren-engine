@@ -117,13 +117,14 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and Push Docker image
+      - name: Build and push
+        uses: docker/build-push-action@v5
         env:
-          TAG_NAME: ${{ steps.prepare-ibis-version.outputs.next_version }}
-        run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/canner/wren-engine-ibis:${TAG_NAME} \
-            --tag ghcr.io/canner/wren-engine-ibis:latest \
-            --file Dockerfile \
-            --push .
+          TAG_NAME: ${{ needs.prepare-ibis-version.outputs.next_version }}
+        with:
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/canner/wren-engine-ibis:${TAG_NAME}
+            ghcr.io/canner/wren-engine-ibis:latest
