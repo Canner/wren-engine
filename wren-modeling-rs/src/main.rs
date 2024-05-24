@@ -12,7 +12,7 @@ fn main() {
     let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
     let wren_mdl = Arc::new(WrenMDL::new(mdl));
 
-    let sql = "select orderkey + orderkey from orders";
+    let sql = "select orderkey as k1 from orders";
     let planned = mdl::transform_sql(Arc::clone(&wren_mdl), sql).unwrap();
     println!("unparse to SQL:\n {}", planned);
 }

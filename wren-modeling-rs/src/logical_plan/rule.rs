@@ -11,7 +11,7 @@ use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::sql::TableReference;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 
 use crate::mdl::manifest::Model;
@@ -174,7 +174,7 @@ impl AnalyzerRule for ModelAnalyzeRule {
 #[derive(PartialEq, Eq, Hash, Debug)]
 struct ModelPlanNode {
     model_name: String,
-    requried_fields: Vec<Expr>,
+    required_exprs: Vec<Expr>,
     schema_ref: DFSchemaRef,
     original_table_scan: LogicalPlan,
 }
@@ -185,44 +185,49 @@ impl ModelPlanNode {
         requried_fields: Vec<Expr>,
         original_table_scan: LogicalPlan,
     ) -> Self {
-        let schema_ref = create_df_schema(Arc::clone(&model), requried_fields.clone());
+        let mut required_exprs_buffer = VecDeque::new();
+        let fields = model
+            .columns
+            .iter()
+            .filter(|column| {
+                requried_fields.iter().any(|expr| {
+                    if let Expr::Column(column_expr) = expr {
+                        column_expr.flat_name() == format!("{}.{}", model.name, column.name)
+                    } else {
+                        false
+                    }
+                })
+            })
+            .map(|column| {
+                let expr_plan = if let Some(expression) = &column.expression {
+                    col(expression).alias(column.name.clone())
+                } else {
+                    col(column.name.clone())
+                };
+                required_exprs_buffer.push_back(expr_plan);
+
+                (
+                    Some(TableReference::bare(model.name.clone())),
+                    Arc::new(Field::new(
+                        &column.name,
+                        map_data_type(&column.r#type),
+                        column.no_null,
+                    )),
+                )
+            })
+            .collect();
+
+        let schema_ref = DFSchemaRef::new(
+            DFSchema::new_with_metadata(fields, HashMap::new()).expect("create schema failed"),
+        );
+
         Self {
             model_name: model.name.clone(),
-            requried_fields,
+            required_exprs: required_exprs_buffer.into_iter().collect(),
             schema_ref,
             original_table_scan,
         }
     }
-}
-
-fn create_df_schema(model: Arc<Model>, required_fields: Vec<Expr>) -> DFSchemaRef {
-    let fields = model
-        .columns
-        .iter()
-        .filter(|column| {
-            required_fields.iter().any(|expr| {
-                if let Expr::Column(column_expr) = expr {
-                    column_expr.flat_name() == format!("{}.{}", model.name, column.name)
-                } else {
-                    false
-                }
-            })
-        })
-        .map(|column| {
-            (
-                Some(TableReference::bare(model.name.clone())),
-                Arc::new(Field::new(
-                    &column.name,
-                    map_data_type(&column.r#type),
-                    column.no_null,
-                )),
-            )
-        })
-        .collect();
-
-    DFSchemaRef::new(
-        DFSchema::new_with_metadata(fields, HashMap::new()).expect("create schema failed"),
-    )
 }
 
 // Just mock up the impl for UserDefinedLogicalNodeCore
@@ -254,7 +259,7 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
     fn from_template(&self, _: &[Expr], _: &[LogicalPlan]) -> Self {
         ModelPlanNode {
             model_name: self.model_name.clone(),
-            requried_fields: self.requried_fields.clone(),
+            required_exprs: self.required_exprs.clone(),
             schema_ref: self.schema_ref.clone(),
             original_table_scan: self.original_table_scan.clone(),
         }
@@ -299,10 +304,11 @@ impl ModelGenerationRule {
                         )),
                     };
 
-                    let result: Projection = Projection::new_from_schema(
+                    let result = Projection::try_new(
+                        model_plan.required_exprs.clone(),
                         Arc::new(table_scan?),
-                        Arc::clone(&model_plan.schema_ref),
-                    );
+                    )
+                    .unwrap();
 
                     let alias_name = model.name.clone();
                     let alias = LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(
