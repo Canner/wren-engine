@@ -11,7 +11,8 @@ use datafusion::{
 
 use super::utils::create_table_source;
 
-// This struct is used to provide the context for the logical plan
+/// WrenContextProvider is a ContextProvider implementation that uses the WrenMDL 
+/// to provide table sources and other metadata.
 pub struct WrenContextProvider {
     options: ConfigOptions,
     tables: HashMap<String, Arc<dyn TableSource>>,

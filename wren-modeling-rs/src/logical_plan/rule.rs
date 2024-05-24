@@ -1,14 +1,17 @@
+use arrow_schema::Field;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{Column, DFField, DFSchema, DFSchemaRef, Result};
+use datafusion::common::{DFSchema, DFSchemaRef, Result};
+use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{
-    col, Expr, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
+    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
     UserDefinedLogicalNodeCore,
 };
 use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
+use datafusion::sql::TableReference;
 use std::cell::RefCell;
-use std::collections::{vec_deque, HashSet, VecDeque};
+use std::collections::HashSet;
 use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 
 use crate::mdl::manifest::Model;
@@ -16,7 +19,9 @@ use crate::mdl::WrenMDL;
 
 use super::utils::{create_remote_table_source, map_data_type};
 
-// Regonzied the model. Turn TableScan from a model to MdoelPlanNode
+/// Regonzied the model. Turn TableScan from a model to MdoelPlanNode
+/// We collect the requried field from the projection, filter, aggregation and join
+/// and pass it to the ModelPlanNode
 pub struct ModelAnalyzeRule {
     mdl: Arc<WrenMDL>,
 }
@@ -29,16 +34,17 @@ impl ModelAnalyzeRule {
     fn analyze_model_internal(
         &self,
         plan: LogicalPlan,
-        used_columns: &RefCell<VecDeque<Expr>>,
+        used_columns: &RefCell<HashSet<Expr>>,
     ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::Projection(projection) => {
+                let mut buffer = used_columns.borrow_mut();
+                buffer.clear();
                 projection.expr.iter().for_each(|expr| {
-                    let mut buffer = used_columns.borrow_mut();
                     let mut acuum = HashSet::new();
                     let _ = utils::expr_to_columns(expr, &mut acuum);
                     acuum.iter().for_each(|expr| {
-                        buffer.push_back(Expr::Column(expr.clone()));
+                        buffer.insert(Expr::Column(expr.clone()));
                     });
                 });
                 return Ok(Transformed::no(LogicalPlan::Projection(projection)));
@@ -48,17 +54,18 @@ impl ModelAnalyzeRule {
                 let _ = utils::expr_to_columns(&filter.predicate, &mut acuum);
                 let mut buffer = used_columns.borrow_mut();
                 acuum.iter().for_each(|expr| {
-                    buffer.push_back(Expr::Column(expr.clone()));
+                    buffer.insert(Expr::Column(expr.clone()));
                 });
                 return Ok(Transformed::no(LogicalPlan::Filter(filter)));
             }
             LogicalPlan::Aggregate(aggregate) => {
+                let mut buffer = used_columns.borrow_mut();
+                buffer.clear();
                 let mut accum = HashSet::new();
                 let _ = utils::exprlist_to_columns(&aggregate.aggr_expr, &mut accum);
                 let _ = utils::exprlist_to_columns(&aggregate.group_expr, &mut accum);
-                let mut buffer = used_columns.borrow_mut();
                 accum.iter().for_each(|expr| {
-                    buffer.push_back(Expr::Column(expr.clone()));
+                    buffer.insert(Expr::Column(expr.clone()));
                 });
                 return Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)));
             }
@@ -67,7 +74,6 @@ impl ModelAnalyzeRule {
                     .mdl
                     .get_model(&table_scan.table_name.to_string().as_str())
                 {
-                    dbg!(used_columns.borrow());
                     let model = LogicalPlan::Extension(Extension {
                         node: Arc::new(ModelPlanNode::new(
                             model,
@@ -81,6 +87,71 @@ impl ModelAnalyzeRule {
                     Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
                 }
             }
+            LogicalPlan::Join(join) => {
+                let mut buffer = used_columns.borrow_mut();
+                let mut accum = HashSet::new();
+                join.on.iter().for_each(|expr| {
+                    let _ = utils::expr_to_columns(&expr.0, &mut accum);
+                    let _ = utils::expr_to_columns(&expr.1, &mut accum);
+                });
+                if let Some(filter_expr) = &join.filter {
+                    let _ = utils::expr_to_columns(filter_expr, &mut accum);
+                }
+                accum.iter().for_each(|expr| {
+                    buffer.insert(Expr::Column(expr.clone()));
+                });
+
+                let left = match unwrap_arc(join.left) {
+                    LogicalPlan::TableScan(table_scan) => {
+                        if let Some(model) = self
+                            .mdl
+                            .get_model(&table_scan.table_name.to_string().as_str())
+                        {
+                            LogicalPlan::Extension(Extension {
+                                node: Arc::new(ModelPlanNode::new(
+                                    model,
+                                    buffer.iter().cloned().collect(),
+                                    LogicalPlan::TableScan(table_scan.clone()),
+                                )),
+                            })
+                        } else {
+                            LogicalPlan::TableScan(table_scan)
+                        }
+                    }
+                    ignore => ignore,
+                };
+
+                let right = match unwrap_arc(join.right) {
+                    LogicalPlan::TableScan(table_scan) => {
+                        if let Some(model) = self
+                            .mdl
+                            .get_model(&table_scan.table_name.to_string().as_str())
+                        {
+                            LogicalPlan::Extension(Extension {
+                                node: Arc::new(ModelPlanNode::new(
+                                    model,
+                                    buffer.iter().cloned().collect(),
+                                    LogicalPlan::TableScan(table_scan.clone()),
+                                )),
+                            })
+                        } else {
+                            LogicalPlan::TableScan(table_scan)
+                        }
+                    }
+                    ignore => ignore,
+                };
+                buffer.clear();
+                Ok(Transformed::no(LogicalPlan::Join(Join {
+                    left: Arc::new(left),
+                    right: Arc::new(right),
+                    on: join.on,
+                    join_type: join.join_type,
+                    schema: join.schema,
+                    filter: join.filter,
+                    join_constraint: join.join_constraint,
+                    null_equals_null: join.null_equals_null,
+                })))
+            }
             _ => return Ok(Transformed::no(plan)),
         }
     }
@@ -88,7 +159,7 @@ impl ModelAnalyzeRule {
 
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        let used_columns = RefCell::new(VecDeque::new());
+        let used_columns = RefCell::new(HashSet::new());
         plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
             self.analyze_model_internal(plan, &used_columns)
         })
@@ -125,20 +196,29 @@ impl ModelPlanNode {
 }
 
 fn create_df_schema(model: Arc<Model>, required_fields: Vec<Expr>) -> DFSchemaRef {
-    let fields: Vec<DFField> = required_fields
+    let fields = required_fields
         .iter()
+        .map(|expr| match expr {
+            Expr::Column(column) => Some(column),
+            _ => None,
+        })
+        .filter(|some_column| some_column.is_some())
         .map(|column| {
-            let column_ref = model
-                .columns
-                .iter()
-                .find(|col| format!("{}.{}", model.name, col.name) == column.to_string())
-                .expect(&format!("Column {} not found in {}", column, &model.name));
+            model.columns.iter().find(|col| {
+                format!("{}.{}", model.name, col.name) == column.as_ref().unwrap().flat_name()
+            })
+        })
+        .filter(|some_column| some_column.is_some())
+        .map(|some_column| {
+            let column_ref = some_column.unwrap();
             let data_type = map_data_type(&column_ref.r#type);
-            DFField::new(
-                Some(model.name.clone()),
-                &column_ref.name,
-                data_type,
-                column_ref.no_null,
+            (
+                Some(TableReference::bare(model.name.clone())),
+                Arc::new(Field::new(
+                    column_ref.name.clone(),
+                    data_type,
+                    column_ref.no_null,
+                )),
             )
         })
         .collect();
@@ -163,7 +243,11 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
     }
 
     fn expressions(&self) -> Vec<Expr> {
-        self.requried_fields.clone()
+        self.schema_ref
+            .fields()
+            .iter()
+            .map(|field| col(field.name()))
+            .collect()
     }
 
     fn fmt_for_explain(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -173,8 +257,8 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
     fn from_template(&self, _: &[Expr], _: &[LogicalPlan]) -> Self {
         ModelPlanNode {
             model_name: self.model_name.clone(),
-            requried_fields: vec![],
-            schema_ref: DFSchemaRef::new(DFSchema::empty()),
+            requried_fields: self.requried_fields.clone(),
+            schema_ref: self.schema_ref.clone(),
             original_table_scan: self.original_table_scan.clone(),
         }
     }
@@ -201,26 +285,6 @@ impl ModelGenerationRule {
                             .expect("Model not found"),
                     );
                     // support table reference
-                    dbg!(model_plan);
-                    let mut exprs = vec_deque::VecDeque::new();
-
-                    // required fields should be qulified with table name
-                    model_plan
-                        .requried_fields
-                        .iter()
-                        .filter(|expr| self.mdl.qualifed_references.contains_key(&expr.to_string()))
-                        .for_each(|expr| {
-                            let qualifed_ref =
-                                self.mdl.qualifed_references.get(&expr.to_string()).unwrap();
-                            let column_ref = qualifed_ref.get_column();
-                            let expr_plan = if let Some(expression) = &column_ref.expression {
-                                col(expression).alias(column_ref.name.clone())
-                            } else {
-                                col(column_ref.name.clone())
-                            };
-                            exprs.push_back(expr_plan);
-                        });
-
                     let table_scan = match &model_plan.original_table_scan {
                         LogicalPlan::TableScan(original_scan) => {
                             LogicalPlanBuilder::scan_with_filters(
@@ -238,8 +302,10 @@ impl ModelGenerationRule {
                         )),
                     };
 
-                    let exprs_vec = exprs.into_iter().collect();
-                    let result = Projection::try_new(exprs_vec, Arc::new(table_scan?)).unwrap();
+                    let result: Projection = Projection::new_from_schema(
+                        Arc::new(table_scan?),
+                        Arc::clone(&model_plan.schema_ref),
+                    );
 
                     let alias_name = model.name.clone();
                     let alias = LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(

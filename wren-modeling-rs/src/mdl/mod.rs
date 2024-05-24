@@ -16,7 +16,7 @@ use datafusion::{
 use crate::{
     logical_plan::{
         rule::{ModelAnalyzeRule, ModelGenerationRule},
-        wren_context_provider::WrenContextProvider,
+        context_provider::WrenContextProvider,
     },
     mdl::manifest::{Column, Manifest, Metric, Model},
 };
@@ -105,7 +105,7 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
     let config = ConfigOptions::default();
 
     let analyzed = analyzer
-        .execute_and_check(&plan, &config, |_, _| {})
+        .execute_and_check(plan, &config, |_, _| {})
         .unwrap();
     println!("Do some modeling:\n {analyzed:?}");
     println!("********");
@@ -161,13 +161,21 @@ mod test {
         let tests: Vec<(&str, &str)> = vec![
             (
                 "select orderkey + orderkey from orders",
-                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
+                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."orderkey" FROM "orders") AS "orders""#,
             ),
             (
                 "select orderkey from orders where orders.totalprice > 10",
                 r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#,
             ),
-            // TODO: support count(*) or *
+            (
+                "select orders.orderkey from orders left join customer using (custkey) where orders.totalprice > 10",
+                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."custkey", "orders"."totalprice", "orders"."orderkey" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
+            ),
+            (
+                "select orderkey, sum(totalprice) from orders group by 1",
+                r#"SELECT "orders"."orderkey", SUM("orders"."totalprice") FROM (SELECT "orders"."orderkey", "orders"."totalprice" FROM "orders") AS "orders" GROUP BY "orders"."orderkey""#
+            )
+            // TODO: support count(*)
             // (
             //     "select orderkey, count(*) from orders where orders.totalprice > 10 group by 1",
             //     r#"SELECT "orders"."orderkey", COUNT(*) FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10) GROUP BY "orders"."orderkey""#,
