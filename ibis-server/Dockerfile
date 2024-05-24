@@ -1,4 +1,4 @@
-FROM python:3.11.9-slim as builder
+FROM python:3.11-buster as builder
 
 # libpq-dev is required for psycopg2
 RUN apt-get update && apt-get -y install libpq-dev
@@ -11,29 +11,30 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
     # poetry
-    POETRY_VIRTUALENVS_IN_PROJECT=true
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1
 
 RUN pip install poetry==1.7.1
 
 WORKDIR /app
 
 COPY pyproject.toml ./
-COPY poetry.lock ./
-COPY .venv ./
 
-RUN poetry install --with ibis
+RUN poetry install --without dev
 
-FROM python:3.11.9-slim as runtime
+FROM python:3.11-slim-buster as runtime
 
 # libpq-dev is required for psycopg2
 RUN apt-get update  \
     && apt-get -y install libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/.venv /app/.venv
-COPY app app
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
 
-ENV PATH="/app/.venv/bin:$PATH"
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+COPY app app
 
 EXPOSE 8000
 
