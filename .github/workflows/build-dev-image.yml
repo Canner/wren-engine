@@ -49,9 +49,6 @@ jobs:
             --build-arg "WREN_VERSION=${WREN_VERSION}" .
   build-ibis-image:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ibis-server
     steps:
       - uses: actions/checkout@v4
       - name: Docker meta
@@ -75,7 +72,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          file: ./Dockerfile
+          file: ./ibis-server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
