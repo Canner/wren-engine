@@ -7,10 +7,10 @@ There are some modules:
 - mdl: The main entry point for using Wren modeling.
 - logical_plan: The rewrite rule based on the logical planner of DataFusion.
 
-# How to Run / Build
+# How to Test / Build
 
-- Run
-
+- Run Tset
+Currently, the test cases are placed in `src/mdl/mod.rs`
 ```
-cargo run
+cargo test
 ```
