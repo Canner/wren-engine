@@ -15,8 +15,8 @@ use datafusion::{
 
 use crate::{
     logical_plan::{
-        rule::{ModelAnalyzeRule, ModelGenerationRule},
         context_provider::WrenContextProvider,
+        rule::{ModelAnalyzeRule, ModelGenerationRule},
     },
     mdl::manifest::{Column, Manifest, Metric, Model},
 };

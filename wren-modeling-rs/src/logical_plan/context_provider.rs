@@ -11,7 +11,7 @@ use datafusion::{
 
 use super::utils::create_table_source;
 
-/// WrenContextProvider is a ContextProvider implementation that uses the WrenMDL 
+/// WrenContextProvider is a ContextProvider implementation that uses the WrenMDL
 /// to provide table sources and other metadata.
 pub struct WrenContextProvider {
     options: ConfigOptions,
