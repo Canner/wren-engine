@@ -31,7 +31,7 @@ Useful links
 
 ## 🎯 Our Mission
 
-Wren Engine is open sourced and it is design as a standalone semantic engine, which you can easily implement with any AI agents, you can use it as a general semantic engine for the semantic layer.
+Wren Engine is designed as a standalone semantic engine, which you can easily implement with any AI agents, you can use it as a general semantic engine for the semantic layer.
 
 <img src="./misc/wren_engine_flow.png">
 
@@ -44,8 +44,6 @@ Wren Engine is open sourced and it is design as a standalone semantic engine, wh
 
 ## 🚧 Project Status
 Wren Engine is currently in the alpha version. The project team is actively working on progress and aiming to release new versions at least biweekly.
-
-Full documentation is also working in progress and will soon be released.
 
 ## ⭐️ Community
 
