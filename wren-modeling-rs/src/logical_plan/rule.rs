@@ -47,7 +47,7 @@ impl ModelAnalyzeRule {
                         buffer.insert(Expr::Column(expr.clone()));
                     });
                 });
-                return Ok(Transformed::no(LogicalPlan::Projection(projection)));
+                Ok(Transformed::no(LogicalPlan::Projection(projection)))
             }
             LogicalPlan::Filter(filter) => {
                 let mut acuum = HashSet::new();
@@ -56,7 +56,7 @@ impl ModelAnalyzeRule {
                 acuum.iter().for_each(|expr| {
                     buffer.insert(Expr::Column(expr.clone()));
                 });
-                return Ok(Transformed::no(LogicalPlan::Filter(filter)));
+                Ok(Transformed::no(LogicalPlan::Filter(filter)))
             }
             LogicalPlan::Aggregate(aggregate) => {
                 let mut buffer = used_columns.borrow_mut();
@@ -67,12 +67,12 @@ impl ModelAnalyzeRule {
                 accum.iter().for_each(|expr| {
                     buffer.insert(Expr::Column(expr.clone()));
                 });
-                return Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)));
+                Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)))
             }
             LogicalPlan::TableScan(table_scan) => {
                 if let Some(model) = self
                     .mdl
-                    .get_model(&table_scan.table_name.to_string().as_str())
+                    .get_model(table_scan.table_name.to_string().as_str())
                 {
                     let model = LogicalPlan::Extension(Extension {
                         node: Arc::new(ModelPlanNode::new(
@@ -105,7 +105,7 @@ impl ModelAnalyzeRule {
                     LogicalPlan::TableScan(table_scan) => {
                         if let Some(model) = self
                             .mdl
-                            .get_model(&table_scan.table_name.to_string().as_str())
+                            .get_model(table_scan.table_name.to_string().as_str())
                         {
                             LogicalPlan::Extension(Extension {
                                 node: Arc::new(ModelPlanNode::new(
@@ -125,7 +125,7 @@ impl ModelAnalyzeRule {
                     LogicalPlan::TableScan(table_scan) => {
                         if let Some(model) = self
                             .mdl
-                            .get_model(&table_scan.table_name.to_string().as_str())
+                            .get_model(table_scan.table_name.to_string().as_str())
                         {
                             LogicalPlan::Extension(Extension {
                                 node: Arc::new(ModelPlanNode::new(
@@ -152,7 +152,7 @@ impl ModelAnalyzeRule {
                     null_equals_null: join.null_equals_null,
                 })))
             }
-            _ => return Ok(Transformed::no(plan)),
+            _ => Ok(Transformed::no(plan)),
         }
     }
 }

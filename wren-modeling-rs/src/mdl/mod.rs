@@ -71,7 +71,7 @@ impl WrenMDL {
             .models
             .iter()
             .find(|model| model.name == name)
-            .map(|model| Arc::clone(model))
+            .map(Arc::clone)
     }
 }
 
