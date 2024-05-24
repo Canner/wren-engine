@@ -161,6 +161,7 @@ mod test {
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
         let wren_mdl = Arc::new(WrenMDL::new(mdl));
 
+        // TODO: instead of assert string value, assert the query plan or result
         let tests: Vec<(&str, &str)> = vec![
             (
                 "select orderkey + orderkey from orders",
@@ -177,12 +178,15 @@ mod test {
             (
                 "select orderkey, sum(totalprice) from orders group by 1",
                 r#"SELECT "orders"."orderkey", SUM("orders"."totalprice") FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" GROUP BY "orders"."orderkey""#,
+            ),
+            (
+                "select orderkey, count(*) from orders where orders.totalprice > 10 group by 1",
+                r#"SELECT "orders"."orderkey", COUNT(*) FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10) GROUP BY "orders"."orderkey""#,
+            ),
+            (
+                "select count(*) from orders",
+                r#"SELECT COUNT(*) FROM "orders""#,
             )
-            // TODO: support count(*)
-            // (
-            //     "select orderkey, count(*) from orders where orders.totalprice > 10 group by 1",
-            //     r#"SELECT "orders"."orderkey", COUNT(*) FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10) GROUP BY "orders"."orderkey""#,
-            // ),
         ];
 
         for (sql, expected) in tests {
