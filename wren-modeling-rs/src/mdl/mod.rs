@@ -121,13 +121,13 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
 pub struct ColumnReference {
-    dataset: Dataset,
+    _dataset: Dataset,
     column: Arc<Column>,
 }
 
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
-        ColumnReference { dataset, column }
+        ColumnReference { _dataset: dataset, column }
     }
 
     pub fn get_column(&self) -> Arc<Column> {
