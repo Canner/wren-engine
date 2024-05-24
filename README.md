@@ -26,6 +26,7 @@
 > Wren Engine is the semantic engine for LLMs, the backbone of the semantic layer. 
 
 👉 Check out our website: https://getwren.ai
+
 📚 Documentation: https://docs.getwren.ai/engine/get_started/what_is
 
 ## 🎯 Our Mission
@@ -53,7 +54,7 @@ Full documentation is also working in progress and will soon be released.
 
 ## 🚀 Get Started
 
-Check out our latest documentation to get a [quick start](https://docs.getwren.ai/engine/get_started/quickstart).
+Check out our latest documentation to get a [Quick start](https://docs.getwren.ai/engine/get_started/quickstart).
 
 ## 🙌 How to build?
 
