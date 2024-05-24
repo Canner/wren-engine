@@ -84,13 +84,13 @@ jobs:
           if [ -n "${{ github.event.inputs.specific_version }}" ]; then
             version=${{ github.event.inputs.specific_version }}
           else
-            version=$(grep -m 1 version pyproject.toml | grep -e '\d.\d.\d' -o)
+            version=$(grep -m 1 version ./ibis-server/pyproject.toml | grep -e '\d.\d.\d' -o)
             IFS=. read major minor micro <<< "${version}"
             micro=$((micro + 1))
             version=$major.$minor.$micro
           fi
           poetry version --next-phase $version
-          git add pyproject.toml
+          git add ./ibis-server/pyproject.toml
           git commit -m "Upgrade ibis version to $version"
           git push
           echo "value=$version" >> $GITHUB_OUTPUT
