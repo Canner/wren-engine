@@ -8,6 +8,7 @@ class Config:
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv('WREN_ENGINE_ENDPOINT')
         self.validate_wren_engine_endpoint(self.wren_engine_endpoint)
+        self.log_level = os.getenv('LOG_LEVEL', 'INFO')
 
     @staticmethod
     def validate_wren_engine_endpoint(endpoint):
