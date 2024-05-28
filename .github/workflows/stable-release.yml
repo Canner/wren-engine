@@ -63,6 +63,7 @@ jobs:
             --push -f ./Dockerfile \
             --build-arg "WREN_VERSION=${WREN_VERSION}" .
   prepare-ibis-version:
+    needs: stable-release-wren-engine
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,10 +88,10 @@ jobs:
           else
             poetry version patch
           fi
+          version=$(poetry version | awk '{print $2}')
           git add pyproject.toml
           git commit -m "Upgrade ibis version to $version"
           git push
-          version=$(poetry version | awk '{print $2}')
           echo "value=$version" >> $GITHUB_OUTPUT
     outputs:
       next_version: ${{ steps.next_version.outputs.value }}
