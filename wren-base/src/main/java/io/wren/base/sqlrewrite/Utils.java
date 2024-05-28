@@ -317,6 +317,7 @@ public final class Utils
                 .columnName(column.getName())
                 .name(column.getName())
                 .relationAlias(relation.getAlias().map(QualifiedName::of).orElse(null))
+                .sourceModelName(modelName)
                 .build();
     }
 

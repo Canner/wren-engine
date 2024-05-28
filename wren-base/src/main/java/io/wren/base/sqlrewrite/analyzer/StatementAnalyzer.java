@@ -15,6 +15,7 @@
 package io.wren.base.sqlrewrite.analyzer;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
@@ -244,11 +245,27 @@ public final class StatementAnalyzer
                                         .columnName(f.getColumnName())
                                         .name(f.getName().orElse(f.getColumnName()))
                                         .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                        .sourceModelName(f.getSourceDatasetName().orElse(null))
                                         .build())));
                     }
                     else {
                         SingleColumn singleColumn = (SingleColumn) selectItem;
-                        String name = singleColumn.getAlias().map(Identifier::getValue).orElse(singleColumn.getExpression().toString());
+                        String name = singleColumn.getAlias().map(Identifier::getValue)
+                                .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression())).map(QualifiedName::toString))
+                                .orElse(singleColumn.getExpression().toString());
+                        if (scope.isPresent()) {
+                            Optional<Field> fieldOptional = scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
+                            if (fieldOptional.isPresent()) {
+                                Field f = fieldOptional.get();
+                                fields.add(Field.builder()
+                                        .columnName(name)
+                                        .name(name)
+                                        .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
+                                        .sourceModelName(f.getSourceDatasetName().orElse(null))
+                                        .build());
+                                continue;
+                            }
+                        }
                         fields.add(Field.builder()
                                 .columnName(name)
                                 .name(name)
@@ -271,6 +288,7 @@ public final class StatementAnalyzer
                                 .tableName(tableName)
                                 .columnName(column.getName())
                                 .name(column.getName())
+                                .sourceModelName(tableName.getSchemaTableName().getTableName())
                                 .build())
                         .collect(toImmutableList());
             }
@@ -283,6 +301,7 @@ public final class StatementAnalyzer
                                 .tableName(tableName)
                                 .columnName(column.getName())
                                 .name(column.getName())
+                                .sourceModelName(tableName.getSchemaTableName().getTableName())
                                 .build())
                         .collect(toImmutableList());
             }
@@ -293,11 +312,13 @@ public final class StatementAnalyzer
                                 .tableName(tableName)
                                 .columnName(cumulativeMetric.getWindow().getName())
                                 .name(cumulativeMetric.getWindow().getName())
+                                .sourceModelName(tableName.getSchemaTableName().getTableName())
                                 .build(),
                         Field.builder()
                                 .tableName(tableName)
                                 .columnName(cumulativeMetric.getMeasure().getName())
                                 .name(cumulativeMetric.getMeasure().getName())
+                                .sourceModelName(tableName.getSchemaTableName().getTableName())
                                 .build());
             }
             return ImmutableList.of();

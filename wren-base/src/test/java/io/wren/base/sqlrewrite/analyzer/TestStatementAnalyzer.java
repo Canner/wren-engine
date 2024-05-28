@@ -199,6 +199,14 @@ public class TestStatementAnalyzer
         assertThat(scope.get().getRelationType().getFields()).hasSize(2);
         assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
         assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("max_c2");
+
+        scope = Optional.ofNullable(analyzeSql.apply("""
+                WITH t1 as (SELECT "c1", "c2" FROM (select * from test.test.foo) table_1) select * from t1
+                """));
+        Assertions.assertThat(scope).isPresent();
+        assertThat(scope.get().getRelationType().getFields()).hasSize(2);
+        assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
+        assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
     }
 
     private static Column varcharColumn(String name)

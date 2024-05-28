@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 
 import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.onTableReference;
@@ -140,6 +141,9 @@ public class TestAnalysisResource
         assertThat(result.get(0).getRelation().getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getCriteria()).isEqualTo("ON (c.custkey = o.custkey)");
+        assertThat(Set.copyOf(result.get(0).getRelation().getExprSources()))
+                .isEqualTo(Set.of(new QueryAnalysisDto.ExprSourceDto("c.custkey", "customer"),
+                        new QueryAnalysisDto.ExprSourceDto("o.custkey", "orders")));
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
         assertThat(result.size()).isEqualTo(1);

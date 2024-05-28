@@ -28,12 +28,13 @@ import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.SingleColumn;
 import io.trino.sql.tree.Statement;
+import io.trino.sql.tree.TableSubquery;
+import io.trino.sql.tree.With;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
 import io.wren.base.sqlrewrite.analyzer.Field;
-import io.wren.base.sqlrewrite.analyzer.Scope;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 
 import java.util.ArrayList;
@@ -43,6 +44,8 @@ import java.util.Optional;
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionExpressionAnalyzer.DEFAULT_ANALYSIS;
+import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointContext.isSubqueryOrCte;
+import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointContext.withSubqueryOrCte;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -60,7 +63,7 @@ public class DecisionPointAnalyzer
     }
 
     static class Visitor
-            extends DefaultTraversalVisitor<Context>
+            extends DefaultTraversalVisitor<DecisionPointContext>
     {
         private final Analysis analysis;
         private final SessionContext sessionContext;
@@ -75,52 +78,65 @@ public class DecisionPointAnalyzer
         }
 
         @Override
-        protected Void visitQuerySpecification(QuerySpecification node, Context ignored)
+        protected Void visitWith(With node, DecisionPointContext decisionPointContext)
+        {
+            return super.visitWith(node, withSubqueryOrCte(decisionPointContext, true));
+        }
+
+        @Override
+        protected Void visitTableSubquery(TableSubquery node, DecisionPointContext decisionPointContext)
+        {
+            return super.visitTableSubquery(node, withSubqueryOrCte(decisionPointContext, true));
+        }
+
+        @Override
+        protected Void visitQuerySpecification(QuerySpecification node, DecisionPointContext decisionPointContext)
         {
             QueryAnalysis.Builder builder = QueryAnalysis.builder();
-            Context context = new Context(builder, analysis.getScope(node));
-            process(node.getSelect(), context);
-            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl)));
+            DecisionPointContext selfDecisionPointContext = new DecisionPointContext(builder, analysis.getScope(node), isSubqueryOrCte(decisionPointContext));
+            process(node.getSelect(), selfDecisionPointContext);
+            node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl, analysis)));
             node.getWhere().ifPresent(where -> builder.setFilter(FilterAnalyzer.analyze(where)));
 
             if (node.getGroupBy().isPresent()) {
-                process(node.getGroupBy().get(), context);
+                process(node.getGroupBy().get(), selfDecisionPointContext);
             }
 
             if (node.getOrderBy().isPresent()) {
-                process(node.getOrderBy().get(), context);
+                process(node.getOrderBy().get(), selfDecisionPointContext);
             }
+            builder.setSubqueryOrCte(isSubqueryOrCte(decisionPointContext));
             queries.add(builder.build());
             return null;
         }
 
         @Override
-        protected Void visitAllColumns(AllColumns node, Context context)
+        protected Void visitAllColumns(AllColumns node, DecisionPointContext decisionPointContext)
         {
-            List<Field> scopedFields = context.scope.getRelationType().getFields();
+            List<Field> scopedFields = decisionPointContext.getScope().getRelationType().getFields();
             if (node.getTarget().isPresent()) {
                 String target = formatExpression(node.getTarget().get(), SqlFormatter.Dialect.DEFAULT);
                 CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, QualifiedName.of(List.of(target.split("\\."))));
                 if (scopedFields.isEmpty()) {
                     // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
-                    context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), format("%s.*", target), DEFAULT_ANALYSIS.toMap()));
+                    decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), format("%s.*", target), DEFAULT_ANALYSIS.toMap()));
                 }
                 else {
                     scopedFields.stream()
                             .filter(field -> field.getRelationAlias().filter(alias -> alias.toString().equals(target)).isPresent() || field.getTableName().equals(catalogSchemaTableName))
                             .forEach(field -> {
-                                context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
+                                decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
                             });
                 }
             }
             else {
                 if (scopedFields.isEmpty()) {
                     // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
-                    context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), "*", DEFAULT_ANALYSIS.toMap()));
+                    decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), "*", DEFAULT_ANALYSIS.toMap()));
                 }
                 else {
                     scopedFields.forEach(field -> {
-                        context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
+                        decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap()));
                     });
                 }
             }
@@ -128,23 +144,23 @@ public class DecisionPointAnalyzer
         }
 
         @Override
-        protected Void visitSingleColumn(SingleColumn node, Context context)
+        protected Void visitSingleColumn(SingleColumn node, DecisionPointContext decisionPointContext)
         {
             DecisionExpressionAnalyzer.DecisionExpressionAnalysis expressionAnalysis = DecisionExpressionAnalyzer.analyze(node.getExpression());
             String expression = formatExpression(node.getExpression(), SqlFormatter.Dialect.DEFAULT);
-            context.builder.addSelectItem(new QueryAnalysis.ColumnAnalysis(node.getAlias().map(Identifier::getValue), expression, expressionAnalysis.toMap()));
+            decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(node.getAlias().map(Identifier::getValue), expression, expressionAnalysis.toMap()));
             return null;
         }
 
         @Override
-        protected Void visitGroupBy(GroupBy node, Context context)
+        protected Void visitGroupBy(GroupBy node, DecisionPointContext decisionPointContext)
         {
             ImmutableList.Builder<List<String>> groups = ImmutableList.builder();
             for (GroupingElement groupingElement : node.getGroupingElements()) {
                 ImmutableList.Builder<String> keys = ImmutableList.builder();
                 for (Expression expression : groupingElement.getExpressions()) {
                     if (expression instanceof LongLiteral) {
-                        QueryAnalysis.ColumnAnalysis field = context.builder.getSelectItems().get((int) ((LongLiteral) expression).getValue() - 1);
+                        QueryAnalysis.ColumnAnalysis field = decisionPointContext.getBuilder().getSelectItems().get((int) ((LongLiteral) expression).getValue() - 1);
                         keys.add(field.getAliasName().orElse(field.getExpression()));
                     }
                     else {
@@ -153,17 +169,17 @@ public class DecisionPointAnalyzer
                 }
                 groups.add(keys.build());
             }
-            context.builder.setGroupByKeys(groups.build());
+            decisionPointContext.getBuilder().setGroupByKeys(groups.build());
             return null;
         }
 
         @Override
-        protected Void visitOrderBy(OrderBy node, Context context)
+        protected Void visitOrderBy(OrderBy node, DecisionPointContext decisionPointContext)
         {
-            context.builder.setSortings(
+            decisionPointContext.getBuilder().setSortings(
                     node.getSortItems().stream().map(sortItem -> {
                         if (sortItem.getSortKey() instanceof LongLiteral) {
-                            QueryAnalysis.ColumnAnalysis field = context.builder.getSelectItems().get((int) ((LongLiteral) sortItem.getSortKey()).getValue() - 1);
+                            QueryAnalysis.ColumnAnalysis field = decisionPointContext.getBuilder().getSelectItems().get((int) ((LongLiteral) sortItem.getSortKey()).getValue() - 1);
                             return new QueryAnalysis.SortItemAnalysis(field.getAliasName().orElse(field.getExpression()), sortItem.getOrdering());
                         }
                         return new QueryAnalysis.SortItemAnalysis(formatExpression(sortItem.getSortKey(), SqlFormatter.Dialect.DEFAULT), sortItem.getOrdering());
@@ -171,6 +187,4 @@ public class DecisionPointAnalyzer
             return null;
         }
     }
-
-    record Context(QueryAnalysis.Builder builder, Scope scope) {}
 }

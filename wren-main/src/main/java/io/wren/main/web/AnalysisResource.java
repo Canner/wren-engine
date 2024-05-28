@@ -90,7 +90,8 @@ public class AnalysisResource
                 toRelationAnalysisDto(queryAnalysis.getRelation()),
                 toFilterAnalysisDto(queryAnalysis.getFilter()),
                 queryAnalysis.getGroupByKeys(),
-                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList());
+                queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList(),
+                queryAnalysis.isSubqueryOrCte());
     }
 
     private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)
@@ -113,7 +114,7 @@ public class AnalysisResource
     {
         return switch (relationAnalysis) {
             case RelationAnalysis.TableRelation tableRelation ->
-                    new RelationAnalysisDto(tableRelation.getType().name(), tableRelation.getAlias(), null, null, null, tableRelation.getTableName(), null);
+                    new RelationAnalysisDto(tableRelation.getType().name(), tableRelation.getAlias(), null, null, null, tableRelation.getTableName(), null, null);
             case RelationAnalysis.JoinRelation joinRelation -> new RelationAnalysisDto(
                     joinRelation.getType().name(),
                     joinRelation.getAlias(),
@@ -121,7 +122,8 @@ public class AnalysisResource
                     toRelationAnalysisDto(joinRelation.getRight()),
                     joinRelation.getCriteria(),
                     null,
-                    null);
+                    null,
+                    joinRelation.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
             case RelationAnalysis.SubqueryRelation subqueryRelation -> new RelationAnalysisDto(
                     subqueryRelation.getType().name(),
                     subqueryRelation.getAlias(),
@@ -129,7 +131,8 @@ public class AnalysisResource
                     null,
                     null,
                     null,
-                    subqueryRelation.getBody().stream().map(AnalysisResource::toQueryAnalysisDto).toList());
+                    subqueryRelation.getBody().stream().map(AnalysisResource::toQueryAnalysisDto).toList(),
+                    null);
             case null -> null;
             default -> throw new IllegalArgumentException("Unsupported relation analysis: " + relationAnalysis);
         };
@@ -138,5 +141,10 @@ public class AnalysisResource
     private static SortItemAnalysisDto toSortItemAnalysisDto(QueryAnalysis.SortItemAnalysis sortItemAnalysis)
     {
         return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name());
+    }
+
+    private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(RelationAnalysis.ExprSource exprSource)
+    {
+        return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset());
     }
 }
