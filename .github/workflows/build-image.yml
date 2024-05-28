@@ -8,7 +8,23 @@ on:
         description: Docker image tag name (Optional)
 
 jobs:
+  prepare-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare tag name
+        id: prepare_tag
+        run: |
+          if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
+            tag_name=${{ github.event.inputs.docker_image_tag_name }}
+          else
+            tag_name=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')-$(git log -1 --pretty=%h)
+          fi
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+    outputs:
+      tag_name: ${{ steps.prepare_tag.outputs.tag_name }}
   build-image:
+    needs: prepare-tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,16 +47,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Prepare tag name
-        id: prepare_tag
-        run: |
-          if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
-            tag_name=${{ github.event.inputs.docker_image_tag_name }}
-          else
-            tag_name=$(echo ${{ github.ref_name }} | sed 's/[^a-zA-Z0-9]/-/g')-$(git log -1 --pretty=%h)
-          fi
-          echo ::set-output name=tag_name::$tag_name
       - name: Build Docker image
+        env:
+          TAG_NAME: ${{ needs.prepare-tag.outputs.tag_name }}
         run: |
           WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
           cd ./docker
@@ -48,6 +57,35 @@ jobs:
           cp -r ../wren-sqlglot-server/ ./
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/canner/wren-engine:${{ steps.prepare_tag.outputs.tag_name }} \
+            --tag ghcr.io/canner/wren-engine:$TAG_NAME \
             --push -f ./Dockerfile \
             --build-arg "WREN_VERSION=${WREN_VERSION}" .
+  build-ibis-image:
+    needs: prepare-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/canner/wren-engine-ibis
+          tags: |
+            type=raw,value=${{ needs.prepare-tag.outputs.tag_name }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ibis-server
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
