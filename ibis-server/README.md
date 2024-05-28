@@ -37,7 +37,7 @@ Run the server
 make run
 ```
 
-## Contributing
+## Developer Guide
 
 ### Environment Setup
 - Python 3.11
