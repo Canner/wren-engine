@@ -14,7 +14,6 @@
 
 package io.wren.main.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.inject.Inject;
 import io.wren.base.WrenMDL;
 import io.wren.main.PreviewService;
@@ -25,11 +24,13 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
-import jakarta.ws.rs.core.Response;
+
+import java.io.IOException;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
-import static jakarta.ws.rs.core.Response.Status.BAD_REQUEST;
 import static java.util.Objects.requireNonNull;
 
 @Path("/v2/mdl")
@@ -50,16 +51,20 @@ public class MDLResourceV2
     public void dryPlan(
             DryPlanDtoV2 dryPlanDto,
             @Suspended AsyncResponse asyncResponse)
-            throws JsonProcessingException
     {
-        if (dryPlanDto.getManifestStr() == null) {
-            asyncResponse.resume(Response
-                    .status(BAD_REQUEST)
-                    .entity("Manifest is required")
-                    .build());
-        }
-        WrenMDL mdl = WrenMDL.fromJson(dryPlanDto.getManifestStr());
-        previewService.dryPlan(mdl, dryPlanDto.getSql(), true)
+        CompletableFuture
+                .supplyAsync(() ->
+                        Optional.ofNullable(dryPlanDto.getManifestStr())
+                                .orElseThrow(() -> new IllegalArgumentException("Manifest is required")))
+                .thenApply(manifestStr -> {
+                    try {
+                        return WrenMDL.fromJson(manifestStr);
+                    }
+                    catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .thenApply(mdl -> previewService.dryPlan(mdl, dryPlanDto.getSql(), true))
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }
