@@ -8,61 +8,7 @@ on:
         description: Specific version number (Optional). Default will be the current version plus 0.0.1.
 
 jobs:
-  stable-release-wren-engine:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GHCR_TOKEN }}
-      - name: Set up Git
-        run: |
-          git config --global user.email "dev@cannerdata.com"
-          git config --global user.name "stable-release-bot"
-      - name: Set up JDK 21
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: 'maven'
-      - name: Maven Prepare Release
-        id: maven_prepare_release
-        run: |
-          if [ -n "${{ github.event.inputs.specific_version }}" ]; then
-            version_number=${{ github.event.inputs.specific_version }}
-            ./mvnw release:prepare -B -DreleaseVersion=${{ github.event.inputs.specific_version }}
-          else
-            version_number=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout | sed -n 's/^\(.*\)-SNAPSHOT/\1/p')
-            ./mvnw release:prepare -B -DreleaseVersion=${version_number}
-          fi
-          git push
-          git push origin $version_number
-          echo "version_number=$version_number" >> $GITHUB_OUTPUT
-      - name: Build
-        run: |
-          ./mvnw clean install -B -DskipTests -P exec-jar
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build Docker image
-        run: |
-          WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
-          cd ./docker
-          cp ../wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./
-          cp -r ../wren-sqlglot-server/ ./
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag ghcr.io/canner/wren-engine:${{ steps.maven_prepare_release.outputs.version_number }} \
-            --tag ghcr.io/canner/wren-engine:latest \
-            --push -f ./Dockerfile \
-            --build-arg "WREN_VERSION=${WREN_VERSION}" .
-  prepare-ibis-version:
+  prepare-version:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,15 +33,71 @@ jobs:
           else
             poetry version patch
           fi
+          version=$(poetry version | awk '{print $2}')
           git add pyproject.toml
           git commit -m "Upgrade ibis version to $version"
           git push
-          version=$(poetry version | awk '{print $2}')
           echo "value=$version" >> $GITHUB_OUTPUT
+      - name: Set up JDK 21
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: Maven Prepare Release
+        id: maven_prepare_release
+        run: |
+          if [ -n "${{ github.event.inputs.specific_version }}" ]; then
+            version_number=${{ github.event.inputs.specific_version }}
+            ./mvnw release:prepare -B -DreleaseVersion=${{ github.event.inputs.specific_version }}
+          else
+            version_number=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout | sed -n 's/^\(.*\)-SNAPSHOT/\1/p')
+            ./mvnw release:prepare -B -DreleaseVersion=${version_number}
+          fi
+          git push
+          git push origin $version_number
+          echo "version_number=$version_number" >> $GITHUB_OUTPUT
     outputs:
       next_version: ${{ steps.next_version.outputs.value }}
+      maven_version: ${{ steps.maven_prepare_release.outputs.version_number }}
+  stable-release-wren-engine:
+    needs: prepare-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: Build
+        run: |
+          ./mvnw clean install -B -DskipTests -P exec-jar
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        run: |
+          WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+          cd ./docker
+          cp ../wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./
+          cp -r ../wren-sqlglot-server/ ./
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag ghcr.io/canner/wren-engine:${{ needs.prepare-version.outputs.maven_version }} \
+            --tag ghcr.io/canner/wren-engine:latest \
+            --push -f ./Dockerfile \
+            --build-arg "WREN_VERSION=${WREN_VERSION}" .
   stable-release-ibis:
-    needs: prepare-ibis-version
+    needs: prepare-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,7 +107,7 @@ jobs:
         with:
           images: ghcr.io/canner/wren-engine-ibis
           tags: |
-            type=raw,value=${{ needs.prepare-ibis-version.outputs.next_version }}
+            type=raw,value=${{ needs.prepare-version.outputs.next_version }}
             type=raw,value=latest
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
