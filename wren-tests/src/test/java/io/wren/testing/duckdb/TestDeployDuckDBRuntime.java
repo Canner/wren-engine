@@ -62,10 +62,9 @@ public class TestDeployDuckDBRuntime
 
     @Test
     public void testDeployDuckDBRuntime()
-            throws Exception
     {
         patchConfig(List.of(configEntry(WREN_DATASOURCE_TYPE, DUCKDB.name())));
-        initDuckDB(server());
+        initDuckDB();
         assertThatNoException().isThrownBy(() -> {
             try (Connection connection = createConnection()) {
                 Statement statement = connection.createStatement();

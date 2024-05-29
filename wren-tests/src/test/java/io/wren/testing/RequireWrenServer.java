@@ -15,6 +15,7 @@
 package io.wren.testing;
 
 import com.google.common.io.Closer;
+import com.google.common.io.Resources;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
@@ -30,6 +31,7 @@ import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.cache.TaskInfo;
+import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.ColumnLineageInputDto;
@@ -68,6 +70,7 @@ import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.listJsonCodec;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class RequireWrenServer
@@ -115,6 +118,22 @@ public abstract class RequireWrenServer
 
     protected abstract TestingWrenServer createWrenServer()
             throws Exception;
+
+    protected void initDuckDB()
+    {
+        ClassLoader classLoader = getClass().getClassLoader();
+        String initSQL;
+        try {
+            initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
+        DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
+        metadata.setInitSQL(initSQL);
+        metadata.reload();
+    }
 
     protected TestingWrenServer server()
     {
