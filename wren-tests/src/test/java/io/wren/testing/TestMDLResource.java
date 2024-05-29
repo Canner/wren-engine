@@ -15,13 +15,10 @@
 package io.wren.testing;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
-import com.google.inject.Key;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
 import io.wren.base.type.IntegerType;
-import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.validation.ColumnIsValid;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
@@ -49,7 +46,6 @@ import static io.wren.base.dto.Model.model;
 import static io.wren.base.dto.Relationship.relationship;
 import static io.wren.main.validation.ColumnIsValid.COLUMN_IS_VALID;
 import static io.wren.testing.WebApplicationExceptionAssert.assertWebApplicationException;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -93,22 +89,15 @@ public class TestMDLResource
                 .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
                 .put(WREN_ENABLE_DYNAMIC_FIELDS, "true");
 
-        TestingWrenServer testing = TestingWrenServer.builder()
+        return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())
                 .build();
-        initDuckDB(testing);
-        return testing;
     }
 
-    protected void initDuckDB(TestingWrenServer wrenServer)
-            throws Exception
+    @Override
+    protected void prepare()
     {
-        ClassLoader classLoader = getClass().getClassLoader();
-        String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
-        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
-        DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
-        metadata.setInitSQL(initSQL);
-        metadata.reload();
+        initDuckDB();
     }
 
     @Test

@@ -15,6 +15,7 @@
 package io.wren.testing;
 
 import com.google.common.io.Closer;
+import com.google.common.io.Resources;
 import com.google.inject.Key;
 import io.airlift.http.client.HttpClient;
 import io.airlift.http.client.HttpClientConfig;
@@ -30,11 +31,13 @@ import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.cache.TaskInfo;
+import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
+import io.wren.main.web.dto.DryPlanDtoV2;
 import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
@@ -68,6 +71,7 @@ import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.airlift.json.JsonCodec.listJsonCodec;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class RequireWrenServer
@@ -92,6 +96,7 @@ public abstract class RequireWrenServer
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
     private static final JsonCodec<List<Column>> COLUMN_LIST_CODEC = listJsonCodec(Column.class);
     private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
+    private static final JsonCodec<DryPlanDtoV2> DRY_PLAN_DTO_V2_CODEC = jsonCodec(DryPlanDtoV2.class);
     private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
     private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
     private static final JsonCodec<List<QueryAnalysisDto>> QUERY_ANALYSIS_DTO_LIST_CODEC = listJsonCodec(QueryAnalysisDto.class);
@@ -115,6 +120,22 @@ public abstract class RequireWrenServer
 
     protected abstract TestingWrenServer createWrenServer()
             throws Exception;
+
+    protected void initDuckDB()
+    {
+        ClassLoader classLoader = getClass().getClassLoader();
+        String initSQL;
+        try {
+            initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
+        DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
+        metadata.setInitSQL(initSQL);
+        metadata.reload();
+    }
 
     protected TestingWrenServer server()
     {
@@ -206,6 +227,21 @@ public abstract class RequireWrenServer
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/dry-plan"))
                 .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(DRY_PLAN_DTO_CODEC, dryPlanDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return response.getBody();
+    }
+
+    protected String dryPlanV2(DryPlanDtoV2 dryPlanDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v2/mdl/dry-plan"))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(DRY_PLAN_DTO_V2_CODEC, dryPlanDto))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());

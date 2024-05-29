@@ -26,11 +26,13 @@ import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 @Path("/v2/mdl")
@@ -58,7 +60,7 @@ public class MDLResourceV2
                                 .orElseThrow(() -> new IllegalArgumentException("Manifest is required")))
                 .thenApply(manifestStr -> {
                     try {
-                        return WrenMDL.fromJson(manifestStr);
+                        return WrenMDL.fromJson(new String(Base64.getDecoder().decode(manifestStr), UTF_8));
                     }
                     catch (IOException e) {
                         throw new RuntimeException(e);

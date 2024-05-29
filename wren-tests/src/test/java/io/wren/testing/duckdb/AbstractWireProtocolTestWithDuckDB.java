@@ -15,11 +15,8 @@
 package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Resources;
-import com.google.inject.Key;
 import io.wren.base.WrenMDL;
 import io.wren.base.dto.Manifest;
-import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.testing.AbstractWireProtocolTest;
 import io.wren.testing.TestingWrenServer;
 
@@ -31,12 +28,13 @@ import java.util.Optional;
 
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractWireProtocolTestWithDuckDB
         extends AbstractWireProtocolTest
 {
+    private Map<String, String> properties;
+
     @Override
     protected TestingWrenServer createWrenServer()
             throws Exception
@@ -56,34 +54,25 @@ public abstract class AbstractWireProtocolTestWithDuckDB
         propBuilder.put("wren.directory", dir.toString());
         propBuilder.put("pg-wire-protocol.enabled", "true");
 
-        Map<String, String> properties = new HashMap<>(propBuilder.build());
+        properties = new HashMap<>(propBuilder.build());
         properties.putAll(properties());
 
-        TestingWrenServer wrenServer = TestingWrenServer.builder()
+        return TestingWrenServer.builder()
                 .setRequiredConfigs(properties)
                 .build();
+    }
 
+    @Override
+    protected void prepare()
+    {
         if (properties.get(WREN_DATASOURCE_TYPE).equals(DUCKDB.name())) {
-            initDuckDB(wrenServer);
+            initDuckDB();
         }
-
-        return wrenServer;
     }
 
     protected Map<String, String> properties()
     {
         return ImmutableMap.of();
-    }
-
-    protected void initDuckDB(TestingWrenServer wrenServer)
-            throws Exception
-    {
-        ClassLoader classLoader = getClass().getClassLoader();
-        String initSQL = Resources.toString(requireNonNull(classLoader.getResource("duckdb/init.sql")).toURI().toURL(), UTF_8);
-        initSQL = initSQL.replaceAll("basePath", requireNonNull(classLoader.getResource("tpch/data")).getPath());
-        DuckDBMetadata metadata = wrenServer.getInstance(Key.get(DuckDBMetadata.class));
-        metadata.setInitSQL(initSQL);
-        metadata.reload();
     }
 
     protected Optional<Manifest> getManifest()
