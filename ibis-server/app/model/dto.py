@@ -11,7 +11,7 @@ from app.model.data_source import (
 
 class IbisDTO(BaseModel):
     sql: str
-    manifest_str: str = Field(alias="manifestStr", description="JSON string of manifest")
+    manifest_str: str = Field(alias="manifestStr", description="Base64 manifest")
 
 
 class PostgresDTO(IbisDTO):
