@@ -24,4 +24,4 @@ RUN pip3 install -r ./wren-sqlglot-server/requirements.txt
 COPY entrypoint.sh ./
 RUN chmod +x ./entrypoint.sh
 
-CMD ./entrypoint.sh ${WREN_JAR}
+CMD ./entrypoint.sh ${WREN_JAR} ${MAX_HEAP_SIZE} ${INI_HEAP_SIZE}
