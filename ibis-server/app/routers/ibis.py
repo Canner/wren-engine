@@ -1,13 +1,13 @@
-import logging
 from json import loads
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
+from app.logger import get_logger
 from app.mdl.rewriter import Rewriter
 from app.model.data_source import DataSource
 from app.model.dto import IbisDTO
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 router = APIRouter(prefix="/v2/ibis")
 
 
@@ -19,7 +19,7 @@ def to_json(df) -> dict:
 
 
 @router.post("/{data_source}/query")
-def query(data_source: DataSource, dto: IbisDTO) -> dict:
-    logger.debug(f'DTO: {dto}')
+def query(data_source: DataSource, dto: IbisDTO, request: Request) -> dict:
+    logger.debug(f'{request.method} {request.url.path}, DTO: {dto}')
     rewritten_sql = Rewriter.rewrite(dto.manifest_str, dto.sql)
     return to_json(data_source.get_connection(dto.connection_info).sql(rewritten_sql, dialect='trino').to_pandas())
