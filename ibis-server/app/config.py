@@ -4,6 +4,13 @@ from dotenv import load_dotenv
 
 
 class Config:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv('WREN_ENGINE_ENDPOINT')
@@ -15,8 +22,5 @@ class Config:
             raise ValueError('WREN_ENGINE_ENDPOINT is not set')
 
 
-config = Config()
-
-
 def get_config() -> Config:
-    return config
+    return Config()
