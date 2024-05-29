@@ -1,12 +1,10 @@
-# Run secret-dependent integration tests only after /test-with-secrets approval
+# Run secret-dependent integration tests
 on:
   push:
     branches:
       - main
   pull_request:
     types: [ labeled ]
-  repository_dispatch:
-    types: [ test-with-secrets-command ]
 
 name: Integration tests
 
