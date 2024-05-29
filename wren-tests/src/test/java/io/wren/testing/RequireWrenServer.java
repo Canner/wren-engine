@@ -37,6 +37,7 @@ import io.wren.main.web.dto.CheckOutputDto;
 import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
+import io.wren.main.web.dto.DryPlanDtoV2;
 import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
@@ -95,6 +96,7 @@ public abstract class RequireWrenServer
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
     private static final JsonCodec<List<Column>> COLUMN_LIST_CODEC = listJsonCodec(Column.class);
     private static final JsonCodec<DryPlanDto> DRY_PLAN_DTO_CODEC = jsonCodec(DryPlanDto.class);
+    private static final JsonCodec<DryPlanDtoV2> DRY_PLAN_DTO_V2_CODEC = jsonCodec(DryPlanDtoV2.class);
     private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
     private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
     private static final JsonCodec<List<QueryAnalysisDto>> QUERY_ANALYSIS_DTO_LIST_CODEC = listJsonCodec(QueryAnalysisDto.class);
@@ -225,6 +227,21 @@ public abstract class RequireWrenServer
                 .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/dry-plan"))
                 .setHeader(CONTENT_TYPE, "application/json")
                 .setBodyGenerator(jsonBodyGenerator(DRY_PLAN_DTO_CODEC, dryPlanDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return response.getBody();
+    }
+
+    protected String dryPlanV2(DryPlanDtoV2 dryPlanDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v2/mdl/dry-plan"))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(DRY_PLAN_DTO_V2_CODEC, dryPlanDto))
                 .build();
 
         StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
