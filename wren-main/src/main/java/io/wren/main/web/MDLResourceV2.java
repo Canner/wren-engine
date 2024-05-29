@@ -64,7 +64,7 @@ public class MDLResourceV2
                         throw new RuntimeException(e);
                     }
                 })
-                .thenApply(mdl -> previewService.dryPlan(mdl, dryPlanDto.getSql(), true))
+                .thenCompose(mdl -> previewService.dryPlan(mdl, dryPlanDto.getSql(), true))
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }
