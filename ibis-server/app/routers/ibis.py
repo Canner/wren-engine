@@ -22,4 +22,5 @@ def to_json(df) -> dict:
 def query(data_source: DataSource, dto: IbisDTO, request: Request) -> dict:
     logger.debug(f'{request.method} {request.url.path}, DTO: {dto}')
     rewritten_sql = Rewriter.rewrite(dto.manifest_str, dto.sql)
+    logger.debug(f'Rewritten SQL: {rewritten_sql}')
     return to_json(data_source.get_connection(dto.connection_info).sql(rewritten_sql, dialect='trino').to_pandas())
