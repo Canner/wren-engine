@@ -1,0 +1,36 @@
+name: ibis CI
+
+on:
+  pull_request:
+    paths:
+      - 'ibis-server/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ibis-server
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Wren JAVA engine
+        working-directory: ./example/duckdb-tpch-example
+        run: |
+          docker compose --env-file .env up -d
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ./ibis-server/pyproject.toml
+          cache: 'poetry'
+      - name: Install dependencies
+        run: make install
+      - name: Run tests
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+        run: make test
