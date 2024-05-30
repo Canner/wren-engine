@@ -27,6 +27,7 @@ pandas = "2.2.2"
 addopts = "--strict-markers"
 markers = [
     "postgres: mark a test as a postgres test",
+    "bigquery: mark a test as a bigquery test",
 ]
 
 [build-system]
