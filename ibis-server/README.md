@@ -48,6 +48,7 @@ make run
 
 ### Environment Variables
 - `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren engine
+- `LOG_LEVEL`: The log level of the server. Default is `INFO`
 
 ### Start the server
 - Execute `make run` to start the server
