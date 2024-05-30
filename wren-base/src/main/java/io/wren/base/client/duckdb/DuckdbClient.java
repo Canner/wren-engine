@@ -132,6 +132,8 @@ public final class DuckdbClient
         else {
             sql.add("SET search_path = 'main'");
             if (cacheStorageConfig instanceof DuckdbS3StyleStorageConfig) {
+                sql.add("INSTALL httpfs");
+                sql.add("LOAD httpfs");
                 DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig = (DuckdbS3StyleStorageConfig) cacheStorageConfig;
                 sql.add(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
                 sql.add(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
