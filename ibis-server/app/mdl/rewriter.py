@@ -19,4 +19,4 @@ def rewrite(manifest_str: str, sql: str) -> str:
                 'sql': sql}))
         return r.text if r.status_code == httpx.codes.OK else r.raise_for_status()
     except httpx.ConnectError as e:
-        raise ConnectionError(f'Cannot connect to Wren Engine: {e}')
+        raise ConnectionError(f'Can not connect to Wren Engine: {e}')

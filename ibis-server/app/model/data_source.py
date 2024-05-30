@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import base64
 from enum import StrEnum, auto
 from json import loads
-from typing import Union, Optional
+from typing import Union
 
 import ibis
 from google.oauth2 import service_account
@@ -26,11 +28,11 @@ class DataSource(StrEnum):
                 raise NotImplementedError(f'Unsupported data source: {self}')
 
     @staticmethod
-    def get_postgres_connection(info: 'PostgresConnectionInfo') -> BaseBackend:
-        return ibis.connect(info.connection_url or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}")
+    def get_postgres_connection(info: PostgresConnectionUrl | PostgresConnectionInfo) -> BaseBackend:
+        return ibis.connect(getattr(info, 'connection_url', None) or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}")
 
     @staticmethod
-    def get_bigquery_connection(info: 'BigQueryConnectionInfo') -> BaseBackend:
+    def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
         credits_json = loads(base64.b64decode(info.credentials).decode('utf-8'))
         credentials = service_account.Credentials.from_service_account_info(credits_json)
         return ibis.bigquery.connect(
@@ -40,7 +42,7 @@ class DataSource(StrEnum):
         )
 
     @staticmethod
-    def get_snowflake_connection(info: 'SnowflakeConnectionInfo') -> BaseBackend:
+    def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         return ibis.snowflake.connect(
             user=info.user,
             password=info.password,
@@ -51,12 +53,15 @@ class DataSource(StrEnum):
 
 
 class PostgresConnectionInfo(BaseModel):
-    host: Optional[str] = Field(examples=["localhost"], default=None)
-    port: Optional[int] = Field(default=5432)
-    database: Optional[str] = None
-    user: Optional[str] = None
-    password: Optional[str] = None
-    connection_url: Optional[str] = Field(alias="connectionUrl", default=None)
+    host: str = Field(examples=["localhost"])
+    port: int = Field(examples=[5432])
+    database: str
+    user: str
+    password: str
+
+
+class PostgresConnectionUrl(BaseModel):
+    connection_url: str = Field(alias="connectionUrl")
 
 
 class BigQueryConnectionInfo(BaseModel):
