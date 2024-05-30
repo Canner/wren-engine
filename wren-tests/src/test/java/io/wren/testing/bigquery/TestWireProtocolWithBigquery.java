@@ -272,7 +272,7 @@ public class TestWireProtocolWithBigquery
             protocolClient.sendParse("", "select typname from pg_type where pg_type.oid = ?",
                     paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
-            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(20, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
             protocolClient.sendSync();
@@ -292,12 +292,12 @@ public class TestWireProtocolWithBigquery
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
             assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
-            protocolClient.assertDataRow("bigint");
+            protocolClient.assertDataRow("int8");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
 
             // reuse the parsed prepared statement
-            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(20, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
             protocolClient.sendSync();
@@ -308,7 +308,7 @@ public class TestWireProtocolWithBigquery
             actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
             assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
-            protocolClient.assertDataRow("bigint");
+            protocolClient.assertDataRow("int8");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
         }

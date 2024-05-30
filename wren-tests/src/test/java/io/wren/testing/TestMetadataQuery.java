@@ -92,9 +92,9 @@ public class TestMetadataQuery
             throws Exception
     {
         try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet result = stmt.executeQuery("SELECT typname FROM pg_type WHERE oid = 14");
+            ResultSet result = stmt.executeQuery("SELECT typname FROM pg_type WHERE oid = 20");
             result.next();
-            assertThat(result.getString(1)).isEqualTo("bigint");
+            assertThat(result.getString(1)).isEqualTo("int8");
         }
 
         try (Connection conn = createConnection(); Statement stmt = conn.createStatement()) {
@@ -138,10 +138,10 @@ public class TestMetadataQuery
     {
         try (Connection conn = createConnection()) {
             PreparedStatement stmt = conn.prepareStatement("SELECT typname FROM pg_type WHERE oid = ?");
-            stmt.setInt(1, 14);
+            stmt.setInt(1, 20);
             ResultSet result = stmt.executeQuery();
             result.next();
-            assertThat(result.getString(1)).isEqualTo("bigint");
+            assertThat(result.getString(1)).isEqualTo("int8");
         }
     }
 
@@ -171,7 +171,7 @@ public class TestMetadataQuery
             protocolClient.sendParse("", "select typname from pg_type where pg_type.oid = ?",
                     paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
-            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(20, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
             protocolClient.sendSync();
@@ -191,7 +191,7 @@ public class TestMetadataQuery
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
             assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
-            protocolClient.assertDataRow("bigint");
+            protocolClient.assertDataRow("int8");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
         }
@@ -253,7 +253,7 @@ public class TestMetadataQuery
             protocolClient.sendParse("", "select typname from pg_type where pg_type.oid = ?",
                     paramTypes.stream().map(PGType::oid).collect(toImmutableList()));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.STATEMENT, "");
-            protocolClient.sendBind("", "", ImmutableList.of(textParameter(14, INTEGER)));
+            protocolClient.sendBind("", "", ImmutableList.of(textParameter(20, INTEGER)));
             protocolClient.sendDescribe(TestingWireProtocolClient.DescribeType.PORTAL, "");
             protocolClient.sendExecute("", 0);
             protocolClient.sendSync();
@@ -273,7 +273,7 @@ public class TestMetadataQuery
             List<PGType> actualTypes2 = fields2.stream().map(TestingWireProtocolClient.Field::getTypeId).map(PGTypes::oidToPgType).collect(toImmutableList());
             assertThat(actualTypes2).isEqualTo(ImmutableList.of(VARCHAR));
 
-            protocolClient.assertDataRow("bigint");
+            protocolClient.assertDataRow("int8");
             protocolClient.assertCommandComplete("SELECT 1");
             protocolClient.assertReadyForQuery('I');
 

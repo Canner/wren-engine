@@ -355,7 +355,7 @@ public class WireProtocolSession
             try {
                 Portal portal = PostgreSqlRewriteUtil.rewriteWithParameters(new Portal(portalName, preparedStatement, params, resultFormatCodes));
                 // Execute Level 1 Query
-                LOG.debug("Bind Portal %s with parameters %s to Statement %s", portalName, params.stream().map(Object::toString).collect(Collectors.joining(",")), statementName);
+                LOG.info("Bind Portal %s with parameters %s to Statement %s", portalName, params.stream().map(Object::toString).collect(Collectors.joining(",")), statementName);
                 ConnectorRecordIterator iter = pgMetastore.directQuery(portal.getPreparedStatement().getStatement(), portal.getParameters());
                 portal.setConnectorRecordIterator(iter);
                 portals.put(portalName, portal);
@@ -363,7 +363,7 @@ public class WireProtocolSession
             }
             catch (Exception e) {
                 // Forward to level 2
-                LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", preparedStatement.getStatement());
+                LOG.info("Failed to execute SQL in METASTORE_FULL level: %s", preparedStatement.getStatement());
                 parseMetastoreSemiQuery(preparedStatement.getName(),
                         preparedStatement.getOriginalStatement(),
                         preparedStatement.getParamTypeOids());

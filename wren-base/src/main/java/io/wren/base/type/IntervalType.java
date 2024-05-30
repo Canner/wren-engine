@@ -29,8 +29,7 @@ import static java.lang.Math.toIntExact;
 public class IntervalType
         extends PGType<Period>
 {
-    // In Postgres the oid of Interval is 1186, but in DuckDB it is 27
-    private static final int OID = 27;
+    private static final int OID = 1186;
     private static final int TYPE_LEN = 16;
     private static final int TYPE_MOD = -1;
     public static final IntervalType INTERVAL = new IntervalType();
