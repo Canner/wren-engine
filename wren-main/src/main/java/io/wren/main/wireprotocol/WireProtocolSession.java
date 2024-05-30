@@ -363,7 +363,7 @@ public class WireProtocolSession
             }
             catch (Exception e) {
                 // Forward to level 2
-                LOG.debug(e, "Failed to execute SQL in METASTORE_FULL level: %s", preparedStatement.getStatement());
+                LOG.debug("Failed to execute SQL in METASTORE_FULL level: %s", preparedStatement.getStatement());
                 parseMetastoreSemiQuery(preparedStatement.getName(),
                         preparedStatement.getOriginalStatement(),
                         preparedStatement.getParamTypeOids());

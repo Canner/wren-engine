@@ -124,6 +124,10 @@ public final class DuckdbClient
     private static String buildConnectionInitSql(DuckDBSettingSQL duckDBSettingSQL, CacheStorageConfig cacheStorageConfig, DuckDBConfig duckDBConfig)
     {
         List<String> sql = new ArrayList<>();
+        // Both of them should be true in default, however they're some issue in v0.10.3.
+        // see https://github.com/duckdb/duckdb-java/issues/18
+        sql.add("SET autoload_known_extensions = true");
+        sql.add("SET autoinstall_known_extensions = true");
         if (duckDBSettingSQL != null) {
             if (duckDBSettingSQL.getSessionSQL() != null) {
                 sql.add(duckDBSettingSQL.getSessionSQL());
