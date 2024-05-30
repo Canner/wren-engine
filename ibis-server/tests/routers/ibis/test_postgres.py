@@ -73,12 +73,12 @@ class TestPostgres:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": manifest_str,
-                "sql": "SELECT * FROM Orders LIMIT 1"
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result['columns']) == 9
+        assert len(result['columns']) == 2
         assert len(result['data']) == 1
         assert result['data'][0][0] == 1
         assert result['dtypes'] is not None
@@ -89,14 +89,14 @@ class TestPostgres:
             url="/v2/ibis/postgres/query",
             json={
                 "connectionInfo": connection_info,
-                "sql": "SELECT * FROM Orders LIMIT 1"
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
         assert response.status_code == 422
         result = response.json()
         assert result['detail'][0] is not None
         assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'PostgresDTO', 'manifestStr']
+        assert result['detail'][0]['loc'] == ['body', 'manifestStr']
         assert result['detail'][0]['msg'] == 'Field required'
 
     def test_no_sql(self, postgres: PostgresContainer, manifest_str: str):
@@ -112,7 +112,7 @@ class TestPostgres:
         result = response.json()
         assert result['detail'][0] is not None
         assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'PostgresDTO', 'sql']
+        assert result['detail'][0]['loc'] == ['body', 'sql']
         assert result['detail'][0]['msg'] == 'Field required'
 
     def test_no_connection_info(self, manifest_str: str):
@@ -120,14 +120,14 @@ class TestPostgres:
             url="/v2/ibis/postgres/query",
             json={
                 "manifestStr": manifest_str,
-                "sql": "SELECT * FROM Orders LIMIT 1"
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
         assert response.status_code == 422
         result = response.json()
         assert result['detail'][0] is not None
         assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'PostgresDTO', 'connectionInfo']
+        assert result['detail'][0]['loc'] == ['body', 'connectionInfo']
         assert result['detail'][0]['msg'] == 'Field required'
 
     @staticmethod
