@@ -203,7 +203,7 @@ mod test {
                 .get(&Column::from_qualified_name("customer.custkey_plus"))
                 .unwrap()
                 .len(),
-            2
+            1
         );
     }
 
