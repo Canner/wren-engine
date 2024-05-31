@@ -75,7 +75,7 @@ class SnowflakeConnectionInfo(BaseModel):
     password: str
     account: str
     database: str
-    sf_schema: str = Field(alias="schema", default=None)  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
+    sf_schema: str = Field(alias="schema")  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
 ConnectionInfo = Union[

@@ -28,6 +28,7 @@ addopts = "--strict-markers"
 markers = [
     "postgres: mark a test as a postgres test",
     "bigquery: mark a test as a bigquery test",
+    "snowflake: mark a test as a snowflake test",
 ]
 
 [build-system]
