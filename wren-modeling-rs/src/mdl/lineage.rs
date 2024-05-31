@@ -4,8 +4,8 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use datafusion::common::Column;
-use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
 use datafusion::sql::sqlparser::ast::visit_expressions;
+use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::TableReference;
@@ -13,9 +13,9 @@ use petgraph::Graph;
 
 use crate::mdl::{utils, WrenMDL};
 
-use super::Dataset;
 use super::manifest::JoinType;
 use super::utils::to_expr_queue;
+use super::Dataset;
 
 pub struct Lineage {
     pub source_columns_map: HashMap<Column, HashSet<Column>>,
@@ -155,14 +155,18 @@ impl Lineage {
                                             "{}.{}",
                                             model_name, source_column_ref.column.name
                                         ));
-                                        requried_fields_map.entry(column.clone())
+                                        if source_column_ref.column.is_calculated {
+                                            todo!("calculated source column not supported")
+                                        }
+                                        requried_fields_map
+                                            .entry(column.clone())
                                             .or_default()
                                             .insert(value);
                                     }
                                 }
                             }
                             Dataset::Metric(_) => {
-                                unimplemented!("Metric dataset not supported");
+                                todo!("Metric dataset not supported");
                             }
                         }
                     }

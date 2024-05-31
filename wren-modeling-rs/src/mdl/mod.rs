@@ -74,14 +74,16 @@ impl WrenMDL {
         self.manifest
             .models
             .iter()
-            .find(|model| model.name == name).cloned()
+            .find(|model| model.name == name)
+            .cloned()
     }
 
     pub fn get_relationship(&self, name: &str) -> Option<Arc<Relationship>> {
         self.manifest
             .relationships
             .iter()
-            .find(|relationship| relationship.name == name).cloned()
+            .find(|relationship| relationship.name == name)
+            .cloned()
     }
 
     pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
@@ -146,10 +148,7 @@ pub struct ColumnReference {
 
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
-        ColumnReference {
-            dataset,
-            column,
-        }
+        ColumnReference { dataset, column }
     }
 
     pub fn clone(&self) -> Self {
