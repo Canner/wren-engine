@@ -1,0 +1,53 @@
+{
+  "catalog": "test",
+  "schema": "test",
+  "models": [
+    {
+      "name": "customer",
+      "tableReference": "main.customer",
+      "columns": [
+        {
+          "name": "custkey",
+          "type": "integer",
+          "expression": "c_orderkey"
+        },
+        {
+          "name": "name",
+          "type": "varchar",
+          "expression": "c_name"
+        }
+      ],
+      "primaryKey": "custkey"
+    },
+    {
+      "name": "orders",
+      "tableReference": "main.orders",
+      "columns": [
+        {
+          "name": "orderkey",
+          "type": "integer",
+          "expression": "o_orderkey"
+        },
+        {
+          "name": "custkey",
+          "type": "integer",
+          "expression": "o_custkey"
+        },
+        {
+          "name": "totalprice",
+          "type": "integer",
+          "expression": "o_totalprice"
+        }
+      ],
+      "primaryKey": "orderkey"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "CustomerOrders",
+      "models": ["Customer", "Orders"],
+      "joinType": "one_to_many",
+      "condition": "Customer.custkey = Orders.custkey"
+    }
+  ]
+}
