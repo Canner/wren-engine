@@ -187,7 +187,7 @@ impl ModelPlanNode {
     ) -> Self {
         let mut required_exprs_buffer = VecDeque::new();
         let fields = model
-            .columns
+            .get_physical_columns()
             .iter()
             .filter(|column| {
                 requried_fields.iter().any(|expr| {

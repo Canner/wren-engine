@@ -51,7 +51,8 @@ impl Lineage {
                             .or_insert(HashSet::new())
                             .insert(source_column.clone());
                     });
-                } else {
+                // relationship columns are not a physical column
+                } else if column.relationship.is_none() {
                     let qualified_name =
                         Column::from_qualified_name(format!("{}.{}", model.name, column.name));
                     source_columns_map.insert(qualified_name, HashSet::new());
@@ -200,7 +201,7 @@ mod test {
         let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
-        assert_eq!(lineage.source_columns_map.len(), 8);
+        assert_eq!(lineage.source_columns_map.len(), 9);
         assert_eq!(
             lineage
                 .source_columns_map
@@ -225,6 +226,13 @@ mod test {
                 .len(),
             1
         );
+        let customer_name: Vec<Column> = lineage
+            .source_columns_map
+            .get(&Column::from_qualified_name("orders.customer_name"))
+            .unwrap()
+            .iter().cloned().collect();
+        assert_eq!(customer_name.len(), 1);
+        assert_eq!(customer_name[0], Column::new_unqualified("customer.name"));
     }
 
     #[test]
@@ -237,7 +245,8 @@ mod test {
         let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
-        assert_eq!(lineage.requried_fields_map.len(), 3);
+        dbg!(lineage.requried_fields_map.clone());
+        assert_eq!(lineage.requried_fields_map.len(), 4);
         assert_eq!(
             lineage
                 .requried_fields_map
@@ -262,5 +271,13 @@ mod test {
                 .len(),
             1
         );
+
+        let customer_name: Vec<Column> = lineage
+            .requried_fields_map
+            .get(&Column::from_qualified_name("orders.customer_name"))
+            .unwrap()
+            .iter().cloned().collect();
+        assert_eq!(customer_name.len(), 1);
+        assert_eq!(customer_name[0], Column::from_qualified_name("customer.name"));
     }
 }

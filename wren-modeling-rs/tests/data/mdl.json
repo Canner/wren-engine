@@ -45,6 +45,17 @@
           "expression": "o_totalprice"
         },
         {
+          "name": "customer",
+          "type": "customer",
+          "relationship": "CustomerOrders"
+        },
+        {
+          "name": "customer_name",
+          "type": "varchar",
+          "expression": "customer.name",
+          "isCalculated": true
+        },
+        {
           "name": "orderkey_plus_custkey",
           "type": "integer",
           "expression": "orderkey + custkey",
@@ -63,9 +74,9 @@
   "relationships": [
     {
       "name": "CustomerOrders",
-      "models": ["Customer", "Orders"],
+      "models": ["customer", "orders"],
       "joinType": "one_to_many",
-      "condition": "Customer.custkey = Orders.custkey"
+      "condition": "customer.custkey = orders.custkey"
     }
   ]
 }
