@@ -1,5 +1,3 @@
-pub mod manifest;
-
 use std::{collections::HashMap, sync::Arc};
 
 use datafusion::{
@@ -13,6 +11,8 @@ use datafusion::{
     },
 };
 
+use manifest::Relationship;
+
 use crate::{
     logical_plan::{
         context_provider::WrenContextProvider,
@@ -20,6 +20,10 @@ use crate::{
     },
     mdl::manifest::{Column, Manifest, Metric, Model},
 };
+
+pub mod lineage;
+pub mod manifest;
+pub mod utils;
 
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
@@ -73,6 +77,22 @@ impl WrenMDL {
             .find(|model| model.name == name)
             .map(Arc::clone)
     }
+
+    pub fn get_relationship(&self, name: &str) -> Option<Arc<Relationship>> {
+        self.manifest
+            .relationships
+            .iter()
+            .find(|relationship| relationship.name == name)
+            .map(Arc::clone)
+    }
+
+    pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
+        let name = format!("{}.{}", dataset, column);
+        self.qualifed_references
+            .get(&name)
+            .expect(format!("column {} not found", name).as_str())
+            .clone()
+    }
 }
 
 pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFusionError> {
@@ -120,16 +140,27 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
 /// Analyze the decision point. It's same as the /v1/analysis/sql API in wren engine
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
+/// Cheap clone of the ColumnReference
 pub struct ColumnReference {
-    _dataset: Dataset,
-    column: Arc<Column>,
+    pub dataset: Dataset,
+    pub column: Arc<Column>,
 }
 
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
         ColumnReference {
-            _dataset: dataset,
+            dataset: dataset,
             column,
+        }
+    }
+
+    pub fn clone(&self) -> Self {
+        ColumnReference {
+            dataset: match &self.dataset {
+                Dataset::Model(model) => Dataset::Model(Arc::clone(model)),
+                Dataset::Metric(metric) => Dataset::Metric(Arc::clone(metric)),
+            },
+            column: Arc::clone(&self.column),
         }
     }
 
@@ -138,6 +169,7 @@ impl ColumnReference {
     }
 }
 
+#[derive(Clone)]
 pub enum Dataset {
     Model(Arc<Model>),
     Metric(Arc<Metric>),
@@ -145,12 +177,13 @@ pub enum Dataset {
 
 #[cfg(test)]
 mod test {
-    use crate::mdl::manifest::Manifest;
-    use crate::mdl::{self, WrenMDL};
     use std::error::Error;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
+
+    use crate::mdl::manifest::Manifest;
+    use crate::mdl::{self, WrenMDL};
 
     #[test]
     fn test_access_model() -> Result<(), Box<dyn Error>> {

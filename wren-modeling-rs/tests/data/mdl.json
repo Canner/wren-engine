@@ -15,6 +15,12 @@
           "name": "name",
           "type": "varchar",
           "expression": "c_name"
+        },
+        {
+          "name": "custkey_plus",
+          "type": "integer",
+          "expression": "custkey + 1",
+          "isCalculated": true
         }
       ],
       "primaryKey": "custkey"

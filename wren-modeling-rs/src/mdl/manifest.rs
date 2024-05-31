@@ -44,7 +44,7 @@ pub struct Column {
     pub name: String,
     pub r#type: String,
     #[serde(default)]
-    pub relationship: String,
+    pub relationship: Option<String>,
     #[serde(default)]
     pub is_calculated: bool,
     #[serde(default)]
@@ -67,7 +67,7 @@ pub struct Relationship {
 }
 
 // handle case insensitive
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum JoinType {
     OneToOne,
