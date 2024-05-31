@@ -230,7 +230,9 @@ mod test {
             .source_columns_map
             .get(&Column::from_qualified_name("orders.customer_name"))
             .unwrap()
-            .iter().cloned().collect();
+            .iter()
+            .cloned()
+            .collect();
         assert_eq!(customer_name.len(), 1);
         assert_eq!(customer_name[0], Column::new_unqualified("customer.name"));
     }
@@ -276,8 +278,13 @@ mod test {
             .requried_fields_map
             .get(&Column::from_qualified_name("orders.customer_name"))
             .unwrap()
-            .iter().cloned().collect();
+            .iter()
+            .cloned()
+            .collect();
         assert_eq!(customer_name.len(), 1);
-        assert_eq!(customer_name[0], Column::from_qualified_name("customer.name"));
+        assert_eq!(
+            customer_name[0],
+            Column::from_qualified_name("customer.name")
+        );
     }
 }

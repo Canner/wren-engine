@@ -141,6 +141,7 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
 /// Cheap clone of the ColumnReference
+#[derive(Clone)]
 pub struct ColumnReference {
     pub dataset: Dataset,
     pub column: Arc<Column>,
@@ -149,16 +150,6 @@ pub struct ColumnReference {
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
         ColumnReference { dataset, column }
-    }
-
-    pub fn clone(&self) -> Self {
-        ColumnReference {
-            dataset: match &self.dataset {
-                Dataset::Model(model) => Dataset::Model(Arc::clone(model)),
-                Dataset::Metric(metric) => Dataset::Metric(Arc::clone(metric)),
-            },
-            column: Arc::clone(&self.column),
-        }
     }
 
     pub fn get_column(&self) -> Arc<Column> {
