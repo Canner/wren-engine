@@ -2,6 +2,7 @@ import httpx
 import orjson
 
 from app.config import get_config
+from app.util import log_rewritten
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 
@@ -9,6 +10,7 @@ wren_engine_endpoint = get_config().wren_engine_endpoint
 class Rewriter:
 
     @staticmethod
+    @log_rewritten
     def rewrite(manifest_str: str, sql: str) -> str:
         try:
             r = httpx.request(
