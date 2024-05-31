@@ -43,6 +43,18 @@
           "name": "totalprice",
           "type": "integer",
           "expression": "o_totalprice"
+        },
+        {
+          "name": "orderkey_plus_custkey",
+          "type": "integer",
+          "expression": "orderkey + custkey",
+          "isCalculated": true
+        },
+        {
+          "name": "hash_orderkey",
+          "type": "varchar",
+          "expression": "md5(orderkey)",
+          "isCalculated": true
         }
       ],
       "primaryKey": "orderkey"

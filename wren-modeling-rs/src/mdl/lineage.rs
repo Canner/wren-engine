@@ -200,11 +200,27 @@ mod test {
         let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
-        assert_eq!(lineage.source_columns_map.len(), 6);
+        assert_eq!(lineage.source_columns_map.len(), 8);
         assert_eq!(
             lineage
                 .source_columns_map
                 .get(&Column::from_qualified_name("customer.custkey_plus"))
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            lineage
+                .source_columns_map
+                .get(&Column::from_qualified_name("orders.orderkey_plus_custkey"))
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            lineage
+                .source_columns_map
+                .get(&Column::from_qualified_name("orders.hash_orderkey"))
                 .unwrap()
                 .len(),
             1
@@ -221,11 +237,27 @@ mod test {
         let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
-        assert_eq!(lineage.requried_fields_map.len(), 1);
+        assert_eq!(lineage.requried_fields_map.len(), 3);
         assert_eq!(
             lineage
                 .requried_fields_map
                 .get(&Column::from_qualified_name("Customer.custkey_plus"))
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            lineage
+                .requried_fields_map
+                .get(&Column::from_qualified_name("orders.orderkey_plus_custkey"))
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            lineage
+                .requried_fields_map
+                .get(&Column::from_qualified_name("orders.hash_orderkey"))
                 .unwrap()
                 .len(),
             1
