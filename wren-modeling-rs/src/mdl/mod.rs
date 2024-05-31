@@ -74,23 +74,21 @@ impl WrenMDL {
         self.manifest
             .models
             .iter()
-            .find(|model| model.name == name)
-            .map(Arc::clone)
+            .find(|model| model.name == name).cloned()
     }
 
     pub fn get_relationship(&self, name: &str) -> Option<Arc<Relationship>> {
         self.manifest
             .relationships
             .iter()
-            .find(|relationship| relationship.name == name)
-            .map(Arc::clone)
+            .find(|relationship| relationship.name == name).cloned()
     }
 
     pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
         let name = format!("{}.{}", dataset, column);
         self.qualifed_references
             .get(&name)
-            .expect(format!("column {} not found", name).as_str())
+            .unwrap_or_else(|| panic!("column {} not found", name))
             .clone()
     }
 }
@@ -149,7 +147,7 @@ pub struct ColumnReference {
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
         ColumnReference {
-            dataset: dataset,
+            dataset,
             column,
         }
     }

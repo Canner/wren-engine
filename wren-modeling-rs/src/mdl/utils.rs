@@ -29,7 +29,7 @@ pub fn to_expr_queue(column: Column) -> VecDeque<String> {
     } else {
         column
             .name
-            .split(".")
+            .split('.')
             .for_each(|part| parts.push_back(part.to_string()));
     }
     parts
@@ -40,5 +40,5 @@ where
     Ty: EdgeType,
     Ix: petgraph::graph::IndexType,
 {
-    return g.is_directed() && !is_cyclic_directed(g);
+    g.is_directed() && !is_cyclic_directed(g)
 }

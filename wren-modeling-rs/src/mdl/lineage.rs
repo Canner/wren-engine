@@ -24,8 +24,8 @@ pub struct Lineage {
 
 impl Lineage {
     pub fn new(mdl: &WrenMDL) -> Self {
-        let source_columns_map = Lineage::collect_source_columns(&mdl);
-        let requried_fields_map = Lineage::collect_required_fields(&mdl, &source_columns_map);
+        let source_columns_map = Lineage::collect_source_columns(mdl);
+        let requried_fields_map = Lineage::collect_required_fields(mdl, &source_columns_map);
         Lineage {
             source_columns_map,
             requried_fields_map,
@@ -42,7 +42,7 @@ impl Lineage {
                         Some(ref exp) => exp,
                         None => return,
                     };
-                    let source_columns = Self::collect_identifiers(&expr);
+                    let source_columns = Self::collect_identifiers(expr);
                     let qualified_name =
                         Column::from_qualified_name(format!("{}.{}", model.name, column.name));
                     source_columns.iter().for_each(|source_column| {
@@ -93,7 +93,7 @@ impl Lineage {
     ) -> HashMap<Column, HashSet<Column>> {
         let mut requried_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
         source_colums_map
-            .into_iter()
+            .iter()
             .for_each(|(column, source_columns)| {
                 let relation = column.clone().relation.unwrap();
                 let mut model_name = if let TableReference::Bare { table } = relation {
@@ -108,9 +108,9 @@ impl Lineage {
                 }
 
                 let mut directed_graph: Graph<Dataset, JoinType> = Graph::new();
-                source_columns.into_iter().for_each(|source_column| {
+                source_columns.iter().for_each(|source_column| {
                     let mut expr_parts = to_expr_queue(source_column.clone());
-                    while expr_parts.len() > 0 {
+                    while !expr_parts.is_empty() {
                         let ident = expr_parts.pop_front().unwrap();
                         let source_column_ref = mdl.get_column_reference(&model_name, &ident);
                         let left_vertex = directed_graph.add_node(column_ref.dataset.clone());
@@ -140,7 +140,7 @@ impl Lineage {
                                             directed_graph.add_edge(
                                                 left_vertex,
                                                 right_vertex,
-                                                rs_rf.join_type.clone(),
+                                                rs_rf.join_type,
                                             );
                                             model_name = related_model_name;
                                         } else {
@@ -148,7 +148,7 @@ impl Lineage {
                                         }
                                     }
                                     None => {
-                                        if expr_parts.len() > 0 {
+                                        if !expr_parts.is_empty() {
                                             panic!("invalid relationship chain: {}", source_column);
                                         }
                                         let value = Column::from_qualified_name(format!(
@@ -156,7 +156,7 @@ impl Lineage {
                                             model_name, source_column_ref.column.name
                                         ));
                                         requried_fields_map.entry(column.clone())
-                                            .or_insert(HashSet::new())
+                                            .or_default()
                                             .insert(value);
                                     }
                                 }
