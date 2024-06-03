@@ -1,25 +1,33 @@
-from json import loads
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Request
+from app.mdl.rewriter import rewrite
+from app.model.data_source import DataSource, ConnectionInfo
+from app.model.dto import PostgresDTO, BigQueryDTO, SnowflakeDTO
+from app.util import log_dto, to_json
 
-from app.logger import get_logger
-from app.mdl.rewriter import Rewriter
-from app.model.data_source import DataSource
-from app.model.dto import IbisDTO
-
-logger = get_logger(__name__)
 router = APIRouter(prefix="/v2/ibis")
 
 
-def to_json(df) -> dict:
-    json_obj = loads(df.to_json(orient='split'))
-    del json_obj['index']
-    json_obj['dtypes'] = df.dtypes.apply(lambda x: x.name).to_dict()
-    return json_obj
+@router.post("/postgres/query")
+@log_dto
+def query_postgres(dto: PostgresDTO) -> dict:
+    rewritten_sql = rewrite(dto.manifest_str, dto.sql)
+    return query_data(DataSource.postgres, dto.connection_info, rewritten_sql)
 
 
-@router.post("/{data_source}/query")
-def query(data_source: DataSource, dto: IbisDTO, request: Request) -> dict:
-    logger.debug(f'{request.method} {request.url.path}, DTO: {dto}')
-    rewritten_sql = Rewriter.rewrite(dto.manifest_str, dto.sql)
-    return to_json(data_source.get_connection(dto.connection_info).sql(rewritten_sql, dialect='trino').to_pandas())
+@router.post("/bigquery/query")
+@log_dto
+def query_bigquery(dto: BigQueryDTO) -> dict:
+    rewritten_sql = rewrite(dto.manifest_str, dto.sql)
+    return query_data(DataSource.bigquery, dto.connection_info, rewritten_sql)
+
+
+@router.post("/snowflake/query")
+@log_dto
+def query_snowflake(dto: SnowflakeDTO) -> dict:
+    rewritten_sql = rewrite(dto.manifest_str, dto.sql)
+    return query_data(DataSource.snowflake, dto.connection_info, rewritten_sql)
+
+
+def query_data(data_source: DataSource, connection_info: ConnectionInfo, rewritten_sql: str) -> dict:
+    return to_json(data_source.get_connection(connection_info).sql(rewritten_sql, dialect='trino').to_pandas())

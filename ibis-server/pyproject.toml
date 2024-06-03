@@ -19,6 +19,17 @@ orjson = "3.10.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.2.0"
+testcontainers = {extras = ["postgres"], version = "4.5.0"}
+sqlalchemy = "2.0.30"
+pandas = "2.2.2"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+markers = [
+    "postgres: mark a test as a postgres test",
+    "bigquery: mark a test as a bigquery test",
+    "snowflake: mark a test as a snowflake test",
+]
 
 [build-system]
 requires = ["poetry-core"]

@@ -3,6 +3,7 @@ from typing import Union
 from pydantic import BaseModel, Field
 
 from app.model.data_source import (
+    PostgresConnectionUrl,
     PostgresConnectionInfo,
     BigQueryConnectionInfo,
     SnowflakeConnectionInfo
@@ -15,7 +16,7 @@ class IbisDTO(BaseModel):
 
 
 class PostgresDTO(IbisDTO):
-    connection_info: PostgresConnectionInfo = Field(alias="connectionInfo")
+    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(alias="connectionInfo")
 
 
 class BigQueryDTO(IbisDTO):

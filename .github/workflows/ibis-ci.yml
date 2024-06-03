@@ -1,0 +1,51 @@
+name: ibis CI
+
+on:
+  pull_request:
+    paths:
+      - 'ibis-server/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ibis-server
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Wren JAVA engine
+        working-directory: ./example/duckdb-tpch-example
+        run: |
+          docker compose --env-file .env up -d
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ./ibis-server/pyproject.toml
+          cache: 'poetry'
+      - name: Install dependencies
+        run: make install
+      - name: Run tests
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+        run: poetry run pytest -m "not bigquery and not snowflake"
+      - name: Test bigquery if need
+        if : contains(github.event.pull_request.labels.*.name, 'bigquery')
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+          TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}
+          TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON: ${{ secrets.TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON }}
+        run: poetry run pytest -m bigquery
+      - name: Test snowflake if need
+        if : contains(github.event.pull_request.labels.*.name, 'snowflake')
+        env:
+          WREN_ENGINE_ENDPOINT: http://localhost:8080
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        run: poetry run pytest -m snowflake
