@@ -9,19 +9,28 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: ibis-server
-
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Start Wren JAVA engine
-        working-directory: ./example/duckdb-tpch-example
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+      - name: Prepare config.properties and executable jar
         run: |
-          docker compose --env-file .env up -d
+          mkdir etc
+          echo "node.environment=production" >> etc/config.properties
+          echo "wren.directory=./etc/mdl" >> etc/config.properties
+          ./mvnw clean install -B -DskipTests -P exec-jar
+      - name: Start Wren JAVA engine
+        run: |
+          WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+          java -Dconfig=etc/config.properties \
+                --add-opens=java.base/java.nio=ALL-UNNAMED \
+                -jar ./wren-server/target/wren-server-${WREN_VERSION}-executable.jar &
       - name: Install poetry
         run: pipx install poetry
       - uses: actions/setup-python@v5
@@ -29,13 +38,16 @@ jobs:
           python-version-file: ./ibis-server/pyproject.toml
           cache: 'poetry'
       - name: Install dependencies
+        working-directory: ibis-server
         run: make install
       - name: Run tests
+        working-directory: ibis-server
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
         run: poetry run pytest -m "not bigquery and not snowflake"
       - name: Test bigquery if need
         if : contains(github.event.pull_request.labels.*.name, 'bigquery')
+        working-directory: ibis-server
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
           TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}
@@ -43,6 +55,7 @@ jobs:
         run: poetry run pytest -m bigquery
       - name: Test snowflake if need
         if : contains(github.event.pull_request.labels.*.name, 'snowflake')
+        working-directory: ibis-server
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
