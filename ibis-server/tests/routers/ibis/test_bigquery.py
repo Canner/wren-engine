@@ -46,7 +46,7 @@ class TestBigquery:
         import os
         return {
             "project_id": os.getenv("TEST_BIG_QUERY_PROJECT_ID"),
-            "dataset_id": "tpch_sf1",
+            "dataset_id": "tpch_tiny",
             "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON")
         }
 
