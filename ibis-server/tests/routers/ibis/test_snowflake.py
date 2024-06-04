@@ -127,9 +127,7 @@ class TestSnowflake:
                 "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
-        assert response.status_code == 200
-        result = response.json()
-        assert result['status'] == 'success'
+        assert response.status_code == 204
 
     def test_query_with_dry_run_and_invalid_sql(self, manifest_str: str):
         connection_info = self.get_connection_info()
@@ -142,7 +140,5 @@ class TestSnowflake:
                 "sql": 'SELECT * FROM X'
             }
         )
-        assert response.status_code == 200
-        result = response.json()
-        assert result['status'] == 'failure'
-        assert result['message'] is not None
+        assert response.status_code == 422
+        assert response.text is not None

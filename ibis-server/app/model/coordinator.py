@@ -14,13 +14,12 @@ class Coordinator:
         rewritten_sql = rewrite(self.manifest_str, sql)
         return self._to_json(self.connection.sql(rewritten_sql, dialect='trino').to_pandas())
 
-    def dry_run(self, sql):
+    def dry_run(self, sql) -> None:
         try:
             rewritten_sql = rewrite(self.manifest_str, sql)
             self.connection.sql(rewritten_sql, dialect='trino')
-            return {"status": "success"}
         except Exception as e:
-            return {"status": "failure", "message": str(e)}
+            raise QueryDryRunError(f'Exception: {type(e)}, message: {str(e)}')
 
     @staticmethod
     def _to_json(df):
@@ -28,3 +27,7 @@ class Coordinator:
         del json_obj['index']
         json_obj['dtypes'] = df.dtypes.apply(lambda x: x.name).to_dict()
         return json_obj
+
+
+class QueryDryRunError(Exception):
+    pass
