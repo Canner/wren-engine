@@ -1,27 +1,27 @@
-use crate::logical_plan::rule::RelationChain::Nil;
-use crate::mdl;
+use std::cell::RefCell;
+use std::cmp::{Ordering, PartialEq};
+use std::collections::{BTreeSet, HashSet};
+use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
+
 use arrow_schema::Field;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, DFSchemaRef, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{
-    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
-    UserDefinedLogicalNodeCore,
+    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
 };
 use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::prelude::Column;
 use datafusion::sql::TableReference;
 use petgraph::Graph;
-use std::cell::RefCell;
-use std::cmp::PartialEq;
-use std::collections::{HashSet, VecDeque};
-use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 
+use crate::logical_plan::rule::RelationChain::Nil;
+use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::{JoinType, Model};
-use crate::mdl::utils::is_dag;
+use crate::mdl::utils::{create_remote_expr_for_model, is_dag};
 use crate::mdl::{AnalyzedWrenMDL, Dataset};
 
 use super::utils::{create_remote_table_source, map_data_type};
@@ -200,9 +200,9 @@ impl ModelPlanNode {
         original_table_scan: Option<LogicalPlan>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     ) -> Self {
-        let mut required_exprs_buffer = HashSet::new();
+        let mut required_exprs_buffer = BTreeSet::new();
         let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
-        let mut model_required_fields: HashMap<String, HashSet<Column>> = HashMap::new();
+        let mut model_required_fields: HashMap<String, BTreeSet<Column>> = HashMap::new();
         let fields = model
             .get_physical_columns()
             .iter()
@@ -216,15 +216,38 @@ impl ModelPlanNode {
                 })
             })
             .map(|column| {
-                let expr_plan = if let Some(expression) = &column.expression {
-                    col(expression).alias(column.name.clone())
-                } else {
-                    col(column.name.clone())
+                if !column.is_calculated {
+                    let expr_plan = if let Some(expression) = &column.expression {
+                        let expr = create_remote_expr_for_model(
+                            expression,
+                            Arc::clone(&model),
+                            Arc::clone(&analyzed_wren_mdl),
+                        );
+                        expr.alias(column.name.clone())
+                    } else {
+                        col(column.name.clone())
+                    };
+                    required_exprs_buffer.insert(OrdExpr::new(expr_plan));
                 };
-                required_exprs_buffer.insert(expr_plan);
+
                 if column.is_calculated {
+                    if let Some(_) = &column.expression {
+                        let column_rf = analyzed_wren_mdl
+                            .wren_mdl
+                            .qualified_references
+                            .get(format!("{}.{}", model.name, column.name).as_str())
+                            .unwrap();
+                        let expr = mdl::utils::create_wren_calculated_field_expr(
+                            column_rf.clone(),
+                            Arc::clone(&analyzed_wren_mdl),
+                        );
+                        let expr_plan = expr.alias(column.name.clone());
+                        required_exprs_buffer.insert(OrdExpr::new(expr_plan));
+                    };
+
                     let qualified_column =
                         Column::from_qualified_name(format!("{}.{}", model.name, column.name));
+
                     match analyzed_wren_mdl
                         .lineage
                         .required_dataset_topo
@@ -250,7 +273,7 @@ impl ModelPlanNode {
                             };
                             model_required_fields
                                 .entry(relation_name)
-                                .or_insert(HashSet::new())
+                                .or_insert(BTreeSet::new())
                                 .insert(c.clone());
                         });
                 }
@@ -343,11 +366,43 @@ impl ModelPlanNode {
 
         Self {
             model_name: model.name.clone(),
-            required_exprs: required_exprs_buffer.into_iter().collect(),
+            required_exprs: required_exprs_buffer
+                .into_iter()
+                .map(|oe| oe.expr)
+                .collect(),
             relation_chain: Box::new(relation_chain),
             schema_ref,
             original_table_scan,
         }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Hash, Clone)]
+struct OrdExpr {
+    expr: Expr,
+}
+
+impl OrdExpr {
+    fn new(expr: Expr) -> Self {
+        Self { expr }
+    }
+}
+
+impl PartialOrd<Self> for OrdExpr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.expr.partial_cmp(&other.expr)
+    }
+}
+
+impl Ord for OrdExpr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.expr.to_string().cmp(&other.expr.to_string())
+    }
+}
+
+impl Into<Expr> for OrdExpr {
+    fn into(self) -> Expr {
+        self.expr
     }
 }
 
@@ -520,9 +575,8 @@ impl ModelGenerationRule {
                         return Ok(Transformed::no(table_scan));
                     }
 
-
                     // join relationship plan
-                    let (join_plan, condition_opt) =
+                    let (join_plan, _) =
                         model_plan
                             .relation_chain
                             .clone()
@@ -530,7 +584,6 @@ impl ModelGenerationRule {
                                 &self.analyzed_wren_mdl,
                             )));
 
-                    dbg!(&join_plan);
                     // calculated field scope
                     let result = match join_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)

@@ -140,9 +140,13 @@ pub fn transform_sql(
 
     let config = ConfigOptions::default();
 
-    let analyzed = analyzer
-        .execute_and_check(plan, &config, |_, _| {})
-        .unwrap();
+    let analyzed = match analyzer.execute_and_check(plan, &config, |_, _| {}) {
+        Ok(analyzed) => analyzed,
+        Err(e) => {
+            println!("Error: {:?}", e);
+            return Err(e);
+        }
+    };
     println!("Do some modeling:\n {analyzed:?}");
     println!("********");
 
@@ -171,6 +175,13 @@ impl ColumnReference {
     pub fn get_column(&self) -> Arc<Column> {
         Arc::clone(&self.column)
     }
+
+    pub fn get_qualified_name(&self) -> String {
+        match &self.dataset {
+            Dataset::Model(model) => format!("{}.{}", model.name, self.column.name),
+            Dataset::Metric(metric) => format!("{}.{}", metric.name, self.column.name),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
@@ -195,6 +206,13 @@ mod test {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use datafusion::error::Result;
+    use datafusion::sql::planner::SqlToRel;
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+    use datafusion::sql::unparser::plan_to_sql;
+
+    use crate::logical_plan::context_provider::RemoteContextProvider;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, AnalyzedWrenMDL};
 
@@ -211,7 +229,7 @@ mod test {
         let tests: Vec<(&str, &str)> = vec![
             (
                 "select orderkey + orderkey from orders",
-                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
+                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
             ),
             (
                 "select orderkey from orders where orders.totalprice > 10",
@@ -219,7 +237,7 @@ mod test {
             ),
             (
                 "select orders.orderkey from orders left join customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_custkey" AS "custkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
+                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."o_custkey" AS "custkey", "orders"."o_orderkey" AS "orderkey", "orders"."o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
             ),
             (
                 "select orderkey, sum(totalprice) from orders group by 1",
@@ -235,15 +253,39 @@ mod test {
             ),
             (
                 "select customer_name from orders",
-                ""
+                r#"SELECT "orders"."customer_name" FROM (SELECT "customer"."name" AS "customer_name" FROM (SELECT "customer"."c_name" AS "name", "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" LEFT JOIN (SELECT "orders"."o_custkey" AS "custkey" FROM "orders") AS "orders" ON ("customer"."custkey" = "orders"."custkey")) AS "orders""#
             ),
+            // TODO: support calculated witout relationship
+            // (
+            //     "select orderkey_plus_custkey from orders",
+            //     "select * from orders;"
+            // )
         ];
 
         for (sql, expected) in tests {
+            println!("{}", sql);
             let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
-            assert_eq!(actual, expected);
+            assert_eq!(
+                plan_sql(&actual, Arc::clone(&analyzed_mdl))?,
+                plan_sql(expected, Arc::clone(&analyzed_mdl))?
+            );
         }
 
         Ok(())
+    }
+
+    fn plan_sql(sql: &str, analyzed_mdl: Arc<AnalyzedWrenMDL>) -> Result<String> {
+        let dialect = GenericDialect {};
+        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+        let statement = &ast[0];
+
+        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl);
+        let sql_to_rel = SqlToRel::new(&context_provider);
+        let rels = sql_to_rel.sql_statement_to_plan(statement.clone())?;
+        // show the planned sql
+        match plan_to_sql(&rels) {
+            Ok(sql) => Ok(sql.to_string()),
+            Err(e) => Err(e),
+        }
     }
 }
