@@ -98,7 +98,7 @@ jobs:
         with:
           submodules: true
       - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-macos-aarch64-builder
+        uses: ./.github/actions/rust/setup-macos-aarch64-builder
       - name: Run tests (excluding doctests)
         working-directory: wren-modeling-rs
         shell: bash
