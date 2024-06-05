@@ -76,6 +76,8 @@ impl ContextProvider for WrenContextProvider {
     }
 }
 
+/// RemoteContextProvider is a ContextProvider implementation that is used to provide
+/// the schema for the remote column in the column expression
 pub struct RemoteContextProvider {
     options: ConfigOptions,
     tables: HashMap<String, Arc<dyn TableSource>>,

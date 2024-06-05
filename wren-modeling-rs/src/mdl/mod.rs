@@ -107,7 +107,7 @@ impl WrenMDL {
             .clone()
     }
 }
-
+/// Transform the SQL based on the MDL
 pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,

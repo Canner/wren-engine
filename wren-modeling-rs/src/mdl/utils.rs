@@ -2,20 +2,20 @@ use std::collections::{BTreeSet, VecDeque};
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use datafusion::{common::Column, sql::TableReference};
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::sql::planner::SqlToRel;
-use datafusion::sql::sqlparser::ast::{visit_expressions, visit_expressions_mut};
 use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
+use datafusion::sql::sqlparser::ast::{visit_expressions, visit_expressions_mut};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use petgraph::{EdgeType, Graph};
+use datafusion::{common::Column, sql::TableReference};
 use petgraph::algo::is_cyclic_directed;
+use petgraph::{EdgeType, Graph};
 
-use crate::logical_plan::context_provider::{RemoteContextProvider, WrenContextProvider};
 use crate::logical_plan::context_provider::DynamicContextProvider;
-use crate::mdl::{AnalyzedWrenMDL, ColumnReference};
+use crate::logical_plan::context_provider::{RemoteContextProvider, WrenContextProvider};
 use crate::mdl::manifest::Model;
+use crate::mdl::{AnalyzedWrenMDL, ColumnReference};
 
 pub fn to_expr_queue(column: Column) -> VecDeque<String> {
     let mut parts = VecDeque::new();
@@ -97,8 +97,10 @@ pub fn create_wren_calculated_field_expr(
         .required_fields_map
         .get(&qualified_col)
         .unwrap();
+
+    // collect all required models.
     let mut model_set = BTreeSet::new();
-     required_fields
+    required_fields
         .iter()
         .map(|c| &c.relation)
         .filter(|r| r.is_some())
@@ -106,9 +108,13 @@ pub fn create_wren_calculated_field_expr(
         .for_each(|m| {
             model_set.insert(m);
         });
-    let models = model_set.iter().map(|m| m.to_string()).collect::<Vec<String>>().join(", ");
+    let models = model_set
+        .iter()
+        .map(|m| m.to_string())
+        .collect::<Vec<String>>()
+        .join(", ");
 
-
+    // Remove all relationship fields from the expression. Only keep the target expression and its source table.
     let expr = column_rf.column.expression.clone().unwrap();
     let wrapped = format!("select {} from {}", expr, models);
     let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
@@ -122,7 +128,7 @@ pub fn create_wren_calculated_field_expr(
                     *expr = CompoundIdentifier(slice.to_vec());
                 }
             }
-            _ => { }
+            _ => {}
         }
         ControlFlow::<()>::Continue(())
     });
@@ -146,6 +152,8 @@ pub fn create_wren_calculated_field_expr(
     }
 }
 
+/// Create the Logical Expr for the remote column.
+/// The
 pub(crate) fn create_remote_expr_for_model(
     expr: &String,
     model: Arc<Model>,
@@ -159,6 +167,7 @@ pub(crate) fn create_remote_expr_for_model(
     )
 }
 
+/// Create the Logical Expr for the column belong to the model according to the context provider
 pub(crate) fn create_expr_for_model(
     expr: &String,
     model: Arc<Model>,
@@ -192,8 +201,8 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
-    use crate::mdl::AnalyzedWrenMDL;
     use crate::mdl::manifest::Manifest;
+    use crate::mdl::AnalyzedWrenMDL;
 
     #[test]
     fn test_create_wren_expr() {

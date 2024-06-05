@@ -421,6 +421,10 @@ fn merge_graph(graph: &mut Graph<Dataset, DatasetLink>, new_graph: &Graph<Datase
     }
 }
 
+/// RelationChain is a chain of models that are connected by the relationship.
+/// The chain is used to generate the join plan for the model.
+/// The physical layout will be looked like:
+/// (((Model3, Model2), Model1), Nil)
 #[derive(Eq, PartialEq, Debug, Hash, Clone)]
 enum RelationChain {
     Chain(ModelPlanNode, JoinType, String, Box<RelationChain>),
