@@ -9,6 +9,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    working-directory: ibis-server
+
 jobs:
   # Check crate compiles
   linux-build-lib:
@@ -36,7 +40,6 @@ jobs:
           key: cargo-cache-benchmark-${{ hashFiles('wren-modeling-rs/Cargo.toml') }}
 
       - name: Check datafusion-common without default features
-        working-directory: wren-modeling-rs
         run: cargo check --all-targets
 
   # Run tests
@@ -55,10 +58,8 @@ jobs:
         with:
           rust-version: stable
       - name: Run tests (excluding doctests)
-        working-directory: wren-modeling-rs
         run: cargo test --lib --tests --bins
       - name: Verify Working Directory Clean
-        working-directory: wren-modeling-rs
         run: git diff --exit-code
 
   windows:
@@ -71,7 +72,6 @@ jobs:
       - name: Setup Rust toolchain
         uses: ./.github/actions/rust/setup-windows-builder
       - name: Run tests (excluding doctests)
-        working-directory: wren-modeling-rs
         shell: bash
         run: |
           cargo test --lib --tests --bins
@@ -86,7 +86,6 @@ jobs:
       - name: Setup Rust toolchain
         uses: ./.github/actions/rust/setup-macos-builder
       - name: Run tests (excluding doctests)
-        working-directory: wren-modeling-rs
         shell: bash
         run: cargo test --lib --tests --bins
 
@@ -100,7 +99,6 @@ jobs:
       - name: Setup Rust toolchain
         uses: ./.github/actions/rust/setup-macos-aarch64-builder
       - name: Run tests (excluding doctests)
-        working-directory: wren-modeling-rs
         shell: bash
         run: cargo test --lib --tests --bins
 
@@ -116,7 +114,6 @@ jobs:
         with:
           rust-version: stable
       - name: Run
-        working-directory: wren-modeling-rs
         run: cargo fmt --all -- --check
 
   clippy:
@@ -134,10 +131,8 @@ jobs:
         with:
           rust-version: stable
       - name: Install Clippy
-        working-directory: wren-modeling-rs
         run: rustup component add clippy
       - name: Run clippy
-        working-directory: wren-modeling-rs
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   cargo-toml-formatting-checks:
@@ -155,9 +150,7 @@ jobs:
         with:
           rust-version: stable
       - name: Install taplo
-        working-directory: wren-modeling-rs
         run: cargo +stable install taplo-cli --version ^0.9 --locked
       # if you encounter an error, try running 'taplo format' to fix the formatting automatically.
       - name: Check Cargo.toml formatting
-        working-directory: wren-modeling-rs
         run: taplo format --check
