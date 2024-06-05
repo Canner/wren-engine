@@ -29,7 +29,6 @@ runs:
       shell: bash
       run: |
         apt-get update
-        apt-get install -y protobuf-compiler
     - name: Setup Rust toolchain
       shell: bash
       # rustfmt is needed for the substrait build script
