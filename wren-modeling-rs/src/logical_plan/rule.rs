@@ -231,7 +231,7 @@ impl ModelPlanNode {
                 };
 
                 if column.is_calculated {
-                    if let Some(_) = &column.expression {
+                    if column.expression.is_some() {
                         let column_rf = analyzed_wren_mdl
                             .wren_mdl
                             .qualified_references
@@ -273,7 +273,7 @@ impl ModelPlanNode {
                             };
                             model_required_fields
                                 .entry(relation_name)
-                                .or_insert(BTreeSet::new())
+                                .or_default()
                                 .insert(c.clone());
                         });
                 }
@@ -309,7 +309,7 @@ impl ModelPlanNode {
                     let required_filed = model_required_fields
                         .get(model.name.as_str())
                         .unwrap()
-                        .into_iter()
+                        .iter()
                         .map(|c| Expr::Column(c.clone()))
                         .collect();
                     match &link.source {
@@ -321,7 +321,7 @@ impl ModelPlanNode {
                                     None,
                                     Arc::clone(&analyzed_wren_mdl),
                                 ),
-                                link.join_type.clone(),
+                                link.join_type,
                                 link.condition.clone(),
                                 Box::new(relation_chain),
                             );
@@ -343,7 +343,7 @@ impl ModelPlanNode {
                     let required_filed = model_required_fields
                         .get(target_model.name.as_str())
                         .unwrap()
-                        .into_iter()
+                        .iter()
                         .map(|c| Expr::Column(c.clone()))
                         .collect();
                     relation_chain = RelationChain::Chain(
@@ -353,7 +353,7 @@ impl ModelPlanNode {
                             None,
                             Arc::clone(&analyzed_wren_mdl),
                         ),
-                        link.join_type.clone(),
+                        link.join_type,
                         link.condition.clone(),
                         Box::new(relation_chain),
                     );
@@ -390,7 +390,7 @@ impl OrdExpr {
 
 impl PartialOrd<Self> for OrdExpr {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.expr.partial_cmp(&other.expr)
+        Some(self.cmp(other))
     }
 }
 
@@ -400,9 +400,9 @@ impl Ord for OrdExpr {
     }
 }
 
-impl Into<Expr> for OrdExpr {
-    fn into(self) -> Expr {
-        self.expr
+impl From<OrdExpr> for Expr {
+    fn from(val: OrdExpr) -> Self {
+        val.expr
     }
 }
 

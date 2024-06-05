@@ -120,15 +120,12 @@ pub fn create_wren_calculated_field_expr(
     let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
     let mut statement = parsed[0].clone();
     visit_expressions_mut(&mut statement, |expr| {
-        match expr {
-            CompoundIdentifier(ids) => {
-                let name_size = ids.len();
-                if name_size > 2 {
-                    let slice = &ids[name_size - 2..name_size - 1];
-                    *expr = CompoundIdentifier(slice.to_vec());
-                }
+        if let CompoundIdentifier(ids) = expr {
+            let name_size = ids.len();
+            if name_size > 2 {
+                let slice = &ids[name_size - 2..name_size - 1];
+                *expr = CompoundIdentifier(slice.to_vec());
             }
-            _ => {}
         }
         ControlFlow::<()>::Continue(())
     });
@@ -146,7 +143,7 @@ pub fn create_wren_calculated_field_expr(
                 &projection.expr[0],
                 &projection.input,
             )
-            .expect(format!("Failed to create column expression {}", expr).as_str())
+            .unwrap_or_else(|_| panic!("Failed to create column expression {}", expr))
         }
         _ => unreachable!("Unexpected plan type: {:?}", plan),
     }
@@ -189,7 +186,7 @@ pub(crate) fn create_expr_for_model(
                 &projection.expr[0],
                 &projection.input,
             )
-            .expect(format!("Failed to create column expression {}", expr).as_str())
+            .unwrap_or_else(|_| panic!("Failed to create column expression {}", expr))
         }
         _ => unreachable!("Unexpected plan type: {:?}", plan),
     }

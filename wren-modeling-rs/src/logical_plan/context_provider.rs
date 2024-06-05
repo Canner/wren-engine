@@ -152,7 +152,7 @@ fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {
                 let data_type = map_data_type(&column.r#type);
                 vec![Field::new(&column.name, data_type, column.no_null)]
             } else {
-                utils::collect_identifiers(&column.expression.as_ref().unwrap())
+                utils::collect_identifiers(column.expression.as_ref().unwrap())
                     .iter()
                     .map(|c| {
                         // we don't know the data type or nullable of the remote table,
@@ -198,7 +198,7 @@ impl ContextProvider for DynamicContextProvider {
     }
 
     fn options(&self) -> &ConfigOptions {
-        &self.delegate.options()
+        self.delegate.options()
     }
 
     fn udfs_names(&self) -> Vec<String> {

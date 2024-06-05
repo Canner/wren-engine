@@ -21,8 +21,10 @@ pub struct Lineage {
 impl Lineage {
     pub fn new(mdl: &WrenMDL) -> Self {
         let source_columns_map = Lineage::collect_source_columns(mdl);
-        let (required_fields_map, required_dataset_topo) =
-            Lineage::collect_required_fields(mdl, &source_columns_map);
+        let RequiredInfo {
+            required_fields_map,
+            required_dataset_topo,
+        } = Lineage::collect_required_fields(mdl, &source_columns_map);
         Lineage {
             source_columns_map,
             required_fields_map,
@@ -62,11 +64,8 @@ impl Lineage {
     fn collect_required_fields(
         mdl: &WrenMDL,
         source_colums_map: &HashMap<Column, HashSet<Column>>,
-    ) -> (
-        HashMap<Column, HashSet<Column>>,
-        HashMap<Column, Graph<Dataset, DatasetLink>>,
-    ) {
-        let mut requried_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
+    ) -> RequiredInfo {
+        let mut required_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
         let mut required_dataset_topo: HashMap<Column, Graph<Dataset, DatasetLink>> =
             HashMap::new();
         source_colums_map
@@ -91,10 +90,9 @@ impl Lineage {
                     while !expr_parts.is_empty() {
                         let ident = expr_parts.pop_front().unwrap();
                         let source_column_ref = mdl.get_column_reference(&model_name, &ident);
-                        let left_vertex = node_index_map
+                        let left_vertex = *node_index_map
                             .entry(column_ref.dataset.clone())
-                            .or_insert_with(|| directed_graph.add_node(column_ref.dataset.clone()))
-                            .clone();
+                            .or_insert_with(|| directed_graph.add_node(column_ref.dataset.clone()));
                         match source_column_ref.dataset {
                             Dataset::Model(_) => {
                                 match source_column_ref.column.relationship.clone() {
@@ -119,7 +117,7 @@ impl Lineage {
                                                 .iter()
                                                 .cloned()
                                                 .for_each(|ident| {
-                                                    requried_fields_map
+                                                    required_fields_map
                                                         .entry(column.clone())
                                                         .or_default()
                                                         .insert(Column::from_qualified_name(
@@ -130,14 +128,13 @@ impl Lineage {
                                             let related_model =
                                                 mdl.get_model(related_model_name.as_ref()).unwrap();
 
-                                            let right_vertex = node_index_map
+                                            let right_vertex = *node_index_map
                                                 .entry(Dataset::Model(Arc::clone(&related_model)))
                                                 .or_insert_with(|| {
                                                     directed_graph.add_node(Dataset::Model(
                                                         Arc::clone(&related_model),
                                                     ))
-                                                })
-                                                .clone();
+                                                });
                                             directed_graph.add_edge(
                                                 left_vertex,
                                                 right_vertex,
@@ -164,7 +161,7 @@ impl Lineage {
                                         if source_column_ref.column.is_calculated {
                                             todo!("calculated source column not supported")
                                         }
-                                        requried_fields_map
+                                        required_fields_map
                                             .entry(column.clone())
                                             .or_default()
                                             .insert(value);
@@ -182,8 +179,16 @@ impl Lineage {
                 }
                 required_dataset_topo.insert(column.clone(), directed_graph);
             });
-        (requried_fields_map, required_dataset_topo)
+        RequiredInfo {
+            required_fields_map,
+            required_dataset_topo,
+        }
     }
+}
+
+struct RequiredInfo {
+    required_fields_map: HashMap<Column, HashSet<Column>>,
+    required_dataset_topo: HashMap<Column, Graph<Dataset, DatasetLink>>,
 }
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
