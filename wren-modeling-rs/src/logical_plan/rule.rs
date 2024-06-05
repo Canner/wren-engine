@@ -187,7 +187,7 @@ impl ModelPlanNode {
     ) -> Self {
         let mut required_exprs_buffer = VecDeque::new();
         let fields = model
-            .columns
+            .get_physical_columns()
             .iter()
             .filter(|column| {
                 requried_fields.iter().any(|expr| {
@@ -308,7 +308,7 @@ impl ModelGenerationRule {
                     if model_plan.required_exprs.is_empty() {
                         return Ok(Transformed::no(table_scan?));
                     }
-                    
+
                     let result = Projection::try_new(
                         model_plan.required_exprs.clone(),
                         Arc::new(table_scan?),

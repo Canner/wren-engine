@@ -15,6 +15,12 @@
           "name": "name",
           "type": "varchar",
           "expression": "c_name"
+        },
+        {
+          "name": "custkey_plus",
+          "type": "integer",
+          "expression": "custkey + 1",
+          "isCalculated": true
         }
       ],
       "primaryKey": "custkey"
@@ -37,6 +43,29 @@
           "name": "totalprice",
           "type": "integer",
           "expression": "o_totalprice"
+        },
+        {
+          "name": "customer",
+          "type": "customer",
+          "relationship": "CustomerOrders"
+        },
+        {
+          "name": "customer_name",
+          "type": "varchar",
+          "expression": "customer.name",
+          "isCalculated": true
+        },
+        {
+          "name": "orderkey_plus_custkey",
+          "type": "integer",
+          "expression": "orderkey + custkey",
+          "isCalculated": true
+        },
+        {
+          "name": "hash_orderkey",
+          "type": "varchar",
+          "expression": "md5(orderkey)",
+          "isCalculated": true
         }
       ],
       "primaryKey": "orderkey"
@@ -45,9 +74,9 @@
   "relationships": [
     {
       "name": "CustomerOrders",
-      "models": ["Customer", "Orders"],
+      "models": ["customer", "orders"],
       "joinType": "one_to_many",
-      "condition": "Customer.custkey = Orders.custkey"
+      "condition": "customer.custkey = orders.custkey"
     }
   ]
 }

@@ -10,3 +10,4 @@ arrow-schema = { version = "51.0.0", default-features = false }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = {version = "1.0.117"}
 petgraph = "0.6.5"
+petgraph-evcxr = "*"

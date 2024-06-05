@@ -38,13 +38,25 @@ pub struct Model {
     pub properties: Vec<(String, String)>,
 }
 
+impl Model {
+    /// Physical columns are columns that can be selected from the model.
+    /// e.g. columns that are not a relationship column
+    pub fn get_physical_columns(&self) -> Vec<Arc<Column>> {
+        self.columns
+            .iter()
+            .filter(|c| c.relationship.is_none())
+            .map(Arc::clone)
+            .collect()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Column {
     pub name: String,
     pub r#type: String,
     #[serde(default)]
-    pub relationship: String,
+    pub relationship: Option<String>,
     #[serde(default)]
     pub is_calculated: bool,
     #[serde(default)]
@@ -67,7 +79,7 @@ pub struct Relationship {
 }
 
 // handle case insensitive
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum JoinType {
     OneToOne,

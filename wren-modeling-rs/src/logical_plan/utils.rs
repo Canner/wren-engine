@@ -17,7 +17,7 @@ pub fn map_data_type(data_type: &str) -> DataType {
 }
 
 pub fn create_table_source(model: &Model) -> Arc<dyn TableSource> {
-    let schema = create_schema(model.columns.clone());
+    let schema = create_schema(model.get_physical_columns());
     Arc::new(LogicalTableSource::new(schema))
 }
 
