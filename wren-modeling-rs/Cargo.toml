@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion = {version = "38.0.0"}
+datafusion = { version = "38.0.0" }
 tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
 arrow-schema = { version = "51.0.0", default-features = false }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
-serde_json = {version = "1.0.117"}
+serde_json = { version = "1.0.117" }
 petgraph = "0.6.5"
 petgraph-evcxr = "*"
