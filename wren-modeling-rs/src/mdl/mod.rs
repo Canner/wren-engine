@@ -25,10 +25,23 @@ pub mod lineage;
 pub mod manifest;
 pub mod utils;
 
+pub struct AnalyzedWrenMDL {
+    pub wren_mdl: Arc<WrenMDL>,
+    pub lineage: lineage::Lineage,
+}
+
+impl AnalyzedWrenMDL {
+    pub fn analyze(manifest: Manifest) -> Self {
+        let wren_mdl = Arc::new(WrenMDL::new(manifest));
+        let lineage = lineage::Lineage::new(&wren_mdl);
+        AnalyzedWrenMDL { wren_mdl, lineage }
+    }
+}
+
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
-    pub qualifed_references: HashMap<String, ColumnReference>,
+    pub qualified_references: HashMap<String, ColumnReference>,
 }
 
 impl WrenMDL {
@@ -62,7 +75,7 @@ impl WrenMDL {
 
         WrenMDL {
             manifest,
-            qualifed_references,
+            qualified_references: qualifed_references,
         }
     }
 
@@ -88,14 +101,17 @@ impl WrenMDL {
 
     pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
         let name = format!("{}.{}", dataset, column);
-        self.qualifed_references
+        self.qualified_references
             .get(&name)
             .unwrap_or_else(|| panic!("column {} not found", name))
             .clone()
     }
 }
 
-pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFusionError> {
+pub fn transform_sql(
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    sql: &str,
+) -> Result<String, DataFusionError> {
     println!("SQL: {}", sql);
     println!("********");
 
@@ -105,7 +121,7 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
     let statement = &ast[0];
 
     // create a logical query plan
-    let context_provider = WrenContextProvider::new(&wren_mdl);
+    let context_provider = WrenContextProvider::new(&analyzed_mdl.wren_mdl);
     let sql_to_rel = SqlToRel::new(&context_provider);
     let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
         Ok(plan) => plan,
@@ -118,8 +134,8 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
     println!("********");
 
     let analyzer = Analyzer::with_rules(vec![
-        Arc::new(ModelAnalyzeRule::new(Arc::clone(&wren_mdl))),
-        Arc::new(ModelGenerationRule::new(Arc::clone(&wren_mdl))),
+        Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
+        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
     ]);
 
     let config = ConfigOptions::default();
@@ -141,7 +157,7 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
 /// Cheap clone of the ColumnReference
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ColumnReference {
     pub dataset: Dataset,
     pub column: Arc<Column>,
@@ -157,10 +173,19 @@ impl ColumnReference {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum Dataset {
     Model(Arc<Model>),
     Metric(Arc<Metric>),
+}
+
+impl Dataset {
+    pub fn get_name(&self) -> String {
+        match self {
+            Dataset::Model(model) => model.name.clone(),
+            Dataset::Metric(metric) => metric.name.clone(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -171,7 +196,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::mdl::manifest::Manifest;
-    use crate::mdl::{self, WrenMDL};
+    use crate::mdl::{self, AnalyzedWrenMDL};
 
     #[test]
     fn test_access_model() -> Result<(), Box<dyn Error>> {
@@ -180,7 +205,7 @@ mod test {
             .collect();
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
-        let wren_mdl = Arc::new(WrenMDL::new(mdl));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
 
         // TODO: instead of assert string value, assert the query plan or result
         let tests: Vec<(&str, &str)> = vec![
@@ -207,11 +232,15 @@ mod test {
             (
                 "select count(*) from orders",
                 r#"SELECT COUNT(*) FROM "orders""#,
-            )
+            ),
+            (
+                "select customer_name from orders",
+                ""
+            ),
         ];
 
         for (sql, expected) in tests {
-            let actual = mdl::transform_sql(Arc::clone(&wren_mdl), sql)?;
+            let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
             assert_eq!(actual, expected);
         }
 
