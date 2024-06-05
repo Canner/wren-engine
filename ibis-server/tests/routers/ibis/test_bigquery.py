@@ -50,7 +50,7 @@ class TestBigquery:
             "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON")
         }
 
-    def test_bigquery(self, manifest_str: str):
+    def test_query(self, manifest_str: str):
         connection_info = self.get_connection_info()
         response = client.post(
             url="/v2/ibis/bigquery/query",
@@ -67,13 +67,13 @@ class TestBigquery:
         assert result['data'][0][0] is not None
         assert result['dtypes'] is not None
 
-    def test_no_manifest(self):
+    def test_query_without_manifest(self):
         connection_info = self.get_connection_info()
         response = client.post(
             url="/v2/ibis/bigquery/query",
             json={
                 "connectionInfo": connection_info,
-                "sql": "SELECT * FROM Orders LIMIT 1"
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
         assert response.status_code == 422
@@ -83,7 +83,7 @@ class TestBigquery:
         assert result['detail'][0]['loc'] == ['body', 'manifestStr']
         assert result['detail'][0]['msg'] == 'Field required'
 
-    def test_no_sql(self, manifest_str: str):
+    def test_query_without_sql(self, manifest_str: str):
         connection_info = self.get_connection_info()
         response = client.post(
             url="/v2/ibis/bigquery/query",
@@ -99,12 +99,12 @@ class TestBigquery:
         assert result['detail'][0]['loc'] == ['body', 'sql']
         assert result['detail'][0]['msg'] == 'Field required'
 
-    def test_no_connection_info(self, manifest_str: str):
+    def test_query_without_connection_info(self, manifest_str: str):
         response = client.post(
             url="/v2/ibis/bigquery/query",
             json={
                 "manifestStr": manifest_str,
-                "sql": "SELECT * FROM Orders LIMIT 1"
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
             }
         )
         assert response.status_code == 422
@@ -113,3 +113,30 @@ class TestBigquery:
         assert result['detail'][0]['type'] == 'missing'
         assert result['detail'][0]['loc'] == ['body', 'connectionInfo']
         assert result['detail'][0]['msg'] == 'Field required'
+
+    def test_query_with_dry_run(self, manifest_str: str):
+        connection_info = self.get_connection_info()
+        response = client.post(
+            url="/v2/ibis/bigquery/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
+            }
+        )
+        assert response.status_code == 204
+
+    def test_query_with_dry_run_and_invalid_sql(self, manifest_str: str):
+        connection_info = self.get_connection_info()
+        response = client.post(
+            url="/v2/ibis/bigquery/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM X'
+            }
+        )
+        assert response.status_code == 422
+        assert response.text is not None

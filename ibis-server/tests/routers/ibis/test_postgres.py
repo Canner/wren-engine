@@ -81,7 +81,7 @@ class TestPostgres:
         info = TestPostgres.to_connection_info(pg)
         return f"postgres://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
 
-    def test_postgres(self, postgres: PostgresContainer, manifest_str: str):
+    def test_query(self, postgres: PostgresContainer, manifest_str: str):
         connection_info = self.to_connection_info(postgres)
         response = client.post(
             url="/v2/ibis/postgres/query",
@@ -98,7 +98,7 @@ class TestPostgres:
         assert result['data'][0][0] == 1
         assert result['dtypes'] is not None
 
-    def test_postgres_with_connection_url(self, postgres: PostgresContainer, manifest_str: str):
+    def test_query_with_connection_url(self, postgres: PostgresContainer, manifest_str: str):
         connection_url = self.to_connection_url(postgres)
         response = client.post(
             url="/v2/ibis/postgres/query",
@@ -117,7 +117,7 @@ class TestPostgres:
         assert result['data'][0][0] == 1
         assert result['dtypes'] is not None
 
-    def test_no_manifest(self, postgres: PostgresContainer):
+    def test_query_without_manifest(self, postgres: PostgresContainer):
         connection_info = self.to_connection_info(postgres)
         response = client.post(
             url="/v2/ibis/postgres/query",
@@ -133,7 +133,7 @@ class TestPostgres:
         assert result['detail'][0]['loc'] == ['body', 'manifestStr']
         assert result['detail'][0]['msg'] == 'Field required'
 
-    def test_no_sql(self, postgres: PostgresContainer, manifest_str: str):
+    def test_query_without_sql(self, postgres: PostgresContainer, manifest_str: str):
         connection_info = self.to_connection_info(postgres)
         response = client.post(
             url="/v2/ibis/postgres/query",
@@ -149,7 +149,7 @@ class TestPostgres:
         assert result['detail'][0]['loc'] == ['body', 'sql']
         assert result['detail'][0]['msg'] == 'Field required'
 
-    def test_no_connection_info(self, manifest_str: str):
+    def test_query_without_connection_info(self, manifest_str: str):
         response = client.post(
             url="/v2/ibis/postgres/query",
             json={
@@ -163,3 +163,30 @@ class TestPostgres:
         assert result['detail'][0]['type'] == 'missing'
         assert result['detail'][0]['loc'] == ['body', 'connectionInfo']
         assert result['detail'][0]['msg'] == 'Field required'
+
+    def test_query_with_dry_run(self, postgres: PostgresContainer, manifest_str: str):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1'
+            }
+        )
+        assert response.status_code == 204
+
+    def test_query_with_dry_run_and_invalid_sql(self, postgres: PostgresContainer, manifest_str: str):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM X'
+            }
+        )
+        assert response.status_code == 422
+        assert response.text is not None

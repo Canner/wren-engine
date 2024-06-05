@@ -2,7 +2,7 @@ import httpx
 import orjson
 
 from app.config import get_config
-from app.util import log_rewritten
+from app.logger import log_rewritten
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 
