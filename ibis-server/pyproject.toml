@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ibis-server"
-version = "0.4.6"
+version = "0.4.7"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
