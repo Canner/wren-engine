@@ -16,12 +16,12 @@ google-auth = "2.29.0"
 httpx = "0.27.0"
 python-dotenv = "1.0.1"
 orjson = "3.10.3"
+pandas = "2.2.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.2.0"
 testcontainers = {extras = ["postgres"], version = "4.5.0"}
 sqlalchemy = "2.0.30"
-pandas = "2.2.2"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"

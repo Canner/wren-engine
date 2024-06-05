@@ -16,7 +16,7 @@ data_source = DataSource.snowflake
 @router.post("/query")
 @log_dto
 def query(dto: SnowflakeDTO, dry_run: Annotated[bool, Query(alias="dryRun")] = False) -> Response:
-    connector = Connector(data_source, dto.connection_info, dto.manifest_str)
+    connector = Connector(data_source, dto.connection_info, dto.manifest_str, dto.column_dtypes)
     if dry_run:
         connector.dry_run(dto.sql)
         return Response(status_code=204)
