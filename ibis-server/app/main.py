@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.model.coordinator import QueryDryRunError
+from app.model.connector import QueryDryRunError
 from app.routers import ibis
 
 app = FastAPI()

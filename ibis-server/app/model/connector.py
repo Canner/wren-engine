@@ -4,7 +4,7 @@ from app.mdl.rewriter import rewrite
 from app.model.data_source import DataSource, ConnectionInfo
 
 
-class Coordinator:
+class Connector:
     def __init__(self, data_source: DataSource, connection_info: ConnectionInfo, manifest_str: str):
         self.data_source = data_source
         self.connection = self.data_source.get_connection(connection_info)
