@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 // This is the main struct that holds all the information about the manifest
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct Manifest {
     pub catalog: String,
     pub schema: String,

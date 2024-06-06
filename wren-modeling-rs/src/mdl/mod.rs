@@ -21,6 +21,7 @@ use crate::{
     mdl::manifest::{Column, Manifest, Metric, Model},
 };
 
+mod builder;
 pub mod lineage;
 pub mod manifest;
 pub mod utils;
