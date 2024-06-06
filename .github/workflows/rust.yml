@@ -1,0 +1,156 @@
+name: Rust
+
+on:
+  pull_request:
+    paths:
+      - 'wren-modeling-rs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: wren-modeling-rs
+
+jobs:
+  # Check crate compiles
+  linux-build-lib:
+    name: cargo check
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-builder
+        with:
+          rust-version: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./wren-modeling-rs/target/
+          # this key equals the ones on `linux-build-lib` for re-use
+          key: cargo-cache-benchmark-${{ hashFiles('wren-modeling-rs/Cargo.toml') }}
+
+      - name: Check datafusion-common without default features
+        run: cargo check --all-targets
+
+  # Run tests
+  linux-test:
+    name: cargo test (amd64)
+    needs: [ linux-build-lib ]
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-builder
+        with:
+          rust-version: stable
+      - name: Run tests (excluding doctests)
+        run: cargo test --lib --tests --bins
+      - name: Verify Working Directory Clean
+        run: git diff --exit-code
+
+  windows:
+    name: cargo test (win64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-windows-builder
+      - name: Run tests (excluding doctests)
+        shell: bash
+        run: |
+          cargo test --lib --tests --bins
+
+  macos:
+    name: cargo test (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-macos-builder
+      - name: Run tests (excluding doctests)
+        shell: bash
+        run: cargo test --lib --tests --bins
+
+  macos-aarch64:
+    name: cargo test (macos-aarch64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-macos-aarch64-builder
+      - name: Run tests (excluding doctests)
+        shell: bash
+        run: cargo test --lib --tests --bins
+
+  check-fmt:
+    name: Check cargo fmt
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-builder
+        with:
+          rust-version: stable
+      - name: Run
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    needs: [ linux-build-lib ]
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-builder
+        with:
+          rust-version: stable
+      - name: Install Clippy
+        run: rustup component add clippy
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  cargo-toml-formatting-checks:
+    name: check Cargo.toml formatting
+    needs: [ linux-build-lib ]
+    runs-on: ubuntu-latest
+    container:
+      image: amd64/rust
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Rust toolchain
+        uses: ./.github/actions/rust/setup-builder
+        with:
+          rust-version: stable
+      - name: Install taplo
+        run: cargo +stable install taplo-cli --version ^0.9 --locked
+      # if you encounter an error, try running 'taplo format' to fix the formatting automatically.
+      - name: Check Cargo.toml formatting
+        run: taplo format --check
