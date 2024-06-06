@@ -73,6 +73,7 @@ make run
 ### Environment Setup
 - Python 3.11
 - Install `poetry` with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
+- Install pre-commit hooks: `make pre-commit-install`
 - Execute `make install` to install the dependencies
 - Execute `make test` to run the tests
 - Create `.env` file and fill in the environment variables

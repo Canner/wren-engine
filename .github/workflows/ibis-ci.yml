@@ -18,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Ruff check
+        uses: chartboost/ruff-action@v1
+        with:
+          src: './ibis-server'
+          changed-files: 'true'
       - name: Start Wren JAVA engine
         working-directory: ./example/duckdb-tpch-example
         run: |

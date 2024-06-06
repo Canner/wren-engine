@@ -22,6 +22,8 @@ pandas = "2.2.2"
 pytest = "8.2.0"
 testcontainers = {extras = ["postgres"], version = "4.5.0"}
 sqlalchemy = "2.0.30"
+pre-commit = "3.7.1"
+ruff = "0.4.8"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -30,6 +32,9 @@ markers = [
     "bigquery: mark a test as a bigquery test",
     "snowflake: mark a test as a snowflake test",
 ]
+
+[tool.ruff]
+target-version = "py311"
 
 [build-system]
 requires = ["poetry-core"]
