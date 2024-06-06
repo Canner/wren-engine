@@ -151,7 +151,7 @@ impl ColumnBuilder {
         self
     }
 
-    pub fn is_calculated(mut self, is_calculated: bool) -> Self {
+    pub fn calculated(mut self, is_calculated: bool) -> Self {
         self.column.is_calculated = is_calculated;
         self
     }
@@ -354,7 +354,7 @@ mod test {
     fn test_column_roundtrip() {
         let expected = ColumnBuilder::new("id", "integer")
             .relationship("test")
-            .is_calculated(true)
+            .calculated(true)
             .no_null(true)
             .expression("test")
             .property("key", "value")
