@@ -14,6 +14,7 @@ client = TestClient(app)
 def postgres(request) -> PostgresContainer:
     def file_path(path: str) -> str:
         import os
+
         return os.path.join(os.path.dirname(__file__), path)
 
     import sqlalchemy
@@ -23,8 +24,12 @@ def postgres(request) -> PostgresContainer:
     pg.start()
     psql_url = pg.get_connection_url()
     engine = sqlalchemy.create_engine(psql_url)
-    pd.read_parquet(file_path("../../resource/tpch/data/orders.parquet")).to_sql("orders", engine, index=False)
-    pd.read_parquet(file_path("../../resource/tpch/data/customer.parquet")).to_sql("customer", engine, index=False)
+    pd.read_parquet(file_path("../../resource/tpch/data/orders.parquet")).to_sql(
+        "orders", engine, index=False
+    )
+    pd.read_parquet(file_path("../../resource/tpch/data/customer.parquet")).to_sql(
+        "customer", engine, index=False
+    )
 
     def stop_pg():
         pg.stop()
@@ -46,28 +51,48 @@ class TestPostgres:
                 "columns": [
                     {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
                     {"name": "custkey", "expression": "o_custkey", "type": "integer"},
-                    {"name": "orderstatus", "expression": "o_orderstatus", "type": "varchar"},
-                    {"name": "totalprice", "expression": "o_totalprice", "type": "float"},
+                    {
+                        "name": "orderstatus",
+                        "expression": "o_orderstatus",
+                        "type": "varchar",
+                    },
+                    {
+                        "name": "totalprice",
+                        "expression": "o_totalprice",
+                        "type": "float",
+                    },
                     {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
-                    {"name": "order_cust_key", "expression": "concat(o_orderkey, '_', o_custkey)", "type": "varchar"},
-                    {"name": "timestamp", "expression": "cast('2024-01-01T23:59:59' as timestamp)", "type": "timestamp"},
-                    {"name": "timestamptz", "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)", "type": "timestamp"}
+                    {
+                        "name": "order_cust_key",
+                        "expression": "concat(o_orderkey, '_', o_custkey)",
+                        "type": "varchar",
+                    },
+                    {
+                        "name": "timestamp",
+                        "expression": "cast('2024-01-01T23:59:59' as timestamp)",
+                        "type": "timestamp",
+                    },
+                    {
+                        "name": "timestamptz",
+                        "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)",
+                        "type": "timestamp",
+                    },
                 ],
-                "primaryKey": "orderkey"
+                "primaryKey": "orderkey",
             },
             {
                 "name": "Customer",
                 "refSql": "select * from public.customer",
                 "columns": [
                     {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                    {"name": "name", "expression": "c_name", "type": "varchar"}
+                    {"name": "name", "expression": "c_name", "type": "varchar"},
                 ],
-                "primaryKey": "custkey"
-            }
-        ]
+                "primaryKey": "custkey",
+            },
+        ],
     }
 
-    manifest_str = base64.b64encode(orjson.dumps(manifest)).decode('utf-8')
+    manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
     @staticmethod
     def to_connection_info(pg: PostgresContainer):
@@ -76,7 +101,7 @@ class TestPostgres:
             "port": pg.get_exposed_port(pg.port),
             "user": pg.username,
             "password": pg.password,
-            "database": pg.dbname
+            "database": pg.dbname,
         }
 
     @staticmethod
@@ -91,23 +116,32 @@ class TestPostgres:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": self.manifest_str,
-                "sql": 'SELECT * FROM "Orders" LIMIT 1'
-            }
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result['columns']) == len(self.manifest['models'][0]['columns'])
-        assert len(result['data']) == 1
-        assert result['data'][0] == [1, 370, 'O', '172799.49', 820540800000, '1_370', 1704153599000, 1704153599000]
-        assert result['dtypes'] == {
-            'orderkey': 'int32',
-            'custkey': 'int32',
-            'orderstatus': 'object',
-            'totalprice': 'object',
-            'orderdate': 'object',
-            'order_cust_key': 'object',
-            'timestamp': 'datetime64[ns]',
-            'timestamptz': 'datetime64[ns, UTC]'
+        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            1,
+            370,
+            "O",
+            "172799.49",
+            820540800000,
+            "1_370",
+            1704153599000,
+            1704153599000,
+        ]
+        assert result["dtypes"] == {
+            "orderkey": "int32",
+            "custkey": "int32",
+            "orderstatus": "object",
+            "totalprice": "object",
+            "orderdate": "object",
+            "order_cust_key": "object",
+            "timestamp": "datetime64[ns]",
+            "timestamptz": "datetime64[ns, UTC]",
         }
 
     def test_query_with_connection_url(self, postgres: PostgresContainer):
@@ -115,19 +149,17 @@ class TestPostgres:
         response = client.post(
             url="/v2/ibis/postgres/query",
             json={
-                "connectionInfo": {
-                    "connectionUrl": connection_url
-                },
+                "connectionInfo": {"connectionUrl": connection_url},
                 "manifestStr": self.manifest_str,
-                "sql": 'SELECT * FROM "Orders" LIMIT 1'
-            }
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result['columns']) == len(self.manifest['models'][0]['columns'])
-        assert len(result['data']) == 1
-        assert result['data'][0][0] == 1
-        assert result['dtypes'] is not None
+        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["data"][0][0] == 1
+        assert result["dtypes"] is not None
 
     def test_query_with_column_dtypes(self, postgres: PostgresContainer):
         connection_info = self.to_connection_info(postgres)
@@ -141,24 +173,33 @@ class TestPostgres:
                     "totalprice": "float",
                     "orderdate": "datetime64",
                     "timestamp": "datetime64",
-                    "timestamptz": "datetime64"
-                }
-            }
+                    "timestamptz": "datetime64",
+                },
+            },
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result['columns']) == len(self.manifest['models'][0]['columns'])
-        assert len(result['data']) == 1
-        assert result['data'][0] == [1, 370, 'O', 172799.49, '1996-01-02 00:00:00.000000', '1_370', '2024-01-01 23:59:59.000000', '2024-01-01 23:59:59.000000 UTC']
-        assert result['dtypes'] == {
-            'orderkey': 'int32',
-            'custkey': 'int32',
-            'orderstatus': 'object',
-            'totalprice': 'float64',
-            'orderdate': 'object',
-            'order_cust_key': 'object',
-            'timestamp': 'object',
-            'timestamptz': 'object'
+        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            1,
+            370,
+            "O",
+            172799.49,
+            "1996-01-02 00:00:00.000000",
+            "1_370",
+            "2024-01-01 23:59:59.000000",
+            "2024-01-01 23:59:59.000000 UTC",
+        ]
+        assert result["dtypes"] == {
+            "orderkey": "int32",
+            "custkey": "int32",
+            "orderstatus": "object",
+            "totalprice": "float64",
+            "orderdate": "object",
+            "order_cust_key": "object",
+            "timestamp": "object",
+            "timestamptz": "object",
         }
 
     def test_query_without_manifest(self, postgres: PostgresContainer):
@@ -167,46 +208,43 @@ class TestPostgres:
             url="/v2/ibis/postgres/query",
             json={
                 "connectionInfo": connection_info,
-                "sql": 'SELECT * FROM "Orders" LIMIT 1'
-            }
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
         )
         assert response.status_code == 422
         result = response.json()
-        assert result['detail'][0] is not None
-        assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'manifestStr']
-        assert result['detail'][0]['msg'] == 'Field required'
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "manifestStr"]
+        assert result["detail"][0]["msg"] == "Field required"
 
     def test_query_without_sql(self, postgres: PostgresContainer):
         connection_info = self.to_connection_info(postgres)
         response = client.post(
             url="/v2/ibis/postgres/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": self.manifest_str
-            }
+            json={"connectionInfo": connection_info, "manifestStr": self.manifest_str},
         )
         assert response.status_code == 422
         result = response.json()
-        assert result['detail'][0] is not None
-        assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'sql']
-        assert result['detail'][0]['msg'] == 'Field required'
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "sql"]
+        assert result["detail"][0]["msg"] == "Field required"
 
     def test_query_without_connection_info(self):
         response = client.post(
             url="/v2/ibis/postgres/query",
             json={
                 "manifestStr": self.manifest_str,
-                "sql": 'SELECT * FROM "Orders" LIMIT 1'
-            }
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
         )
         assert response.status_code == 422
         result = response.json()
-        assert result['detail'][0] is not None
-        assert result['detail'][0]['type'] == 'missing'
-        assert result['detail'][0]['loc'] == ['body', 'connectionInfo']
-        assert result['detail'][0]['msg'] == 'Field required'
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
+        assert result["detail"][0]["msg"] == "Field required"
 
     def test_query_with_dry_run(self, postgres: PostgresContainer):
         connection_info = self.to_connection_info(postgres)
@@ -216,8 +254,8 @@ class TestPostgres:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": self.manifest_str,
-                "sql": 'SELECT * FROM "Orders" LIMIT 1'
-            }
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
         )
         assert response.status_code == 204
 
@@ -229,8 +267,8 @@ class TestPostgres:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": self.manifest_str,
-                "sql": 'SELECT * FROM X'
-            }
+                "sql": "SELECT * FROM X",
+            },
         )
         assert response.status_code == 422
         assert response.text is not None

@@ -11,7 +11,7 @@ def get_logger(name):
 
 
 def log_dto(f):
-    logger = get_logger('app.routers.ibis')
+    logger = get_logger("app.routers.ibis")
 
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -22,12 +22,12 @@ def log_dto(f):
 
 
 def log_rewritten(f):
-    logger = get_logger('app.mdl.rewriter')
+    logger = get_logger("app.mdl.rewriter")
 
     @wraps(f)
     def wrapper(*args, **kwargs):
         rs = f(*args, **kwargs)
-        logger.debug(f'Rewritten SQL: {rs}')
+        logger.debug(f"Rewritten SQL: {rs}")
         return rs
 
     return wrapper

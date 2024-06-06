@@ -6,18 +6,24 @@ from app.model.data_source import (
     PostgresConnectionUrl,
     PostgresConnectionInfo,
     BigQueryConnectionInfo,
-    SnowflakeConnectionInfo
+    SnowflakeConnectionInfo,
 )
 
 
 class IbisDTO(BaseModel):
     sql: str
     manifest_str: str = Field(alias="manifestStr", description="Base64 manifest")
-    column_dtypes: dict[str, str] | None = Field(alias="columnDtypes", description="If this field is set, it will forcibly convert the type.", default=None)
+    column_dtypes: dict[str, str] | None = Field(
+        alias="columnDtypes",
+        description="If this field is set, it will forcibly convert the type.",
+        default=None,
+    )
 
 
 class PostgresDTO(IbisDTO):
-    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(alias="connectionInfo")
+    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(
+        alias="connectionInfo"
+    )
 
 
 class BigQueryDTO(IbisDTO):
