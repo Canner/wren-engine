@@ -1,7 +1,6 @@
 [package]
 name = "wren-core"
 include = ["src/**/*.rs", "Cargo.toml"]
-readme = "README.md"
 version = { workspace = true }
 edition = { workspace = true }
 homepage = { workspace = true }
