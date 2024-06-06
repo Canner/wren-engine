@@ -50,3 +50,7 @@ pub fn create_remote_table_source(model: &Model, _: &WrenMDL) -> Arc<dyn TableSo
     let schema = SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()));
     Arc::new(LogicalTableSource::new(schema))
 }
+
+pub fn format_qualified_name(model: &str, column: &str) -> String {
+    format!("{}.{}", model, column)
+}

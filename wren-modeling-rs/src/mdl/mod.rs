@@ -25,10 +25,23 @@ pub mod lineage;
 pub mod manifest;
 pub mod utils;
 
+pub struct AnalyzedWrenMDL {
+    pub wren_mdl: Arc<WrenMDL>,
+    pub lineage: lineage::Lineage,
+}
+
+impl AnalyzedWrenMDL {
+    pub fn analyze(manifest: Manifest) -> Self {
+        let wren_mdl = Arc::new(WrenMDL::new(manifest));
+        let lineage = lineage::Lineage::new(&wren_mdl);
+        AnalyzedWrenMDL { wren_mdl, lineage }
+    }
+}
+
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
-    pub qualifed_references: HashMap<String, ColumnReference>,
+    pub qualified_references: HashMap<String, ColumnReference>,
 }
 
 impl WrenMDL {
@@ -62,7 +75,7 @@ impl WrenMDL {
 
         WrenMDL {
             manifest,
-            qualifed_references,
+            qualified_references: qualifed_references,
         }
     }
 
@@ -88,14 +101,17 @@ impl WrenMDL {
 
     pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
         let name = format!("{}.{}", dataset, column);
-        self.qualifed_references
+        self.qualified_references
             .get(&name)
             .unwrap_or_else(|| panic!("column {} not found", name))
             .clone()
     }
 }
-
-pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFusionError> {
+/// Transform the SQL based on the MDL
+pub fn transform_sql(
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    sql: &str,
+) -> Result<String, DataFusionError> {
     println!("SQL: {}", sql);
     println!("********");
 
@@ -105,12 +121,12 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
     let statement = &ast[0];
 
     // create a logical query plan
-    let context_provider = WrenContextProvider::new(&wren_mdl);
+    let context_provider = WrenContextProvider::new(&analyzed_mdl.wren_mdl);
     let sql_to_rel = SqlToRel::new(&context_provider);
     let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
         Ok(plan) => plan,
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             return Err(e);
         }
     };
@@ -118,15 +134,19 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
     println!("********");
 
     let analyzer = Analyzer::with_rules(vec![
-        Arc::new(ModelAnalyzeRule::new(Arc::clone(&wren_mdl))),
-        Arc::new(ModelGenerationRule::new(Arc::clone(&wren_mdl))),
+        Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
+        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
     ]);
 
     let config = ConfigOptions::default();
 
-    let analyzed = analyzer
-        .execute_and_check(plan, &config, |_, _| {})
-        .unwrap();
+    let analyzed = match analyzer.execute_and_check(plan, &config, |_, _| {}) {
+        Ok(analyzed) => analyzed,
+        Err(e) => {
+            eprintln!("Error: {:?}", e);
+            return Err(e);
+        }
+    };
     println!("Do some modeling:\n {analyzed:?}");
     println!("********");
 
@@ -141,7 +161,7 @@ pub fn transform_sql(wren_mdl: Arc<WrenMDL>, sql: &str) -> Result<String, DataFu
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
 /// Cheap clone of the ColumnReference
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ColumnReference {
     pub dataset: Dataset,
     pub column: Arc<Column>,
@@ -155,12 +175,25 @@ impl ColumnReference {
     pub fn get_column(&self) -> Arc<Column> {
         Arc::clone(&self.column)
     }
+
+    pub fn get_qualified_name(&self) -> String {
+        format!("{}.{}", self.dataset.get_name(), self.column.name)
+    }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum Dataset {
     Model(Arc<Model>),
     Metric(Arc<Metric>),
+}
+
+impl Dataset {
+    pub fn get_name(&self) -> String {
+        match self {
+            Dataset::Model(model) => model.name.clone(),
+            Dataset::Metric(metric) => metric.name.clone(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -170,8 +203,15 @@ mod test {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use datafusion::error::Result;
+    use datafusion::sql::planner::SqlToRel;
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+    use datafusion::sql::unparser::plan_to_sql;
+
+    use crate::logical_plan::context_provider::RemoteContextProvider;
     use crate::mdl::manifest::Manifest;
-    use crate::mdl::{self, WrenMDL};
+    use crate::mdl::{self, AnalyzedWrenMDL};
 
     #[test]
     fn test_access_model() -> Result<(), Box<dyn Error>> {
@@ -180,13 +220,13 @@ mod test {
             .collect();
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
-        let wren_mdl = Arc::new(WrenMDL::new(mdl));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
 
         // TODO: instead of assert string value, assert the query plan or result
         let tests: Vec<(&str, &str)> = vec![
             (
                 "select orderkey + orderkey from orders",
-                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
+                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
             ),
             (
                 "select orderkey from orders where orders.totalprice > 10",
@@ -194,7 +234,7 @@ mod test {
             ),
             (
                 "select orders.orderkey from orders left join customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_custkey" AS "custkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
+                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."o_custkey" AS "custkey", "orders"."o_orderkey" AS "orderkey", "orders"."o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
             ),
             (
                 "select orderkey, sum(totalprice) from orders group by 1",
@@ -207,14 +247,42 @@ mod test {
             (
                 "select count(*) from orders",
                 r#"SELECT COUNT(*) FROM "orders""#,
-            )
+            ),
+            (
+                "select customer_name from orders",
+                r#"SELECT "orders"."customer_name" FROM (SELECT "customer"."name" AS "customer_name" FROM (SELECT "customer"."c_name" AS "name", "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" LEFT JOIN (SELECT "orders"."o_custkey" AS "custkey" FROM "orders") AS "orders" ON ("customer"."custkey" = "orders"."custkey")) AS "orders""#
+            ),
+            // TODO: support calculated witout relationship
+            // (
+            //     "select orderkey_plus_custkey from orders",
+            //     "select * from orders;"
+            // )
         ];
 
         for (sql, expected) in tests {
-            let actual = mdl::transform_sql(Arc::clone(&wren_mdl), sql)?;
-            assert_eq!(actual, expected);
+            println!("{}", sql);
+            let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
+            assert_eq!(
+                plan_sql(&actual, Arc::clone(&analyzed_mdl))?,
+                plan_sql(expected, Arc::clone(&analyzed_mdl))?
+            );
         }
 
         Ok(())
+    }
+
+    fn plan_sql(sql: &str, analyzed_mdl: Arc<AnalyzedWrenMDL>) -> Result<String> {
+        let dialect = GenericDialect {};
+        let ast = Parser::parse_sql(&dialect, sql).unwrap();
+        let statement = &ast[0];
+
+        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl);
+        let sql_to_rel = SqlToRel::new(&context_provider);
+        let rels = sql_to_rel.sql_statement_to_plan(statement.clone())?;
+        // show the planned sql
+        match plan_to_sql(&rels) {
+            Ok(sql) => Ok(sql.to_string()),
+            Err(e) => Err(e),
+        }
     }
 }

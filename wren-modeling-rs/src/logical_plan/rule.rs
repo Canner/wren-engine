@@ -1,34 +1,41 @@
+use std::cell::RefCell;
+use std::cmp::{Ordering, PartialEq};
+use std::collections::{BTreeSet, HashSet};
+use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
+
 use arrow_schema::Field;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{DFSchema, DFSchemaRef, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{
-    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, Projection, SubqueryAlias,
-    UserDefinedLogicalNodeCore,
+    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
 };
 use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
+use datafusion::prelude::Column;
 use datafusion::sql::TableReference;
-use std::cell::RefCell;
-use std::collections::{HashSet, VecDeque};
-use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
+use petgraph::Graph;
 
-use crate::mdl::manifest::Model;
-use crate::mdl::WrenMDL;
+use crate::logical_plan::rule::RelationChain::Nil;
+use crate::mdl;
+use crate::mdl::lineage::DatasetLink;
+use crate::mdl::manifest::{JoinType, Model};
+use crate::mdl::utils::{create_remote_expr_for_model, is_dag};
+use crate::mdl::{AnalyzedWrenMDL, Dataset};
 
-use super::utils::{create_remote_table_source, map_data_type};
+use super::utils::{create_remote_table_source, format_qualified_name, map_data_type};
 
-/// Regonzied the model. Turn TableScan from a model to MdoelPlanNode
-/// We collect the requried field from the projection, filter, aggregation and join
-/// and pass it to the ModelPlanNode
+/// Recognized the model. Turn TableScan from a model to a ModelPlanNode.
+/// We collect the required fields from the projection, filter, aggregation, and join,
+/// and pass them to the ModelPlanNode.
 pub struct ModelAnalyzeRule {
-    mdl: Arc<WrenMDL>,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
 }
 
 impl ModelAnalyzeRule {
-    pub fn new(mdl: Arc<WrenMDL>) -> Self {
-        Self { mdl }
+    pub fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
+        Self { analyzed_wren_mdl }
     }
 
     fn analyze_model_internal(
@@ -71,14 +78,16 @@ impl ModelAnalyzeRule {
             }
             LogicalPlan::TableScan(table_scan) => {
                 if let Some(model) = self
-                    .mdl
+                    .analyzed_wren_mdl
+                    .wren_mdl
                     .get_model(table_scan.table_name.to_string().as_str())
                 {
                     let model = LogicalPlan::Extension(Extension {
                         node: Arc::new(ModelPlanNode::new(
                             model,
                             used_columns.borrow().iter().cloned().collect(),
-                            LogicalPlan::TableScan(table_scan.clone()),
+                            Some(LogicalPlan::TableScan(table_scan.clone())),
+                            Arc::clone(&self.analyzed_wren_mdl),
                         )),
                     });
                     used_columns.borrow_mut().clear();
@@ -104,14 +113,16 @@ impl ModelAnalyzeRule {
                 let left = match unwrap_arc(join.left) {
                     LogicalPlan::TableScan(table_scan) => {
                         if let Some(model) = self
-                            .mdl
+                            .analyzed_wren_mdl
+                            .wren_mdl
                             .get_model(table_scan.table_name.to_string().as_str())
                         {
                             LogicalPlan::Extension(Extension {
                                 node: Arc::new(ModelPlanNode::new(
                                     model,
                                     buffer.iter().cloned().collect(),
-                                    LogicalPlan::TableScan(table_scan.clone()),
+                                    Some(LogicalPlan::TableScan(table_scan.clone())),
+                                    Arc::clone(&self.analyzed_wren_mdl),
                                 )),
                             })
                         } else {
@@ -124,14 +135,16 @@ impl ModelAnalyzeRule {
                 let right = match unwrap_arc(join.right) {
                     LogicalPlan::TableScan(table_scan) => {
                         if let Some(model) = self
-                            .mdl
+                            .analyzed_wren_mdl
+                            .wren_mdl
                             .get_model(table_scan.table_name.to_string().as_str())
                         {
                             LogicalPlan::Extension(Extension {
                                 node: Arc::new(ModelPlanNode::new(
                                     model,
                                     buffer.iter().cloned().collect(),
-                                    LogicalPlan::TableScan(table_scan.clone()),
+                                    Some(LogicalPlan::TableScan(table_scan.clone())),
+                                    Arc::clone(&self.analyzed_wren_mdl),
                                 )),
                             })
                         } else {
@@ -171,41 +184,99 @@ impl AnalyzerRule for ModelAnalyzeRule {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 struct ModelPlanNode {
     model_name: String,
     required_exprs: Vec<Expr>,
+    relation_chain: Box<RelationChain>,
     schema_ref: DFSchemaRef,
-    original_table_scan: LogicalPlan,
+    original_table_scan: Option<LogicalPlan>,
 }
 
 impl ModelPlanNode {
     pub fn new(
         model: Arc<Model>,
         requried_fields: Vec<Expr>,
-        original_table_scan: LogicalPlan,
+        original_table_scan: Option<LogicalPlan>,
+        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     ) -> Self {
-        let mut required_exprs_buffer = VecDeque::new();
+        let mut required_exprs_buffer = BTreeSet::new();
+        let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
+        let mut model_required_fields: HashMap<String, BTreeSet<Column>> = HashMap::new();
         let fields = model
             .get_physical_columns()
             .iter()
             .filter(|column| {
                 requried_fields.iter().any(|expr| {
                     if let Expr::Column(column_expr) = expr {
-                        column_expr.flat_name() == format!("{}.{}", model.name, column.name)
+                        column_expr.flat_name() == format_qualified_name(&model.name, &column.name)
                     } else {
                         false
                     }
                 })
             })
             .map(|column| {
-                let expr_plan = if let Some(expression) = &column.expression {
-                    col(expression).alias(column.name.clone())
-                } else {
-                    col(column.name.clone())
-                };
-                required_exprs_buffer.push_back(expr_plan);
+                if column.is_calculated {
+                    if column.expression.is_some() {
+                        let column_rf = analyzed_wren_mdl
+                            .wren_mdl
+                            .qualified_references
+                            .get(&format_qualified_name(&model.name, &column.name))
+                            .unwrap();
+                        let expr = mdl::utils::create_wren_calculated_field_expr(
+                            column_rf.clone(),
+                            Arc::clone(&analyzed_wren_mdl),
+                        );
+                        let expr_plan = expr.alias(column.name.clone());
+                        required_exprs_buffer.insert(OrdExpr::new(expr_plan));
+                    };
 
+                    let qualified_column = Column::from_qualified_name(format_qualified_name(
+                        &model.name,
+                        &column.name,
+                    ));
+
+                    match analyzed_wren_mdl
+                        .lineage
+                        .required_dataset_topo
+                        .get(&qualified_column)
+                    {
+                        Some(column_graph) => {
+                            merge_graph(&mut directed_graph, column_graph);
+                        }
+                        None => {
+                            panic!("Column {} not found in the lineage", qualified_column)
+                        }
+                    }
+                    analyzed_wren_mdl
+                        .lineage
+                        .required_fields_map
+                        .get(&qualified_column)
+                        .unwrap()
+                        .iter()
+                        .for_each(|c| {
+                            let relation_name = match &c.relation {
+                                Some(r) => r.to_string(),
+                                None => panic!("Source dataset not found for column {}", c),
+                            };
+                            model_required_fields
+                                .entry(relation_name)
+                                .or_default()
+                                .insert(c.clone());
+                        });
+                } else {
+                    let expr_plan = if let Some(expression) = &column.expression {
+                        let expr = create_remote_expr_for_model(
+                            expression,
+                            Arc::clone(&model),
+                            Arc::clone(&analyzed_wren_mdl),
+                        );
+                        expr.alias(column.name.clone())
+                    } else {
+                        col(column.name.clone())
+                    };
+                    required_exprs_buffer.insert(OrdExpr::new(expr_plan));
+                }
                 (
                     Some(TableReference::bare(model.name.clone())),
                     Arc::new(Field::new(
@@ -217,15 +288,197 @@ impl ModelPlanNode {
             })
             .collect();
 
+        if !is_dag(&directed_graph) {
+            panic!("cyclic dependency detected: {}", model.name);
+        }
+
         let schema_ref = DFSchemaRef::new(
             DFSchema::new_with_metadata(fields, HashMap::new()).expect("create schema failed"),
         );
 
+        let mut relation_chain = Nil;
+        for edge_index in directed_graph.edge_indices() {
+            let link = directed_graph.edge_weight(edge_index).unwrap();
+
+            // check if the chain is valid
+            match &relation_chain {
+                Nil => {
+                    if link.source.get_name() != model.name {
+                        panic!("Relation chain should start with source model");
+                    }
+                    let required_filed = model_required_fields
+                        .get(model.name.as_str())
+                        .unwrap()
+                        .iter()
+                        .map(|c| Expr::Column(c.clone()))
+                        .collect();
+                    match &link.source {
+                        Dataset::Model(source_model) => {
+                            relation_chain = RelationChain::Chain(
+                                ModelPlanNode::new(
+                                    Arc::clone(source_model),
+                                    required_filed,
+                                    None,
+                                    Arc::clone(&analyzed_wren_mdl),
+                                ),
+                                link.join_type,
+                                link.condition.clone(),
+                                Box::new(relation_chain),
+                            );
+                        }
+                        _ => {
+                            unimplemented!("Only support model as source dataset")
+                        }
+                    }
+                }
+                RelationChain::Chain(plan, ..) => {
+                    if link.source.get_name() != plan.model_name {
+                        panic!("Relation chain should start with model");
+                    }
+                }
+            }
+
+            if let Dataset::Model(target_model) = &link.target {
+                let required_filed = model_required_fields
+                    .get(target_model.name.as_str())
+                    .unwrap()
+                    .iter()
+                    .map(|c| Expr::Column(c.clone()))
+                    .collect();
+                relation_chain = RelationChain::Chain(
+                    ModelPlanNode::new(
+                        Arc::clone(target_model),
+                        required_filed,
+                        None,
+                        Arc::clone(&analyzed_wren_mdl),
+                    ),
+                    link.join_type,
+                    link.condition.clone(),
+                    Box::new(relation_chain),
+                );
+            } else {
+                unimplemented!("Only support model as target dataset")
+            }
+        }
+
         Self {
             model_name: model.name.clone(),
-            required_exprs: required_exprs_buffer.into_iter().collect(),
+            required_exprs: required_exprs_buffer
+                .into_iter()
+                .map(|oe| oe.expr)
+                .collect(),
+            relation_chain: Box::new(relation_chain),
             schema_ref,
             original_table_scan,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Hash, Clone)]
+struct OrdExpr {
+    expr: Expr,
+}
+
+impl OrdExpr {
+    fn new(expr: Expr) -> Self {
+        Self { expr }
+    }
+}
+
+impl PartialOrd<Self> for OrdExpr {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for OrdExpr {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.expr.to_string().cmp(&other.expr.to_string())
+    }
+}
+
+impl From<OrdExpr> for Expr {
+    fn from(val: OrdExpr) -> Self {
+        val.expr
+    }
+}
+
+fn merge_graph(graph: &mut Graph<Dataset, DatasetLink>, new_graph: &Graph<Dataset, DatasetLink>) {
+    let mut node_map = HashMap::new();
+    for node in new_graph.node_indices() {
+        let new_node = graph.add_node(new_graph[node].clone());
+        node_map.insert(node, new_node);
+    }
+
+    for edge in new_graph.edge_indices() {
+        let (source, target) = new_graph.edge_endpoints(edge).unwrap();
+        let source = node_map.get(&source).unwrap();
+        let target = node_map.get(&target).unwrap();
+        graph.add_edge(*source, *target, new_graph[edge].clone());
+    }
+}
+
+/// RelationChain is a chain of models that are connected by the relationship.
+/// The chain is used to generate the join plan for the model.
+/// The physical layout will be looked like:
+/// (((Model3, Model2), Model1), Nil)
+#[derive(Eq, PartialEq, Debug, Hash, Clone)]
+enum RelationChain {
+    Chain(ModelPlanNode, JoinType, String, Box<RelationChain>),
+    Nil,
+}
+
+impl RelationChain {
+    fn plan(&mut self, rule: ModelGenerationRule) -> (Option<LogicalPlan>, Option<Expr>) {
+        match self {
+            RelationChain::Chain(plan, _, condition, ref mut next) => {
+                if let Nil = **next {
+                    let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)
+                        .iter()
+                        .cloned()
+                        .map(|c| col(c.flat_name()))
+                        .collect();
+                    let join_condition = join_keys[0].clone().eq(join_keys[1].clone());
+                    let left = rule
+                        .generate_model_internal(LogicalPlan::Extension(Extension {
+                            node: Arc::new(plan.to_owned()),
+                        }))
+                        .unwrap()
+                        .data;
+                    (Some(left), Some(join_condition))
+                } else {
+                    let left = rule
+                        .generate_model_internal(LogicalPlan::Extension(Extension {
+                            node: Arc::new(plan.to_owned()),
+                        }))
+                        .unwrap()
+                        .data;
+                    let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)
+                        .iter()
+                        .cloned()
+                        .map(|c| col(c.flat_name()))
+                        .collect();
+                    let join_condition = join_keys[0].clone().eq(join_keys[1].clone());
+                    let (Some(next_plan), _) = next.plan(rule) else {
+                        panic!("Nil relation chain")
+                    };
+                    (
+                        Some(
+                            LogicalPlanBuilder::from(left)
+                                .join_on(
+                                    next_plan,
+                                    datafusion::logical_expr::JoinType::Left,
+                                    vec![join_condition],
+                                )
+                                .unwrap()
+                                .build()
+                                .unwrap(),
+                        ),
+                        None,
+                    )
+                }
+            }
+            _ => (None, None),
         }
     }
 }
@@ -260,6 +513,7 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
         ModelPlanNode {
             model_name: self.model_name.clone(),
             required_exprs: self.required_exprs.clone(),
+            relation_chain: self.relation_chain.clone(),
             schema_ref: self.schema_ref.clone(),
             original_table_scan: self.original_table_scan.clone(),
         }
@@ -268,12 +522,14 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
 
 // Generate the query plan for the ModelPlanNode
 pub struct ModelGenerationRule {
-    mdl: Arc<WrenMDL>,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
 }
 
 impl ModelGenerationRule {
-    pub fn new(mdl: Arc<WrenMDL>) -> Self {
-        Self { mdl }
+    pub fn new(mdl: Arc<AnalyzedWrenMDL>) -> Self {
+        Self {
+            analyzed_wren_mdl: mdl,
+        }
     }
 
     fn generate_model_internal(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -282,44 +538,66 @@ impl ModelGenerationRule {
                 if let Some(model_plan) = extension.node.as_any().downcast_ref::<ModelPlanNode>() {
                     let model: Arc<Model> = Arc::clone(
                         &self
-                            .mdl
+                            .analyzed_wren_mdl
+                            .wren_mdl
                             .get_model(&model_plan.model_name)
                             .expect("Model not found"),
                     );
                     // support table reference
                     let table_scan = match &model_plan.original_table_scan {
-                        LogicalPlan::TableScan(original_scan) => {
+                        Some(LogicalPlan::TableScan(original_scan)) => {
                             LogicalPlanBuilder::scan_with_filters(
                                 model.name.clone(),
-                                create_remote_table_source(&model, &self.mdl),
+                                create_remote_table_source(
+                                    &model,
+                                    &self.analyzed_wren_mdl.wren_mdl,
+                                ),
                                 None,
                                 original_scan.filters.clone(),
                             )
                             .unwrap()
                             .build()
                         }
-                        _ => Err(datafusion::error::DataFusionError::Internal(
+                        Some(_) => Err(datafusion::error::DataFusionError::Internal(
                             "ModelPlanNode should have a TableScan as original_table_scan"
                                 .to_string(),
                         )),
-                    };
+                        None => LogicalPlanBuilder::scan(
+                            model.name.clone(),
+                            create_remote_table_source(&model, &self.analyzed_wren_mdl.wren_mdl),
+                            None,
+                        )
+                        .unwrap()
+                        .build(),
+                    }?;
 
                     // it could be count(*) query
                     if model_plan.required_exprs.is_empty() {
-                        return Ok(Transformed::no(table_scan?));
+                        return Ok(Transformed::no(table_scan));
                     }
 
-                    let result = Projection::try_new(
-                        model_plan.required_exprs.clone(),
-                        Arc::new(table_scan?),
-                    )
-                    .unwrap();
+                    // join relationship plan
+                    let (join_plan, _) =
+                        model_plan
+                            .relation_chain
+                            .clone()
+                            .plan(ModelGenerationRule::new(Arc::clone(
+                                &self.analyzed_wren_mdl,
+                            )));
 
-                    let alias_name = model.name.clone();
-                    let alias = LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(
-                        Arc::new(LogicalPlan::Projection(result)),
-                        alias_name,
-                    )?);
+                    // calculated field scope
+                    let result = match join_plan {
+                        Some(plan) => LogicalPlanBuilder::from(plan)
+                            .project(model_plan.required_exprs.clone())?
+                            .build()?,
+                        None => LogicalPlanBuilder::from(table_scan)
+                            .project(model_plan.required_exprs.clone())?
+                            .build()?,
+                    };
+
+                    let alias = LogicalPlanBuilder::from(result)
+                        .alias(model.name.clone())?
+                        .build()?;
                     Ok(Transformed::yes(alias))
                 } else {
                     Ok(Transformed::no(LogicalPlan::Extension(extension)))
