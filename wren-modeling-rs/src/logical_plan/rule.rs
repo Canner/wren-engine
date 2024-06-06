@@ -24,7 +24,7 @@ use crate::mdl::manifest::{JoinType, Model};
 use crate::mdl::utils::{create_remote_expr_for_model, is_dag};
 use crate::mdl::{AnalyzedWrenMDL, Dataset};
 
-use super::utils::{create_remote_table_source, map_data_type};
+use super::utils::{create_remote_table_source, format_qualified_name, map_data_type};
 
 /// Recognized the model. Turn TableScan from a model to a ModelPlanNode.
 /// We collect the required fields from the projection, filter, aggregation, and join,
@@ -209,33 +209,19 @@ impl ModelPlanNode {
             .filter(|column| {
                 requried_fields.iter().any(|expr| {
                     if let Expr::Column(column_expr) = expr {
-                        column_expr.flat_name() == format!("{}.{}", model.name, column.name)
+                        column_expr.flat_name() == format_qualified_name(&model.name, &column.name)
                     } else {
                         false
                     }
                 })
             })
             .map(|column| {
-                if !column.is_calculated {
-                    let expr_plan = if let Some(expression) = &column.expression {
-                        let expr = create_remote_expr_for_model(
-                            expression,
-                            Arc::clone(&model),
-                            Arc::clone(&analyzed_wren_mdl),
-                        );
-                        expr.alias(column.name.clone())
-                    } else {
-                        col(column.name.clone())
-                    };
-                    required_exprs_buffer.insert(OrdExpr::new(expr_plan));
-                };
-
                 if column.is_calculated {
                     if column.expression.is_some() {
                         let column_rf = analyzed_wren_mdl
                             .wren_mdl
                             .qualified_references
-                            .get(format!("{}.{}", model.name, column.name).as_str())
+                            .get(&format_qualified_name(&model.name, &column.name))
                             .unwrap();
                         let expr = mdl::utils::create_wren_calculated_field_expr(
                             column_rf.clone(),
@@ -245,8 +231,10 @@ impl ModelPlanNode {
                         required_exprs_buffer.insert(OrdExpr::new(expr_plan));
                     };
 
-                    let qualified_column =
-                        Column::from_qualified_name(format!("{}.{}", model.name, column.name));
+                    let qualified_column = Column::from_qualified_name(format_qualified_name(
+                        &model.name,
+                        &column.name,
+                    ));
 
                     match analyzed_wren_mdl
                         .lineage
@@ -276,6 +264,18 @@ impl ModelPlanNode {
                                 .or_default()
                                 .insert(c.clone());
                         });
+                } else {
+                    let expr_plan = if let Some(expression) = &column.expression {
+                        let expr = create_remote_expr_for_model(
+                            expression,
+                            Arc::clone(&model),
+                            Arc::clone(&analyzed_wren_mdl),
+                        );
+                        expr.alias(column.name.clone())
+                    } else {
+                        col(column.name.clone())
+                    };
+                    required_exprs_buffer.insert(OrdExpr::new(expr_plan));
                 }
                 (
                     Some(TableReference::bare(model.name.clone())),
@@ -338,29 +338,26 @@ impl ModelPlanNode {
                 }
             }
 
-            match &link.target {
-                Dataset::Model(target_model) => {
-                    let required_filed = model_required_fields
-                        .get(target_model.name.as_str())
-                        .unwrap()
-                        .iter()
-                        .map(|c| Expr::Column(c.clone()))
-                        .collect();
-                    relation_chain = RelationChain::Chain(
-                        ModelPlanNode::new(
-                            Arc::clone(target_model),
-                            required_filed,
-                            None,
-                            Arc::clone(&analyzed_wren_mdl),
-                        ),
-                        link.join_type,
-                        link.condition.clone(),
-                        Box::new(relation_chain),
-                    );
-                }
-                _ => {
-                    unimplemented!("Only support model as target dataset")
-                }
+            if let Dataset::Model(target_model) = &link.target {
+                let required_filed = model_required_fields
+                    .get(target_model.name.as_str())
+                    .unwrap()
+                    .iter()
+                    .map(|c| Expr::Column(c.clone()))
+                    .collect();
+                relation_chain = RelationChain::Chain(
+                    ModelPlanNode::new(
+                        Arc::clone(target_model),
+                        required_filed,
+                        None,
+                        Arc::clone(&analyzed_wren_mdl),
+                    ),
+                    link.join_type,
+                    link.condition.clone(),
+                    Box::new(relation_chain),
+                );
+            } else {
+                unimplemented!("Only support model as target dataset")
             }
         }
 

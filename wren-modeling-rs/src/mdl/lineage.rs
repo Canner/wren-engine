@@ -219,10 +219,9 @@ fn get_dataset_link_revers_if_need(
         rs.join_type
     } else {
         match rs.join_type {
-            JoinType::OneToOne => JoinType::OneToOne,
             JoinType::OneToMany => JoinType::ManyToOne,
             JoinType::ManyToOne => JoinType::OneToMany,
-            JoinType::ManyToMany => JoinType::ManyToMany,
+            _ => rs.join_type,
         }
     };
     DatasetLink::new(source, target, join_type, rs.condition.clone())
@@ -326,10 +325,11 @@ mod test {
             .required_fields_map
             .get(&Column::from_qualified_name("orders.customer_name"))
             .unwrap();
-        let mut expected = HashSet::new();
-        expected.insert(Column::from_qualified_name("customer.name"));
-        expected.insert(Column::from_qualified_name("orders.custkey"));
-        expected.insert(Column::from_qualified_name("customer.custkey"));
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name("customer.name"),
+            Column::from_qualified_name("orders.custkey"),
+            Column::from_qualified_name("customer.custkey"),
+        ]);
 
         assert_eq!(customer_name.len(), 3);
         assert_eq!(*customer_name, expected,);

@@ -126,7 +126,7 @@ pub fn transform_sql(
     let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
         Ok(plan) => plan,
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             return Err(e);
         }
     };
@@ -143,7 +143,7 @@ pub fn transform_sql(
     let analyzed = match analyzer.execute_and_check(plan, &config, |_, _| {}) {
         Ok(analyzed) => analyzed,
         Err(e) => {
-            println!("Error: {:?}", e);
+            eprintln!("Error: {:?}", e);
             return Err(e);
         }
     };
@@ -177,10 +177,7 @@ impl ColumnReference {
     }
 
     pub fn get_qualified_name(&self) -> String {
-        match &self.dataset {
-            Dataset::Model(model) => format!("{}.{}", model.name, self.column.name),
-            Dataset::Metric(metric) => format!("{}.{}", metric.name, self.column.name),
-        }
+        format!("{}.{}", self.dataset.get_name(), self.column.name)
     }
 }
 

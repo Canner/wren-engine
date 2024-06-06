@@ -85,11 +85,12 @@ pub struct RemoteContextProvider {
 
 impl RemoteContextProvider {
     pub fn new(mdl: &WrenMDL) -> Self {
-        let mut tables = HashMap::new();
-        mdl.manifest.models.iter().for_each(|model| {
-            let name = model.name.clone();
-            tables.insert(name.clone(), create_remote_table_source(model));
-        });
+        let tables = mdl
+            .manifest
+            .models
+            .iter()
+            .map(|model| (model.name.clone(), create_remote_table_source(model)))
+            .collect::<HashMap<_, _>>();
         Self {
             tables,
             options: Default::default(),

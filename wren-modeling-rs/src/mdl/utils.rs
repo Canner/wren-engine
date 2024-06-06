@@ -99,17 +99,13 @@ pub fn create_wren_calculated_field_expr(
         .unwrap();
 
     // collect all required models.
-    let mut model_set = BTreeSet::new();
-    required_fields
+    let models = required_fields
         .iter()
         .map(|c| &c.relation)
         .filter(|r| r.is_some())
         .map(|r| r.clone().unwrap().to_string())
-        .for_each(|m| {
-            model_set.insert(m);
-        });
-    let models = model_set
-        .iter()
+        .collect::<BTreeSet<_>>() // Collect into a BTreeSet to remove duplicates
+        .into_iter() // Convert BTreeSet back into an iterator
         .map(|m| m.to_string())
         .collect::<Vec<String>>()
         .join(", ");
@@ -150,7 +146,7 @@ pub fn create_wren_calculated_field_expr(
 }
 
 /// Create the Logical Expr for the remote column.
-/// The
+/// Use [RemoteContextProvider] to provide the context for the remote column.
 pub(crate) fn create_remote_expr_for_model(
     expr: &String,
     model: Arc<Model>,
