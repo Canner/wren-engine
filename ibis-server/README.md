@@ -61,21 +61,22 @@ vim .env
 ```
 Install the dependencies
 ```bash
-make install
+just install
 ```
 Run the server
 ```bash
-make run
+just run
 ```
 
 ## Developer Guide
 
 ### Environment Setup
 - Python 3.11
-- Install `poetry` with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
-- Install pre-commit hooks: `make pre-commit-install`
-- Execute `make install` to install the dependencies
-- Execute `make test` to run the tests
+- Install [poetry](https://github.com/python-poetry/poetry) with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
+- Install [casey/just](https://github.com/casey/just)
+- Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
+- Execute `just install` to install the dependencies
+- Execute `just test` to run the tests
 - Create `.env` file and fill in the environment variables
 
 ### Environment Variables
@@ -83,10 +84,10 @@ make run
 - `LOG_LEVEL`: The log level of the server. Default is `INFO`
 
 ### Start the server
-- Execute `make run` to start the server
-- Execute `make dev` to start the server in development mode. It will auto-reload after the code is edited.
-- Default port is `8000`, you can change it by `make run PORT=8001` or `make dev PORT=8001`
+- Execute `just run` to start the server
+- Execute `just dev` to start the server in development mode. It will auto-reload after the code is edited.
+- Default port is `8000`, you can change it by `just port=8001 run` or `just port=8001 dev`
 
 ### Docker
-- Build the image: `make docker-build`
-- Run the container: `make docker-run`
+- Build the image: `just docker-build`
+- Run the container: `just docker-run`
