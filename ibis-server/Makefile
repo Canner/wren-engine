@@ -1,6 +1,9 @@
 install:
 	poetry install
 
+pre-commit-install:
+	poetry run pre-commit install
+
 define port-command
 	$(shell [ -z "$(PORT)" ] && echo "" || echo "--port $(PORT)")
 endef
@@ -19,3 +22,11 @@ docker-build:
 
 docker-run:
 	docker run -it --rm -p 8000:8000 --env-file .env wren-engine-ibis
+
+lint:
+	poetry run ruff format -q . --check
+	poetry run ruff check .
+
+fmt:
+	poetry run ruff format .
+	poetry run ruff check --fix .

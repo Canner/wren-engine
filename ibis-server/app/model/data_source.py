@@ -25,16 +25,23 @@ class DataSource(StrEnum):
             case DataSource.snowflake:
                 return self.get_snowflake_connection(dto)
             case _:
-                raise NotImplementedError(f'Unsupported data source: {self}')
+                raise NotImplementedError(f"Unsupported data source: {self}")
 
     @staticmethod
-    def get_postgres_connection(info: PostgresConnectionUrl | PostgresConnectionInfo) -> BaseBackend:
-        return ibis.connect(getattr(info, 'connection_url', None) or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}")
+    def get_postgres_connection(
+        info: PostgresConnectionUrl | PostgresConnectionInfo,
+    ) -> BaseBackend:
+        return ibis.connect(
+            getattr(info, "connection_url", None)
+            or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        )
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
-        credits_json = loads(base64.b64decode(info.credentials).decode('utf-8'))
-        credentials = service_account.Credentials.from_service_account_info(credits_json)
+        credits_json = loads(base64.b64decode(info.credentials).decode("utf-8"))
+        credentials = service_account.Credentials.from_service_account_info(
+            credits_json
+        )
         return ibis.bigquery.connect(
             project_id=info.project_id,
             dataset_id=info.dataset_id,
@@ -75,7 +82,9 @@ class SnowflakeConnectionInfo(BaseModel):
     password: str
     account: str
     database: str
-    sf_schema: str = Field(alias="schema")  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
+    sf_schema: str = Field(
+        alias="schema"
+    )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
 ConnectionInfo = Union[
