@@ -2,50 +2,24 @@ use std::collections::{BTreeSet, VecDeque};
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
+use datafusion::common::Column;
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::sql::planner::SqlToRel;
 use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
 use datafusion::sql::sqlparser::ast::{visit_expressions, visit_expressions_mut};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use datafusion::{common::Column, sql::TableReference};
 use petgraph::algo::is_cyclic_directed;
 use petgraph::{EdgeType, Graph};
 
 use crate::logical_plan::context_provider::DynamicContextProvider;
 use crate::logical_plan::context_provider::{RemoteContextProvider, WrenContextProvider};
+use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference};
 
 pub fn to_expr_queue(column: Column) -> VecDeque<String> {
-    let mut parts = VecDeque::new();
-    if let Some(relation) = column.relation {
-        match relation {
-            TableReference::Bare { table } => {
-                parts.push_back(table.to_string());
-            }
-            TableReference::Partial { schema, table } => {
-                parts.push_back(schema.to_string());
-                parts.push_back(table.to_string());
-            }
-            TableReference::Full {
-                catalog,
-                schema,
-                table,
-            } => {
-                parts.push_back(catalog.to_string());
-                parts.push_back(schema.to_string());
-                parts.push_back(table.to_string());
-            }
-        }
-        parts.push_back(column.name);
-    } else {
-        column
-            .name
-            .split('.')
-            .for_each(|part| parts.push_back(part.to_string()));
-    }
-    parts
+    column.name.split('.').map(String::from).collect()
 }
 
 pub fn is_dag<'a, N: 'a, E: 'a, Ty, Ix>(g: &'a Graph<N, E, Ty, Ix>) -> bool
@@ -90,13 +64,16 @@ pub fn create_wren_calculated_field_expr(
     if !column_rf.column.is_calculated {
         panic!("Column is not calculated: {}", column_rf.column.name)
     }
-    let qualified_name = column_rf.get_qualified_name();
-    let qualified_col = Column::from_qualified_name(qualified_name);
+    let qualified_col = from_qualified_name(
+        &analyzed_wren_mdl.wren_mdl,
+        column_rf.dataset.name(),
+        column_rf.column.name(),
+    );
     let required_fields = analyzed_wren_mdl
         .lineage
         .required_fields_map
         .get(&qualified_col)
-        .unwrap();
+        .unwrap_or_else(|| panic!("Required fields not found for {}", qualified_col));
 
     // collect all required models.
     let models = required_fields
@@ -194,6 +171,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use crate::logical_plan::utils::from_qualified_name;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::AnalyzedWrenMDL;
 
@@ -210,7 +188,11 @@ mod tests {
         let column_rf = analyzed_mdl
             .wren_mdl
             .qualified_references
-            .get(format!("{}.{}", "orders", "customer_name").as_str())
+            .get(&from_qualified_name(
+                &analyzed_mdl.wren_mdl,
+                "orders",
+                "customer_name",
+            ))
             .unwrap();
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
@@ -232,7 +214,11 @@ mod tests {
         let column_rf = analyzed_mdl
             .wren_mdl
             .qualified_references
-            .get(format!("{}.{}", "orders", "orderkey_plus_custkey").as_str())
+            .get(&from_qualified_name(
+                &analyzed_mdl.wren_mdl,
+                "orders",
+                "orderkey_plus_custkey",
+            ))
             .unwrap();
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),

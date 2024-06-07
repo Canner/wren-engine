@@ -54,6 +54,25 @@ pub fn create_remote_table_source(model: &Model, _: &WrenMDL) -> Arc<dyn TableSo
     Arc::new(LogicalTableSource::new(schema))
 }
 
-pub fn format_qualified_name(model: &str, column: &str) -> String {
-    format!("{}.{}", model, column)
+pub fn format_qualified_name(catalog: &str, schema: &str, dataset: &str, column: &str) -> String {
+    format!("{}.{}.{}.{}", catalog, schema, dataset, column)
+}
+
+pub fn from_qualified_name(
+    wren_mdl: &WrenMDL,
+    dataset: &str,
+    column: &str,
+) -> datafusion::common::Column {
+    from_qualified_name_str(wren_mdl.catalog(), wren_mdl.schema(), dataset, column)
+}
+
+pub fn from_qualified_name_str(
+    catalog: &str,
+    schema: &str,
+    dataset: &str,
+    column: &str,
+) -> datafusion::common::Column {
+    datafusion::common::Column::from_qualified_name(format_qualified_name(
+        catalog, schema, dataset, column,
+    ))
 }

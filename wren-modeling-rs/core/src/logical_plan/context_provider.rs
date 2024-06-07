@@ -25,8 +25,10 @@ impl WrenContextProvider {
     pub fn new(mdl: &WrenMDL) -> Self {
         let mut tables = HashMap::new();
         mdl.manifest.models.iter().for_each(|model| {
-            let name = model.name.clone();
-            tables.insert(name.clone(), create_table_source(model));
+            tables.insert(
+                format!("{}.{}.{}", mdl.catalog(), mdl.schema(), model.name()),
+                create_table_source(model),
+            );
         });
         Self {
             tables,
@@ -37,9 +39,10 @@ impl WrenContextProvider {
 
 impl ContextProvider for WrenContextProvider {
     fn get_table_source(&self, name: TableReference) -> Result<Arc<dyn TableSource>> {
-        match self.tables.get(name.table()) {
+        let table_name = name.to_string();
+        match self.tables.get(&table_name) {
             Some(table) => Ok(table.clone()),
-            _ => plan_err!("Table not found: {}", name.table()),
+            _ => plan_err!("Table not found: {}", &table_name),
         }
     }
 
