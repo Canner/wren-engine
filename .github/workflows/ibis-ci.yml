@@ -34,7 +34,7 @@ jobs:
           python-version-file: ./ibis-server/pyproject.toml
           cache: 'poetry'
       - name: Install dependencies
-        run: make install
+        run: poetry install
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
