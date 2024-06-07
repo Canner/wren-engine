@@ -1,0 +1,18 @@
+[package]
+name = "wren-core"
+include = ["src/**/*.rs", "Cargo.toml"]
+version = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+
+[dependencies]
+datafusion = { workspace = true }
+tokio = { workspace = true }
+arrow-schema = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+petgraph = "0.6.5"
+petgraph-evcxr = "*"
