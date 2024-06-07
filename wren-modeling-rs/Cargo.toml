@@ -1,5 +1,9 @@
 [workspace]
-members = ["core", "sqllogictest"]
+members = [
+    "core",
+    "sqllogictest"
+]
+resolver = "2"
 
 [workspace.package]
 authors = ["Canner <dev@cannerdata.com>"]

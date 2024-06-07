@@ -28,9 +28,10 @@ use sqllogictest::strict_column_validator;
 use wren_sqllogictest::{engine::DataFusion, TestContext};
 
 use datafusion::common::runtime::SpawnedTask;
-use datafusion::common::{exec_datafusion_err, exec_err, DataFusionError, Result};
+use datafusion::common::{exec_err, DataFusionError, Result};
+use wren_sqllogictest::engine::utils::read_dir_recursive;
 
-const TEST_DIRECTORY: &str = "test_files/";
+const TEST_DIRECTORY: &str = "test_sql_files/";
 
 #[cfg(target_family = "windows")]
 pub fn main() {
@@ -56,15 +57,16 @@ pub async fn main() -> Result<()> {
     run_tests().await
 }
 
-/// Sets up an empty directory at test_files/scratch/<name>
+/// Sets up an empty directory at test_sql_files/scratch/<name>
 /// creating it if needed and clearing any file contents if it exists
 /// This allows tests for inserting to external tables or copy to
 /// to persist data to disk and have consistent state when running
 /// a new test
 fn setup_scratch_dir(name: &Path) -> Result<()> {
-    // go from copy.slt --> copy
     let file_stem = name.file_stem().expect("File should have a stem");
-    let path = PathBuf::from("test_files").join("scratch").join(file_stem);
+    let path = PathBuf::from(TEST_DIRECTORY)
+        .join("scratch")
+        .join(file_stem);
 
     info!("Creating scratch dir in {path:?}");
     if path.exists() {
@@ -78,7 +80,7 @@ async fn run_tests() -> Result<()> {
     // Enable logging (e.g. set RUST_LOG=debug to see debug logs)
     env_logger::init();
 
-    let options: Options = clap::Parser::parse();
+    let options: Options = Parser::parse();
     options.warn_on_ignored();
 
     // Run all tests in parallel, reporting failures at the end
@@ -160,7 +162,6 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
     use sqllogictest::default_validator;
 
     info!("Using complete mode to complete: {}", path.display());
-
     let Some(test_ctx) = TestContext::try_new_for_test_file(&relative_path).await else {
         info!("Skipping: {}", path.display());
         return Ok(());
@@ -211,14 +212,6 @@ impl TestFile {
     fn is_slt_file(&self) -> bool {
         self.path.extension() == Some(OsStr::new("slt"))
     }
-
-    fn check_tpch(&self, options: &Options) -> bool {
-        if !self.relative_path.starts_with("tpch") {
-            return true;
-        }
-
-        options.include_tpch
-    }
 }
 
 fn read_test_files<'a>(options: &'a Options) -> Result<Box<dyn Iterator<Item = TestFile> + 'a>> {
@@ -227,34 +220,8 @@ fn read_test_files<'a>(options: &'a Options) -> Result<Box<dyn Iterator<Item = T
             .into_iter()
             .map(TestFile::new)
             .filter(|f| options.check_test_file(&f.relative_path))
-            .filter(|f| f.is_slt_file())
-            .filter(|f| f.check_tpch(options)),
+            .filter(|f| f.is_slt_file()),
     ))
-}
-
-fn read_dir_recursive<P: AsRef<Path>>(path: P) -> Result<Vec<PathBuf>> {
-    let mut dst = vec![];
-    read_dir_recursive_impl(&mut dst, path.as_ref())?;
-    Ok(dst)
-}
-
-/// Append all paths recursively to dst
-fn read_dir_recursive_impl(dst: &mut Vec<PathBuf>, path: &Path) -> Result<()> {
-    let entries = std::fs::read_dir(path)
-        .map_err(|e| exec_datafusion_err!("Error reading directory {path:?}: {e}"))?;
-    for entry in entries {
-        let path = entry
-            .map_err(|e| exec_datafusion_err!("Error reading entry in directory {path:?}: {e}"))?
-            .path();
-
-        if path.is_dir() {
-            read_dir_recursive_impl(dst, &path)?;
-        } else {
-            dst.push(path);
-        }
-    }
-
-    Ok(())
 }
 
 /// Parsed command line options

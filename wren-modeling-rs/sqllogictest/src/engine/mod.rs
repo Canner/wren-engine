@@ -22,6 +22,7 @@ mod runner;
 
 mod conversion;
 mod output;
+pub mod utils;
 
 pub use error::*;
 pub use runner::*;

@@ -1,0 +1,2 @@
+statement ok
+SELECT * from wrenai.default.orders
