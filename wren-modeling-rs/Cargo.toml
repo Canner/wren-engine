@@ -1,8 +1,5 @@
 [workspace]
-members = [
-    "core",
-    "sqllogictest"
-]
+members = ["core", "sqllogictest"]
 resolver = "2"
 
 [workspace.package]
