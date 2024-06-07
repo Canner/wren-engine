@@ -1,12 +1,19 @@
 from json import loads
 
 import pandas as pd
+from pydantic import BaseModel, Field
 
 from app.mdl.rewriter import rewrite
 from app.model.data_source import DataSource, ConnectionInfo
+from app.model.data_source import (
+    PostgresConnectionUrl,
+    PostgresConnectionInfo,
+    BigQueryConnectionInfo,
+    SnowflakeConnectionInfo,
+)
 
 
-class Connector:
+class Querier:
     def __init__(
         self,
         data_source: DataSource,
@@ -57,6 +64,30 @@ class Connector:
             if not pd.isnull(d)
             else d
         )
+
+
+class QueryDTO(BaseModel):
+    sql: str
+    manifest_str: str = Field(alias="manifestStr", description="Base64 manifest")
+    column_dtypes: dict[str, str] | None = Field(
+        alias="columnDtypes",
+        description="If this field is set, it will forcibly convert the type.",
+        default=None,
+    )
+
+
+class QueryPostgresDTO(QueryDTO):
+    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(
+        alias="connectionInfo"
+    )
+
+
+class QueryBigQueryDTO(QueryDTO):
+    connection_info: BigQueryConnectionInfo = Field(alias="connectionInfo")
+
+
+class QuerySnowflakeDTO(QueryDTO):
+    connection_info: SnowflakeConnectionInfo = Field(alias="connectionInfo")
 
 
 class QueryDryRunError(Exception):

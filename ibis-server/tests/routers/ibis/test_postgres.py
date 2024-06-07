@@ -272,3 +272,96 @@ class TestPostgres:
         )
         assert response.status_code == 422
         assert response.text is not None
+
+    def test_validate_with_unknown_rule(self, postgres: PostgresContainer):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/validate/unknown_rule",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert (
+            response.text
+            == "The rule `unknown_rule` is not in the rules, rules: ['column_is_valid']"
+        )
+
+    def test_validate_rule_column_is_valid(self, postgres: PostgresContainer):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 204
+
+    def test_validate_rule_column_is_valid_with_invalid_parameters(
+        self, postgres: PostgresContainer
+    ):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"modelName": "X", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "X"},
+            },
+        )
+        assert response.status_code == 422
+
+    def test_validate_rule_column_is_valid_without_parameters(
+        self, postgres: PostgresContainer
+    ):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={"connectionInfo": connection_info, "manifestStr": self.manifest_str},
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "parameters"]
+        assert result["detail"][0]["msg"] == "Field required"
+
+    def test_validate_rule_column_is_valid_without_one_parameter(
+        self, postgres: PostgresContainer
+    ):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"modelName": "Orders"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `columnName`"
+
+        response = client.post(
+            url="/v2/ibis/postgres/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "parameters": {"columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `modelName`"
