@@ -7,6 +7,8 @@ from app.logger import log_dto
 from app.model.connector import Connector, QueryPostgresDTO, to_json
 from app.model.data_source import DataSource
 from app.model.validator import ValidateDTO, Validator
+from app.model.metadata_dto import MetadataDTO
+from app.model.metadata import Metadata
 
 router = APIRouter(prefix="/postgres", tags=["postgres"])
 
@@ -31,3 +33,17 @@ def validate(rule_name: str, dto: ValidateDTO) -> Response:
     validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)
+
+
+@router.post("/metadata/tables")
+@log_dto
+def get_postgres_table_list(dto: MetadataDTO) -> dict:
+    table_list = Metadata.postgres.get_table_list(dto.connection_info)
+    return {"tables": table_list}
+
+
+@router.post("/metadata/constraints")
+@log_dto
+def get_postgres_constraints(dto: MetadataDTO) -> dict:
+    table_list = Metadata.postgres.get_constraints(dto.connection_info)
+    return {"constraints": table_list}
