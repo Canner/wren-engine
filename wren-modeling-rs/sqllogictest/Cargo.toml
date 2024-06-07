@@ -1,0 +1,45 @@
+[package]
+name = "wren-sqllogictest"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+name = "wren_sqllogictest"
+path = "src/lib.rs"
+
+[dependencies]
+wren-core = { path = "../core" }
+datafusion = { workspace = true }
+sqllogictest = "0.20.4"
+async-trait = "0.1.80"
+thiserror = "1.0.61"
+tokio = { workspace = true }
+log = { workspace = true }
+bigdecimal = "0.4.3"
+half = { version = "2.4.1", default-features = true }
+rust_decimal = { version = "1.27.0" }
+
+itertools = "0.13.0"
+object_store = { version = "0.10.1", default-features = false }
+
+tempfile = "3.10.1"
+futures = "0.3.17"
+clap = { version = "4.4.8", features = ["derive", "env"] }
+
+
+[dev-dependencies]
+env_logger = "0.11.3"
+num_cpus = "1.16.0"
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+
+[[test]]
+harness = false
+name = "sqllogictests"
+path = "bin/sqllogictests.rs"

@@ -8,6 +8,10 @@ repository = { workspace = true }
 license = { workspace = true }
 authors = { workspace = true }
 
+[lib]
+name = "wren_core"
+path = "src/lib.rs"
+
 [dependencies]
 arrow-schema = { workspace = true }
 datafusion = { workspace = true }

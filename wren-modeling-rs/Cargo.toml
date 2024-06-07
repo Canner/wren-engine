@@ -1,5 +1,5 @@
 [workspace]
-members = ["core"]
+members = ["core", "sqllogictest"]
 
 [workspace.package]
 authors = ["Canner <dev@cannerdata.com>"]
@@ -17,3 +17,6 @@ datafusion = { version = "38.0.0" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = { version = "1.0.117" }
 tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
+petgraph = "0.6.5"
+petgraph-evcxr = "*"
+log = { version = "0.4.14" }
