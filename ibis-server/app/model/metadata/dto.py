@@ -11,7 +11,7 @@ class MetadataDTO(BaseModel):
 class WrenEngineColumnType(Enum):
     # Boolean Types
     BOOLEAN = "BOOLEAN"
-    
+
     # Numeric Types
     TINYINT = "TINYINT"
     INT2 = "INT2"

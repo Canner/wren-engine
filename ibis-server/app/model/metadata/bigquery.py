@@ -111,4 +111,3 @@ class BigQueryMetadata(Metadata):
                 )
             )
         return constraints
-
