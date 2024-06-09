@@ -1,45 +1,31 @@
 from enum import Enum
-from app.model.data_source import (
-    PostgresConnectionUrl,
-    PostgresConnectionInfo,
-    BigQueryConnectionInfo,
-    SnowflakeConnectionInfo,
-)
+from app.model.data_source import ConnectionInfo
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 
 
 class MetadataDTO(BaseModel):
-    connection_info: Union[
-        PostgresConnectionUrl | PostgresConnectionInfo,
-        BigQueryConnectionInfo,
-        SnowflakeConnectionInfo,
-    ] = Field(alias="connectionInfo")
+    connection_info: ConnectionInfo = Field(alias="connectionInfo")
 
 
 class WrenEngineColumnType(Enum):
     # Boolean Types
     BOOLEAN = "BOOLEAN"
-
+    
     # Numeric Types
     TINYINT = "TINYINT"
-
     INT2 = "INT2"
     SMALLINT = "SMALLINT"  # alias for INT2
-
     INT4 = "INT4"
     INTEGER = "INTEGER"  # alias for INT4
-
     INT8 = "INT8"
     BIGINT = "BIGINT"  # alias for INT8
-
     NUMERIC = "NUMERIC"
     DECIMAL = "DECIMAL"
 
     # Floating-Point Types
     FLOAT4 = "FLOAT4"
     REAL = "REAL"  # alias for FLOAT4
-
     FLOAT8 = "FLOAT8"
     DOUBLE = "DOUBLE"  # alias for FLOAT8
 
@@ -77,7 +63,7 @@ class WrenEngineColumnType(Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class CompactColumn(BaseModel):
+class Column(BaseModel):
     name: str
     type: str
     notNull: bool
@@ -85,17 +71,17 @@ class CompactColumn(BaseModel):
     properties: Optional[Dict[str, Any]] = None
 
 
-class CompactTableProperties(BaseModel):
+class TableProperties(BaseModel):
     schema: Optional[str]
     catalog: Optional[str]
     table: Optional[str]  # only table name without schema or catalog
 
 
-class CompactTable(BaseModel):
+class Table(BaseModel):
     name: str  # unique table name (might contain schema name or catalog name as well)
-    columns: List[CompactColumn]
+    columns: List[Column]
     description: Optional[str] = None
-    properties: CompactTableProperties = None
+    properties: TableProperties = None
     primaryKey: Optional[str] = None
 
 

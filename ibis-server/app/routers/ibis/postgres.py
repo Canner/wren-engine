@@ -7,8 +7,8 @@ from app.logger import log_dto
 from app.model.connector import Connector, QueryPostgresDTO, to_json
 from app.model.data_source import DataSource
 from app.model.validator import ValidateDTO, Validator
-from app.model.metadata_dto import MetadataDTO
-from app.model.metadata import Metadata
+from app.model.metadata.dto import MetadataDTO, Table, Constraint
+from app.model.metadata.factory import MetadataFactory
 
 router = APIRouter(prefix="/postgres", tags=["postgres"])
 
@@ -35,15 +35,16 @@ def validate(rule_name: str, dto: ValidateDTO) -> Response:
     return Response(status_code=204)
 
 
-@router.post("/metadata/tables")
+@router.post("/metadata/tables", response_model=list[Table])
 @log_dto
-def get_postgres_table_list(dto: MetadataDTO) -> dict:
-    table_list = Metadata.postgres.get_table_list(dto.connection_info)
-    return {"tables": table_list}
+def get_postgres_table_list(dto: MetadataDTO) -> list[Table]:
+    metadata = MetadataFactory(DataSource.postgres, dto.connection_info)
+    return metadata.get_table_list()
+    
 
-
-@router.post("/metadata/constraints")
+@router.post("/metadata/constraints", response_model=list[Constraint])
 @log_dto
-def get_postgres_constraints(dto: MetadataDTO) -> dict:
-    table_list = Metadata.postgres.get_constraints(dto.connection_info)
-    return {"constraints": table_list}
+def get_postgres_constraints(dto: MetadataDTO) -> list[Constraint]:
+    metadata = MetadataFactory(DataSource.postgres, dto.connection_info)
+    return metadata.get_constraints()
+
