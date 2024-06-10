@@ -228,6 +228,9 @@ mod tests {
             .unwrap();
         let expr =
             super::create_wren_calculated_field_expr(column_rf.clone(), analyzed_mdl.clone());
-        assert_eq!(expr.to_string(), "test.test.orders.orderkey + test.test.orders.custkey");
+        assert_eq!(
+            expr.to_string(),
+            "test.test.orders.orderkey + test.test.orders.custkey"
+        );
     }
 }

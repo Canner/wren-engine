@@ -207,7 +207,7 @@ pub fn transform_sql(
         Ok(sql) => {
             info!("wren-core planned SQL: {}", sql.to_string());
             Ok(sql.to_string())
-        },
+        }
         Err(e) => Err(e),
     }
 }
