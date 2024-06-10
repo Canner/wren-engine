@@ -38,12 +38,28 @@ impl AnalyzedWrenMDL {
         let lineage = lineage::Lineage::new(&wren_mdl);
         AnalyzedWrenMDL { wren_mdl, lineage }
     }
+
+    pub fn analyze_with_tables(
+        manifest: Manifest,
+        register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
+    ) -> Self {
+        let mut wren_mdl = WrenMDL::new(manifest);
+        for (name, table) in register_tables {
+            wren_mdl.register_table(name, table);
+        }
+        let lineage = lineage::Lineage::new(&wren_mdl);
+        AnalyzedWrenMDL {
+            wren_mdl: Arc::new(wren_mdl),
+            lineage,
+        }
+    }
 }
 
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
     pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
+    pub register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
 }
 
 impl WrenMDL {
@@ -94,11 +110,24 @@ impl WrenMDL {
         WrenMDL {
             manifest,
             qualified_references: qualifed_references,
+            register_tables: HashMap::new(),
         }
     }
 
     pub fn new_ref(manifest: Manifest) -> Arc<Self> {
         Arc::new(WrenMDL::new(manifest))
+    }
+
+    pub fn register_table(
+        &mut self,
+        name: String,
+        table: Arc<dyn datafusion::datasource::TableProvider>,
+    ) {
+        self.register_tables.insert(name, table);
+    }
+
+    pub fn get_table(&self, name: &str) -> Option<Arc<dyn datafusion::datasource::TableProvider>> {
+        self.register_tables.get(name).cloned()
     }
 
     pub fn catalog(&self) -> &str {

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
+use datafusion::datasource::DefaultTableSource;
 use datafusion::logical_expr::builder::LogicalTableSource;
 use datafusion::{
     common::{plan_err, Result},
@@ -92,7 +93,7 @@ impl RemoteContextProvider {
             .manifest
             .models
             .iter()
-            .map(|model| (model.name.clone(), create_remote_table_source(model)))
+            .map(|model| (model.name.clone(), create_remote_table_source(model, mdl)))
             .collect::<HashMap<_, _>>();
         Self {
             tables,
@@ -142,9 +143,13 @@ impl ContextProvider for RemoteContextProvider {
     }
 }
 
-fn create_remote_table_source(model: &Model) -> Arc<dyn TableSource> {
-    let schema = create_schema(model.get_physical_columns());
-    Arc::new(LogicalTableSource::new(schema))
+fn create_remote_table_source(model: &Model, wren_mdl: &WrenMDL) -> Arc<dyn TableSource> {
+    if let Some(table_provider) = wren_mdl.get_table(&model.table_reference) {
+        Arc::new(DefaultTableSource::new(table_provider))
+    } else {
+        let schema = create_schema(model.get_physical_columns());
+        Arc::new(LogicalTableSource::new(schema))
+    }
 }
 
 fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {

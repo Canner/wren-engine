@@ -77,7 +77,9 @@ impl Lineage {
         source_colums_map
             .iter()
             .for_each(|(column, source_columns)| {
-                let relation = column.clone().relation.unwrap();
+                let Some(relation) = column.clone().relation else {
+                    return;
+                };
                 let mut current_relation = match relation {
                     TableReference::Bare { table } => {
                         TableReference::full(mdl.catalog(), mdl.schema(), table)
