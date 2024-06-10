@@ -1,4 +1,4 @@
-OrderId,CustomerId,Status,PurchaseTimestamp,ApprovedTimestamp,DeliveredCarrierDate,DeliveredCustomerDate,EstimatedDeliveryDate
+order_id,customer_id,status,purchase_timestamp,approved_timestamp,delivered_carrier_date,delivered_customer_date,estimated_delivery_date
 76754c0e642c8f99a8c3fcb8a14ac700,f6c39f83de772dd502809cee2fee4c41,delivered,2022/10/26 9:31:00,2022/10/26 9:49:00,2022/10/26 21:33,2022/11/1 21:17,2022/11/22 0:00
 607911c4ac62f9038b4ec434673e486e,7cec2ad3ecf1b10ce543161225a13a97,delivered,2023/8/6 16:41:00,2023/8/6 16:50:00,2023/8/8 11:09,2023/8/13 17:57,2023/8/22 0:00
 0af28d87520565eb3b57c9b2abe1a2cc,0a209a88c2e3dc2981c79ad85c558059,delivered,2022/10/5 19:23:00,2022/10/5 20:28:00,2022/10/6 17:15,2022/10/17 20:58,2022/11/6 0:00

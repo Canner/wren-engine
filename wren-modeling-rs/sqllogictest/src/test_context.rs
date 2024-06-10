@@ -16,6 +16,7 @@
 // under the License.
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -71,19 +72,18 @@ impl TestContext {
             .with_target_partitions(4);
 
         let ctx = SessionContext::new_with_config(config);
-        let test_ctx = TestContext::new(ctx);
 
         let file_name = relative_path.file_name().unwrap().to_str().unwrap();
         match file_name {
             "model.slt" => {
                 info!("Registering local temporary table");
-                register_ecommerce_table(&test_ctx).await;
+                Some(register_ecommerce_table(&ctx).await.ok()?)
             }
             _ => {
                 info!("Using default SessionContext");
+                None
             }
-        };
-        Some(test_ctx)
+        }
     }
 
     /// Enables the test directory feature. If not enabled,
@@ -106,26 +106,26 @@ impl TestContext {
     }
 }
 
-pub async fn register_ecommerce_table(test_ctx: &TestContext) {
+pub async fn register_ecommerce_table(ctx: &SessionContext) -> Result<TestContext> {
     let path = PathBuf::from(TEST_RESOURCES).join("ecommerce");
     let data = read_dir_recursive(&path).unwrap();
 
     // register csv file with the execution context
     for file in data.iter() {
         let table_name = file.file_stem().unwrap().to_str().unwrap();
-        test_ctx
-            .ctx
-            .register_csv(table_name, file.to_str().unwrap(), CsvReadOptions::new())
+        ctx.register_csv(table_name, file.to_str().unwrap(), CsvReadOptions::new())
             .await
             .unwrap();
     }
-    register_ecommerce_mdl(&test_ctx.ctx).await;
+    let ctx = register_ecommerce_mdl(ctx).await?;
+    Ok(TestContext::new(ctx))
 }
 
-async fn register_ecommerce_mdl(ctx: &SessionContext) {
+async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> {
     let manifest = ManifestBuilder::new()
         .model(
             ModelBuilder::new("customers")
+                .table_reference("customers")
                 .column(ColumnBuilder::new("city", "varchar").build())
                 .column(ColumnBuilder::new("id", "varchar").build())
                 .column(ColumnBuilder::new("state", "varchar").build())
@@ -134,11 +134,12 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) {
         )
         .model(
             ModelBuilder::new("order_items")
-                .column(ColumnBuilder::new("freight_value", "double").build())
+                .table_reference("order_items")
+                .column(ColumnBuilder::new("freight_value", "varchar").build())
                 .column(ColumnBuilder::new("id", "varchar").build())
-                .column(ColumnBuilder::new("item_number", "integer").build())
+                .column(ColumnBuilder::new("item_number", "varchar").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("price", "double").build())
+                .column(ColumnBuilder::new("price", "varchar").build())
                 .column(ColumnBuilder::new("product_id", "varchar").build())
                 .column(ColumnBuilder::new("shipping_limit_date", "varchar").build())
                 .primary_key("id")
@@ -146,21 +147,60 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) {
         )
         .model(
             ModelBuilder::new("orders")
-                .column(ColumnBuilder::new("approved_timestamp", "timestamp").build())
+                .table_reference("orders")
+                .column(ColumnBuilder::new("approved_timestamp", "varchar").build())
                 .column(ColumnBuilder::new("customer_id", "varchar").build())
-                .column(ColumnBuilder::new("delivered_carrier_date", "date").build())
-                .column(ColumnBuilder::new("estimated_deliver_date", "date").build())
+                .column(ColumnBuilder::new("delivered_carrier_date", "varchar").build())
+                .column(ColumnBuilder::new("estimated_delivery_date", "varchar").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("purchase_timestamp", "timestamp").build())
+                .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
                 .build(),
         )
         .build();
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest));
-    ctx.state().with_analyzer_rules(vec![
-        Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
-        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
-    ]);
-    register_table_with_mdl(ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    let mut register_tables = HashMap::new();
+    register_tables.insert(
+        "orders".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("orders")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "order_items".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("order_items")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "customers".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("customers")
+            .await?
+            .unwrap(),
+    );
+    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze_with_tables(
+        manifest,
+        register_tables,
+    ));
+    let new_state = ctx
+        .state()
+        .add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))))
+        .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
+            &analyzed_mdl,
+        ))));
+    let ctx = SessionContext::new_with_state(new_state);
+    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    Ok(ctx)
 }
 
 pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) {
