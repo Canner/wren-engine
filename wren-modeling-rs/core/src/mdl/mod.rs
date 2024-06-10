@@ -10,6 +10,7 @@ use datafusion::{
         unparser::plan_to_sql,
     },
 };
+use log::{debug, info};
 
 use manifest::Relationship;
 
@@ -166,8 +167,7 @@ pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
 ) -> Result<String, DataFusionError> {
-    println!("SQL: {}", sql);
-    println!("********");
+    info!("wren-core received SQL: {}", sql);
 
     // parse the SQL
     let dialect = GenericDialect {};
@@ -184,8 +184,7 @@ pub fn transform_sql(
             return Err(e);
         }
     };
-    println!("Original LogicalPlan:\n {plan:?}");
-    println!("********");
+    debug!("wren-core got the origin plan:\n {plan:?}");
 
     let analyzer = Analyzer::with_rules(vec![
         Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
@@ -201,12 +200,14 @@ pub fn transform_sql(
             return Err(e);
         }
     };
-    println!("Do some modeling:\n {analyzed:?}");
-    println!("********");
+    debug!("wren-core final planned:\n {analyzed:?}");
 
     // show the planned sql
     match plan_to_sql(&analyzed) {
-        Ok(sql) => Ok(sql.to_string()),
+        Ok(sql) => {
+            info!("wren-core planned SQL: {}", sql.to_string());
+            Ok(sql.to_string())
+        },
         Err(e) => Err(e),
     }
 }
