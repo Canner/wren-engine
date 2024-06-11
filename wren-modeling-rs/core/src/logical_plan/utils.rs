@@ -60,7 +60,12 @@ pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn Table
     }
 }
 
-pub fn format_qualified_name(catalog: &str, schema: &str, dataset: &str, column: &str) -> String {
+pub fn format_qualified_name(
+    catalog: &str,
+    schema: &str,
+    dataset: &str,
+    column: &str,
+) -> String {
     format!("{}.{}.{}.{}", catalog, schema, dataset, column)
 }
 

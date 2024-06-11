@@ -14,6 +14,7 @@ use log::{debug, info};
 
 use manifest::Relationship;
 
+use crate::logical_plan::utils::from_qualified_name_str;
 use crate::{
     logical_plan::{
         context_provider::WrenContextProvider,
@@ -21,7 +22,6 @@ use crate::{
     },
     mdl::manifest::{Column, Manifest, Metric, Model},
 };
-use crate::logical_plan::utils::from_qualified_name_str;
 
 pub mod builder;
 pub mod lineage;
@@ -69,14 +69,16 @@ impl WrenMDL {
         manifest.models.iter().for_each(|model| {
             model.columns.iter().for_each(|column| {
                 qualifed_references.insert(
-
                     from_qualified_name_str(
                         &manifest.catalog,
                         &manifest.schema,
                         model.name(),
                         column.name(),
                     ),
-                    ColumnReference::new(Dataset::Model(Arc::clone(model)), Arc::clone(column)),
+                    ColumnReference::new(
+                        Dataset::Model(Arc::clone(model)),
+                        Arc::clone(column),
+                    ),
                 );
             });
         });
@@ -103,7 +105,10 @@ impl WrenMDL {
                         metric.name(),
                         measure.name(),
                     ),
-                    ColumnReference::new(Dataset::Metric(Arc::clone(metric)), Arc::clone(measure)),
+                    ColumnReference::new(
+                        Dataset::Metric(Arc::clone(metric)),
+                        Arc::clone(measure),
+                    ),
                 );
             });
         });
@@ -127,7 +132,10 @@ impl WrenMDL {
         self.register_tables.insert(name, table);
     }
 
-    pub fn get_table(&self, name: &str) -> Option<Arc<dyn datafusion::datasource::TableProvider>> {
+    pub fn get_table(
+        &self,
+        name: &str,
+    ) -> Option<Arc<dyn datafusion::datasource::TableProvider>> {
         self.register_tables.get(name).cloned()
     }
 
@@ -155,7 +163,10 @@ impl WrenMDL {
             .cloned()
     }
 
-    pub fn get_column_reference(&self, column: &datafusion::common::Column) -> ColumnReference {
+    pub fn get_column_reference(
+        &self,
+        column: &datafusion::common::Column,
+    ) -> ColumnReference {
         self.qualified_references
             .get(column)
             .unwrap_or_else(|| panic!("column {} not found", column))
@@ -265,8 +276,8 @@ mod test {
     use datafusion::sql::unparser::plan_to_sql;
 
     use crate::logical_plan::context_provider::RemoteContextProvider;
-    use crate::mdl::{self, AnalyzedWrenMDL};
     use crate::mdl::manifest::Manifest;
+    use crate::mdl::{self, AnalyzedWrenMDL};
 
     #[test]
     fn test_access_model() -> Result<(), Box<dyn Error>> {

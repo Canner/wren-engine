@@ -13,12 +13,12 @@ name = "wren_core"
 path = "src/lib.rs"
 
 [dependencies]
-datafusion = { workspace = true }
-tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
 arrow-schema = { workspace = true }
+async-trait = "0.1.80"
+datafusion = { workspace = true }
+log = { workspace = true }
 petgraph = "0.6.5"
 petgraph-evcxr = "*"
 serde = { workspace = true }
 serde_json = { workspace = true }
-async-trait = "0.1.80"
-log = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }

@@ -9,9 +9,9 @@ use petgraph::Graph;
 use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::{utils, WrenMDL};
 
-use super::Dataset;
 use super::manifest::{JoinType, Relationship};
 use super::utils::to_expr_queue;
+use super::Dataset;
 
 pub struct Lineage {
     pub source_columns_map: HashMap<Column, HashSet<Column>>,
@@ -44,7 +44,8 @@ impl Lineage {
                         None => return,
                     };
                     let source_columns = utils::collect_identifiers(expr);
-                    let qualified_name = from_qualified_name(mdl, model.name(), column.name());
+                    let qualified_name =
+                        from_qualified_name(mdl, model.name(), column.name());
                     source_columns.iter().for_each(|source_column| {
                         source_columns_map
                             .entry(qualified_name.clone())
@@ -60,7 +61,8 @@ impl Lineage {
                     });
                 // relationship columns are not a physical column
                 } else if column.relationship.is_none() {
-                    let qualified_name = from_qualified_name(mdl, model.name(), column.name());
+                    let qualified_name =
+                        from_qualified_name(mdl, model.name(), column.name());
                     source_columns_map.insert(qualified_name, HashSet::new());
                 }
             });
@@ -95,7 +97,9 @@ impl Lineage {
                 };
 
                 let column_ref = mdl.get_column_reference(column);
-                if !column_ref.column.is_calculated || column_ref.column.relationship.is_some() {
+                if !column_ref.column.is_calculated
+                    || column_ref.column.relationship.is_some()
+                {
                     return;
                 }
 
@@ -125,7 +129,8 @@ impl Lineage {
                                                 .find(|m| m != &current_relation.table())
                                                 .cloned()
                                                 .unwrap();
-                                            if related_model_name != source_column_ref.column.r#type
+                                            if related_model_name
+                                                != source_column_ref.column.r#type
                                             {
                                                 panic!(
                                                     "invalid relationship type: {}",
@@ -140,18 +145,21 @@ impl Lineage {
                                                     required_fields_map
                                                         .entry(column.clone())
                                                         .or_default()
-                                                        .insert(Column::from_qualified_name(
-                                                            format!(
-                                                                "{}.{}.{}",
-                                                                mdl.catalog(),
-                                                                mdl.schema(),
-                                                                ident.flat_name()
+                                                        .insert(
+                                                            Column::from_qualified_name(
+                                                                format!(
+                                                                    "{}.{}.{}",
+                                                                    mdl.catalog(),
+                                                                    mdl.schema(),
+                                                                    ident.flat_name()
+                                                                ),
                                                             ),
-                                                        ));
+                                                        );
                                                 });
 
-                                            let related_model =
-                                                mdl.get_model(&related_model_name).unwrap();
+                                            let related_model = mdl
+                                                .get_model(&related_model_name)
+                                                .unwrap();
 
                                             let right_vertex = *node_index_map
                                                 .entry(Dataset::Model(Arc::clone(
@@ -277,11 +285,11 @@ fn get_dataset_link_revers_if_need(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
     use std::{
         fs,
         path::{self, PathBuf},
     };
-    use std::collections::HashSet;
 
     use datafusion::common::Column;
     use datafusion::sql::TableReference;

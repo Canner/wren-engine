@@ -194,17 +194,11 @@ mod tests {
                 "customer_name",
             ))
             .unwrap();
-<<<<<<< HEAD
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
             analyzed_mdl.clone(),
         );
-        assert_eq!(expr.to_string(), "customer.name");
-=======
-        let expr =
-            super::create_wren_calculated_field_expr(column_rf.clone(), analyzed_mdl.clone());
         assert_eq!(expr.to_string(), "test.test.customer.name");
->>>>>>> 182a398 (fix test)
     }
 
     #[test]
@@ -226,8 +220,10 @@ mod tests {
                 "orderkey_plus_custkey",
             ))
             .unwrap();
-        let expr =
-            super::create_wren_calculated_field_expr(column_rf.clone(), analyzed_mdl.clone());
+        let expr = super::create_wren_calculated_field_expr(
+            column_rf.clone(),
+            analyzed_mdl.clone(),
+        );
         assert_eq!(
             expr.to_string(),
             "test.test.orders.orderkey + test.test.orders.custkey"

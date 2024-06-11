@@ -1,17 +1,18 @@
-use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 use std::cell::RefCell;
 use std::cmp::{Ordering, PartialEq};
 use std::collections::{BTreeSet, HashSet};
+use std::{collections::HashMap, fmt, fmt::Debug, sync::Arc};
 
 use arrow_schema::Field;
-use datafusion::common::{DFSchema, DFSchemaRef, Result};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::logical_expr::{
-    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan, UserDefinedLogicalNodeCore,
-};
-use datafusion::logical_expr::{Extension, utils};
+use datafusion::common::{DFSchema, DFSchemaRef, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
+use datafusion::logical_expr::{
+    col, Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan,
+    UserDefinedLogicalNodeCore,
+};
+use datafusion::logical_expr::{utils, Extension};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::prelude::Column;
 use datafusion::sql::TableReference;
@@ -19,10 +20,10 @@ use petgraph::Graph;
 
 use crate::logical_plan::rule::RelationChain::Nil;
 use crate::mdl;
-use crate::mdl::{AnalyzedWrenMDL, Dataset, WrenMDL};
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::{JoinType, Model};
 use crate::mdl::utils::{create_remote_expr_for_model, is_dag};
+use crate::mdl::{AnalyzedWrenMDL, Dataset, WrenMDL};
 
 use super::utils::{create_remote_table_source, from_qualified_name, map_data_type};
 
@@ -84,7 +85,8 @@ impl ModelAnalyzeRule {
                     return Ok(Transformed::no(LogicalPlan::TableScan(table_scan)));
                 }
                 let table_name = table_scan.table_name.table();
-                if let Some(model) = self.analyzed_wren_mdl.wren_mdl.get_model(table_name) {
+                if let Some(model) = self.analyzed_wren_mdl.wren_mdl.get_model(table_name)
+                {
                     let model = LogicalPlan::Extension(Extension {
                         node: Arc::new(ModelPlanNode::new(
                             model,
@@ -213,7 +215,8 @@ impl ModelPlanNode {
     ) -> Self {
         let mut required_exprs_buffer = BTreeSet::new();
         let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
-        let mut model_required_fields: HashMap<TableReference, BTreeSet<Column>> = HashMap::new();
+        let mut model_required_fields: HashMap<TableReference, BTreeSet<Column>> =
+            HashMap::new();
         let fields = model
             .get_physical_columns()
             .iter()
@@ -338,7 +341,9 @@ impl ModelPlanNode {
                     );
                     let required_filed = model_required_fields
                         .get(&model_ref)
-                        .unwrap_or_else(|| panic!("Required fields not found {}", model.name()))
+                        .unwrap_or_else(|| {
+                            panic!("Required fields not found {}", model.name())
+                        })
                         .iter()
                         .map(|c| Expr::Column(c.clone()))
                         .collect();
