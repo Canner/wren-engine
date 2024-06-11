@@ -1,2 +1,4 @@
 Cargo.lock
 target/
+core/src/main.rs
+sqllogictest/test_sql_files/scratch/
