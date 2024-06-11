@@ -17,7 +17,9 @@
 
 use datafusion::arrow::datatypes::Fields;
 use datafusion::arrow::util::display::ArrayFormatter;
-use datafusion::arrow::{array, array::ArrayRef, datatypes::DataType, record_batch::RecordBatch};
+use datafusion::arrow::{
+    array, array::ArrayRef, datatypes::DataType, record_batch::RecordBatch,
+};
 use datafusion::common::format::DEFAULT_FORMAT_OPTIONS;
 use datafusion::common::DataFusionError;
 use std::path::PathBuf;
@@ -157,7 +159,8 @@ fn workspace_root() -> &'static object_store::path::Path {
         let sanitized_workplace_root = if cfg!(windows) {
             // Object store paths are delimited with `/`, e.g. `/datafusion/datafusion/testing/data/csv/aggregate_test_100.csv`.
             // The default windows delimiter is `\`, so the workplace path is `datafusion\datafusion`.
-            workspace_root.replace(std::path::MAIN_SEPARATOR, object_store::path::DELIMITER)
+            workspace_root
+                .replace(std::path::MAIN_SEPARATOR, object_store::path::DELIMITER)
         } else {
             workspace_root.to_string()
         };
@@ -204,10 +207,18 @@ pub fn cell_to_string(col: &ArrayRef, row: usize) -> Result<String> {
     } else {
         match col.data_type() {
             DataType::Null => Ok(NULL_STR.to_string()),
-            DataType::Boolean => Ok(bool_to_str(get_row_value!(array::BooleanArray, col, row))),
-            DataType::Float16 => Ok(f16_to_str(get_row_value!(array::Float16Array, col, row))),
-            DataType::Float32 => Ok(f32_to_str(get_row_value!(array::Float32Array, col, row))),
-            DataType::Float64 => Ok(f64_to_str(get_row_value!(array::Float64Array, col, row))),
+            DataType::Boolean => {
+                Ok(bool_to_str(get_row_value!(array::BooleanArray, col, row)))
+            }
+            DataType::Float16 => {
+                Ok(f16_to_str(get_row_value!(array::Float16Array, col, row)))
+            }
+            DataType::Float32 => {
+                Ok(f32_to_str(get_row_value!(array::Float32Array, col, row)))
+            }
+            DataType::Float64 => {
+                Ok(f64_to_str(get_row_value!(array::Float64Array, col, row)))
+            }
             DataType::Decimal128(precision, scale) => {
                 let value = get_row_value!(array::Decimal128Array, col, row);
                 Ok(i128_to_str(value, precision, scale))
@@ -221,7 +232,9 @@ pub fn cell_to_string(col: &ArrayRef, row: usize) -> Result<String> {
                 col,
                 row
             ))),
-            DataType::Utf8 => Ok(varchar_to_str(get_row_value!(array::StringArray, col, row))),
+            DataType::Utf8 => {
+                Ok(varchar_to_str(get_row_value!(array::StringArray, col, row)))
+            }
             _ => {
                 let f = ArrayFormatter::try_new(col.as_ref(), &DEFAULT_FORMAT_OPTIONS);
                 Ok(f.unwrap().value(row).to_string())
@@ -252,9 +265,10 @@ pub(crate) fn convert_schema_to_types(columns: &Fields) -> Vec<DFColumnType> {
             | DataType::Decimal128(_, _)
             | DataType::Decimal256(_, _) => DFColumnType::Float,
             DataType::Utf8 | DataType::LargeUtf8 => DFColumnType::Text,
-            DataType::Date32 | DataType::Date64 | DataType::Time32(_) | DataType::Time64(_) => {
-                DFColumnType::DateTime
-            }
+            DataType::Date32
+            | DataType::Date64
+            | DataType::Time32(_)
+            | DataType::Time64(_) => DFColumnType::DateTime,
             DataType::Timestamp(_, _) => DFColumnType::Timestamp,
             _ => DFColumnType::Another,
         })

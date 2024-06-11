@@ -183,7 +183,9 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
         )
         .await
         // Can't use e directly because it isn't marked Send, so turn it into a string.
-        .map_err(|e| DataFusionError::Execution(format!("Error completing {relative_path:?}: {e}")))
+        .map_err(|e| {
+            DataFusionError::Execution(format!("Error completing {relative_path:?}: {e}"))
+        })
 }
 
 /// Represents a parsed test file
@@ -214,7 +216,9 @@ impl TestFile {
     }
 }
 
-fn read_test_files<'a>(options: &'a Options) -> Result<Box<dyn Iterator<Item = TestFile> + 'a>> {
+fn read_test_files<'a>(
+    options: &'a Options,
+) -> Result<Box<dyn Iterator<Item = TestFile> + 'a>> {
     Ok(Box::new(
         read_dir_recursive(TEST_DIRECTORY)?
             .into_iter()
