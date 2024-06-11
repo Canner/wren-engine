@@ -10,6 +10,12 @@ pub struct ManifestBuilder {
     pub manifest: Manifest,
 }
 
+impl Default for ManifestBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ManifestBuilder {
     pub fn new() -> Self {
         Self {

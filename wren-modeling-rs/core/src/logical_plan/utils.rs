@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use arrow_schema::{DataType, Field, Schema, SchemaRef};
+use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
 
 use crate::mdl::{
@@ -12,6 +12,9 @@ pub fn map_data_type(data_type: &str) -> DataType {
     match data_type {
         "integer" => DataType::Int32,
         "varchar" => DataType::Utf8,
+        "double" => DataType::Float64,
+        "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None),
+        "date" => DataType::Date32,
         _ => unimplemented!("{}", &data_type),
     }
 }
