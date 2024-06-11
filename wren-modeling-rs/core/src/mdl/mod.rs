@@ -52,7 +52,10 @@ impl WrenMDL {
             model.columns.iter().for_each(|column| {
                 qualifed_references.insert(
                     format!("{}.{}", model.name, column.name),
-                    ColumnReference::new(Dataset::Model(Arc::clone(model)), Arc::clone(column)),
+                    ColumnReference::new(
+                        Dataset::Model(Arc::clone(model)),
+                        Arc::clone(column),
+                    ),
                 );
             });
         });
@@ -69,7 +72,10 @@ impl WrenMDL {
             metric.measure.iter().for_each(|measure| {
                 qualifed_references.insert(
                     format!("{}.{}", metric.name, measure.name),
-                    ColumnReference::new(Dataset::Metric(Arc::clone(metric)), Arc::clone(measure)),
+                    ColumnReference::new(
+                        Dataset::Metric(Arc::clone(metric)),
+                        Arc::clone(measure),
+                    ),
                 );
             });
         });
@@ -216,9 +222,10 @@ mod test {
 
     #[test]
     fn test_access_model() -> Result<(), Box<dyn Error>> {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));

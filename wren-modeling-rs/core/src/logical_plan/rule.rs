@@ -209,7 +209,8 @@ impl ModelPlanNode {
             .filter(|column| {
                 requried_fields.iter().any(|expr| {
                     if let Expr::Column(column_expr) = expr {
-                        column_expr.flat_name() == format_qualified_name(&model.name, &column.name)
+                        column_expr.flat_name()
+                            == format_qualified_name(&model.name, &column.name)
                     } else {
                         false
                     }
@@ -231,10 +232,9 @@ impl ModelPlanNode {
                         required_exprs_buffer.insert(OrdExpr::new(expr_plan));
                     };
 
-                    let qualified_column = Column::from_qualified_name(format_qualified_name(
-                        &model.name,
-                        &column.name,
-                    ));
+                    let qualified_column = Column::from_qualified_name(
+                        format_qualified_name(&model.name, &column.name),
+                    );
 
                     match analyzed_wren_mdl
                         .lineage
@@ -257,7 +257,9 @@ impl ModelPlanNode {
                         .for_each(|c| {
                             let relation_name = match &c.relation {
                                 Some(r) => r.to_string(),
-                                None => panic!("Source dataset not found for column {}", c),
+                                None => {
+                                    panic!("Source dataset not found for column {}", c)
+                                }
                             };
                             model_required_fields
                                 .entry(relation_name)
@@ -293,7 +295,8 @@ impl ModelPlanNode {
         }
 
         let schema_ref = DFSchemaRef::new(
-            DFSchema::new_with_metadata(fields, HashMap::new()).expect("create schema failed"),
+            DFSchema::new_with_metadata(fields, HashMap::new())
+                .expect("create schema failed"),
         );
 
         let mut relation_chain = Nil;
@@ -403,7 +406,10 @@ impl From<OrdExpr> for Expr {
     }
 }
 
-fn merge_graph(graph: &mut Graph<Dataset, DatasetLink>, new_graph: &Graph<Dataset, DatasetLink>) {
+fn merge_graph(
+    graph: &mut Graph<Dataset, DatasetLink>,
+    new_graph: &Graph<Dataset, DatasetLink>,
+) {
     let mut node_map = HashMap::new();
     for node in new_graph.node_indices() {
         let new_node = graph.add_node(new_graph[node].clone());
@@ -532,10 +538,15 @@ impl ModelGenerationRule {
         }
     }
 
-    fn generate_model_internal(&self, plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    fn generate_model_internal(
+        &self,
+        plan: LogicalPlan,
+    ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::Extension(extension) => {
-                if let Some(model_plan) = extension.node.as_any().downcast_ref::<ModelPlanNode>() {
+                if let Some(model_plan) =
+                    extension.node.as_any().downcast_ref::<ModelPlanNode>()
+                {
                     let model: Arc<Model> = Arc::clone(
                         &self
                             .analyzed_wren_mdl

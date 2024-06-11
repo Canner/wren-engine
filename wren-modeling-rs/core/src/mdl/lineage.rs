@@ -43,8 +43,10 @@ impl Lineage {
                         None => return,
                     };
                     let source_columns = utils::collect_identifiers(expr);
-                    let qualified_name =
-                        Column::from_qualified_name(format!("{}.{}", model.name, column.name));
+                    let qualified_name = Column::from_qualified_name(format!(
+                        "{}.{}",
+                        model.name, column.name
+                    ));
                     source_columns.iter().for_each(|source_column| {
                         source_columns_map
                             .entry(qualified_name.clone())
@@ -53,8 +55,10 @@ impl Lineage {
                     });
                 // relationship columns are not a physical column
                 } else if column.relationship.is_none() {
-                    let qualified_name =
-                        Column::from_qualified_name(format!("{}.{}", model.name, column.name));
+                    let qualified_name = Column::from_qualified_name(format!(
+                        "{}.{}",
+                        model.name, column.name
+                    ));
                     source_columns_map.insert(qualified_name, HashSet::new());
                 }
             });
@@ -78,8 +82,11 @@ impl Lineage {
                     panic!("Expected a bare table reference, got {:?}", column.relation);
                 };
 
-                let column_ref = mdl.get_column_reference(model_name.as_ref(), &column.name);
-                if !column_ref.column.is_calculated || column_ref.column.relationship.is_some() {
+                let column_ref =
+                    mdl.get_column_reference(model_name.as_ref(), &column.name);
+                if !column_ref.column.is_calculated
+                    || column_ref.column.relationship.is_some()
+                {
                     return;
                 }
 
@@ -89,10 +96,13 @@ impl Lineage {
                     let mut expr_parts = to_expr_queue(source_column.clone());
                     while !expr_parts.is_empty() {
                         let ident = expr_parts.pop_front().unwrap();
-                        let source_column_ref = mdl.get_column_reference(&model_name, &ident);
+                        let source_column_ref =
+                            mdl.get_column_reference(&model_name, &ident);
                         let left_vertex = *node_index_map
                             .entry(column_ref.dataset.clone())
-                            .or_insert_with(|| directed_graph.add_node(column_ref.dataset.clone()));
+                            .or_insert_with(|| {
+                                directed_graph.add_node(column_ref.dataset.clone())
+                            });
                         match source_column_ref.dataset {
                             Dataset::Model(_) => {
                                 match source_column_ref.column.relationship.clone() {
@@ -101,11 +111,16 @@ impl Lineage {
                                             let related_model_name: Arc<str> = rs_rf
                                                 .models
                                                 .iter()
-                                                .find(|m| m.as_str() != model_name.as_ref())
+                                                .find(|m| {
+                                                    m.as_str() != model_name.as_ref()
+                                                })
                                                 .map(|m| m.as_str().into())
                                                 .unwrap();
                                             if related_model_name.as_ref()
-                                                != source_column_ref.column.r#type.as_str()
+                                                != source_column_ref
+                                                    .column
+                                                    .r#type
+                                                    .as_str()
                                             {
                                                 panic!(
                                                     "invalid relationship type: {}",
@@ -120,46 +135,63 @@ impl Lineage {
                                                     required_fields_map
                                                         .entry(column.clone())
                                                         .or_default()
-                                                        .insert(Column::from_qualified_name(
-                                                            ident.flat_name(),
-                                                        ));
+                                                        .insert(
+                                                            Column::from_qualified_name(
+                                                                ident.flat_name(),
+                                                            ),
+                                                        );
                                                 });
 
-                                            let related_model =
-                                                mdl.get_model(related_model_name.as_ref()).unwrap();
+                                            let related_model = mdl
+                                                .get_model(related_model_name.as_ref())
+                                                .unwrap();
 
                                             let right_vertex = *node_index_map
-                                                .entry(Dataset::Model(Arc::clone(&related_model)))
+                                                .entry(Dataset::Model(Arc::clone(
+                                                    &related_model,
+                                                )))
                                                 .or_insert_with(|| {
-                                                    directed_graph.add_node(Dataset::Model(
-                                                        Arc::clone(&related_model),
-                                                    ))
+                                                    directed_graph.add_node(
+                                                        Dataset::Model(Arc::clone(
+                                                            &related_model,
+                                                        )),
+                                                    )
                                                 });
                                             directed_graph.add_edge(
                                                 left_vertex,
                                                 right_vertex,
                                                 get_dataset_link_revers_if_need(
                                                     column_ref.dataset.clone(),
-                                                    Dataset::Model(Arc::clone(&related_model)),
+                                                    Dataset::Model(Arc::clone(
+                                                        &related_model,
+                                                    )),
                                                     rs_rf,
                                                 ),
                                             );
 
                                             model_name = related_model_name;
                                         } else {
-                                            panic!("relationship not found: {}", source_column);
+                                            panic!(
+                                                "relationship not found: {}",
+                                                source_column
+                                            );
                                         }
                                     }
                                     None => {
                                         if !expr_parts.is_empty() {
-                                            panic!("invalid relationship chain: {}", source_column);
+                                            panic!(
+                                                "invalid relationship chain: {}",
+                                                source_column
+                                            );
                                         }
                                         let value = Column::from_qualified_name(format!(
                                             "{}.{}",
                                             model_name, source_column_ref.column.name
                                         ));
                                         if source_column_ref.column.is_calculated {
-                                            todo!("calculated source column not supported")
+                                            todo!(
+                                                "calculated source column not supported"
+                                            )
                                         }
                                         required_fields_map
                                             .entry(column.clone())
@@ -200,7 +232,12 @@ pub struct DatasetLink {
 }
 
 impl DatasetLink {
-    fn new(source: Dataset, target: Dataset, join_type: JoinType, condition: String) -> Self {
+    fn new(
+        source: Dataset,
+        target: Dataset,
+        join_type: JoinType,
+        condition: String,
+    ) -> Self {
         DatasetLink {
             source,
             target,
@@ -241,12 +278,14 @@ mod test {
 
     #[test]
     fn test_collect_source_columns() {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
-        let mdl_json =
-            fs::read_to_string(path::Path::new(test_data.as_path())).expect("Unable to read file");
-        let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
+            .expect("Unable to read file");
+        let manifest =
+            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
         assert_eq!(lineage.source_columns_map.len(), 9);
@@ -287,12 +326,14 @@ mod test {
 
     #[test]
     fn test_collect_required_fields() {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
-        let mdl_json =
-            fs::read_to_string(path::Path::new(test_data.as_path())).expect("Unable to read file");
-        let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
+            .expect("Unable to read file");
+        let manifest =
+            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
         assert_eq!(lineage.required_fields_map.len(), 4);
@@ -337,12 +378,14 @@ mod test {
 
     #[test]
     fn test_required_dataset_topo() {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
-        let mdl_json =
-            fs::read_to_string(path::Path::new(test_data.as_path())).expect("Unable to read file");
-        let manifest = serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
+            .expect("Unable to read file");
+        let manifest =
+            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
         assert_eq!(lineage.required_dataset_topo.len(), 4);
