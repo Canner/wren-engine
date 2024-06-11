@@ -5,10 +5,10 @@ from starlette.responses import PlainTextResponse
 from app.config import get_config
 from app.model.connector import QueryDryRunError
 from app.model.validator import ValidationError
-from app.routers import ibis
+from app.routers import v2
 
 app = FastAPI()
-app.include_router(ibis.router)
+app.include_router(v2.router)
 
 
 @app.get("/")
