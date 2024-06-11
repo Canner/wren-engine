@@ -9,8 +9,26 @@ There are some modules:
 
 # How to Test / Build
 
-- Run Tset
-Currently, the test cases are placed in `src/mdl/mod.rs`
+- Run Test
+  Currently, the test cases are placed in `src/mdl/mod.rs`
+
 ```
 cargo test
+```
+
+# Coding Style
+
+Please format your code with `rustfmt` and `taplo` before submitting a pull request.
+
+## Format with rustfmt
+
+```
+cargo fmt
+```
+
+## Format toml with taplo
+
+```
+cargo install taplo-cli --locked
+taplo fmt
 ```

@@ -12,8 +12,8 @@ rust-version = "1.78"
 version = "0.1.0"
 
 [workspace.dependencies]
-datafusion = { version = "38.0.0" }
-tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
 arrow-schema = { version = "51.0.0", default-features = false }
+datafusion = { version = "38.0.0" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = { version = "1.0.117" }
+tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }

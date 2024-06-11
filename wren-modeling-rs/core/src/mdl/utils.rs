@@ -199,9 +199,10 @@ mod tests {
 
     #[test]
     fn test_create_wren_expr() {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
@@ -211,16 +212,19 @@ mod tests {
             .qualified_references
             .get(format!("{}.{}", "orders", "customer_name").as_str())
             .unwrap();
-        let expr =
-            super::create_wren_calculated_field_expr(column_rf.clone(), analyzed_mdl.clone());
+        let expr = super::create_wren_calculated_field_expr(
+            column_rf.clone(),
+            analyzed_mdl.clone(),
+        );
         assert_eq!(expr.to_string(), "customer.name");
     }
 
     #[test]
     fn test_create_wren_expr_non_relationship() {
-        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-            .iter()
-            .collect();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
@@ -230,8 +234,10 @@ mod tests {
             .qualified_references
             .get(format!("{}.{}", "orders", "orderkey_plus_custkey").as_str())
             .unwrap();
-        let expr =
-            super::create_wren_calculated_field_expr(column_rf.clone(), analyzed_mdl.clone());
+        let expr = super::create_wren_calculated_field_expr(
+            column_rf.clone(),
+            analyzed_mdl.clone(),
+        );
         assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
     }
 }

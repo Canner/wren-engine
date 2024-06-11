@@ -344,10 +344,12 @@ impl ViewBuilder {
 #[cfg(test)]
 mod test {
     use crate::mdl::builder::{
-        ColumnBuilder, MetricBuilder, ModelBuilder, RelationshipBuilder, TimeGrainBuilder,
-        ViewBuilder,
+        ColumnBuilder, MetricBuilder, ModelBuilder, RelationshipBuilder,
+        TimeGrainBuilder, ViewBuilder,
     };
-    use crate::mdl::manifest::{Column, JoinType, Metric, Model, Relationship, TimeUnit, View};
+    use crate::mdl::manifest::{
+        Column, JoinType, Metric, Model, Relationship, TimeUnit, View,
+    };
     use std::sync::Arc;
 
     #[test]
@@ -481,7 +483,8 @@ mod test {
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
-        let actual: crate::mdl::manifest::Manifest = serde_json::from_str(&json_str).unwrap();
+        let actual: crate::mdl::manifest::Manifest =
+            serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
     }
 }
