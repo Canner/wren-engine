@@ -28,6 +28,6 @@ def query(
 @router.post("/validate/{rule_name}")
 @log_dto
 def validate(rule_name: str, dto: ValidateDTO) -> Response:
-    validator = Validator(data_source, dto.connection_info, dto.manifest_str)
+    validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)

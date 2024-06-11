@@ -2,22 +2,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.mdl.rewriter import rewrite
-from app.model.data_source import ConnectionInfo, DataSource
+from app.model.connector import Connector
+from app.model.data_source import ConnectionInfo
 
 rules = ["column_is_valid"]
 
 
 class Validator:
-    def __init__(
-        self,
-        data_source: DataSource,
-        connection_info: ConnectionInfo,
-        manifest_str: str,
-    ):
-        self.data_source = data_source
-        self.connection = self.data_source.get_connection(connection_info)
-        self.manifest_str = manifest_str
+    def __init__(self, connector: Connector):
+        self.connector = connector
 
     def validate(self, rule: str, parameters: dict[str, str]):
         if rule not in rules:
@@ -37,10 +30,10 @@ class Validator:
         if column_name is None:
             raise MissingRequiredParameterError("columnName")
 
-        sql = f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
-        rewritten_sql = rewrite(self.manifest_str, sql)
         try:
-            self.connection.sql(rewritten_sql, dialect="trino")
+            self.connector.dry_run(
+                f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
+            )
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {str(e)}")
 
