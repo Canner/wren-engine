@@ -1,7 +1,6 @@
 # Modeling Module
 
-This is just a very early version of transforming SQL with DataFusion. The main program is a simple use case
-demonstrating how to use the mdl library.
+This is just a very early version of transforming SQL with DataFusion. The main program is a simple use case demonstrating how to use the mdl library.
 
 There are some modules:
 
@@ -10,7 +9,7 @@ There are some modules:
 
 # How to Test / Build
 
-- Run Tset
+- Run Test
   Currently, the test cases are placed in `src/mdl/mod.rs`
 
 ```
@@ -27,7 +26,7 @@ Please format your code with `rustfmt` and `taplo` before submitting a pull requ
 cargo fmt
 ```
 
-## Format with taplo
+## Format toml with taplo
 
 ```
 cargo install taplo-cli --locked
