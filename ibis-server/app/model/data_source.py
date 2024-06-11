@@ -89,6 +89,7 @@ class SnowflakeConnectionInfo(BaseModel):
 
 ConnectionInfo = Union[
     PostgresConnectionInfo,
+    PostgresConnectionUrl,
     BigQueryConnectionInfo,
     SnowflakeConnectionInfo,
 ]

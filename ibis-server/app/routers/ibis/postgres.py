@@ -4,9 +4,9 @@ from fastapi import APIRouter, Query, Response
 from fastapi.responses import JSONResponse
 
 from app.logger import log_dto
-from app.model.connector import Connector
+from app.model.connector import Connector, QueryPostgresDTO, to_json
 from app.model.data_source import DataSource
-from app.model.dto import PostgresDTO
+from app.model.validator import ValidateDTO, Validator
 
 router = APIRouter(prefix="/postgres", tags=["postgres"])
 
@@ -16,12 +16,18 @@ data_source = DataSource.postgres
 @router.post("/query")
 @log_dto
 def query(
-    dto: PostgresDTO, dry_run: Annotated[bool, Query(alias="dryRun")] = False
+    dto: QueryPostgresDTO, dry_run: Annotated[bool, Query(alias="dryRun")] = False
 ) -> Response:
-    connector = Connector(
-        data_source, dto.connection_info, dto.manifest_str, dto.column_dtypes
-    )
+    connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
         connector.dry_run(dto.sql)
         return Response(status_code=204)
-    return JSONResponse(connector.query(dto.sql))
+    return JSONResponse(to_json(connector.query(dto.sql), dto.column_dtypes))
+
+
+@router.post("/validate/{rule_name}")
+@log_dto
+def validate(rule_name: str, dto: ValidateDTO) -> Response:
+    validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
+    validator.validate(rule_name, dto.parameters)
+    return Response(status_code=204)
