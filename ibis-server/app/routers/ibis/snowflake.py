@@ -4,8 +4,8 @@ from fastapi import APIRouter, Query, Response
 from fastapi.responses import JSONResponse
 
 from app.logger import log_dto
+from app.model.connector import Connector, QuerySnowflakeDTO, to_json
 from app.model.data_source import DataSource
-from app.model.querier import Querier, QuerySnowflakeDTO
 from app.model.validator import ValidateDTO, Validator
 
 router = APIRouter(prefix="/snowflake", tags=["snowflake"])
@@ -18,13 +18,11 @@ data_source = DataSource.snowflake
 def query(
     dto: QuerySnowflakeDTO, dry_run: Annotated[bool, Query(alias="dryRun")] = False
 ) -> Response:
-    querier = Querier(
-        data_source, dto.connection_info, dto.manifest_str, dto.column_dtypes
-    )
+    connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
-        querier.dry_run(dto.sql)
+        connector.dry_run(dto.sql)
         return Response(status_code=204)
-    return JSONResponse(querier.query(dto.sql))
+    return JSONResponse(to_json(connector.query(dto.sql), dto.column_dtypes))
 
 
 @router.post("/validate/{rule_name}")
