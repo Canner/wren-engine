@@ -22,11 +22,23 @@ jobs:
         uses: chartboost/ruff-action@v1
         with:
           src: './ibis-server'
-          changed-files: 'true'
+          args: 'format --check'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
       - name: Start Wren JAVA engine
-        working-directory: ./example/duckdb-tpch-example
+        working-directory: .
         run: |
-          docker compose --env-file .env up -d
+          mkdir etc
+          echo "node.environment=production" >> etc/config.properties
+          echo "wren.directory=./etc/mdl" >> etc/config.properties
+          echo "wren.experimental-enable-dynamic-fields=true" >> etc/config.properties
+          ./mvnw clean install -B -DskipTests -P exec-jar
+          java -Dconfig=etc/config.properties \
+                --add-opens=java.base/java.nio=ALL-UNNAMED \
+                -jar ./wren-server/target/wren-server-*-executable.jar &
       - name: Install poetry
         run: pipx install poetry
       - uses: actions/setup-python@v5
@@ -40,14 +52,14 @@ jobs:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
         run: poetry run pytest -m "not bigquery and not snowflake"
       - name: Test bigquery if need
-        if : contains(github.event.pull_request.labels.*.name, 'bigquery')
+        if: contains(github.event.pull_request.labels.*.name, 'bigquery')
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
           TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}
           TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON: ${{ secrets.TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON }}
         run: poetry run pytest -m bigquery
       - name: Test snowflake if need
-        if : contains(github.event.pull_request.labels.*.name, 'snowflake')
+        if: contains(github.event.pull_request.labels.*.name, 'snowflake')
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
