@@ -83,7 +83,7 @@ public class AnalysisResource
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 
-    private static QueryAnalysisDto toQueryAnalysisDto(QueryAnalysis queryAnalysis)
+    static QueryAnalysisDto toQueryAnalysisDto(QueryAnalysis queryAnalysis)
     {
         return new QueryAnalysisDto(
                 queryAnalysis.getSelectItems().stream().map(AnalysisResource::toColumnAnalysisDto).toList(),

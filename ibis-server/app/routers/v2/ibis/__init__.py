@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-import app.routers.ibis.bigquery as bigquery
-import app.routers.ibis.postgres as postgres
-import app.routers.ibis.snowflake as snowflake
+import app.routers.v2.ibis.bigquery as bigquery
+import app.routers.v2.ibis.postgres as postgres
+import app.routers.v2.ibis.snowflake as snowflake
 
-prefix = "/v2/ibis"
+prefix = "/ibis"
 
 router = APIRouter(prefix=prefix)
 
