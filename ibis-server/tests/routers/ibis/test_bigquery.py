@@ -307,3 +307,19 @@ class TestBigquery:
         )
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
+
+    def test_metadata_list_tables(self):
+        connection_info = self.get_connection_info()
+        response = client.post(
+            url="/v2/ibis/bigquery/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+
+    def test_metadata_list_constraints(self):
+        connection_info = self.get_connection_info()
+        response = client.post(
+            url="/v2/ibis/bigquery/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200

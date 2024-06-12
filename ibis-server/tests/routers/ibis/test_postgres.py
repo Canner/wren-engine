@@ -365,3 +365,19 @@ class TestPostgres:
         )
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
+
+    def test_metadata_list_tables(self, postgres: PostgresContainer):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+
+    def test_metadata_list_constraints(self, postgres: PostgresContainer):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
