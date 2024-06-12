@@ -34,6 +34,7 @@ jobs:
           mkdir etc
           echo "node.environment=production" >> etc/config.properties
           echo "wren.directory=./etc/mdl" >> etc/config.properties
+          echo "wren.experimental-enable-dynamic-fields=true" >> etc/config.properties
           ./mvnw clean install -B -DskipTests -P exec-jar
           java -Dconfig=etc/config.properties \
                 --add-opens=java.base/java.nio=ALL-UNNAMED \
