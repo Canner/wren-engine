@@ -1,4 +1,4 @@
-from app.model.dto import BigQueryConnectionInfo
+from app.model.data_source import BigQueryConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.metadata import Metadata
 from app.model.metadata.dto import (
