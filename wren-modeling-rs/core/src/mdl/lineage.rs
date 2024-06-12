@@ -6,6 +6,7 @@ use datafusion::common::Column;
 use datafusion::sql::TableReference;
 use petgraph::Graph;
 
+use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::{utils, WrenMDL};
 
 use super::manifest::{JoinType, Relationship};
@@ -43,22 +44,25 @@ impl Lineage {
                         None => return,
                     };
                     let source_columns = utils::collect_identifiers(expr);
-                    let qualified_name = Column::from_qualified_name(format!(
-                        "{}.{}",
-                        model.name, column.name
-                    ));
+                    let qualified_name =
+                        from_qualified_name(mdl, model.name(), column.name());
                     source_columns.iter().for_each(|source_column| {
                         source_columns_map
                             .entry(qualified_name.clone())
                             .or_insert(HashSet::new())
-                            .insert(source_column.clone());
+                            .insert(Column::new(
+                                Some(TableReference::full(
+                                    mdl.catalog(),
+                                    mdl.schema(),
+                                    model.name(),
+                                )),
+                                &source_column.name,
+                            ));
                     });
                 // relationship columns are not a physical column
                 } else if column.relationship.is_none() {
-                    let qualified_name = Column::from_qualified_name(format!(
-                        "{}.{}",
-                        model.name, column.name
-                    ));
+                    let qualified_name =
+                        from_qualified_name(mdl, model.name(), column.name());
                     source_columns_map.insert(qualified_name, HashSet::new());
                 }
             });
@@ -75,15 +79,24 @@ impl Lineage {
         source_colums_map
             .iter()
             .for_each(|(column, source_columns)| {
-                let relation = column.clone().relation.unwrap();
-                let mut model_name = if let TableReference::Bare { table } = relation {
-                    table.clone()
-                } else {
-                    panic!("Expected a bare table reference, got {:?}", column.relation);
+                let Some(relation) = column.clone().relation else {
+                    return;
+                };
+                let mut current_relation = match relation {
+                    TableReference::Bare { table } => {
+                        TableReference::full(mdl.catalog(), mdl.schema(), table)
+                    }
+                    TableReference::Partial { schema, table } => {
+                        TableReference::full(mdl.catalog(), schema, table)
+                    }
+                    TableReference::Full {
+                        catalog,
+                        schema,
+                        table,
+                    } => TableReference::full(catalog, schema, table),
                 };
 
-                let column_ref =
-                    mdl.get_column_reference(model_name.as_ref(), &column.name);
+                let column_ref = mdl.get_column_reference(column);
                 if !column_ref.column.is_calculated
                     || column_ref.column.relationship.is_some()
                 {
@@ -96,8 +109,10 @@ impl Lineage {
                     let mut expr_parts = to_expr_queue(source_column.clone());
                     while !expr_parts.is_empty() {
                         let ident = expr_parts.pop_front().unwrap();
-                        let source_column_ref =
-                            mdl.get_column_reference(&model_name, &ident);
+                        let source_column_ref = mdl.get_column_reference(&Column::new(
+                            Some(current_relation.clone()),
+                            ident.clone(),
+                        ));
                         let left_vertex = *node_index_map
                             .entry(column_ref.dataset.clone())
                             .or_insert_with(|| {
@@ -108,19 +123,14 @@ impl Lineage {
                                 match source_column_ref.column.relationship.clone() {
                                     Some(rs) => {
                                         if let Some(rs_rf) = mdl.get_relationship(&rs) {
-                                            let related_model_name: Arc<str> = rs_rf
+                                            let related_model_name = rs_rf
                                                 .models
                                                 .iter()
-                                                .find(|m| {
-                                                    m.as_str() != model_name.as_ref()
-                                                })
-                                                .map(|m| m.as_str().into())
+                                                .find(|m| m != &current_relation.table())
+                                                .cloned()
                                                 .unwrap();
-                                            if related_model_name.as_ref()
-                                                != source_column_ref
-                                                    .column
-                                                    .r#type
-                                                    .as_str()
+                                            if related_model_name
+                                                != source_column_ref.column.r#type
                                             {
                                                 panic!(
                                                     "invalid relationship type: {}",
@@ -137,13 +147,18 @@ impl Lineage {
                                                         .or_default()
                                                         .insert(
                                                             Column::from_qualified_name(
-                                                                ident.flat_name(),
+                                                                format!(
+                                                                    "{}.{}.{}",
+                                                                    mdl.catalog(),
+                                                                    mdl.schema(),
+                                                                    ident.flat_name()
+                                                                ),
                                                             ),
                                                         );
                                                 });
 
                                             let related_model = mdl
-                                                .get_model(related_model_name.as_ref())
+                                                .get_model(&related_model_name)
                                                 .unwrap();
 
                                             let right_vertex = *node_index_map
@@ -169,7 +184,11 @@ impl Lineage {
                                                 ),
                                             );
 
-                                            model_name = related_model_name;
+                                            current_relation = TableReference::full(
+                                                mdl.catalog(),
+                                                mdl.schema(),
+                                                related_model_name,
+                                            );
                                         } else {
                                             panic!(
                                                 "relationship not found: {}",
@@ -184,10 +203,10 @@ impl Lineage {
                                                 source_column
                                             );
                                         }
-                                        let value = Column::from_qualified_name(format!(
-                                            "{}.{}",
-                                            model_name, source_column_ref.column.name
-                                        ));
+                                        let value = Column::new(
+                                            Some(current_relation.clone()),
+                                            source_column_ref.column.name().to_string(),
+                                        );
                                         if source_column_ref.column.is_calculated {
                                             todo!(
                                                 "calculated source column not supported"
@@ -252,7 +271,7 @@ fn get_dataset_link_revers_if_need(
     target: Dataset,
     rs: Arc<Relationship>,
 ) -> DatasetLink {
-    let join_type = if rs.models[0] == source.get_name() {
+    let join_type = if rs.models[0] == source.name() {
         rs.join_type
     } else {
         match rs.join_type {
@@ -273,6 +292,7 @@ mod test {
     };
 
     use datafusion::common::Column;
+    use datafusion::sql::TableReference;
 
     use crate::mdl::{Dataset, WrenMDL};
 
@@ -292,7 +312,9 @@ mod test {
         assert_eq!(
             lineage
                 .source_columns_map
-                .get(&Column::from_qualified_name("customer.custkey_plus"))
+                .get(&Column::from_qualified_name(
+                    "test.test.customer.custkey_plus"
+                ))
                 .unwrap()
                 .len(),
             1
@@ -300,7 +322,9 @@ mod test {
         assert_eq!(
             lineage
                 .source_columns_map
-                .get(&Column::from_qualified_name("orders.orderkey_plus_custkey"))
+                .get(&Column::from_qualified_name(
+                    "test.test.orders.orderkey_plus_custkey"
+                ))
                 .unwrap()
                 .len(),
             2
@@ -308,20 +332,30 @@ mod test {
         assert_eq!(
             lineage
                 .source_columns_map
-                .get(&Column::from_qualified_name("orders.hash_orderkey"))
+                .get(&Column::from_qualified_name(
+                    "test.test.orders.hash_orderkey"
+                ))
                 .unwrap()
                 .len(),
             1
         );
         let customer_name: Vec<Column> = lineage
             .source_columns_map
-            .get(&Column::from_qualified_name("orders.customer_name"))
+            .get(&Column::from_qualified_name(
+                "test.test.orders.customer_name",
+            ))
             .unwrap()
             .iter()
             .cloned()
             .collect();
         assert_eq!(customer_name.len(), 1);
-        assert_eq!(customer_name[0], Column::new_unqualified("customer.name"));
+        assert_eq!(
+            customer_name[0],
+            Column {
+                relation: Some(TableReference::full("test", "test", "orders")),
+                name: "customer.name".to_string()
+            }
+        );
     }
 
     #[test]
@@ -340,7 +374,9 @@ mod test {
         assert_eq!(
             lineage
                 .required_fields_map
-                .get(&Column::from_qualified_name("Customer.custkey_plus"))
+                .get(&Column::from_qualified_name(
+                    "test.test.customer.custkey_plus"
+                ))
                 .unwrap()
                 .len(),
             1
@@ -348,7 +384,9 @@ mod test {
         assert_eq!(
             lineage
                 .required_fields_map
-                .get(&Column::from_qualified_name("orders.orderkey_plus_custkey"))
+                .get(&Column::from_qualified_name(
+                    "test.test.orders.orderkey_plus_custkey"
+                ))
                 .unwrap()
                 .len(),
             2
@@ -356,7 +394,9 @@ mod test {
         assert_eq!(
             lineage
                 .required_fields_map
-                .get(&Column::from_qualified_name("orders.hash_orderkey"))
+                .get(&Column::from_qualified_name(
+                    "test.test.orders.hash_orderkey"
+                ))
                 .unwrap()
                 .len(),
             1
@@ -364,12 +404,14 @@ mod test {
 
         let customer_name = lineage
             .required_fields_map
-            .get(&Column::from_qualified_name("orders.customer_name"))
+            .get(&Column::from_qualified_name(
+                "test.test.orders.customer_name",
+            ))
             .unwrap();
         let expected: HashSet<Column> = HashSet::from([
-            Column::from_qualified_name("customer.name"),
-            Column::from_qualified_name("orders.custkey"),
-            Column::from_qualified_name("customer.custkey"),
+            Column::from_qualified_name("test.test.customer.name"),
+            Column::from_qualified_name("test.test.orders.custkey"),
+            Column::from_qualified_name("test.test.customer.custkey"),
         ]);
 
         assert_eq!(customer_name.len(), 3);
@@ -391,7 +433,9 @@ mod test {
         assert_eq!(lineage.required_dataset_topo.len(), 4);
         let customer_name = lineage
             .required_dataset_topo
-            .get(&Column::from_qualified_name("orders.customer_name"))
+            .get(&Column::from_qualified_name(
+                "test.test.orders.customer_name",
+            ))
             .unwrap();
         assert_eq!(customer_name.node_count(), 2);
         assert_eq!(customer_name.edge_count(), 1);

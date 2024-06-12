@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
+use datafusion::datasource::DefaultTableSource;
 use datafusion::logical_expr::builder::LogicalTableSource;
 use datafusion::{
     common::{plan_err, Result},
@@ -25,8 +26,10 @@ impl WrenContextProvider {
     pub fn new(mdl: &WrenMDL) -> Self {
         let mut tables = HashMap::new();
         mdl.manifest.models.iter().for_each(|model| {
-            let name = model.name.clone();
-            tables.insert(name.clone(), create_table_source(model));
+            tables.insert(
+                format!("{}.{}.{}", mdl.catalog(), mdl.schema(), model.name()),
+                create_table_source(model),
+            );
         });
         Self {
             tables,
@@ -37,9 +40,10 @@ impl WrenContextProvider {
 
 impl ContextProvider for WrenContextProvider {
     fn get_table_source(&self, name: TableReference) -> Result<Arc<dyn TableSource>> {
-        match self.tables.get(name.table()) {
+        let table_name = name.to_string();
+        match self.tables.get(&table_name) {
             Some(table) => Ok(table.clone()),
-            _ => plan_err!("Table not found: {}", name.table()),
+            _ => plan_err!("Table not found: {}", &table_name),
         }
     }
 
@@ -89,7 +93,7 @@ impl RemoteContextProvider {
             .manifest
             .models
             .iter()
-            .map(|model| (model.name.clone(), create_remote_table_source(model)))
+            .map(|model| (model.name.clone(), create_remote_table_source(model, mdl)))
             .collect::<HashMap<_, _>>();
         Self {
             tables,
@@ -139,9 +143,13 @@ impl ContextProvider for RemoteContextProvider {
     }
 }
 
-fn create_remote_table_source(model: &Model) -> Arc<dyn TableSource> {
-    let schema = create_schema(model.get_physical_columns());
-    Arc::new(LogicalTableSource::new(schema))
+fn create_remote_table_source(model: &Model, wren_mdl: &WrenMDL) -> Arc<dyn TableSource> {
+    if let Some(table_provider) = wren_mdl.get_table(&model.table_reference) {
+        Arc::new(DefaultTableSource::new(table_provider))
+    } else {
+        let schema = create_schema(model.get_physical_columns());
+        Arc::new(LogicalTableSource::new(schema))
+    }
 }
 
 fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {

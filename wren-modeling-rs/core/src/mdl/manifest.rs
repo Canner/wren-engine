@@ -48,6 +48,10 @@ impl Model {
             .map(Arc::clone)
             .collect()
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
@@ -65,6 +69,12 @@ pub struct Column {
     pub expression: Option<String>,
     #[serde(default)]
     pub properties: Vec<(String, String)>,
+}
+
+impl Column {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
@@ -99,6 +109,12 @@ pub struct Metric {
     pub cached: bool,
     pub refresh_time: String,
     pub properties: Vec<(String, String)>,
+}
+
+impl Metric {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]

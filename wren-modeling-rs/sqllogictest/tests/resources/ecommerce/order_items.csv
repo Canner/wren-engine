@@ -1,4 +1,4 @@
-Id,OrderId,ItemNumber,ProductId,ShippingLimitDate,Price,FreightValue
+id,order_id,item_number,product_id,shipping_limit_date,price,freight_value
 1,03c83b31dbc387f83f1b5579b53182fb,1,a04087ab6a96ffa041f8a2701a72b616,2023/1/15 7:26,119.8,14.68
 2,048e6e4623dbf118c43e0f5572016faa,1,a04087ab6a96ffa041f8a2701a72b616,2023/1/5 18:09,119.8,11.73
 3,05d61bb749461f4805dbda51f767fa47,1,bc4cd4da98dd128c39bf0b8c2674032f,2022/9/4 19:15,240,4

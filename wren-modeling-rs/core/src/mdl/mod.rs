@@ -10,9 +10,11 @@ use datafusion::{
         unparser::plan_to_sql,
     },
 };
+use log::{debug, info};
 
 use manifest::Relationship;
 
+use crate::logical_plan::utils::from_qualified_name_str;
 use crate::{
     logical_plan::{
         context_provider::WrenContextProvider,
@@ -37,12 +39,28 @@ impl AnalyzedWrenMDL {
         let lineage = lineage::Lineage::new(&wren_mdl);
         AnalyzedWrenMDL { wren_mdl, lineage }
     }
+
+    pub fn analyze_with_tables(
+        manifest: Manifest,
+        register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
+    ) -> Self {
+        let mut wren_mdl = WrenMDL::new(manifest);
+        for (name, table) in register_tables {
+            wren_mdl.register_table(name, table);
+        }
+        let lineage = lineage::Lineage::new(&wren_mdl);
+        AnalyzedWrenMDL {
+            wren_mdl: Arc::new(wren_mdl),
+            lineage,
+        }
+    }
 }
 
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
-    pub qualified_references: HashMap<String, ColumnReference>,
+    pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
+    pub register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
 }
 
 impl WrenMDL {
@@ -51,7 +69,12 @@ impl WrenMDL {
         manifest.models.iter().for_each(|model| {
             model.columns.iter().for_each(|column| {
                 qualifed_references.insert(
-                    format!("{}.{}", model.name, column.name),
+                    from_qualified_name_str(
+                        &manifest.catalog,
+                        &manifest.schema,
+                        model.name(),
+                        column.name(),
+                    ),
                     ColumnReference::new(
                         Dataset::Model(Arc::clone(model)),
                         Arc::clone(column),
@@ -62,7 +85,12 @@ impl WrenMDL {
         manifest.metrics.iter().for_each(|metric| {
             metric.dimension.iter().for_each(|dimension| {
                 qualifed_references.insert(
-                    format!("{}.{}", metric.name, dimension.name),
+                    from_qualified_name_str(
+                        &manifest.catalog,
+                        &manifest.schema,
+                        metric.name(),
+                        dimension.name(),
+                    ),
                     ColumnReference::new(
                         Dataset::Metric(Arc::clone(metric)),
                         Arc::clone(dimension),
@@ -71,7 +99,12 @@ impl WrenMDL {
             });
             metric.measure.iter().for_each(|measure| {
                 qualifed_references.insert(
-                    format!("{}.{}", metric.name, measure.name),
+                    from_qualified_name_str(
+                        &manifest.catalog,
+                        &manifest.schema,
+                        metric.name(),
+                        measure.name(),
+                    ),
                     ColumnReference::new(
                         Dataset::Metric(Arc::clone(metric)),
                         Arc::clone(measure),
@@ -83,11 +116,35 @@ impl WrenMDL {
         WrenMDL {
             manifest,
             qualified_references: qualifed_references,
+            register_tables: HashMap::new(),
         }
     }
 
     pub fn new_ref(manifest: Manifest) -> Arc<Self> {
         Arc::new(WrenMDL::new(manifest))
+    }
+
+    pub fn register_table(
+        &mut self,
+        name: String,
+        table: Arc<dyn datafusion::datasource::TableProvider>,
+    ) {
+        self.register_tables.insert(name, table);
+    }
+
+    pub fn get_table(
+        &self,
+        name: &str,
+    ) -> Option<Arc<dyn datafusion::datasource::TableProvider>> {
+        self.register_tables.get(name).cloned()
+    }
+
+    pub fn catalog(&self) -> &str {
+        &self.manifest.catalog
+    }
+
+    pub fn schema(&self) -> &str {
+        &self.manifest.schema
     }
 
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {
@@ -106,11 +163,13 @@ impl WrenMDL {
             .cloned()
     }
 
-    pub fn get_column_reference(&self, dataset: &str, column: &str) -> ColumnReference {
-        let name = format!("{}.{}", dataset, column);
+    pub fn get_column_reference(
+        &self,
+        column: &datafusion::common::Column,
+    ) -> ColumnReference {
         self.qualified_references
-            .get(&name)
-            .unwrap_or_else(|| panic!("column {} not found", name))
+            .get(column)
+            .unwrap_or_else(|| panic!("column {} not found", column))
             .clone()
     }
 }
@@ -119,8 +178,7 @@ pub fn transform_sql(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
 ) -> Result<String, DataFusionError> {
-    println!("SQL: {}", sql);
-    println!("********");
+    info!("wren-core received SQL: {}", sql);
 
     // parse the SQL
     let dialect = GenericDialect {};
@@ -137,8 +195,7 @@ pub fn transform_sql(
             return Err(e);
         }
     };
-    println!("Original LogicalPlan:\n {plan:?}");
-    println!("********");
+    debug!("wren-core got the origin plan:\n {plan:?}");
 
     let analyzer = Analyzer::with_rules(vec![
         Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
@@ -154,12 +211,14 @@ pub fn transform_sql(
             return Err(e);
         }
     };
-    println!("Do some modeling:\n {analyzed:?}");
-    println!("********");
+    debug!("wren-core final planned:\n {analyzed:?}");
 
     // show the planned sql
     match plan_to_sql(&analyzed) {
-        Ok(sql) => Ok(sql.to_string()),
+        Ok(sql) => {
+            info!("wren-core planned SQL: {}", sql.to_string());
+            Ok(sql.to_string())
+        }
         Err(e) => Err(e),
     }
 }
@@ -184,7 +243,7 @@ impl ColumnReference {
     }
 
     pub fn get_qualified_name(&self) -> String {
-        format!("{}.{}", self.dataset.get_name(), self.column.name)
+        format!("{}.{}", self.dataset.name(), self.column.name)
     }
 }
 
@@ -195,10 +254,10 @@ pub enum Dataset {
 }
 
 impl Dataset {
-    pub fn get_name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            Dataset::Model(model) => model.name.clone(),
-            Dataset::Metric(metric) => metric.name.clone(),
+            Dataset::Model(model) => model.name(),
+            Dataset::Metric(metric) => metric.name(),
         }
     }
 }
@@ -233,34 +292,34 @@ mod test {
         // TODO: instead of assert string value, assert the query plan or result
         let tests: Vec<(&str, &str)> = vec![
             (
-                "select orderkey + orderkey from orders",
+                "select orderkey + orderkey from test.test.orders",
                 r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
             ),
             (
-                "select orderkey from orders where orders.totalprice > 10",
+                "select orderkey from test.test.orders where orders.totalprice > 10",
                 r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#,
             ),
             (
-                "select orders.orderkey from orders left join customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
+                "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
                 r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."o_custkey" AS "custkey", "orders"."o_orderkey" AS "orderkey", "orders"."o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
             ),
             (
-                "select orderkey, sum(totalprice) from orders group by 1",
+                "select orderkey, sum(totalprice) from test.test.orders group by 1",
                 r#"SELECT "orders"."orderkey", SUM("orders"."totalprice") FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" GROUP BY "orders"."orderkey""#,
             ),
             (
-                "select orderkey, count(*) from orders where orders.totalprice > 10 group by 1",
+                "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
                 r#"SELECT "orders"."orderkey", COUNT(*) FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10) GROUP BY "orders"."orderkey""#,
             ),
             (
-                "select count(*) from orders",
+                "select count(*) from test.test.orders",
                 r#"SELECT COUNT(*) FROM "orders""#,
             ),
             (
-                "select customer_name from orders",
+                "select customer_name from test.test.orders",
                 r#"SELECT "orders"."customer_name" FROM (SELECT "customer"."name" AS "customer_name" FROM (SELECT "customer"."c_name" AS "name", "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" LEFT JOIN (SELECT "orders"."o_custkey" AS "custkey" FROM "orders") AS "orders" ON ("customer"."custkey" = "orders"."custkey")) AS "orders""#
             ),
-            // TODO: support calculated witout relationship
+            // TODO: support calculated without relationship
             // (
             //     "select orderkey_plus_custkey from orders",
             //     "select * from orders;"

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
+use datafusion::datasource::DefaultTableSource;
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
 
 use crate::mdl::{
@@ -35,25 +36,54 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {
     SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()))
 }
 
-pub fn create_remote_table_source(model: &Model, _: &WrenMDL) -> Arc<dyn TableSource> {
-    let fields: Vec<Field> = model
-        .columns
-        .iter()
-        .map(|column| {
-            let column = Arc::clone(column);
-            let name = if let Some(ref expression) = column.expression {
-                expression.clone()
-            } else {
-                column.name.clone()
-            };
-            // We don't know the data type of the remote table, so we just mock a Int32 type here
-            Field::new(name, DataType::Int32, column.no_null)
-        })
-        .collect();
-    let schema = SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()));
-    Arc::new(LogicalTableSource::new(schema))
+pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {
+    if let Some(table_provider) = mdl.get_table(&model.table_reference) {
+        Arc::new(DefaultTableSource::new(table_provider))
+    } else {
+        let fields: Vec<Field> = model
+            .columns
+            .iter()
+            .map(|column| {
+                let column = Arc::clone(column);
+                let name = if let Some(ref expression) = column.expression {
+                    expression.clone()
+                } else {
+                    column.name.clone()
+                };
+                // We don't know the data type of the remote table, so we just mock a Int32 type here
+                Field::new(name, DataType::Int32, column.no_null)
+            })
+            .collect();
+
+        let schema = SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()));
+        Arc::new(LogicalTableSource::new(schema))
+    }
 }
 
-pub fn format_qualified_name(model: &str, column: &str) -> String {
-    format!("{}.{}", model, column)
+pub fn format_qualified_name(
+    catalog: &str,
+    schema: &str,
+    dataset: &str,
+    column: &str,
+) -> String {
+    format!("{}.{}.{}.{}", catalog, schema, dataset, column)
+}
+
+pub fn from_qualified_name(
+    wren_mdl: &WrenMDL,
+    dataset: &str,
+    column: &str,
+) -> datafusion::common::Column {
+    from_qualified_name_str(wren_mdl.catalog(), wren_mdl.schema(), dataset, column)
+}
+
+pub fn from_qualified_name_str(
+    catalog: &str,
+    schema: &str,
+    dataset: &str,
+    column: &str,
+) -> datafusion::common::Column {
+    datafusion::common::Column::from_qualified_name(format_qualified_name(
+        catalog, schema, dataset, column,
+    ))
 }
