@@ -23,7 +23,9 @@
   </a>
 </p>
 
-> Wren Engine is the semantic engine for LLMs, the backbone of the semantic layer. 
+> Wren Engine is the semantic engine for LLMs, the backbone of the [WrenAI](https://github.com/Canner/WrenAI) project.
+
+<img src="./misc/wren_engine_flow.png">
 
 Useful links
 - [WrenAI Website](https://getwren.ai)
@@ -31,9 +33,9 @@ Useful links
 
 ## 🎯 Our Mission
 
-Wren Engine is designed as a standalone semantic engine, which you can easily implement with any AI agents, you can use it as a general semantic engine for the semantic layer.
+The Wren engine aims to be compatible with composable data systems. It follows two important traits: Embeddable and interoperability. With these two designs in mind, you can reuse the semantic context across your AI agents through our APIs and connect freely with your on-premise and cloud data sources, which nicely fit into your existing data stack.
 
-<img src="./misc/wren_engine_flow.png">
+<img src="./misc/wrenai_vision.png">
 
 ## 🤔 Concepts
 
