@@ -1,6 +1,7 @@
 # Ibis server
 Ibis server is a server base on Python that provides the API for rewriting the queries with [Modeling Definition Language (MDL)](https://docs.getwren.ai/engine/concept/what_is_mdl) manifest and connect data source via [Ibis](https://github.com/ibis-project/ibis). It is built on top of the [FastAPI](https://github.com/tiangolo/fastapi) framework. \
-We still need to run the Java engine for rewriting the queries. In the future, we will rewrite the modeling core of java engine to [Rust](https://github.com/rust-lang/rust) and integrate the modeling core into the Ibis server.
+We still need to run the Java engine for rewriting the queries. In the future, we will rewrite the modeling core of java engine to [Rust](https://github.com/rust-lang/rust) and integrate the modeling core into the Ibis server. \
+We continuously integrate the Rust core with the Ibis server now.
 
 ## Quick Start
 ### Running on Docker
@@ -63,6 +64,10 @@ Install the dependencies
 ```bash
 just install
 ```
+Build rust core
+```bash
+just maturin
+```
 Run the server
 ```bash
 just run
@@ -76,6 +81,7 @@ just run
 - Install [casey/just](https://github.com/casey/just)
 - Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
 - Execute `just install` to install the dependencies
+- Execute `just maturin` to build rust be a dependency.
 - Execute `just test` to run the tests
 - Create `.env` file and fill in the environment variables
 

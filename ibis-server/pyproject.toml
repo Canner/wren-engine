@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "ibis-server"
+name = "wren_engine"
 version = "0.5.0"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
-packages = [{ include = "app" }]
+packages = [{ include = "python/wren_engine" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -25,9 +25,14 @@ testcontainers = {extras = ["mysql", "postgres"], version = "4.5.0"}
 sqlalchemy = "2.0.30"
 pre-commit = "3.7.1"
 ruff = "0.4.8"
+maturin = "1.6.0"
 
 [tool.pytest.ini_options]
-addopts = "--strict-markers"
+pythonpath = "python"
+addopts = [
+    "--strict-markers",
+    "--import-mode=importlib"
+]
 markers = [
     "bigquery: mark a test as a bigquery test",
     "mysql: mark a test as a mysql test",
@@ -39,5 +44,27 @@ markers = [
 target-version = "py311"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "wren_engine"
+readme = "README.md"
+requires-python = ">=3.11"
+classifier = [
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+]
+
+[tool.maturin]
+python-source = "python"
+module-name = "wren_engine.modeling_core"
+include = [
+    { path = "Cargo.lock", format = "sdist" }
+]
+exclude = [".github/**", "tests/**", "target/**", "wheels/**"]
+locked = true
