@@ -30,6 +30,12 @@ impl ManifestBuilder {
         }
     }
 
+    pub fn from_manifest(manifest: Manifest) -> Self {
+        Self {
+            manifest
+        }
+    }
+
     pub fn catalog(mut self, catalog: &str) -> Self {
         self.manifest.catalog = catalog.to_string();
         self

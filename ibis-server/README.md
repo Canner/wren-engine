@@ -64,7 +64,7 @@ Install the dependencies
 ```bash
 just install
 ```
-Build rust core
+Build rust code be a python dependency
 ```bash
 just maturin
 ```
@@ -77,11 +77,12 @@ just run
 
 ### Environment Setup
 - Python 3.11
+- Install [Rust](https://www.rust-lang.org/tools/install) and [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - Install [poetry](https://github.com/python-poetry/poetry) with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
 - Install [casey/just](https://github.com/casey/just)
 - Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
 - Execute `just install` to install the dependencies
-- Execute `just maturin` to build rust be a dependency.
+- Execute `just maturin` to make rust be a python dependency.
 - Execute `just test` to run the tests
 - Create `.env` file and fill in the environment variables
 

@@ -1,5 +1,5 @@
 [package]
-name = "wren_core"
+name = "wren-core-wrapper"
 version = "0.1.0"
 edition = "2021"
 include = ["/src", "pyproject.toml", "Cargo.toml", "Cargo.lock"]
@@ -13,3 +13,4 @@ pyo3 = { version = "0.21.2", features = ["extension-module"] }
 wren-core = { path = "../wren-modeling-rs/core" }
 base64 = "0.22.1"
 serde_json = "1.0.117"
+thiserror = "1.0"

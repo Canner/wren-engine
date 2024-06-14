@@ -25,6 +25,8 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 def test_transform_sql():
     sql = "SELECT * FROM my_catalog.my_schema.customer"
+    x = modeling_core.builder_from_base64(manifest_str)
+    print(x)
     rewritten_sql = modeling_core.transform_sql(manifest_str, sql)
     assert (
         rewritten_sql
