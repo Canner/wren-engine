@@ -6,3 +6,18 @@ select cast(freight_value as int) + cast(price as int) from wrenai.default.order
 
 statement ok
 select product_id from wrenai.default.order_items where cast(freight_value as double) > 10
+
+statement ok
+select * from wrenai.default.order_items;
+
+statement ok
+select * from wrenai.default.customers;
+
+statement ok
+select count(*) from wrenai.default.order_items;
+
+# check the count of order_items won't be increased by the relationship calculation
+query B
+select cnt1 = cnt2 from (select count(*) as cnt1 from (select customer_state from  wrenai.default.order_items)), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
+----
+true

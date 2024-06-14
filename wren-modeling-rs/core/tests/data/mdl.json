@@ -4,7 +4,7 @@
   "models": [
     {
       "name": "customer",
-      "tableReference": "main.customer",
+      "tableReference": "customer",
       "columns": [
         {
           "name": "custkey",
@@ -27,7 +27,7 @@
     },
     {
       "name": "orders",
-      "tableReference": "main.orders",
+      "tableReference": "orders",
       "columns": [
         {
           "name": "orderkey",

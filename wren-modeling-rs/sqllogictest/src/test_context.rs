@@ -34,11 +34,13 @@ use datafusion::{
 };
 use log::info;
 use tempfile::TempDir;
+use wren_core::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
 
-use wren_core::logical_plan::rule::{ModelAnalyzeRule, ModelGenerationRule};
 use wren_core::logical_plan::utils::create_schema;
-use wren_core::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-use wren_core::mdl::manifest::Model;
+use wren_core::mdl::builder::{
+    ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
+};
+use wren_core::mdl::manifest::{JoinType, Model};
 use wren_core::mdl::{AnalyzedWrenMDL, WrenMDL};
 
 use crate::engine::utils::read_dir_recursive;
@@ -125,7 +127,7 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
     let manifest = ManifestBuilder::new()
         .model(
             ModelBuilder::new("customers")
-                .table_reference("customers")
+                .table_reference("datafusion.public.customers")
                 .column(ColumnBuilder::new("city", "varchar").build())
                 .column(ColumnBuilder::new("id", "varchar").build())
                 .column(ColumnBuilder::new("state", "varchar").build())
@@ -134,32 +136,70 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
         )
         .model(
             ModelBuilder::new("order_items")
-                .table_reference("order_items")
-                .column(ColumnBuilder::new("freight_value", "varchar").build())
-                .column(ColumnBuilder::new("id", "varchar").build())
-                .column(ColumnBuilder::new("item_number", "varchar").build())
+                .table_reference("datafusion.public.order_items")
+                .column(ColumnBuilder::new("freight_value", "double").build())
+                .column(ColumnBuilder::new("id", "bigint").build())
+                .column(ColumnBuilder::new("item_number", "bigint").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("price", "varchar").build())
+                .column(ColumnBuilder::new("price", "double").build())
                 .column(ColumnBuilder::new("product_id", "varchar").build())
                 .column(ColumnBuilder::new("shipping_limit_date", "varchar").build())
+                .column(
+                    ColumnBuilder::new("orders", "orders")
+                        .relationship("orders_order_items")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("customer_state", "varchar")
+                        .calculated(true)
+                        .expression("orders.customers.state")
+                        .build(),
+                )
                 .primary_key("id")
                 .build(),
         )
         .model(
             ModelBuilder::new("orders")
-                .table_reference("orders")
+                .table_reference("datafusion.public.orders")
                 .column(ColumnBuilder::new("approved_timestamp", "varchar").build())
                 .column(ColumnBuilder::new("customer_id", "varchar").build())
                 .column(ColumnBuilder::new("delivered_carrier_date", "varchar").build())
                 .column(ColumnBuilder::new("estimated_delivery_date", "varchar").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
                 .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
+                .column(
+                    ColumnBuilder::new("customers", "customers")
+                        .relationship("orders_customer")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("customer_state", "varchar")
+                        .calculated(true)
+                        .expression("customers.state")
+                        .build(),
+                )
+                .build(),
+        )
+        .relationship(
+            RelationshipBuilder::new("orders_customer")
+                .model("orders")
+                .model("customers")
+                .join_type(JoinType::ManyToOne)
+                .condition("orders.customer_id = customers.id")
+                .build(),
+        )
+        .relationship(
+            RelationshipBuilder::new("orders_order_items")
+                .model("orders")
+                .model("order_items")
+                .join_type(JoinType::ManyToOne)
+                .condition("orders.order_id = order_items.order_id")
                 .build(),
         )
         .build();
     let mut register_tables = HashMap::new();
     register_tables.insert(
-        "orders".to_string(),
+        "datafusion.public.orders".to_string(),
         ctx.catalog("datafusion")
             .unwrap()
             .schema("public")
@@ -169,7 +209,7 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
             .unwrap(),
     );
     register_tables.insert(
-        "order_items".to_string(),
+        "datafusion.public.order_items".to_string(),
         ctx.catalog("datafusion")
             .unwrap()
             .schema("public")
@@ -179,7 +219,7 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
             .unwrap(),
     );
     register_tables.insert(
-        "customers".to_string(),
+        "datafusion.public.customers".to_string(),
         ctx.catalog("datafusion")
             .unwrap()
             .schema("public")
@@ -197,7 +237,10 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
         .add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))))
         .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
             &analyzed_mdl,
-        ))));
+        ))))
+        // TODO: disable optimize_projections rule
+        // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
+        .with_optimizer_rules(vec![]);
     let ctx = SessionContext::new_with_state(new_state);
     register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
     Ok(ctx)
@@ -231,7 +274,7 @@ struct WrenDataSource {
 
 impl WrenDataSource {
     pub fn new(model: Arc<Model>) -> Self {
-        let schema = create_schema(model.columns.clone());
+        let schema = create_schema(model.get_physical_columns().clone());
         Self { schema }
     }
 }
