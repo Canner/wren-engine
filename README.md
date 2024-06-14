@@ -37,6 +37,8 @@ The Wren engine aims to be compatible with composable data systems. It follows t
 
 <img src="./misc/wrenai_vision.png">
 
+🤩 [About our Vision](https://blog.getwren.ai/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents-ec8f0a2e7141)
+
 ## 🤔 Concepts
 
 - [Introducing Wren Engine](https://docs.getwren.ai/engine/get_started/what_is)
