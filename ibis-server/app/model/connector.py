@@ -4,11 +4,14 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from app.mdl.rewriter import rewrite
-from app.model.data_source import DataSource, ConnectionInfo
 from app.model.data_source import (
+    BigQueryConnectionInfo,
+    ConnectionInfo,
+    DataSource,
+    MySqlConnectionUrl,
+    MySqlConnectionInfo,
     PostgresConnectionUrl,
     PostgresConnectionInfo,
-    BigQueryConnectionInfo,
     SnowflakeConnectionInfo,
 )
 
@@ -74,14 +77,20 @@ class QueryDTO(BaseModel):
     )
 
 
-class QueryPostgresDTO(QueryDTO):
-    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(
+class QueryBigQueryDTO(QueryDTO):
+    connection_info: BigQueryConnectionInfo = Field(alias="connectionInfo")
+
+
+class QueryMySqlDTO(QueryDTO):
+    connection_info: MySqlConnectionUrl | MySqlConnectionInfo = Field(
         alias="connectionInfo"
     )
 
 
-class QueryBigQueryDTO(QueryDTO):
-    connection_info: BigQueryConnectionInfo = Field(alias="connectionInfo")
+class QueryPostgresDTO(QueryDTO):
+    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(
+        alias="connectionInfo"
+    )
 
 
 class QuerySnowflakeDTO(QueryDTO):

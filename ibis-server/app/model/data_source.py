@@ -12,29 +12,23 @@ from pydantic import BaseModel, Field
 
 
 class DataSource(StrEnum):
-    postgres = auto()
     bigquery = auto()
+    mysql = auto()
+    postgres = auto()
     snowflake = auto()
 
     def get_connection(self, dto) -> BaseBackend:
         match self:
-            case DataSource.postgres:
-                return self.get_postgres_connection(dto)
             case DataSource.bigquery:
                 return self.get_bigquery_connection(dto)
+            case DataSource.mysql:
+                return self.get_mysql_connection(dto)
+            case DataSource.postgres:
+                return self.get_postgres_connection(dto)
             case DataSource.snowflake:
                 return self.get_snowflake_connection(dto)
             case _:
                 raise NotImplementedError(f"Unsupported data source: {self}")
-
-    @staticmethod
-    def get_postgres_connection(
-        info: PostgresConnectionUrl | PostgresConnectionInfo,
-    ) -> BaseBackend:
-        return ibis.connect(
-            getattr(info, "connection_url", None)
-            or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
-        )
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
@@ -49,6 +43,25 @@ class DataSource(StrEnum):
         )
 
     @staticmethod
+    def get_mysql_connection(
+        info: MySqlConnectionUrl | MySqlConnectionInfo,
+    ) -> BaseBackend:
+        return ibis.connect(
+            getattr(info, "connection_url", None)
+            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}",
+            port=info.port,  # ibis miss port of connection url, so we need to pass it explicitly
+        )
+
+    @staticmethod
+    def get_postgres_connection(
+        info: PostgresConnectionUrl | PostgresConnectionInfo,
+    ) -> BaseBackend:
+        return ibis.connect(
+            getattr(info, "connection_url", None)
+            or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        )
+
+    @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         return ibis.snowflake.connect(
             user=info.user,
@@ -57,6 +70,24 @@ class DataSource(StrEnum):
             database=info.database,
             schema=info.sf_schema,
         )
+
+
+class BigQueryConnectionInfo(BaseModel):
+    project_id: str
+    dataset_id: str
+    credentials: str = Field(description="Base64 encode `credentials.json`")
+
+
+class MySqlConnectionInfo(BaseModel):
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+
+
+class MySqlConnectionUrl(BaseModel):
+    connection_url: str = Field(alias="connectionUrl")
 
 
 class PostgresConnectionInfo(BaseModel):
@@ -71,12 +102,6 @@ class PostgresConnectionUrl(BaseModel):
     connection_url: str = Field(alias="connectionUrl")
 
 
-class BigQueryConnectionInfo(BaseModel):
-    project_id: str
-    dataset_id: str
-    credentials: str = Field(description="Base64 encode `credentials.json`")
-
-
 class SnowflakeConnectionInfo(BaseModel):
     user: str
     password: str
@@ -88,8 +113,10 @@ class SnowflakeConnectionInfo(BaseModel):
 
 
 ConnectionInfo = Union[
+    BigQueryConnectionInfo,
+    MySqlConnectionInfo,
+    MySqlConnectionUrl,
     PostgresConnectionInfo,
     PostgresConnectionUrl,
-    BigQueryConnectionInfo,
     SnowflakeConnectionInfo,
 ]
