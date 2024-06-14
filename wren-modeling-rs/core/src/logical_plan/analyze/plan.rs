@@ -179,7 +179,7 @@ impl ModelPlanNode {
         let source_required_fields: Vec<Expr> = model_required_fields
             .get(&model_ref)
             .map(|c| c.iter().cloned().map(|c| c.expr).collect())
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_default();
 
         let mut relation_chain = RelationChain::source(
             source,
