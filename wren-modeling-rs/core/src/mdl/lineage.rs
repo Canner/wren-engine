@@ -1,5 +1,6 @@
 use core::panic;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Display;
 use std::sync::Arc;
 
 use datafusion::common::Column;
@@ -105,6 +106,12 @@ impl Lineage {
 
                 let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
                 let mut node_index_map = HashMap::new();
+                let mut left_vertex = *node_index_map
+                    .entry(column_ref.dataset.clone())
+                    .or_insert_with(|| {
+                        directed_graph.add_node(column_ref.dataset.clone())
+                    });
+
                 source_columns.iter().for_each(|source_column| {
                     let mut expr_parts = to_expr_queue(source_column.clone());
                     while !expr_parts.is_empty() {
@@ -113,11 +120,6 @@ impl Lineage {
                             Some(current_relation.clone()),
                             ident.clone(),
                         ));
-                        let left_vertex = *node_index_map
-                            .entry(column_ref.dataset.clone())
-                            .or_insert_with(|| {
-                                directed_graph.add_node(column_ref.dataset.clone())
-                            });
                         match source_column_ref.dataset {
                             Dataset::Model(_) => {
                                 match source_column_ref.column.relationship.clone() {
@@ -176,10 +178,7 @@ impl Lineage {
                                                 left_vertex,
                                                 right_vertex,
                                                 get_dataset_link_revers_if_need(
-                                                    column_ref.dataset.clone(),
-                                                    Dataset::Model(Arc::clone(
-                                                        &related_model,
-                                                    )),
+                                                    source_column_ref.dataset.clone(),
                                                     rs_rf,
                                                 ),
                                             );
@@ -189,6 +188,8 @@ impl Lineage {
                                                 mdl.schema(),
                                                 related_model_name,
                                             );
+
+                                            left_vertex = right_vertex;
                                         } else {
                                             panic!(
                                                 "relationship not found: {}",
@@ -244,31 +245,27 @@ struct RequiredInfo {
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct DatasetLink {
-    pub source: Dataset,
-    pub target: Dataset,
     pub join_type: JoinType,
     pub condition: String,
 }
 
 impl DatasetLink {
-    fn new(
-        source: Dataset,
-        target: Dataset,
-        join_type: JoinType,
-        condition: String,
-    ) -> Self {
+    fn new(join_type: JoinType, condition: String) -> Self {
         DatasetLink {
-            source,
-            target,
             join_type,
             condition,
         }
     }
 }
 
+impl Display for DatasetLink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ON {}", self.join_type, self.condition)
+    }
+}
+
 fn get_dataset_link_revers_if_need(
     source: Dataset,
-    target: Dataset,
     rs: Arc<Relationship>,
 ) -> DatasetLink {
     let join_type = if rs.models[0] == source.name() {
@@ -280,7 +277,7 @@ fn get_dataset_link_revers_if_need(
             _ => rs.join_type,
         }
     };
-    DatasetLink::new(source, target, join_type, rs.condition.clone())
+    DatasetLink::new(join_type, rs.condition.clone())
 }
 
 #[cfg(test)]
@@ -294,6 +291,10 @@ mod test {
     use datafusion::common::Column;
     use datafusion::sql::TableReference;
 
+    use crate::mdl::builder::{
+        ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
+    };
+    use crate::mdl::manifest::{JoinType, Manifest};
     use crate::mdl::{Dataset, WrenMDL};
 
     #[test]
@@ -420,39 +421,96 @@ mod test {
 
     #[test]
     fn test_required_dataset_topo() {
-        let test_data: PathBuf =
-            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-                .iter()
-                .collect();
-        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
-            .expect("Unable to read file");
-        let manifest =
-            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let manifest = testing_manifest();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
-        assert_eq!(lineage.required_dataset_topo.len(), 4);
+        assert_eq!(lineage.required_dataset_topo.len(), 2);
         let customer_name = lineage
             .required_dataset_topo
-            .get(&Column::from_qualified_name(
-                "test.test.orders.customer_name",
-            ))
+            .get(&Column::from_qualified_name("wrenai.default.a.c1"))
             .unwrap();
-        assert_eq!(customer_name.node_count(), 2);
-        assert_eq!(customer_name.edge_count(), 1);
-        let mut edges = customer_name.edge_indices().collect::<Vec<_>>();
-        let edge = customer_name.edge_weight(edges.pop().unwrap()).unwrap();
-        assert_eq!(
-            edge.source,
-            Dataset::Model(wren_mdl.get_model("orders").unwrap())
-        );
-        assert_eq!(
-            edge.target,
-            Dataset::Model(wren_mdl.get_model("customer").unwrap())
-        );
-        assert_eq!(edge.join_type, crate::mdl::manifest::JoinType::ManyToOne);
-        assert_eq!(
-            edge.condition,
-            "customer.custkey = orders.custkey".to_string()
-        );
+        assert_eq!(customer_name.node_count(), 3);
+        assert_eq!(customer_name.edge_count(), 2);
+        let mut iter = customer_name.node_indices();
+        let first = iter.next().unwrap();
+        let source = customer_name.node_weight(first).unwrap();
+        assert_eq!(source, &Dataset::Model(wren_mdl.get_model("a").unwrap()));
+
+        let second = iter.next().unwrap();
+        let target = customer_name.node_weight(second).unwrap();
+        assert_eq!(target, &Dataset::Model(wren_mdl.get_model("b").unwrap()));
+        let first_edge = customer_name.find_edge(first, second).unwrap();
+        let edge = customer_name.edge_weight(first_edge).unwrap();
+        assert_eq!(edge.join_type, JoinType::OneToOne);
+        assert_eq!(edge.condition, "a.a1 = b.a1");
+
+        let third = iter.next().unwrap();
+        let target = customer_name.node_weight(third).unwrap();
+        assert_eq!(target, &Dataset::Model(wren_mdl.get_model("c").unwrap()));
+        let second_edge = customer_name.find_edge(second, third).unwrap();
+        let edge = customer_name.edge_weight(second_edge).unwrap();
+        assert_eq!(edge.join_type, JoinType::OneToOne);
+        assert_eq!(edge.condition, "b.b1 = c.b1");
+    }
+
+    fn testing_manifest() -> Manifest {
+        ManifestBuilder::new()
+            .model(
+                ModelBuilder::new("a")
+                    .table_reference("a")
+                    .column(ColumnBuilder::new("id", "varchar").build())
+                    .column(ColumnBuilder::new("a1", "varchar").build())
+                    .column(ColumnBuilder::new("b", "b").relationship("a_b").build())
+                    .column(
+                        ColumnBuilder::new("c1", "varchar")
+                            .calculated(true)
+                            .expression("b.c.c1")
+                            .build(),
+                    )
+                    .primary_key("id")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("b")
+                    .table_reference("b")
+                    .column(ColumnBuilder::new("id", "varchar").build())
+                    .column(ColumnBuilder::new("b1", "varchar").build())
+                    .column(ColumnBuilder::new("a1", "varchar").build())
+                    .column(ColumnBuilder::new("c", "c").relationship("b_c").build())
+                    .column(
+                        ColumnBuilder::new("c1", "varchar")
+                            .calculated(true)
+                            .expression("c.c1")
+                            .build(),
+                    )
+                    .primary_key("id")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("c")
+                    .table_reference("c")
+                    .column(ColumnBuilder::new("id", "varchar").build())
+                    .column(ColumnBuilder::new("c1", "varchar").build())
+                    .column(ColumnBuilder::new("b1", "varchar").build())
+                    .primary_key("id")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("a_b")
+                    .model("a")
+                    .model("b")
+                    .join_type(JoinType::OneToOne)
+                    .condition("a.a1 = b.a1")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("b_c")
+                    .model("b")
+                    .model("c")
+                    .join_type(JoinType::OneToOne)
+                    .condition("b.b1 = c.b1")
+                    .build(),
+            )
+            .build()
     }
 }

@@ -36,6 +36,17 @@ impl WrenContextProvider {
             options: Default::default(),
         }
     }
+
+    pub fn new_bare(mdl: &WrenMDL) -> Self {
+        let mut tables = HashMap::new();
+        mdl.manifest.models.iter().for_each(|model| {
+            tables.insert(model.name().to_string(), create_table_source(model));
+        });
+        Self {
+            tables,
+            options: Default::default(),
+        }
+    }
 }
 
 impl ContextProvider for WrenContextProvider {
@@ -93,7 +104,15 @@ impl RemoteContextProvider {
             .manifest
             .models
             .iter()
-            .map(|model| (model.name.clone(), create_remote_table_source(model, mdl)))
+            .map(|model| {
+                let remove_provider = mdl.get_table(&model.table_reference);
+                let datasource = if let Some(table_provider) = remove_provider {
+                    Arc::new(DefaultTableSource::new(table_provider))
+                } else {
+                    create_remote_table_source(model, mdl)
+                };
+                (model.table_reference.clone(), datasource)
+            })
             .collect::<HashMap<_, _>>();
         Self {
             tables,
@@ -104,7 +123,7 @@ impl RemoteContextProvider {
 
 impl ContextProvider for RemoteContextProvider {
     fn get_table_source(&self, name: TableReference) -> Result<Arc<dyn TableSource>> {
-        match self.tables.get(name.table()) {
+        match self.tables.get(name.to_string().as_str()) {
             Some(table) => Ok(table.clone()),
             _ => plan_err!("Table not found: {}", name.table()),
         }
