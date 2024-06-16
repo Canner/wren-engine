@@ -38,12 +38,12 @@ def validate(rule_name: str, dto: ValidateDTO) -> Response:
 @router.post("/metadata/tables", response_model=list[Table])
 @log_dto
 def get_bigquery_table_list(dto: MetadataDTO) -> list[Table]:
-    metadata = MetadataFactory(DataSource.bigquery, dto.connection_info)
+    metadata = MetadataFactory(data_source, dto.connection_info)
     return metadata.get_table_list()
 
 
 @router.post("/metadata/constraints", response_model=list[Constraint])
 @log_dto
 def get_bigquery_constraints(dto: MetadataDTO) -> list[Constraint]:
-    metadata = MetadataFactory(DataSource.bigquery, dto.connection_info)
+    metadata = MetadataFactory(data_source, dto.connection_info)
     return metadata.get_constraints()
