@@ -10,7 +10,7 @@ async fn main() -> datafusion::common::Result<()> {
     let manifest = init_manifest();
     let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest));
 
-    let sql = "select * from wrenai.default.customers_model";
+    let sql = "select * from wrenai.default.order_items_model";
     println!("Original SQL: \n{}", sql);
     let sql = transform_sql(analyzed_mdl, sql).unwrap();
     println!("Wren engine generated SQL: \n{}", sql);
@@ -79,7 +79,7 @@ fn init_manifest() -> Manifest {
                 .model("orders_model")
                 .model("customers_model")
                 .join_type(JoinType::ManyToOne)
-                .condition("orders.customer_id = customers.id")
+                .condition("orders_model.customer_id = customers_model.id")
                 .build(),
         )
         .relationship(
