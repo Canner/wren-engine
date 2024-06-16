@@ -9,7 +9,7 @@ To run the examples, use the `cargo run` command, such as:
 git clone https://github.com/Canner/wren-engine.git
 cd wren-engine/wren-modeling-rs
 
-# Run the `csv_sql` example:
+# Run the `datafusion_apply` example:
 # ... use the equivalent for other examples
 cargo run --example datafusion-apply
 ```
