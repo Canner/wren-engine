@@ -50,7 +50,7 @@ build-backend = "maturin"
 [project]
 name = "wren_engine"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 classifier = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
