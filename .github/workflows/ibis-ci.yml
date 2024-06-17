@@ -47,6 +47,16 @@ jobs:
           cache: 'poetry'
       - name: Install dependencies
         run: poetry install
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ibis-server/rust/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('ibis-server/rust/Cargo.lock') }}
       - name: Test rust code
         working-directory: ./ibis-server/rust
         run: cargo test
