@@ -47,6 +47,8 @@ jobs:
           cache: 'poetry'
       - name: Install dependencies
         run: poetry install
+      - name: Build rust code be a python dependency
+        run: poetry run maturin develop
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
