@@ -48,6 +48,7 @@ jobs:
       - name: Install dependencies
         run: poetry install
       - name: Test rust code
+        working-directory: ./ibis-server/rust
         run: cargo test
       - name: Build rust code be a python dependency
         run: poetry run maturin develop
