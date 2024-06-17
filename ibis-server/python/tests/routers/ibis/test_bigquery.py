@@ -4,7 +4,7 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 
-from python.wren_engine.main import app
+from wren_engine.main import app
 
 client = TestClient(app)
 

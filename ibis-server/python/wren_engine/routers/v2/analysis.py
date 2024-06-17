@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from python.wren_engine.logger import log_dto
-from python.wren_engine.mdl.analyzer import analyze
+from wren_engine.logger import log_dto
+from wren_engine.mdl.analyzer import analyze
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 

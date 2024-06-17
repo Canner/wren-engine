@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, Field
 
-from python.wren_engine.model.data_source import ConnectionInfo
+from wren_engine.model.data_source import ConnectionInfo
 
 
 class MetadataDTO(BaseModel):

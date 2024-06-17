@@ -2,10 +2,10 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from starlette.responses import PlainTextResponse
 
-from python.wren_engine.config import get_config
-from python.wren_engine.model.connector import QueryDryRunError
-from python.wren_engine.model.validator import ValidationError
-from python.wren_engine.routers import v2
+from wren_engine.config import get_config
+from wren_engine.model.connector import QueryDryRunError
+from wren_engine.model.validator import ValidationError
+from wren_engine.routers import v2
 
 app = FastAPI()
 app.include_router(v2.router)

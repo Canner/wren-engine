@@ -1,5 +1,5 @@
-from python.wren_engine.model.connector import ConnectionInfo
-from python.wren_engine.model.metadata.dto import Table, Constraint
+from wren_engine.model.connector import ConnectionInfo
+from wren_engine.model.metadata.dto import Table, Constraint
 
 
 class Metadata:

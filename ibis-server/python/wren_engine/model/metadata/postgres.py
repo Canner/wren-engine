@@ -1,7 +1,7 @@
 from json import loads
 
-from python.wren_engine.model.data_source import DataSource, PostgresConnectionInfo
-from python.wren_engine.model.metadata.dto import (
+from wren_engine.model.data_source import DataSource, PostgresConnectionInfo
+from wren_engine.model.metadata.dto import (
     Table,
     Constraint,
     TableProperties,
@@ -9,7 +9,7 @@ from python.wren_engine.model.metadata.dto import (
     ConstraintType,
     WrenEngineColumnType,
 )
-from python.wren_engine.model.metadata.metadata import Metadata
+from wren_engine.model.metadata.metadata import Metadata
 
 
 class PostgresMetadata(Metadata):

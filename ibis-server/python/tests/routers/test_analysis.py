@@ -3,7 +3,7 @@ import base64
 from fastapi.testclient import TestClient
 from orjson import orjson
 
-from python.wren_engine.main import app
+from wren_engine.main import app
 
 client = TestClient(app)
 

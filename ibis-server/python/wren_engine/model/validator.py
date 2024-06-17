@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from python.wren_engine.model.connector import Connector
-from python.wren_engine.model.data_source import ConnectionInfo
+from wren_engine.model.connector import Connector
+from wren_engine.model.data_source import ConnectionInfo
 
 rules = ["column_is_valid"]
 

@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-from python.wren_engine.config import get_config
+from wren_engine.config import get_config
 
 logging.basicConfig(level=get_config().log_level)
 

@@ -1,7 +1,7 @@
 import httpx
 import orjson
 
-from python.wren_engine.config import get_config
+from wren_engine.config import get_config
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 

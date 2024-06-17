@@ -1,15 +1,15 @@
 from json import loads
 
-from python.wren_engine.model.data_source import BigQueryConnectionInfo
-from python.wren_engine.model.data_source import DataSource
-from python.wren_engine.model.metadata.dto import (
+from wren_engine.model.data_source import BigQueryConnectionInfo
+from wren_engine.model.data_source import DataSource
+from wren_engine.model.metadata.dto import (
     Table,
     Constraint,
     TableProperties,
     Column,
     ConstraintType,
 )
-from python.wren_engine.model.metadata.metadata import Metadata
+from wren_engine.model.metadata.metadata import Metadata
 
 
 class BigQueryMetadata(Metadata):

@@ -1,13 +1,13 @@
 from json import loads
 
-from python.wren_engine.model.data_source import DataSource, ConnectionInfo
-from python.wren_engine.model.metadata.bigquery import BigQueryMetadata
-from python.wren_engine.model.metadata.dto import (
+from wren_engine.model.data_source import DataSource, ConnectionInfo
+from wren_engine.model.metadata.bigquery import BigQueryMetadata
+from wren_engine.model.metadata.dto import (
     Table,
     Constraint,
 )
-from python.wren_engine.model.metadata.metadata import Metadata
-from python.wren_engine.model.metadata.postgres import PostgresMetadata
+from wren_engine.model.metadata.metadata import Metadata
+from wren_engine.model.metadata.postgres import PostgresMetadata
 
 
 class MetadataFactory:

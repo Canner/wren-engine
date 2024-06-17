@@ -21,8 +21,8 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY poetry.lock ./
-COPY Cargo.toml ./
-COPY Cargo.lock ./
+COPY rust/Cargo.toml ./
+COPY rust/Cargo.lock ./
 
 RUN poetry install --without dev
 RUN poetry run maturin develop

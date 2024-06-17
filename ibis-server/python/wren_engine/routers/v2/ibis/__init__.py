@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from python.wren_engine.routers.v2.ibis import bigquery, mysql, postgres, snowflake
+from wren_engine.routers.v2.ibis import bigquery, mysql, postgres, snowflake
 
 prefix = "/ibis"
 

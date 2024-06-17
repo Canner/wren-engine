@@ -3,10 +3,10 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response
 from fastapi.responses import JSONResponse
 
-from python.wren_engine.logger import log_dto
-from python.wren_engine.model.connector import Connector, QuerySnowflakeDTO, to_json
-from python.wren_engine.model.data_source import DataSource
-from python.wren_engine.model.validator import ValidateDTO, Validator
+from wren_engine.logger import log_dto
+from wren_engine.model.connector import Connector, QuerySnowflakeDTO, to_json
+from wren_engine.model.data_source import DataSource
+from wren_engine.model.validator import ValidateDTO, Validator
 
 router = APIRouter(prefix="/snowflake", tags=["snowflake"])
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from python.wren_engine.routers.v2 import ibis, analysis
+from wren_engine.routers.v2 import ibis, analysis
 
 prefix = "/v2"
 

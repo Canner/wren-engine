@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from testcontainers.postgres import PostgresContainer
 
-from python.wren_engine.main import app
+from wren_engine.main import app
 
 client = TestClient(app)
 

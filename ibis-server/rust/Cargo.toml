@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.21.2", features = ["extension-module"] }
-wren-core = { path = "../wren-modeling-rs/core" }
+wren-core = { path = "../../wren-modeling-rs/core" }
 base64 = "0.22.1"
 serde_json = "1.0.117"
 thiserror = "1.0"

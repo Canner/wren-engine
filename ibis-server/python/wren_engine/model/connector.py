@@ -3,8 +3,8 @@ from json import loads
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from python.wren_engine.mdl.rewriter import rewrite
-from python.wren_engine.model.data_source import (
+from wren_engine.mdl.rewriter import rewrite
+from wren_engine.model.data_source import (
     BigQueryConnectionInfo,
     ConnectionInfo,
     DataSource,
