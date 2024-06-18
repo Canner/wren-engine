@@ -20,8 +20,12 @@ RUN pip install poetry==1.7.1
 WORKDIR /app
 
 COPY pyproject.toml ./
+COPY poetry.lock ./
+COPY rust/Cargo.toml ./
+COPY rust/Cargo.lock ./
 
 RUN poetry install --without dev
+RUN poetry run maturin develop
 
 FROM python:3.11-slim-buster as runtime
 
@@ -34,7 +38,7 @@ ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
-COPY app app
+COPY python/wren_engine app
 
 EXPOSE 8000
 
