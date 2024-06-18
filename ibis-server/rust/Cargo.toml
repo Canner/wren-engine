@@ -1,5 +1,5 @@
 [package]
-name = "wren-core-wrapper"
+name = "wren-modeling-py"
 version = "0.1.0"
 edition = "2021"
 include = ["/src", "pyproject.toml", "Cargo.toml", "Cargo.lock"]
