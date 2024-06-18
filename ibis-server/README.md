@@ -1,6 +1,6 @@
 # Ibis server
 Ibis server is a server base on Python that provides the API for rewriting the queries with [Modeling Definition Language (MDL)](https://docs.getwren.ai/engine/concept/what_is_mdl) manifest and connect data source via [Ibis](https://github.com/ibis-project/ibis). It is built on top of the [FastAPI](https://github.com/tiangolo/fastapi) framework. \
-We still need to run the Java engine for rewriting the queries. In the future, we will rewrite the modeling core of java engine to [Rust](https://github.com/rust-lang/rust) and integrate the modeling core into the Ibis server. \
+We still need to run the Java engine for rewriting the queries. In the future, we will redesign the modeling core of java engine to [Rust](https://github.com/rust-lang/rust) and integrate the modeling core into the Ibis server. \
 We continuously integrate the Rust core with the Ibis server now.
 
 ## Quick Start
