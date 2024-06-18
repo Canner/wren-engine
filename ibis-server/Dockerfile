@@ -21,11 +21,8 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY poetry.lock ./
-COPY rust/Cargo.toml ./
-COPY rust/Cargo.lock ./
 
 RUN poetry install --without dev
-RUN poetry run maturin develop
 
 FROM python:3.11-slim-buster as runtime
 
