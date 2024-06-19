@@ -4,6 +4,7 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from testcontainers.mysql import MySqlContainer
+from sqlalchemy import text
 
 from wren_engine.main import app
 
@@ -30,7 +31,12 @@ def mysql(request) -> MySqlContainer:
     pd.read_parquet(file_path("../../resource/tpch/data/customer.parquet")).to_sql(
         "customer", engine, index=False
     )
-
+    conn = engine.connect()
+    conn.execute(text("ALTER TABLE orders ADD PRIMARY KEY(o_orderkey);"))
+    conn.execute(text("ALTER TABLE customer Add PRIMARY KEY(c_custkey);"))
+    conn.execute(text("ALTER TABLE orders ADD FOREIGN KEY (o_custkey) REFERENCES customer(c_custkey);"))
+    conn.close()
+    
     def stop_pg():
         mysql.stop()
 
@@ -368,3 +374,34 @@ class TestMySql:
         )
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
+
+    def test_metadata_list_tables(self, mysql: MySqlContainer):
+        connection_info = self.to_connection_info(mysql)
+        response = client.post(
+            url="/v2/ibis/mysql/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+
+        result = response.json()[0]
+        assert result["name"] is not None
+        assert result["columns"] is not None
+        assert result["primaryKey"] is not None
+        assert result["description"] is not None
+        assert result["properties"] is not None
+
+    def test_metadata_list_constraints(self, mysql: MySqlContainer):
+        connection_info = self.to_connection_info(mysql)
+        response = client.post(
+            url="/v2/ibis/mysql/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+
+        result = response.json()[0]
+        assert result["constraintName"] is not None
+        assert result["constraintType"] is not None
+        assert result["constraintTable"] is not None
+        assert result["constraintColumn"] is not None
+        assert result["constraintedTable"] is not None
+        assert result["constraintedColumn"] is not None
