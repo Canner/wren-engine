@@ -7,6 +7,9 @@ from wren_engine.logger import log_dto
 from wren_engine.model.connector import Connector, to_json, QueryMySqlDTO
 from wren_engine.model.data_source import DataSource
 from wren_engine.model.validator import ValidateDTO, Validator
+from wren_engine.model.metadata.dto import MetadataDTO, Table, Constraint
+from wren_engine.model.metadata.factory import MetadataFactory
+
 
 router = APIRouter(prefix="/mysql", tags=["mysql"])
 
@@ -31,3 +34,17 @@ def validate(rule_name: str, dto: ValidateDTO) -> Response:
     validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)
+
+
+@router.post("/metadata/tables", response_model=list[Table])
+@log_dto
+def get_table_list(dto: MetadataDTO) -> list[Table]:
+    metadata = MetadataFactory(data_source, dto.connection_info)
+    return metadata.get_table_list()
+
+
+@router.post("/metadata/constraints", response_model=list[Constraint])
+@log_dto
+def get_constraints(dto: MetadataDTO) -> list[Constraint]:
+    metadata = MetadataFactory(data_source, dto.connection_info)
+    return metadata.get_constraints()

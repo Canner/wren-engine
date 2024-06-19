@@ -2,12 +2,13 @@ from json import loads
 
 from wren_engine.model.data_source import DataSource, ConnectionInfo
 from wren_engine.model.metadata.bigquery import BigQueryMetadata
+from wren_engine.model.metadata.metadata import Metadata
+from wren_engine.model.metadata.postgres import PostgresMetadata
+from wren_engine.model.metadata.mysql import MySQLMetadata
 from wren_engine.model.metadata.dto import (
     Table,
     Constraint,
 )
-from wren_engine.model.metadata.metadata import Metadata
-from wren_engine.model.metadata.postgres import PostgresMetadata
 
 
 class MetadataFactory:
@@ -19,6 +20,8 @@ class MetadataFactory:
             return PostgresMetadata(connection_info)
         if data_source == DataSource.bigquery:
             return BigQueryMetadata(connection_info)
+        if data_source == DataSource.mysql:
+            return MySQLMetadata(connection_info)
         raise NotImplementedError(f"Unsupported data source: {self}")
 
     def get_table_list(self) -> list[Table]:
