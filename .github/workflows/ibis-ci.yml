@@ -55,13 +55,14 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ibis-server/rust/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('ibis-server/rust/Cargo.lock') }}
-      - name: Test rust code
-        working-directory: ./ibis-server/rust
-        run: cargo test
-      - name: Build rust code be a python dependency
-        run: poetry run maturin develop
+            wren-modeling-py/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wren-modeling-py/Cargo.lock') }}
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: wren-modeling-py
+          command: build
+      - name: Install wren-modeling-py
+        run: poetry run pip install ../wren-modeling-py/target/wheels/wren_modeling_py-*.whl
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
