@@ -34,9 +34,13 @@ def mysql(request) -> MySqlContainer:
     conn = engine.connect()
     conn.execute(text("ALTER TABLE orders ADD PRIMARY KEY(o_orderkey);"))
     conn.execute(text("ALTER TABLE customer Add PRIMARY KEY(c_custkey);"))
-    conn.execute(text("ALTER TABLE orders ADD FOREIGN KEY (o_custkey) REFERENCES customer(c_custkey);"))
+    conn.execute(
+        text(
+            "ALTER TABLE orders ADD FOREIGN KEY (o_custkey) REFERENCES customer(c_custkey);"
+        )
+    )
     conn.close()
-    
+
     def stop_pg():
         mysql.stop()
 
