@@ -1,6 +1,5 @@
 import base64
-
-from orjson import orjson
+import json
 
 import wren_core
 
@@ -20,7 +19,7 @@ manifest = {
     ],
 }
 
-manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+manifest_str = base64.b64encode(json.dumps(manifest).encode("utf-8")).decode("utf-8")
 
 
 def test_transform_sql():

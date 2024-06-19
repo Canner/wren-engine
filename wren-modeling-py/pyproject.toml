@@ -15,7 +15,6 @@ python = ">=3.11,<3.12"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.2.0"
-orjson = "3.10.3"
 
 [tool.maturin]
 module-name = "wren_core"
