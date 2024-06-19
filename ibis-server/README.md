@@ -42,6 +42,7 @@ docker compose up
 Requirements:
 - Python 3.11
 - [poetry](https://github.com/python-poetry/poetry) 1.7.1 (see [Environment Setup](#Environment-Setup))
+- [Rust](https://www.rust-lang.org/tools/install) and [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 
 Clone the repository
 ```bash
@@ -64,10 +65,6 @@ Install the dependencies
 ```bash
 just install
 ```
-Build rust code be a python dependency
-```bash
-just maturin
-```
 Run the server
 ```bash
 just run
@@ -82,7 +79,6 @@ just run
 - Install [casey/just](https://github.com/casey/just)
 - Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
 - Execute `just install` to install the dependencies
-- Execute `just maturin` to make rust be a python dependency.
 - Execute `just test` to run the tests
 - Create `.env` file and fill in the environment variables
 
@@ -98,3 +94,6 @@ just run
 ### Docker
 - Build the image: `just docker-build`
 - Run the container: `just docker-run`
+
+### Modeling Core
+The modeling core is written in Rust and convert to Python package. You can find the [wren-modeling-py](../wren-modeling-py) and the source code in the [wren-modeling-rs](../wren-modeling-rs) directory.

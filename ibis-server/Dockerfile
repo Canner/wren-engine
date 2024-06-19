@@ -35,7 +35,7 @@ ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
-COPY python/wren_engine app
+COPY app app
 
 EXPOSE 8000
 
