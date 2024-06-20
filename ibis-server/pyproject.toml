@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "wren_engine"
+name = "wren-engine"
 version = "0.5.0"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
-packages = [{ include = "python/wren_engine" }]
+packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -28,10 +28,8 @@ ruff = "0.4.8"
 maturin = "1.6.0"
 
 [tool.pytest.ini_options]
-pythonpath = "python"
 addopts = [
     "--strict-markers",
-    "--import-mode=importlib"
 ]
 markers = [
     "bigquery: mark a test as a bigquery test",
@@ -44,27 +42,5 @@ markers = [
 target-version = "py311"
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
-
-[project]
-name = "wren_engine"
-readme = "README.md"
-requires-python = ">=3.11,<3.12"
-classifier = [
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python",
-    "Programming Language :: Rust",
-]
-
-[tool.maturin]
-python-source = "python"
-module-name = "wren_engine.modeling_core"
-include = [
-    { path = "Cargo.lock", format = "sdist" }
-]
-exclude = [".github/**", "tests/**", "target/**", "wheels/**"]
-locked = true
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

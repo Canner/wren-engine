@@ -1,0 +1,29 @@
+[project]
+name = "wren-modeling-py"
+classifiers = [
+    "Programming Language :: Python :: 3.11"
+]
+
+[tool.poetry]
+name = "wren-modeling-py"
+version = "0.1.0"
+description = ""
+authors = ["Canner <dev@cannerdata.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.2.0"
+
+[tool.maturin]
+module-name = "wren_core"
+include = [
+    { path = "Cargo.lock", format = "sdist" }
+]
+exclude = ["tests/**", "target/**"]
+locked = true
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"

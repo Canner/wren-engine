@@ -1,0 +1,12 @@
+default:
+    @just --list --unsorted
+
+build:
+    maturin build
+
+develop:
+    maturin develop
+
+test: develop
+    cargo test
+    pytest
