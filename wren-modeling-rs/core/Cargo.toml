@@ -14,8 +14,9 @@ path = "src/lib.rs"
 
 [dependencies]
 arrow-schema = { workspace = true }
-async-trait = "0.1.80"
+async-trait = { workspace = true }
 datafusion = { workspace = true }
+env_logger = { workspace = true }
 log = { workspace = true }
 petgraph = "0.6.5"
 petgraph-evcxr = "*"

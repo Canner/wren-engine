@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -96,6 +97,17 @@ pub enum JoinType {
     OneToMany,
     ManyToOne,
     ManyToMany,
+}
+
+impl Display for JoinType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JoinType::OneToOne => write!(f, "one_to_one"),
+            JoinType::OneToMany => write!(f, "one_to_many"),
+            JoinType::ManyToOne => write!(f, "many_to_one"),
+            JoinType::ManyToMany => write!(f, "many_to_many"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]

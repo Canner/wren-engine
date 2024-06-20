@@ -1,0 +1,19 @@
+[package]
+name = "wren-example"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+publish = false
+
+[dev-dependencies]
+arrow-schema = { workspace = true }
+async-trait = { workspace = true }
+datafusion = { workspace = true }
+env_logger = { workspace = true }
+tokio = { workspace = true }
+wren-core = { workspace = true }

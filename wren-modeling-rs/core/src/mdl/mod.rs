@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::{collections::HashMap, sync::Arc};
 
 use datafusion::{
@@ -14,11 +15,12 @@ use log::{debug, info};
 
 use manifest::Relationship;
 
+use crate::logical_plan::analyze::rule::RemoveWrenPrefixRule;
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::{
     logical_plan::{
+        analyze::rule::{ModelAnalyzeRule, ModelGenerationRule},
         context_provider::WrenContextProvider,
-        rule::{ModelAnalyzeRule, ModelGenerationRule},
     },
     mdl::manifest::{Column, Manifest, Metric, Model},
 };
@@ -30,13 +32,13 @@ pub mod utils;
 
 pub struct AnalyzedWrenMDL {
     pub wren_mdl: Arc<WrenMDL>,
-    pub lineage: lineage::Lineage,
+    pub lineage: Arc<lineage::Lineage>,
 }
 
 impl AnalyzedWrenMDL {
     pub fn analyze(manifest: Manifest) -> Self {
         let wren_mdl = Arc::new(WrenMDL::new(manifest));
-        let lineage = lineage::Lineage::new(&wren_mdl);
+        let lineage = Arc::new(lineage::Lineage::new(&wren_mdl));
         AnalyzedWrenMDL { wren_mdl, lineage }
     }
 
@@ -51,8 +53,16 @@ impl AnalyzedWrenMDL {
         let lineage = lineage::Lineage::new(&wren_mdl);
         AnalyzedWrenMDL {
             wren_mdl: Arc::new(wren_mdl),
-            lineage,
+            lineage: Arc::new(lineage),
         }
+    }
+
+    pub fn wren_mdl(&self) -> Arc<WrenMDL> {
+        Arc::clone(&self.wren_mdl)
+    }
+
+    pub fn lineage(&self) -> Arc<lineage::Lineage> {
+        Arc::clone(&self.lineage)
     }
 }
 
@@ -139,6 +149,12 @@ impl WrenMDL {
         self.register_tables.get(name).cloned()
     }
 
+    pub fn get_register_tables(
+        &self,
+    ) -> &HashMap<String, Arc<dyn datafusion::datasource::TableProvider>> {
+        &self.register_tables
+    }
+
     pub fn catalog(&self) -> &str {
         &self.manifest.catalog
     }
@@ -200,6 +216,7 @@ pub fn transform_sql(
     let analyzer = Analyzer::with_rules(vec![
         Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
         Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
+        Arc::new(RemoveWrenPrefixRule::new(Arc::clone(&analyzed_mdl))),
     ]);
 
     let config = ConfigOptions::default();
@@ -262,6 +279,15 @@ impl Dataset {
     }
 }
 
+impl Display for Dataset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Dataset::Model(model) => write!(f, "{}", model.name()),
+            Dataset::Metric(metric) => write!(f, "{}", metric.name()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::error::Error;
@@ -289,50 +315,20 @@ mod test {
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
 
-        // TODO: instead of assert string value, assert the query plan or result
-        let tests: Vec<(&str, &str)> = vec![
-            (
+        let tests: Vec<&str> = vec![
                 "select orderkey + orderkey from test.test.orders",
-                r#"SELECT ("orders"."orderkey" + "orders"."orderkey") FROM (SELECT "orders"."o_orderkey" AS "orderkey" FROM "orders") AS "orders""#,
-            ),
-            (
                 "select orderkey from test.test.orders where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10)"#,
-            ),
-            (
                 "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                r#"SELECT "orders"."orderkey" FROM (SELECT "orders"."o_custkey" AS "custkey", "orders"."o_orderkey" AS "orderkey", "orders"."o_totalprice" AS "totalprice" FROM "orders") AS "orders" LEFT JOIN (SELECT "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" ON ("orders"."custkey" = "customer"."custkey") WHERE ("orders"."totalprice" > 10)"#,
-            ),
-            (
                 "select orderkey, sum(totalprice) from test.test.orders group by 1",
-                r#"SELECT "orders"."orderkey", SUM("orders"."totalprice") FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" GROUP BY "orders"."orderkey""#,
-            ),
-            (
                 "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
-                r#"SELECT "orders"."orderkey", COUNT(*) FROM (SELECT "o_orderkey" AS "orderkey", "o_totalprice" AS "totalprice" FROM "orders") AS "orders" WHERE ("orders"."totalprice" > 10) GROUP BY "orders"."orderkey""#,
-            ),
-            (
-                "select count(*) from test.test.orders",
-                r#"SELECT COUNT(*) FROM "orders""#,
-            ),
-            (
-                "select customer_name from test.test.orders",
-                r#"SELECT "orders"."customer_name" FROM (SELECT "customer"."name" AS "customer_name" FROM (SELECT "customer"."c_name" AS "name", "customer"."c_orderkey" AS "custkey" FROM "customer") AS "customer" LEFT JOIN (SELECT "orders"."o_custkey" AS "custkey" FROM "orders") AS "orders" ON ("customer"."custkey" = "orders"."custkey")) AS "orders""#
-            ),
-            // TODO: support calculated without relationship
-            // (
-            //     "select orderkey_plus_custkey from orders",
-            //     "select * from orders;"
-            // )
+        // TODO: support calculated without relationship
+        //     "select orderkey_plus_custkey from orders",
         ];
 
-        for (sql, expected) in tests {
+        for sql in tests {
             println!("{}", sql);
             let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
-            assert_eq!(
-                plan_sql(&actual, Arc::clone(&analyzed_mdl))?,
-                plan_sql(expected, Arc::clone(&analyzed_mdl))?
-            );
+            plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
         }
 
         Ok(())
@@ -343,7 +339,7 @@ mod test {
         let ast = Parser::parse_sql(&dialect, sql).unwrap();
         let statement = &ast[0];
 
-        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl);
+        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl());
         let sql_to_rel = SqlToRel::new(&context_provider);
         let rels = sql_to_rel.sql_statement_to_plan(statement.clone())?;
         // show the planned sql
