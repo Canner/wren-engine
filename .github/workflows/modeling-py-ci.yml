@@ -6,15 +6,9 @@
 name: Modeling Python CI
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - '*'
   pull_request:
     paths:
       - 'wren-modeling-py/**'
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
