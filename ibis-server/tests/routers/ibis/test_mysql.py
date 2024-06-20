@@ -3,8 +3,8 @@ import base64
 import orjson
 import pytest
 from fastapi.testclient import TestClient
-from testcontainers.mysql import MySqlContainer
 from sqlalchemy import text
+from testcontainers.mysql import MySqlContainer
 
 from app.main import app
 
@@ -18,8 +18,8 @@ def mysql(request) -> MySqlContainer:
 
         return os.path.join(os.path.dirname(__file__), path)
 
-    import sqlalchemy
     import pandas as pd
+    import sqlalchemy
 
     mysql = MySqlContainer("mysql:8.0")
     mysql.start()

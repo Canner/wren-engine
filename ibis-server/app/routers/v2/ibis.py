@@ -1,22 +1,22 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
-from app.logger import log_dto
-from app.model.connector import (
-    Connector,
-    to_json,
-)
 from app.dependencies import verify_query_dto
+from app.logger import log_dto
 from app.model import (
     QueryDTO,
     ValidateDTO,
 )
+from app.model.connector import (
+    Connector,
+    to_json,
+)
 from app.model.data_source import DataSource
-from app.model.validator import Validator
-from app.model.metadata.dto import MetadataDTO, Table, Constraint
+from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
+from app.model.validator import Validator
 
 router = APIRouter(prefix="/ibis")
 

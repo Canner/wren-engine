@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.routers.v2 import ibis, analysis
+from app.routers.v2 import analysis, ibis
 
 prefix = "/v2"
 

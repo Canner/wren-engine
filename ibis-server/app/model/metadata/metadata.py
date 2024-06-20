@@ -1,5 +1,5 @@
 from app.model import ConnectionInfo
-from app.model.metadata.dto import Table, Constraint
+from app.model.metadata.dto import Constraint, Table
 
 
 class Metadata:

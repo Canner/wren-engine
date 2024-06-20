@@ -1,15 +1,15 @@
 from json import loads
 
-from app.model.data_source import DataSource
 from app.model import ConnectionInfo
+from app.model.data_source import DataSource
 from app.model.metadata.bigquery import BigQueryMetadata
-from app.model.metadata.metadata import Metadata
-from app.model.metadata.postgres import PostgresMetadata
-from app.model.metadata.mysql import MySQLMetadata
 from app.model.metadata.dto import (
-    Table,
     Constraint,
+    Table,
 )
+from app.model.metadata.metadata import Metadata
+from app.model.metadata.mysql import MySQLMetadata
+from app.model.metadata.postgres import PostgresMetadata
 
 
 class MetadataFactory:

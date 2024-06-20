@@ -3,8 +3,8 @@ from json import loads
 import pandas as pd
 
 from app.mdl.rewriter import rewrite
-from app.model.data_source import DataSource
 from app.model import ConnectionInfo
+from app.model.data_source import DataSource
 
 
 class Connector:

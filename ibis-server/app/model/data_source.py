@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from enum import StrEnum, auto, Enum
+from enum import Enum, StrEnum, auto
 from json import loads
 
 import ibis
@@ -14,12 +14,12 @@ from app.model import (
     ConnectionUrl,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
-    SnowflakeConnectionInfo,
     QueryBigQueryDTO,
     QueryDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
     QuerySnowflakeDTO,
+    SnowflakeConnectionInfo,
 )
 
 
