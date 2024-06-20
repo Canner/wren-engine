@@ -5,7 +5,7 @@ edition = "2021"
 include = ["/src", "pyproject.toml", "Cargo.toml", "Cargo.lock"]
 
 [lib]
-name = "wren_core"
+name = "wren_modeling_py"
 crate-type = ["cdylib"]
 
 [dependencies]
