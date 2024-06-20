@@ -61,8 +61,8 @@ impl AnalyzedWrenMDL {
         Arc::clone(&self.wren_mdl)
     }
 
-    pub fn lineage(&self) -> Arc<lineage::Lineage> {
-        Arc::clone(&self.lineage)
+    pub fn lineage(&self) -> &lineage::Lineage {
+        &self.lineage
     }
 }
 
@@ -244,7 +244,7 @@ pub fn transform_sql(
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
 /// Cheap clone of the ColumnReference
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ColumnReference {
     pub dataset: Dataset,
     pub column: Arc<Column>,
@@ -253,10 +253,6 @@ pub struct ColumnReference {
 impl ColumnReference {
     fn new(dataset: Dataset, column: Arc<Column>) -> Self {
         ColumnReference { dataset, column }
-    }
-
-    pub fn get_column(&self) -> Arc<Column> {
-        Arc::clone(&self.column)
     }
 
     pub fn get_qualified_name(&self) -> String {
@@ -275,6 +271,13 @@ impl Dataset {
         match self {
             Dataset::Model(model) => model.name(),
             Dataset::Metric(metric) => metric.name(),
+        }
+    }
+
+    pub fn try_as_model(&self) -> Option<Arc<Model>> {
+        match self {
+            Dataset::Model(model) => Some(Arc::clone(model)),
+            _ => None,
         }
     }
 }

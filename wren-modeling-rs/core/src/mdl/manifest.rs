@@ -30,7 +30,7 @@ pub struct Model {
     pub table_reference: String,
     pub columns: Vec<Arc<Column>>,
     #[serde(default)]
-    pub primary_key: String,
+    pub primary_key: Option<String>,
     #[serde(default)]
     pub cached: bool,
     #[serde(default)]
@@ -52,6 +52,17 @@ impl Model {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
+        self.columns
+            .iter()
+            .find(|c| c.name == column_name)
+            .map(Arc::clone)
+    }
+
+    pub fn primary_key(&self) -> Option<&str> {
+        self.primary_key.as_deref()
     }
 }
 
@@ -97,6 +108,15 @@ pub enum JoinType {
     OneToMany,
     ManyToOne,
     ManyToMany,
+}
+
+impl JoinType {
+    pub fn is_to_one(&self) -> bool {
+        match self {
+            JoinType::OneToOne | JoinType::ManyToOne => true,
+            _ => false,
+        }
+    }
 }
 
 impl Display for JoinType {

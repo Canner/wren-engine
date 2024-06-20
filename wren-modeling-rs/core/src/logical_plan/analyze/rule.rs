@@ -6,12 +6,14 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::Result;
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
-use datafusion::logical_expr::{col, utils, Extension};
+use datafusion::logical_expr::{col, ident, utils, Extension};
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::sql::TableReference;
 
-use crate::logical_plan::analyze::plan::{ModelPlanNode, ModelSourceNode};
+use crate::logical_plan::analyze::plan::{
+    CalculationPlanNode, ModelPlanNode, ModelSourceNode,
+};
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
@@ -225,7 +227,6 @@ impl ModelGenerationRule {
                             .get_model(&model_plan.model_name)
                             .expect("Model not found"),
                     );
-
                     let result = match source_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)
                             .project(model_plan.required_exprs.clone())?
@@ -288,6 +289,39 @@ impl ModelGenerationRule {
                         .alias(model.name.clone())?
                         .build()?;
                     Ok(Transformed::yes(result))
+                } else if let Some(calculation_plan) = extension
+                    .node
+                    .as_any()
+                    .downcast_ref::<CalculationPlanNode>(
+                ) {
+                    let source_plan = calculation_plan.relation_chain.clone().plan(
+                        ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
+                    );
+
+                    if let Expr::Alias(alias) = calculation_plan.measures[0].clone() {
+                        let measure: Expr = *alias.expr.clone();
+                        let name = alias.name.clone();
+                        let ident = ident(measure.to_string()).alias(name);
+                        let project = vec![calculation_plan.dimensions[0].clone(), ident];
+                        let result = match source_plan {
+                            Some(plan) => LogicalPlanBuilder::from(plan)
+                                .aggregate(
+                                    calculation_plan.dimensions.clone(),
+                                    vec![measure],
+                                )?
+                                .project(project)?
+                                .build()?,
+                            _ => {
+                                panic!("Failed to generate source plan")
+                            }
+                        };
+                        let alias = LogicalPlanBuilder::from(result)
+                            .alias(calculation_plan.calculation.column.name())?
+                            .build()?;
+                        Ok(Transformed::yes(alias))
+                    } else {
+                        panic!("measures should have an alias")
+                    }
                 } else {
                     Ok(Transformed::no(LogicalPlan::Extension(extension)))
                 }
@@ -409,11 +443,11 @@ mod test {
         // the expected result will have the schema prefix.
         let tests = vec![
             ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a",
-             r#"SELECT "a"."c1", "a"."c2" FROM "default"."a""#),
+             r#"SELECT a.c1, a.c2 FROM wrenai."default".a"#),
             ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a where wrenai.default.a.c1 = 1",
-                 r#"SELECT "a"."c1", "a"."c2" FROM "default"."a" WHERE ("a"."c1" = 1)"#),
+                 r#"SELECT a.c1, a.c2 FROM wrenai."default".a WHERE (a.c1 = 1)"#),
             ("select wrenai.default.a.c1 + 1 from wrenai.default.a",
-            r#"SELECT ("a"."c1" + 1) FROM "default"."a""#)
+            r#"SELECT (a.c1 + 1) FROM wrenai."default".a"#)
         ];
 
         let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl);

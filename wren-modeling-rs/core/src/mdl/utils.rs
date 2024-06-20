@@ -3,6 +3,7 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use datafusion::common::Column;
+use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::sql::planner::SqlToRel;
 use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
@@ -112,10 +113,16 @@ pub fn create_wren_calculated_field_expr(
         Err(e) => panic!("Error creating plan: {}", e),
     };
 
-    match plan {
-        LogicalPlan::Projection(projection) => projection.expr[0].clone(),
+    let result = match plan {
+        LogicalPlan::Projection(projection) => {
+            if let LogicalPlan::Aggregate(aggregation) = unwrap_arc(projection.input) {
+                return aggregation.aggr_expr[0].clone();
+            }
+            projection.expr[0].clone()
+        }
         _ => unreachable!("Unexpected plan type: {:?}", plan),
-    }
+    };
+    result
 }
 
 /// Create the Logical Expr for the remote column.

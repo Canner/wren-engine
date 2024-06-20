@@ -1,6 +1,6 @@
+use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use std::{collections::HashMap, sync::Arc};
 
-use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
 use petgraph::dot::{Config, Dot};
