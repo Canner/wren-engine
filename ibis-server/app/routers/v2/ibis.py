@@ -1,25 +1,32 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Response, Depends
 from fastapi.responses import JSONResponse
 
 from app.logger import log_dto
-from app.model.connector import Connector, to_json, QueryMySqlDTO
+from app.model.connector import (
+    Connector,
+    to_json,
+)
+from app.dependencies import verify_query_dto
+from app.model import (
+    QueryDTO,
+    ValidateDTO,
+)
 from app.model.data_source import DataSource
-from app.model.validator import ValidateDTO, Validator
+from app.model.validator import Validator
 from app.model.metadata.dto import MetadataDTO, Table, Constraint
 from app.model.metadata.factory import MetadataFactory
 
-
-router = APIRouter(prefix="/mysql", tags=["mysql"])
-
-data_source = DataSource.mysql
+router = APIRouter(prefix="/ibis")
 
 
-@router.post("/query")
+@router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
 @log_dto
 def query(
-    dto: QueryMySqlDTO, dry_run: Annotated[bool, Query(alias="dryRun")] = False
+    data_source: DataSource,
+    dto: QueryDTO,
+    dry_run: Annotated[bool, Query(alias="dryRun")] = False,
 ) -> Response:
     connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
@@ -28,23 +35,23 @@ def query(
     return JSONResponse(to_json(connector.query(dto.sql), dto.column_dtypes))
 
 
-@router.post("/validate/{rule_name}")
+@router.post("/{data_source}/validate/{rule_name}")
 @log_dto
-def validate(rule_name: str, dto: ValidateDTO) -> Response:
+def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
     validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)
 
 
-@router.post("/metadata/tables", response_model=list[Table])
+@router.post("/{data_source}/metadata/tables", response_model=list[Table])
 @log_dto
-def get_table_list(dto: MetadataDTO) -> list[Table]:
+def get_table_list(data_source: DataSource, dto: MetadataDTO) -> list[Table]:
     metadata = MetadataFactory(data_source, dto.connection_info)
     return metadata.get_table_list()
 
 
-@router.post("/metadata/constraints", response_model=list[Constraint])
+@router.post("/{data_source}/metadata/constraints", response_model=list[Constraint])
 @log_dto
-def get_constraints(dto: MetadataDTO) -> list[Constraint]:
+def get_constraints(data_source: DataSource, dto: MetadataDTO) -> list[Constraint]:
     metadata = MetadataFactory(data_source, dto.connection_info)
     return metadata.get_constraints()

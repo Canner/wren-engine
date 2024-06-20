@@ -1,6 +1,7 @@
 from json import loads
 
-from app.model.data_source import DataSource, ConnectionInfo
+from app.model.data_source import DataSource
+from app.model import ConnectionInfo
 from app.model.metadata.bigquery import BigQueryMetadata
 from app.model.metadata.metadata import Metadata
 from app.model.metadata.postgres import PostgresMetadata

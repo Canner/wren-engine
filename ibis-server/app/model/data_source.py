@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 import base64
-from enum import StrEnum, auto
+from enum import StrEnum, auto, Enum
 from json import loads
-from typing import Union
 
 import ibis
 from google.oauth2 import service_account
 from ibis import BaseBackend
-from pydantic import BaseModel, Field
+
+from app.model import (
+    BigQueryConnectionInfo,
+    ConnectionInfo,
+    ConnectionUrl,
+    MySqlConnectionInfo,
+    PostgresConnectionInfo,
+    SnowflakeConnectionInfo,
+    QueryBigQueryDTO,
+    QueryDTO,
+    QueryMySqlDTO,
+    QueryPostgresDTO,
+    QuerySnowflakeDTO,
+)
 
 
 class DataSource(StrEnum):
@@ -17,18 +29,33 @@ class DataSource(StrEnum):
     postgres = auto()
     snowflake = auto()
 
-    def get_connection(self, dto) -> BaseBackend:
-        match self:
-            case DataSource.bigquery:
-                return self.get_bigquery_connection(dto)
-            case DataSource.mysql:
-                return self.get_mysql_connection(dto)
-            case DataSource.postgres:
-                return self.get_postgres_connection(dto)
-            case DataSource.snowflake:
-                return self.get_snowflake_connection(dto)
-            case _:
-                raise NotImplementedError(f"Unsupported data source: {self}")
+    def get_connection(self, info: ConnectionInfo) -> BaseBackend:
+        try:
+            return DataSourceExtension[self].get_connection(info)
+        except KeyError:
+            raise NotImplementedError(f"Unsupported data source: {self}")
+
+    def get_dto_type(self):
+        try:
+            return DataSourceExtension[self].dto
+        except KeyError:
+            raise NotImplementedError(f"Unsupported data source: {self}")
+
+
+class DataSourceExtension(Enum):
+    bigquery = QueryBigQueryDTO
+    mysql = QueryMySqlDTO
+    postgres = QueryPostgresDTO
+    snowflake = QuerySnowflakeDTO
+
+    def __init__(self, dto: QueryDTO):
+        self.dto = dto
+
+    def get_connection(self, info: ConnectionInfo) -> BaseBackend:
+        try:
+            return getattr(self, f"get_{self.name}_connection")(info)
+        except KeyError:
+            raise NotImplementedError(f"Unsupported data source: {self}")
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
@@ -44,7 +71,7 @@ class DataSource(StrEnum):
 
     @staticmethod
     def get_mysql_connection(
-        info: MySqlConnectionUrl | MySqlConnectionInfo,
+        info: ConnectionUrl | MySqlConnectionInfo,
     ) -> BaseBackend:
         return ibis.connect(
             getattr(info, "connection_url", None)
@@ -54,7 +81,7 @@ class DataSource(StrEnum):
 
     @staticmethod
     def get_postgres_connection(
-        info: PostgresConnectionUrl | PostgresConnectionInfo,
+        info: ConnectionUrl | PostgresConnectionInfo,
     ) -> BaseBackend:
         return ibis.connect(
             getattr(info, "connection_url", None)
@@ -70,53 +97,3 @@ class DataSource(StrEnum):
             database=info.database,
             schema=info.sf_schema,
         )
-
-
-class BigQueryConnectionInfo(BaseModel):
-    project_id: str
-    dataset_id: str
-    credentials: str = Field(description="Base64 encode `credentials.json`")
-
-
-class MySqlConnectionInfo(BaseModel):
-    host: str
-    port: int
-    database: str
-    user: str
-    password: str
-
-
-class MySqlConnectionUrl(BaseModel):
-    connection_url: str = Field(alias="connectionUrl")
-
-
-class PostgresConnectionInfo(BaseModel):
-    host: str = Field(examples=["localhost"])
-    port: int = Field(examples=[5432])
-    database: str
-    user: str
-    password: str
-
-
-class PostgresConnectionUrl(BaseModel):
-    connection_url: str = Field(alias="connectionUrl")
-
-
-class SnowflakeConnectionInfo(BaseModel):
-    user: str
-    password: str
-    account: str
-    database: str
-    sf_schema: str = Field(
-        alias="schema"
-    )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
-
-
-ConnectionInfo = Union[
-    BigQueryConnectionInfo,
-    MySqlConnectionInfo,
-    MySqlConnectionUrl,
-    PostgresConnectionInfo,
-    PostgresConnectionUrl,
-    SnowflakeConnectionInfo,
-]

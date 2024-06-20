@@ -1,6 +1,7 @@
 from json import loads
 
-from app.model.data_source import DataSource, PostgresConnectionInfo
+from app.model.data_source import DataSource
+from app.model import PostgresConnectionInfo
 from app.model.metadata.dto import (
     Table,
     Constraint,
