@@ -96,4 +96,4 @@ just run
 - Run the container: `just docker-run`
 
 ### Modeling Core
-The modeling core is written in Rust and convert to Python package. You can find the [wren-modeling-py](../wren-modeling-py) and the source code in the [wren-modeling-rs](../wren-modeling-rs) directory.
+The modeling core is written in Rust and provides the Python adaptor. You can find the [wren-modeling-py](../wren-modeling-py) and the source code in the [wren-modeling-rs](../wren-modeling-rs) directory.

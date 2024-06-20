@@ -1,4 +1,4 @@
-# Wren Modeling Core
+# Wren Modeling Core in Python
 Here is a dependency package for Python. It is a wrapper for the Rust package [wren-modeling-rs](../wren-modeling-rs). The Rust package is compiled to a Python package and can be used in Python.
 
 ## Developer Guide
