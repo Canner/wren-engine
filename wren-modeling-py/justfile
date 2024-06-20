@@ -2,11 +2,11 @@ default:
     @just --list --unsorted
 
 build:
-    maturin build
+    poetry run maturin build
 
 develop:
-    maturin develop
+    poetry run maturin develop
 
 test: develop
     cargo test
-    pytest
+    poetry run pytest
