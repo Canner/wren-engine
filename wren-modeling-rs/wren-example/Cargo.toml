@@ -11,7 +11,6 @@ version.workspace = true
 publish = false
 
 [dev-dependencies]
-arrow-schema = { workspace = true }
 async-trait = { workspace = true }
 datafusion = { workspace = true }
 env_logger = { workspace = true }
