@@ -7,7 +7,6 @@ Here is a dependency package for Python. It is a wrapper for the Rust package [w
 - Install [Rust](https://www.rust-lang.org/tools/install) and [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - Install [Python](https://www.python.org/downloads/) and [pipx](https://pipx.pypa.io/)
 - Install [poetry](https://github.com/python-poetry/poetry)
-- Install [maturin](https://github.com/PyO3/maturin)
 - Install [casey/just](https://github.com/casey/just)
 
 ### Test and build
