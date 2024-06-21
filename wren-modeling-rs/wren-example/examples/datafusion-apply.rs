@@ -185,7 +185,10 @@ fn init_manifest() -> Manifest {
         .build()
 }
 
-pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) -> Result<()> {
+pub async fn register_table_with_mdl(
+    ctx: &SessionContext,
+    wren_mdl: Arc<WrenMDL>,
+) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
 

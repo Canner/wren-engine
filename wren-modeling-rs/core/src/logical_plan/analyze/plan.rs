@@ -60,10 +60,8 @@ impl ModelPlanNode {
             model.name(),
         );
 
-        let required_columns = model
-            .get_physical_columns()
-            .into_iter()
-            .filter(|column| {
+        let required_columns =
+            model.get_physical_columns().into_iter().filter(|column| {
                 required_fields.iter().any(|expr| {
                     if let Expr::Column(column_expr) = expr {
                         column_expr.name.as_str() == column.name()
@@ -817,8 +815,7 @@ impl CalculationPlanNode {
         let Some(model) = calculation.dataset.try_as_model() else {
             return plan_err!("Only support model as source dataset");
         };
-        let Some(pk_column) =
-            model.primary_key().and_then(|pk| model.get_column(pk))
+        let Some(pk_column) = model.primary_key().and_then(|pk| model.get_column(pk))
         else {
             return plan_err!("Primary key not found");
         };
