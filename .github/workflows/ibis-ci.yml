@@ -61,6 +61,16 @@ jobs:
         with:
           working-directory: wren-modeling-py
           command: build
+      - name: Install FreeTDS to be a ODBC driver
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y unixodbc-dev freetds-dev tdsodbc
+          cat << EOF > free.tds.ini
+          [FreeTDS]
+          Description = FreeTDS driver
+          Driver = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+          Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+          EOF
+          sudo odbcinst -i -d -f free.tds.ini
       - name: Install wren-modeling-py
         run: poetry run pip install ../wren-modeling-py/target/wheels/wren_modeling_py-*.whl
       - name: Run tests
