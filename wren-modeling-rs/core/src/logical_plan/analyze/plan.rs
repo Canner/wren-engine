@@ -168,7 +168,7 @@ impl ModelPlanNode {
                     required_calculation.push(calculation);
                 } else {
                     required_exprs_buffer.insert(OrdExpr::new(expr.clone()));
-                    merge_graph(&mut directed_graph, column_graph);
+                    let _ = merge_graph(&mut directed_graph, column_graph)?;
                     let _ = collect_model_required_fields(
                         qualified_column,
                         Arc::clone(&analyzed_wren_mdl),
@@ -213,8 +213,12 @@ impl ModelPlanNode {
         );
 
         let mut iter = directed_graph.node_indices();
-        let start = iter.next().unwrap();
-        let source = directed_graph.node_weight(start).unwrap();
+        let Some(start) = iter.next() else {
+            return internal_err!("Model not found");
+        };
+        let Some(source) = directed_graph.node_weight(start) else {
+            return internal_err!("Dataset not found");
+        };
         let source_required_fields: Vec<Expr> = model_required_fields
             .get(&model_ref)
             .map(|c| c.iter().cloned().map(|c| c.expr).collect())
@@ -229,7 +233,9 @@ impl ModelPlanNode {
                 Arc::clone(&analyzed_wren_mdl),
             )?
         } else {
-            let first_calculation = calculate_iter.next().unwrap();
+            let Some(first_calculation) = calculate_iter.next() else {
+                return plan_err!("Calculation not found and no any required field");
+            };
             Start(LogicalPlan::Extension(Extension {
                 node: Arc::new(first_calculation.clone()),
             }))
@@ -247,6 +253,9 @@ impl ModelPlanNode {
         for calculation_plan in calculate_iter {
             let target_ref =
                 TableReference::bare(calculation_plan.calculation.column.name());
+            let Some(join_key) = model.primary_key() else {
+                return plan_err!("Model {} should have primary key for calculation", model.name());
+            };
             relation_chain = RelationChain::Chain(
                 LogicalPlan::Extension(Extension {
                     node: Arc::new(calculation_plan.clone()),
@@ -255,9 +264,9 @@ impl ModelPlanNode {
                 format!(
                     "{}.{} = {}.{}",
                     model_ref.table(),
-                    model.primary_key().unwrap(),
+                    join_key,
                     target_ref.table(),
-                    model.primary_key().unwrap(),
+                    join_key,
                 ),
                 Box::new(relation_chain),
             );
@@ -376,7 +385,7 @@ impl From<OrdExpr> for Expr {
 fn merge_graph(
     graph: &mut Graph<Dataset, DatasetLink>,
     new_graph: &Graph<Dataset, DatasetLink>,
-) {
+) -> Result<()> {
     let mut node_map = HashMap::new();
     for node in new_graph.node_indices() {
         let new_node = graph.add_node(new_graph[node].clone());
@@ -384,11 +393,14 @@ fn merge_graph(
     }
 
     for edge in new_graph.edge_indices() {
-        let (source, target) = new_graph.edge_endpoints(edge).unwrap();
+        let Some((source, target)) = new_graph.edge_endpoints(edge) else {
+            return internal_err!("Edge not found");
+        };
         let source = node_map.get(&source).unwrap();
         let target = node_map.get(&target).unwrap();
         graph.add_edge(*source, *target, new_graph[edge].clone());
     }
+    Ok(())
 }
 
 /// RelationChain is a chain of models that are connected by the relationship.
