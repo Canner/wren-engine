@@ -301,7 +301,7 @@ mod test {
         let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
-        assert_eq!(lineage.source_columns_map.len(), 9);
+        assert_eq!(lineage.source_columns_map.len(), 13);
         assert_eq!(
             lineage
                 .source_columns_map
@@ -363,7 +363,7 @@ mod test {
         let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
-        assert_eq!(lineage.required_fields_map.len(), 4);
+        assert_eq!(lineage.required_fields_map.len(), 5);
         assert_eq!(
             lineage
                 .required_fields_map
