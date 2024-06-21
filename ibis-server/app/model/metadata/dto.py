@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.model.data_source import ConnectionInfo
+from app.model import ConnectionInfo
 
 
 class MetadataDTO(BaseModel):

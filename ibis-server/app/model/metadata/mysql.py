@@ -1,12 +1,13 @@
 from json import loads
 
-from app.model.data_source import DataSource, MySqlConnectionInfo
+from app.model import MySqlConnectionInfo
+from app.model.data_source import DataSource
 from app.model.metadata.dto import (
-    Table,
-    Constraint,
-    TableProperties,
     Column,
+    Constraint,
     ConstraintType,
+    Table,
+    TableProperties,
     WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata

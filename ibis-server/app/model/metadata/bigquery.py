@@ -1,13 +1,13 @@
 from json import loads
 
-from app.model.data_source import BigQueryConnectionInfo
+from app.model import BigQueryConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
-    Table,
-    Constraint,
-    TableProperties,
     Column,
+    Constraint,
     ConstraintType,
+    Table,
+    TableProperties,
 )
 from app.model.metadata.metadata import Metadata
 

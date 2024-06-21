@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
-
 from app.model.connector import Connector
-from app.model.data_source import ConnectionInfo
 
 rules = ["column_is_valid"]
 
@@ -36,12 +33,6 @@ class Validator:
             )
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {str(e)}")
-
-
-class ValidateDTO(BaseModel):
-    manifest_str: str = Field(alias="manifestStr", description="Base64 manifest")
-    parameters: dict[str, str]
-    connection_info: ConnectionInfo = Field(alias="connectionInfo")
 
 
 class ValidationError(Exception):

@@ -17,8 +17,8 @@ def postgres(request) -> PostgresContainer:
 
         return os.path.join(os.path.dirname(__file__), path)
 
-    import sqlalchemy
     import pandas as pd
+    import sqlalchemy
 
     pg = PostgresContainer("postgres:16-alpine")
     pg.start()

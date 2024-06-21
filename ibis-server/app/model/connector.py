@@ -1,19 +1,10 @@
 from json import loads
 
 import pandas as pd
-from pydantic import BaseModel, Field
 
 from app.mdl.rewriter import rewrite
-from app.model.data_source import (
-    BigQueryConnectionInfo,
-    ConnectionInfo,
-    DataSource,
-    MySqlConnectionUrl,
-    MySqlConnectionInfo,
-    PostgresConnectionUrl,
-    PostgresConnectionInfo,
-    SnowflakeConnectionInfo,
-)
+from app.model import ConnectionInfo
+from app.model.data_source import DataSource
 
 
 class Connector:
@@ -65,36 +56,6 @@ def _to_datetime_and_format(series: pd.Series) -> pd.Series:
         if not pd.isnull(d)
         else d
     )
-
-
-class QueryDTO(BaseModel):
-    sql: str
-    manifest_str: str = Field(alias="manifestStr", description="Base64 manifest")
-    column_dtypes: dict[str, str] | None = Field(
-        alias="columnDtypes",
-        description="If this field is set, it will forcibly convert the type.",
-        default=None,
-    )
-
-
-class QueryBigQueryDTO(QueryDTO):
-    connection_info: BigQueryConnectionInfo = Field(alias="connectionInfo")
-
-
-class QueryMySqlDTO(QueryDTO):
-    connection_info: MySqlConnectionUrl | MySqlConnectionInfo = Field(
-        alias="connectionInfo"
-    )
-
-
-class QueryPostgresDTO(QueryDTO):
-    connection_info: PostgresConnectionUrl | PostgresConnectionInfo = Field(
-        alias="connectionInfo"
-    )
-
-
-class QuerySnowflakeDTO(QueryDTO):
-    connection_info: SnowflakeConnectionInfo = Field(alias="connectionInfo")
 
 
 class QueryDryRunError(Exception):

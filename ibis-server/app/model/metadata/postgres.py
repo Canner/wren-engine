@@ -1,12 +1,13 @@
 from json import loads
 
-from app.model.data_source import DataSource, PostgresConnectionInfo
+from app.model import PostgresConnectionInfo
+from app.model.data_source import DataSource
 from app.model.metadata.dto import (
-    Table,
-    Constraint,
-    TableProperties,
     Column,
+    Constraint,
     ConstraintType,
+    Table,
+    TableProperties,
     WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata
