@@ -4,8 +4,8 @@ use base64::prelude::*;
 use pyo3::prelude::*;
 
 use wren_core::mdl;
-use wren_core::mdl::AnalyzedWrenMDL;
 use wren_core::mdl::manifest::Manifest;
+use wren_core::mdl::AnalyzedWrenMDL;
 
 use crate::errors::CoreError;
 
@@ -13,10 +13,15 @@ mod errors;
 
 #[pyfunction]
 fn transform_sql(mdl_base64: &str, sql: &str) -> Result<String, CoreError> {
-    let mdl_json_bytes = BASE64_STANDARD.decode(mdl_base64).map_err(CoreError::from)?;
+    let mdl_json_bytes = BASE64_STANDARD
+        .decode(mdl_base64)
+        .map_err(CoreError::from)?;
     let mdl_json = String::from_utf8(mdl_json_bytes).map_err(CoreError::from)?;
     let manifest = serde_json::from_str::<Manifest>(&mdl_json)?;
-    let analyzed_mdl = AnalyzedWrenMDL::analyze(manifest);
+
+    let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(manifest) else {
+        return Err(CoreError::new("Failed to analyze manifest"));
+    };
     match mdl::transform_sql(Arc::new(analyzed_mdl), sql) {
         Ok(transformed_sql) => Ok(transformed_sql),
         Err(e) => Err(CoreError::new(&e.to_string())),
@@ -32,8 +37,8 @@ fn wren_core_wrapper(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use base64::Engine;
     use base64::prelude::BASE64_STANDARD;
+    use base64::Engine;
     use serde_json::Value;
 
     use crate::transform_sql;
@@ -58,11 +63,12 @@ mod tests {
         }"#;
         let v: Value = serde_json::from_str(data).unwrap();
         let mdl_base64: String = BASE64_STANDARD.encode(v.to_string().as_bytes());
-        let transformed_sql = transform_sql(
-            &mdl_base64,
-            "SELECT * FROM my_catalog.my_schema.customer",
-        )
-        .unwrap();
-        assert_eq!(transformed_sql, r##"SELECT "customer"."custkey", "customer"."name" FROM (SELECT "customer"."custkey", "customer"."name" FROM (SELECT "main"."customer"."c_custkey" AS "custkey", "main"."customer"."c_name" AS "name" FROM "main"."customer") AS "customer") AS "customer""##);
+        let transformed_sql =
+            transform_sql(&mdl_base64, "SELECT * FROM my_catalog.my_schema.customer")
+                .unwrap();
+        assert_eq!(
+            transformed_sql,
+            r#"SELECT customer.custkey, customer."name" FROM (SELECT customer.custkey, customer."name" FROM (SELECT main.customer.c_custkey AS custkey, main.customer.c_name AS "name" FROM main.customer) AS customer) AS customer"#
+        );
     }
 }
