@@ -21,6 +21,44 @@
           "type": "integer",
           "expression": "custkey + 1",
           "isCalculated": true
+        },
+        {
+          "name": "orders",
+          "type": "orders",
+          "relationship": "CustomerOrders"
+        }
+      ],
+      "primaryKey": "custkey"
+    },
+    {
+      "name": "profile",
+      "tableReference": "profile",
+      "columns": [
+        {
+          "name": "custkey",
+          "type": "integer",
+          "expression": "p_custkey"
+        },
+        {
+          "name": "phone",
+          "type": "varchar",
+          "expression": "p_phone"
+        },
+        {
+          "name": "sex",
+          "type": "varchar",
+          "expression": "p_sex"
+        },
+        {
+          "name": "customer",
+          "type": "customer",
+          "relationship": "CustomerProfile"
+        },
+        {
+          "name": "totalcost",
+          "type": "integer",
+          "isCalculated": true,
+          "expression": "sum(customer.orders.totalprice)"
         }
       ],
       "primaryKey": "custkey"
@@ -77,6 +115,12 @@
       "models": ["customer", "orders"],
       "joinType": "one_to_many",
       "condition": "customer.custkey = orders.custkey"
+    },
+    {
+      "name" : "CustomerProfile",
+      "models": ["customer", "profile"],
+      "joinType": "one_to_one",
+      "condition": "customer.custkey = profile.custkey"
     }
   ]
 }

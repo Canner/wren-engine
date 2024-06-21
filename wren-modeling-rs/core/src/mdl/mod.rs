@@ -318,14 +318,16 @@ mod test {
                 "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
                 "select orderkey, sum(totalprice) from test.test.orders group by 1",
                 "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
+                "select totalcost from test.test.profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];
 
         for sql in tests {
-            println!("{}", sql);
+            println!("Original: {}", sql);
             let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
-            plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
+            let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
+            println!("After roundtrip: {}", after_roundtrip);
         }
 
         Ok(())
