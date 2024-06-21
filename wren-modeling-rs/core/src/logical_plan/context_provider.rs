@@ -25,11 +25,16 @@ pub struct WrenContextProvider {
 impl WrenContextProvider {
     pub fn new(mdl: &WrenMDL) -> Result<Self> {
         let mut tables = HashMap::new();
+        // register model table
         for model in mdl.manifest.models.iter() {
             tables.insert(
                 format!("{}.{}.{}", mdl.catalog(), mdl.schema(), model.name()),
                 create_table_source(&model)?,
             );
+        }
+        // register physical table
+        for (name, table) in mdl.register_tables.iter() {
+            tables.insert(name.clone(), Arc::new(DefaultTableSource::new(table.clone())));
         }
         Ok(Self {
             tables,

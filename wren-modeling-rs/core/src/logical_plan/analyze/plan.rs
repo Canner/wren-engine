@@ -219,14 +219,17 @@ impl ModelPlanNode {
         let Some(source) = directed_graph.node_weight(start) else {
             return internal_err!("Dataset not found");
         };
-        let source_required_fields: Vec<Expr> = model_required_fields
+        let mut source_required_fields: Vec<Expr> = model_required_fields
             .get(&model_ref)
             .map(|c| c.iter().cloned().map(|c| c.expr).collect())
             .unwrap_or_default();
 
         let mut calculate_iter = required_calculation.iter();
 
-        let source_chain = if !source_required_fields.is_empty() {
+        let source_chain = if !source_required_fields.is_empty() || required_fields.is_empty() {
+            if required_fields.is_empty() {
+                source_required_fields.insert(0, Expr::Wildcard { qualifier: None });
+            }
             RelationChain::source(
                 source,
                 source_required_fields,
@@ -669,20 +672,48 @@ impl ModelSourceNode {
         original_table_scan: Option<LogicalPlan>,
     ) -> Result<Self> {
         let mut required_exprs_buffer = BTreeSet::new();
-        let fields = required_exprs
-            .iter()
-            .map(|field| {
+        let mut fields_buffer = BTreeSet::new();
+        for expr in required_exprs.iter() {
+            if let Expr::Wildcard { qualifier } = expr {
+                let model = if let Some(model) = qualifier {
+                    let Some(model) = analyzed_wren_mdl.wren_mdl.get_model(model) else {
+                        return plan_err!("Model not found {}", &model);
+                    };
+                    model
+                } else {
+                    Arc::clone(&model)
+                };
+                for column in model.get_physical_columns().into_iter() {
+                    // skip the calculated field
+                    if column.is_calculated {
+                        continue;
+                    }
+                    fields_buffer.insert((
+                        Some(TableReference::bare(model.name())),
+                        Arc::new(Field::new(
+                            column.name(),
+                            map_data_type(&column.r#type)?,
+                            column.no_null))));
+                    required_exprs_buffer.insert(OrdExpr::new(
+                        get_remote_column_exp(
+                            &column,
+                            Arc::clone(&model),
+                            Arc::clone(&analyzed_wren_mdl),
+                        )?));
+                };
+            }
+            else {
                 let Some(column) =
                     model
                         .get_physical_columns()
                         .into_iter()
-                        .find(|column| match field {
+                        .find(|column| match expr {
                             Expr::Column(c) => c.name.as_str() == column.name(),
                             Expr::Alias(alias) => alias.name.as_str() == column.name(),
                             _ => false,
                         })
                 else {
-                    return plan_err!("Field not found {}", field);
+                    return plan_err!("Field not found {}", expr);
                 };
 
                 if column.is_calculated {
@@ -695,22 +726,22 @@ impl ModelSourceNode {
                     )?;
                     required_exprs_buffer.insert(OrdExpr::new(expr_plan.clone()));
                 }
-                Ok((
+
+                fields_buffer.insert((
                     Some(TableReference::bare(model.name())),
                     Arc::new(Field::new(
                         column.name(),
                         map_data_type(&column.r#type)?,
-                        column.no_null,
-                    )),
-                ))
-            })
-            .collect::<Result<Vec<_>>>()?;
+                        column.no_null))));
+            }
+        };
 
+        let fields= fields_buffer.into_iter().collect::<Vec<_>>();
         let schema_ref = DFSchemaRef::new(
             DFSchema::new_with_metadata(fields, HashMap::new())
                 .expect("create schema failed"),
         );
-
+        let required_exprs = required_exprs_buffer.into_iter().map(|e|e.expr).collect::<Vec<_>>();
         Ok(ModelSourceNode {
             model_name: model.name().to_string(),
             required_exprs,
