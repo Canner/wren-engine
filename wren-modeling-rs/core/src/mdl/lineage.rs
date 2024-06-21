@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::sync::Arc;
 
-use datafusion::common::Column;
+use datafusion::common::{internal_err, plan_err, Column};
+use datafusion::error::Result;
 use datafusion::sql::TableReference;
 use petgraph::Graph;
 
@@ -21,17 +22,17 @@ pub struct Lineage {
 }
 
 impl Lineage {
-    pub fn new(mdl: &WrenMDL) -> Self {
+    pub fn new(mdl: &WrenMDL) -> Result<Self> {
         let source_columns_map = Lineage::collect_source_columns(mdl);
         let RequiredInfo {
             required_fields_map,
             required_dataset_topo,
-        } = Lineage::collect_required_fields(mdl, &source_columns_map);
-        Lineage {
+        } = Lineage::collect_required_fields(mdl, &source_columns_map)?;
+        Ok(Lineage {
             source_columns_map,
             required_fields_map,
             required_dataset_topo,
-        }
+        })
     }
 
     fn collect_source_columns(mdl: &WrenMDL) -> HashMap<Column, HashSet<Column>> {
@@ -73,168 +74,160 @@ impl Lineage {
     fn collect_required_fields(
         mdl: &WrenMDL,
         source_colums_map: &HashMap<Column, HashSet<Column>>,
-    ) -> RequiredInfo {
+    ) -> Result<RequiredInfo> {
         let mut required_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
         let mut required_dataset_topo: HashMap<Column, Graph<Dataset, DatasetLink>> =
             HashMap::new();
-        source_colums_map
-            .iter()
-            .for_each(|(column, source_columns)| {
-                let Some(relation) = column.clone().relation else {
-                    return;
-                };
-                let mut current_relation = match relation {
-                    TableReference::Bare { table } => {
-                        TableReference::full(mdl.catalog(), mdl.schema(), table)
-                    }
-                    TableReference::Partial { schema, table } => {
-                        TableReference::full(mdl.catalog(), schema, table)
-                    }
-                    TableReference::Full {
-                        catalog,
-                        schema,
-                        table,
-                    } => TableReference::full(catalog, schema, table),
-                };
-
-                let column_ref = mdl.get_column_reference(column);
-                if !column_ref.column.is_calculated
-                    || column_ref.column.relationship.is_some()
-                {
-                    return;
+        for (column, source_columns) in source_colums_map.iter() {
+            let Some(relation) = column.clone().relation else {
+                return internal_err!("relation not found: {}", column);
+            };
+            let mut current_relation = match relation {
+                TableReference::Bare { table } => {
+                    TableReference::full(mdl.catalog(), mdl.schema(), table)
                 }
+                TableReference::Partial { schema, table } => {
+                    TableReference::full(mdl.catalog(), schema, table)
+                }
+                TableReference::Full {
+                    catalog,
+                    schema,
+                    table,
+                } => TableReference::full(catalog, schema, table),
+            };
 
-                let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
-                let mut node_index_map = HashMap::new();
-                let mut left_vertex = *node_index_map
-                    .entry(column_ref.dataset.clone())
-                    .or_insert_with(|| {
-                        directed_graph.add_node(column_ref.dataset.clone())
-                    });
+            let Some(column_ref) = mdl.get_column_reference(column) else {
+                return internal_err!("column not found: {}", column);
+            };
 
-                source_columns.iter().for_each(|source_column| {
-                    let mut expr_parts = to_expr_queue(source_column.clone());
-                    while !expr_parts.is_empty() {
-                        let ident = expr_parts.pop_front().unwrap();
-                        let source_column_ref = mdl.get_column_reference(&Column::new(
-                            Some(current_relation.clone()),
-                            ident.clone(),
-                        ));
-                        match source_column_ref.dataset {
-                            Dataset::Model(_) => {
-                                match source_column_ref.column.relationship.clone() {
-                                    Some(rs) => {
-                                        if let Some(rs_rf) = mdl.get_relationship(&rs) {
-                                            let related_model_name = rs_rf
-                                                .models
-                                                .iter()
-                                                .find(|m| m != &current_relation.table())
-                                                .cloned()
-                                                .unwrap();
-                                            if related_model_name
-                                                != source_column_ref.column.r#type
-                                            {
-                                                panic!(
-                                                    "invalid relationship type: {}",
-                                                    source_column
-                                                );
-                                            }
+            // Only analyze the calculated field and the relationship field
+            if !column_ref.column.is_calculated
+                || column_ref.column.relationship.is_some()
+            {
+                continue;
+            }
 
-                                            utils::collect_identifiers(&rs_rf.condition)
-                                                .iter()
-                                                .cloned()
-                                                .for_each(|ident| {
-                                                    required_fields_map
-                                                        .entry(column.clone())
-                                                        .or_default()
-                                                        .insert(
-                                                            Column::from_qualified_name(
-                                                                format!(
-                                                                    "{}.{}.{}",
-                                                                    mdl.catalog(),
-                                                                    mdl.schema(),
-                                                                    ident.flat_name()
-                                                                ),
-                                                            ),
-                                                        );
-                                                });
+            let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
+            let mut node_index_map = HashMap::new();
+            let mut left_vertex = *node_index_map
+                .entry(column_ref.dataset.clone())
+                .or_insert_with(|| directed_graph.add_node(column_ref.dataset.clone()));
 
-                                            let related_model = mdl
-                                                .get_model(&related_model_name)
-                                                .unwrap();
-
-                                            let right_vertex = *node_index_map
-                                                .entry(Dataset::Model(Arc::clone(
-                                                    &related_model,
-                                                )))
-                                                .or_insert_with(|| {
-                                                    directed_graph.add_node(
-                                                        Dataset::Model(Arc::clone(
-                                                            &related_model,
-                                                        )),
-                                                    )
-                                                });
-                                            directed_graph.add_edge(
-                                                left_vertex,
-                                                right_vertex,
-                                                get_dataset_link_revers_if_need(
-                                                    source_column_ref.dataset.clone(),
-                                                    rs_rf,
-                                                ),
-                                            );
-
-                                            current_relation = TableReference::full(
-                                                mdl.catalog(),
-                                                mdl.schema(),
-                                                related_model_name,
-                                            );
-
-                                            left_vertex = right_vertex;
-                                        } else {
-                                            panic!(
-                                                "relationship not found: {}",
-                                                source_column
-                                            );
-                                        }
-                                    }
-                                    None => {
-                                        if !expr_parts.is_empty() {
-                                            panic!(
-                                                "invalid relationship chain: {}",
-                                                source_column
-                                            );
-                                        }
-                                        let value = Column::new(
-                                            Some(current_relation.clone()),
-                                            source_column_ref.column.name().to_string(),
+            for source_column in source_columns.iter() {
+                let mut expr_parts = to_expr_queue(source_column.clone());
+                while !expr_parts.is_empty() {
+                    let ident = expr_parts.pop_front().unwrap();
+                    let Some(source_column_ref) = mdl.get_column_reference(&Column::new(
+                        Some(current_relation.clone()),
+                        ident.clone(),
+                    )) else {
+                        return plan_err!("source column not found: {}", ident);
+                    };
+                    match source_column_ref.dataset {
+                        Dataset::Model(_) => {
+                            if let Some(rs) =
+                                source_column_ref.column.relationship.clone()
+                            {
+                                if let Some(rs_rf) = mdl.get_relationship(&rs) {
+                                    let related_model_name = rs_rf
+                                        .models
+                                        .iter()
+                                        .find(|m| m != &current_relation.table())
+                                        .cloned()
+                                        .unwrap();
+                                    if related_model_name
+                                        != source_column_ref.column.r#type
+                                    {
+                                        return plan_err!(
+                                            "invalid relationship type: {}",
+                                            source_column
                                         );
-                                        if source_column_ref.column.is_calculated {
-                                            todo!(
-                                                "calculated source column not supported"
-                                            )
-                                        }
-                                        required_fields_map
-                                            .entry(column.clone())
-                                            .or_default()
-                                            .insert(value);
                                     }
+
+                                    utils::collect_identifiers(&rs_rf.condition)
+                                        .iter()
+                                        .cloned()
+                                        .for_each(|ident| {
+                                            required_fields_map
+                                                .entry(column.clone())
+                                                .or_default()
+                                                .insert(Column::from_qualified_name(
+                                                    format!(
+                                                        "{}.{}.{}",
+                                                        mdl.catalog(),
+                                                        mdl.schema(),
+                                                        ident.flat_name()
+                                                    ),
+                                                ));
+                                        });
+
+                                    let related_model =
+                                        mdl.get_model(&related_model_name).unwrap();
+
+                                    let right_vertex = *node_index_map
+                                        .entry(Dataset::Model(Arc::clone(&related_model)))
+                                        .or_insert_with(|| {
+                                            directed_graph.add_node(Dataset::Model(
+                                                Arc::clone(&related_model),
+                                            ))
+                                        });
+                                    directed_graph.add_edge(
+                                        left_vertex,
+                                        right_vertex,
+                                        get_dataset_link_revers_if_need(
+                                            source_column_ref.dataset.clone(),
+                                            rs_rf,
+                                        ),
+                                    );
+
+                                    current_relation = TableReference::full(
+                                        mdl.catalog(),
+                                        mdl.schema(),
+                                        related_model_name,
+                                    );
+
+                                    left_vertex = right_vertex;
+                                } else {
+                                    return plan_err!(
+                                        "relationship not found: {}",
+                                        source_column
+                                    );
                                 }
-                            }
-                            Dataset::Metric(_) => {
-                                todo!("Metric dataset not supported");
+                            } else {
+                                if !expr_parts.is_empty() {
+                                    return plan_err!(
+                                        "invalid relationship chain: {}",
+                                        source_column
+                                    );
+                                }
+                                let value = Column::new(
+                                    Some(current_relation.clone()),
+                                    source_column_ref.column.name().to_string(),
+                                );
+                                if source_column_ref.column.is_calculated {
+                                    todo!("calculated source column not supported")
+                                }
+                                required_fields_map
+                                    .entry(column.clone())
+                                    .or_default()
+                                    .insert(value);
                             }
                         }
+                        Dataset::Metric(_) => {
+                            todo!("Metric dataset not supported");
+                        }
                     }
-                });
-                if !utils::is_dag(&directed_graph) {
-                    panic!("cyclic dependency detected: {}", column);
                 }
-                required_dataset_topo.insert(column.clone(), directed_graph);
-            });
-        RequiredInfo {
+            }
+            if !utils::is_dag(&directed_graph) {
+                return plan_err!("cyclic dependency detected: {}", column);
+            }
+            required_dataset_topo.insert(column.clone(), directed_graph);
+        }
+        Ok(RequiredInfo {
             required_fields_map,
             required_dataset_topo,
-        }
+        })
     }
 }
 
@@ -289,6 +282,7 @@ mod test {
     };
 
     use datafusion::common::Column;
+    use datafusion::error::Result;
     use datafusion::sql::TableReference;
 
     use crate::mdl::builder::{
@@ -298,17 +292,16 @@ mod test {
     use crate::mdl::{Dataset, WrenMDL};
 
     #[test]
-    fn test_collect_source_columns() {
+    fn test_collect_source_columns() -> Result<()> {
         let test_data: PathBuf =
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
                 .iter()
                 .collect();
         let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
             .expect("Unable to read file");
-        let manifest =
-            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
-        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
+        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.source_columns_map.len(), 9);
         assert_eq!(
             lineage
@@ -357,20 +350,20 @@ mod test {
                 name: "customer.name".to_string()
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_collect_required_fields() {
+    fn test_collect_required_fields() -> Result<()> {
         let test_data: PathBuf =
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
                 .iter()
                 .collect();
         let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
             .expect("Unable to read file");
-        let manifest =
-            serde_json::from_str::<crate::mdl::manifest::Manifest>(&mdl_json).unwrap();
+        let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let wren_mdl = WrenMDL::new(manifest);
-        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
+        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.required_fields_map.len(), 4);
         assert_eq!(
             lineage
@@ -416,14 +409,15 @@ mod test {
         ]);
 
         assert_eq!(customer_name.len(), 3);
-        assert_eq!(*customer_name, expected,);
+        assert_eq!(*customer_name, expected);
+        Ok(())
     }
 
     #[test]
-    fn test_required_dataset_topo() {
+    fn test_required_dataset_topo() -> Result<()> {
         let manifest = testing_manifest();
         let wren_mdl = WrenMDL::new(manifest);
-        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl);
+        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.required_dataset_topo.len(), 2);
         let customer_name = lineage
             .required_dataset_topo
@@ -451,6 +445,7 @@ mod test {
         let edge = customer_name.edge_weight(second_edge).unwrap();
         assert_eq!(edge.join_type, JoinType::OneToOne);
         assert_eq!(edge.condition, "b.b1 = c.b1");
+        Ok(())
     }
 
     fn testing_manifest() -> Manifest {

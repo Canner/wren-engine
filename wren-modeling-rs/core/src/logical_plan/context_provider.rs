@@ -23,29 +23,29 @@ pub struct WrenContextProvider {
 }
 
 impl WrenContextProvider {
-    pub fn new(mdl: &WrenMDL) -> Self {
+    pub fn new(mdl: &WrenMDL) -> Result<Self> {
         let mut tables = HashMap::new();
-        mdl.manifest.models.iter().for_each(|model| {
+        for model in mdl.manifest.models.iter() {
             tables.insert(
                 format!("{}.{}.{}", mdl.catalog(), mdl.schema(), model.name()),
-                create_table_source(model),
+                create_table_source(&model)?,
             );
-        });
-        Self {
+        }
+        Ok(Self {
             tables,
             options: Default::default(),
-        }
+        })
     }
 
-    pub fn new_bare(mdl: &WrenMDL) -> Self {
+    pub fn new_bare(mdl: &WrenMDL) -> Result<Self> {
         let mut tables = HashMap::new();
-        mdl.manifest.models.iter().for_each(|model| {
-            tables.insert(model.name().to_string(), create_table_source(model));
-        });
-        Self {
+        for model in mdl.manifest.models.iter() {
+            tables.insert(model.name().to_string(), create_table_source(&model)?);
+        }
+        Ok(Self {
             tables,
             options: Default::default(),
-        }
+        })
     }
 }
 
@@ -99,7 +99,7 @@ pub struct RemoteContextProvider {
 }
 
 impl RemoteContextProvider {
-    pub fn new(mdl: &WrenMDL) -> Self {
+    pub fn new(mdl: &WrenMDL) -> Result<Self> {
         let tables = mdl
             .manifest
             .models
@@ -109,15 +109,15 @@ impl RemoteContextProvider {
                 let datasource = if let Some(table_provider) = remove_provider {
                     Arc::new(DefaultTableSource::new(table_provider))
                 } else {
-                    create_remote_table_source(model, mdl)
+                    create_remote_table_source(model, mdl)?
                 };
-                (model.table_reference.clone(), datasource)
+                Ok((model.table_reference.clone(), datasource))
             })
-            .collect::<HashMap<_, _>>();
-        Self {
+            .collect::<Result<HashMap<_, _>>>()?;
+        Ok(Self {
             tables,
             options: Default::default(),
-        }
+        })
     }
 }
 
@@ -162,22 +162,30 @@ impl ContextProvider for RemoteContextProvider {
     }
 }
 
-fn create_remote_table_source(model: &Model, wren_mdl: &WrenMDL) -> Arc<dyn TableSource> {
+fn create_remote_table_source(
+    model: &Model,
+    wren_mdl: &WrenMDL,
+) -> Result<Arc<dyn TableSource>> {
     if let Some(table_provider) = wren_mdl.get_table(&model.table_reference) {
-        Arc::new(DefaultTableSource::new(table_provider))
+        Ok(Arc::new(DefaultTableSource::new(table_provider)))
     } else {
         let schema = create_schema(model.get_physical_columns());
-        Arc::new(LogicalTableSource::new(schema))
+        Ok(Arc::new(LogicalTableSource::new(schema?)))
     }
 }
 
-fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {
+fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .filter(|c| !c.is_calculated)
         .flat_map(|column| {
             if column.expression.is_none() {
-                let data_type = map_data_type(&column.r#type);
+                let data_type = if let Ok(data_type) = map_data_type(&column.r#type) {
+                    data_type
+                } else {
+                    // TODO optimize to use Datafusion's error type
+                    unimplemented!("Unsupported data type: {}", column.r#type)
+                };
                 vec![Field::new(&column.name, data_type, column.no_null)]
             } else {
                 utils::collect_identifiers(column.expression.as_ref().unwrap())
@@ -191,7 +199,10 @@ fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {
             }
         })
         .collect();
-    SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()))
+    Ok(SchemaRef::new(Schema::new_with_metadata(
+        fields,
+        HashMap::new(),
+    )))
 }
 
 pub(crate) struct DynamicContextProvider {

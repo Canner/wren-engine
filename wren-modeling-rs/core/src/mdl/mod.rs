@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use datafusion::{
     config::ConfigOptions,
-    error::DataFusionError,
+    error::Result,
     optimizer::analyzer::Analyzer,
     sql::{
         planner::SqlToRel,
@@ -36,25 +36,25 @@ pub struct AnalyzedWrenMDL {
 }
 
 impl AnalyzedWrenMDL {
-    pub fn analyze(manifest: Manifest) -> Self {
+    pub fn analyze(manifest: Manifest) -> Result<Self> {
         let wren_mdl = Arc::new(WrenMDL::new(manifest));
-        let lineage = Arc::new(lineage::Lineage::new(&wren_mdl));
-        AnalyzedWrenMDL { wren_mdl, lineage }
+        let lineage = Arc::new(lineage::Lineage::new(&wren_mdl)?);
+        Ok(AnalyzedWrenMDL { wren_mdl, lineage })
     }
 
     pub fn analyze_with_tables(
         manifest: Manifest,
         register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut wren_mdl = WrenMDL::new(manifest);
         for (name, table) in register_tables {
             wren_mdl.register_table(name, table);
         }
-        let lineage = lineage::Lineage::new(&wren_mdl);
-        AnalyzedWrenMDL {
+        let lineage = lineage::Lineage::new(&wren_mdl)?;
+        Ok(AnalyzedWrenMDL {
             wren_mdl: Arc::new(wren_mdl),
             lineage: Arc::new(lineage),
-        }
+        })
     }
 
     pub fn wren_mdl(&self) -> Arc<WrenMDL> {
@@ -182,18 +182,12 @@ impl WrenMDL {
     pub fn get_column_reference(
         &self,
         column: &datafusion::common::Column,
-    ) -> ColumnReference {
-        self.qualified_references
-            .get(column)
-            .unwrap_or_else(|| panic!("column {} not found", column))
-            .clone()
+    ) -> Option<ColumnReference> {
+        self.qualified_references.get(column).cloned()
     }
 }
 /// Transform the SQL based on the MDL
-pub fn transform_sql(
-    analyzed_mdl: Arc<AnalyzedWrenMDL>,
-    sql: &str,
-) -> Result<String, DataFusionError> {
+pub fn transform_sql(analyzed_mdl: Arc<AnalyzedWrenMDL>, sql: &str) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
 
     // parse the SQL
@@ -202,7 +196,7 @@ pub fn transform_sql(
     let statement = &ast[0];
 
     // create a logical query plan
-    let context_provider = WrenContextProvider::new(&analyzed_mdl.wren_mdl);
+    let context_provider = WrenContextProvider::new(&analyzed_mdl.wren_mdl)?;
     let sql_to_rel = SqlToRel::new(&context_provider);
     let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
         Ok(plan) => plan,
@@ -316,7 +310,7 @@ mod test {
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path())?;
         let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let tests: Vec<&str> = vec![
                 "select orderkey + orderkey from test.test.orders",
@@ -342,7 +336,7 @@ mod test {
         let ast = Parser::parse_sql(&dialect, sql).unwrap();
         let statement = &ast[0];
 
-        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl());
+        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl())?;
         let sql_to_rel = SqlToRel::new(&context_provider);
         let rels = sql_to_rel.sql_statement_to_plan(statement.clone())?;
         // show the planned sql
