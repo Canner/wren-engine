@@ -23,6 +23,10 @@ class QueryBigQueryDTO(QueryDTO):
     connection_info: BigQueryConnectionInfo = connection_info_field
 
 
+class QueryMSSqlDTO(QueryDTO):
+    connection_info: ConnectionUrl | MSSqlConnectionInfo = connection_info_field
+
+
 class QueryMySqlDTO(QueryDTO):
     connection_info: ConnectionUrl | MySqlConnectionInfo = connection_info_field
 
@@ -39,6 +43,18 @@ class BigQueryConnectionInfo(BaseModel):
     project_id: str
     dataset_id: str
     credentials: str = Field(description="Base64 encode `credentials.json`")
+
+
+class MSSqlConnectionInfo(BaseModel):
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+    driver: str = Field(
+        default="FreeTDS",
+        description="On Mac and Linux this is usually `FreeTDS. On Windows, it is usually `ODBC Driver 18 for SQL Server`",
+    )
 
 
 class MySqlConnectionInfo(BaseModel):
@@ -74,6 +90,7 @@ class SnowflakeConnectionInfo(BaseModel):
 ConnectionInfo = Union[
     BigQueryConnectionInfo,
     ConnectionUrl,
+    MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
     SnowflakeConnectionInfo,
