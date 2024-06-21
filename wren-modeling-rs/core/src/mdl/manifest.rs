@@ -112,10 +112,7 @@ pub enum JoinType {
 
 impl JoinType {
     pub fn is_to_one(&self) -> bool {
-        match self {
-            JoinType::OneToOne | JoinType::ManyToOne => true,
-            _ => false,
-        }
+        matches!(self, JoinType::OneToOne | JoinType::ManyToOne)
     }
 }
 

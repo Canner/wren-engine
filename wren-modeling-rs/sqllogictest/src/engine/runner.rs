@@ -15,16 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::{path::PathBuf, time::Duration};
 use std::sync::Arc;
+use std::{path::PathBuf, time::Duration};
 
+use crate::TestContext;
 use async_trait::async_trait;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 use log::info;
 use sqllogictest::DBOutput;
 use wren_core::mdl::transform_sql;
-use crate::TestContext;
 
 use super::{
     error::Result,
@@ -55,8 +55,8 @@ impl sqllogictest::AsyncDB for DataFusion {
             self.relative_path.display(),
             sql
         );
-        let sql = transform_sql(Arc::clone(&self.ctx.analyzed_wren_mdl()), sql)?;
-        run_query(&self.ctx.session_ctx(), sql).await
+        let sql = transform_sql(Arc::clone(self.ctx.analyzed_wren_mdl()), sql)?;
+        run_query(self.ctx.session_ctx(), sql).await
     }
 
     /// Engine name of current database.

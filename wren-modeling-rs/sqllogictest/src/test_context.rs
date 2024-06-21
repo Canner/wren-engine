@@ -128,7 +128,9 @@ pub async fn register_ecommerce_table(ctx: &SessionContext) -> Result<TestContex
     Ok(TestContext::new(ctx, mdl))
 }
 
-async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<(SessionContext, Arc<AnalyzedWrenMDL>)> {
+async fn register_ecommerce_mdl(
+    ctx: &SessionContext,
+) -> Result<(SessionContext, Arc<AnalyzedWrenMDL>)> {
     let manifest = ManifestBuilder::new()
         .model(
             ModelBuilder::new("customers")
@@ -183,6 +185,18 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<(SessionContext,
                         .expression("customers.state")
                         .build(),
                 )
+                .column(
+                    ColumnBuilder::new("order_items", "order_items")
+                        .relationship("orders_order_items")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("totalprice", "double")
+                        .expression("sum(order_items.price)")
+                        .calculated(true)
+                        .build(),
+                )
+                .primary_key("order_id")
                 .build(),
         )
         .relationship(
@@ -249,11 +263,14 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<(SessionContext,
     //     // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
     //     .with_optimizer_rules(vec![]);
     // let ctx = SessionContext::new_with_state(new_state);
-    let _ = register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    let _ = register_table_with_mdl(ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
 
-pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) -> Result<()> {
+pub async fn register_table_with_mdl(
+    ctx: &SessionContext,
+    wren_mdl: Arc<WrenMDL>,
+) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
 

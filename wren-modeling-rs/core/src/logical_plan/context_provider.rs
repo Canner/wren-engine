@@ -29,12 +29,15 @@ impl WrenContextProvider {
         for model in mdl.manifest.models.iter() {
             tables.insert(
                 format!("{}.{}.{}", mdl.catalog(), mdl.schema(), model.name()),
-                create_table_source(&model)?,
+                create_table_source(model)?,
             );
         }
         // register physical table
         for (name, table) in mdl.register_tables.iter() {
-            tables.insert(name.clone(), Arc::new(DefaultTableSource::new(table.clone())));
+            tables.insert(
+                name.clone(),
+                Arc::new(DefaultTableSource::new(table.clone())),
+            );
         }
         Ok(Self {
             tables,
@@ -45,7 +48,7 @@ impl WrenContextProvider {
     pub fn new_bare(mdl: &WrenMDL) -> Result<Self> {
         let mut tables = HashMap::new();
         for model in mdl.manifest.models.iter() {
-            tables.insert(model.name().to_string(), create_table_source(&model)?);
+            tables.insert(model.name().to_string(), create_table_source(model)?);
         }
         Ok(Self {
             tables,

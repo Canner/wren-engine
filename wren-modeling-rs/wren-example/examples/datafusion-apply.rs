@@ -86,7 +86,8 @@ async fn main() -> Result<()> {
             order_items_provider,
         ),
     ]);
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
+    let analyzed_mdl =
+        Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
     let new_state = ctx
         .state()
@@ -99,7 +100,7 @@ async fn main() -> Result<()> {
         ))))
         // There is some conflict with optimize_projections. Disable optimization rule temporarily,
         .with_optimizer_rules(vec![]);
-    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
     let new_ctx = SessionContext::new_with_state(new_state);
     let sql = "select * from wrenai.default.order_items";
     // create a plan to run a SQL query
@@ -184,7 +185,7 @@ fn init_manifest() -> Manifest {
         .build()
 }
 
-pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) {
+pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
 
@@ -204,6 +205,7 @@ pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL
         )
         .unwrap();
     }
+    Ok(())
 }
 
 struct WrenDataSource {

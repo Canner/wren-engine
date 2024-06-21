@@ -71,8 +71,7 @@ impl ModelPlanNode {
                         false
                     }
                 })
-            })
-            .into_iter();
+            });
 
         for column in required_columns {
             if column.is_calculated {
@@ -168,7 +167,7 @@ impl ModelPlanNode {
                     required_calculation.push(calculation);
                 } else {
                     required_exprs_buffer.insert(OrdExpr::new(expr.clone()));
-                    let _ = merge_graph(&mut directed_graph, column_graph)?;
+                    merge_graph(&mut directed_graph, column_graph)?;
                     let _ = collect_model_required_fields(
                         qualified_column,
                         Arc::clone(&analyzed_wren_mdl),
@@ -226,23 +225,24 @@ impl ModelPlanNode {
 
         let mut calculate_iter = required_calculation.iter();
 
-        let source_chain = if !source_required_fields.is_empty() || required_fields.is_empty() {
-            if required_fields.is_empty() {
-                source_required_fields.insert(0, Expr::Wildcard { qualifier: None });
-            }
-            RelationChain::source(
-                source,
-                source_required_fields,
-                Arc::clone(&analyzed_wren_mdl),
-            )?
-        } else {
-            let Some(first_calculation) = calculate_iter.next() else {
-                return plan_err!("Calculation not found and no any required field");
+        let source_chain =
+            if !source_required_fields.is_empty() || required_fields.is_empty() {
+                if required_fields.is_empty() {
+                    source_required_fields.insert(0, Expr::Wildcard { qualifier: None });
+                }
+                RelationChain::source(
+                    source,
+                    source_required_fields,
+                    Arc::clone(&analyzed_wren_mdl),
+                )?
+            } else {
+                let Some(first_calculation) = calculate_iter.next() else {
+                    return plan_err!("Calculation not found and no any required field");
+                };
+                Start(LogicalPlan::Extension(Extension {
+                    node: Arc::new(first_calculation.clone()),
+                }))
             };
-            Start(LogicalPlan::Extension(Extension {
-                node: Arc::new(first_calculation.clone()),
-            }))
-        };
 
         let mut relation_chain = RelationChain::with_chain(
             source_chain,
@@ -257,7 +257,10 @@ impl ModelPlanNode {
             let target_ref =
                 TableReference::bare(calculation_plan.calculation.column.name());
             let Some(join_key) = model.primary_key() else {
-                return plan_err!("Model {} should have primary key for calculation", model.name());
+                return plan_err!(
+                    "Model {} should have primary key for calculation",
+                    model.name()
+                );
             };
             relation_chain = RelationChain::Chain(
                 LogicalPlan::Extension(Extension {
@@ -693,16 +696,16 @@ impl ModelSourceNode {
                         Arc::new(Field::new(
                             column.name(),
                             map_data_type(&column.r#type)?,
-                            column.no_null))));
-                    required_exprs_buffer.insert(OrdExpr::new(
-                        get_remote_column_exp(
-                            &column,
-                            Arc::clone(&model),
-                            Arc::clone(&analyzed_wren_mdl),
-                        )?));
-                };
-            }
-            else {
+                            column.no_null,
+                        )),
+                    ));
+                    required_exprs_buffer.insert(OrdExpr::new(get_remote_column_exp(
+                        &column,
+                        Arc::clone(&model),
+                        Arc::clone(&analyzed_wren_mdl),
+                    )?));
+                }
+            } else {
                 let Some(column) =
                     model
                         .get_physical_columns()
@@ -732,16 +735,21 @@ impl ModelSourceNode {
                     Arc::new(Field::new(
                         column.name(),
                         map_data_type(&column.r#type)?,
-                        column.no_null))));
+                        column.no_null,
+                    )),
+                ));
             }
-        };
+        }
 
-        let fields= fields_buffer.into_iter().collect::<Vec<_>>();
+        let fields = fields_buffer.into_iter().collect::<Vec<_>>();
         let schema_ref = DFSchemaRef::new(
             DFSchema::new_with_metadata(fields, HashMap::new())
                 .expect("create schema failed"),
         );
-        let required_exprs = required_exprs_buffer.into_iter().map(|e|e.expr).collect::<Vec<_>>();
+        let required_exprs = required_exprs_buffer
+            .into_iter()
+            .map(|e| e.expr)
+            .collect::<Vec<_>>();
         Ok(ModelSourceNode {
             model_name: model.name().to_string(),
             required_exprs,
@@ -810,7 +818,7 @@ impl CalculationPlanNode {
             return plan_err!("Only support model as source dataset");
         };
         let Some(pk_column) =
-            model.primary_key().map(|pk| model.get_column(pk)).flatten()
+            model.primary_key().and_then(|pk| model.get_column(pk))
         else {
             return plan_err!("Primary key not found");
         };

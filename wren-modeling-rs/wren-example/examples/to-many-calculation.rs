@@ -83,14 +83,15 @@ async fn main() -> Result<()> {
             order_items_provider,
         ),
     ]);
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
+    let analyzed_mdl =
+        Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
     let transformed = transform_sql(
         Arc::clone(&analyzed_mdl),
         "select totalprice from wrenai.default.orders",
     )
     .unwrap();
-    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
     let df = ctx.sql(&transformed).await?;
     df.show().await?;
     Ok(())
@@ -184,7 +185,10 @@ fn init_manifest() -> Manifest {
         .build()
 }
 
-pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) -> Result<()>{
+pub async fn register_table_with_mdl(
+    ctx: &SessionContext,
+    wren_mdl: Arc<WrenMDL>,
+) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
 
