@@ -34,7 +34,6 @@ use datafusion::{
 };
 use log::info;
 use tempfile::TempDir;
-use wren_core::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
 
 use wren_core::logical_plan::utils::create_schema;
 use wren_core::mdl::builder::{
@@ -51,14 +50,16 @@ const TEST_RESOURCES: &str = "tests/resources";
 pub struct TestContext {
     /// Context for running queries
     ctx: SessionContext,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     /// Temporary directory created and cleared at the end of the test
     test_dir: Option<TempDir>,
 }
 
 impl TestContext {
-    pub fn new(ctx: SessionContext) -> Self {
+    pub fn new(ctx: SessionContext, analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
         Self {
             ctx,
+            analyzed_wren_mdl,
             test_dir: None,
         }
     }
@@ -106,6 +107,10 @@ impl TestContext {
     pub fn session_ctx(&self) -> &SessionContext {
         &self.ctx
     }
+
+    pub fn analyzed_wren_mdl(&self) -> &Arc<AnalyzedWrenMDL> {
+        &self.analyzed_wren_mdl
+    }
 }
 
 pub async fn register_ecommerce_table(ctx: &SessionContext) -> Result<TestContext> {
@@ -119,11 +124,11 @@ pub async fn register_ecommerce_table(ctx: &SessionContext) -> Result<TestContex
             .await
             .unwrap();
     }
-    let ctx = register_ecommerce_mdl(ctx).await?;
-    Ok(TestContext::new(ctx))
+    let (ctx, mdl) = register_ecommerce_mdl(ctx).await?;
+    Ok(TestContext::new(ctx, mdl))
 }
 
-async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> {
+async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<(SessionContext, Arc<AnalyzedWrenMDL>)> {
     let manifest = ManifestBuilder::new()
         .model(
             ModelBuilder::new("customers")
@@ -231,22 +236,24 @@ async fn register_ecommerce_mdl(ctx: &SessionContext) -> Result<SessionContext> 
     let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze_with_tables(
         manifest,
         register_tables,
-    ));
-    let new_state = ctx
-        .state()
-        .add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))))
-        .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-            &analyzed_mdl,
-        ))))
-        // TODO: disable optimize_projections rule
-        // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
-        .with_optimizer_rules(vec![]);
-    let ctx = SessionContext::new_with_state(new_state);
-    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
-    Ok(ctx)
+    )?);
+    // let new_state = ctx
+    //     .state()
+    //     .add_analyzer_rule(Arc::new(ModelAnalyzeRule::
+    //
+    // new(Arc::clone(&analyzed_mdl))))
+    //     .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
+    //         &analyzed_mdl,
+    //     ))))
+    //     // TODO: disable optimize_projections rule
+    //     // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
+    //     .with_optimizer_rules(vec![]);
+    // let ctx = SessionContext::new_with_state(new_state);
+    let _ = register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
+    Ok((ctx.to_owned(), analyzed_mdl))
 }
 
-pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) {
+pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL>) -> Result<()> {
     let catalog = MemoryCatalogProvider::new();
     let schema = MemorySchemaProvider::new();
 
@@ -256,16 +263,16 @@ pub async fn register_table_with_mdl(ctx: &SessionContext, wren_mdl: Arc<WrenMDL
     ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
 
     for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model));
+        let table = WrenDataSource::new(Arc::clone(model))?;
         ctx.register_table(
             format!(
                 "{}.{}.{}",
                 &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
             ),
             Arc::new(table),
-        )
-        .unwrap();
+        )?;
     }
+    Ok(())
 }
 
 struct WrenDataSource {
@@ -273,9 +280,9 @@ struct WrenDataSource {
 }
 
 impl WrenDataSource {
-    pub fn new(model: Arc<Model>) -> Self {
-        let schema = create_schema(model.get_physical_columns().clone());
-        Self { schema }
+    pub fn new(model: Arc<Model>) -> Result<Self> {
+        let schema = create_schema(model.get_physical_columns().clone())?;
+        Ok(Self { schema })
     }
 }
 

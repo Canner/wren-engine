@@ -18,6 +18,7 @@
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 #[cfg(target_family = "windows")]
 use std::thread;
 
@@ -140,10 +141,11 @@ async fn run_test_file(test_file: TestFile) -> Result<()> {
         info!("Skipping: {}", path.display());
         return Ok(());
     };
+    let test_ctx = Arc::new(test_ctx);
     setup_scratch_dir(&relative_path)?;
     let mut runner = sqllogictest::Runner::new(|| async {
         Ok(DataFusion::new(
-            test_ctx.session_ctx().clone(),
+            Arc::clone(&test_ctx),
             relative_path.clone(),
         ))
     });
@@ -166,10 +168,11 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
         info!("Skipping: {}", path.display());
         return Ok(());
     };
+    let test_ctx = Arc::new(test_ctx);
     setup_scratch_dir(&relative_path)?;
     let mut runner = sqllogictest::Runner::new(|| async {
         Ok(DataFusion::new(
-            test_ctx.session_ctx().clone(),
+            Arc::clone(&test_ctx),
             relative_path.clone(),
         ))
     });

@@ -16,12 +16,15 @@
 // under the License.
 
 use std::{path::PathBuf, time::Duration};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 use log::info;
 use sqllogictest::DBOutput;
+use wren_core::mdl::transform_sql;
+use crate::TestContext;
 
 use super::{
     error::Result,
@@ -31,12 +34,12 @@ use super::{
 };
 
 pub struct DataFusion {
-    ctx: SessionContext,
+    ctx: Arc<TestContext>,
     relative_path: PathBuf,
 }
 
 impl DataFusion {
-    pub fn new(ctx: SessionContext, relative_path: PathBuf) -> Self {
+    pub fn new(ctx: Arc<TestContext>, relative_path: PathBuf) -> Self {
         Self { ctx, relative_path }
     }
 }
@@ -52,7 +55,8 @@ impl sqllogictest::AsyncDB for DataFusion {
             self.relative_path.display(),
             sql
         );
-        run_query(&self.ctx, sql).await
+        let sql = transform_sql(Arc::clone(&self.ctx.analyzed_wren_mdl()), sql)?;
+        run_query(&self.ctx.session_ctx(), sql).await
     }
 
     /// Engine name of current database.
