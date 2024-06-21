@@ -2783,6 +2783,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "pyo3",
+ "pyo3-build-config",
  "serde_json",
  "thiserror",
  "wren-core",
