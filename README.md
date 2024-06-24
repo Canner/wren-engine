@@ -23,12 +23,12 @@
   </a>
 </p>
 
-> Wren Engine is the semantic engine for LLMs, the backbone of the [WrenAI](https://github.com/Canner/WrenAI) project.
+> Wren Engine is the semantic engine for LLMs, the backbone of the [Wren AI](https://github.com/Canner/WrenAI) project.
 
 <img src="./misc/wren_engine_flow.png">
 
 Useful links
-- [WrenAI Website](https://getwren.ai)
+- [Wren AI Website](https://getwren.ai)
 - [Wren Engine Documentation](https://docs.getwren.ai/engine/get_started/what_is)
 
 ## 🎯 Our Mission
