@@ -13,15 +13,12 @@ use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
 
-use wren_core::logical_plan::analyze::rule::{
-    ModelAnalyzeRule, ModelGenerationRule, RemoveWrenPrefixRule,
-};
 use wren_core::logical_plan::utils::create_schema;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
 use wren_core::mdl::manifest::{JoinType, Manifest, Model};
-use wren_core::mdl::{AnalyzedWrenMDL, WrenMDL};
+use wren_core::mdl::{transform_sql, AnalyzedWrenMDL, WrenMDL};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -89,22 +86,13 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
-    let new_state = ctx
-        .state()
-        .add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))))
-        .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-            &analyzed_mdl,
-        ))))
-        .add_analyzer_rule(Arc::new(RemoveWrenPrefixRule::new(Arc::clone(
-            &analyzed_mdl,
-        ))))
-        // There is some conflict with optimize_projections. Disable optimization rule temporarily,
-        .with_optimizer_rules(vec![]);
+    let transformed = transform_sql(
+        Arc::clone(&analyzed_mdl),
+        "select totalprice from wrenai.default.orders",
+    )
+    .unwrap();
     register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
-    let new_ctx = SessionContext::new_with_state(new_state);
-    let sql = "select * from wrenai.default.order_items";
-    // create a plan to run a SQL query
-    let df = new_ctx.sql(sql).await?;
+    let df = ctx.sql(&transformed).await?;
     df.show().await?;
     Ok(())
 }
@@ -153,6 +141,18 @@ fn init_manifest() -> Manifest {
                 .column(ColumnBuilder::new("estimated_delivery_date", "varchar").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
                 .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
+                .column(
+                    ColumnBuilder::new("order_items", "order_items")
+                        .relationship("orders_order_items")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("totalprice", "double")
+                        .expression("sum(order_items.price)")
+                        .calculated(true)
+                        .build(),
+                )
+                .primary_key("order_id")
                 .column(
                     ColumnBuilder::new("customers", "customers")
                         .relationship("orders_customer")
@@ -205,8 +205,7 @@ pub async fn register_table_with_mdl(
                 &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
             ),
             Arc::new(table),
-        )
-        .unwrap();
+        )?;
     }
     Ok(())
 }

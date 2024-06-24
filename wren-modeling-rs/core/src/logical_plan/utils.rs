@@ -1,7 +1,9 @@
+use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
+use datafusion::common::not_impl_err;
 use std::{collections::HashMap, sync::Arc};
 
-use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use datafusion::datasource::DefaultTableSource;
+use datafusion::error::Result;
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
@@ -12,32 +14,36 @@ use crate::mdl::{
     Dataset, WrenMDL,
 };
 
-pub fn map_data_type(data_type: &str) -> DataType {
-    match data_type {
+pub fn map_data_type(data_type: &str) -> Result<DataType> {
+    let result = match data_type {
         "integer" => DataType::Int32,
         "bigint" => DataType::Int64,
         "varchar" => DataType::Utf8,
         "double" => DataType::Float64,
         "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None),
         "date" => DataType::Date32,
-        _ => unimplemented!("{}", &data_type),
-    }
+        _ => return not_impl_err!("Unsupported data type: {}", &data_type),
+    };
+    Ok(result)
 }
 
-pub fn create_table_source(model: &Model) -> Arc<dyn TableSource> {
-    let schema = create_schema(model.get_physical_columns());
-    Arc::new(LogicalTableSource::new(schema))
+pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
+    let schema = create_schema(model.get_physical_columns())?;
+    Ok(Arc::new(LogicalTableSource::new(schema)))
 }
 
-pub fn create_schema(columns: Vec<Arc<Column>>) -> SchemaRef {
+pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type);
-            Field::new(&column.name, data_type, column.no_null)
+            let data_type = map_data_type(&column.r#type)?;
+            Ok(Field::new(&column.name, data_type, column.no_null))
         })
-        .collect();
-    SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(SchemaRef::new(Schema::new_with_metadata(
+        fields,
+        HashMap::new(),
+    )))
 }
 
 pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {

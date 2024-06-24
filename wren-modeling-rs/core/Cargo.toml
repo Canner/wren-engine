@@ -13,7 +13,6 @@ name = "wren_core"
 path = "src/lib.rs"
 
 [dependencies]
-arrow-schema = { workspace = true }
 async-trait = { workspace = true }
 datafusion = { workspace = true }
 env_logger = { workspace = true }

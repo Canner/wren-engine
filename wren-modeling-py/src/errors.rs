@@ -1,7 +1,7 @@
-use std::string::FromUtf8Error;
 use base64::DecodeError;
 use pyo3::exceptions::PyException;
 use pyo3::PyErr;
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

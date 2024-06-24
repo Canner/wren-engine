@@ -78,7 +78,7 @@ impl ModelBuilder {
                 base_object: "".to_string(),
                 table_reference: "".to_string(),
                 columns: vec![],
-                primary_key: "".to_string(),
+                primary_key: None,
                 cached: false,
                 refresh_time: "".to_string(),
                 properties: vec![],
@@ -107,7 +107,7 @@ impl ModelBuilder {
     }
 
     pub fn primary_key(mut self, primary_key: &str) -> Self {
-        self.model.primary_key = primary_key.to_string();
+        self.model.primary_key = Some(primary_key.to_string());
         self
     }
 

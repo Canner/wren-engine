@@ -2,7 +2,9 @@ use std::collections::{BTreeSet, VecDeque};
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use datafusion::common::Column;
+use datafusion::common::{internal_err, plan_err, Column};
+use datafusion::error::Result;
+use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{Expr, LogicalPlan};
 use datafusion::sql::planner::SqlToRel;
 use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
@@ -61,20 +63,22 @@ pub fn collect_identifiers(expr: &String) -> BTreeSet<Column> {
 pub fn create_wren_calculated_field_expr(
     column_rf: ColumnReference,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-) -> Expr {
+) -> Result<Expr> {
     if !column_rf.column.is_calculated {
-        panic!("Column is not calculated: {}", column_rf.column.name)
+        return plan_err!("Column is not calculated: {}", column_rf.column.name);
     }
     let qualified_col = from_qualified_name(
         &analyzed_wren_mdl.wren_mdl,
         column_rf.dataset.name(),
         column_rf.column.name(),
     );
-    let required_fields = analyzed_wren_mdl
+    let Some(required_fields) = analyzed_wren_mdl
         .lineage
         .required_fields_map
         .get(&qualified_col)
-        .unwrap_or_else(|| panic!("Required fields not found for {}", qualified_col));
+    else {
+        return plan_err!("Required fields not found for {}", qualified_col);
+    };
 
     // collect all required models.
     let models = required_fields
@@ -105,17 +109,24 @@ pub fn create_wren_calculated_field_expr(
     });
     debug!("Statement: {:?}", statement.to_string());
     // Create the expression only has the table prefix. We don't need the catalog and schema prefix when planning.
-    let context_provider = WrenContextProvider::new_bare(&analyzed_wren_mdl.wren_mdl);
+    let context_provider = WrenContextProvider::new_bare(&analyzed_wren_mdl.wren_mdl)?;
     let sql_to_rel = SqlToRel::new(&context_provider);
     let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
         Ok(plan) => plan,
-        Err(e) => panic!("Error creating plan: {}", e),
+        Err(e) => return plan_err!("Error creating plan: {}", e),
     };
 
-    match plan {
-        LogicalPlan::Projection(projection) => projection.expr[0].clone(),
-        _ => unreachable!("Unexpected plan type: {:?}", plan),
-    }
+    let result = match plan {
+        LogicalPlan::Projection(projection) => {
+            if let LogicalPlan::Aggregate(aggregation) = unwrap_arc(projection.input) {
+                aggregation.aggr_expr[0].clone()
+            } else {
+                projection.expr[0].clone()
+            }
+        }
+        _ => return internal_err!("Unexpected plan type: {:?}", plan),
+    };
+    Ok(result)
 }
 
 /// Create the Logical Expr for the remote column.
@@ -124,8 +135,8 @@ pub(crate) fn create_remote_expr_for_model(
     expr: &String,
     model: Arc<Model>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-) -> Expr {
-    let context_provider = RemoteContextProvider::new(&analyzed_wren_mdl.wren_mdl);
+) -> Result<Expr> {
+    let context_provider = RemoteContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
     create_expr_for_model(
         expr,
         model,
@@ -139,8 +150,8 @@ pub(crate) fn create_wren_expr_for_model(
     expr: &String,
     model: Arc<Model>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-) -> Expr {
-    let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl);
+) -> Result<Expr> {
+    let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
     let wrapped = format!(
         "select {} from {}.{}.{}",
         expr,
@@ -153,14 +164,11 @@ pub(crate) fn create_wren_expr_for_model(
     debug!("Statement: {:?}", statement.to_string());
 
     let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
-        Ok(plan) => plan,
-        Err(e) => panic!("Error creating plan: {}", e),
-    };
+    let plan = sql_to_rel.sql_statement_to_plan(statement.clone())?;
 
     match plan {
-        LogicalPlan::Projection(projection) => projection.expr[0].clone(),
-        _ => unreachable!("Unexpected plan type: {:?}", plan),
+        LogicalPlan::Projection(projection) => Ok(projection.expr[0].clone()),
+        _ => internal_err!("Unexpected plan type: {:?}", plan),
     }
 }
 
@@ -169,20 +177,16 @@ pub(crate) fn create_expr_for_model(
     expr: &String,
     model: Arc<Model>,
     context_provider: DynamicContextProvider,
-) -> Expr {
+) -> Result<Expr> {
     let wrapped = format!("select {} from {}", expr, &model.table_reference);
     let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
     let statement = &parsed[0];
 
     let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
-        Ok(plan) => plan,
-        Err(e) => panic!("Error creating plan: {}", e),
-    };
-
+    let plan = sql_to_rel.sql_statement_to_plan(statement.clone())?;
     match plan {
-        LogicalPlan::Projection(projection) => projection.expr[0].clone(),
-        _ => unreachable!("Unexpected plan type: {:?}", plan),
+        LogicalPlan::Projection(projection) => Ok(projection.expr[0].clone()),
+        _ => internal_err!("Unexpected plan type: {:?}", plan),
     }
 }
 
@@ -195,16 +199,17 @@ mod tests {
     use crate::logical_plan::utils::from_qualified_name;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::AnalyzedWrenMDL;
+    use datafusion::error::Result;
 
     #[test]
-    fn test_create_wren_expr() {
+    fn test_create_wren_expr() -> Result<()> {
         let test_data: PathBuf =
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
                 .iter()
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -218,19 +223,20 @@ mod tests {
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
             analyzed_mdl.clone(),
-        );
+        )?;
         assert_eq!(expr.to_string(), "customer.name");
+        Ok(())
     }
 
     #[test]
-    fn test_create_wren_expr_non_relationship() {
+    fn test_create_wren_expr_non_relationship() -> Result<()> {
         let test_data: PathBuf =
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
                 .iter()
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
-        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl));
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let column_rf = analyzed_mdl
             .wren_mdl
@@ -244,7 +250,8 @@ mod tests {
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
             analyzed_mdl.clone(),
-        );
+        )?;
         assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
+        Ok(())
     }
 }

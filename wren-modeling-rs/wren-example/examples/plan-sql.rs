@@ -8,7 +8,7 @@ use wren_core::mdl::{transform_sql, AnalyzedWrenMDL};
 #[tokio::main]
 async fn main() -> datafusion::common::Result<()> {
     let manifest = init_manifest();
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest));
+    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
 
     let sql = "select * from wrenai.default.order_items_model";
     println!("Original SQL: \n{}", sql);

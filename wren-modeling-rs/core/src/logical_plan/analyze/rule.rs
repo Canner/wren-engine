@@ -4,14 +4,16 @@ use std::sync::Arc;
 
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::Result;
+use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
-use datafusion::logical_expr::{col, utils, Extension};
+use datafusion::logical_expr::{col, ident, utils, Extension};
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::sql::TableReference;
 
-use crate::logical_plan::analyze::plan::{ModelPlanNode, ModelSourceNode};
+use crate::logical_plan::analyze::plan::{
+    CalculationPlanNode, ModelPlanNode, ModelSourceNode,
+};
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
@@ -85,7 +87,7 @@ impl ModelAnalyzeRule {
                             field,
                             Some(LogicalPlan::TableScan(table_scan.clone())),
                             Arc::clone(&self.analyzed_wren_mdl),
-                        )),
+                        )?),
                     });
                     used_columns.borrow_mut().clear();
                     Ok(Transformed::yes(model))
@@ -112,7 +114,7 @@ impl ModelAnalyzeRule {
                         Arc::clone(&self.analyzed_wren_mdl),
                         table_scan,
                         buffer.iter().cloned().collect(),
-                    ),
+                    )?,
                     ignore => ignore,
                 };
 
@@ -121,7 +123,7 @@ impl ModelAnalyzeRule {
                         Arc::clone(&self.analyzed_wren_mdl),
                         table_scan,
                         buffer.iter().cloned().collect(),
-                    ),
+                    )?,
                     ignore => ignore,
                 };
                 buffer.clear();
@@ -155,22 +157,22 @@ fn analyze_table_scan(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     table_scan: TableScan,
     required_field: Vec<Expr>,
-) -> LogicalPlan {
+) -> Result<LogicalPlan> {
     if belong_to_mdl(&analyzed_wren_mdl.wren_mdl(), table_scan.table_name.clone()) {
-        LogicalPlan::TableScan(table_scan)
+        Ok(LogicalPlan::TableScan(table_scan))
     } else {
         let table_name = table_scan.table_name.table();
         if let Some(model) = analyzed_wren_mdl.wren_mdl.get_model(table_name) {
-            LogicalPlan::Extension(Extension {
+            Ok(LogicalPlan::Extension(Extension {
                 node: Arc::new(ModelPlanNode::new(
                     model,
                     required_field,
                     Some(LogicalPlan::TableScan(table_scan.clone())),
                     Arc::clone(&analyzed_wren_mdl),
-                )),
-            })
+                )?),
+            }))
         } else {
-            LogicalPlan::TableScan(table_scan)
+            Ok(LogicalPlan::TableScan(table_scan))
         }
     }
 }
@@ -210,13 +212,9 @@ impl ModelGenerationRule {
                 if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelPlanNode>()
                 {
-                    let source_plan =
-                        model_plan
-                            .relation_chain
-                            .clone()
-                            .plan(ModelGenerationRule::new(Arc::clone(
-                                &self.analyzed_wren_mdl,
-                            )));
+                    let source_plan = model_plan.relation_chain.clone().plan(
+                        ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
+                    )?;
 
                     let model: Arc<Model> = Arc::clone(
                         &self
@@ -225,13 +223,12 @@ impl ModelGenerationRule {
                             .get_model(&model_plan.model_name)
                             .expect("Model not found"),
                     );
-
                     let result = match source_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)
                             .project(model_plan.required_exprs.clone())?
                             .build()?,
                         _ => {
-                            panic!("Failed to generate source plan")
+                            return plan_err!("Failed to generate source plan");
                         }
                     };
                     // calculated field scope
@@ -288,6 +285,39 @@ impl ModelGenerationRule {
                         .alias(model.name.clone())?
                         .build()?;
                     Ok(Transformed::yes(result))
+                } else if let Some(calculation_plan) = extension
+                    .node
+                    .as_any()
+                    .downcast_ref::<CalculationPlanNode>(
+                ) {
+                    let source_plan = calculation_plan.relation_chain.clone().plan(
+                        ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
+                    )?;
+
+                    if let Expr::Alias(alias) = calculation_plan.measures[0].clone() {
+                        let measure: Expr = *alias.expr.clone();
+                        let name = alias.name.clone();
+                        let ident = ident(measure.to_string()).alias(name);
+                        let project = vec![calculation_plan.dimensions[0].clone(), ident];
+                        let result = match source_plan {
+                            Some(plan) => LogicalPlanBuilder::from(plan)
+                                .aggregate(
+                                    calculation_plan.dimensions.clone(),
+                                    vec![measure],
+                                )?
+                                .project(project)?
+                                .build()?,
+                            _ => {
+                                return plan_err!("Failed to generate source plan");
+                            }
+                        };
+                        let alias = LogicalPlanBuilder::from(result)
+                            .alias(calculation_plan.calculation.column.name())?
+                            .build()?;
+                        Ok(Transformed::yes(alias))
+                    } else {
+                        return plan_err!("measures should have an alias");
+                    }
                 } else {
                     Ok(Transformed::no(LogicalPlan::Extension(extension)))
                 }
@@ -403,20 +433,20 @@ mod test {
                     .build(),
             )
             .build();
-        let analyzed_wren_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest));
+        let analyzed_wren_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
 
         // [RemoveWrenPrefixRule] only remove the prefix of identifiers, so that the table name in
         // the expected result will have the schema prefix.
         let tests = vec![
             ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a",
-             r#"SELECT "a"."c1", "a"."c2" FROM "default"."a""#),
+             r#"SELECT a.c1, a.c2 FROM wrenai."default".a"#),
             ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a where wrenai.default.a.c1 = 1",
-                 r#"SELECT "a"."c1", "a"."c2" FROM "default"."a" WHERE ("a"."c1" = 1)"#),
+                 r#"SELECT a.c1, a.c2 FROM wrenai."default".a WHERE (a.c1 = 1)"#),
             ("select wrenai.default.a.c1 + 1 from wrenai.default.a",
-            r#"SELECT ("a"."c1" + 1) FROM "default"."a""#)
+            r#"SELECT (a.c1 + 1) FROM wrenai."default".a"#)
         ];
 
-        let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl);
+        let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
         let sql_to_rel = SqlToRel::new(&context_provider);
         let dialect = GenericDialect {};
         let analyzer = Analyzer::with_rules(vec![Arc::new(RemoveWrenPrefixRule::new(

@@ -21,3 +21,8 @@ query B
 select cnt1 = cnt2 from (select count(*) as cnt1 from (select customer_state from  wrenai.default.order_items)), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
 ----
 true
+
+query B
+select actual = expected from (select totalprice as actual from wrenai.default.orders where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'), (select sum(price) as expected from datafusion.public.order_items where order_id = '76754c0e642c8f99a8c3fcb8a14ac700') limit 1;
+----
+true
