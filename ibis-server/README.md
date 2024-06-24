@@ -97,3 +97,28 @@ just run
 
 ### Modeling Core
 The modeling core is written in Rust and provides the Python adaptor. You can find the [wren-modeling-py](../wren-modeling-py) and the source code in the [wren-modeling-rs](../wren-modeling-rs) directory.
+
+### FAQ
+#### Why can’t I run test about MS SQL Server?
+Maybe you don't have the driver for MS SQL Server. If your OS is Linux or MacOS, We recommend you install the `unixodbc` and `freetds` package. \
+After installing, you can execute `odbcinst -j` to check the path of the `odbcinst.ini` file.
+```bash
+odbcinst -j
+
+unixODBC 2.3.12
+DRIVERS............: /opt/homebrew/etc/odbcinst.ini
+SYSTEM DATA SOURCES: /opt/homebrew/etc/odbc.ini
+FILE DATA SOURCES..: /opt/homebrew/etc/ODBCDataSources
+USER DATA SOURCES..: /Users/your_username/.odbc.ini
+SQLULEN Size.......: 8
+SQLLEN Size........: 8
+SQLSETPOSIROW Size.: 8
+```
+Find the path of `libtdsodbc.so` in `freetds` and open the `odbcinst.ini` file to add the following content
+```bash
+[FreeTDS]
+Description = FreeTDS driver
+Driver = /opt/homebrew/Cellar/freetds/1.4.17/lib/libtdsodbc.so
+Setup = /opt/homebrew/Cellar/freetds/1.4.17/lib/libtdsodbc.so
+FileUsage = 1
+```

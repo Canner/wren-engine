@@ -12,10 +12,12 @@ from app.model import (
     BigQueryConnectionInfo,
     ConnectionInfo,
     ConnectionUrl,
+    MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
     QueryBigQueryDTO,
     QueryDTO,
+    QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
     QuerySnowflakeDTO,
@@ -25,6 +27,7 @@ from app.model import (
 
 class DataSource(StrEnum):
     bigquery = auto()
+    mssql = auto()
     mysql = auto()
     postgres = auto()
     snowflake = auto()
@@ -44,6 +47,7 @@ class DataSource(StrEnum):
 
 class DataSourceExtension(Enum):
     bigquery = QueryBigQueryDTO
+    mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
     postgres = QueryPostgresDTO
     snowflake = QuerySnowflakeDTO
@@ -67,6 +71,18 @@ class DataSourceExtension(Enum):
             project_id=info.project_id,
             dataset_id=info.dataset_id,
             credentials=credentials,
+        )
+
+    @staticmethod
+    def get_mssql_connection(info: MSSqlConnectionInfo) -> BaseBackend:
+        # mssql in ibis does not support connection url
+        return ibis.mssql.connect(
+            host=info.host,
+            port=info.port,
+            database=info.database,
+            user=info.user,
+            password=info.password,
+            driver=info.driver,
         )
 
     @staticmethod
