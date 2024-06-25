@@ -415,6 +415,7 @@ relationPrimary
     | UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest
     | (IDENTIFIER '.')? UNNEST '(' expression (',' expression)* ')' (WITH ORDINALITY)?  #unnest // pg syntax
     | functionExpression                                              #functionRelation  // pg syntax
+    | string                                                          #pathRelation // duckdb syntax
     | LATERAL '(' query ')'                                           #lateral
     | '(' relation ')'                                                #parenthesizedRelation
     ;
@@ -498,6 +499,7 @@ primaryExpression
     // for wireprotocol pg style casting
     | primaryExpression PG_CAST (IDENTIFIER '.')? type                                    #cast
     | ARRAY '[' (expression (',' expression)*)? ']'                                       #arrayConstructor
+    | '[' (expression (',' expression)*)? ']'                                             #arrayConstructor // duckdb array syntax
     | value=primaryExpression '[' index=valueExpression ']'                               #subscript
     | identifier                                                                          #columnReference
     | base=primaryExpression '.' fieldName=identifier                                     #dereference

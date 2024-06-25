@@ -32,6 +32,7 @@ import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
+import io.trino.sql.tree.PathRelation;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
@@ -66,6 +67,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.QueryUtil.getQualifiedName;
+import static io.trino.sql.parser.AstBuilder.DUCKDB_TABLE_FUNCTIONS;
 import static io.wren.base.metadata.StandardErrorCode.TYPE_MISMATCH;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
@@ -465,7 +467,18 @@ public final class StatementAnalyzer
                 // currently we don't care about metric rollup output scope
                 return Scope.builder().parent(scope).build();
             }
-            throw new IllegalArgumentException("FunctionRelation not supported: " + node.getName());
+            else if (DUCKDB_TABLE_FUNCTIONS.contains(node.getName().toString())) {
+                return Scope.builder().parent(scope).build();
+            }
+            else {
+                throw new IllegalArgumentException("FunctionRelation not supported: " + node.getName());
+            }
+        }
+
+        @Override
+        protected Scope visitPathRelation(PathRelation node, Optional<Scope> context)
+        {
+            return Scope.builder().parent(context).build();
         }
 
         @Override
