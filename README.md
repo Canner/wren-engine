@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a aria-label="Canner" href="https://cannerdata.com/">
-    <img src="https://img.shields.io/badge/%F0%9F%A7%A1-Made%20by%20Canner-blue?style=for-the-badge">
+  <a aria-label="Follow us" href="https://x.com/getwrenai">
+    <img alt="" src="https://img.shields.io/badge/-@getwrenai-blue?style=for-the-badge&logo=x&logoColor=white&labelColor=gray&logoWidth=20">
   </a>
   <a aria-label="License" href="https://github.com/Canner/wren-engine/blob/main/LICENSE">
     <img alt="" src="https://img.shields.io/github/license/canner/wren-engine?color=blue&style=for-the-badge">
@@ -18,17 +18,17 @@
   <a aria-label="Join the community on GitHub" href="https://discord.gg/5DvshJqG8Z">
     <img alt="" src="https://img.shields.io/badge/-JOIN%20THE%20COMMUNITY-blue?style=for-the-badge&logo=discord&logoColor=white&labelColor=grey&logoWidth=20">
   </a>
-  <a aria-label="Follow us" href="https://x.com/getwrenai">
-    <img alt="" src="https://img.shields.io/badge/-@getwrenai-blue?style=for-the-badge&logo=x&logoColor=white&labelColor=gray&logoWidth=20">
+  <a aria-label="Canner" href="https://cannerdata.com/">
+    <img src="https://img.shields.io/badge/%F0%9F%A7%A1-Made%20by%20Canner-blue?style=for-the-badge">
   </a>
 </p>
 
-> Wren Engine is the semantic engine for LLMs, the backbone of the [WrenAI](https://github.com/Canner/WrenAI) project.
+> Wren Engine is the semantic engine for LLMs, the backbone of the [Wren AI](https://github.com/Canner/WrenAI) project.
 
 <img src="./misc/wren_engine_flow.png">
 
 Useful links
-- [WrenAI Website](https://getwren.ai)
+- [Wren AI Website](https://getwren.ai)
 - [Wren Engine Documentation](https://docs.getwren.ai/engine/get_started/what_is)
 
 ## 🎯 Our Mission
