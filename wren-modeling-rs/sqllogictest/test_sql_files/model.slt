@@ -1,28 +1,28 @@
 statement ok
-SELECT * from wrenai.default.orders
+SELECT * from wrenai.public.orders
 
 statement ok
-select cast(freight_value as int) + cast(price as int) from wrenai.default.order_items
+select cast(freight_value as int) + cast(price as int) from wrenai.public.order_items
 
 statement ok
-select product_id from wrenai.default.order_items where cast(freight_value as double) > 10
+select product_id from wrenai.public.order_items where cast(freight_value as double) > 10
 
 statement ok
-select * from wrenai.default.order_items;
+select * from wrenai.public.order_items;
 
 statement ok
-select * from wrenai.default.customers;
+select * from wrenai.public.customers;
 
 statement ok
-select count(*) from wrenai.default.order_items;
+select count(*) from wrenai.public.order_items;
 
 # check the count of order_items won't be increased by the relationship calculation
 query B
-select cnt1 = cnt2 from (select count(*) as cnt1 from (select customer_state from  wrenai.default.order_items)), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
+select cnt1 = cnt2 from (select count(*) as cnt1 from (select customer_state from  wrenai.public.order_items)), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
 ----
 true
 
 query B
-select actual = expected from (select totalprice as actual from wrenai.default.orders where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'), (select sum(price) as expected from datafusion.public.order_items where order_id = '76754c0e642c8f99a8c3fcb8a14ac700') limit 1;
+select actual = expected from (select totalprice as actual from wrenai.public.orders where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'), (select sum(price) as expected from datafusion.public.order_items where order_id = '76754c0e642c8f99a8c3fcb8a14ac700') limit 1;
 ----
 true

@@ -33,9 +33,9 @@ where
     g.is_directed() && !is_cyclic_directed(g)
 }
 
-pub fn collect_identifiers(expr: &String) -> BTreeSet<Column> {
+pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     let wrapped = format!("select {}", expr);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
+    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;
     let statement = parsed[0].clone();
     let mut visited: BTreeSet<Column> = BTreeSet::new();
 
@@ -56,7 +56,7 @@ pub fn collect_identifiers(expr: &String) -> BTreeSet<Column> {
         }
         ControlFlow::<()>::Continue(())
     });
-    visited
+    Ok(visited)
 }
 
 /// Create the Logical Expr for the calculated field
@@ -252,6 +252,22 @@ mod tests {
             analyzed_mdl.clone(),
         )?;
         assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
+        Ok(())
+    }
+
+    #[test]
+    fn test_collect_identifiers() -> Result<()> {
+        let expr = "orders.orderkey + orders.custkey";
+        let result = super::collect_identifiers(&expr.to_string())?;
+        assert_eq!(result.len(), 2);
+        assert!(result.contains(&super::Column::new_unqualified("orders.orderkey")));
+        assert!(result.contains(&super::Column::new_unqualified("orders.custkey")));
+
+        let expr = "customers.state || order_id";
+        let result = super::collect_identifiers(&expr.to_string())?;
+        assert_eq!(result.len(), 2);
+        assert!(result.contains(&super::Column::new_unqualified("customers.state")));
+        assert!(result.contains(&super::Column::new_unqualified("order_id")));
         Ok(())
     }
 }

@@ -195,8 +195,10 @@ fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
                     unimplemented!("Unsupported data type: {}", column.r#type)
                 };
                 vec![Field::new(&column.name, data_type, column.no_null)]
-            } else {
+            } else if let Ok(idents) =
                 utils::collect_identifiers(column.expression.as_ref().unwrap())
+            {
+                idents
                     .iter()
                     .map(|c| {
                         // we don't know the data type or nullable of the remote table,
@@ -204,6 +206,11 @@ fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
                         Field::new(&c.name, DataType::Int8, true)
                     })
                     .collect()
+            } else {
+                panic!(
+                    "Failed to collect identifiers from expression: {}",
+                    column.expression.as_ref().unwrap()
+                );
             }
         })
         .collect();

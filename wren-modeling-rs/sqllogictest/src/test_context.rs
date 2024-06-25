@@ -138,6 +138,11 @@ async fn register_ecommerce_mdl(
                 .column(ColumnBuilder::new("city", "varchar").build())
                 .column(ColumnBuilder::new("id", "varchar").build())
                 .column(ColumnBuilder::new("state", "varchar").build())
+                .column(
+                    ColumnBuilder::new_calculated("city_state", "varchar")
+                        .expression("city || ' ' || state")
+                        .build(),
+                )
                 .primary_key("id")
                 .build(),
         )
@@ -152,13 +157,15 @@ async fn register_ecommerce_mdl(
                 .column(ColumnBuilder::new("product_id", "varchar").build())
                 .column(ColumnBuilder::new("shipping_limit_date", "varchar").build())
                 .column(
-                    ColumnBuilder::new("orders", "orders")
-                        .relationship("orders_order_items")
-                        .build(),
+                    ColumnBuilder::new_relationship(
+                        "orders",
+                        "orders",
+                        "orders_order_items",
+                    )
+                    .build(),
                 )
                 .column(
-                    ColumnBuilder::new("customer_state", "varchar")
-                        .calculated(true)
+                    ColumnBuilder::new_calculated("customer_state", "varchar")
                         .expression("orders.customers.state")
                         .build(),
                 )
@@ -175,25 +182,34 @@ async fn register_ecommerce_mdl(
                 .column(ColumnBuilder::new("order_id", "varchar").build())
                 .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
                 .column(
-                    ColumnBuilder::new("customers", "customers")
-                        .relationship("orders_customer")
-                        .build(),
+                    ColumnBuilder::new_relationship(
+                        "customers",
+                        "customers",
+                        "orders_customer",
+                    )
+                    .build(),
                 )
                 .column(
-                    ColumnBuilder::new("customer_state", "varchar")
-                        .calculated(true)
+                    ColumnBuilder::new_calculated("customer_state", "varchar")
                         .expression("customers.state")
                         .build(),
                 )
                 .column(
-                    ColumnBuilder::new("order_items", "order_items")
-                        .relationship("orders_order_items")
+                    ColumnBuilder::new_calculated("customer_state_order_id", "varchar")
+                        .expression("customers.state || ' ' || order_id")
                         .build(),
                 )
                 .column(
-                    ColumnBuilder::new("totalprice", "double")
+                    ColumnBuilder::new_relationship(
+                        "order_items",
+                        "order_items",
+                        "orders_order_items",
+                    )
+                    .build(),
+                )
+                .column(
+                    ColumnBuilder::new_calculated("totalprice", "double")
                         .expression("sum(order_items.price)")
-                        .calculated(true)
                         .build(),
                 )
                 .primary_key("order_id")

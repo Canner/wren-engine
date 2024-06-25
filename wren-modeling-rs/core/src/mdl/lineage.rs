@@ -11,7 +11,7 @@ use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::{utils, WrenMDL};
 
 use super::manifest::{JoinType, Relationship};
-use super::utils::to_expr_queue;
+use super::utils::{collect_identifiers, to_expr_queue};
 use super::Dataset;
 
 pub struct Lineage {
@@ -22,7 +22,7 @@ pub struct Lineage {
 
 impl Lineage {
     pub fn new(mdl: &WrenMDL) -> Result<Self> {
-        let source_columns_map = Lineage::collect_source_columns(mdl);
+        let source_columns_map = Lineage::collect_source_columns(mdl)?;
         let RequiredInfo {
             required_fields_map,
             required_dataset_topo,
@@ -34,17 +34,22 @@ impl Lineage {
         })
     }
 
-    fn collect_source_columns(mdl: &WrenMDL) -> HashMap<Column, HashSet<Column>> {
+    fn collect_source_columns(mdl: &WrenMDL) -> Result<HashMap<Column, HashSet<Column>>> {
         let mut source_columns_map = HashMap::new();
 
-        mdl.manifest.models.iter().for_each(|model| {
-            model.columns.iter().for_each(|column| {
+        for model in mdl.manifest.models.iter() {
+            for column in model.columns.iter() {
                 if column.is_calculated {
                     let expr: &String = match column.expression {
                         Some(ref exp) => exp,
-                        None => return,
+                        None => {
+                            return plan_err!(
+                                "calculated field should have expression: {}",
+                                column.name()
+                            )
+                        }
                     };
-                    let source_columns = utils::collect_identifiers(expr);
+                    let source_columns = collect_identifiers(expr)?;
                     let qualified_name =
                         from_qualified_name(mdl, model.name(), column.name());
                     source_columns.iter().for_each(|source_column| {
@@ -66,9 +71,9 @@ impl Lineage {
                         from_qualified_name(mdl, model.name(), column.name());
                     source_columns_map.insert(qualified_name, HashSet::new());
                 }
-            });
-        });
-        source_columns_map
+            }
+        }
+        Ok(source_columns_map)
     }
     fn collect_required_fields(
         mdl: &WrenMDL,
@@ -81,7 +86,7 @@ impl Lineage {
             let Some(relation) = column.clone().relation else {
                 return internal_err!("relation not found: {}", column);
             };
-            let mut current_relation = match relation {
+            let current_relation = match relation {
                 TableReference::Bare { table } => {
                     TableReference::full(mdl.catalog(), mdl.schema(), table)
                 }
@@ -114,10 +119,11 @@ impl Lineage {
 
             for source_column in source_columns.iter() {
                 let mut expr_parts = to_expr_queue(source_column.clone());
+                let mut relation_ref = current_relation.clone();
                 while !expr_parts.is_empty() {
                     let ident = expr_parts.pop_front().unwrap();
                     let Some(source_column_ref) = mdl.get_column_reference(&Column::new(
-                        Some(current_relation.clone()),
+                        Some(relation_ref.clone()),
                         ident.clone(),
                     )) else {
                         return plan_err!("source column not found: {}", ident);
@@ -131,7 +137,7 @@ impl Lineage {
                                     let related_model_name = rs_rf
                                         .models
                                         .iter()
-                                        .find(|m| m != &current_relation.table())
+                                        .find(|m| m != &relation_ref.table())
                                         .cloned()
                                         .unwrap();
                                     if related_model_name
@@ -143,7 +149,7 @@ impl Lineage {
                                         );
                                     }
 
-                                    utils::collect_identifiers(&rs_rf.condition)
+                                    collect_identifiers(&rs_rf.condition)?
                                         .iter()
                                         .cloned()
                                         .for_each(|ident| {
@@ -179,7 +185,7 @@ impl Lineage {
                                         ),
                                     );
 
-                                    current_relation = TableReference::full(
+                                    relation_ref = TableReference::full(
                                         mdl.catalog(),
                                         mdl.schema(),
                                         related_model_name,
@@ -200,7 +206,7 @@ impl Lineage {
                                     );
                                 }
                                 let value = Column::new(
-                                    Some(current_relation.clone()),
+                                    Some(relation_ref.clone()),
                                     source_column_ref.column.name().to_string(),
                                 );
                                 if source_column_ref.column.is_calculated {
@@ -274,153 +280,289 @@ fn get_dataset_link_revers_if_need(
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashSet;
-    use std::{
-        fs,
-        path::{self, PathBuf},
-    };
-
     use datafusion::common::Column;
     use datafusion::error::Result;
     use datafusion::sql::TableReference;
+    use std::collections::HashSet;
 
     use crate::mdl::builder::{
         ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
     };
-    use crate::mdl::manifest::{JoinType, Manifest};
+    use crate::mdl::lineage::Lineage;
+    use crate::mdl::manifest::JoinType;
     use crate::mdl::{Dataset, WrenMDL};
 
     #[test]
     fn test_collect_source_columns() -> Result<()> {
-        let test_data: PathBuf =
-            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-                .iter()
-                .collect();
-        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
-            .expect("Unable to read file");
-        let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let manifest = ManifestBuilder::new()
+            .model(
+                model_a()
+                    .column(
+                        ColumnBuilder::new("a1_concat_native", "varchar")
+                            .expression("a1 || a2")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_id", "varchar")
+                            .expression("a1 || id")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_b1", "varchar")
+                            .expression("a1 || b.b1")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_c1", "varchar")
+                            .expression("a1 || b.c.c1")
+                            .build(),
+                    )
+                    .column(ColumnBuilder::new_relationship("b", "b", "a_b").build())
+                    .build(),
+            )
+            .model(
+                model_b()
+                    .column(ColumnBuilder::new_relationship("c", "c", "b_c").build())
+                    .column(
+                        ColumnBuilder::new_calculated("c1", "varchar")
+                            .expression("c.c1")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(model_c().build())
+            .relationship(
+                RelationshipBuilder::new("a_b")
+                    .model("a")
+                    .model("b")
+                    .join_type(JoinType::OneToOne)
+                    .condition("a.a1 = b.a1")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("b_c")
+                    .model("b")
+                    .model("c")
+                    .join_type(JoinType::OneToOne)
+                    .condition("b.b1 = c.b1")
+                    .build(),
+            )
+            .build();
+
         let wren_mdl = WrenMDL::new(manifest);
-        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
+        let lineage = Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.source_columns_map.len(), 13);
         assert_eq!(
             lineage
                 .source_columns_map
-                .get(&Column::from_qualified_name(
-                    "test.test.customer.custkey_plus"
-                ))
-                .unwrap()
-                .len(),
-            1
-        );
-        assert_eq!(
-            lineage
-                .source_columns_map
-                .get(&Column::from_qualified_name(
-                    "test.test.orders.orderkey_plus_custkey"
-                ))
+                .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_id"))
                 .unwrap()
                 .len(),
             2
         );
-        assert_eq!(
-            lineage
-                .source_columns_map
-                .get(&Column::from_qualified_name(
-                    "test.test.orders.hash_orderkey"
-                ))
-                .unwrap()
-                .len(),
-            1
-        );
-        let customer_name: Vec<Column> = lineage
+        let a1_concat_b1 = lineage
             .source_columns_map
-            .get(&Column::from_qualified_name(
-                "test.test.orders.customer_name",
-            ))
-            .unwrap()
-            .iter()
-            .cloned()
-            .collect();
-        assert_eq!(customer_name.len(), 1);
-        assert_eq!(
-            customer_name[0],
-            Column {
-                relation: Some(TableReference::full("test", "test", "orders")),
-                name: "customer.name".to_string()
-            }
-        );
+            .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_b1"))
+            .unwrap();
+        assert_eq!(a1_concat_b1.len(), 2);
+        assert!(a1_concat_b1.contains(&Column {
+            relation: Some(TableReference::full("wrenai", "public", "a")),
+            name: "b.b1".to_string()
+        }));
+
+        let a1_concat_c1 = lineage
+            .source_columns_map
+            .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_c1"))
+            .unwrap();
+        assert_eq!(a1_concat_c1.len(), 2);
+        assert!(a1_concat_c1.contains(&Column {
+            relation: Some(TableReference::full("wrenai", "public", "a")),
+            name: "b.c.c1".to_string()
+        }));
         Ok(())
     }
 
     #[test]
     fn test_collect_required_fields() -> Result<()> {
-        let test_data: PathBuf =
-            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-                .iter()
-                .collect();
-        let mdl_json = fs::read_to_string(path::Path::new(test_data.as_path()))
-            .expect("Unable to read file");
-        let manifest = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let manifest = ManifestBuilder::new()
+            .model(
+                model_a()
+                    .column(
+                        ColumnBuilder::new("a1_concat_native", "varchar")
+                            .expression("a1 || a2")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_id", "varchar")
+                            .expression("a1 || id")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_b1", "varchar")
+                            .expression("a1 || b.b1")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a1_concat_c1", "varchar")
+                            .expression("a1 || b.c.c1")
+                            .build(),
+                    )
+                    .column(ColumnBuilder::new_relationship("b", "b", "a_b").build())
+                    .build(),
+            )
+            .model(
+                model_b()
+                    .column(ColumnBuilder::new_relationship("c", "c", "b_c").build())
+                    .column(ColumnBuilder::new_relationship("a", "a", "a_b").build())
+                    .column(
+                        ColumnBuilder::new_calculated("c1", "varchar")
+                            .expression("c.c1")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new_calculated("a_id_concat_c1", "varchar")
+                            .expression("a.id || c.c1")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(model_c().build())
+            .relationship(
+                RelationshipBuilder::new("a_b")
+                    .model("a")
+                    .model("b")
+                    .join_type(JoinType::OneToOne)
+                    .condition("a.a1 = b.a1")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("b_c")
+                    .model("b")
+                    .model("c")
+                    .join_type(JoinType::OneToOne)
+                    .condition("b.b1 = c.b1")
+                    .build(),
+            )
+            .build();
         let wren_mdl = WrenMDL::new(manifest);
-        let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
+        let lineage = Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.required_fields_map.len(), 5);
         assert_eq!(
             lineage
                 .required_fields_map
-                .get(&Column::from_qualified_name(
-                    "test.test.customer.custkey_plus"
-                ))
-                .unwrap()
-                .len(),
-            1
-        );
-        assert_eq!(
-            lineage
-                .required_fields_map
-                .get(&Column::from_qualified_name(
-                    "test.test.orders.orderkey_plus_custkey"
-                ))
+                .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_id"))
                 .unwrap()
                 .len(),
             2
         );
-        assert_eq!(
-            lineage
-                .required_fields_map
-                .get(&Column::from_qualified_name(
-                    "test.test.orders.hash_orderkey"
-                ))
-                .unwrap()
-                .len(),
-            1
-        );
 
-        let customer_name = lineage
+        let a1_concat_b1 = lineage
+            .required_fields_map
+            .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_b1"))
+            .unwrap();
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name("wrenai.public.a.a1"),
+            Column::from_qualified_name("wrenai.public.b.a1"),
+            Column::from_qualified_name("wrenai.public.b.b1"),
+        ]);
+        assert_eq!(a1_concat_b1.len(), 3);
+        assert_eq!(a1_concat_b1, &expected);
+
+        let a1_concat_c1 = lineage
+            .required_fields_map
+            .get(&Column::from_qualified_name("wrenai.public.a.a1_concat_c1"))
+            .unwrap();
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name("wrenai.public.a.a1"),
+            Column::from_qualified_name("wrenai.public.b.a1"),
+            Column::from_qualified_name("wrenai.public.b.b1"),
+            Column::from_qualified_name("wrenai.public.c.b1"),
+            Column::from_qualified_name("wrenai.public.c.c1"),
+        ]);
+        assert_eq!(a1_concat_c1.len(), 5);
+        assert_eq!(a1_concat_c1, &expected);
+
+        let c1 = lineage
+            .required_fields_map
+            .get(&Column::from_qualified_name("wrenai.public.b.c1"))
+            .unwrap();
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name("wrenai.public.b.b1"),
+            Column::from_qualified_name("wrenai.public.c.b1"),
+            Column::from_qualified_name("wrenai.public.c.c1"),
+        ]);
+        assert_eq!(c1.len(), 3);
+        assert_eq!(c1, &expected);
+
+        let a_id_concat_c1 = lineage
             .required_fields_map
             .get(&Column::from_qualified_name(
-                "test.test.orders.customer_name",
+                "wrenai.public.b.a_id_concat_c1",
             ))
             .unwrap();
         let expected: HashSet<Column> = HashSet::from([
-            Column::from_qualified_name("test.test.customer.name"),
-            Column::from_qualified_name("test.test.orders.custkey"),
-            Column::from_qualified_name("test.test.customer.custkey"),
+            Column::from_qualified_name("wrenai.public.a.id"),
+            Column::from_qualified_name("wrenai.public.a.a1"),
+            Column::from_qualified_name("wrenai.public.b.a1"),
+            Column::from_qualified_name("wrenai.public.b.b1"),
+            Column::from_qualified_name("wrenai.public.c.b1"),
+            Column::from_qualified_name("wrenai.public.c.c1"),
         ]);
+        assert_eq!(a_id_concat_c1.len(), 6);
+        assert_eq!(a_id_concat_c1, &expected);
 
-        assert_eq!(customer_name.len(), 3);
-        assert_eq!(*customer_name, expected);
         Ok(())
     }
 
     #[test]
     fn test_required_dataset_topo() -> Result<()> {
-        let manifest = testing_manifest();
+        let manifest = ManifestBuilder::new()
+            .model(
+                model_a()
+                    .column(ColumnBuilder::new_relationship("b", "b", "a_b").build())
+                    .column(
+                        ColumnBuilder::new("c1", "varchar")
+                            .calculated(true)
+                            .expression("b.c.c1")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(
+                model_b()
+                    .column(ColumnBuilder::new("c", "c").relationship("b_c").build())
+                    .column(
+                        ColumnBuilder::new("c1", "varchar")
+                            .calculated(true)
+                            .expression("c.c1")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(model_c().build())
+            .relationship(
+                RelationshipBuilder::new("a_b")
+                    .model("a")
+                    .model("b")
+                    .join_type(JoinType::OneToOne)
+                    .condition("a.a1 = b.a1")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("b_c")
+                    .model("b")
+                    .model("c")
+                    .join_type(JoinType::OneToOne)
+                    .condition("b.b1 = c.b1")
+                    .build(),
+            )
+            .build();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = crate::mdl::lineage::Lineage::new(&wren_mdl)?;
         assert_eq!(lineage.required_dataset_topo.len(), 2);
         let customer_name = lineage
             .required_dataset_topo
-            .get(&Column::from_qualified_name("wrenai.default.a.c1"))
+            .get(&Column::from_qualified_name("wrenai.public.a.c1"))
             .unwrap();
         assert_eq!(customer_name.node_count(), 3);
         assert_eq!(customer_name.edge_count(), 2);
@@ -447,64 +589,29 @@ mod test {
         Ok(())
     }
 
-    fn testing_manifest() -> Manifest {
-        ManifestBuilder::new()
-            .model(
-                ModelBuilder::new("a")
-                    .table_reference("a")
-                    .column(ColumnBuilder::new("id", "varchar").build())
-                    .column(ColumnBuilder::new("a1", "varchar").build())
-                    .column(ColumnBuilder::new("b", "b").relationship("a_b").build())
-                    .column(
-                        ColumnBuilder::new("c1", "varchar")
-                            .calculated(true)
-                            .expression("b.c.c1")
-                            .build(),
-                    )
-                    .primary_key("id")
-                    .build(),
-            )
-            .model(
-                ModelBuilder::new("b")
-                    .table_reference("b")
-                    .column(ColumnBuilder::new("id", "varchar").build())
-                    .column(ColumnBuilder::new("b1", "varchar").build())
-                    .column(ColumnBuilder::new("a1", "varchar").build())
-                    .column(ColumnBuilder::new("c", "c").relationship("b_c").build())
-                    .column(
-                        ColumnBuilder::new("c1", "varchar")
-                            .calculated(true)
-                            .expression("c.c1")
-                            .build(),
-                    )
-                    .primary_key("id")
-                    .build(),
-            )
-            .model(
-                ModelBuilder::new("c")
-                    .table_reference("c")
-                    .column(ColumnBuilder::new("id", "varchar").build())
-                    .column(ColumnBuilder::new("c1", "varchar").build())
-                    .column(ColumnBuilder::new("b1", "varchar").build())
-                    .primary_key("id")
-                    .build(),
-            )
-            .relationship(
-                RelationshipBuilder::new("a_b")
-                    .model("a")
-                    .model("b")
-                    .join_type(JoinType::OneToOne)
-                    .condition("a.a1 = b.a1")
-                    .build(),
-            )
-            .relationship(
-                RelationshipBuilder::new("b_c")
-                    .model("b")
-                    .model("c")
-                    .join_type(JoinType::OneToOne)
-                    .condition("b.b1 = c.b1")
-                    .build(),
-            )
-            .build()
+    fn model_a() -> ModelBuilder {
+        ModelBuilder::new("a")
+            .table_reference("a")
+            .column(ColumnBuilder::new("id", "varchar").build())
+            .column(ColumnBuilder::new("a1", "varchar").build())
+            .primary_key("id")
+    }
+
+    fn model_b() -> ModelBuilder {
+        ModelBuilder::new("b")
+            .table_reference("b")
+            .column(ColumnBuilder::new("id", "varchar").build())
+            .column(ColumnBuilder::new("b1", "varchar").build())
+            .column(ColumnBuilder::new("a1", "varchar").build())
+            .primary_key("id")
+    }
+
+    fn model_c() -> ModelBuilder {
+        ModelBuilder::new("c")
+            .table_reference("c")
+            .column(ColumnBuilder::new("id", "varchar").build())
+            .column(ColumnBuilder::new("c1", "varchar").build())
+            .column(ColumnBuilder::new("b1", "varchar").build())
+            .primary_key("id")
     }
 }

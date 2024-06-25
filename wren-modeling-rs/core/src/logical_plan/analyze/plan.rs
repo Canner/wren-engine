@@ -461,19 +461,16 @@ impl RelationChain {
                 analyzed_wren_mdl.wren_mdl().schema(),
                 target.name(),
             );
+            let Some(fields) = model_required_fields.get(&target_ref) else {
+                return plan_err!("Required fields not found for {}", target_ref);
+            };
             match target {
                 Dataset::Model(target_model) => {
                     relation_chain = RelationChain::Chain(
                         LogicalPlan::Extension(Extension {
                             node: Arc::new(ModelSourceNode::new(
                                 Arc::clone(target_model),
-                                model_required_fields
-                                    .get(&target_ref)
-                                    .unwrap()
-                                    .iter()
-                                    .cloned()
-                                    .map(|c| c.expr)
-                                    .collect(),
+                                fields.iter().cloned().map(|c| c.expr).collect(),
                                 Arc::clone(&analyzed_wren_mdl),
                                 None,
                             )?),
@@ -500,7 +497,7 @@ impl RelationChain {
                     .generate_model_internal(plan.clone())
                     .expect("Failed to generate model plan")
                     .data;
-                let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)
+                let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
                     .iter()
                     .cloned()
                     .map(|c| col(c.flat_name()))
