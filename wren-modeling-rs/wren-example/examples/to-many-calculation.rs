@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
 
     let transformed = transform_sql(
         Arc::clone(&analyzed_mdl),
-        "select totalprice from wrenai.default.orders",
+        "select totalprice from wrenai.public.orders",
     )
     .unwrap();
     register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;

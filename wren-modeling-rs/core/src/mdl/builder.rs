@@ -21,7 +21,7 @@ impl ManifestBuilder {
         Self {
             manifest: Manifest {
                 catalog: "wrenai".to_string(),
-                schema: "default".to_string(),
+                schema: "public".to_string(),
                 models: vec![],
                 relationships: vec![],
                 metrics: vec![],
@@ -150,6 +150,14 @@ impl ColumnBuilder {
                 properties: vec![],
             },
         }
+    }
+
+    pub fn new_calculated(name: &str, r#type: &str) -> Self {
+        Self::new(name, r#type).calculated(true)
+    }
+
+    pub fn new_relationship(name: &str, r#type: &str, relationship: &str) -> Self {
+        Self::new(name, r#type).relationship(relationship)
     }
 
     pub fn relationship(mut self, relationship: &str) -> Self {
@@ -481,7 +489,7 @@ mod test {
 
         let expected = crate::mdl::builder::ManifestBuilder::new()
             .catalog("wrenai")
-            .schema("default")
+            .schema("public")
             .model(model)
             .relationship(relationship)
             .metric(metric)
