@@ -258,13 +258,13 @@ mod tests {
     #[test]
     fn test_collect_identifiers() -> Result<()> {
         let expr = "orders.orderkey + orders.custkey";
-        let result = super::collect_identifiers(&expr.to_string())?;
+        let result = super::collect_identifiers(&expr)?;
         assert_eq!(result.len(), 2);
         assert!(result.contains(&super::Column::new_unqualified("orders.orderkey")));
         assert!(result.contains(&super::Column::new_unqualified("orders.custkey")));
 
         let expr = "customers.state || order_id";
-        let result = super::collect_identifiers(&expr.to_string())?;
+        let result = super::collect_identifiers(&expr)?;
         assert_eq!(result.len(), 2);
         assert!(result.contains(&super::Column::new_unqualified("customers.state")));
         assert!(result.contains(&super::Column::new_unqualified("order_id")));
