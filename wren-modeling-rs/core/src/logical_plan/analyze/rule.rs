@@ -438,12 +438,12 @@ mod test {
         // [RemoveWrenPrefixRule] only remove the prefix of identifiers, so that the table name in
         // the expected result will have the schema prefix.
         let tests = vec![
-            ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a",
-             r#"SELECT a.c1, a.c2 FROM wrenai."default".a"#),
-            ("select wrenai.default.a.c1, wrenai.default.a.c2 from wrenai.default.a where wrenai.default.a.c1 = 1",
-                 r#"SELECT a.c1, a.c2 FROM wrenai."default".a WHERE (a.c1 = 1)"#),
-            ("select wrenai.default.a.c1 + 1 from wrenai.default.a",
-            r#"SELECT (a.c1 + 1) FROM wrenai."default".a"#)
+            ("select wrenai.public.a.c1, wrenai.public.a.c2 from wrenai.public.a",
+             r#"SELECT a.c1, a.c2 FROM wrenai.public.a"#),
+            ("select wrenai.public.a.c1, wrenai.public.a.c2 from wrenai.public.a where wrenai.public.a.c1 = 1",
+                 r#"SELECT a.c1, a.c2 FROM wrenai.public.a WHERE (a.c1 = 1)"#),
+            ("select wrenai.public.a.c1 + 1 from wrenai.public.a",
+            r#"SELECT (a.c1 + 1) FROM wrenai.public.a"#)
         ];
 
         let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;

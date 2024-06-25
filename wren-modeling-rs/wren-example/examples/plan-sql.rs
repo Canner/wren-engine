@@ -10,7 +10,7 @@ async fn main() -> datafusion::common::Result<()> {
     let manifest = init_manifest();
     let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
 
-    let sql = "select * from wrenai.default.order_items_model";
+    let sql = "select * from wrenai.public.order_items_model";
     println!("Original SQL: \n{}", sql);
     let sql = transform_sql(analyzed_mdl, sql).unwrap();
     println!("Wren engine generated SQL: \n{}", sql);

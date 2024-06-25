@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
         .with_optimizer_rules(vec![]);
     register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
     let new_ctx = SessionContext::new_with_state(new_state);
-    let sql = "select * from wrenai.default.order_items";
+    let sql = "select * from wrenai.public.order_items";
     // create a plan to run a SQL query
     let df = new_ctx.sql(sql).await?;
     df.show().await?;
