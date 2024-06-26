@@ -21,7 +21,7 @@ def mssql(request) -> SqlServerContainer:
     import sqlalchemy
 
     mssql = SqlServerContainer(
-        "mcr.microsoft.com/mssql/server:2017-latest", dialect="mssql+pyodbc"
+        "mcr.microsoft.com/mssql/server:2019-latest", dialect="mssql+pyodbc"
     )
     mssql.start()
     connection_url = mssql.get_connection_url()
@@ -370,3 +370,26 @@ class TestMSSql:
         )
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
+
+    def test_metadata_list_tables(self, mssql: SqlServerContainer):
+        connection_info = self.to_connection_info(mssql)
+        response = client.post(
+            url="/v2/ibis/mssql/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+
+        result = response.json()[0]
+        assert result["name"] is not None
+        assert result["columns"] is not None
+        assert result["primaryKey"] is not None
+        assert result["description"] is not None
+        assert result["properties"] is not None
+
+    def test_metadata_list_constraints(self, mssql: SqlServerContainer):
+        connection_info = self.to_connection_info(mssql)
+        response = client.post(
+            url="/v2/ibis/mssql/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
