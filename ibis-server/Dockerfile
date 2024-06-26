@@ -27,7 +27,7 @@ RUN poetry install --without dev
 FROM python:3.11-slim-buster as runtime
 
 # libpq-dev is required for psycopg2
-# unixodbc-dev and freetds-dev are required for pyodbc
+# unixodbc-dev, freetds-dev and tdsodbc are required for pyodbc
 RUN apt-get update  \
     && apt-get -y install libpq-dev \
     && apt-get -y install unixodbc-dev freetds-dev tdsodbc \
