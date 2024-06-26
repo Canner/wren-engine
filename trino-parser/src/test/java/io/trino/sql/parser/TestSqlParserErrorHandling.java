@@ -52,7 +52,7 @@ public class TestSqlParserErrorHandling
                         "line 1:25: mismatched input '@'. Expecting: <expression>"),
                 // Canner: sc-9618 Fix the error message
                 Arguments.of("select * from 'oops",
-                        "line 1:15: mismatched input '''. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, IDENTIFIER"),
+                        "line 1:15: mismatched input '''. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, <string>, IDENTIFIER"),
                 Arguments.of("select *\nfrom x\nfrom",
                         "line 3:1: mismatched input 'from'. Expecting: ',', '.', 'AS', 'CROSS', 'EXCEPT', 'FETCH', 'FOR', 'FULL', 'GROUP', 'HAVING', 'INNER', 'INTERSECT', 'JOIN', 'LEFT', " +
                                 "'LIMIT', 'MATCH_RECOGNIZE', 'NATURAL', 'OFFSET', 'ORDER', 'RIGHT', 'TABLESAMPLE', 'UNION', 'WHERE', 'WINDOW', <EOF>, <identifier>"),
@@ -62,10 +62,10 @@ public class TestSqlParserErrorHandling
                         "line 1:8: mismatched input '<EOF>'. Expecting: '*', 'ALL', 'DISTINCT', <expression>"),
                 // Canner: sc-9618 Fix the error message
                 Arguments.of("select * from",
-                        "line 1:14: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, IDENTIFIER"),
+                        "line 1:14: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, <string>, IDENTIFIER"),
                 // Canner: sc-9618 Fix the error message
                 Arguments.of("select * from  ",
-                        "line 1:16: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, IDENTIFIER"),
+                        "line 1:16: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, <string>, IDENTIFIER"),
                 Arguments.of("select * from `foo`",
                         "line 1:15: backquoted identifiers are not supported; use double quotes to quote identifiers"),
                 Arguments.of("select * from foo `bar`",
@@ -125,7 +125,7 @@ public class TestSqlParserErrorHandling
                         "line 1:35: mismatched input '<EOF>'. Expecting: <string>"),
                 // Canner: sc-9618 Fix the error message
                 Arguments.of("SELECT * FROM ( ",
-                        "line 1:17: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, <query>, IDENTIFIER"),
+                        "line 1:17: mismatched input '<EOF>'. Expecting: '(', 'LATERAL', 'UNNEST', <identifier>, <query>, <string>, IDENTIFIER"),
                 // Canner: sc-9618 Fix the error message
                 Arguments.of("SELECT CAST(a AS )",
                         "line 1:18: mismatched input ')'. Expecting: <type>, IDENTIFIER"),

@@ -79,6 +79,7 @@ import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
+import io.trino.sql.tree.PathRelation;
 import io.trino.sql.tree.PatternRecognitionRelation;
 import io.trino.sql.tree.Prepare;
 import io.trino.sql.tree.PrincipalSpecification;
@@ -236,6 +237,13 @@ public final class SqlFormatter
                             .map(expression -> formatExpression(expression, dialect))
                             .collect(joining(", ")))
                     .append(")");
+            return null;
+        }
+
+        @Override
+        protected Void visitPathRelation(PathRelation node, Integer context)
+        {
+            builder.append(node.getPath());
             return null;
         }
 
@@ -716,8 +724,14 @@ public final class SqlFormatter
                 builder.append("\n")
                         .append(indentString(indent))
                         .append(first ? "  " : ", ");
-
-                builder.append(formatExpression(row, dialect));
+                if (row instanceof Row) {
+                    builder.append(formatExpression(row, dialect));
+                }
+                else {
+                    builder.append("(")
+                            .append(formatExpression(row, dialect))
+                            .append(")");
+                }
                 first = false;
             }
             builder.append('\n');

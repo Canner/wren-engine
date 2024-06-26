@@ -13,6 +13,7 @@
  */
 package io.trino.sql.parser;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -140,6 +141,7 @@ import io.trino.sql.tree.OneOrMoreQuantifier;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PathElement;
+import io.trino.sql.tree.PathRelation;
 import io.trino.sql.tree.PathSpecification;
 import io.trino.sql.tree.PatternAlternation;
 import io.trino.sql.tree.PatternConcatenation;
@@ -282,9 +284,18 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-class AstBuilder
+@VisibleForTesting
+public class AstBuilder
         extends SqlBaseBaseVisitor<Node>
 {
+    public static final List<String> DUCKDB_TABLE_FUNCTIONS = ImmutableList.of(
+            "read_csv",
+            "sniff_csv",
+            "read_json",
+            "glob",
+            "read_parquet",
+            "parquet_metadata");
+
     private int parameterPosition;
     private final ParsingOptions parsingOptions;
 
@@ -1818,8 +1829,8 @@ class AstBuilder
     {
         QualifiedName name = getQualifiedName(context.functionExpression().qualifiedName());
 
-        // wren function: metric roll_up
-        if (name.toString().equalsIgnoreCase("roll_up")) {
+        // wren function: metric roll_up and duckdb table function
+        if (name.toString().equalsIgnoreCase("roll_up") || isDuckDBTableFunction(name.toString())) {
             List<Expression> arguments = visit(context.functionExpression().expression(), Expression.class);
             return new FunctionRelation(getLocation(context), name, arguments);
         }
@@ -1833,6 +1844,17 @@ class AstBuilder
                 ImmutableList.of(functionCall(name.toString(), visit(context.functionExpression().expression(), Expression.class))),
                 ImmutableList.of(name.toString())));
         return new TableSubquery(getLocation(context), query);
+    }
+
+    public boolean isDuckDBTableFunction(String functionName)
+    {
+        return DUCKDB_TABLE_FUNCTIONS.contains(functionName);
+    }
+
+    @Override
+    public Node visitPathRelation(SqlBaseParser.PathRelationContext ctx)
+    {
+        return new PathRelation(Optional.of(getLocation(ctx)), ctx.string().getText());
     }
 
     @Override

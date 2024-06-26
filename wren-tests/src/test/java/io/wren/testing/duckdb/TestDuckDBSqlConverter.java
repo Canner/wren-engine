@@ -75,6 +75,36 @@ public class TestDuckDBSqlConverter
         assertConvert("SELECT generate_array(1, 10)", "SELECT generate_series(1, 10)" + "\n\n");
     }
 
+    @Test
+    public void testValues()
+    {
+        assertConvert("SELECT * FROM (values (ARRAY[1,2,3]))", """
+                SELECT *
+                FROM
+                  (
+                 VALUES\s
+                     (ARRAY[1,2,3])
+                )\s
+                """);
+
+        assertConvert("SELECT * FROM (values (1))", """
+                SELECT *
+                FROM
+                  (
+                 VALUES\s
+                     (1)
+                )\s
+                """);
+        assertConvert("SELECT * FROM (values (1, 2, ARRAY[1,2,3]))", """
+                SELECT *
+                FROM
+                  (
+                 VALUES\s
+                      (1, 2, ARRAY[1,2,3])
+                )\s
+                """);
+    }
+
     private void assertConvert(String from, String to)
     {
         assertThat(sqlConverter.convert(from, DEFAULT_SESSION_CONTEXT)).isEqualTo(to);
