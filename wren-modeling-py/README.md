@@ -10,7 +10,7 @@ Here is a dependency package for Python. It is a wrapper for the Rust package [w
 - Install [casey/just](https://github.com/casey/just)
 
 ### Test and build
-- Create python venv and install dependencies via `poetry install --no-root`.
+- Execute `just install` to create python venv and install dependencies.
 - Execute `just test` to test Rust and Python.
 - Execute `just build` to build the Python package. You can find the wheel in the `target/wheels/` directory.
 

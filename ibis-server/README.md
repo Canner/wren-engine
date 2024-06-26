@@ -78,6 +78,12 @@ just run
 - Install [poetry](https://github.com/python-poetry/poetry) with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
 - Install [casey/just](https://github.com/casey/just)
 - Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
+
+### Modeling Core
+The modeling core is written in Rust and provides the Python adaptor. \
+You must create python venv and install dependencies in [wren-modeling-py](../wren-modeling-py) first.
+
+### Test and build
 - Execute `just install` to install the dependencies
 - Execute `just test` to run the tests
 - Create `.env` file and fill in the environment variables
@@ -95,11 +101,8 @@ just run
 - Build the image: `just docker-build`
 - Run the container: `just docker-run`
 
-### Modeling Core
-The modeling core is written in Rust and provides the Python adaptor. You can find the [wren-modeling-py](../wren-modeling-py) and the source code in the [wren-modeling-rs](../wren-modeling-rs) directory.
-
-### FAQ
-#### Why can’t I run test about MS SQL Server?
+## FAQ
+### Why can’t I run test about MS SQL Server?
 Maybe you don't have the driver for MS SQL Server. If your OS is Linux or MacOS, We recommend you install the `unixodbc` and `freetds` package. \
 After installing, you can execute `odbcinst -j` to check the path of the `odbcinst.ini` file.
 ```bash
