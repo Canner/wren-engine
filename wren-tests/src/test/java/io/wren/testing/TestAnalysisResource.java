@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.onTableReference;
 import static io.wren.base.dto.TableReference.tableReference;
 import static io.wren.testing.AbstractTestFramework.DEFAULT_SESSION_CONTEXT;
@@ -117,14 +116,14 @@ public class TestAnalysisResource
     @Test
     public void testBasic()
     {
-        List<QueryAnalysisDto> result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer"));
+        List<QueryAnalysisDto> result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "select * from customer"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
         assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
 
-        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select custkey, count(*) from customer group by 1"));
+        result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "select custkey, count(*) from customer group by 1"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
@@ -133,7 +132,7 @@ public class TestAnalysisResource
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
 
-        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "select * from customer c join orders o on c.custkey = o.custkey"));
+        result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "select * from customer c join orders o on c.custkey = o.custkey"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
@@ -145,7 +144,7 @@ public class TestAnalysisResource
                 .isEqualTo(Set.of(new QueryAnalysisDto.ExprSourceDto("c.custkey", "customer"),
                         new QueryAnalysisDto.ExprSourceDto("o.custkey", "orders")));
 
-        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
+        result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.TABLE.name());
         assertThat(result.get(0).getRelation().getAlias()).isNull();
@@ -156,14 +155,14 @@ public class TestAnalysisResource
         assertThat(result.get(0).getFilter().getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR.name());
         assertThat(result.get(0).getFilter().getRight().getType()).isEqualTo(FilterAnalysis.Type.AND.name());
 
-        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey"));
+        result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(3);
         assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
         assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("name");
         assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo("nationkey");
 
-        result = getSqlAnalysis(new SqlAnalysisInputDto(null, "SELECT custkey, name FROM customer ORDER BY 1 ASC, 2 DESC"));
+        result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT custkey, name FROM customer ORDER BY 1 ASC, 2 DESC"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSortings().size()).isEqualTo(2);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");

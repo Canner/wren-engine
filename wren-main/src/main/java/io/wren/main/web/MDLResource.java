@@ -110,13 +110,15 @@ public class MDLResource
             ValidateDto validateDto,
             @Suspended AsyncResponse asyncResponse)
     {
-        if (validateDto.getManifest() == null) {
+        if (validateDto == null || validateDto.getManifest() == null) {
             asyncResponse.resume(new IllegalArgumentException("Manifest is required"));
         }
-        Map<String, Object> parameters = Map.of();
-        parameters = validateDto.getParameters() != null ? validateDto.getParameters() : parameters;
-        AnalyzedMDL analyzedMDL = new AnalyzedMDL(WrenMDL.fromManifest(validateDto.getManifest()), null);
-        validationService.validate(ruleName, parameters, analyzedMDL)
-                .whenComplete(bindAsyncResponse(asyncResponse));
+        else {
+            Map<String, Object> parameters = Map.of();
+            parameters = validateDto.getParameters() != null ? validateDto.getParameters() : parameters;
+            AnalyzedMDL analyzedMDL = new AnalyzedMDL(WrenMDL.fromManifest(validateDto.getManifest()), null);
+            validationService.validate(ruleName, parameters, analyzedMDL)
+                    .whenComplete(bindAsyncResponse(asyncResponse));
+        }
     }
 }

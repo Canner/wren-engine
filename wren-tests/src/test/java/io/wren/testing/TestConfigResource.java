@@ -36,7 +36,6 @@ import static io.wren.base.config.ConfigManager.ConfigEntry.configEntry;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
-import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.testing.AbstractTestFramework.withDefaultCatalogSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,8 +66,7 @@ public class TestConfigResource
 
         ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
                 .put(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString())
-                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
-                .put("pg-wire-protocol.enabled", "true");
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name());
 
         return TestingWrenServer.builder()
                 .setRequiredConfigs(properties.build())
