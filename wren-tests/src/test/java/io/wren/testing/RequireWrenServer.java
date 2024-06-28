@@ -25,21 +25,16 @@ import io.airlift.http.client.StringResponseHandler;
 import io.airlift.http.client.jetty.JettyHttpClient;
 import io.airlift.json.JsonCodec;
 import io.airlift.units.Duration;
-import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
-import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
-import io.wren.cache.TaskInfo;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
-import io.wren.main.web.dto.ColumnLineageInputDto;
 import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.DryPlanDtoV2;
 import io.wren.main.web.dto.ErrorMessageDto;
-import io.wren.main.web.dto.LineageResult;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryResultDto;
@@ -80,17 +75,12 @@ public abstract class RequireWrenServer
     protected Closer closer = Closer.create();
     protected HttpClient client;
 
-    public static final JsonCodec<TaskInfo> TASK_INFO_CODEC = jsonCodec(TaskInfo.class);
-    public static final JsonCodec<List<TaskInfo>> TASK_INFO_LIST_CODEC = listJsonCodec(TaskInfo.class);
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
     private static final JsonCodec<CheckOutputDto> CHECK_OUTPUT_DTO_CODEC = jsonCodec(CheckOutputDto.class);
-    private static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = jsonCodec(Manifest.class);
+    public static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = jsonCodec(Manifest.class);
     private static final JsonCodec<PreviewDto> PREVIEW_DTO_CODEC = jsonCodec(PreviewDto.class);
     private static final JsonCodec<DeployInputDto> DEPLOY_INPUT_DTO_JSON_CODEC = jsonCodec(DeployInputDto.class);
-    private static final JsonCodec<ColumnLineageInputDto> COLUMN_LINEAGE_INPUT_DTO_CODEC = jsonCodec(ColumnLineageInputDto.class);
-    private static final JsonCodec<List<LineageResult>> MODEL_LINEAGE_RESULT_LIST_CODEC = listJsonCodec(LineageResult.class);
     private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
-    private static final JsonCodec<List<QueryAnalysis>> SQL_ANALYSIS_OUTPUT_LIST_CODEC = listJsonCodec(QueryAnalysis.class);
     private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<QueryResultDto> QUERY_RESULT_DTO_CODEC = jsonCodec(QueryResultDto.class);
@@ -158,32 +148,6 @@ public abstract class RequireWrenServer
     }
 
     protected void cleanup() {}
-
-    protected TaskInfo getTaskInfo(CatalogSchemaTableName name)
-    {
-        Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve(format("/v1/cache/info/%s/%s/%s",
-                        name.getCatalogName(), name.getSchemaTableName().getSchemaName(), name.getSchemaTableName().getTableName())))
-                .build();
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 200) {
-            getWebApplicationException(response);
-        }
-        return TASK_INFO_CODEC.fromJson(response.getBody());
-    }
-
-    protected List<TaskInfo> getTaskInfo(String catalog, String schema)
-    {
-        Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve(format("/v1/cache/info/%s/%s",
-                        catalog, schema)))
-                .build();
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 200) {
-            getWebApplicationException(response);
-        }
-        return TASK_INFO_LIST_CODEC.fromJson(response.getBody());
-    }
 
     public <T, E extends Exception> T executeHttpRequest(Request request, ResponseHandler<T, E> responseHandler)
             throws E

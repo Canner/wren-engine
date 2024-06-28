@@ -1,1 +1,0 @@
-PLATFORM=linux/amd64

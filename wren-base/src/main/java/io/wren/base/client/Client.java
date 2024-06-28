@@ -14,8 +14,8 @@
 
 package io.wren.base.client;
 
+import io.wren.base.Column;
 import io.wren.base.Parameter;
-import io.wren.base.metadata.ColumnMetadata;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -34,7 +34,7 @@ public interface Client
 
     void executeDDL(String sql);
 
-    List<ColumnMetadata> describe(String sql, List<Parameter> parameters);
+    List<Column> describe(String sql, List<Parameter> parameters);
 
     List<String> listTables();
 

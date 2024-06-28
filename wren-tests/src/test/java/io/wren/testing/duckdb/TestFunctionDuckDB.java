@@ -26,14 +26,12 @@ import java.nio.file.Path;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
-import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 
 public class TestFunctionDuckDB
         extends AbstractFunctionTest
 {
     @Override
     protected TestingWrenServer createWrenServer()
-            throws Exception
     {
         Path mdlDir;
 

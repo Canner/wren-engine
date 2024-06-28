@@ -17,15 +17,10 @@ package io.wren.server.module;
 import com.google.inject.Binder;
 import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
-import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.main.PreviewService;
 import io.wren.main.ValidationService;
-import io.wren.main.pgcatalog.NoOpPgCatalogManager;
-import io.wren.main.pgcatalog.PgCatalogManager;
-import io.wren.main.pgcatalog.PgCatalogManagerImpl;
 import io.wren.main.web.AnalysisResource;
 import io.wren.main.web.AnalysisResourceV2;
-import io.wren.main.web.CacheResource;
 import io.wren.main.web.ConfigResource;
 import io.wren.main.web.DuckDBResource;
 import io.wren.main.web.MDLResource;
@@ -40,7 +35,6 @@ public class WebModule
     @Override
     protected void setup(Binder binder)
     {
-        PostgresWireProtocolConfig config = buildConfigObject(PostgresWireProtocolConfig.class);
         jaxrsBinder(binder).bind(MDLResource.class);
         jaxrsBinder(binder).bind(MDLResourceV2.class);
         jaxrsBinder(binder).bind(AnalysisResource.class);
@@ -50,12 +44,5 @@ public class WebModule
         jaxrsBinder(binder).bindInstance(new WrenExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(ValidationService.class).in(Scopes.SINGLETON);
-        if (config.isPgWireProtocolEnabled()) {
-            jaxrsBinder(binder).bind(CacheResource.class);
-            binder.bind(PgCatalogManager.class).to(PgCatalogManagerImpl.class).in(Scopes.SINGLETON);
-        }
-        else {
-            binder.bind(PgCatalogManager.class).to(NoOpPgCatalogManager.class).in(Scopes.SINGLETON);
-        }
     }
 }

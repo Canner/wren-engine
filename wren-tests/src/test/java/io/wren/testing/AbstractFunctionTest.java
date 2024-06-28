@@ -14,6 +14,7 @@
 
 package io.wren.testing;
 
+import io.wren.base.dto.Manifest;
 import io.wren.main.web.dto.PreviewDto;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -237,6 +238,6 @@ public abstract class AbstractFunctionTest
 
     protected void execute(String sql)
     {
-        preview(new PreviewDto(null, sql, 100L));
+        preview(new PreviewDto(Manifest.builder().setCatalog("wrenai").setSchema("public").build(), sql, 100L));
     }
 }

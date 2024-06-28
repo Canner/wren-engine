@@ -20,10 +20,8 @@ import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
 import io.wren.base.WrenException;
-import io.wren.base.client.duckdb.CacheStorageConfig;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
-import io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -53,26 +51,7 @@ import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_TEMP_DIRECTORY;
 import static io.wren.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_INIT_SQL_PATH;
 import static io.wren.base.client.duckdb.DuckDBConnectorConfig.DUCKDB_CONNECTOR_SESSION_SQL_PATH;
-import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ACCESS_KEY;
-import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_ENDPOINT;
-import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_REGION;
-import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_SECRET_KEY;
-import static io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig.DUCKDB_STORAGE_URL_STYLE;
 import static io.wren.base.client.duckdb.FileUtil.ARCHIVED;
-import static io.wren.base.config.PostgresConfig.POSTGRES_JDBC_URL;
-import static io.wren.base.config.PostgresConfig.POSTGRES_PASSWORD;
-import static io.wren.base.config.PostgresConfig.POSTGRES_USER;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_DATABASE;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_JDBC_URL;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_PASSWORD;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_ROLE;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_SCHEMA;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_USER;
-import static io.wren.base.config.SnowflakeConfig.SNOWFLAKE_WAREHOUSE;
 import static io.wren.base.metadata.StandardErrorCode.NOT_FOUND;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -82,13 +61,8 @@ public class ConfigManager
 {
     private static final Logger LOG = Logger.get(ConfigManager.class);
     private Optional<WrenConfig> wrenConfig;
-    private Optional<PostgresConfig> postgresConfig;
-    private Optional<BigQueryConfig> bigQueryConfig;
     private Optional<DuckDBConfig> duckDBConfig;
-    private Optional<PostgresWireProtocolConfig> postgresWireProtocolConfig;
-    private Optional<DuckdbS3StyleStorageConfig> duckdbS3StyleStorageConfig;
     private Optional<DuckDBConnectorConfig> duckDBConnectorConfig;
-    private Optional<SnowflakeConfig> snowflakeConfig;
 
     private final Map<String, String> configs = new HashMap<>();
     // All configs set by user and config files. It's used to sync with config file.
@@ -100,32 +74,17 @@ public class ConfigManager
     @Inject
     public ConfigManager(
             WrenConfig wrenConfig,
-            PostgresConfig postgresConfig,
-            BigQueryConfig bigQueryConfig,
             DuckDBConfig duckDBConfig,
-            PostgresWireProtocolConfig postgresWireProtocolConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnectorConfig duckDBConnectorConfig,
-            SnowflakeConfig snowflakeConfig)
+            DuckDBConnectorConfig duckDBConnectorConfig)
     {
         this.wrenConfig = Optional.of(wrenConfig);
-        this.postgresConfig = Optional.of(postgresConfig);
-        this.bigQueryConfig = Optional.of(bigQueryConfig);
         this.duckDBConfig = Optional.of(duckDBConfig);
-        this.postgresWireProtocolConfig = Optional.of(postgresWireProtocolConfig);
-        this.duckdbS3StyleStorageConfig = Optional.of(duckdbS3StyleStorageConfig);
         this.duckDBConnectorConfig = Optional.of(duckDBConnectorConfig);
-        this.snowflakeConfig = Optional.of(snowflakeConfig);
 
         initConfig(
                 wrenConfig,
-                postgresConfig,
-                bigQueryConfig,
                 duckDBConfig,
-                postgresWireProtocolConfig,
-                duckdbS3StyleStorageConfig,
-                duckDBConnectorConfig,
-                snowflakeConfig);
+                duckDBConnectorConfig);
 
         try {
             setConfigs.putAll(loadPropertiesFrom(configFile));
@@ -137,22 +96,12 @@ public class ConfigManager
 
     private void initConfig(
             WrenConfig wrenConfig,
-            PostgresConfig postgresConfig,
-            BigQueryConfig bigQueryConfig,
             DuckDBConfig duckDBConfig,
-            PostgresWireProtocolConfig postgresWireProtocolConfig,
-            DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig,
-            DuckDBConnectorConfig duckDBConnectorConfig,
-            SnowflakeConfig snowflakeConfig)
+            DuckDBConnectorConfig duckDBConnectorConfig)
     {
         initConfig(WrenConfig.WREN_DIRECTORY, wrenConfig.getWrenMDLDirectory().getPath(), false, true);
         initConfig(WrenConfig.WREN_DATASOURCE_TYPE, Optional.ofNullable(wrenConfig.getDataSourceType()).map(Enum::name).orElse(null), true, false);
         initConfig(WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS, Boolean.toString(wrenConfig.getEnableDynamicFields()), false, false);
-        initConfig(DUCKDB_STORAGE_ENDPOINT, duckdbS3StyleStorageConfig.getEndpoint(), false, true);
-        initConfig(DUCKDB_STORAGE_ACCESS_KEY, duckdbS3StyleStorageConfig.getAccessKey().orElse(null), true, false);
-        initConfig(DUCKDB_STORAGE_SECRET_KEY, duckdbS3StyleStorageConfig.getSecretKey().orElse(null), true, false);
-        initConfig(DUCKDB_STORAGE_REGION, duckdbS3StyleStorageConfig.getRegion().orElse(null), true, false);
-        initConfig(DUCKDB_STORAGE_URL_STYLE, duckdbS3StyleStorageConfig.getUrlStyle(), false, false);
         initConfig(DUCKDB_MEMORY_LIMIT, duckDBConfig.getMemoryLimit().toString(), true, false);
         initConfig(DUCKDB_HOME_DIRECTORY, duckDBConfig.getHomeDirectory(), true, false);
         initConfig(DUCKDB_TEMP_DIRECTORY, duckDBConfig.getTempDirectory(), true, false);
@@ -161,28 +110,8 @@ public class ConfigManager
         initConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, Integer.toString(duckDBConfig.getMaxConcurrentMetadataQueries()), false, true);
         initConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, Long.toString(duckDBConfig.getMaxCacheQueryTimeout()), false, true);
         initConfig(DUCKDB_CACHE_TASK_RETRY_DELAY, Long.toString(duckDBConfig.getCacheTaskRetryDelay()), false, true);
-        initConfig(PG_WIRE_PROTOCOL_PORT, postgresWireProtocolConfig.getPort(), false, true);
-        initConfig(PG_WIRE_PROTOCOL_SSL_ENABLED, Boolean.toString(postgresWireProtocolConfig.isSslEnable()), false, true);
-        initConfig(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT, Integer.toString(postgresWireProtocolConfig.getNettyThreadCount()), false, true);
-        initConfig(PG_WIRE_PROTOCOL_AUTH_FILE, postgresWireProtocolConfig.getAuthFile().getPath(), false, true);
-        initConfig(BigQueryConfig.BIGQUERY_CRENDITALS_KEY, bigQueryConfig.getCredentialsKey().orElse(null), true, false);
-        initConfig(BigQueryConfig.BIGQUERY_CRENDITALS_FILE, bigQueryConfig.getCredentialsFile().orElse(null), true, false);
-        initConfig(BigQueryConfig.BIGQUERY_PROJECT_ID, bigQueryConfig.getProjectId().orElse(null), true, false);
-        initConfig(BigQueryConfig.BIGQUERY_LOCATION, bigQueryConfig.getLocation().orElse(null), true, false);
-        initConfig(BigQueryConfig.BIGQUERY_BUCKET_NAME, bigQueryConfig.getBucketName().orElse(null), true, false);
-        initConfig(BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX, bigQueryConfig.getMetadataSchemaPrefix(), true, false);
-        initConfig(POSTGRES_JDBC_URL, postgresConfig.getJdbcUrl(), true, false);
-        initConfig(POSTGRES_USER, postgresConfig.getUser(), true, false);
-        initConfig(POSTGRES_PASSWORD, postgresConfig.getPassword(), true, false);
         initConfig(DUCKDB_CONNECTOR_INIT_SQL_PATH, duckDBConnectorConfig.getInitSQLPath(), false, false);
         initConfig(DUCKDB_CONNECTOR_SESSION_SQL_PATH, duckDBConnectorConfig.getSessionSQLPath(), false, false);
-        initConfig(SNOWFLAKE_JDBC_URL, snowflakeConfig.getJdbcUrl(), true, false);
-        initConfig(SNOWFLAKE_USER, snowflakeConfig.getUser(), true, false);
-        initConfig(SNOWFLAKE_PASSWORD, snowflakeConfig.getPassword(), true, false);
-        initConfig(SNOWFLAKE_DATABASE, snowflakeConfig.getDatabase().orElse(null), true, false);
-        initConfig(SNOWFLAKE_SCHEMA, snowflakeConfig.getSchema().orElse(null), true, false);
-        initConfig(SNOWFLAKE_WAREHOUSE, snowflakeConfig.getWarehouse().orElse(null), true, false);
-        initConfig(SNOWFLAKE_ROLE, snowflakeConfig.getRole().orElse(null), true, false);
     }
 
     private void initConfig(String key, String value, boolean requiredReload, boolean isStatic)
@@ -207,20 +136,6 @@ public class ConfigManager
                 return result;
             });
         }
-        if (config == BigQueryConfig.class) {
-            return (T) bigQueryConfig.orElseGet(() -> {
-                BigQueryConfig result = getBigQueryConfig();
-                bigQueryConfig = Optional.of(result);
-                return result;
-            });
-        }
-        if (config == PostgresConfig.class) {
-            return (T) postgresConfig.orElseGet(() -> {
-                PostgresConfig result = getPostgresConfig();
-                postgresConfig = Optional.of(result);
-                return result;
-            });
-        }
         if (config == DuckDBConfig.class) {
             return (T) duckDBConfig.orElseGet(() -> {
                 DuckDBConfig result = getDuckDBConfig();
@@ -228,32 +143,10 @@ public class ConfigManager
                 return result;
             });
         }
-        if (config == PostgresWireProtocolConfig.class) {
-            return (T) postgresWireProtocolConfig.orElseGet(() -> {
-                PostgresWireProtocolConfig result = getPostgresWireProtocolConfig();
-                postgresWireProtocolConfig = Optional.of(result);
-                return result;
-            });
-        }
-        if (config == CacheStorageConfig.class &&
-                wrenConfig.map(WrenConfig::getDataSourceType).stream().anyMatch(type -> type == WrenConfig.DataSourceType.BIGQUERY)) {
-            return (T) duckdbS3StyleStorageConfig.orElseGet(() -> {
-                DuckdbS3StyleStorageConfig result = getDuckdbS3StyleStorageConfig();
-                duckdbS3StyleStorageConfig = Optional.of(result);
-                return result;
-            });
-        }
         if (config == DuckDBConnectorConfig.class) {
             return (T) duckDBConnectorConfig.orElseGet(() -> {
                 DuckDBConnectorConfig result = getDuckDBConnectorConfig();
                 duckDBConnectorConfig = Optional.of(result);
-                return result;
-            });
-        }
-        if (config == SnowflakeConfig.class) {
-            return (T) snowflakeConfig.orElseGet(() -> {
-                SnowflakeConfig result = getSnowflakeConfig();
-                snowflakeConfig = Optional.of(result);
                 return result;
             });
         }
@@ -270,27 +163,6 @@ public class ConfigManager
         return result;
     }
 
-    private BigQueryConfig getBigQueryConfig()
-    {
-        BigQueryConfig result = new BigQueryConfig();
-        result.setCredentialsKey(configs.get(BigQueryConfig.BIGQUERY_CRENDITALS_KEY));
-        result.setCredentialsFile(configs.get(BigQueryConfig.BIGQUERY_CRENDITALS_FILE));
-        result.setProjectId(configs.get(BigQueryConfig.BIGQUERY_PROJECT_ID));
-        result.setLocation(configs.get(BigQueryConfig.BIGQUERY_LOCATION));
-        result.setBucketName(configs.get(BigQueryConfig.BIGQUERY_BUCKET_NAME));
-        result.setMetadataSchemaPrefix(configs.get(BigQueryConfig.BIGQUERY_METADATA_SCHEMA_PREFIX));
-        return result;
-    }
-
-    private PostgresConfig getPostgresConfig()
-    {
-        PostgresConfig result = new PostgresConfig();
-        result.setJdbcUrl(configs.get(POSTGRES_JDBC_URL));
-        result.setUser(configs.get(POSTGRES_USER));
-        result.setPassword(configs.get(POSTGRES_PASSWORD));
-        return result;
-    }
-
     private DuckDBConfig getDuckDBConfig()
     {
         DuckDBConfig result = new DuckDBConfig();
@@ -304,46 +176,12 @@ public class ConfigManager
         return result;
     }
 
-    private PostgresWireProtocolConfig getPostgresWireProtocolConfig()
-    {
-        PostgresWireProtocolConfig result = new PostgresWireProtocolConfig();
-        result.setPort(configs.get(PG_WIRE_PROTOCOL_PORT));
-        result.setSslEnable(Boolean.parseBoolean(configs.get(PG_WIRE_PROTOCOL_SSL_ENABLED)));
-        result.setNettyThreadCount(Integer.parseInt(configs.get(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)));
-        result.setAuthFile(new File(configs.get(PG_WIRE_PROTOCOL_AUTH_FILE)));
-        return result;
-    }
-
-    private DuckdbS3StyleStorageConfig getDuckdbS3StyleStorageConfig()
-    {
-        DuckdbS3StyleStorageConfig result = new DuckdbS3StyleStorageConfig();
-        result.setEndpoint(configs.get(DUCKDB_STORAGE_ENDPOINT));
-        result.setAccessKey(configs.get(DUCKDB_STORAGE_ACCESS_KEY));
-        result.setSecretKey(configs.get(DUCKDB_STORAGE_SECRET_KEY));
-        result.setRegion(configs.get(DUCKDB_STORAGE_REGION));
-        result.setUrlStyle(configs.get(DUCKDB_STORAGE_URL_STYLE));
-        return result;
-    }
-
     private DuckDBConnectorConfig getDuckDBConnectorConfig()
     {
         DuckDBConnectorConfig result = new DuckDBConnectorConfig();
         result.setInitSQLPath(configs.get(DUCKDB_CONNECTOR_INIT_SQL_PATH));
         result.setSessionSQLPath(configs.get(DUCKDB_CONNECTOR_SESSION_SQL_PATH));
         return result;
-    }
-
-    private SnowflakeConfig getSnowflakeConfig()
-    {
-        SnowflakeConfig config = new SnowflakeConfig();
-        config.setJdbcUrl(configs.get(SNOWFLAKE_JDBC_URL));
-        config.setUser(configs.get(SNOWFLAKE_USER));
-        config.setPassword(configs.get(SNOWFLAKE_PASSWORD));
-        config.setDatabase(configs.get(SNOWFLAKE_DATABASE));
-        config.setSchema(configs.get(SNOWFLAKE_SCHEMA));
-        config.setWarehouse(configs.get(SNOWFLAKE_WAREHOUSE));
-        config.setRole(configs.get(SNOWFLAKE_ROLE));
-        return config;
     }
 
     public synchronized boolean setConfigs(List<ConfigEntry> configEntries, boolean reset)
@@ -386,11 +224,7 @@ public class ConfigManager
     private void resetCache()
     {
         wrenConfig = Optional.empty();
-        postgresConfig = Optional.empty();
-        bigQueryConfig = Optional.empty();
         duckDBConfig = Optional.empty();
-        postgresWireProtocolConfig = Optional.empty();
-        duckdbS3StyleStorageConfig = Optional.empty();
         duckDBConnectorConfig = Optional.empty();
     }
 
@@ -400,13 +234,8 @@ public class ConfigManager
         setConfigs.clear();
         initConfig(
                 new WrenConfig(),
-                new PostgresConfig(),
-                new BigQueryConfig(),
                 new DuckDBConfig(),
-                new PostgresWireProtocolConfig(),
-                new DuckdbS3StyleStorageConfig(),
-                new DuckDBConnectorConfig(),
-                new SnowflakeConfig());
+                new DuckDBConnectorConfig());
     }
 
     private void syncFile(Map<String, String> updated)

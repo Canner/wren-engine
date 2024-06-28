@@ -14,22 +14,20 @@
 
 package io.wren.base;
 
-import io.wren.base.type.PGType;
-
 import java.util.Objects;
 
 public class Parameter
 {
-    private final PGType<?> type;
+    private final String type;
     private final Object value;
 
-    public Parameter(PGType<?> type, Object value)
+    public Parameter(String type, Object value)
     {
         this.type = type;
         this.value = value;
     }
 
-    public PGType<?> getType()
+    public String getType()
     {
         return type;
     }

@@ -17,25 +17,17 @@ package io.wren.main.connector.duckdb;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
-import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.WrenException;
-import io.wren.base.client.duckdb.CacheStorageConfig;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
 import io.wren.base.client.duckdb.DuckDBSettingSQL;
 import io.wren.base.client.duckdb.DuckdbClient;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
-import io.wren.base.type.DateType;
-import io.wren.base.type.PGType;
-import io.wren.cache.DuckdbRecordIterator;
-import io.wren.connector.StorageClient;
 import io.wren.main.metadata.Metadata;
-import io.wren.main.pgcatalog.builder.DuckDBFunctionBuilder;
-import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -49,7 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static io.wren.base.metadata.StandardErrorCode.GENERIC_INTERNAL_ERROR;
-import static io.wren.main.pgcatalog.PgCatalogUtils.PG_CATALOG_NAME;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -60,7 +51,6 @@ public class DuckDBMetadata
     private static final Logger LOG = Logger.get(DuckDBMetadata.class);
     private final ConfigManager configManager;
     private DuckdbClient duckdbClient;
-    private final PgFunctionBuilder pgFunctionBuilder;
     private final AtomicReference<DuckDBSettingSQL> duckDBSettingSQL = new AtomicReference<>(new DuckDBSettingSQL());
 
     @Inject
@@ -72,31 +62,6 @@ public class DuckDBMetadata
             initDuckDBSettingSQLIfNeed();
             this.duckdbClient = buildDuckDBClientSafely();
         }
-        this.pgFunctionBuilder = new DuckDBFunctionBuilder();
-    }
-
-    @Override
-    public void createSchema(String name)
-    {
-        duckdbClient.executeDDL("CREATE SCHEMA " + name);
-    }
-
-    @Override
-    public void dropSchemaIfExists(String name)
-    {
-        duckdbClient.executeDDL("DROP SCHEMA " + name);
-    }
-
-    @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
-    {
-        return QualifiedName.of(functionName);
-    }
-
-    @Override
-    public String getDefaultCatalog()
-    {
-        return null;
     }
 
     @Override
@@ -125,18 +90,6 @@ public class DuckDBMetadata
     }
 
     @Override
-    public boolean isPgCompatible()
-    {
-        return true;
-    }
-
-    @Override
-    public String getPgCatalogName()
-    {
-        return PG_CATALOG_NAME;
-    }
-
-    @Override
     public void reload()
     {
         close();
@@ -151,18 +104,6 @@ public class DuckDBMetadata
         }
     }
 
-    @Override
-    public StorageClient getCacheStorageClient()
-    {
-        throw new UnsupportedOperationException("DuckDB does not support cache storage");
-    }
-
-    @Override
-    public PgFunctionBuilder getPgFunctionBuilder()
-    {
-        return pgFunctionBuilder;
-    }
-
     public DuckdbClient getClient()
     {
         return duckdbClient;
@@ -172,7 +113,6 @@ public class DuckDBMetadata
     {
         return DuckdbClient.builder()
                 .setDuckDBConfig(configManager.getConfig(DuckDBConfig.class))
-                .setCacheStorageConfig(getCacheStorageConfigIfExists())
                 .setDuckDBSettingSQL(duckDBSettingSQL.get())
                 .build();
     }
@@ -181,21 +121,8 @@ public class DuckDBMetadata
     {
         DuckdbClient.Builder builder = DuckdbClient.builder()
                 .setDuckDBConfig(configManager.getConfig(DuckDBConfig.class))
-                .setCacheStorageConfig(getCacheStorageConfigIfExists())
                 .setDuckDBSettingSQL(duckDBSettingSQL.get());
         return builder.buildSafely().orElse(builder.setDuckDBSettingSQL(null).build());
-    }
-
-    private CacheStorageConfig getCacheStorageConfigIfExists()
-    {
-        try {
-            return configManager.getConfig(CacheStorageConfig.class);
-        }
-        catch (Exception ignored) {
-            LOG.debug(ignored, "Failed to get cache storage config");
-            LOG.warn("%s connector does not support cache storage. Cache is disable.", configManager.getConfig(WrenConfig.class).getDataSourceType().name());
-            return null;
-        }
     }
 
     /**
@@ -236,9 +163,9 @@ public class DuckDBMetadata
 
     private static Parameter convertParameter(Parameter parameter)
     {
-        PGType<?> type = parameter.getType();
+        String type = parameter.getType();
         Object value = parameter.getValue();
-        if (type instanceof DateType && value instanceof LocalDate) {
+        if (type.equals("DATE") && value instanceof LocalDate) {
             value = Date.valueOf((LocalDate) value);
         }
         return new Parameter(type, value);

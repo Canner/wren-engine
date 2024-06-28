@@ -15,13 +15,11 @@
 package io.wren.base.sqlrewrite;
 
 import com.google.common.collect.ImmutableList;
-import io.trino.sql.parser.SqlParser;
 import io.wren.base.SessionContext;
 import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBSettingSQL;
 import io.wren.base.client.duckdb.DuckdbClient;
-import io.wren.base.client.duckdb.DuckdbS3StyleStorageConfig;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Model;
@@ -38,7 +36,6 @@ import static io.wren.base.sqlrewrite.Utils.parseSql;
 
 public abstract class AbstractTestFramework
 {
-    private static final SqlParser SQL_PARSER = new SqlParser();
     public static final SessionContext DEFAULT_SESSION_CONTEXT =
             SessionContext.builder().setCatalog("wren").setSchema("test").build();
     private DuckdbClient duckdbClient;
@@ -70,7 +67,7 @@ public abstract class AbstractTestFramework
     @BeforeClass
     public void init()
     {
-        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckdbS3StyleStorageConfig(), new DuckDBSettingSQL());
+        duckdbClient = new DuckdbClient(new DuckDBConfig(), new DuckDBSettingSQL());
         prepareData();
     }
 

@@ -15,18 +15,12 @@
 package io.wren.main.metadata;
 
 import com.google.inject.Inject;
-import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
-import io.wren.connector.StorageClient;
-import io.wren.main.connector.bigquery.BigQueryMetadata;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
-import io.wren.main.connector.postgres.PostgresMetadata;
-import io.wren.main.connector.snowflake.SnowflakeMetadata;
-import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import java.util.List;
 
@@ -35,11 +29,7 @@ import static java.util.Objects.requireNonNull;
 public final class MetadataManager
         implements Metadata
 {
-    private final ConfigManager configManager;
-    private final BigQueryMetadata bigQueryMetadata;
-    private final PostgresMetadata postgresMetadata;
     private final DuckDBMetadata duckDBMetadata;
-    private final SnowflakeMetadata snowflakeMetadata;
 
     private WrenConfig.DataSourceType dataSourceType;
     private Metadata delegate;
@@ -47,16 +37,9 @@ public final class MetadataManager
     @Inject
     public MetadataManager(
             ConfigManager configManager,
-            BigQueryMetadata bigQueryMetadata,
-            PostgresMetadata postgresMetadata,
-            DuckDBMetadata duckDBMetadata,
-            SnowflakeMetadata snowflakeMetadata)
+            DuckDBMetadata duckDBMetadata)
     {
-        this.configManager = requireNonNull(configManager, "configManager is null");
-        this.bigQueryMetadata = requireNonNull(bigQueryMetadata, "bigQueryMetadata is null");
-        this.postgresMetadata = requireNonNull(postgresMetadata, "postgresMetadata is null");
         this.duckDBMetadata = requireNonNull(duckDBMetadata, "duckDBMetadata is null");
-        this.snowflakeMetadata = requireNonNull(snowflakeMetadata, "snowflakeMetadata is null");
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
@@ -64,45 +47,12 @@ public final class MetadataManager
     private synchronized void changeDelegate(WrenConfig.DataSourceType dataSourceType)
     {
         switch (dataSourceType) {
-            case BIGQUERY:
-                delegate = bigQueryMetadata;
-                break;
-            case POSTGRES:
-                delegate = postgresMetadata;
-                break;
             case DUCKDB:
                 delegate = duckDBMetadata;
-                break;
-            case SNOWFLAKE:
-                delegate = snowflakeMetadata;
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
         }
-    }
-
-    @Override
-    public void createSchema(String name)
-    {
-        delegate.createSchema(name);
-    }
-
-    @Override
-    public void dropSchemaIfExists(String name)
-    {
-        delegate.dropSchemaIfExists(name);
-    }
-
-    @Override
-    public QualifiedName resolveFunction(String functionName, int numArgument)
-    {
-        return delegate.resolveFunction(functionName, numArgument);
-    }
-
-    @Override
-    public String getDefaultCatalog()
-    {
-        return delegate.getDefaultCatalog();
     }
 
     @Override
@@ -124,39 +74,9 @@ public final class MetadataManager
     }
 
     @Override
-    public boolean isPgCompatible()
-    {
-        return delegate.isPgCompatible();
-    }
-
-    @Override
-    public String getPgCatalogName()
-    {
-        return delegate.getPgCatalogName();
-    }
-
-    @Override
     public void reload()
     {
-        WrenConfig.DataSourceType newDataSourceType = configManager.getConfig(WrenConfig.class).getDataSourceType();
-        if (dataSourceType != newDataSourceType) {
-            dataSourceType = newDataSourceType;
-            delegate.close();
-            changeDelegate(dataSourceType);
-        }
         delegate.reload();
-    }
-
-    @Override
-    public StorageClient getCacheStorageClient()
-    {
-        return delegate.getCacheStorageClient();
-    }
-
-    @Override
-    public PgFunctionBuilder getPgFunctionBuilder()
-    {
-        return delegate.getPgFunctionBuilder();
     }
 
     @Override
