@@ -14,10 +14,8 @@
 
 package io.wren.testing;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closer;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -29,19 +27,10 @@ import io.airlift.http.server.testing.TestingHttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
-import io.wren.base.config.PostgresWireProtocolConfig;
-import io.wren.cache.CacheModule;
 import io.wren.main.WrenModule;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
-import io.wren.main.wireprotocol.PostgresNetty;
-import io.wren.main.wireprotocol.ssl.EmptyTlsDataProvider;
-import io.wren.server.module.BigQueryConnectorModule;
 import io.wren.server.module.DuckDBConnectorModule;
 import io.wren.server.module.MainModule;
-import io.wren.server.module.PostgresConnectorModule;
-import io.wren.server.module.PostgresWireProtocolModule;
-import io.wren.server.module.SQLGlotModule;
-import io.wren.server.module.SnowflakeConnectorModule;
 import io.wren.server.module.WebModule;
 
 import java.io.Closeable;
@@ -53,9 +42,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import static io.airlift.configuration.ConditionalModule.conditionalModule;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
 
 public class TestingWrenServer
         implements Closeable
@@ -74,7 +60,6 @@ public class TestingWrenServer
             throws IOException
     {
         Map<String, String> requiredConfigProps = new HashMap<>();
-        requiredConfigProps.put(PG_WIRE_PROTOCOL_PORT, String.valueOf(randomPort()));
         requiredConfigProps.put(HTTP_SERVER_PORT, String.valueOf(randomPort()));
         requiredConfigProps.put(NODE_ENVIRONMENT, "test");
 
@@ -87,15 +72,9 @@ public class TestingWrenServer
                 new JaxrsModule(),
                 new EventModule(),
                 new MainModule(),
-                new BigQueryConnectorModule(),
-                new PostgresConnectorModule(),
                 new DuckDBConnectorModule(),
-                new SnowflakeConnectorModule(),
                 new WrenModule(),
-                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new CacheModule()),
-                conditionalModule(PostgresWireProtocolConfig.class, PostgresWireProtocolConfig::isPgWireProtocolEnabled, new PostgresWireProtocolModule(new EmptyTlsDataProvider())),
-                new WebModule(),
-                new SQLGlotModule()));
+                new WebModule()));
 
         injector = app
                 .doNotInitializeLogging()
@@ -105,12 +84,6 @@ public class TestingWrenServer
 
         closer.register(() -> injector.getInstance(Key.get(DuckDBMetadata.class)).close());
         closer.register(() -> injector.getInstance(LifeCycleManager.class).stop());
-    }
-
-    @VisibleForTesting
-    public HostAndPort getPgHostAndPort()
-    {
-        return injector.getInstance(PostgresNetty.class).getHostAndPort();
     }
 
     public URI getHttpServerBasedUrl()

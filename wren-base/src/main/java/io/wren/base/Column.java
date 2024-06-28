@@ -16,14 +16,21 @@ package io.wren.base;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.wren.base.type.AnyType;
-import io.wren.base.type.PGType;
-import io.wren.base.type.PGTypes;
+
+import java.util.Locale;
+import java.util.Objects;
+
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 public final class Column
 {
+    public static Column column(String name, String type)
+    {
+        return new Column(name, type);
+    }
+
     private final String name;
-    private final PGType<?> type;
+    private final String type;
 
     @JsonCreator
     public Column(
@@ -31,13 +38,7 @@ public final class Column
             @JsonProperty("type") String type)
     {
         this.name = name;
-        this.type = PGTypes.nameToPgType(type).orElse(AnyType.ANY);
-    }
-
-    public Column(String name, PGType<?> type)
-    {
-        this.name = name;
-        this.type = type;
+        this.type = type.toUpperCase(Locale.ROOT);
     }
 
     @JsonProperty
@@ -46,14 +47,38 @@ public final class Column
         return name;
     }
 
-    public PGType<?> getType()
+    @JsonProperty
+    public String getType()
     {
         return type;
     }
 
-    @JsonProperty("type")
-    public String getTypeName()
+    @Override
+    public boolean equals(Object o)
     {
-        return type.typName();
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Column column = (Column) o;
+        return Objects.equals(name, column.name) &&
+                Objects.equals(type, column.type);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(name, type);
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("name", name)
+                .add("type", type)
+                .toString();
     }
 }

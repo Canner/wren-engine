@@ -14,40 +14,21 @@
 
 package io.wren.main.metadata;
 
-import io.trino.sql.tree.QualifiedName;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.Parameter;
-import io.wren.connector.StorageClient;
-import io.wren.main.pgcatalog.builder.PgFunctionBuilder;
 
 import java.util.List;
 
 public interface Metadata
 {
-    void createSchema(String name);
-
-    void dropSchemaIfExists(String name);
-
-    QualifiedName resolveFunction(String functionName, int numArgument);
-
-    String getDefaultCatalog();
-
     void directDDL(String sql);
 
     ConnectorRecordIterator directQuery(String sql, List<Parameter> parameters);
 
     List<Column> describeQuery(String sql, List<Parameter> parameters);
 
-    boolean isPgCompatible();
-
-    String getPgCatalogName();
-
     void reload();
-
-    StorageClient getCacheStorageClient();
-
-    PgFunctionBuilder getPgFunctionBuilder();
 
     void close();
 }

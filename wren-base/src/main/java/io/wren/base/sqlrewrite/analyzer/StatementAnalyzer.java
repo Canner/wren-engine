@@ -57,8 +57,6 @@ import io.wren.base.dto.Model;
 import io.wren.base.dto.TimeUnit;
 import io.wren.base.dto.View;
 
-import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -84,13 +82,7 @@ public final class StatementAnalyzer
 
     public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, WrenMDL wrenMDL)
     {
-        return analyze(analysis, statement, sessionContext, wrenMDL, null);
-    }
-
-    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, WrenMDL wrenMDL, TypeCoercion typeCoercion)
-    {
-        Scope queryScope = new Visitor(sessionContext, analysis, wrenMDL, typeCoercion).process(statement, Optional.empty());
-
+        Scope queryScope = new Visitor(sessionContext, analysis, wrenMDL).process(statement, Optional.empty());
         // add models directly used in sql query
         analysis.addModels(
                 wrenMDL.listModels().stream()
@@ -137,18 +129,15 @@ public final class StatementAnalyzer
         private final SessionContext sessionContext;
         private final Analysis analysis;
         private final WrenMDL wrenMDL;
-        private final Optional<TypeCoercion> typeCoercionOptional;
 
         public Visitor(
                 SessionContext sessionContext,
                 Analysis analysis,
-                WrenMDL wrenMDL,
-                @Nullable TypeCoercion typeCoercion)
+                WrenMDL wrenMDL)
         {
             this.sessionContext = requireNonNull(sessionContext, "sessionContext is null");
             this.analysis = requireNonNull(analysis, "analysis is null");
             this.wrenMDL = requireNonNull(wrenMDL, "wrenMDL is null");
-            this.typeCoercionOptional = Optional.ofNullable(typeCoercion);
         }
 
         public Scope process(Node node)
@@ -214,7 +203,7 @@ public final class StatementAnalyzer
         {
             Query query = withQuery.getQuery();
             Analysis analyzed = new Analysis(query);
-            Optional<Scope> queryScope = Optional.ofNullable(analyze(analyzed, query, sessionContext, wrenMDL, typeCoercionOptional.orElse(null)));
+            Optional<Scope> queryScope = Optional.ofNullable(analyze(analyzed, query, sessionContext, wrenMDL));
             List<Field> fields;
             Optional<List<Identifier>> columnNames = withQuery.getColumnNames();
             if (columnNames.isPresent()) {
@@ -395,11 +384,6 @@ public final class StatementAnalyzer
                 analysis.addRequiredSourceNode(scope.getRelationId().getSourceNode()
                         .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source")));
             }
-
-            typeCoercionOptional.ifPresent(typeCoercion -> {
-                Optional<Expression> coerced = typeCoercion.coerceExpression(singleColumn.getExpression(), scope);
-                coerced.ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(singleColumn.getExpression()), expression));
-            });
         }
 
         private Scope analyzeFrom(QuerySpecification node, Optional<Scope> scope)
@@ -413,8 +397,6 @@ public final class StatementAnalyzer
         private void analyzeWhere(Expression node, Scope scope)
         {
             ExpressionAnalysis expressionAnalysis = analyzeExpression(node, scope);
-            typeCoercionOptional.flatMap(typeCoercion -> typeCoercion.coerceExpression(node, scope))
-                    .ifPresent(expression -> analysis.addTypeCoercion(NodeRef.of(node), expression));
         }
 
         private void analyzeWindowSpecification(WindowSpecification windowSpecification, Scope scope)
@@ -522,16 +504,6 @@ public final class StatementAnalyzer
                 case JoinOn joinOn:
                     Expression expression = joinOn.getExpression();
                     analyzeExpression(expression, outputScope);
-                    typeCoercionOptional.ifPresent(typeCoercion -> {
-                        Optional<Expression> coerced = typeCoercion.coerceExpression(expression, outputScope);
-                        if (coerced.isPresent()) {
-                            JoinOn newJoinOn = new JoinOn(coerced.get());
-                            Join newJoin = node.getLocation().isPresent() ?
-                                    new Join(node.getLocation().get(), node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn)) :
-                                    new Join(node.getType(), node.getLeft(), node.getRight(), Optional.of(newJoinOn));
-                            analysis.addTypeCoercion(NodeRef.of(node), newJoin);
-                        }
-                    });
                     break;
                 case JoinUsing joinUsing:
                     joinUsing.getColumns().forEach(column -> analyzeExpression(column, outputScope));
@@ -574,7 +546,7 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
         {
-            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, wrenMDL, typeCoercionOptional.orElse(null)))
+            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, wrenMDL))
                     .map(value -> createAndAssignScope(node, scope, value))
                     .orElseGet(() -> Scope.builder().parent(scope).build());
         }

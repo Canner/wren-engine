@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import io.wren.base.dto.Column;
 import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
-import io.wren.base.type.IntegerType;
 import io.wren.main.validation.ColumnIsValid;
 import io.wren.main.validation.ValidationResult;
 import io.wren.main.web.dto.CheckOutputDto;
@@ -41,7 +40,6 @@ import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
 import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
 import static io.wren.base.dto.Column.caluclatedColumn;
 import static io.wren.base.dto.Column.column;
-import static io.wren.base.dto.Manifest.MANIFEST_JSON_CODEC;
 import static io.wren.base.dto.Model.model;
 import static io.wren.base.dto.Relationship.relationship;
 import static io.wren.main.validation.ColumnIsValid.COLUMN_IS_VALID;
@@ -140,7 +138,7 @@ public class TestMDLResource
         assertThat(testDefault.getData().size()).isEqualTo(100);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("custkey");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(IntegerType.INTEGER);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("integer");
 
         PreviewDto testDefaultDto1 = new PreviewDto(previewManifest, "select custkey from Customer limit 200", null);
         QueryResultDto preview1 = preview(testDefaultDto1);

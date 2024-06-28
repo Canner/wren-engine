@@ -16,14 +16,12 @@ package io.wren.main.web;
 
 import com.google.inject.Inject;
 import io.trino.sql.tree.Statement;
-import io.wren.base.AnalyzedMDL;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
-import io.wren.main.WrenMetastore;
 import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryAnalysisDto.ColumnAnalysisDto;
 import io.wren.main.web.dto.QueryAnalysisDto.FilterAnalysisDto;
@@ -42,18 +40,13 @@ import java.util.concurrent.CompletableFuture;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
-import static java.util.Objects.requireNonNull;
 
 @Path("/v1/analysis")
 public class AnalysisResource
 {
-    private final WrenMetastore wrenMetastore;
-
     @Inject
-    public AnalysisResource(
-            WrenMetastore wrenMetastore)
+    public AnalysisResource()
     {
-        this.wrenMetastore = requireNonNull(wrenMetastore, "wrenMetastore is null");
     }
 
     @GET
@@ -64,23 +57,18 @@ public class AnalysisResource
             SqlAnalysisInputDto inputDto,
             @Suspended AsyncResponse asyncResponse)
     {
+        if (inputDto.getManifest() == null) {
+            asyncResponse.resume(new IllegalArgumentException("Manifest is required"));
+        }
         CompletableFuture
-                .supplyAsync(() -> {
-                    WrenMDL mdl;
-                    if (inputDto.getManifest() == null) {
-                        AnalyzedMDL analyzedMDL = wrenMetastore.getAnalyzedMDL();
-                        mdl = analyzedMDL.getWrenMDL();
-                    }
-                    else {
-                        mdl = WrenMDL.fromManifest(inputDto.getManifest());
-                    }
-                    Statement statement = parseSql(inputDto.getSql());
-                    return DecisionPointAnalyzer.analyze(
-                            statement,
-                            SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
-                            mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
-                })
-                .whenComplete(bindAsyncResponse(asyncResponse));
+            .supplyAsync(() -> {
+                WrenMDL mdl = WrenMDL.fromManifest(inputDto.getManifest());
+                Statement statement = parseSql(inputDto.getSql());
+                return DecisionPointAnalyzer.analyze(
+                        statement,
+                        SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
+                        mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
+            }).whenComplete(bindAsyncResponse(asyncResponse));
     }
 
     static QueryAnalysisDto toQueryAnalysisDto(QueryAnalysis queryAnalysis)

@@ -29,11 +29,8 @@
     <modules>
         <module>trino-parser</module>
         <module>wren-base</module>
-        <module>wren-cache</module>
         <module>wren-main</module>
         <module>wren-server</module>
-        <module>wren-shaded</module>
-        <module>wren-testing</module>
         <module>wren-tests</module>
     </modules>
 
@@ -92,15 +89,6 @@
 
     <dependencyManagement>
         <dependencies>
-
-            <dependency>
-                <groupId>com.google.cloud</groupId>
-                <artifactId>libraries-bom</artifactId>
-                <version>25.2.0</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
@@ -115,12 +103,6 @@
                 <version>${dep.testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>com.carrotsearch</groupId>
-                <artifactId>hppc</artifactId>
-                <version>0.9.1</version>
             </dependency>
 
             <dependency>
@@ -148,30 +130,6 @@
             </dependency>
 
             <dependency>
-                <groupId>com.google.api</groupId>
-                <artifactId>gax</artifactId>
-                <version>2.16.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.auth</groupId>
-                <artifactId>google-auth-library-credentials</artifactId>
-                <version>1.23.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.auth</groupId>
-                <artifactId>google-auth-library-oauth2-http</artifactId>
-                <version>1.23.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.auto.value</groupId>
-                <artifactId>auto-value-annotations</artifactId>
-                <version>1.10.4</version>
-            </dependency>
-
-            <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>3.0.2</version>
@@ -196,27 +154,9 @@
             </dependency>
 
             <dependency>
-                <groupId>com.google.http-client</groupId>
-                <artifactId>google-http-client</artifactId>
-                <version>1.44.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.http-client</groupId>
-                <artifactId>google-http-client-gson</artifactId>
-                <version>1.44.1</version>
-            </dependency>
-
-            <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
                 <version>3.19.4</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <version>2.0.202</version>
             </dependency>
 
             <dependency>
@@ -241,12 +181,6 @@
                         <artifactId>slf4j-api</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-
-            <dependency>
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>1.15</version>
             </dependency>
 
             <dependency>
@@ -340,36 +274,6 @@
             </dependency>
 
             <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-api</artifactId>
-                <version>1.60.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-context</artifactId>
-                <version>1.60.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>${netty.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.opencensus</groupId>
-                <artifactId>opencensus-api</artifactId>
-                <version>0.31.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.opencensus</groupId>
-                <artifactId>opencensus-contrib-http-util</artifactId>
-                <version>0.31.1</version>
-            </dependency>
-
-            <dependency>
                 <groupId>io.wren</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
@@ -383,11 +287,6 @@
 
             <dependency>
                 <groupId>io.wren</groupId>
-                <artifactId>wren-cache</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.wren</groupId>
                 <artifactId>wren-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -395,18 +294,6 @@
             <dependency>
                 <groupId>io.wren</groupId>
                 <artifactId>wren-server</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.wren</groupId>
-                <artifactId>wren-shaded</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.wren</groupId>
-                <artifactId>wren-testing</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -423,33 +310,15 @@
             </dependency>
 
             <dependency>
-                <groupId>it.unimi.dsi</groupId>
-                <artifactId>fastutil</artifactId>
-                <version>8.3.0</version>
-            </dependency>
-
-            <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
                 <version>1.14.13</version>
             </dependency>
 
             <dependency>
-                <groupId>net.snowflake</groupId>
-                <artifactId>snowflake-jdbc</artifactId>
-                <version>3.15.0</version>
-            </dependency>
-
-            <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
                 <version>${dep.antlr.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>3.9</version>
             </dependency>
 
             <!-- TODO: move this to Airbase -->
@@ -498,7 +367,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.3.1</version>
+                <version>42.3.9</version>
             </dependency>
 
             <dependency>

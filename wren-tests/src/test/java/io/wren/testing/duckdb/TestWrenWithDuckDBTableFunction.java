@@ -15,11 +15,8 @@
 package io.wren.testing.duckdb;
 
 import com.google.common.collect.ImmutableMap;
-import io.airlift.json.JsonCodec;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Model;
-import io.wren.base.type.IntegerType;
-import io.wren.base.type.VarcharType;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.testing.RequireWrenServer;
@@ -28,7 +25,6 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-import static io.airlift.json.JsonCodec.jsonCodec;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
@@ -40,8 +36,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestWrenWithDuckDBTableFunction
         extends RequireWrenServer
 {
-    private static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = jsonCodec(Manifest.class);
-
     @Override
     protected TestingWrenServer createWrenServer()
             throws Exception
@@ -74,7 +68,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(100);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("custkey");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(IntegerType.INTEGER);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("integer");
     }
 
     @Test
@@ -96,7 +90,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(99);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(VarcharType.VARCHAR);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
 
         String folder = requireNonNull(getClass().getClassLoader().getResource("csv/orders")).getPath();
         manifest = Manifest.builder()
@@ -114,7 +108,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(181);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(VarcharType.VARCHAR);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
     }
 
     @Test
@@ -136,6 +130,6 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(99);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo(VarcharType.VARCHAR);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
     }
 }

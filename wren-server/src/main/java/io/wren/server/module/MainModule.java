@@ -19,12 +19,8 @@ import com.google.inject.Scopes;
 import io.airlift.configuration.AbstractConfigurationAwareModule;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.sql.SqlConverter;
-import io.wren.cache.CacheService;
-import io.wren.cache.NOPCacheService;
-import io.wren.main.connector.CacheServiceManager;
 import io.wren.main.metadata.Metadata;
 import io.wren.main.metadata.MetadataManager;
-import io.wren.main.pgcatalog.builder.PgFunctionBuilderManager;
 import io.wren.main.sql.SqlConverterManager;
 
 public class MainModule
@@ -36,9 +32,6 @@ public class MainModule
     {
         binder.bind(Metadata.class).to(MetadataManager.class).in(Scopes.SINGLETON);
         binder.bind(SqlConverter.class).to(SqlConverterManager.class).in(Scopes.SINGLETON);
-        binder.bind(CacheService.class).to(CacheServiceManager.class).in(Scopes.SINGLETON);
-        binder.bind(NOPCacheService.class).in(Scopes.SINGLETON);
-        binder.bind(PgFunctionBuilderManager.class).in(Scopes.SINGLETON);
         binder.bind(ConfigManager.class).in(Scopes.SINGLETON);
     }
 }

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 public abstract class BaseJdbcRecordIterator<T>
@@ -40,12 +39,6 @@ public abstract class BaseJdbcRecordIterator<T>
     protected final int columnCount;
 
     private boolean hasNext;
-
-    public BaseJdbcRecordIterator(Client client, String sql)
-            throws SQLException
-    {
-        this(client, sql, emptyList());
-    }
 
     public BaseJdbcRecordIterator(Client client, String sql, List<Parameter> parameters)
             throws SQLException

@@ -19,14 +19,13 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.airlift.log.Logger;
 import io.airlift.units.DataSize;
+import io.wren.base.Column;
 import io.wren.base.Parameter;
 import io.wren.base.WrenException;
 import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.Client;
 import io.wren.base.client.jdbc.JdbcRecordIterator;
-import io.wren.base.metadata.ColumnMetadata;
 import io.wren.base.metadata.StandardErrorCode;
-import io.wren.base.type.PGType;
 import org.duckdb.DuckDBConnection;
 
 import javax.annotation.Nullable;
@@ -42,7 +41,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static io.wren.base.client.duckdb.DuckdbTypes.toPGType;
 import static java.lang.String.format;
 
 public final class DuckdbClient
@@ -50,18 +48,15 @@ public final class DuckdbClient
 {
     private static final Logger LOG = Logger.get(DuckdbClient.class);
     private final DuckDBConfig duckDBConfig;
-    private final CacheStorageConfig cacheStorageConfig;
     private final DuckDBSettingSQL duckDBSettingSQL;
     private DuckDBConnection duckDBConnection;
     private HikariDataSource connectionPool;
 
     public DuckdbClient(
             DuckDBConfig duckDBConfig,
-            @Nullable CacheStorageConfig cacheStorageConfig,
             @Nullable DuckDBSettingSQL duckDBSettingSQL)
     {
         this.duckDBConfig = duckDBConfig;
-        this.cacheStorageConfig = cacheStorageConfig;
         this.duckDBSettingSQL = duckDBSettingSQL;
         init();
     }
@@ -99,12 +94,11 @@ public final class DuckdbClient
 
     public synchronized void initPool()
     {
-        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, cacheStorageConfig, duckDBConnection, duckDBSettingSQL));
+        connectionPool = new HikariDataSource(getHikariConfig(duckDBConfig, duckDBConnection, duckDBSettingSQL));
     }
 
     private static HikariConfig getHikariConfig(
             DuckDBConfig duckDBConfig,
-            CacheStorageConfig cacheStorageConfig,
             DuckDBConnection duckDBConnection,
             DuckDBSettingSQL duckDBSettingSQL)
     {
@@ -116,12 +110,12 @@ public final class DuckdbClient
         config.setMinimumIdle(duckDBConfig.getMaxConcurrentTasks());
         // remain some query slots for metadata queries
         config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
-        String initSql = buildConnectionInitSql(duckDBSettingSQL, cacheStorageConfig, duckDBConfig);
+        String initSql = buildConnectionInitSql(duckDBSettingSQL, duckDBConfig);
         config.setConnectionInitSql(initSql);
         return config;
     }
 
-    private static String buildConnectionInitSql(DuckDBSettingSQL duckDBSettingSQL, CacheStorageConfig cacheStorageConfig, DuckDBConfig duckDBConfig)
+    private static String buildConnectionInitSql(DuckDBSettingSQL duckDBSettingSQL, DuckDBConfig duckDBConfig)
     {
         List<String> sql = new ArrayList<>();
         // Both of them should be true in default, however they're some issue in v0.10.3.
@@ -135,11 +129,6 @@ public final class DuckdbClient
         }
         else {
             sql.add("SET search_path = 'main'");
-            if (cacheStorageConfig instanceof DuckdbS3StyleStorageConfig) {
-                DuckdbS3StyleStorageConfig duckdbS3StyleStorageConfig = (DuckdbS3StyleStorageConfig) cacheStorageConfig;
-                sql.add(format("SET s3_endpoint='%s'", duckdbS3StyleStorageConfig.getEndpoint()));
-                sql.add(format("SET s3_url_style='%s'", duckdbS3StyleStorageConfig.getUrlStyle()));
-            }
             sql.add(format("SET home_directory='%s'", duckDBConfig.getHomeDirectory()));
         }
         return String.join(";", sql);
@@ -173,20 +162,16 @@ public final class DuckdbClient
      * So we ignore the parameters here.
      */
     @Override
-    public List<ColumnMetadata> describe(String sql, List<Parameter> ignored)
+    public List<Column> describe(String sql, List<Parameter> ignored)
     {
         try (Connection connection = createConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
             ResultSetMetaData metaData = preparedStatement.getMetaData();
             int columnCount = metaData.getColumnCount();
 
-            ImmutableList.Builder<ColumnMetadata> builder = ImmutableList.builder();
+            ImmutableList.Builder<Column> builder = ImmutableList.builder();
             for (int i = 1; i <= columnCount; i++) {
-                PGType<?> type = toPGType(metaData, i);
-                builder.add(ColumnMetadata.builder()
-                        .setName(metaData.getColumnName(i))
-                        .setType(type)
-                        .build());
+                builder.add(new Column(metaData.getColumnName(i), metaData.getColumnTypeName(i)));
             }
             return builder.build();
         }
@@ -269,18 +254,11 @@ public final class DuckdbClient
     public static class Builder
     {
         private DuckDBConfig duckDBConfig;
-        private CacheStorageConfig cacheStorageConfig;
         private DuckDBSettingSQL duckDBSettingSQL;
 
         public Builder setDuckDBConfig(DuckDBConfig duckDBConfig)
         {
             this.duckDBConfig = duckDBConfig;
-            return this;
-        }
-
-        public Builder setCacheStorageConfig(CacheStorageConfig cacheStorageConfig)
-        {
-            this.cacheStorageConfig = cacheStorageConfig;
             return this;
         }
 
@@ -292,7 +270,7 @@ public final class DuckdbClient
 
         public DuckdbClient build()
         {
-            return new DuckdbClient(duckDBConfig, cacheStorageConfig, duckDBSettingSQL);
+            return new DuckdbClient(duckDBConfig, duckDBSettingSQL);
         }
 
         public Optional<DuckdbClient> buildSafely()

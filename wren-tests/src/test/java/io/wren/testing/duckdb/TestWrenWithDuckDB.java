@@ -14,26 +14,48 @@
 
 package io.wren.testing.duckdb;
 
+import com.google.common.collect.ImmutableMap;
+import io.wren.base.dto.Manifest;
+import io.wren.main.web.dto.QueryResultDto;
+import io.wren.testing.AbstractTestFramework;
+import io.wren.testing.TestingWrenServer;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.Optional;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
-import static java.util.Objects.requireNonNull;
+import static io.wren.base.Column.column;
+import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
+import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
+import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestWrenWithDuckDB
-        extends AbstractWireProtocolTestWithDuckDB
+        extends AbstractTestFramework
 {
+    private Manifest manifest;
+
     @Override
-    protected Optional<String> getWrenMDLPath()
+    protected TestingWrenServer createWrenServer()
+            throws Exception
     {
-        return Optional.of(requireNonNull(getClass().getClassLoader().getResource("duckdb/mdl.json")).getPath());
+        ImmutableMap.Builder<String, String> properties = ImmutableMap.<String, String>builder()
+                .put(WREN_DATASOURCE_TYPE, DUCKDB.name())
+                .put(WREN_ENABLE_DYNAMIC_FIELDS, "true");
+
+        try {
+            manifest = MANIFEST_JSON_CODEC.fromJson(Files.readString(Path.of(getClass().getClassLoader().getResource("duckdb/mdl.json").getPath())));
+        }
+        catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+
+        return TestingWrenServer.builder()
+                .setRequiredConfigs(properties.build())
+                .build();
     }
 
     @DataProvider
@@ -52,251 +74,114 @@ public class TestWrenWithDuckDB
     public void testQueryModel(String sql)
     {
         assertThatNoException().isThrownBy(() -> {
-            try (Connection connection = createConnection()) {
-                PreparedStatement stmt = connection.prepareStatement(sql);
-                ResultSet resultSet = stmt.executeQuery();
-                resultSet.next();
-            }
+            query(manifest, sql);
         });
     }
 
     @Test
     public void testQueryOnlyModelColumn()
-            throws Exception
     {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from Orders limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("orderkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getString("orderstatus"));
-            assertThatNoException().isThrownBy(() -> resultSet.getString("totalprice"));
-            assertThatNoException().isThrownBy(() -> resultSet.getString("nation_name"));
-            assertThatThrownBy(() -> resultSet.getString("o_orderkey"))
-                    .hasMessageMatching(".*The column name o_orderkey was not found in this ResultSet.*");
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        QueryResultDto queryResultDto = query(manifest, "select * from Orders limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("orderkey", "integer"),
+                        column("custkey", "integer"),
+                        column("orderstatus", "varchar"),
+                        column("totalprice", "DECIMAL(15,2)"),
+                        column("nation_name", "varchar"),
+                        column("orderdate", "date")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
 
     @Test
     public void testQueryMetric()
-            throws Exception
     {
         // test the TO_ONE relationship
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select customer, totalprice from Revenue limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        QueryResultDto queryResultDto = query(manifest, "select customer, totalprice from Revenue limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("customer", "varchar"), column("totalprice", "DECIMAL(38,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
         // test the TO_MANY relationship
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from CustomerRevenue limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
+        queryResultDto = query(manifest, "select custkey, totalprice from CustomerRevenue limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("custkey", "integer"),
+                        column("totalprice", "DECIMAL(38,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
-
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select customer, month, totalprice from CustomerMonthlyRevenue limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
-    }
-
-    // TODO: support metric roll up relationship
-    @Test(enabled = false)
-    void testQueryMetricRollup()
-            throws Exception
-    {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey, totalprice from roll_up(Revenue, orderdate, YEAR) limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
-    }
-
-    @Test
-    public void testQueryCumulativeMetric()
-            throws Exception
-    {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from WeeklyRevenue");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(53);
-        }
+        queryResultDto = query(manifest, "select customer, month, totalprice from CustomerMonthlyRevenue limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("customer", "varchar"),
+                        column("month", "date"),
+                        column("totalprice", "DECIMAL(38,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
 
     @Test
     public void testEnum()
-            throws Exception
     {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select Status.F as f1");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThat(resultSet.getString("f1")).isEqualTo("F");
-        }
+        QueryResultDto queryResultDto = query(manifest, "select Status.F as f1");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("f1", "VARCHAR")));
+        assertThat(queryResultDto.getData().get(0)[0]).isEqualTo("F");
 
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select count(*) as totalcount from Orders where orderstatus = Status.O");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThat(resultSet.getInt("totalcount")).isEqualTo(7333);
-        }
+        queryResultDto = query(manifest, "select count(*) as totalcount from Orders where orderstatus = Status.O");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("totalcount", "BIGINT")));
+        assertThat(queryResultDto.getData().get(0)[0]).isEqualTo(7333);
     }
 
     @Test
     public void testView()
-            throws Exception
     {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from useModel limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        QueryResultDto queryResultDto = query(manifest, "select * from useModel limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("orderkey", "integer"),
+                        column("custkey", "integer"),
+                        column("orderstatus", "varchar"),
+                        column("totalprice", "DECIMAL(15,2)"),
+                        column("nation_name", "varchar"),
+                        column("orderdate", "date")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from useMetric limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
+        queryResultDto = query(manifest, "select * from useMetric limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("customer", "varchar"),
+                        column("totalprice", "DECIMAL(38,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        queryResultDto = query(manifest, "select * from useUseMetric limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("customer", "varchar"),
+                        column("totalprice", "DECIMAL(38,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
-        // TODO: support metric roll up relationship
-        // try (Connection connection = createConnection()) {
-        //     PreparedStatement stmt = connection.prepareStatement("select * from useMetricRollUp limit 100");
-        //     ResultSet resultSet = stmt.executeQuery();
-        //     resultSet.next();
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("custkey"));
-        //     assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-        //     int count = 1;
-        //
-        //     while (resultSet.next()) {
-        //         count++;
-        //     }
-        //     assertThat(count).isEqualTo(100);
-        // }
-
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from useUseMetric limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("customer"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
-
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select * from sameCte limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getString("custkey"));
-            assertThatNoException().isThrownBy(() -> resultSet.getInt("totalprice"));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        queryResultDto = query(manifest, "select * from sameCte limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("orderkey", "integer"),
+                        column("custkey", "integer"),
+                        column("orderstatus", "varchar"),
+                        column("totalprice", "DECIMAL(15,2)"),
+                        column("nation_name", "varchar"),
+                        column("orderdate", "date")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
 
     @Test
     public void testQuerySqlReservedWord()
-            throws Exception
     {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select \"order\" from Lineitem limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        QueryResultDto queryResultDto = query(manifest, "select \"order\" from Lineitem limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("order", "integer")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
 
     @Test
     public void testQueryMacro()
-            throws Exception
     {
-        try (Connection connection = createConnection()) {
-            PreparedStatement stmt = connection.prepareStatement("select custkey_name, custkey_call_concat from Customer limit 100");
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            assertThatNoException().isThrownBy(() -> resultSet.getObject(1));
-            int count = 1;
-
-            while (resultSet.next()) {
-                count++;
-            }
-            assertThat(count).isEqualTo(100);
-        }
+        QueryResultDto queryResultDto = query(manifest, "select custkey_name, custkey_call_concat from Customer limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("custkey_name", "varchar"),
+                        column("custkey_call_concat", "varchar")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
 }

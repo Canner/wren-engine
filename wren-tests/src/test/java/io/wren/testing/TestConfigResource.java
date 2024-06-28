@@ -18,7 +18,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.config.ConfigManager;
-import io.wren.base.config.PostgresWireProtocolConfig;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.dto.Manifest;
 import org.testng.annotations.Test;
@@ -34,10 +33,6 @@ import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_META
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_TASKS;
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.wren.base.config.ConfigManager.ConfigEntry.configEntry;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_AUTH_FILE;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_PORT;
-import static io.wren.base.config.PostgresWireProtocolConfig.PG_WIRE_PROTOCOL_SSL_ENABLED;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
@@ -128,22 +123,13 @@ public class TestConfigResource
                 configEntry(DUCKDB_MAX_CONCURRENT_TASKS, "100"),
                 configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, "100"),
                 configEntry(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, "1000"),
-                configEntry(DUCKDB_CACHE_TASK_RETRY_DELAY, "1000"),
-                configEntry(PG_WIRE_PROTOCOL_PORT, "1234"),
-                configEntry(PG_WIRE_PROTOCOL_SSL_ENABLED, "true"),
-                configEntry(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT, "100"),
-                configEntry(PG_WIRE_PROTOCOL_AUTH_FILE, "fake")));
+                configEntry(DUCKDB_CACHE_TASK_RETRY_DELAY, "1000")));
 
         DuckDBConfig duckDBConfig = new DuckDBConfig();
-        PostgresWireProtocolConfig postgresWireProtocolConfig = new PostgresWireProtocolConfig();
         assertThat(getConfig(WREN_DIRECTORY)).isEqualTo(configEntry(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString()));
         assertThat(getConfig(DUCKDB_MAX_CONCURRENT_TASKS)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_TASKS, String.valueOf(duckDBConfig.getMaxConcurrentTasks())));
         assertThat(getConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));
         assertThat(getConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)).isEqualTo(configEntry(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, String.valueOf(duckDBConfig.getMaxCacheQueryTimeout())));
         assertThat(getConfig(DUCKDB_CACHE_TASK_RETRY_DELAY)).isEqualTo(configEntry(DUCKDB_CACHE_TASK_RETRY_DELAY, String.valueOf(duckDBConfig.getCacheTaskRetryDelay())));
-        assertThat(getConfig(PG_WIRE_PROTOCOL_PORT)).isEqualTo(configEntry(PG_WIRE_PROTOCOL_PORT, String.valueOf(server().getPgHostAndPort().getPort())));
-        assertThat(getConfig(PG_WIRE_PROTOCOL_SSL_ENABLED)).isEqualTo(configEntry(PG_WIRE_PROTOCOL_SSL_ENABLED, String.valueOf(postgresWireProtocolConfig.isSslEnable())));
-        assertThat(getConfig(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT)).isEqualTo(configEntry(PG_WIRE_PROTOCOL_NETTY_THREAD_COUNT, String.valueOf(postgresWireProtocolConfig.getNettyThreadCount())));
-        assertThat(getConfig(PG_WIRE_PROTOCOL_AUTH_FILE)).isEqualTo(configEntry(PG_WIRE_PROTOCOL_AUTH_FILE, postgresWireProtocolConfig.getAuthFile().getPath()));
     }
 }

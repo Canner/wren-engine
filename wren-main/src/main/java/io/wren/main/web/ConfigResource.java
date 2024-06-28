@@ -17,10 +17,7 @@ package io.wren.main.web;
 import com.google.inject.Inject;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.sql.SqlConverter;
-import io.wren.cache.CacheService;
-import io.wren.main.connector.CacheServiceManager;
 import io.wren.main.metadata.Metadata;
-import io.wren.main.metadata.MetadataManager;
 import io.wren.main.sql.SqlConverterManager;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -40,22 +37,17 @@ import static java.util.Objects.requireNonNull;
 public class ConfigResource
 {
     private final ConfigManager configManager;
-    private final MetadataManager metadata;
     private final SqlConverterManager sqlConverter;
-    private final CacheServiceManager cacheService;
 
     @Inject
     public ConfigResource(
             ConfigManager configManager,
             Metadata metadata,
-            SqlConverter sqlConverter,
-            CacheService cacheService)
+            SqlConverter sqlConverter)
 
     {
         this.configManager = requireNonNull(configManager, "configManager is null");
-        this.metadata = (MetadataManager) requireNonNull(metadata, "metadata is null");
         this.sqlConverter = (SqlConverterManager) requireNonNull(sqlConverter, "sqlConverter is null");
-        this.cacheService = (CacheServiceManager) requireNonNull(cacheService, "cacheService is null");
     }
 
     @GET
@@ -105,8 +97,6 @@ public class ConfigResource
 
     private void reloadConfig()
     {
-        metadata.reload();
         sqlConverter.reload();
-        cacheService.reload();
     }
 }
