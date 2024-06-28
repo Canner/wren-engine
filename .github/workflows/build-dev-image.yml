@@ -40,7 +40,6 @@ jobs:
           LATEST_COMMIT=$(git log -1 --pretty=%h)
           cd ./docker
           cp ../wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./
-          cp -r ../wren-sqlglot-server/ ./
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag ghcr.io/canner/wren-engine:main-${LATEST_COMMIT} \
