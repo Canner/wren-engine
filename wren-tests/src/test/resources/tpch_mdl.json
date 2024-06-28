@@ -4,7 +4,7 @@
   "models": [
     {
       "name": "Orders",
-      "refSql": "select * from wrenai.tpch_tiny.orders",
+      "refSql": "select * from tpch.orders",
       "columns": [
         {
           "name": "orderkey",
@@ -52,7 +52,7 @@
     },
     {
       "name": "Customer",
-      "refSql": "select * from wrenai.tpch_tiny.customer",
+      "refSql": "select * from tpch.customer",
       "columns": [
         {
           "name": "custkey",
@@ -94,7 +94,7 @@
     },
     {
       "name": "Lineitem",
-      "refSql": "select * from wrenai.tpch_tiny.lineitem",
+      "refSql": "select * from tpch.lineitem",
       "columns": [
         {
           "name": "orderkey",
@@ -151,7 +151,7 @@
     },
     {
       "name": "Part",
-      "refSql": "select * from wrenai.tpch_tiny.part",
+      "refSql": "select * from tpch.part",
       "columns": [
         {
           "name": "partkey",
@@ -168,7 +168,7 @@
     },
     {
       "name": "Nation",
-      "refSql": "select * from wrenai.tpch_tiny.nation",
+      "refSql": "select * from tpch.nation",
       "columns": [
         {
           "name": "nationkey",

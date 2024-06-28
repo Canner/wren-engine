@@ -68,7 +68,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(100);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("custkey");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("integer");
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("INTEGER");
     }
 
     @Test
@@ -90,7 +90,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(99);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
 
         String folder = requireNonNull(getClass().getClassLoader().getResource("csv/orders")).getPath();
         manifest = Manifest.builder()
@@ -108,7 +108,7 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(181);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -130,6 +130,6 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().size()).isEqualTo(99);
         assertThat(testDefault.getColumns().size()).isEqualTo(1);
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
-        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("varchar");
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
     }
 }

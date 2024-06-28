@@ -60,14 +60,14 @@ public class TestDynamicFields
     {
         // select one dimension and measure
         QueryResultDto actual = query(manifest, "SELECT customer, totalprice FROM CustomerDailyRevenue WHERE customer = 'Customer#000000048'");
-        QueryResultDto expected = query(manifest, "SELECT c.name, SUM(o.totalprice) FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
+        QueryResultDto expected = query(manifest, "SELECT c.name as customer, SUM(o.totalprice) as totalprice FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
                 "WHERE c.name = 'Customer#000000048' GROUP BY 1");
 
         assertThat(actual).isEqualTo(expected);
 
         // select two dimensions and measure
         actual = query(manifest, "SELECT customer, date, totalprice FROM CustomerDailyRevenue WHERE customer = 'Customer#000000048' ORDER BY 1, 2");
-        expected = query(manifest, "SELECT c.name, o.orderdate, SUM(o.totalprice) FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
+        expected = query(manifest, "SELECT c.name as customer, o.orderdate as date, SUM(o.totalprice) as totalprice FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
                         "WHERE c.name = 'Customer#000000048' GROUP BY 1, 2 ORDER BY 1, 2");
         assertThat(actual).isEqualTo(expected);
     }

@@ -579,10 +579,6 @@
                     <excludes>
                         <exclude>**/*jmhTest*.java</exclude>
                         <exclude>**/*jmhType*.java</exclude>
-                        <exclude>TestTPCHWithSnowflake.java</exclude>
-                        <exclude>TestDeploySnowflakeRuntime</exclude>
-                        <exclude>TestWireProtocolTypeWithSnowflake</exclude>
-                        <exclude>TestWrenWithSnowflake.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

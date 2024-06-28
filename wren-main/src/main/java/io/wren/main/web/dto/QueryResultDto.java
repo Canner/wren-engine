@@ -21,6 +21,8 @@ import io.wren.base.Column;
 import java.util.List;
 import java.util.Objects;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 public class QueryResultDto
 {
     private final List<Column> columns;
@@ -64,5 +66,14 @@ public class QueryResultDto
     public int hashCode()
     {
         return Objects.hash(columns, data);
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("columns", columns)
+                .add("data", data)
+                .toString();
     }
 }

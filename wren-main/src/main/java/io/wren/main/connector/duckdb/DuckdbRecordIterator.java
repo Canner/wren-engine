@@ -20,6 +20,7 @@ import io.wren.base.Parameter;
 import io.wren.base.client.AutoCloseableIterator;
 import io.wren.base.client.Client;
 import io.wren.base.client.jdbc.JdbcRecordIterator;
+import org.duckdb.DuckDBArray;
 import org.duckdb.DuckDBResultSet;
 
 import java.sql.ResultSetMetaData;
@@ -96,6 +97,11 @@ public class DuckdbRecordIterator
                 return null;
             }
             if (type.endsWith("[]")) {
+                if (value instanceof DuckDBArray array) {
+                    return Arrays.stream((Object[]) array.getArray())
+                            .map(innerVal -> convertValue(type.substring(0, type.length() - 2), innerVal))
+                            .collect(toList());
+                }
                 return Arrays.stream((Object[]) value)
                         .map(innerVal -> convertValue(type.substring(0, type.length() - 2), innerVal))
                         .collect(toList());
