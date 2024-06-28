@@ -89,7 +89,6 @@ jobs:
           WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
           cd ./docker
           cp ../wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./
-          cp -r ../wren-sqlglot-server/ ./
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag ghcr.io/canner/wren-engine:${{ needs.prepare-version.outputs.maven_version }} \
