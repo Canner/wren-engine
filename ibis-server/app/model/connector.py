@@ -18,11 +18,13 @@ class Connector:
         self.connection = self.data_source.get_connection(connection_info)
         self.manifest_str = manifest_str
 
-    def query(self, sql) -> pd.DataFrame:
+    def query(self, sql: str, limit: int) -> pd.DataFrame:
         rewritten_sql = rewrite(self.manifest_str, sql)
-        return self.connection.sql(rewritten_sql, dialect="trino").to_pandas()
+        return (
+            self.connection.sql(rewritten_sql, dialect="trino").limit(limit).to_pandas()
+        )
 
-    def dry_run(self, sql) -> None:
+    def dry_run(self, sql: str) -> None:
         try:
             rewritten_sql = rewrite(self.manifest_str, sql)
             self.connection.sql(rewritten_sql, dialect="trino")

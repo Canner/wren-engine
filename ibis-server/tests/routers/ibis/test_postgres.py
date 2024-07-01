@@ -202,6 +202,21 @@ class TestPostgres:
             "timestamptz": "object",
         }
 
+    def test_query_with_limit(self, postgres: PostgresContainer):
+        connection_info = self.to_connection_info(postgres)
+        response = client.post(
+            url="/v2/ibis/postgres/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "sql": 'SELECT * FROM "Orders"',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["data"]) == 1
+
     def test_query_without_manifest(self, postgres: PostgresContainer):
         connection_info = self.to_connection_info(postgres)
         response = client.post(
