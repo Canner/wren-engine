@@ -1,31 +1,18 @@
 use std::fmt::Display;
 use std::{collections::HashMap, sync::Arc};
 
-use datafusion::{
-    config::ConfigOptions,
-    error::Result,
-    optimizer::analyzer::Analyzer,
-    sql::{
-        planner::SqlToRel,
-        sqlparser::{dialect::GenericDialect, parser::Parser},
-        unparser::plan_to_sql,
-    },
-};
+use datafusion::prelude::SessionContext;
+use datafusion::{error::Result, sql::unparser::plan_to_sql};
 use log::{debug, info};
 
 use manifest::Relationship;
 
-use crate::logical_plan::analyze::rule::RemoveWrenPrefixRule;
 use crate::logical_plan::utils::from_qualified_name_str;
-use crate::{
-    logical_plan::{
-        analyze::rule::{ModelAnalyzeRule, ModelGenerationRule},
-        context_provider::WrenContextProvider,
-    },
-    mdl::manifest::{Column, Manifest, Metric, Model},
-};
+use crate::mdl::context::create_ctx_with_mdl;
+use crate::mdl::manifest::{Column, Manifest, Metric, Model};
 
 pub mod builder;
+pub mod context;
 pub mod lineage;
 pub mod manifest;
 pub mod utils;
@@ -187,41 +174,16 @@ impl WrenMDL {
     }
 }
 /// Transform the SQL based on the MDL
-pub fn transform_sql(analyzed_mdl: Arc<AnalyzedWrenMDL>, sql: &str) -> Result<String> {
+pub async fn transform_sql(
+    ctx: &SessionContext,
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    sql: &str,
+) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
-
-    // parse the SQL
-    let dialect = GenericDialect {};
-    let ast = Parser::parse_sql(&dialect, sql).unwrap();
-    let statement = &ast[0];
-
-    // create a logical query plan
-    let context_provider = WrenContextProvider::new(&analyzed_mdl.wren_mdl)?;
-    let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
-        Ok(plan) => plan,
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            return Err(e);
-        }
-    };
-    debug!("wren-core got the origin plan:\n {plan:?}");
-
-    let analyzer = Analyzer::with_rules(vec![
-        Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
-        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
-        Arc::new(RemoveWrenPrefixRule::new(Arc::clone(&analyzed_mdl))),
-    ]);
-
-    let config = ConfigOptions::default();
-
-    let analyzed = match analyzer.execute_and_check(plan, &config, |_, _| {}) {
-        Ok(analyzed) => analyzed,
-        Err(e) => {
-            eprintln!("Error: {:?}", e);
-            return Err(e);
-        }
-    };
+    let ctx = create_ctx_with_mdl(ctx, analyzed_mdl).await?;
+    let plan = ctx.state().create_logical_plan(sql).await?;
+    debug!("wren-core original plan:\n {plan:?}");
+    let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed:?}");
 
     // show the planned sql
@@ -287,12 +249,13 @@ impl Display for Dataset {
 
 #[cfg(test)]
 mod test {
-    use std::error::Error;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use datafusion::common::not_impl_err;
     use datafusion::error::Result;
+    use datafusion::prelude::SessionContext;
     use datafusion::sql::planner::SqlToRel;
     use datafusion::sql::sqlparser::dialect::GenericDialect;
     use datafusion::sql::sqlparser::parser::Parser;
@@ -302,14 +265,17 @@ mod test {
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, AnalyzedWrenMDL};
 
-    #[test]
-    fn test_access_model() -> Result<(), Box<dyn Error>> {
+    #[tokio::test]
+    async fn test_access_model() -> Result<()> {
         let test_data: PathBuf =
             [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
                 .iter()
                 .collect();
         let mdl_json = fs::read_to_string(test_data.as_path())?;
-        let mdl = serde_json::from_str::<Manifest>(&mdl_json)?;
+        let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
+            Ok(mdl) => mdl,
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+        };
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let tests: Vec<&str> = vec![
@@ -325,7 +291,12 @@ mod test {
 
         for sql in tests {
             println!("Original: {}", sql);
-            let actual = mdl::transform_sql(Arc::clone(&analyzed_mdl), sql)?;
+            let actual = mdl::transform_sql(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                sql,
+            )
+            .await?;
             let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
             println!("After roundtrip: {}", after_roundtrip);
         }

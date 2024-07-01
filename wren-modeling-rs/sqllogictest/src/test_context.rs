@@ -15,32 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use std::any::Any;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::error::Result;
-use datafusion::execution::context::SessionState;
-use datafusion::logical_expr::Expr;
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionConfig;
-use datafusion::{
-    catalog::{schema::MemorySchemaProvider, CatalogProvider, MemoryCatalogProvider},
-    datasource::{TableProvider, TableType},
-    prelude::{CsvReadOptions, SessionContext},
-};
+use datafusion::prelude::{CsvReadOptions, SessionContext};
 use log::info;
 use tempfile::TempDir;
 
-use wren_core::logical_plan::utils::create_schema;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
-use wren_core::mdl::manifest::{JoinType, Model};
-use wren_core::mdl::{AnalyzedWrenMDL, WrenMDL};
+use wren_core::mdl::manifest::JoinType;
+use wren_core::mdl::AnalyzedWrenMDL;
 
 use crate::engine::utils::read_dir_recursive;
 
@@ -279,68 +268,5 @@ async fn register_ecommerce_mdl(
     //     // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
     //     .with_optimizer_rules(vec![]);
     // let ctx = SessionContext::new_with_state(new_state);
-    let _ = register_table_with_mdl(ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await;
     Ok((ctx.to_owned(), analyzed_mdl))
-}
-
-pub async fn register_table_with_mdl(
-    ctx: &SessionContext,
-    wren_mdl: Arc<WrenMDL>,
-) -> Result<()> {
-    let catalog = MemoryCatalogProvider::new();
-    let schema = MemorySchemaProvider::new();
-
-    catalog
-        .register_schema(&wren_mdl.manifest.schema, Arc::new(schema))
-        .unwrap();
-    ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
-
-    for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model))?;
-        ctx.register_table(
-            format!(
-                "{}.{}.{}",
-                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
-            ),
-            Arc::new(table),
-        )?;
-    }
-    Ok(())
-}
-
-struct WrenDataSource {
-    schema: SchemaRef,
-}
-
-impl WrenDataSource {
-    pub fn new(model: Arc<Model>) -> Result<Self> {
-        let schema = create_schema(model.get_physical_columns().clone())?;
-        Ok(Self { schema })
-    }
-}
-
-#[async_trait]
-impl TableProvider for WrenDataSource {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn schema(&self) -> SchemaRef {
-        self.schema.clone()
-    }
-
-    fn table_type(&self) -> TableType {
-        TableType::View
-    }
-
-    async fn scan(
-        &self,
-        _state: &SessionState,
-        _projection: Option<&Vec<usize>>,
-        // filters and limit can be used here to inject some push-down operations if needed
-        _filters: &[Expr],
-        _limit: Option<usize>,
-    ) -> Result<Arc<dyn ExecutionPlan>> {
-        unreachable!("WrenDataSource should be replaced before physical planning")
-    }
 }

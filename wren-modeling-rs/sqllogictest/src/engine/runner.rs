@@ -55,7 +55,12 @@ impl sqllogictest::AsyncDB for DataFusion {
             self.relative_path.display(),
             sql
         );
-        let sql = transform_sql(Arc::clone(self.ctx.analyzed_wren_mdl()), sql)?;
+        let sql = transform_sql(
+            self.ctx.session_ctx(),
+            Arc::clone(self.ctx.analyzed_wren_mdl()),
+            sql,
+        )
+        .await?;
         run_query(self.ctx.session_ctx(), sql).await
     }
 

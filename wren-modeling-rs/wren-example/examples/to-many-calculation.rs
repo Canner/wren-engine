@@ -87,10 +87,11 @@ async fn main() -> Result<()> {
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
     let transformed = transform_sql(
+        &ctx,
         Arc::clone(&analyzed_mdl),
         "select totalprice from wrenai.public.orders",
     )
-    .unwrap();
+    .await?;
     register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
     let df = ctx.sql(&transformed).await?;
     df.show().await?;
