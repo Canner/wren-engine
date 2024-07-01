@@ -1,0 +1,7 @@
+statement ok
+SELECT * FROM wrenai.public.orders_view
+
+query TR
+SELECT * FROM wrenai.public.revenue_orders where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'
+----
+76754c0e642c8f99a8c3fcb8a14ac700 287.4

@@ -168,5 +168,6 @@ pub enum TimeUnit {
 pub struct View {
     pub name: String,
     pub statement: String,
+    #[serde(default)]
     pub properties: Vec<(String, String)>,
 }

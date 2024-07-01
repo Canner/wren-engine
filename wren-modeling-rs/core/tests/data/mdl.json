@@ -122,5 +122,11 @@
       "joinType": "one_to_one",
       "condition": "customer.custkey = profile.custkey"
     }
+  ],
+  "views": [
+    {
+      "name": "customer_view",
+      "statement": "select * from test.test.customer"
+    }
   ]
 }

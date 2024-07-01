@@ -1,3 +1,4 @@
+use datafusion::prelude::SessionContext;
 use std::sync::Arc;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
@@ -12,7 +13,7 @@ async fn main() -> datafusion::common::Result<()> {
 
     let sql = "select * from wrenai.public.order_items_model";
     println!("Original SQL: \n{}", sql);
-    let sql = transform_sql(analyzed_mdl, sql).unwrap();
+    let sql = transform_sql(&SessionContext::new(), analyzed_mdl, sql).await?;
     println!("Wren engine generated SQL: \n{}", sql);
     Ok(())
 }
