@@ -318,4 +318,26 @@ mod test {
             Err(e) => Err(e),
         }
     }
+
+    #[tokio::test]
+    async fn test_access_view() -> Result<()> {
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path())?;
+        let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
+            Ok(mdl) => mdl,
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+        };
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let sql = "select * from test.test.customer_view";
+        println!("Original: {}", sql);
+        let actual =
+            mdl::transform_sql(&SessionContext::new(), Arc::clone(&analyzed_mdl), sql)
+                .await?;
+        let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
+        println!("After roundtrip: {}", after_roundtrip);
+        Ok(())
+    }
 }

@@ -26,7 +26,7 @@ use log::info;
 use tempfile::TempDir;
 
 use wren_core::mdl::builder::{
-    ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
+    ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
 use wren_core::mdl::manifest::JoinType;
 use wren_core::mdl::AnalyzedWrenMDL;
@@ -67,10 +67,11 @@ impl TestContext {
 
         let file_name = relative_path.file_name().unwrap().to_str().unwrap();
         match file_name {
-            "model.slt" => {
+            "view.slt" | "model.slt" => {
                 info!("Registering local temporary table");
                 Some(register_ecommerce_table(&ctx).await.ok()?)
             }
+
             _ => {
                 info!("Using default SessionContext");
                 None
@@ -220,6 +221,12 @@ async fn register_ecommerce_mdl(
                 .condition("orders.order_id = order_items.order_id")
                 .build(),
         )
+        .view(ViewBuilder::new("orders_view")
+            .statement("select * from wrenai.public.orders")
+            .build())
+        // TODO: support expression without alias inside view
+        // .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
+        .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id").build())
         .build();
     let mut register_tables = HashMap::new();
     register_tables.insert(

@@ -74,6 +74,13 @@ impl ModelAnalyzeRule {
                     table_scan.table_name.clone(),
                 ) {
                     let table_name = table_scan.table_name.table();
+                    // transform ViewTable to a subquery plan
+                    if let Some(logical_plan) = table_scan.source.get_logical_plan() {
+                        let subquery = LogicalPlanBuilder::from(logical_plan.clone())
+                            .alias(table_name)?
+                            .build()?;
+                        return Ok(Transformed::yes(subquery));
+                    }
                     if let Some(model) =
                         self.analyzed_wren_mdl.wren_mdl().get_model(table_name)
                     {
@@ -92,8 +99,7 @@ impl ModelAnalyzeRule {
                     } else {
                         Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
                     }
-                }
-                else {
+                } else {
                     Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
                 }
             }
@@ -148,9 +154,11 @@ impl ModelAnalyzeRule {
 fn belong_to_mdl(mdl: &WrenMDL, table_reference: TableReference) -> bool {
     let catalog_match = table_reference
         .catalog()
-        .map_or(false, |c| c != mdl.catalog());
+        .map_or(false, |c| c == mdl.catalog());
 
-    let schema_match = table_reference.schema().map_or(false, |s| s == mdl.schema());
+    let schema_match = table_reference
+        .schema()
+        .map_or(false, |s| s == mdl.schema());
 
     catalog_match && schema_match
 }

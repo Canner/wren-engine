@@ -6,7 +6,7 @@ use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::schema::MemorySchemaProvider;
 use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider};
 use datafusion::common::Result;
-use datafusion::datasource::{TableProvider, TableType};
+use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
@@ -55,6 +55,17 @@ pub async fn register_table_with_mdl(
                 &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
             ),
             Arc::new(table),
+        )?;
+    }
+    for view in wren_mdl.manifest.views.iter() {
+        let plan = ctx.state().create_logical_plan(&view.statement).await?;
+        let view_table = ViewTable::try_new(plan, Some(view.statement.clone()))?;
+        ctx.register_table(
+            format!(
+                "{}.{}.{}",
+                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &view.name
+            ),
+            Arc::new(view_table),
         )?;
     }
     Ok(())
