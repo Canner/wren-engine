@@ -27,7 +27,7 @@ def query(
     data_source: DataSource,
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
-    limit: int = 100,
+    limit: int | None = None,
 ) -> Response:
     connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
