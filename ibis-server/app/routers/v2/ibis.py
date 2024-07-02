@@ -27,12 +27,15 @@ def query(
     data_source: DataSource,
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
+    limit: int | None = None,
 ) -> Response:
     connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
         connector.dry_run(dto.sql)
         return Response(status_code=204)
-    return JSONResponse(to_json(connector.query(dto.sql), dto.column_dtypes))
+    return JSONResponse(
+        to_json(connector.query(dto.sql, limit=limit), dto.column_dtypes)
+    )
 
 
 @router.post("/{data_source}/validate/{rule_name}")
