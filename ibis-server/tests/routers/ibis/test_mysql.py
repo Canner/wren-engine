@@ -154,9 +154,6 @@ class TestMySql:
             "timestamptz": "datetime64[ns]",
         }
 
-    @pytest.mark.skip(
-        reason="ibis miss port in connection_url, wait fix PR in ibis repo"
-    )
     def test_query_with_connection_url(self, mysql: MySqlContainer):
         connection_url = self.to_connection_url(mysql)
         response = client.post(

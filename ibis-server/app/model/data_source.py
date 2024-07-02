@@ -108,10 +108,14 @@ class DataSourceExtension(Enum):
     def get_mysql_connection(
         info: ConnectionUrl | MySqlConnectionInfo,
     ) -> BaseBackend:
-        return ibis.connect(
+        connection_url = (
             getattr(info, "connection_url", None)
-            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}",
-            port=info.port,  # ibis miss port of connection url, so we need to pass it explicitly
+            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        )
+        return ibis.connect(
+            connection_url,
+            # ibis miss port of connection url, so we need to pass it explicitly
+            port=urlparse(connection_url).port,
         )
 
     @staticmethod
