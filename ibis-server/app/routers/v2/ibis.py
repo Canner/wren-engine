@@ -9,14 +9,12 @@ from app.model import (
     QueryDTO,
     ValidateDTO,
 )
-from app.model.connector import (
-    Connector,
-    to_json,
-)
+from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
+from app.util import to_json
 
 router = APIRouter(prefix="/ibis")
 
