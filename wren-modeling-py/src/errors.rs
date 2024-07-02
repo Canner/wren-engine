@@ -3,7 +3,6 @@ use pyo3::exceptions::PyException;
 use pyo3::PyErr;
 use std::string::FromUtf8Error;
 use thiserror::Error;
-use wren_core::DataFusionError;
 
 #[derive(Error, Debug)]
 #[error("{message}")]
@@ -39,12 +38,6 @@ impl From<FromUtf8Error> for CoreError {
 
 impl From<serde_json::Error> for CoreError {
     fn from(err: serde_json::Error) -> Self {
-        CoreError::new(&err.to_string())
-    }
-}
-
-impl From<DataFusionError> for CoreError {
-    fn from(err: DataFusionError) -> Self {
         CoreError::new(&err.to_string())
     }
 }

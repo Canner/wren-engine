@@ -2648,7 +2648,6 @@ dependencies = [
  "pyo3-build-config",
  "serde_json",
  "thiserror",
- "tokio",
  "wren-core",
 ]
 

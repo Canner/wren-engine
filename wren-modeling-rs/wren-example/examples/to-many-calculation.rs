@@ -8,7 +8,7 @@ use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
 use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::{transform_sql, AnalyzedWrenMDL};
+use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
-    let transformed = transform_sql(
+    let transformed = transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
         "select totalprice from wrenai.public.orders",

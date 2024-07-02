@@ -4,7 +4,7 @@ use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
 use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::{transform_sql, AnalyzedWrenMDL};
+use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> datafusion::common::Result<()> {
@@ -13,7 +13,7 @@ async fn main() -> datafusion::common::Result<()> {
 
     let sql = "select * from wrenai.public.order_items_model";
     println!("Original SQL: \n{}", sql);
-    let sql = transform_sql(&SessionContext::new(), analyzed_mdl, sql).await?;
+    let sql = transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, sql).await?;
     println!("Wren engine generated SQL: \n{}", sql);
     Ok(())
 }

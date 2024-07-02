@@ -173,8 +173,18 @@ impl WrenMDL {
         self.qualified_references.get(column).cloned()
     }
 }
+
 /// Transform the SQL based on the MDL
-pub async fn transform_sql(
+pub fn transform_sql(
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    sql: &str,
+) -> Result<String> {
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    runtime.block_on(transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, sql))
+}
+
+/// Transform the SQL based on the MDL with the SessionContext
+pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
@@ -291,7 +301,7 @@ mod test {
 
         for sql in tests {
             println!("Original: {}", sql);
-            let actual = mdl::transform_sql(
+            let actual = mdl::transform_sql_with_ctx(
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
                 sql,
@@ -334,7 +344,7 @@ mod test {
         let sql = "select * from test.test.customer_view";
         println!("Original: {}", sql);
         let actual =
-            mdl::transform_sql(&SessionContext::new(), Arc::clone(&analyzed_mdl), sql)
+            mdl::transform_sql_with_ctx(&SessionContext::new(), Arc::clone(&analyzed_mdl), sql)
                 .await?;
         let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
         println!("After roundtrip: {}", after_roundtrip);

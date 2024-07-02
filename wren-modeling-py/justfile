@@ -11,4 +11,5 @@ develop:
     poetry run maturin develop
 
 test: develop
+    cargo test
     poetry run pytest
