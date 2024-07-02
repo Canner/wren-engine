@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::catalog::CatalogProvider;
 use datafusion::error::Result;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
 
