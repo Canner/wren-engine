@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestSqlFormatter
 {
     private static final SqlParser SQL_PARSER = new SqlParser();
+
     @Test
     public void testFormatJoin()
     {
