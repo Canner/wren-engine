@@ -223,7 +223,7 @@ public class TestMDLResource
                    , "Orders"."custkey" "custkey"
                    , "Orders_relationsub"."customer_name" "customer_name"
                    FROM
-                     ((
+                     (
                       SELECT
                         "Orders"."orderkey" "orderkey"
                       , "Orders"."custkey" "custkey"
@@ -245,7 +245,7 @@ public class TestMDLResource
                         "Orders"."orderkey"
                       , "Customer"."name" "customer_name"
                       FROM
-                        ((
+                        (
                          SELECT
                            o_orderkey "orderkey"
                          , o_custkey "custkey"
@@ -256,8 +256,8 @@ public class TestMDLResource
                               tpch.orders
                          )  "Orders"
                       )  "Orders"
-                      LEFT JOIN "Customer" ON ("Customer"."custkey" = "Orders"."custkey"))
-                   )  "Orders_relationsub" ON ("Orders"."orderkey" = "Orders_relationsub"."orderkey"))
+                      LEFT JOIN "Customer" ON ("Customer"."custkey" = "Orders"."custkey")
+                   )  "Orders_relationsub" ON ("Orders"."orderkey" = "Orders_relationsub"."orderkey")
                 )\s
                 SELECT customer_name
                 FROM
