@@ -23,6 +23,10 @@ class QueryBigQueryDTO(QueryDTO):
     connection_info: BigQueryConnectionInfo = connection_info_field
 
 
+class QueryClickHouseDTO(QueryDTO):
+    connection_info: ConnectionUrl | ClickHouseConnectionInfo = connection_info_field
+
+
 class QueryMSSqlDTO(QueryDTO):
     connection_info: MSSqlConnectionInfo = connection_info_field
 
@@ -43,6 +47,14 @@ class BigQueryConnectionInfo(BaseModel):
     project_id: str
     dataset_id: str
     credentials: str = Field(description="Base64 encode `credentials.json`")
+
+
+class ClickHouseConnectionInfo(BaseModel):
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
 
 
 class MSSqlConnectionInfo(BaseModel):

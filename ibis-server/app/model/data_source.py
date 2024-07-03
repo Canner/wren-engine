@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 from enum import Enum, StrEnum, auto
 from json import loads
+from urllib.parse import urlparse
 
 import ibis
 from google.oauth2 import service_account
@@ -10,12 +11,14 @@ from ibis import BaseBackend
 
 from app.model import (
     BigQueryConnectionInfo,
+    ClickHouseConnectionInfo,
     ConnectionInfo,
     ConnectionUrl,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
     QueryBigQueryDTO,
+    QueryClickHouseDTO,
     QueryDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
@@ -27,6 +30,7 @@ from app.model import (
 
 class DataSource(StrEnum):
     bigquery = auto()
+    clickhouse = auto()
     mssql = auto()
     mysql = auto()
     postgres = auto()
@@ -47,6 +51,7 @@ class DataSource(StrEnum):
 
 class DataSourceExtension(Enum):
     bigquery = QueryBigQueryDTO
+    clickhouse = QueryClickHouseDTO
     mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
     postgres = QueryPostgresDTO
@@ -74,6 +79,20 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
+    def get_clickhouse_connection(
+        info: ConnectionUrl | ClickHouseConnectionInfo,
+    ) -> BaseBackend:
+        connection_url = (
+            getattr(info, "connection_url", None)
+            or f"clickhouse://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        )
+        return ibis.connect(
+            connection_url,
+            # ibis miss port of connection url, so we need to pass it explicitly
+            port=urlparse(connection_url).port,
+        )
+
+    @staticmethod
     def get_mssql_connection(info: MSSqlConnectionInfo) -> BaseBackend:
         # mssql in ibis does not support connection url
         return ibis.mssql.connect(
@@ -89,10 +108,14 @@ class DataSourceExtension(Enum):
     def get_mysql_connection(
         info: ConnectionUrl | MySqlConnectionInfo,
     ) -> BaseBackend:
-        return ibis.connect(
+        connection_url = (
             getattr(info, "connection_url", None)
-            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}",
-            port=info.port,  # ibis miss port of connection url, so we need to pass it explicitly
+            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+        )
+        return ibis.connect(
+            connection_url,
+            # ibis miss port of connection url, so we need to pass it explicitly
+            port=urlparse(connection_url).port,
         )
 
     @staticmethod
