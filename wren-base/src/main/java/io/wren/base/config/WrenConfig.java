@@ -35,7 +35,7 @@ public class WrenConfig
 
     private File wrenMDLDirectory = new File("etc/mdl");
     private DataSourceType dataSourceType = DataSourceType.DUCKDB;
-    private boolean enableDynamicFields;
+    private boolean enableDynamicFields = true;
 
     @NotNull
     public File getWrenMDLDirectory()
