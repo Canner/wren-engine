@@ -47,7 +47,7 @@ def clickhouse(request) -> ClickHouseContainer:
     return ch
 
 
-@pytest.mark.postgres
+@pytest.mark.clickhouse
 class TestClickHouse:
     base_url = "/v2/ibis/clickhouse"
 
