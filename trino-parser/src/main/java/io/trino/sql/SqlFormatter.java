@@ -562,9 +562,6 @@ public final class SqlFormatter
                 type = "NATURAL " + type;
             }
 
-            if (node.getType() != Join.Type.IMPLICIT) {
-                builder.append('(');
-            }
             process(node.getLeft(), indent);
 
             builder.append('\n');
@@ -592,10 +589,6 @@ public final class SqlFormatter
                 else if (!(criteria instanceof NaturalJoin)) {
                     throw new UnsupportedOperationException("unknown join criteria: " + criteria);
                 }
-            }
-
-            if (node.getType() != Join.Type.IMPLICIT) {
-                builder.append(")");
             }
 
             return null;
