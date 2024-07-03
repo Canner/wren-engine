@@ -1,27 +1,15 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::catalog::schema::MemorySchemaProvider;
-use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider};
-use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::Result;
-use datafusion::execution::context::SessionState;
-use datafusion::logical_expr::Expr;
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
 
-use wren_core::logical_plan::analyze::rule::{
-    ModelAnalyzeRule, ModelGenerationRule, RemoveWrenPrefixRule,
-};
-use wren_core::logical_plan::utils::create_schema;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
-use wren_core::mdl::manifest::{JoinType, Manifest, Model};
-use wren_core::mdl::{AnalyzedWrenMDL, WrenMDL};
+use wren_core::mdl::context::create_ctx_with_mdl;
+use wren_core::mdl::manifest::{JoinType, Manifest};
+use wren_core::mdl::AnalyzedWrenMDL;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -89,22 +77,10 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
-    let new_state = ctx
-        .state()
-        .add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))))
-        .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-            &analyzed_mdl,
-        ))))
-        .add_analyzer_rule(Arc::new(RemoveWrenPrefixRule::new(Arc::clone(
-            &analyzed_mdl,
-        ))))
-        // There is some conflict with optimize_projections. Disable optimization rule temporarily,
-        .with_optimizer_rules(vec![]);
-    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
-    let new_ctx = SessionContext::new_with_state(new_state);
+    let ctx = create_ctx_with_mdl(&ctx, analyzed_mdl).await?;
     let sql = "select * from wrenai.public.order_items";
     // create a plan to run a SQL query
-    let df = new_ctx.sql(sql).await?;
+    let df = ctx.sql(sql).await?;
     df.show().await?;
     Ok(())
 }
@@ -183,67 +159,4 @@ fn init_manifest() -> Manifest {
                 .build(),
         )
         .build()
-}
-
-pub async fn register_table_with_mdl(
-    ctx: &SessionContext,
-    wren_mdl: Arc<WrenMDL>,
-) -> Result<()> {
-    let catalog = MemoryCatalogProvider::new();
-    let schema = MemorySchemaProvider::new();
-
-    catalog
-        .register_schema(&wren_mdl.manifest.schema, Arc::new(schema))
-        .unwrap();
-    ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
-
-    for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model))?;
-        ctx.register_table(
-            format!(
-                "{}.{}.{}",
-                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
-            ),
-            Arc::new(table),
-        )
-        .unwrap();
-    }
-    Ok(())
-}
-
-struct WrenDataSource {
-    schema: SchemaRef,
-}
-
-impl WrenDataSource {
-    pub fn new(model: Arc<Model>) -> Result<Self> {
-        let schema = create_schema(model.get_physical_columns())?;
-        Ok(Self { schema })
-    }
-}
-
-#[async_trait]
-impl TableProvider for WrenDataSource {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn schema(&self) -> SchemaRef {
-        self.schema.clone()
-    }
-
-    fn table_type(&self) -> TableType {
-        TableType::View
-    }
-
-    async fn scan(
-        &self,
-        _state: &SessionState,
-        _projection: Option<&Vec<usize>>,
-        // filters and limit can be used here to inject some push-down operations if needed
-        _filters: &[Expr],
-        _limit: Option<usize>,
-    ) -> Result<Arc<dyn ExecutionPlan>> {
-        unreachable!("WrenDataSource should be replaced before physical planning")
-    }
 }

@@ -1,24 +1,14 @@
-use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::catalog::schema::MemorySchemaProvider;
-use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider};
-use datafusion::datasource::{TableProvider, TableType};
 use datafusion::error::Result;
-use datafusion::execution::context::SessionState;
-use datafusion::logical_expr::Expr;
-use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
 
-use wren_core::logical_plan::utils::create_schema;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
-use wren_core::mdl::manifest::{JoinType, Manifest, Model};
-use wren_core::mdl::{transform_sql, AnalyzedWrenMDL, WrenMDL};
+use wren_core::mdl::manifest::{JoinType, Manifest};
+use wren_core::mdl::{transform_sql_with_ctx, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -86,12 +76,12 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
-    let transformed = transform_sql(
+    let transformed = transform_sql_with_ctx(
+        &ctx,
         Arc::clone(&analyzed_mdl),
         "select totalprice from wrenai.public.orders",
     )
-    .unwrap();
-    register_table_with_mdl(&ctx, Arc::clone(&analyzed_mdl.wren_mdl)).await?;
+    .await?;
     let df = ctx.sql(&transformed).await?;
     df.show().await?;
     Ok(())
@@ -183,66 +173,4 @@ fn init_manifest() -> Manifest {
                 .build(),
         )
         .build()
-}
-
-pub async fn register_table_with_mdl(
-    ctx: &SessionContext,
-    wren_mdl: Arc<WrenMDL>,
-) -> Result<()> {
-    let catalog = MemoryCatalogProvider::new();
-    let schema = MemorySchemaProvider::new();
-
-    catalog
-        .register_schema(&wren_mdl.manifest.schema, Arc::new(schema))
-        .unwrap();
-    ctx.register_catalog(&wren_mdl.manifest.catalog, Arc::new(catalog));
-
-    for model in wren_mdl.manifest.models.iter() {
-        let table = WrenDataSource::new(Arc::clone(model))?;
-        ctx.register_table(
-            format!(
-                "{}.{}.{}",
-                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
-            ),
-            Arc::new(table),
-        )?;
-    }
-    Ok(())
-}
-
-struct WrenDataSource {
-    schema: SchemaRef,
-}
-
-impl WrenDataSource {
-    pub fn new(model: Arc<Model>) -> Result<Self> {
-        let schema = create_schema(model.get_physical_columns())?;
-        Ok(Self { schema })
-    }
-}
-
-#[async_trait]
-impl TableProvider for WrenDataSource {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn schema(&self) -> SchemaRef {
-        self.schema.clone()
-    }
-
-    fn table_type(&self) -> TableType {
-        TableType::View
-    }
-
-    async fn scan(
-        &self,
-        _state: &SessionState,
-        _projection: Option<&Vec<usize>>,
-        // filters and limit can be used here to inject some push-down operations if needed
-        _filters: &[Expr],
-        _limit: Option<usize>,
-    ) -> Result<Arc<dyn ExecutionPlan>> {
-        unreachable!("WrenDataSource should be replaced before physical planning")
-    }
 }

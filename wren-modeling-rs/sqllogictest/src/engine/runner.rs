@@ -24,7 +24,7 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
 use log::info;
 use sqllogictest::DBOutput;
-use wren_core::mdl::transform_sql;
+use wren_core::mdl::transform_sql_with_ctx;
 
 use super::{
     error::Result,
@@ -55,7 +55,12 @@ impl sqllogictest::AsyncDB for DataFusion {
             self.relative_path.display(),
             sql
         );
-        let sql = transform_sql(Arc::clone(self.ctx.analyzed_wren_mdl()), sql)?;
+        let sql = transform_sql_with_ctx(
+            self.ctx.session_ctx(),
+            Arc::clone(self.ctx.analyzed_wren_mdl()),
+            sql,
+        )
+        .await?;
         run_query(self.ctx.session_ctx(), sql).await
     }
 
