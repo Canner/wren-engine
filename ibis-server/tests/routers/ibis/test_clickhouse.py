@@ -411,3 +411,16 @@ class TestClickHouse:
         assert result["primaryKey"] is not None
         assert result["description"] is not None
         assert result["properties"] is not None
+
+    def test_metadata_list_constraints(self, clickhouse: ClickHouseContainer):
+        connection_info = self.to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{self.base_url}/metadata/constraints",
+            json={
+                "connectionInfo": connection_info,
+            },
+        )
+        assert response.status_code == 200
+
+        result = response.json()
+        assert len(result) == 0
