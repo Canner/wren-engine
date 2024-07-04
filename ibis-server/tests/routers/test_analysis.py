@@ -95,6 +95,10 @@ def test_analysis_sql_select_all_customer():
     assert result[0]["relation"]["type"] == "TABLE"
     assert "alias" not in result[0]["relation"]
     assert len(result[0]["selectItems"]) == 8
+    assert result[0]["selectItems"][0]["nodeLocation"] == {"line": 1, "column": 8}
+    assert result[0]["selectItems"][1]["nodeLocation"] == {"line": 1, "column": 8}
+    assert result[0]["relation"]["tableName"] == "customer"
+    assert result[0]["relation"]["nodeLocation"] == {"line": 1, "column": 15}
 
 
 def test_analysis_sql_group_by_customer():
@@ -108,9 +112,15 @@ def test_analysis_sql_group_by_customer():
     assert result[0]["relation"]["type"] == "TABLE"
     assert "alias" not in result[0]["relation"]
     assert len(result[0]["selectItems"]) == 2
+    assert result[0]["selectItems"][0]["nodeLocation"] == {"line": 1, "column": 8}
+    assert result[0]["selectItems"][1]["nodeLocation"] == {"line": 1, "column": 17}
     assert result[0]["relation"]["tableName"] == "customer"
+    assert result[0]["relation"]["nodeLocation"] == {"line": 1, "column": 31}
     assert len(result[0]["groupByKeys"]) == 1
-    assert result[0]["groupByKeys"][0][0] == "custkey"
+    assert result[0]["groupByKeys"][0][0] == {
+        "expression": "custkey",
+        "nodeLocation": {"line": 1, "column": 49},
+    }
 
 
 def test_analysis_sql_join_customer_orders():
@@ -123,13 +133,25 @@ def test_analysis_sql_join_customer_orders():
     assert len(result) == 1
     assert result[0]["relation"]["type"] == "INNER_JOIN"
     assert "alias" not in result[0]["relation"]
+    assert result[0]["relation"].get("tableName") is None
+    assert result[0]["relation"]["nodeLocation"] == {"line": 1, "column": 15}
     assert len(result[0]["selectItems"]) == 17
     assert result[0]["relation"]["left"]["type"] == "TABLE"
+    assert result[0]["relation"]["left"]["nodeLocation"] == {"line": 1, "column": 15}
     assert result[0]["relation"]["right"]["type"] == "TABLE"
+    assert result[0]["relation"]["right"]["nodeLocation"] == {"line": 1, "column": 31}
     assert result[0]["relation"]["criteria"] == "ON (c.custkey = o.custkey)"
     assert result[0]["relation"]["exprSources"] == [
-        {"expression": "o.custkey", "sourceDataset": "orders"},
-        {"expression": "c.custkey", "sourceDataset": "customer"},
+        {
+            "expression": "o.custkey",
+            "nodeLocation": {"line": 1, "column": 55},
+            "sourceDataset": "orders",
+        },
+        {
+            "expression": "c.custkey",
+            "nodeLocation": {"line": 1, "column": 43},
+            "sourceDataset": "customer",
+        },
     ]
 
 
@@ -159,9 +181,18 @@ def test_analysis_sql_group_by_multiple_columns():
     )
     assert len(result) == 1
     assert len(result[0]["groupByKeys"]) == 3
-    assert result[0]["groupByKeys"][0][0] == "custkey"
-    assert result[0]["groupByKeys"][1][0] == "name"
-    assert result[0]["groupByKeys"][2][0] == "nationkey"
+    assert result[0]["groupByKeys"][0][0] == {
+        "expression": "custkey",
+        "nodeLocation": {"line": 1, "column": 55},
+    }
+    assert result[0]["groupByKeys"][1][0] == {
+        "expression": "name",
+        "nodeLocation": {"line": 1, "column": 58},
+    }
+    assert result[0]["groupByKeys"][2][0] == {
+        "expression": "nationkey",
+        "nodeLocation": {"line": 1, "column": 61},
+    }
 
 
 def test_analysis_sql_order_by():
@@ -175,8 +206,10 @@ def test_analysis_sql_order_by():
     assert len(result[0]["sortings"]) == 2
     assert result[0]["sortings"][0]["expression"] == "custkey"
     assert result[0]["sortings"][0]["ordering"] == "ASCENDING"
+    assert result[0]["sortings"][0]["nodeLocation"] == {"line": 1, "column": 45}
     assert result[0]["sortings"][1]["expression"] == "name"
     assert result[0]["sortings"][1]["ordering"] == "DESCENDING"
+    assert result[0]["sortings"][1]["nodeLocation"] == {"line": 1, "column": 52}
 
 
 def get_sql_analysis(input_dto):
