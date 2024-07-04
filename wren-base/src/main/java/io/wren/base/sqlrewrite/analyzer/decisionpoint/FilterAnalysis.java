@@ -14,23 +14,25 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
+import io.trino.sql.tree.NodeLocation;
+
 import static java.util.Objects.requireNonNull;
 
 public abstract class FilterAnalysis
 {
-    public static FilterAnalysis and(FilterAnalysis left, FilterAnalysis right)
+    public static FilterAnalysis and(FilterAnalysis left, FilterAnalysis right, NodeLocation nodeLocation)
     {
-        return new LogicalAnalysis(Type.AND, left, right);
+        return new LogicalAnalysis(Type.AND, left, right, nodeLocation);
     }
 
-    public static FilterAnalysis or(FilterAnalysis left, FilterAnalysis right)
+    public static FilterAnalysis or(FilterAnalysis left, FilterAnalysis right, NodeLocation nodeLocation)
     {
-        return new LogicalAnalysis(Type.OR, left, right);
+        return new LogicalAnalysis(Type.OR, left, right, nodeLocation);
     }
 
-    public static FilterAnalysis expression(String node)
+    public static FilterAnalysis expression(String node, NodeLocation nodeLocation)
     {
-        return new ExpressionAnalysis(node);
+        return new ExpressionAnalysis(node, nodeLocation);
     }
 
     public enum Type
@@ -41,15 +43,22 @@ public abstract class FilterAnalysis
     }
 
     private final Type type;
+    private final NodeLocation nodeLocation;
 
-    public FilterAnalysis(Type type)
+    public FilterAnalysis(Type type, NodeLocation nodeLocation)
     {
         this.type = requireNonNull(type, "type is null");
+        this.nodeLocation = nodeLocation;
     }
 
     public Type getType()
     {
         return type;
+    }
+
+    public NodeLocation getNodeLocation()
+    {
+        return nodeLocation;
     }
 
     public static class LogicalAnalysis
@@ -58,9 +67,9 @@ public abstract class FilterAnalysis
         private final FilterAnalysis left;
         private final FilterAnalysis right;
 
-        public LogicalAnalysis(Type type, FilterAnalysis left, FilterAnalysis right)
+        public LogicalAnalysis(Type type, FilterAnalysis left, FilterAnalysis right, NodeLocation nodeLocation)
         {
-            super(type);
+            super(type, nodeLocation);
             this.left = requireNonNull(left, "left is null");
             this.right = requireNonNull(right, "right is null");
         }
@@ -81,9 +90,9 @@ public abstract class FilterAnalysis
     {
         private final String node;
 
-        public ExpressionAnalysis(String node)
+        public ExpressionAnalysis(String node, NodeLocation nodeLocation)
         {
-            super(Type.EXPR);
+            super(Type.EXPR, nodeLocation);
             this.node = requireNonNull(node, "node is null");
         }
 

@@ -14,12 +14,13 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.SortItem;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class QueryAnalysis
@@ -32,7 +33,7 @@ public class QueryAnalysis
     private final List<ColumnAnalysis> selectItems;
     private final RelationAnalysis relation;
     private final FilterAnalysis filter;
-    private final List<List<String>> groupByKeys;
+    private final List<List<GroupByKey>> groupByKeys;
     private final List<SortItemAnalysis> sortings;
     private final boolean isSubqueryOrCte;
 
@@ -40,7 +41,7 @@ public class QueryAnalysis
             List<ColumnAnalysis> selectItems,
             RelationAnalysis relation,
             FilterAnalysis filter,
-            List<List<String>> groupByKeys,
+            List<List<GroupByKey>> groupByKeys,
             List<SortItemAnalysis> sortings,
             boolean isSubqueryOrCte)
     {
@@ -67,7 +68,7 @@ public class QueryAnalysis
         return filter;
     }
 
-    public List<List<String>> getGroupByKeys()
+    public List<List<GroupByKey>> getGroupByKeys()
     {
         return groupByKeys;
     }
@@ -87,13 +88,14 @@ public class QueryAnalysis
         private final Optional<String> aliasName;
         private final String expression;
         private final Map<String, String> properties;
+        private final NodeLocation nodeLocation;
 
-        @JsonCreator
-        public ColumnAnalysis(Optional<String> aliasName, String expression, Map<String, String> properties)
+        public ColumnAnalysis(Optional<String> aliasName, String expression, Map<String, String> properties, NodeLocation nodeLocation)
         {
             this.aliasName = aliasName;
             this.expression = expression;
             this.properties = properties;
+            this.nodeLocation = nodeLocation;
         }
 
         public Optional<String> getAliasName()
@@ -110,17 +112,24 @@ public class QueryAnalysis
         {
             return properties;
         }
+
+        public NodeLocation getNodeLocation()
+        {
+            return nodeLocation;
+        }
     }
 
     public static class SortItemAnalysis
     {
         private final String expression;
         private final SortItem.Ordering ordering;
+        private final NodeLocation nodeLocation;
 
-        public SortItemAnalysis(String expression, SortItem.Ordering ordering)
+        public SortItemAnalysis(String expression, SortItem.Ordering ordering, NodeLocation nodeLocation)
         {
             this.expression = expression;
             this.ordering = ordering;
+            this.nodeLocation = nodeLocation;
         }
 
         public String getExpression()
@@ -132,6 +141,62 @@ public class QueryAnalysis
         {
             return ordering;
         }
+
+        public NodeLocation getNodeLocation()
+        {
+            return nodeLocation;
+        }
+    }
+
+    public static class GroupByKey
+    {
+        private final String expression;
+        private final NodeLocation nodeLocation;
+
+        public GroupByKey(String expression, NodeLocation nodeLocation)
+        {
+            this.expression = expression;
+            this.nodeLocation = nodeLocation;
+        }
+
+        public String getExpression()
+        {
+            return expression;
+        }
+
+        public NodeLocation getNodeLocation()
+        {
+            return nodeLocation;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            GroupByKey that = (GroupByKey) o;
+            return Objects.equals(expression, that.expression) &&
+                    Objects.equals(nodeLocation, that.nodeLocation);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(expression, nodeLocation);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "GroupByKey{" +
+                    "expression='" + expression + '\'' +
+                    ", nodeLocation=" + nodeLocation +
+                    '}';
+        }
     }
 
     public static class Builder
@@ -139,7 +204,7 @@ public class QueryAnalysis
         private final List<ColumnAnalysis> selectItems = new ArrayList<>();
         private RelationAnalysis relation;
         private FilterAnalysis filter;
-        private List<List<String>> groupByKeys;
+        private List<List<GroupByKey>> groupByKeys;
         private List<SortItemAnalysis> sortings;
         private boolean isSubqueryOrCte;
 
@@ -173,7 +238,7 @@ public class QueryAnalysis
             return this;
         }
 
-        public Builder setGroupByKeys(List<List<String>> groupByKeys)
+        public Builder setGroupByKeys(List<List<GroupByKey>> groupByKeys)
         {
             this.groupByKeys = groupByKeys;
             return this;

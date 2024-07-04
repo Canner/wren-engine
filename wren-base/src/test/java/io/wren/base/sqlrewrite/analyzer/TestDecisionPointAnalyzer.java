@@ -14,6 +14,7 @@
 
 package io.wren.base.sqlrewrite.analyzer;
 
+import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.SortItem;
 import io.trino.sql.tree.Statement;
 import io.wren.base.SessionContext;
@@ -104,12 +105,16 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(2);
         assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("custkey");
+        assertThat(result.get(0).getSelectItems().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 8));
         assertThat(result.get(0).getSelectItems().get(1).getExpression()).isEqualTo("name");
+        assertThat(result.get(0).getSelectItems().get(1).getNodeLocation()).isEqualTo(new NodeLocation(1, 17));
 
         statement = parseSql("SELECT * FROM customer");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
+        assertThat(result.get(0).getSelectItems().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 8));
+        assertThat(result.get(0).getSelectItems().get(1).getNodeLocation()).isEqualTo(new NodeLocation(1, 8));
 
         statement = parseSql("SELECT * FROM customer, orders");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -120,6 +125,10 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(9);
+        assertThat(result.get(0).getSelectItems().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 8));
+        assertThat(result.get(0).getSelectItems().stream()
+                .filter(item -> item.getExpression().equals("orderkey")).findAny().orElseThrow(() -> new AssertionError("orderkey not found")).getNodeLocation())
+                .isEqualTo(new NodeLocation(1, 20));
 
         statement = parseSql("SELECT c.*, orderkey FROM customer c JOIN orders o ON c.custkey = o.custkey");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -133,15 +142,19 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("custkey");
         assertThat(result.get(0).getSelectItems().get(0).getProperties().get(INCLUDE_FUNCTION_CALL)).isEqualTo("false");
         assertThat(result.get(0).getSelectItems().get(0).getProperties().get(INCLUDE_MATHEMATICAL_OPERATION)).isEqualTo("false");
+        assertThat(result.get(0).getSelectItems().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 8));
         assertThat(result.get(0).getSelectItems().get(1).getExpression()).isEqualTo("date_trunc('MONTH', orderdate)");
         assertThat(result.get(0).getSelectItems().get(1).getProperties().get(INCLUDE_FUNCTION_CALL)).isEqualTo("true");
         assertThat(result.get(0).getSelectItems().get(1).getProperties().get(INCLUDE_MATHEMATICAL_OPERATION)).isEqualTo("false");
+        assertThat(result.get(0).getSelectItems().get(1).getNodeLocation()).isEqualTo(new NodeLocation(1, 17));
         assertThat(result.get(0).getSelectItems().get(2).getExpression()).isEqualTo("(custkey + 1)");
         assertThat(result.get(0).getSelectItems().get(2).getProperties().get(INCLUDE_FUNCTION_CALL)).isEqualTo("false");
         assertThat(result.get(0).getSelectItems().get(2).getProperties().get(INCLUDE_MATHEMATICAL_OPERATION)).isEqualTo("true");
+        assertThat(result.get(0).getSelectItems().get(2).getNodeLocation()).isEqualTo(new NodeLocation(1, 49));
         assertThat(result.get(0).getSelectItems().get(3).getExpression()).isEqualTo("mod((custkey + 1), 10)");
         assertThat(result.get(0).getSelectItems().get(3).getProperties().get(INCLUDE_FUNCTION_CALL)).isEqualTo("true");
         assertThat(result.get(0).getSelectItems().get(3).getProperties().get(INCLUDE_MATHEMATICAL_OPERATION)).isEqualTo("true");
+        assertThat(result.get(0).getSelectItems().get(3).getNodeLocation()).isEqualTo(new NodeLocation(1, 63));
 
         statement = parseSql("SELECT custkey ckey, orderkey okey FROM customer");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -173,13 +186,16 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.IMPLICIT_JOIN);
+        assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(new NodeLocation(1, 1));
         if (result.get(0).getRelation() instanceof JoinRelation) {
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
             assertThat(joinRelation.getLeft().getAlias()).isNull();
             assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
             assertThat(((TableRelation) joinRelation.getLeft()).getTableName()).isEqualTo("customer");
             assertThat(joinRelation.getRight().getAlias()).isNull();
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 25));
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getExprSources()).isEmpty();
         }
@@ -192,15 +208,20 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+        assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
         if (result.get(0).getRelation() instanceof JoinRelation) {
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
             assertThat(joinRelation.getLeft().getAlias()).isNull();
             assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
             assertThat(((TableRelation) joinRelation.getLeft()).getTableName()).isEqualTo("customer");
             assertThat(joinRelation.getRight().getAlias()).isNull();
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 29));
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (customer.custkey = orders.custkey)");
+            assertThat(joinRelation.getExprSources().get(0).nodeLocation()).isEqualTo(new NodeLocation(1, 39));
+            assertThat(joinRelation.getExprSources().get(1).nodeLocation()).isEqualTo(new NodeLocation(1, 58));
         }
         else {
             throw new AssertionError("wrong type");
@@ -211,19 +232,22 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getAlias()).isEqualTo("join_relation");
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+        assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
         if (result.get(0).getRelation() instanceof JoinRelation) {
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
             assertThat(joinRelation.getLeft().getAlias()).isNull();
             assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 16));
             assertThat(((TableRelation) joinRelation.getLeft()).getTableName()).isEqualTo("customer");
             assertThat(joinRelation.getRight().getAlias()).isNull();
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 30));
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (customer.custkey = orders.custkey)");
             assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("customer.custkey", "customer"),
-                    new RelationAnalysis.ExprSource("orders.custkey", "orders")));
+                    new RelationAnalysis.ExprSource("customer.custkey", "customer", new NodeLocation(1, 40)),
+                    new RelationAnalysis.ExprSource("orders.custkey", "orders", new NodeLocation(1, 59))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -233,10 +257,13 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         if (result.get(0).getRelation() instanceof JoinRelation) {
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
+            assertThat(joinRelation.getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 16));
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 32));
             assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("c.custkey", "customer"),
-                    new RelationAnalysis.ExprSource("o.custkey", "orders")));
+                    new RelationAnalysis.ExprSource("c.custkey", "customer", new NodeLocation(1, 44)),
+                    new RelationAnalysis.ExprSource("o.custkey", "orders", new NodeLocation(1, 56))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -247,19 +274,24 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getRelation().getAlias()).isNull();
         assertThat(result.get(0).getRelation().getType()).isEqualTo(RelationAnalysis.Type.LEFT_JOIN);
+        assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
         if (result.get(0).getRelation() instanceof JoinRelation) {
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
             assertThat(joinRelation.getLeft().getAlias()).isNull();
             assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.INNER_JOIN);
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
             assertThat(((JoinRelation) joinRelation.getLeft()).getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((JoinRelation) joinRelation.getLeft()).getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(((JoinRelation) joinRelation.getLeft()).getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 15));
+            assertThat(((JoinRelation) joinRelation.getLeft()).getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 29));
             assertThat(joinRelation.getRight().getAlias()).isNull();
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 83));
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("lineitem");
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (orders.orderkey = lineitem.orderkey)");
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("lineitem.orderkey", "lineitem"),
-                    new RelationAnalysis.ExprSource("orders.orderkey", "orders")));
+                    new RelationAnalysis.ExprSource("lineitem.orderkey", "lineitem", new NodeLocation(1, 113)),
+                    new RelationAnalysis.ExprSource("orders.orderkey", "orders", new NodeLocation(1, 95))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -280,8 +312,8 @@ public class TestDecisionPointAnalyzer
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo("USING (custkey)");
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("custkey", "customer"),
-                    new RelationAnalysis.ExprSource("custkey", "orders")));
+                    new RelationAnalysis.ExprSource("custkey", "customer", new NodeLocation(1, 43)),
+                    new RelationAnalysis.ExprSource("custkey", "orders", new NodeLocation(1, 43))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -301,6 +333,9 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("customer");
             assertThat(joinRelation.getCriteria()).isEqualTo("USING (custkey, name)");
+            assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
+                    new RelationAnalysis.ExprSource("custkey", "customer", new NodeLocation(1, 45)),
+                    new RelationAnalysis.ExprSource("name", "customer", new NodeLocation(1, 54))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -315,14 +350,17 @@ public class TestDecisionPointAnalyzer
             JoinRelation joinRelation = (JoinRelation) result.get(0).getRelation();
             assertThat(joinRelation.getLeft().getAlias()).isNull();
             assertThat(joinRelation.getLeft().getType()).isEqualTo(RelationAnalysis.Type.TABLE);
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 16));
             assertThat(((TableRelation) joinRelation.getLeft()).getTableName()).isEqualTo("customer");
+            assertThat(joinRelation.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 16));
             assertThat(joinRelation.getRight().getAlias()).isEqualTo("orders");
             assertThat(joinRelation.getRight().getType()).isEqualTo(RelationAnalysis.Type.SUBQUERY);
+            assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 30));
             assertThat(((SubqueryRelation) joinRelation.getRight()).getBody().size()).isEqualTo(1);
             assertThat(joinRelation.getCriteria()).isEqualTo("ON (customer.custkey = orders.custkey)");
             assertThat(joinRelation.getExprSources().size()).isEqualTo(1);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("customer.custkey", "customer")));
+                    new RelationAnalysis.ExprSource("customer.custkey", "customer", new NodeLocation(1, 92))));
         }
         else {
             throw new AssertionError("wrong type");
@@ -336,6 +374,7 @@ public class TestDecisionPointAnalyzer
         List<QueryAnalysis> result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
+        assertThat(result.get(0).getFilter().getNodeLocation()).isEqualTo(new NodeLocation(1, 38));
         if (result.get(0).getFilter() instanceof ExpressionAnalysis) {
             ExpressionAnalysis expressionAnalysis = (ExpressionAnalysis) result.get(0).getFilter();
             assertThat(expressionAnalysis.getNode()).isEqualTo("(custkey = 1)");
@@ -348,6 +387,7 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.AND);
+        assertThat(result.get(0).getFilter().getNodeLocation()).isEqualTo(new NodeLocation(1, 30));
         if (result.get(0).getFilter() instanceof LogicalAnalysis) {
             LogicalAnalysis logicalAnalysis = (LogicalAnalysis) result.get(0).getFilter();
             assertThat(logicalAnalysis.getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
@@ -372,16 +412,21 @@ public class TestDecisionPointAnalyzer
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.OR);
+        assertThat(result.get(0).getFilter().getNodeLocation()).isEqualTo(new NodeLocation(1, 30));
         if (result.get(0).getFilter() instanceof LogicalAnalysis) {
             LogicalAnalysis logicalAnalysis = (LogicalAnalysis) result.get(0).getFilter();
             assertThat(logicalAnalysis.getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
+            assertThat(logicalAnalysis.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 38));
             assertThat(((ExpressionAnalysis) logicalAnalysis.getLeft()).getNode()).isEqualTo("(custkey = 1)");
             assertThat(logicalAnalysis.getRight().getType()).isEqualTo(FilterAnalysis.Type.AND);
+            assertThat(logicalAnalysis.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 46));
             if (logicalAnalysis.getRight() instanceof LogicalAnalysis) {
                 LogicalAnalysis andLogicalAnalysis = (LogicalAnalysis) logicalAnalysis.getRight();
                 assertThat(andLogicalAnalysis.getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
+                assertThat(andLogicalAnalysis.getLeft().getNodeLocation()).isEqualTo(new NodeLocation(1, 51));
                 assertThat(((ExpressionAnalysis) andLogicalAnalysis.getLeft()).getNode()).isEqualTo("(name = 'test')");
                 assertThat(andLogicalAnalysis.getRight().getType()).isEqualTo(FilterAnalysis.Type.EXPR);
+                assertThat(andLogicalAnalysis.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 72));
                 assertThat(((ExpressionAnalysis) andLogicalAnalysis.getRight()).getNode()).isEqualTo("(address = 'test')");
             }
         }
@@ -430,41 +475,41 @@ public class TestDecisionPointAnalyzer
         List<QueryAnalysis> result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("custkey", new NodeLocation(1, 49)));
 
         statement = parseSql("SELECT c.custkey, count(*) FROM customer c GROUP BY c.custkey");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("c.custkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("c.custkey", new NodeLocation(1, 53)));
 
         statement = parseSql("SELECT custkey, count(*) FROM customer GROUP BY custkey, name");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(2);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
-        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("name");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("custkey", new NodeLocation(1, 49)));
+        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("name", new NodeLocation(1, 58)));
 
         statement = parseSql("SELECT custkey, count(*) FROM customer GROUP BY (custkey, name), nationkey");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(2);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
-        assertThat(result.get(0).getGroupByKeys().get(0).get(1)).isEqualTo("name");
-        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("nationkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("custkey", new NodeLocation(1, 50)));
+        assertThat(result.get(0).getGroupByKeys().get(0).get(1)).isEqualTo(new QueryAnalysis.GroupByKey("name", new NodeLocation(1, 59)));
+        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("nationkey", new NodeLocation(1, 66)));
 
         statement = parseSql("SELECT custkey, count(*) FROM customer GROUP BY 1");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("custkey", new NodeLocation(1, 49)));
 
         statement = parseSql("SELECT c.custkey, count(*) FROM customer c GROUP BY 1");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(0).size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("c.custkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("c.custkey", new NodeLocation(1, 53)));
 
         statement = parseSql("SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -473,9 +518,9 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getGroupByKeys().get(0).size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(1).size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().get(2).size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo("custkey");
-        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo("name");
-        assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo("nationkey");
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("custkey", new NodeLocation(1, 55)));
+        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("name", new NodeLocation(1, 58)));
+        assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo(new QueryAnalysis.GroupByKey("nationkey", new NodeLocation(1, 61)));
     }
 
     @Test
@@ -487,6 +532,7 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSortings().size()).isEqualTo(1);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
         assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING);
+        assertThat(result.get(0).getSortings().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 45));
 
         statement = parseSql("SELECT custkey, name FROM customer ORDER BY custkey ASC, name DESC");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -494,8 +540,10 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSortings().size()).isEqualTo(2);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
         assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING);
+        assertThat(result.get(0).getSortings().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 45));
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
         assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING);
+        assertThat(result.get(0).getSortings().get(1).getNodeLocation()).isEqualTo(new NodeLocation(1, 58));
 
         statement = parseSql("SELECT custkey, name FROM customer ORDER BY 1 ASC, 2 DESC");
         result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
@@ -503,8 +551,10 @@ public class TestDecisionPointAnalyzer
         assertThat(result.get(0).getSortings().size()).isEqualTo(2);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
         assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING);
+        assertThat(result.get(0).getSortings().get(0).getNodeLocation()).isEqualTo(new NodeLocation(1, 45));
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
         assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING);
+        assertThat(result.get(0).getSortings().get(1).getNodeLocation()).isEqualTo(new NodeLocation(1, 52));
     }
 
     @Test
@@ -540,8 +590,8 @@ public class TestDecisionPointAnalyzer
         if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
             assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
-                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer", new NodeLocation(2, 29)),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders", new NodeLocation(2, 42))));
         }
 
         statement = parseSql("""
@@ -556,8 +606,8 @@ public class TestDecisionPointAnalyzer
         if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
             assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
-                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer", new NodeLocation(2, 29)),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders", new NodeLocation(2, 42))));
         }
 
         statement = parseSql("""
@@ -572,8 +622,8 @@ public class TestDecisionPointAnalyzer
         if (mainBody.getRelation() instanceof JoinRelation joinRelation) {
             assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
-                    new RelationAnalysis.ExprSource("t1.custkey", "customer"),
-                    new RelationAnalysis.ExprSource("t2.custkey", "orders")));
+                    new RelationAnalysis.ExprSource("t1.custkey", "customer", new NodeLocation(2, 33)),
+                    new RelationAnalysis.ExprSource("t2.custkey", "orders", new NodeLocation(2, 50))));
         }
     }
 

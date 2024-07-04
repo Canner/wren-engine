@@ -14,6 +14,8 @@
 
 package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
+import io.trino.sql.tree.NodeLocation;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -22,20 +24,20 @@ import static java.util.Objects.requireNonNull;
 
 public abstract class RelationAnalysis
 {
-    static JoinRelation join(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources)
+    static JoinRelation join(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
     {
         checkArgument(type != Type.TABLE && type != Type.SUBQUERY, "type should be a join type");
-        return new JoinRelation(type, alias, left, right, criteria, exprSources);
+        return new JoinRelation(type, alias, left, right, criteria, exprSources, nodeLocation);
     }
 
-    static TableRelation table(String tableName, String alias)
+    static TableRelation table(String tableName, String alias, NodeLocation nodeLocation)
     {
-        return new TableRelation(tableName, alias);
+        return new TableRelation(tableName, alias, nodeLocation);
     }
 
-    static SubqueryRelation subquery(String alias, List<QueryAnalysis> body)
+    static SubqueryRelation subquery(String alias, List<QueryAnalysis> body, NodeLocation nodeLocation)
     {
-        return new SubqueryRelation(alias, body);
+        return new SubqueryRelation(alias, body, nodeLocation);
     }
 
     public enum Type
@@ -52,11 +54,13 @@ public abstract class RelationAnalysis
 
     private final Type type;
     private final String alias;
+    private final NodeLocation nodeLocation;
 
-    public RelationAnalysis(Type type, String alias)
+    public RelationAnalysis(Type type, String alias, NodeLocation nodeLocation)
     {
         this.type = requireNonNull(type, "type is null");
         this.alias = alias;
+        this.nodeLocation = nodeLocation;
     }
 
     public Type getType()
@@ -69,6 +73,11 @@ public abstract class RelationAnalysis
         return alias;
     }
 
+    public NodeLocation getNodeLocation()
+    {
+        return nodeLocation;
+    }
+
     public static class JoinRelation
             extends RelationAnalysis
     {
@@ -77,9 +86,9 @@ public abstract class RelationAnalysis
         private final String criteria;
         private final List<ExprSource> exprSources;
 
-        public JoinRelation(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources)
+        public JoinRelation(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
         {
-            super(type, alias);
+            super(type, alias, nodeLocation);
             this.left = requireNonNull(left, "left is null");
             this.right = requireNonNull(right, "right is null");
             this.criteria = criteria;
@@ -112,9 +121,9 @@ public abstract class RelationAnalysis
     {
         private final String tableName;
 
-        public TableRelation(String tableName, String alias)
+        public TableRelation(String tableName, String alias, NodeLocation nodeLocation)
         {
-            super(Type.TABLE, alias);
+            super(Type.TABLE, alias, nodeLocation);
             this.tableName = requireNonNull(tableName, "tableName is null");
         }
 
@@ -129,9 +138,9 @@ public abstract class RelationAnalysis
     {
         private final List<QueryAnalysis> body;
 
-        public SubqueryRelation(String alias, List<QueryAnalysis> body)
+        public SubqueryRelation(String alias, List<QueryAnalysis> body, NodeLocation nodeLocation)
         {
-            super(Type.SUBQUERY, alias);
+            super(Type.SUBQUERY, alias, nodeLocation);
             this.body = requireNonNull(body, "body is null");
         }
 
@@ -141,7 +150,7 @@ public abstract class RelationAnalysis
         }
     }
 
-    public record ExprSource(String expression, String sourceDataset)
+    public record ExprSource(String expression, String sourceDataset, NodeLocation nodeLocation)
     {
         @Override
         public boolean equals(Object o)
@@ -155,13 +164,15 @@ public abstract class RelationAnalysis
             }
 
             ExprSource that = (ExprSource) o;
-            return Objects.equals(expression, that.expression) && Objects.equals(sourceDataset, that.sourceDataset);
+            return Objects.equals(expression, that.expression) &&
+                    Objects.equals(sourceDataset, that.sourceDataset)
+                    && Objects.equals(nodeLocation, that.nodeLocation);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, sourceDataset);
+            return Objects.hash(expression, sourceDataset, nodeLocation);
         }
     }
 }

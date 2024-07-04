@@ -15,6 +15,7 @@
 package io.wren.main.web;
 
 import com.google.inject.Inject;
+import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.Statement;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
@@ -22,6 +23,7 @@ import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
+import io.wren.main.web.dto.NodeLocationDto;
 import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryAnalysisDto.ColumnAnalysisDto;
 import io.wren.main.web.dto.QueryAnalysisDto.FilterAnalysisDto;
@@ -77,22 +79,32 @@ public class AnalysisResource
                 queryAnalysis.getSelectItems().stream().map(AnalysisResource::toColumnAnalysisDto).toList(),
                 toRelationAnalysisDto(queryAnalysis.getRelation()),
                 toFilterAnalysisDto(queryAnalysis.getFilter()),
-                queryAnalysis.getGroupByKeys(),
+                queryAnalysis.getGroupByKeys().stream().map(groupByKeys -> groupByKeys.stream().map(AnalysisResource::toGroupByKeyDto).toList()).toList(),
                 queryAnalysis.getSortings().stream().map(AnalysisResource::toSortItemAnalysisDto).toList(),
                 queryAnalysis.isSubqueryOrCte());
     }
 
     private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)
     {
-        return new ColumnAnalysisDto(columnAnalysis.getAliasName(), columnAnalysis.getExpression(), columnAnalysis.getProperties());
+        return new ColumnAnalysisDto(columnAnalysis.getAliasName(), columnAnalysis.getExpression(), columnAnalysis.getProperties(), toNodeLocationDto(columnAnalysis.getNodeLocation()));
     }
 
     private static FilterAnalysisDto toFilterAnalysisDto(FilterAnalysis filterAnalysis)
     {
         return switch (filterAnalysis) {
-            case FilterAnalysis.ExpressionAnalysis exprAnalysis -> new FilterAnalysisDto(exprAnalysis.getType().name(), null, null, exprAnalysis.getNode());
+            case FilterAnalysis.ExpressionAnalysis exprAnalysis -> new FilterAnalysisDto(
+                    exprAnalysis.getType().name(),
+                    null,
+                    null,
+                    exprAnalysis.getNode(),
+                    toNodeLocationDto(exprAnalysis.getNodeLocation()));
             case FilterAnalysis.LogicalAnalysis logicalAnalysis ->
-                    new FilterAnalysisDto(logicalAnalysis.getType().name(), toFilterAnalysisDto(logicalAnalysis.getLeft()), toFilterAnalysisDto(logicalAnalysis.getRight()), null);
+                    new FilterAnalysisDto(
+                            logicalAnalysis.getType().name(),
+                            toFilterAnalysisDto(logicalAnalysis.getLeft()),
+                            toFilterAnalysisDto(logicalAnalysis.getRight()),
+                            null,
+                            toNodeLocationDto(logicalAnalysis.getNodeLocation()));
             case null -> null;
             default -> throw new IllegalArgumentException("Unsupported filter analysis: " + filterAnalysis);
         };
@@ -102,7 +114,15 @@ public class AnalysisResource
     {
         return switch (relationAnalysis) {
             case RelationAnalysis.TableRelation tableRelation ->
-                    new RelationAnalysisDto(tableRelation.getType().name(), tableRelation.getAlias(), null, null, null, tableRelation.getTableName(), null, null);
+                    new RelationAnalysisDto(tableRelation.getType().name(),
+                            tableRelation.getAlias(),
+                            null,
+                            null,
+                            null,
+                            tableRelation.getTableName(),
+                            null,
+                            null,
+                            toNodeLocationDto(tableRelation.getNodeLocation()));
             case RelationAnalysis.JoinRelation joinRelation -> new RelationAnalysisDto(
                     joinRelation.getType().name(),
                     joinRelation.getAlias(),
@@ -111,7 +131,8 @@ public class AnalysisResource
                     joinRelation.getCriteria(),
                     null,
                     null,
-                    joinRelation.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
+                    joinRelation.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList(),
+                    toNodeLocationDto(joinRelation.getNodeLocation()));
             case RelationAnalysis.SubqueryRelation subqueryRelation -> new RelationAnalysisDto(
                     subqueryRelation.getType().name(),
                     subqueryRelation.getAlias(),
@@ -120,7 +141,8 @@ public class AnalysisResource
                     null,
                     null,
                     subqueryRelation.getBody().stream().map(AnalysisResource::toQueryAnalysisDto).toList(),
-                    null);
+                    null,
+                    toNodeLocationDto(subqueryRelation.getNodeLocation()));
             case null -> null;
             default -> throw new IllegalArgumentException("Unsupported relation analysis: " + relationAnalysis);
         };
@@ -128,11 +150,21 @@ public class AnalysisResource
 
     private static SortItemAnalysisDto toSortItemAnalysisDto(QueryAnalysis.SortItemAnalysis sortItemAnalysis)
     {
-        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name());
+        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name(), toNodeLocationDto(sortItemAnalysis.getNodeLocation()));
     }
 
     private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(RelationAnalysis.ExprSource exprSource)
     {
-        return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset());
+        return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset(), toNodeLocationDto(exprSource.nodeLocation()));
+    }
+
+    private static QueryAnalysisDto.GroupByKeyDto toGroupByKeyDto(QueryAnalysis.GroupByKey groupByKey)
+    {
+        return new QueryAnalysisDto.GroupByKeyDto(groupByKey.getExpression(), toNodeLocationDto(groupByKey.getNodeLocation()));
+    }
+
+    private static NodeLocationDto toNodeLocationDto(NodeLocation nodeLocation)
+    {
+        return new NodeLocationDto(nodeLocation.getLineNumber(), nodeLocation.getColumnNumber());
     }
 }
