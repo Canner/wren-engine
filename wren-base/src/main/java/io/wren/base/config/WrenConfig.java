@@ -27,9 +27,12 @@ public class WrenConfig
 
     public enum DataSourceType
     {
+        @Deprecated
         BIGQUERY,
+        @Deprecated
         POSTGRES,
         DUCKDB,
+        @Deprecated
         SNOWFLAKE
     }
 
