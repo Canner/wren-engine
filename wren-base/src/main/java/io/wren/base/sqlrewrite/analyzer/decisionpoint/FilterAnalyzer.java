@@ -42,7 +42,7 @@ public class FilterAnalyzer
             if (node instanceof LogicalExpression) {
                 return process(node, context);
             }
-            return FilterAnalysis.expression(ExpressionFormatter.formatExpression(node, SqlFormatter.Dialect.DEFAULT));
+            return FilterAnalysis.expression(ExpressionFormatter.formatExpression(node, SqlFormatter.Dialect.DEFAULT), node.getLocation().orElse(null));
         }
 
         @Override
@@ -50,13 +50,13 @@ public class FilterAnalyzer
         {
             if (parent == null || parent instanceof LogicalExpression) {
                 if (node.getOperator().equals(LogicalExpression.Operator.AND)) {
-                    return FilterAnalysis.and(process(node.getChildren().get(0), node), process(node.getChildren().get(1), node));
+                    return FilterAnalysis.and(process(node.getChildren().get(0), node), process(node.getChildren().get(1), node), node.getLocation().orElse(null));
                 }
                 if (node.getOperator().equals(LogicalExpression.Operator.OR)) {
-                    return FilterAnalysis.or(process(node.getChildren().get(0), node), process(node.getChildren().get(1), node));
+                    return FilterAnalysis.or(process(node.getChildren().get(0), node), process(node.getChildren().get(1), node), node.getLocation().orElse(null));
                 }
             }
-            return FilterAnalysis.expression(ExpressionFormatter.formatExpression(node, SqlFormatter.Dialect.DEFAULT));
+            return FilterAnalysis.expression(ExpressionFormatter.formatExpression(node, SqlFormatter.Dialect.DEFAULT), node.getLocation().orElse(null));
         }
     }
 }

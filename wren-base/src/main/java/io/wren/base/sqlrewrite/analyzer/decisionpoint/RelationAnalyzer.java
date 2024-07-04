@@ -79,7 +79,7 @@ public class RelationAnalyzer
         @Override
         protected RelationAnalysis visitTable(Table node, Void context)
         {
-            return new RelationAnalysis.TableRelation(node.getName().toString(), null);
+            return new RelationAnalysis.TableRelation(node.getName().toString(), null, node.getLocation().orElse(null));
         }
 
         @Override
@@ -110,7 +110,7 @@ public class RelationAnalyzer
             List<QueryAnalysis> analyses = DecisionPointAnalyzer.analyze(node.getQuery(), sessionContext, wrenMDL)
                     .stream().map(analysis -> QueryAnalysis.Builder.from(analysis).setSubqueryOrCte(true).build())
                     .toList();
-            return new RelationAnalysis.SubqueryRelation(null, analyses);
+            return new RelationAnalysis.SubqueryRelation(null, analyses, node.getLocation().orElse(null));
         }
 
         @Override
@@ -132,7 +132,8 @@ public class RelationAnalyzer
             return new RelationAnalysis.JoinRelation(
                     RelationAnalysis.Type.valueOf(format("%s_JOIN", node.getType())),
                     null, left, right, node.getCriteria().map(this::formatCriteria).orElse(null),
-                    exprSources);
+                    exprSources,
+                    node.getLocation().orElse(null));
         }
 
         private String formatCriteria(JoinCriteria criteria)
@@ -180,10 +181,17 @@ public class RelationAnalyzer
             RelationAnalysis relationAnalysis = process(node.getRelation(), context);
 
             return switch (relationAnalysis) {
-                case RelationAnalysis.TableRelation tableRelation -> RelationAnalysis.table(tableRelation.getTableName(), node.getAlias().getValue());
+                case RelationAnalysis.TableRelation tableRelation -> RelationAnalysis.table(tableRelation.getTableName(), node.getAlias().getValue(), node.getLocation().orElse(null));
                 case RelationAnalysis.JoinRelation joinRelation ->
-                        RelationAnalysis.join(joinRelation.getType(), node.getAlias().getValue(), joinRelation.getLeft(), joinRelation.getRight(), joinRelation.getCriteria(), joinRelation.getExprSources());
-                case RelationAnalysis.SubqueryRelation subqueryRelation -> RelationAnalysis.subquery(node.getAlias().getValue(), subqueryRelation.getBody());
+                        RelationAnalysis.join(
+                                joinRelation.getType(),
+                                node.getAlias().getValue(),
+                                joinRelation.getLeft(),
+                                joinRelation.getRight(),
+                                joinRelation.getCriteria(),
+                                joinRelation.getExprSources(),
+                                node.getLocation().orElse(null));
+                case RelationAnalysis.SubqueryRelation subqueryRelation -> RelationAnalysis.subquery(node.getAlias().getValue(), subqueryRelation.getBody(), node.getLocation().orElse(null));
                 default -> throw new IllegalStateException("Unexpected value: " + relationAnalysis);
             };
         }
@@ -240,7 +248,7 @@ public class RelationAnalyzer
         {
             scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
                     .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getSourceDatasetName().get())));
+                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getSourceDatasetName().get(), node.getLocation().orElse(null))));
             return null;
         }
 
@@ -250,7 +258,7 @@ public class RelationAnalyzer
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
                     scope.getRelationType().resolveFields(qualifiedName)
                             .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get()))));
+                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), node.getLocation().orElse(null)))));
             return null;
         }
     }
