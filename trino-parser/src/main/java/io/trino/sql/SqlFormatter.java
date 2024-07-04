@@ -697,7 +697,7 @@ public final class SqlFormatter
 
         private void processRelationSuffix(Relation relation, Integer indent)
         {
-            if ((relation instanceof AliasedRelation) || (relation instanceof SampledRelation) || (relation instanceof PatternRecognitionRelation)) {
+            if ((relation instanceof AliasedRelation) || (relation instanceof SampledRelation) || (relation instanceof PatternRecognitionRelation) || (relation instanceof Join)) {
                 builder.append("( ");
                 process(relation, indent + 1);
                 append(indent, ")");

@@ -184,4 +184,18 @@ public class TestWrenWithDuckDB
                         column("custkey_call_concat", "varchar")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
+
+    @Test
+    public void testQueryJoinAliased()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select totalprice from (Orders o join Customer c on o.custkey = c.custkey) join_relation limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("totalprice", "DECIMAL(15,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
+
+        queryResultDto = query(manifest, "select totalprice from ((Orders o join Customer c on o.custkey = c.custkey) j join Lineitem l on j.orderkey = l.orderkey) limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("totalprice", "DECIMAL(15,2)")));
+        assertThat(queryResultDto.getData().size()).isEqualTo(100);
+    }
 }
