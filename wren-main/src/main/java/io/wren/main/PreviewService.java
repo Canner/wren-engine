@@ -30,6 +30,7 @@ package io.wren.main;
 
 import com.google.common.collect.Streams;
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.wren.base.AnalyzedMDL;
 import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
@@ -50,6 +51,7 @@ import static java.util.stream.Collectors.toList;
 
 public class PreviewService
 {
+    private static final Logger LOG = Logger.get(PreviewService.class);
     private final Metadata metadata;
 
     private final SqlConverter sqlConverter;
@@ -101,6 +103,7 @@ public class PreviewService
 
             String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
             if (isModelingOnly) {
+                LOG.info("Planned SQL: %s", planned);
                 return planned;
             }
             return sqlConverter.convert(planned, sessionContext);

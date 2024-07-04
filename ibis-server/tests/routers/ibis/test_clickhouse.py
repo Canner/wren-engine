@@ -43,6 +43,24 @@ def clickhouse(request) -> ClickHouseContainer:
         os.path.dirname(__file__), "../../resource/tpch/data/orders.parquet"
     )
     client.insert_df("orders", pd.read_parquet(data_path))
+    client.command("""
+        CREATE TABLE customer (
+            c_custkey        Int32,
+            c_name           String,
+            c_address        String,
+            c_nationkey      Int32,
+            c_phone          String,
+            c_acctbal        Decimal(15,2),
+            c_mktsegment     String,
+            c_comment        String
+        ) 
+        ENGINE = MergeTree
+        ORDER BY (c_custkey)
+    """)
+    data_path = os.path.join(
+        os.path.dirname(__file__), "../../resource/tpch/data/customer.parquet"
+    )
+    client.insert_df("customer", pd.read_parquet(data_path))
     request.addfinalizer(ch.stop)
     return ch
 
@@ -87,9 +105,48 @@ class TestClickHouse:
                         "expression": "toDateTime64('2024-01-01T23:59:59', 9, 'UTC')",
                         "type": "timestamp",
                     },
+                    {
+                        "name": "customer",
+                        "type": "Customer",
+                        "relationship": "OrdersCustomer",
+                    },
+                    {
+                        "name": "customer_name",
+                        "type": "varchar",
+                        "isCalculated": True,
+                        "expression": "customer.name",
+                    },
                 ],
                 "primaryKey": "orderkey",
-            }
+            },
+            {
+                "name": "Customer",
+                "refSql": "select * from test.customer",
+                "columns": [
+                    {"name": "custkey", "expression": "c_custkey", "type": "integer"},
+                    {"name": "name", "expression": "c_name", "type": "varchar"},
+                    {
+                        "name": "orders",
+                        "type": "Orders",
+                        "relationship": "OrdersCustomer",
+                    },
+                    {
+                        "name": "totalprice",
+                        "type": "float",
+                        "isCalculated": True,
+                        "expression": "sum(orders.totalprice)",
+                    },
+                ],
+                "primaryKey": "custkey",
+            },
+        ],
+        "relationships": [
+            {
+                "name": "OrdersCustomer",
+                "models": ["Orders", "Customer"],
+                "joinType": "MANY_TO_ONE",
+                "condition": "Orders.custkey = Customer.custkey",
+            },
         ],
     }
 
@@ -122,7 +179,7 @@ class TestClickHouse:
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["columns"]) == 9
         assert len(result["data"]) == 1
         assert result["data"][0] == [
             1,
@@ -133,6 +190,7 @@ class TestClickHouse:
             "1_370",
             1704153599000,
             1704153599000,
+            "Customer#000000370",
         ]
         assert result["dtypes"] == {
             "orderkey": "int32",
@@ -143,6 +201,7 @@ class TestClickHouse:
             "order_cust_key": "object",
             "timestamp": "datetime64[ns]",
             "timestamptz": "datetime64[ns, UTC]",
+            "customer_name": "object",
         }
 
     def test_query_with_connection_url(self, clickhouse: ClickHouseContainer):
@@ -157,7 +216,7 @@ class TestClickHouse:
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["columns"]) == 9
         assert len(result["data"]) == 1
         assert result["data"][0][0] == 1
         assert result["dtypes"] is not None
@@ -180,7 +239,7 @@ class TestClickHouse:
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result["columns"]) == len(self.manifest["models"][0]["columns"])
+        assert len(result["columns"]) == 9
         assert len(result["data"]) == 1
         assert result["data"][0] == [
             1,
@@ -191,6 +250,7 @@ class TestClickHouse:
             "1_370",
             "2024-01-01 23:59:59.000000",
             "2024-01-01 23:59:59.000000 UTC",
+            "Customer#000000370",
         ]
         assert result["dtypes"] == {
             "orderkey": "int32",
@@ -201,6 +261,7 @@ class TestClickHouse:
             "order_cust_key": "object",
             "timestamp": "object",
             "timestamptz": "object",
+            "customer_name": "object",
         }
 
     def test_query_with_limit(self, clickhouse: ClickHouseContainer):
@@ -230,6 +291,63 @@ class TestClickHouse:
         assert response.status_code == 200
         result = response.json()
         assert len(result["data"]) == 1
+
+    def test_query_join(self, clickhouse: ClickHouseContainer):
+        connection_info = self.to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{self.base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "sql": 'SELECT name as customer_name FROM "Orders" join "Customer" on "Orders".custkey = "Customer".custkey WHERE custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == ["Customer#000000370"]
+        assert result["dtypes"] == {
+            "customer_name": "object",
+        }
+
+    def test_query_to_one_relationship(self, clickhouse: ClickHouseContainer):
+        connection_info = self.to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{self.base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "sql": 'SELECT customer_name FROM "Orders" where custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == ["Customer#000000370"]
+        assert result["dtypes"] == {
+            "customer_name": "object",
+        }
+
+    def test_query_to_many_relationship(self, clickhouse: ClickHouseContainer):
+        connection_info = self.to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{self.base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": self.manifest_str,
+                "sql": 'SELECT totalprice FROM "Customer" where custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [2860895.79]
+        assert result["dtypes"] == {
+            "totalprice": "object",
+        }
 
     def test_query_without_manifest(self, clickhouse: ClickHouseContainer):
         connection_info = self.to_connection_info(clickhouse)
