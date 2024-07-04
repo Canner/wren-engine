@@ -349,6 +349,19 @@ class TestClickHouse:
             "totalprice": "object",
         }
 
+    def test_query_alias_join(self, clickhouse: ClickHouseContainer):
+        connection_info = self.to_connection_info(clickhouse)
+        # ClickHouse does not support alias join
+        with pytest.raises(Exception):
+            client.post(
+                url=f"{self.base_url}/query",
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": self.manifest_str,
+                    "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
+                },
+            )
+
     def test_query_without_manifest(self, clickhouse: ClickHouseContainer):
         connection_info = self.to_connection_info(clickhouse)
         response = client.post(

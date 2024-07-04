@@ -153,8 +153,8 @@ public class TestAnalysisResource
         assertThat(result.get(0).getRelation().getRight().getNodeLocation()).isEqualTo(nodeLocationDto(1, 31));
         assertThat(result.get(0).getRelation().getCriteria()).isEqualTo("ON (c.custkey = o.custkey)");
         assertThat(Set.copyOf(result.get(0).getRelation().getExprSources()))
-                .isEqualTo(Set.of(new QueryAnalysisDto.ExprSourceDto("c.custkey", "customer", nodeLocationDto(1, 8)),
-                        new QueryAnalysisDto.ExprSourceDto("o.custkey", "orders", nodeLocationDto(1, 8))));
+                .isEqualTo(Set.of(new QueryAnalysisDto.ExprSourceDto("c.custkey", "customer", nodeLocationDto(1, 43)),
+                        new QueryAnalysisDto.ExprSourceDto("o.custkey", "orders", nodeLocationDto(1, 55))));
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT * FROM customer WHERE custkey = 1 OR (name = 'test' AND address = 'test')"));
         assertThat(result.size()).isEqualTo(1);

@@ -46,4 +46,26 @@ public class TestSqlFormatter
                 INNER JOIN c ON (a.x = c.z)
                 """, formattedSql);
     }
+
+    @Test
+    public void testFormatAliasJoin()
+    {
+        String sql = "SELECT * FROM (a JOIN b ON a.x = b.y) t1";
+        String formattedSql = SqlFormatter.formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions()));
+        assertEquals("""
+                SELECT *
+                FROM
+                  ( a
+                   INNER JOIN b ON (a.x = b.y)) t1
+                """, formattedSql);
+        sql = "SELECT * FROM ((a JOIN b ON a.x = b.y) t1 join c on t1.x = c.y)";
+        formattedSql = SqlFormatter.formatSql(SQL_PARSER.createStatement(sql, new ParsingOptions()));
+        assertEquals("""
+                SELECT *
+                FROM
+                  ( a
+                   INNER JOIN b ON (a.x = b.y)) t1
+                INNER JOIN c ON (t1.x = c.y)
+                """, formattedSql);
+    }
 }
