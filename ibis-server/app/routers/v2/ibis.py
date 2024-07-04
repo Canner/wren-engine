@@ -2,10 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
-from mdl.rewriter import Rewriter
 
 from app.dependencies import verify_query_dto
 from app.logger import log_dto
+from app.mdl.rewriter import Rewriter
 from app.model import (
     DryPlanDTO,
     QueryDTO,

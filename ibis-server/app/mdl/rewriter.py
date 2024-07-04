@@ -1,10 +1,10 @@
 import httpx
 import orjson
 import sqlglot
-from model.data_source import DataSource
 
 from app.config import get_config
 from app.logger import get_logger
+from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 
