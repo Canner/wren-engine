@@ -27,7 +27,7 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 def test_dry_plan():
     response = client.post(
-        url="/v2/ibis/dry-plan",
+        url="/v2/connector/dry-plan",
         json={
             "manifestStr": manifest_str,
             "sql": 'SELECT orderkey FROM "Orders" LIMIT 1',

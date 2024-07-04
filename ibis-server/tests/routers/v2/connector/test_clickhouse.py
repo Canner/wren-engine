@@ -40,7 +40,7 @@ def clickhouse(request) -> ClickHouseContainer:
         ORDER BY (o_orderkey)
     """)
     data_path = os.path.join(
-        os.path.dirname(__file__), "../../resource/tpch/data/orders.parquet"
+        os.path.dirname(__file__), "../../../resource/tpch/data/orders.parquet"
     )
     client.insert_df("orders", pd.read_parquet(data_path))
     client.command("""
@@ -58,7 +58,7 @@ def clickhouse(request) -> ClickHouseContainer:
         ORDER BY (c_custkey)
     """)
     data_path = os.path.join(
-        os.path.dirname(__file__), "../../resource/tpch/data/customer.parquet"
+        os.path.dirname(__file__), "../../../resource/tpch/data/customer.parquet"
     )
     client.insert_df("customer", pd.read_parquet(data_path))
     request.addfinalizer(ch.stop)
@@ -67,7 +67,7 @@ def clickhouse(request) -> ClickHouseContainer:
 
 @pytest.mark.clickhouse
 class TestClickHouse:
-    base_url = "/v2/ibis/clickhouse"
+    base_url = "/v2/connector/clickhouse"
 
     manifest = {
         "catalog": "my_catalog",
