@@ -3,6 +3,7 @@ from json import loads
 from app.model import ConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.bigquery import BigQueryMetadata
+from app.model.metadata.clickhouse import ClickHouseMetadata
 from app.model.metadata.dto import (
     Constraint,
     Table,
@@ -26,6 +27,9 @@ class MetadataFactory:
             return MySQLMetadata(connection_info)
         if data_source == DataSource.mssql:
             return MSSQLMetadata(connection_info)
+        if data_source == DataSource.clickhouse:
+            return ClickHouseMetadata(connection_info)
+
         raise NotImplementedError(f"Unsupported data source: {self}")
 
     def get_table_list(self) -> list[Table]:
