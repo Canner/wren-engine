@@ -2,10 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
+from mdl.rewriter import Rewriter
 
 from app.dependencies import verify_query_dto
 from app.logger import log_dto
 from app.model import (
+    DryPlanDTO,
     QueryDTO,
     ValidateDTO,
 )
@@ -56,3 +58,15 @@ def get_table_list(data_source: DataSource, dto: MetadataDTO) -> list[Table]:
 def get_constraints(data_source: DataSource, dto: MetadataDTO) -> list[Constraint]:
     metadata = MetadataFactory(data_source, dto.connection_info)
     return metadata.get_constraints()
+
+
+@router.post("/dry-plan")
+@log_dto
+def dry_plan(dto: DryPlanDTO) -> str:
+    return Rewriter(dto.manifest_str).rewrite(dto.sql)
+
+
+@router.post("/{data_source}/dry-plan")
+@log_dto
+def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
+    return Rewriter(dto.manifest_str, data_source).rewrite(dto.sql)

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.mdl.rewriter import rewrite
+from app.mdl.rewriter import Rewriter
 from app.model import ConnectionInfo
 from app.model.data_source import DataSource
 
@@ -17,15 +17,19 @@ class Connector:
         self.manifest_str = manifest_str
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
-        rewritten_sql = rewrite(self.manifest_str, sql)
+        rewritten_sql = Rewriter(self.manifest_str).rewrite(sql)
         return (
-            self.connection.sql(rewritten_sql, dialect="trino").limit(limit).to_pandas()
+            self.connection.sql(
+                rewritten_sql,
+            )
+            .limit(limit)
+            .to_pandas()
         )
 
     def dry_run(self, sql: str) -> None:
         try:
-            rewritten_sql = rewrite(self.manifest_str, sql)
-            self.connection.sql(rewritten_sql, dialect="trino")
+            rewritten_sql = Rewriter(self.manifest_str).rewrite(sql)
+            self.connection.sql(rewritten_sql)
         except Exception as e:
             raise QueryDryRunError(f"Exception: {type(e)}, message: {str(e)}")
 

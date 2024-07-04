@@ -118,3 +118,8 @@ class ValidateDTO(BaseModel):
 class AnalyzeSQLDTO(BaseModel):
     manifest_str: str = manifest_str_field
     sql: str
+
+
+class DryPlanDTO(BaseModel):
+    manifest_str: str = manifest_str_field
+    sql: str

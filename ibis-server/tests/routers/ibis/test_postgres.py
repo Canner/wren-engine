@@ -409,3 +409,17 @@ class TestPostgres:
             json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
+
+    def test_dry_plan(self):
+        response = client.post(
+            url="/v2/ibis/postgres/dry-plan",
+            json={
+                "manifestStr": self.manifest_str,
+                "sql": 'SELECT orderkey, order_cust_key FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        assert (
+            response.text
+            == '''"WITH \\"Orders\\" AS (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\" FROM (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\" FROM (SELECT o_orderkey AS \\"orderkey\\", o_custkey AS \\"custkey\\", o_orderstatus AS \\"orderstatus\\", o_totalprice AS \\"totalprice\\", o_orderdate AS \\"orderdate\\", CONCAT(o_orderkey, '_', o_custkey) AS \\"order_cust_key\\", CAST('2024-01-01T23:59:59' AS TIMESTAMP) AS \\"timestamp\\", CAST('2024-01-01T23:59:59' AS TIMESTAMPTZ) AS \\"timestamptz\\" FROM (SELECT * FROM public.orders) AS \\"Orders\\") AS \\"Orders\\") AS \\"Orders\\") SELECT orderkey, order_cust_key FROM \\"Orders\\" LIMIT 1"'''
+        )
