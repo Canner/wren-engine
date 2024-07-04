@@ -296,7 +296,6 @@ class TestClickHouse:
         connection_info = self.to_connection_info(clickhouse)
         response = client.post(
             url=f"{self.base_url}/query",
-            params={"limit": 1},
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": self.manifest_str,
