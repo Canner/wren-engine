@@ -345,13 +345,25 @@ public class QueryAnalysisDto
                 return false;
             }
             ExprSourceDto that = (ExprSourceDto) o;
-            return Objects.equals(expression, that.expression) && Objects.equals(sourceDataset, that.sourceDataset);
+            return Objects.equals(expression, that.expression) &&
+                    Objects.equals(sourceDataset, that.sourceDataset)
+                    && Objects.equals(nodeLocation, that.nodeLocation);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, sourceDataset);
+            return Objects.hash(expression, sourceDataset, nodeLocation);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "ExprSourceDto{" +
+                    "expression='" + expression + '\'' +
+                    ", sourceDataset='" + sourceDataset + '\'' +
+                    ", nodeLocation=" + nodeLocation +
+                    '}';
         }
     }
 
