@@ -15,7 +15,7 @@ def log_dto(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        logger.debug(f'DTO: {kwargs["dto"]}')
+        logger.debug("DTO: %s", kwargs["dto"])
         return f(*args, **kwargs)
 
     return wrapper

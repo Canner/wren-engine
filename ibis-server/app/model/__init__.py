@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 from pydantic import BaseModel, Field
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
@@ -99,14 +97,14 @@ class SnowflakeConnectionInfo(BaseModel):
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
-ConnectionInfo = Union[
-    BigQueryConnectionInfo,
-    ConnectionUrl,
-    MSSqlConnectionInfo,
-    MySqlConnectionInfo,
-    PostgresConnectionInfo,
-    SnowflakeConnectionInfo,
-]
+ConnectionInfo = (
+    BigQueryConnectionInfo
+    | ConnectionUrl
+    | MSSqlConnectionInfo
+    | MySqlConnectionInfo
+    | PostgresConnectionInfo
+    | SnowflakeConnectionInfo
+)
 
 
 class ValidateDTO(BaseModel):

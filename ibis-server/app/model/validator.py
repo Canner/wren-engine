@@ -17,7 +17,7 @@ class Validator:
         except ValidationError as e:
             raise e
         except Exception as e:
-            raise ValidationError(f"Unknown exception: {type(e)}, message: {str(e)}")
+            raise ValidationError(f"Unknown exception: {type(e)}, message: {e!s}")
 
     def _validate_column_is_valid(self, parameters: dict[str, str]):
         model_name = parameters.get("modelName")
@@ -32,7 +32,7 @@ class Validator:
                 f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
             )
         except Exception as e:
-            raise ValidationError(f"Exception: {type(e)}, message: {str(e)}")
+            raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
 
 
 class ValidationError(Exception):

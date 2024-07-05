@@ -16,4 +16,4 @@ def analyze(manifest_str: str, sql: str) -> list[dict]:
         )
         return r.json() if r.status_code == httpx.codes.OK else r.raise_for_status()
     except httpx.ConnectError as e:
-        raise ConnectionError(f"Can not connect to Wren Engine: {e}")
+        raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
