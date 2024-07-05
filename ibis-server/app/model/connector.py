@@ -17,7 +17,7 @@ class Connector:
         self.manifest_str = manifest_str
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
-        rewritten_sql = Rewriter(self.manifest_str).rewrite(sql)
+        rewritten_sql = Rewriter(self.manifest_str, self.data_source).rewrite(sql)
         return (
             self.connection.sql(
                 rewritten_sql,
@@ -28,7 +28,7 @@ class Connector:
 
     def dry_run(self, sql: str) -> None:
         try:
-            rewritten_sql = Rewriter(self.manifest_str).rewrite(sql)
+            rewritten_sql = Rewriter(self.manifest_str, self.data_source).rewrite(sql)
             self.connection.sql(rewritten_sql)
         except Exception as e:
             raise QueryDryRunError(f"Exception: {type(e)}, message: {str(e)}")
