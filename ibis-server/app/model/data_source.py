@@ -24,7 +24,9 @@ from app.model import (
     QueryMySqlDTO,
     QueryPostgresDTO,
     QuerySnowflakeDTO,
+    QueryTrinoDTO,
     SnowflakeConnectionInfo,
+    TrinoConnectionInfo,
 )
 
 
@@ -35,6 +37,7 @@ class DataSource(StrEnum):
     mysql = auto()
     postgres = auto()
     snowflake = auto()
+    trino = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -56,6 +59,7 @@ class DataSourceExtension(Enum):
     mysql = QueryMySqlDTO
     postgres = QueryPostgresDTO
     snowflake = QuerySnowflakeDTO
+    trino = QueryTrinoDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
@@ -135,4 +139,20 @@ class DataSourceExtension(Enum):
             account=info.account,
             database=info.database,
             schema=info.sf_schema,
+        )
+
+    @staticmethod
+    def get_trino_connection(
+        info: ConnectionUrl | TrinoConnectionInfo,
+    ) -> BaseBackend:
+        if hasattr(info, "connection_url"):
+            return ibis.connect(info.connection_url)
+
+        return ibis.trino.connect(
+            host=info.host,
+            port=info.port,
+            database=info.catalog,
+            schema=info.trino_schema,
+            user=info.user,
+            password=info.password,
         )

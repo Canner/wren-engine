@@ -41,6 +41,10 @@ class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
 
 
+class QueryTrinoDTO(QueryDTO):
+    connection_info: ConnectionUrl | TrinoConnectionInfo = connection_info_field
+
+
 class BigQueryConnectionInfo(BaseModel):
     project_id: str
     dataset_id: str
@@ -97,6 +101,17 @@ class SnowflakeConnectionInfo(BaseModel):
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
+class TrinoConnectionInfo(BaseModel):
+    host: str
+    port: int = Field(default=8080)
+    catalog: str
+    trino_schema: str = Field(
+        alias="schema"
+    )  # Use `trino_schema` to avoid `schema` shadowing in BaseModel
+    user: str | None = None
+    password: str | None = None
+
+
 ConnectionInfo = (
     BigQueryConnectionInfo
     | ConnectionUrl
@@ -104,6 +119,7 @@ ConnectionInfo = (
     | MySqlConnectionInfo
     | PostgresConnectionInfo
     | SnowflakeConnectionInfo
+    | TrinoConnectionInfo
 )
 
 
