@@ -53,3 +53,4 @@ format:
 fmt:
     poetry run ruff format .
     poetry run ruff check --fix .
+    taplo fmt

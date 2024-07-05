@@ -78,6 +78,7 @@ just run
 - Install [poetry](https://github.com/python-poetry/poetry) with version 1.7.1: `curl -sSL https://install.python-poetry.org | python3 - --version 1.7.1`
 - Install [casey/just](https://github.com/casey/just)
 - Install [pre-commit](https://pre-commit.com) hooks: `just pre-commit-install`
+- Install [taplo](https://github.com/tamasfe/taplo) for TOML linting
 
 ### Modeling Core
 The modeling core is written in Rust and provides the Python adaptor. \
