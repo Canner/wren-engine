@@ -6,7 +6,7 @@ import orjson
 import pandas as pd
 
 
-def to_json(df: pd.DataFrame, column_dtypes: dict[str, str] = None) -> dict:
+def to_json(df: pd.DataFrame, column_dtypes: dict[str, str] | None) -> dict:
     if column_dtypes:
         _to_specific_types(df, column_dtypes)
     return _to_json_obj(df)

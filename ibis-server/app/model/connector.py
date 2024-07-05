@@ -31,7 +31,7 @@ class Connector:
             rewritten_sql = Rewriter(self.manifest_str, self.data_source).rewrite(sql)
             self.connection.sql(rewritten_sql)
         except Exception as e:
-            raise QueryDryRunError(f"Exception: {type(e)}, message: {str(e)}")
+            raise QueryDryRunError(f"Exception: {type(e)}, message: {e!s}")
 
 
 class QueryDryRunError(Exception):

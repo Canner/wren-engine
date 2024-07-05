@@ -30,7 +30,7 @@ class Rewriter:
             rewritten_sql = (
                 r.text if r.status_code == httpx.codes.OK else r.raise_for_status()
             )
-            logger.debug(f"Rewritten SQL: {rewritten_sql}")
+            logger.debug("Rewritten SQL: %s", rewritten_sql)
             return (
                 rewritten_sql
                 if self.data_source is None
@@ -43,5 +43,5 @@ class Rewriter:
         transpiled_sql = sqlglot.transpile(
             rewritten_sql, read="trino", write=self.data_source.name
         )[0]
-        logger.debug(f"Translated SQL: {transpiled_sql}")
+        logger.debug("Translated SQL: %s", transpiled_sql)
         return transpiled_sql

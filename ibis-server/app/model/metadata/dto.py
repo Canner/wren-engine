@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -69,22 +69,22 @@ class Column(BaseModel):
     name: str
     type: str
     notNull: bool
-    description: Optional[str] = None
-    properties: Optional[dict[str, Any]] = None
+    description: str | None = None
+    properties: dict[str, Any] | None = None
 
 
 class TableProperties(BaseModel):
-    schema: Optional[str]
-    catalog: Optional[str]
-    table: Optional[str]  # only table name without schema or catalog
+    schema: str | None
+    catalog: str | None
+    table: str | None  # only table name without schema or catalog
 
 
 class Table(BaseModel):
     name: str  # unique table name (might contain schema name or catalog name as well)
     columns: list[Column]
-    description: Optional[str] = None
+    description: str | None = None
     properties: TableProperties = None
-    primaryKey: Optional[str] = None
+    primaryKey: str | None = None
 
 
 class ConstraintType(Enum):
