@@ -19,15 +19,3 @@ def log_dto(f):
         return f(*args, **kwargs)
 
     return wrapper
-
-
-def log_rewritten(f):
-    logger = get_logger("app.mdl.rewriter")
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        rs = f(*args, **kwargs)
-        logger.debug(f"Rewritten SQL: {rs}")
-        return rs
-
-    return wrapper

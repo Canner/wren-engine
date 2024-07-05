@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -70,7 +70,7 @@ class Column(BaseModel):
     type: str
     notNull: bool
     description: Optional[str] = None
-    properties: Optional[Dict[str, Any]] = None
+    properties: Optional[dict[str, Any]] = None
 
 
 class TableProperties(BaseModel):
@@ -81,7 +81,7 @@ class TableProperties(BaseModel):
 
 class Table(BaseModel):
     name: str  # unique table name (might contain schema name or catalog name as well)
-    columns: List[Column]
+    columns: list[Column]
     description: Optional[str] = None
     properties: TableProperties = None
     primaryKey: Optional[str] = None
