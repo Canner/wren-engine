@@ -3,9 +3,9 @@ import base64
 import orjson
 import pytest
 from fastapi.testclient import TestClient
-from self_testcontainers.trino import TrinoContainer
 
 from app.main import app
+from tests.self_testcontainers.trino import TrinoContainer
 
 pytestmark = pytest.mark.trino
 
