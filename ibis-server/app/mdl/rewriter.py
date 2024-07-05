@@ -43,8 +43,5 @@ class Rewriter:
         transpiled_sql = sqlglot.transpile(
             rewritten_sql, read="trino", write=self.data_source.name
         )[0]
-        transpiled_sql = sqlglot.parse_one(
-            transpiled_sql, dialect=self.data_source.name
-        ).sql(self.data_source.name)
         logger.debug(f"Translated SQL: {transpiled_sql}")
         return transpiled_sql
