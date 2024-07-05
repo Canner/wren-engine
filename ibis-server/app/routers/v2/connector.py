@@ -18,7 +18,7 @@ from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.util import to_json
 
-router = APIRouter(prefix="/ibis")
+router = APIRouter(prefix="/connector")
 
 
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
