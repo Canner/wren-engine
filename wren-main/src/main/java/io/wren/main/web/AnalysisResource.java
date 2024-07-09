@@ -43,6 +43,7 @@ import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.main.web.WrenExceptionMapper.bindAsyncResponse;
 import static jakarta.ws.rs.core.MediaType.APPLICATION_JSON;
 
+@Deprecated
 @Path("/v1/analysis")
 public class AnalysisResource
 {
