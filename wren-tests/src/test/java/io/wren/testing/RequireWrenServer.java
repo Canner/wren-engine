@@ -36,6 +36,7 @@ import io.wren.main.web.dto.ErrorMessageDto;
 import io.wren.main.web.dto.PreviewDto;
 import io.wren.main.web.dto.QueryAnalysisDto;
 import io.wren.main.web.dto.QueryResultDto;
+import io.wren.main.web.dto.SqlAnalysisInputBatchDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import io.wren.main.web.dto.ValidateDto;
 import jakarta.ws.rs.WebApplicationException;
@@ -82,6 +83,8 @@ public abstract class RequireWrenServer
     private static final JsonCodec<List<ValidationResult>> VALIDATION_RESULT_LIST_CODEC = listJsonCodec(ValidationResult.class);
     private static final JsonCodec<ValidateDto> VALIDATE_DTO_CODEC = jsonCodec(ValidateDto.class);
     private static final JsonCodec<List<QueryAnalysisDto>> QUERY_ANALYSIS_DTO_LIST_CODEC = listJsonCodec(QueryAnalysisDto.class);
+    private static final JsonCodec<SqlAnalysisInputBatchDto> SQL_ANALYSIS_INPUT_BATCH_DTO_CODEC = jsonCodec(SqlAnalysisInputBatchDto.class);
+    private static final JsonCodec<List<List<QueryAnalysisDto>>> QUERY_ANALYSIS_DTO_LIST_LIST_CODEC = listJsonCodec(listJsonCodec(QueryAnalysisDto.class));
 
     public RequireWrenServer() {}
 
@@ -220,6 +223,21 @@ public abstract class RequireWrenServer
             getWebApplicationException(response);
         }
         return QUERY_ANALYSIS_DTO_LIST_CODEC.fromJson(response.getBody());
+    }
+
+    protected List<List<QueryAnalysisDto>> getSqlAnalysisBatch(SqlAnalysisInputBatchDto inputBatchDto)
+    {
+        Request request = prepareGet()
+                .setUri(server().getHttpServerBasedUrl().resolve("/v2/analysis/sqls"))
+                .setHeader(CONTENT_TYPE, "application/json")
+                .setBodyGenerator(jsonBodyGenerator(SQL_ANALYSIS_INPUT_BATCH_DTO_CODEC, inputBatchDto))
+                .build();
+
+        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
+        if (response.getStatusCode() != 200) {
+            getWebApplicationException(response);
+        }
+        return QUERY_ANALYSIS_DTO_LIST_LIST_CODEC.fromJson(response.getBody());
     }
 
     protected List<ConfigManager.ConfigEntry> getConfigs()
