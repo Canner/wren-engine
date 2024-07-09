@@ -89,13 +89,15 @@ public class QueryAnalysis
         private final String expression;
         private final Map<String, String> properties;
         private final NodeLocation nodeLocation;
+        private final List<ExprSource> exprSources;
 
-        public ColumnAnalysis(Optional<String> aliasName, String expression, Map<String, String> properties, NodeLocation nodeLocation)
+        public ColumnAnalysis(Optional<String> aliasName, String expression, Map<String, String> properties, NodeLocation nodeLocation, List<ExprSource> exprSources)
         {
             this.aliasName = aliasName;
             this.expression = expression;
             this.properties = properties;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources == null ? List.of() : List.copyOf(exprSources);
         }
 
         public Optional<String> getAliasName()
@@ -117,6 +119,11 @@ public class QueryAnalysis
         {
             return nodeLocation;
         }
+
+        public List<ExprSource> getExprSources()
+        {
+            return exprSources;
+        }
     }
 
     public static class SortItemAnalysis
@@ -124,12 +131,14 @@ public class QueryAnalysis
         private final String expression;
         private final SortItem.Ordering ordering;
         private final NodeLocation nodeLocation;
+        private final List<ExprSource> exprSources;
 
-        public SortItemAnalysis(String expression, SortItem.Ordering ordering, NodeLocation nodeLocation)
+        public SortItemAnalysis(String expression, SortItem.Ordering ordering, NodeLocation nodeLocation, List<ExprSource> exprSources)
         {
             this.expression = expression;
             this.ordering = ordering;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources == null ? List.of() : List.copyOf(exprSources);
         }
 
         public String getExpression()
@@ -146,17 +155,24 @@ public class QueryAnalysis
         {
             return nodeLocation;
         }
+
+        public List<ExprSource> getExprSources()
+        {
+            return exprSources;
+        }
     }
 
     public static class GroupByKey
     {
         private final String expression;
         private final NodeLocation nodeLocation;
+        private final List<ExprSource> exprSources;
 
-        public GroupByKey(String expression, NodeLocation nodeLocation)
+        public GroupByKey(String expression, NodeLocation nodeLocation, List<ExprSource> exprSources)
         {
             this.expression = expression;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources == null ? List.of() : List.copyOf(exprSources);
         }
 
         public String getExpression()
@@ -167,6 +183,11 @@ public class QueryAnalysis
         public NodeLocation getNodeLocation()
         {
             return nodeLocation;
+        }
+
+        public List<ExprSource> getExprSources()
+        {
+            return exprSources;
         }
 
         @Override
@@ -180,13 +201,14 @@ public class QueryAnalysis
             }
             GroupByKey that = (GroupByKey) o;
             return Objects.equals(expression, that.expression) &&
-                    Objects.equals(nodeLocation, that.nodeLocation);
+                    Objects.equals(nodeLocation, that.nodeLocation) &&
+                    Objects.equals(exprSources, that.exprSources);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, nodeLocation);
+            return Objects.hash(expression, nodeLocation, exprSources);
         }
 
         @Override
@@ -195,6 +217,7 @@ public class QueryAnalysis
             return "GroupByKey{" +
                     "expression='" + expression + '\'' +
                     ", nodeLocation=" + nodeLocation +
+                    ", exprSources=" + exprSources +
                     '}';
         }
     }

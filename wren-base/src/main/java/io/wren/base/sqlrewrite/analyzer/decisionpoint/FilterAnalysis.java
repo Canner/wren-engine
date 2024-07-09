@@ -16,6 +16,8 @@ package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 
 import io.trino.sql.tree.NodeLocation;
 
+import java.util.List;
+
 import static java.util.Objects.requireNonNull;
 
 public abstract class FilterAnalysis
@@ -30,9 +32,9 @@ public abstract class FilterAnalysis
         return new LogicalAnalysis(Type.OR, left, right, nodeLocation);
     }
 
-    public static FilterAnalysis expression(String node, NodeLocation nodeLocation)
+    public static FilterAnalysis expression(String node, NodeLocation nodeLocation, List<ExprSource> exprSources)
     {
-        return new ExpressionAnalysis(node, nodeLocation);
+        return new ExpressionAnalysis(node, nodeLocation, exprSources);
     }
 
     public enum Type
@@ -89,16 +91,23 @@ public abstract class FilterAnalysis
             extends FilterAnalysis
     {
         private final String node;
+        private final List<ExprSource> exprSources;
 
-        public ExpressionAnalysis(String node, NodeLocation nodeLocation)
+        public ExpressionAnalysis(String node, NodeLocation nodeLocation, List<ExprSource> exprSources)
         {
             super(Type.EXPR, nodeLocation);
             this.node = requireNonNull(node, "node is null");
+            this.exprSources = exprSources == null ? List.of() : List.copyOf(exprSources);
         }
 
         public String getNode()
         {
             return node;
+        }
+
+        public List<ExprSource> getExprSources()
+        {
+            return exprSources;
         }
     }
 }

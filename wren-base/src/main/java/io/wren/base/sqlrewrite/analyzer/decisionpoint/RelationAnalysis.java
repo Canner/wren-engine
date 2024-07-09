@@ -17,7 +17,6 @@ package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 import io.trino.sql.tree.NodeLocation;
 
 import java.util.List;
-import java.util.Objects;
 
 import static io.wren.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -147,32 +146,6 @@ public abstract class RelationAnalysis
         public List<QueryAnalysis> getBody()
         {
             return body;
-        }
-    }
-
-    public record ExprSource(String expression, String sourceDataset, NodeLocation nodeLocation)
-    {
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) {
-                return true;
-            }
-
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            ExprSource that = (ExprSource) o;
-            return Objects.equals(expression, that.expression) &&
-                    Objects.equals(sourceDataset, that.sourceDataset)
-                    && Objects.equals(nodeLocation, that.nodeLocation);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(expression, sourceDataset, nodeLocation);
         }
     }
 }

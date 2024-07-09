@@ -20,6 +20,7 @@ import io.trino.sql.tree.Statement;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
+import io.wren.base.sqlrewrite.analyzer.decisionpoint.ExprSource;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
@@ -153,7 +154,7 @@ public class AnalysisResource
         return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name(), toNodeLocationDto(sortItemAnalysis.getNodeLocation()));
     }
 
-    private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(RelationAnalysis.ExprSource exprSource)
+    private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(ExprSource exprSource)
     {
         return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset(), toNodeLocationDto(exprSource.nodeLocation()));
     }

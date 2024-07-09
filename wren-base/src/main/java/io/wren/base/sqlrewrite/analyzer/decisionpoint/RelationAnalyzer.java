@@ -127,7 +127,7 @@ public class RelationAnalyzer
             RelationAnalysis right = process(node.getRight(), context);
 
             Scope scope = analysis.getScope(node);
-            List<RelationAnalysis.ExprSource> exprSources = node.getCriteria().map(criteria -> analyzeCriteria(criteria, scope))
+            List<ExprSource> exprSources = node.getCriteria().map(criteria -> analyzeCriteria(criteria, scope))
                     .orElse(null);
             return new RelationAnalysis.JoinRelation(
                     RelationAnalysis.Type.valueOf(format("%s_JOIN", node.getType())),
@@ -157,9 +157,9 @@ public class RelationAnalyzer
             return builder.toString();
         }
 
-        private List<RelationAnalysis.ExprSource> analyzeCriteria(JoinCriteria criteria, Scope scope)
+        private List<ExprSource> analyzeCriteria(JoinCriteria criteria, Scope scope)
         {
-            Set<RelationAnalysis.ExprSource> exprSources = new HashSet<>();
+            Set<ExprSource> exprSources = new HashSet<>();
             switch (criteria) {
                 case JoinOn joinOn:
                     exprSources.addAll(ExpressionSourceAnalyzer.analyze(joinOn.getExpression(), scope));
@@ -228,7 +228,7 @@ public class RelationAnalyzer
     static class ExpressionSourceAnalyzer
             extends DefaultExpressionTraversalVisitor<Void>
     {
-        static Set<RelationAnalysis.ExprSource> analyze(Expression expression, Scope scope)
+        static Set<ExprSource> analyze(Expression expression, Scope scope)
         {
             ExpressionSourceAnalyzer analyzer = new ExpressionSourceAnalyzer(scope);
             analyzer.process(expression, null);
@@ -236,7 +236,7 @@ public class RelationAnalyzer
         }
 
         private final Scope scope;
-        private final Set<RelationAnalysis.ExprSource> exprSources = new HashSet<>();
+        private final Set<ExprSource> exprSources = new HashSet<>();
 
         public ExpressionSourceAnalyzer(Scope scope)
         {
@@ -248,7 +248,7 @@ public class RelationAnalyzer
         {
             scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
                     .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                    .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(node.getValue(), field.getSourceDatasetName().get(), node.getLocation().orElse(null))));
+                    .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), node.getLocation().orElse(null))));
             return null;
         }
 
@@ -258,7 +258,7 @@ public class RelationAnalyzer
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
                     scope.getRelationType().resolveFields(qualifiedName)
                             .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                            .forEach(field -> exprSources.add(new RelationAnalysis.ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), node.getLocation().orElse(null)))));
+                            .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), node.getLocation().orElse(null)))));
             return null;
         }
     }
