@@ -212,6 +212,25 @@ def test_analysis_sql_order_by():
     assert result[0]["sortings"][1]["nodeLocation"] == {"line": 1, "column": 52}
 
 
+def test_analysis_sqls():
+    result = get_sql_analysis_batch(
+        {
+            "manifestStr": manifest_str,
+            "sqls": [
+                "SELECT * FROM customer",
+                "SELECT custkey, count(*) FROM customer GROUP BY 1",
+                "WITH t1 AS (SELECT * FROM customer) SELECT * FROM t1",
+                "SELECT * FROM orders WHERE orderkey = 1 UNION SELECT * FROM orders where orderkey = 2",
+            ],
+        }
+    )
+    assert len(result) == 4
+    assert len(result[0]) == 1
+    assert len(result[1]) == 1
+    assert len(result[2]) == 2
+    assert len(result[3]) == 2
+
+
 def get_sql_analysis(input_dto):
     response = client.request(
         method="GET",
@@ -219,6 +238,19 @@ def get_sql_analysis(input_dto):
         json={
             "manifestStr": input_dto["manifestStr"],
             "sql": input_dto["sql"],
+        },
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def get_sql_analysis_batch(input_dto):
+    response = client.request(
+        method="GET",
+        url="/v2/analysis/sqls",
+        json={
+            "manifestStr": input_dto["manifestStr"],
+            "sqls": input_dto["sqls"],
         },
     )
     assert response.status_code == 200

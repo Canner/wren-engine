@@ -134,6 +134,11 @@ class AnalyzeSQLDTO(BaseModel):
     sql: str
 
 
+class AnalyzeSQLBatchDTO(BaseModel):
+    manifest_str: str = manifest_str_field
+    sqls: list[str]
+
+
 class DryPlanDTO(BaseModel):
     manifest_str: str = manifest_str_field
     sql: str
