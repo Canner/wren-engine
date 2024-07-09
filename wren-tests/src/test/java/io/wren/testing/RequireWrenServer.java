@@ -30,8 +30,6 @@ import io.wren.base.dto.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.main.connector.duckdb.DuckDBMetadata;
 import io.wren.main.validation.ValidationResult;
-import io.wren.main.web.dto.CheckOutputDto;
-import io.wren.main.web.dto.DeployInputDto;
 import io.wren.main.web.dto.DryPlanDto;
 import io.wren.main.web.dto.DryPlanDtoV2;
 import io.wren.main.web.dto.ErrorMessageDto;
@@ -48,10 +46,6 @@ import org.testng.annotations.BeforeClass;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static io.airlift.http.client.JsonBodyGenerator.jsonBodyGenerator;
@@ -76,10 +70,8 @@ public abstract class RequireWrenServer
     protected HttpClient client;
 
     private static final JsonCodec<ErrorMessageDto> ERROR_CODEC = jsonCodec(ErrorMessageDto.class);
-    private static final JsonCodec<CheckOutputDto> CHECK_OUTPUT_DTO_CODEC = jsonCodec(CheckOutputDto.class);
     public static final JsonCodec<Manifest> MANIFEST_JSON_CODEC = jsonCodec(Manifest.class);
     private static final JsonCodec<PreviewDto> PREVIEW_DTO_CODEC = jsonCodec(PreviewDto.class);
-    private static final JsonCodec<DeployInputDto> DEPLOY_INPUT_DTO_JSON_CODEC = jsonCodec(DeployInputDto.class);
     private static final JsonCodec<SqlAnalysisInputDto> SQL_ANALYSIS_INPUT_DTO_CODEC = jsonCodec(SqlAnalysisInputDto.class);
     private static final JsonCodec<ConfigManager.ConfigEntry> CONFIG_ENTRY_JSON_CODEC = jsonCodec(ConfigManager.ConfigEntry.class);
     private static final JsonCodec<List<ConfigManager.ConfigEntry>> CONFIG_ENTRY_LIST_CODEC = listJsonCodec(ConfigManager.ConfigEntry.class);
@@ -213,65 +205,6 @@ public abstract class RequireWrenServer
             getWebApplicationException(response);
         }
         return response.getBody();
-    }
-
-    protected void deployMDL(DeployInputDto dto)
-    {
-        Request request = preparePost()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/deploy"))
-                .setHeader(CONTENT_TYPE, "application/json")
-                .setBodyGenerator(jsonBodyGenerator(DEPLOY_INPUT_DTO_JSON_CODEC, dto))
-                .build();
-
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 202) {
-            getWebApplicationException(response);
-        }
-    }
-
-    protected Manifest getCurrentManifest()
-    {
-        Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl"))
-                .build();
-
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 200) {
-            getWebApplicationException(response);
-        }
-        return MANIFEST_JSON_CODEC.fromJson(response.getBody());
-    }
-
-    protected CheckOutputDto getDeployStatus()
-    {
-        Request request = prepareGet()
-                .setUri(server().getHttpServerBasedUrl().resolve("/v1/mdl/status"))
-                .build();
-
-        StringResponseHandler.StringResponse response = executeHttpRequest(request, createStringResponseHandler());
-        if (response.getStatusCode() != 200) {
-            getWebApplicationException(response);
-        }
-        return CHECK_OUTPUT_DTO_CODEC.fromJson(response.getBody());
-    }
-
-    protected void waitUntilReady()
-            throws ExecutionException, InterruptedException, TimeoutException
-    {
-        CompletableFuture.runAsync(() -> {
-            while (true) {
-                CheckOutputDto checkOutputDto = getDeployStatus();
-                if (checkOutputDto.getStatus() == CheckOutputDto.Status.READY) {
-                    break;
-                }
-                try {
-                    Thread.sleep(1000);
-                }
-                catch (InterruptedException e) {
-                    throw new AssertionError("Status doesn't change to READY", e);
-                }
-            }
-        }).get(60, TimeUnit.SECONDS);
     }
 
     protected List<QueryAnalysisDto> getSqlAnalysis(SqlAnalysisInputDto inputDto)
