@@ -1202,13 +1202,13 @@ socks = ["socksio (==1.*)"]
 
 [[package]]
 name = "ibis-framework"
-version = "9.0.0"
+version = "9.1.0"
 description = "The portable Python dataframe library"
 optional = false
-python-versions = "<4.0,>=3.9"
+python-versions = "<4.0,>=3.10"
 files = [
-    {file = "ibis_framework-9.0.0-py3-none-any.whl", hash = "sha256:9ed9cb4f68fb528d2f5be2879937aa186ce54305eaf40112aa97b2ce4159bdae"},
-    {file = "ibis_framework-9.0.0.tar.gz", hash = "sha256:464c4f14febbc54625be80915df3b307bc0adc89b498ec2481b6c13358db321e"},
+    {file = "ibis_framework-9.1.0-py3-none-any.whl", hash = "sha256:f1f7438ed1746250fd81ede484e40539655d0372b452fd5929bfc2ed295f7c83"},
+    {file = "ibis_framework-9.1.0.tar.gz", hash = "sha256:b9612be4da0182a7b5526592d1e5155c92b3971073d03cad8bd7ee14bf015bb1"},
 ]
 
 [package.dependencies]
@@ -1231,20 +1231,21 @@ python-dateutil = ">=2.8.2,<3"
 pytz = ">=2022.7"
 rich = ">=12.4.4,<14"
 snowflake-connector-python = {version = ">=3.0.2,<3.3.0b1 || >3.3.0b1,<4", optional = true, markers = "extra == \"snowflake\""}
-sqlglot = ">=23.4,<23.13"
+sqlglot = ">=23.4,<25.2"
 toolz = ">=0.11,<1"
+trino = {version = ">=0.321,<1", optional = true, markers = "extra == \"trino\""}
 typing-extensions = ">=4.3.0,<5"
 
 [package.extras]
 bigquery = ["db-dtypes (>=0.3,<2)", "google-cloud-bigquery (>=3,<4)", "google-cloud-bigquery-storage (>=2,<3)", "pydata-google-auth (>=1.4.0,<2)"]
 clickhouse = ["clickhouse-connect[arrow,numpy,pandas] (>=0.5.23,<1)"]
 dask = ["dask[array,dataframe] (>=2022.9.1,<2024.3.0)", "packaging (>=21.3,<25)", "regex (>=2021.7.6)"]
-datafusion = ["datafusion (>=0.6,<37)"]
+datafusion = ["datafusion (>=0.6,<39)"]
 decompiler = ["black (>=22.1.0,<25)"]
 deltalake = ["deltalake (>=0.9.0,<1)"]
-druid = ["pydruid[sqlalchemy] (>=0.6.5,<1)"]
-duckdb = ["duckdb (>=0.8.1,<1)"]
-examples = ["fsspec (<2024.3.0)", "pins[gcs] (>=0.8.3,<1)"]
+druid = ["pydruid (>=0.6.7,<1)"]
+duckdb = ["duckdb (>=0.8.1,<2)"]
+examples = ["fsspec (<2024.6.1)", "pins[gcs] (>=0.8.3,<1)"]
 exasol = ["pyexasol[pandas] (>=0.25.2,<1)"]
 geospatial = ["geopandas (>=0.6,<1)", "shapely (>=2,<3)"]
 impala = ["impyla (>=0.17,<1)"]
@@ -2712,18 +2713,18 @@ sqlcipher = ["sqlcipher3_binary"]
 
 [[package]]
 name = "sqlglot"
-version = "23.12.2"
+version = "25.1.0"
 description = "An easily customizable SQL parser and transpiler"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "sqlglot-23.12.2-py3-none-any.whl", hash = "sha256:5d63006a802482ab49a4f2e848cecb17edc4ba920395c1f226c8e7ad48fac874"},
-    {file = "sqlglot-23.12.2.tar.gz", hash = "sha256:3d887c3841d615fc97f02df73b441514ebe20576afffdf145019212a4c37e4a8"},
+    {file = "sqlglot-25.1.0-py3-none-any.whl", hash = "sha256:a9b23f0ea455ca3a7bc8daf4b404f9a19d4ab201b0220907e121f935c8a01013"},
+    {file = "sqlglot-25.1.0.tar.gz", hash = "sha256:1df2c5c0ef56961c4269a626414d3c349340f2aa329dffdb9d3f90f2eef50dbf"},
 ]
 
 [package.extras]
-dev = ["duckdb (>=0.6)", "maturin (>=1.4,<2.0)", "mypy", "pandas", "pandas-stubs", "pdoc", "pre-commit", "pyspark", "python-dateutil", "ruff (==0.3.2)", "types-python-dateutil", "typing-extensions"]
-rs = ["sqlglotrs (==0.2.0)"]
+dev = ["duckdb (>=0.6)", "maturin (>=1.4,<2.0)", "mypy", "pandas", "pandas-stubs", "pdoc", "pre-commit", "python-dateutil", "ruff (==0.4.3)", "types-python-dateutil", "typing-extensions"]
+rs = ["sqlglotrs (==0.2.6)"]
 
 [[package]]
 name = "starlette"
@@ -2810,6 +2811,30 @@ files = [
     {file = "toolz-0.12.1-py3-none-any.whl", hash = "sha256:d22731364c07d72eea0a0ad45bafb2c2937ab6fd38a3507bf55eae8744aa7d85"},
     {file = "toolz-0.12.1.tar.gz", hash = "sha256:ecca342664893f177a13dac0e6b41cbd8ac25a358e5f215316d43e2100224f4d"},
 ]
+
+[[package]]
+name = "trino"
+version = "0.328.0"
+description = "Client for the Trino distributed SQL Engine"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "trino-0.328.0-py3-none-any.whl", hash = "sha256:5d4498356f894978478ae5574a503fe011254ac01bc19f786a3d3733eca8096f"},
+    {file = "trino-0.328.0.tar.gz", hash = "sha256:bd6454ef1c16cc630b4bccb73e975502b007ff9b96ddeb56711f6099ca41e3a2"},
+]
+
+[package.dependencies]
+python-dateutil = "*"
+pytz = "*"
+requests = ">=2.31.0"
+tzlocal = "*"
+
+[package.extras]
+all = ["requests-kerberos", "sqlalchemy (>=1.3)"]
+external-authentication-token-cache = ["keyring"]
+kerberos = ["requests-kerberos"]
+sqlalchemy = ["sqlalchemy (>=1.3)"]
+tests = ["black", "httpretty (<1.1)", "isort", "pre-commit", "pytest", "pytest-runner", "requests-kerberos", "sqlalchemy (>=1.3)"]
 
 [[package]]
 name = "typer"
@@ -3371,4 +3396,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "bff93649a2869f08fdacf75e99986e05db9aa23483713838ac473f1ed4f2425f"
+content-hash = "ca3ada97404730ca1b4fc981f7a47a471eb5a78527c99cf375618fb9ba047172"
