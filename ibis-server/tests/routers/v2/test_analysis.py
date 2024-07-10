@@ -96,6 +96,13 @@ def test_analysis_sql_select_all_customer():
     assert "alias" not in result[0]["relation"]
     assert len(result[0]["selectItems"]) == 8
     assert result[0]["selectItems"][0]["nodeLocation"] == {"line": 1, "column": 8}
+    assert result[0]["selectItems"][0]["exprSources"] == [
+        {
+            "expression": "custkey",
+            "nodeLocation": {"line": 1, "column": 8},
+            "sourceDataset": "customer",
+        },
+    ]
     assert result[0]["selectItems"][1]["nodeLocation"] == {"line": 1, "column": 8}
     assert result[0]["relation"]["tableName"] == "customer"
     assert result[0]["relation"]["nodeLocation"] == {"line": 1, "column": 15}
@@ -120,6 +127,13 @@ def test_analysis_sql_group_by_customer():
     assert result[0]["groupByKeys"][0][0] == {
         "expression": "custkey",
         "nodeLocation": {"line": 1, "column": 49},
+        "exprSources": [
+            {
+                "expression": "custkey",
+                "nodeLocation": {"line": 1, "column": 8},
+                "sourceDataset": "customer",
+            },
+        ],
     }
 
 
@@ -169,6 +183,13 @@ def test_analysis_sql_where_clause():
     assert result[0]["relation"]["tableName"] == "customer"
     assert result[0]["filter"]["type"] == "OR"
     assert result[0]["filter"]["left"]["type"] == "EXPR"
+    assert result[0]["filter"]["left"]["exprSources"] == [
+        {
+            "expression": "custkey",
+            "nodeLocation": {"line": 1, "column": 30},
+            "sourceDataset": "customer",
+        },
+    ]
     assert result[0]["filter"]["right"]["type"] == "AND"
 
 
@@ -184,14 +205,35 @@ def test_analysis_sql_group_by_multiple_columns():
     assert result[0]["groupByKeys"][0][0] == {
         "expression": "custkey",
         "nodeLocation": {"line": 1, "column": 55},
+        "exprSources": [
+            {
+                "expression": "custkey",
+                "nodeLocation": {"line": 1, "column": 8},
+                "sourceDataset": "customer",
+            },
+        ],
     }
     assert result[0]["groupByKeys"][1][0] == {
         "expression": "name",
         "nodeLocation": {"line": 1, "column": 58},
+        "exprSources": [
+            {
+                "expression": "name",
+                "nodeLocation": {"line": 1, "column": 27},
+                "sourceDataset": "customer",
+            },
+        ],
     }
     assert result[0]["groupByKeys"][2][0] == {
         "expression": "nationkey",
         "nodeLocation": {"line": 1, "column": 61},
+        "exprSources": [
+            {
+                "expression": "nationkey",
+                "nodeLocation": {"line": 1, "column": 61},
+                "sourceDataset": "customer",
+            },
+        ],
     }
 
 
@@ -206,6 +248,13 @@ def test_analysis_sql_order_by():
     assert len(result[0]["sortings"]) == 2
     assert result[0]["sortings"][0]["expression"] == "custkey"
     assert result[0]["sortings"][0]["ordering"] == "ASCENDING"
+    assert result[0]["sortings"][0]["exprSources"] == [
+        {
+            "expression": "custkey",
+            "nodeLocation": {"line": 1, "column": 8},
+            "sourceDataset": "customer",
+        },
+    ]
     assert result[0]["sortings"][0]["nodeLocation"] == {"line": 1, "column": 45}
     assert result[0]["sortings"][1]["expression"] == "name"
     assert result[0]["sortings"][1]["ordering"] == "DESCENDING"
