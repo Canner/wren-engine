@@ -87,7 +87,10 @@ public class AnalysisResource
 
     private static ColumnAnalysisDto toColumnAnalysisDto(QueryAnalysis.ColumnAnalysis columnAnalysis)
     {
-        return new ColumnAnalysisDto(columnAnalysis.getAliasName(), columnAnalysis.getExpression(), columnAnalysis.getProperties(), toNodeLocationDto(columnAnalysis.getNodeLocation()));
+        return new ColumnAnalysisDto(columnAnalysis.getAliasName(),
+                columnAnalysis.getExpression(), columnAnalysis.getProperties(),
+                toNodeLocationDto(columnAnalysis.getNodeLocation()),
+                columnAnalysis.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
     }
 
     private static FilterAnalysisDto toFilterAnalysisDto(FilterAnalysis filterAnalysis)
@@ -98,14 +101,16 @@ public class AnalysisResource
                     null,
                     null,
                     exprAnalysis.getNode(),
-                    toNodeLocationDto(exprAnalysis.getNodeLocation()));
+                    toNodeLocationDto(exprAnalysis.getNodeLocation()),
+                    exprAnalysis.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
             case FilterAnalysis.LogicalAnalysis logicalAnalysis ->
                     new FilterAnalysisDto(
                             logicalAnalysis.getType().name(),
                             toFilterAnalysisDto(logicalAnalysis.getLeft()),
                             toFilterAnalysisDto(logicalAnalysis.getRight()),
                             null,
-                            toNodeLocationDto(logicalAnalysis.getNodeLocation()));
+                            toNodeLocationDto(logicalAnalysis.getNodeLocation()),
+                            null);
             case null -> null;
             default -> throw new IllegalArgumentException("Unsupported filter analysis: " + filterAnalysis);
         };
@@ -151,7 +156,10 @@ public class AnalysisResource
 
     private static SortItemAnalysisDto toSortItemAnalysisDto(QueryAnalysis.SortItemAnalysis sortItemAnalysis)
     {
-        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(), sortItemAnalysis.getOrdering().name(), toNodeLocationDto(sortItemAnalysis.getNodeLocation()));
+        return new SortItemAnalysisDto(sortItemAnalysis.getExpression(),
+                sortItemAnalysis.getOrdering().name(),
+                toNodeLocationDto(sortItemAnalysis.getNodeLocation()),
+                sortItemAnalysis.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
     }
 
     private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(ExprSource exprSource)
@@ -161,7 +169,9 @@ public class AnalysisResource
 
     private static QueryAnalysisDto.GroupByKeyDto toGroupByKeyDto(QueryAnalysis.GroupByKey groupByKey)
     {
-        return new QueryAnalysisDto.GroupByKeyDto(groupByKey.getExpression(), toNodeLocationDto(groupByKey.getNodeLocation()));
+        return new QueryAnalysisDto.GroupByKeyDto(groupByKey.getExpression(),
+                toNodeLocationDto(groupByKey.getNodeLocation()),
+                groupByKey.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
     }
 
     private static NodeLocationDto toNodeLocationDto(NodeLocation nodeLocation)

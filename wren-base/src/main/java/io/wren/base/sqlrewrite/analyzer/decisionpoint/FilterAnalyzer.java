@@ -40,6 +40,7 @@ public class FilterAnalyzer
             extends AstVisitor<FilterAnalysis, Node>
     {
         private final Scope scope;
+
         private Visitor(Scope scope)
         {
             this.scope = scope;
