@@ -226,15 +226,15 @@ def test_analysis_sqls():
     )
     assert len(result) == 4
     assert len(result[0]) == 1
-    assert result[0][0]["relation"]["relation"]["tableName"] == "customer"
+    assert result[0][0]["relation"]["tableName"] == "customer"
     assert len(result[1]) == 1
-    assert result[1][0]["relation"]["relation"]["tableName"] == "customer"
+    assert result[1][0]["relation"]["tableName"] == "customer"
     assert len(result[2]) == 2
-    assert result[2][0]["relation"]["relation"]["tableName"] == "customer"
-    assert result[2][1]["relation"]["relation"]["tableName"] == "t1"
+    assert result[2][0]["relation"]["tableName"] == "customer"
+    assert result[2][1]["relation"]["tableName"] == "t1"
     assert len(result[3]) == 2
-    assert result[3][0]["relation"]["relation"]["tableName"] == "orders"
-    assert result[3][1]["relation"]["relation"]["tableName"] == "orders"
+    assert result[3][0]["relation"]["tableName"] == "orders"
+    assert result[3][1]["relation"]["tableName"] == "orders"
 
 
 def get_sql_analysis(input_dto):
