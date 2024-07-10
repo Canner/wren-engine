@@ -19,6 +19,7 @@ import io.trino.sql.tree.Statement;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
+import io.wren.main.web.dto.SqlAnalysisInputBatchDto;
 import io.wren.main.web.dto.SqlAnalysisInputDtoV2;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -70,6 +71,37 @@ public class AnalysisResourceV2
                             SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
                             mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
                 })
+                .whenComplete(bindAsyncResponse(asyncResponse));
+    }
+
+    @GET
+    @Path("/sqls")
+    @Consumes(APPLICATION_JSON)
+    @Produces(APPLICATION_JSON)
+    public void getSqlAnalysisBatch(
+            SqlAnalysisInputBatchDto inputBatchDto,
+            @Suspended AsyncResponse asyncResponse)
+    {
+        CompletableFuture
+                .supplyAsync(() ->
+                        Optional.ofNullable(inputBatchDto.getManifestStr())
+                                .orElseThrow(() -> new IllegalArgumentException("Manifest is required")))
+                .thenApply(manifestStr -> {
+                    try {
+                        return WrenMDL.fromJson(new String(Base64.getDecoder().decode(manifestStr), UTF_8));
+                    }
+                    catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .thenApply(mdl ->
+                  inputBatchDto.getSqls().stream().map(sql -> {
+                      Statement statement = parseSql(sql);
+                      return DecisionPointAnalyzer.analyze(
+                            statement,
+                            SessionContext.builder().setCatalog(mdl.getCatalog()).setSchema(mdl.getSchema()).build(),
+                            mdl).stream().map(AnalysisResource::toQueryAnalysisDto).toList();
+                  }).toList())
                 .whenComplete(bindAsyncResponse(asyncResponse));
     }
 }

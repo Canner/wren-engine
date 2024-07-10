@@ -22,12 +22,14 @@ import io.wren.base.dto.Manifest;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis;
 import io.wren.main.web.dto.QueryAnalysisDto;
+import io.wren.main.web.dto.SqlAnalysisInputBatchDto;
 import io.wren.main.web.dto.SqlAnalysisInputDto;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +37,7 @@ import static io.wren.base.dto.Model.onTableReference;
 import static io.wren.base.dto.TableReference.tableReference;
 import static io.wren.main.web.dto.NodeLocationDto.nodeLocationDto;
 import static io.wren.testing.AbstractTestFramework.DEFAULT_SESSION_CONTEXT;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestAnalysisResource
@@ -183,5 +186,33 @@ public class TestAnalysisResource
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
         assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING.name());
         assertThat(result.get(0).getSortings().get(1).getNodeLocation()).isEqualTo(nodeLocationDto(1, 52));
+    }
+
+    @Test
+    public void testBatchAnalysis()
+    {
+        SqlAnalysisInputBatchDto inputBatchDto = new SqlAnalysisInputBatchDto(
+                base64Encode(toJson(manifest)),
+                List.of("select * from customer",
+                        "select custkey, count(*) from customer group by 1",
+                        "with t1 as (select * from customer) select * from t1",
+                        "select * from orders where orderstatus = 'O' union select * from orders where orderstatus = 'F'"));
+
+        List<List<QueryAnalysisDto>> results = getSqlAnalysisBatch(inputBatchDto);
+        assertThat(results.size()).isEqualTo(4);
+        assertThat(results.get(0).size()).isEqualTo(1);
+        assertThat(results.get(1).size()).isEqualTo(1);
+        assertThat(results.get(2).size()).isEqualTo(2);
+        assertThat(results.get(3).size()).isEqualTo(2);
+    }
+
+    private String toJson(Manifest manifest)
+    {
+        return MANIFEST_JSON_CODEC.toJson(manifest);
+    }
+
+    private String base64Encode(String str)
+    {
+        return Base64.getEncoder().encodeToString(str.getBytes(UTF_8));
     }
 }
