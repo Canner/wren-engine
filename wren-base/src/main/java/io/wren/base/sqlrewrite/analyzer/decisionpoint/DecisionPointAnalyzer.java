@@ -40,12 +40,14 @@ import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static io.trino.sql.ExpressionFormatter.formatExpression;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionExpressionAnalyzer.DEFAULT_ANALYSIS;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointContext.isSubqueryOrCte;
 import static io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointContext.withSubqueryOrCte;
+import static io.wren.base.sqlrewrite.analyzer.decisionpoint.QueryAnalysis.ColumnAnalysis;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -96,7 +98,7 @@ public class DecisionPointAnalyzer
             DecisionPointContext selfDecisionPointContext = new DecisionPointContext(builder, analysis.getScope(node), isSubqueryOrCte(decisionPointContext));
             process(node.getSelect(), selfDecisionPointContext);
             node.getFrom().ifPresent(from -> builder.setRelation(RelationAnalyzer.analyze(from, sessionContext, mdl, analysis)));
-            node.getWhere().ifPresent(where -> builder.setFilter(FilterAnalyzer.analyze(where)));
+            node.getWhere().ifPresent(where -> builder.setFilter(FilterAnalyzer.analyze(where, selfDecisionPointContext.getScope())));
 
             if (node.getGroupBy().isPresent()) {
                 process(node.getGroupBy().get(), selfDecisionPointContext);
@@ -119,24 +121,50 @@ public class DecisionPointAnalyzer
                 CatalogSchemaTableName catalogSchemaTableName = toCatalogSchemaTableName(sessionContext, QualifiedName.of(List.of(target.split("\\."))));
                 if (scopedFields.isEmpty()) {
                     // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
-                    decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), format("%s.*", target), DEFAULT_ANALYSIS.toMap(), node.getLocation().orElse(null)));
+                    decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                            Optional.empty(),
+                            format("%s.*", target),
+                            DEFAULT_ANALYSIS.toMap(),
+                            node.getLocation().orElse(null),
+                            List.of()));
                 }
                 else {
                     scopedFields.stream()
                             .filter(field -> field.getRelationAlias().filter(alias -> alias.toString().equals(target)).isPresent() || field.getTableName().equals(catalogSchemaTableName))
                             .forEach(field -> {
-                                decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap(), node.getLocation().orElse(null)));
+                                decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                                        Optional.empty(),
+                                        field.getName().orElse(field.getColumnName()),
+                                        DEFAULT_ANALYSIS.toMap(),
+                                        node.getLocation().orElse(null),
+                                        List.of(new ExprSource(
+                                                field.getName().orElse(field.getColumnName()),
+                                                field.getTableName().getSchemaTableName().getTableName(),
+                                                node.getLocation().orElse(null)))));
                             });
                 }
             }
             else {
                 if (scopedFields.isEmpty()) {
                     // relation scope can't be analyzed, so we can't determine the fields. It may be a remote table.
-                    decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), "*", DEFAULT_ANALYSIS.toMap(), node.getLocation().orElse(null)));
+                    decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                            Optional.empty(),
+                            "*",
+                            DEFAULT_ANALYSIS.toMap(),
+                            node.getLocation().orElse(null),
+                            List.of()));
                 }
                 else {
                     scopedFields.forEach(field -> {
-                        decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(Optional.empty(), field.getName().orElse(field.getColumnName()), DEFAULT_ANALYSIS.toMap(), node.getLocation().orElse(null)));
+                        decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                                Optional.empty(),
+                                field.getName().orElse(field.getColumnName()),
+                                DEFAULT_ANALYSIS.toMap(),
+                                node.getLocation().orElse(null),
+                                List.of(new ExprSource(
+                                        field.getName().orElse(field.getColumnName()),
+                                        field.getTableName().getSchemaTableName().getTableName(),
+                                        node.getLocation().orElse(null)))));
                     });
                 }
             }
@@ -148,7 +176,13 @@ public class DecisionPointAnalyzer
         {
             DecisionExpressionAnalyzer.DecisionExpressionAnalysis expressionAnalysis = DecisionExpressionAnalyzer.analyze(node.getExpression());
             String expression = formatExpression(node.getExpression(), SqlFormatter.Dialect.DEFAULT);
-            decisionPointContext.getBuilder().addSelectItem(new QueryAnalysis.ColumnAnalysis(node.getAlias().map(Identifier::getValue), expression, expressionAnalysis.toMap(), node.getLocation().orElse(null)));
+            Set<ExprSource> exprSources = RelationAnalyzer.ExpressionSourceAnalyzer.analyze(node.getExpression(), decisionPointContext.getScope());
+            decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                    node.getAlias().map(Identifier::getValue),
+                    expression,
+                    expressionAnalysis.toMap(),
+                    node.getLocation().orElse(null),
+                    List.copyOf(exprSources)));
             return null;
         }
 
@@ -161,10 +195,11 @@ public class DecisionPointAnalyzer
                 for (Expression expression : groupingElement.getExpressions()) {
                     if (expression instanceof LongLiteral) {
                         QueryAnalysis.ColumnAnalysis field = decisionPointContext.getBuilder().getSelectItems().get((int) ((LongLiteral) expression).getValue() - 1);
-                        keys.add(new QueryAnalysis.GroupByKey(field.getAliasName().orElse(field.getExpression()), expression.getLocation().orElse(null)));
+                        keys.add(new QueryAnalysis.GroupByKey(field.getAliasName().orElse(field.getExpression()), expression.getLocation().orElse(null), field.getExprSources()));
                     }
                     else {
-                        keys.add(new QueryAnalysis.GroupByKey(formatExpression(expression, SqlFormatter.Dialect.DEFAULT), expression.getLocation().orElse(null)));
+                        List<ExprSource> exprSources = List.copyOf(RelationAnalyzer.ExpressionSourceAnalyzer.analyze(expression, decisionPointContext.getScope()));
+                        keys.add(new QueryAnalysis.GroupByKey(formatExpression(expression, SqlFormatter.Dialect.DEFAULT), expression.getLocation().orElse(null), exprSources));
                     }
                 }
                 groups.add(keys.build());
@@ -180,9 +215,10 @@ public class DecisionPointAnalyzer
                     node.getSortItems().stream().map(sortItem -> {
                         if (sortItem.getSortKey() instanceof LongLiteral) {
                             QueryAnalysis.ColumnAnalysis field = decisionPointContext.getBuilder().getSelectItems().get((int) ((LongLiteral) sortItem.getSortKey()).getValue() - 1);
-                            return new QueryAnalysis.SortItemAnalysis(field.getAliasName().orElse(field.getExpression()), sortItem.getOrdering(), sortItem.getLocation().orElse(null));
+                            return new QueryAnalysis.SortItemAnalysis(field.getAliasName().orElse(field.getExpression()), sortItem.getOrdering(), sortItem.getLocation().orElse(null), field.getExprSources());
                         }
-                        return new QueryAnalysis.SortItemAnalysis(formatExpression(sortItem.getSortKey(), SqlFormatter.Dialect.DEFAULT), sortItem.getOrdering(), sortItem.getLocation().orElse(null));
+                        List<ExprSource> exprSources = List.copyOf(RelationAnalyzer.ExpressionSourceAnalyzer.analyze(sortItem.getSortKey(), decisionPointContext.getScope()));
+                        return new QueryAnalysis.SortItemAnalysis(formatExpression(sortItem.getSortKey(), SqlFormatter.Dialect.DEFAULT), sortItem.getOrdering(), sortItem.getLocation().orElse(null), exprSources);
                     }).toList());
             return null;
         }

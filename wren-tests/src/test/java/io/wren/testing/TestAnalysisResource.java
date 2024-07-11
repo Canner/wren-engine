@@ -127,6 +127,8 @@ public class TestAnalysisResource
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(8);
         // all of select item match the star symbol position
         assertThat(result.get(0).getSelectItems().get(0).getNodeLocation()).isEqualTo(nodeLocationDto(1, 8));
+        assertThat(result.get(0).getSelectItems().get(0).getExprSources())
+                .isEqualTo(List.of(new QueryAnalysisDto.ExprSourceDto("custkey", "customer", nodeLocationDto(1, 8))));
         assertThat(result.get(0).getSelectItems().get(1).getNodeLocation()).isEqualTo(nodeLocationDto(1, 8));
         assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
         assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(nodeLocationDto(1, 15));
@@ -141,7 +143,10 @@ public class TestAnalysisResource
         assertThat(result.get(0).getRelation().getTableName()).isEqualTo("customer");
         assertThat(result.get(0).getRelation().getNodeLocation()).isEqualTo(nodeLocationDto(1, 31));
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(1);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("custkey", nodeLocationDto(1, 49)));
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(
+                new QueryAnalysisDto.GroupByKeyDto("custkey",
+                nodeLocationDto(1, 49),
+                List.of(new QueryAnalysisDto.ExprSourceDto("custkey", "customer", nodeLocationDto(1, 8)))));
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "select * from customer c join orders o on c.custkey = o.custkey"));
         assertThat(result.size()).isEqualTo(1);
@@ -168,20 +173,29 @@ public class TestAnalysisResource
 
         assertThat(result.get(0).getFilter().getType()).isEqualTo(FilterAnalysis.Type.OR.name());
         assertThat(result.get(0).getFilter().getLeft().getType()).isEqualTo(FilterAnalysis.Type.EXPR.name());
+        assertThat(assertThat(result.get(0).getFilter().getLeft().getExprSources())
+                .isEqualTo(List.of(new QueryAnalysisDto.ExprSourceDto("custkey", "customer", nodeLocationDto(1, 30)))));
         assertThat(result.get(0).getFilter().getRight().getType()).isEqualTo(FilterAnalysis.Type.AND.name());
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT custkey, count(*), name FROM customer GROUP BY 1, 3, nationkey"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getGroupByKeys().size()).isEqualTo(3);
-        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("custkey", nodeLocationDto(1, 55)));
-        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("name", nodeLocationDto(1, 58)));
-        assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("nationkey", nodeLocationDto(1, 61)));
+        assertThat(result.get(0).getGroupByKeys().get(0).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("custkey",
+                nodeLocationDto(1, 55),
+                List.of(new QueryAnalysisDto.ExprSourceDto("custkey", "customer", nodeLocationDto(1, 8)))));
+        assertThat(result.get(0).getGroupByKeys().get(1).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("name",
+                nodeLocationDto(1, 58),
+                List.of(new QueryAnalysisDto.ExprSourceDto("name", "customer", nodeLocationDto(1, 27)))));
+        assertThat(result.get(0).getGroupByKeys().get(2).get(0)).isEqualTo(new QueryAnalysisDto.GroupByKeyDto("nationkey",
+                nodeLocationDto(1, 61),
+                List.of(new QueryAnalysisDto.ExprSourceDto("nationkey", "customer", nodeLocationDto(1, 61)))));
 
         result = getSqlAnalysis(new SqlAnalysisInputDto(manifest, "SELECT custkey, name FROM customer ORDER BY 1 ASC, 2 DESC"));
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSortings().size()).isEqualTo(2);
         assertThat(result.get(0).getSortings().get(0).getExpression()).isEqualTo("custkey");
         assertThat(result.get(0).getSortings().get(0).getOrdering()).isEqualTo(SortItem.Ordering.ASCENDING.name());
+        assertThat(result.get(0).getSortings().get(0).getExprSources()).isEqualTo(List.of(new QueryAnalysisDto.ExprSourceDto("custkey", "customer", nodeLocationDto(1, 8))));
         assertThat(result.get(0).getSortings().get(0).getNodeLocation()).isEqualTo(nodeLocationDto(1, 45));
         assertThat(result.get(0).getSortings().get(1).getExpression()).isEqualTo("name");
         assertThat(result.get(0).getSortings().get(1).getOrdering()).isEqualTo(SortItem.Ordering.DESCENDING.name());

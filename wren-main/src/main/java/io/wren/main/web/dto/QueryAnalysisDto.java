@@ -93,14 +93,16 @@ public class QueryAnalysisDto
         private String expression;
         private Map<String, String> properties;
         private NodeLocationDto nodeLocation;
+        private List<ExprSourceDto> exprSources;
 
         @JsonCreator
-        public ColumnAnalysisDto(Optional<String> alias, String expression, Map<String, String> properties, NodeLocationDto nodeLocation)
+        public ColumnAnalysisDto(Optional<String> alias, String expression, Map<String, String> properties, NodeLocationDto nodeLocation, List<ExprSourceDto> exprSources)
         {
             this.alias = alias;
             this.expression = expression;
             this.properties = properties;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources;
         }
 
         @JsonProperty
@@ -125,6 +127,12 @@ public class QueryAnalysisDto
         public NodeLocationDto getNodeLocation()
         {
             return nodeLocation;
+        }
+
+        @JsonProperty
+        public List<ExprSourceDto> getExprSources()
+        {
+            return exprSources;
         }
     }
 
@@ -227,15 +235,17 @@ public class QueryAnalysisDto
         private FilterAnalysisDto right;
         private String node;
         private NodeLocationDto nodeLocation;
+        private List<ExprSourceDto> exprSources;
 
         @JsonCreator
-        public FilterAnalysisDto(String type, FilterAnalysisDto left, FilterAnalysisDto right, String node, NodeLocationDto nodeLocation)
+        public FilterAnalysisDto(String type, FilterAnalysisDto left, FilterAnalysisDto right, String node, NodeLocationDto nodeLocation, List<ExprSourceDto> exprSources)
         {
             this.type = type;
             this.left = left;
             this.right = right;
             this.node = node;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources;
         }
 
         @JsonProperty
@@ -267,6 +277,12 @@ public class QueryAnalysisDto
         {
             return nodeLocation;
         }
+
+        @JsonProperty
+        public List<ExprSourceDto> getExprSources()
+        {
+            return exprSources;
+        }
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -275,13 +291,15 @@ public class QueryAnalysisDto
         private String expression;
         private String ordering;
         private NodeLocationDto nodeLocation;
+        private List<ExprSourceDto> exprSources;
 
         @JsonCreator
-        public SortItemAnalysisDto(String expression, String ordering, NodeLocationDto nodeLocation)
+        public SortItemAnalysisDto(String expression, String ordering, NodeLocationDto nodeLocation, List<ExprSourceDto> exprSources)
         {
             this.expression = expression;
             this.ordering = ordering;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources;
         }
 
         @JsonProperty
@@ -300,6 +318,12 @@ public class QueryAnalysisDto
         public NodeLocationDto getNodeLocation()
         {
             return nodeLocation;
+        }
+
+        @JsonProperty
+        public List<ExprSourceDto> getExprSources()
+        {
+            return exprSources;
         }
     }
 
@@ -372,12 +396,14 @@ public class QueryAnalysisDto
     {
         private String expression;
         private NodeLocationDto nodeLocation;
+        private List<ExprSourceDto> exprSources;
 
         @JsonCreator
-        public GroupByKeyDto(String expression, NodeLocationDto nodeLocation)
+        public GroupByKeyDto(String expression, NodeLocationDto nodeLocation, List<ExprSourceDto> exprSources)
         {
             this.expression = expression;
             this.nodeLocation = nodeLocation;
+            this.exprSources = exprSources;
         }
 
         @JsonProperty
@@ -392,6 +418,12 @@ public class QueryAnalysisDto
             return nodeLocation;
         }
 
+        @JsonProperty
+        public List<ExprSourceDto> getExprSources()
+        {
+            return exprSources;
+        }
+
         @Override
         public boolean equals(Object o)
         {
@@ -403,13 +435,14 @@ public class QueryAnalysisDto
             }
             GroupByKeyDto that = (GroupByKeyDto) o;
             return Objects.equals(expression, that.expression) &&
-                    Objects.equals(nodeLocation, that.nodeLocation);
+                    Objects.equals(nodeLocation, that.nodeLocation)
+                    && Objects.equals(exprSources, that.exprSources);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, nodeLocation);
+            return Objects.hash(expression, nodeLocation, exprSources);
         }
 
         @Override
@@ -418,6 +451,7 @@ public class QueryAnalysisDto
             return "GroupByKeyDto{" +
                     "expression='" + expression + '\'' +
                     ", nodeLocation=" + nodeLocation +
+                    ", exprSources=" + exprSources +
                     '}';
         }
     }
