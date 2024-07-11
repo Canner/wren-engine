@@ -132,4 +132,40 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getColumns().get(0).getName()).isEqualTo("order_id");
         assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
     }
+
+    @Test
+    public void testQueryNestedType()
+    {
+        setDuckDBInitSQL("create table nested_table as select * from (values ({'f1':'2'})) t(a1)");
+        Manifest manifest = Manifest.builder()
+                .setCatalog("wren")
+                .setSchema("public")
+                .setModels(List.of(
+                        Model.model(
+                                "nested_table",
+                                "select * from main.nested_table",
+                                List.of(column("a1", "array<int>", null, false)))))
+                .build();
+
+        PreviewDto previewDto = new PreviewDto(manifest, "select a1.f1 from nested_table", null);
+        QueryResultDto testDefault = preview(previewDto);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
+        assertThat(testDefault.getData().get(0)[0]).isEqualTo("2");
+
+        setDuckDBInitSQL("create table nested_table as select * from (values ([{'f1':'2'}, {'f1':'3'}, {'f1':'4'}])) t(a1)");
+        manifest = Manifest.builder()
+                .setCatalog("wren")
+                .setSchema("public")
+                .setModels(List.of(
+                        Model.model(
+                                "nested_table",
+                                "select * from main.nested_table",
+                                List.of(column("a1", "array<struct<f1, varchar>>", null, false)))))
+                .build();
+
+        previewDto = new PreviewDto(manifest, "select a1[1].f1 from nested_table", null);
+        testDefault = preview(previewDto);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("VARCHAR");
+        assertThat(testDefault.getData().get(0)[0]).isEqualTo("2");
+    }
 }
