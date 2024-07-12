@@ -25,6 +25,7 @@ import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.SubqueryExpression;
+import io.trino.sql.tree.SubscriptExpression;
 import io.trino.sql.tree.Window;
 import io.trino.sql.tree.WindowOperation;
 import io.trino.sql.tree.WindowSpecification;
@@ -36,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
 import static java.util.Objects.requireNonNull;
 
 public class ExpressionAnalyzer
@@ -84,6 +84,11 @@ public class ExpressionAnalyzer
                         .findAny()
                         .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             }
+            else {
+                // The base could be SubscriptExpression, so we need to process it
+                process(node.getBase());
+            }
+
             return null;
         }
 
@@ -91,6 +96,17 @@ public class ExpressionAnalyzer
         protected Void visitIdentifier(Identifier node, Void context)
         {
             QualifiedName qualifiedName = QualifiedName.of(ImmutableList.of(node));
+            scope.getRelationType().getFields().stream()
+                    .filter(field -> field.canResolve(qualifiedName))
+                    .findAny()
+                    .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
+            return null;
+        }
+
+        @Override
+        protected Void visitSubscriptExpression(SubscriptExpression node, Void context)
+        {
+            QualifiedName qualifiedName = getQualifiedName(node.getBase());
             scope.getRelationType().getFields().stream()
                     .filter(field -> field.canResolve(qualifiedName))
                     .findAny()
@@ -161,5 +177,14 @@ public class ExpressionAnalyzer
         {
             return requireRelation;
         }
+    }
+
+    private static QualifiedName getQualifiedName(Expression expression)
+    {
+        return switch (expression) {
+            case DereferenceExpression dereferenceExpression -> DereferenceExpression.getQualifiedName(dereferenceExpression);
+            case Identifier identifier -> QualifiedName.of(ImmutableList.of(identifier));
+            default -> null;
+        };
     }
 }

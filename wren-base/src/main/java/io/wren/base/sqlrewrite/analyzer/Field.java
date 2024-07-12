@@ -107,7 +107,8 @@ public class Field
         }
 
         // TODO: need to know whether the qualified name and the name of this field were quoted
-        return matchesPrefix(name.getPrefix()) && this.name.get().equalsIgnoreCase(name.getSuffix());
+        return (matchesPrefix(name.getPrefix()) && this.name.get().equalsIgnoreCase(name.getSuffix())) ||
+        name.getPrefix().map(p -> p.toString().equals(columnName)).orElse(false); // support struct type
     }
 
     @Override
