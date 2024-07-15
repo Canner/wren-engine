@@ -1,8 +1,10 @@
 import base64
+import time
 
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from trino.dbapi import connect
 
 from app.main import app
 from tests.self_testcontainers.trino import TrinoContainer
@@ -60,7 +62,22 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 @pytest.fixture(scope="module")
 def trino(request) -> TrinoContainer:
-    db = TrinoContainer().start()
+    db = TrinoContainer("trinodb/trino:450").start()
+    with connect(
+        host=db.get_container_host_ip(), port=db.get_exposed_port(db.port), user="test"
+    ) as conn:
+        cur = conn.cursor()
+        start = time.time()
+        while True:
+            if (time.time() - start) > 120:
+                db.stop()
+                raise TimeoutError(
+                    "Trino did not generate the TPC-H dataset within 120 seconds."
+                )
+            cur.execute("SHOW CATALOGS LIKE 'tpch'")
+            if len(cur.fetchall()) > 0:
+                break
+            time.sleep(1)
     request.addfinalizer(db.stop)
     return db
 

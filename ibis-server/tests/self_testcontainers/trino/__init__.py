@@ -3,7 +3,6 @@ import re
 from testcontainers.core.config import testcontainers_config as c
 from testcontainers.core.generic import DbContainer
 from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs
-from trino.dbapi import connect
 
 
 # Reference: https://github.com/testcontainers/testcontainers-python/pull/152
@@ -26,15 +25,6 @@ class TrinoContainer(DbContainer):
             c.max_tries,
             c.sleep_time,
         )
-        conn = connect(
-            host=self.get_container_host_ip(),
-            port=self.get_exposed_port(self.port),
-            user="test",
-        )
-        cur = conn.cursor()
-        cur.execute("SELECT 1")
-        cur.fetchall()
-        conn.close()
 
     def get_connection_url(self):
         return f"trino://{self.get_container_host_ip()}:{self.port}"
