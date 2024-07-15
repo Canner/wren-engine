@@ -82,6 +82,7 @@ impl Lineage {
         let mut required_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
         let mut required_dataset_topo: HashMap<Column, Graph<Dataset, DatasetLink>> =
             HashMap::new();
+        let mut pending_fields = Vec::new();
         for (column, source_columns) in source_colums_map.iter() {
             let Some(relation) = column.clone().relation else {
                 return internal_err!("relation not found: {}", column);
@@ -210,12 +211,17 @@ impl Lineage {
                                     source_column_ref.column.name().to_string(),
                                 );
                                 if source_column_ref.column.is_calculated {
-                                    todo!("calculated source column not supported")
+                                    pending_fields.push((value.clone(), column));
+                                    required_fields_map
+                                        .entry(column.clone())
+                                        .or_default()
+                                        .insert(value);
+                                } else {
+                                    required_fields_map
+                                        .entry(column.clone())
+                                        .or_default()
+                                        .insert(value);
                                 }
-                                required_fields_map
-                                    .entry(column.clone())
-                                    .or_default()
-                                    .insert(value);
                             }
                         }
                         Dataset::Metric(_) => {
@@ -229,11 +235,43 @@ impl Lineage {
             }
             required_dataset_topo.insert(column.clone(), directed_graph);
         }
+
+        // resolve pending fields
+        while !pending_fields.is_empty() {
+            let (value, source_column) = pending_fields.pop().unwrap();
+            consume_pending_field(mdl, &mut required_fields_map, value, &source_column)?;
+        }
+
         Ok(RequiredInfo {
             required_fields_map,
             required_dataset_topo,
         })
     }
+}
+
+fn consume_pending_field(
+    mdl: &WrenMDL,
+    required_fields_map: &mut HashMap<Column, HashSet<Column>>,
+    value: Column,
+    source_column: &Column,
+) -> Result<()> {
+    let Some(fields) = required_fields_map.get_mut(&value) else {
+        return plan_err!("pending field not found: {}", value);
+    };
+    for field in fields.clone() {
+        let Some(source_column_ref) = mdl.get_column_reference(&field) else {
+            return plan_err!("source column not found: {}", field);
+        };
+        if source_column_ref.column.is_calculated {
+            consume_pending_field(mdl, required_fields_map, field, &value)?;
+        } else {
+            required_fields_map
+                .entry(source_column.clone())
+                .or_default()
+                .insert(field);
+        }
+    }
+    Ok(())
 }
 
 struct RequiredInfo {
@@ -407,6 +445,11 @@ mod test {
                             .expression("a1 || b.c.c1")
                             .build(),
                     )
+                    .column(
+                        ColumnBuilder::new_calculated("b_c1", "varchar")
+                            .expression("b.c1")
+                            .build(),
+                    )
                     .column(ColumnBuilder::new_relationship("b", "b", "a_b").build())
                     .build(),
             )
@@ -446,7 +489,7 @@ mod test {
             .build();
         let wren_mdl = WrenMDL::new(manifest);
         let lineage = Lineage::new(&wren_mdl)?;
-        assert_eq!(lineage.required_fields_map.len(), 5);
+        assert_eq!(lineage.required_fields_map.len(), 6);
         assert_eq!(
             lineage
                 .required_fields_map
@@ -510,6 +553,22 @@ mod test {
         ]);
         assert_eq!(a_id_concat_c1.len(), 6);
         assert_eq!(a_id_concat_c1, &expected);
+
+        let a_b_c1 = lineage
+            .required_fields_map
+            .get(&Column::from_qualified_name("wrenai.public.a.b_c1"))
+            .unwrap();
+
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name("wrenai.public.a.a1"),
+            Column::from_qualified_name("wrenai.public.b.a1"),
+            Column::from_qualified_name("wrenai.public.b.b1"),
+            Column::from_qualified_name("wrenai.public.b.c1"),
+            Column::from_qualified_name("wrenai.public.c.b1"),
+            Column::from_qualified_name("wrenai.public.c.c1"),
+        ]);
+
+        assert_eq!(a_b_c1, &expected);
 
         Ok(())
     }
