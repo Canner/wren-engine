@@ -30,8 +30,6 @@ package io.wren.base.client.duckdb;
 
 import io.airlift.configuration.Config;
 import io.airlift.units.DataSize;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 
 public class DuckDBConfig
 {
@@ -39,17 +37,13 @@ public class DuckDBConfig
     public static final String DUCKDB_HOME_DIRECTORY = "duckdb.home-directory";
     public static final String DUCKDB_TEMP_DIRECTORY = "duckdb.temp-directory";
     public static final String DUCKDB_MAX_CONCURRENT_TASKS = "duckdb.max-concurrent-tasks";
-    public static final String DUCKDB_MAX_CONCURRENT_METADATA_QUERIES = "duckdb.max-concurrent-metadata-queries";
     public static final String DUCKDB_MAX_CACHE_QUERY_TIMEOUT = "duckdb.max-cache-query-timeout";
-
-    public static final String DUCKDB_MAX_CACHE_TABLE_SIZE_RATIO = "duckdb.max-cache-table-size-ratio";
     public static final String DUCKDB_CACHE_TASK_RETRY_DELAY = "duckdb.cache-task-retry-delay";
+
     private DataSize memoryLimit = DataSize.of(Runtime.getRuntime().maxMemory() / 2, DataSize.Unit.BYTE);
     private String homeDirectory;
     private String tempDirectory = "/tmp/duck";
     private int maxConcurrentTasks = 10;
-    private int maxConcurrentMetadataQueries = 10;
-    private double maxCacheTableSizeRatio = 0.5;
     private long maxCacheQueryTimeout = 20;
     private long cacheTaskRetryDelay = 60;
 
@@ -95,30 +89,6 @@ public class DuckDBConfig
     public void setMaxConcurrentTasks(int maxConcurrentTasks)
     {
         this.maxConcurrentTasks = maxConcurrentTasks;
-    }
-
-    public int getMaxConcurrentMetadataQueries()
-    {
-        return maxConcurrentMetadataQueries;
-    }
-
-    @Config(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)
-    public void setMaxConcurrentMetadataQueries(int maxConcurrentMetadataQueries)
-    {
-        this.maxConcurrentMetadataQueries = maxConcurrentMetadataQueries;
-    }
-
-    @Min(0)
-    @Max(1)
-    public double getMaxCacheTableSizeRatio()
-    {
-        return maxCacheTableSizeRatio;
-    }
-
-    @Config(DUCKDB_MAX_CACHE_TABLE_SIZE_RATIO)
-    public void setMaxCacheTableSizeRatio(double maxCacheTableSizeRatio)
-    {
-        this.maxCacheTableSizeRatio = maxCacheTableSizeRatio;
     }
 
     public long getMaxCacheQueryTimeout()
