@@ -36,6 +36,7 @@ import io.wren.base.Column;
 import io.wren.base.ConnectorRecordIterator;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
+import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
 import io.wren.base.sql.SqlConverter;
@@ -45,6 +46,8 @@ import io.wren.main.web.dto.QueryResultDto;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -56,6 +59,7 @@ public class PreviewService
 
     private final SqlConverter sqlConverter;
     private final ConfigManager configManager;
+    private final ExecutorService connectionPool;
 
     @Inject
     public PreviewService(
@@ -66,6 +70,8 @@ public class PreviewService
         this.metadata = requireNonNull(metadata, "metadata is null");
         this.sqlConverter = requireNonNull(sqlConverter, "sqlConverter is null");
         this.configManager = requireNonNull(configManager, "configManager is null");
+        DuckDBConfig config = configManager.getConfig(DuckDBConfig.class);
+        this.connectionPool = Executors.newFixedThreadPool(config.getMaxConcurrentTasks());
     }
 
     public CompletableFuture<QueryResultDto> preview(WrenMDL mdl, String sql, long limit)
@@ -88,7 +94,7 @@ public class PreviewService
             catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        });
+        }, connectionPool);
     }
 
     public CompletableFuture<String> dryPlan(WrenMDL mdl, String sql, boolean isModelingOnly)
@@ -107,7 +113,7 @@ public class PreviewService
                 return planned;
             }
             return sqlConverter.convert(planned, sessionContext);
-        });
+        }, connectionPool);
     }
 
     public CompletableFuture<List<Column>> dryRun(WrenMDL mdl, String sql)
@@ -123,6 +129,6 @@ public class PreviewService
             String planned = WrenPlanner.rewrite(sql, sessionContext, new AnalyzedMDL(mdl, null));
             String converted = sqlConverter.convert(planned, sessionContext);
             return metadata.describeQuery(converted, List.of());
-        });
+        }, connectionPool);
     }
 }
