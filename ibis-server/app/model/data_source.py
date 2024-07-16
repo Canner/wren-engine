@@ -79,8 +79,8 @@ class DataSourceExtension(Enum):
             credits_json
         )
         return ibis.bigquery.connect(
-            project_id=info.project_id,
-            dataset_id=info.dataset_id,
+            project_id=info.project_id.get_secret_value(),
+            dataset_id=info.dataset_id.get_secret_value(),
             credentials=credentials,
         )
 
@@ -88,24 +88,26 @@ class DataSourceExtension(Enum):
     def get_clickhouse_connection(
         info: ConnectionUrl | ClickHouseConnectionInfo,
     ) -> BaseBackend:
-        connection_url = (
-            getattr(info, "connection_url", None)
-            or f"clickhouse://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
-        )
-        return ibis.connect(
-            connection_url,
+        if hasattr(info, "connection_url"):
+            url = info.connection_url.get_secret_value()
             # ibis miss port of connection url, so we need to pass it explicitly
-            port=urlparse(connection_url).port,
+            return ibis.connect(url, port=urlparse(url).port)
+        return ibis.clickhouse.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=info.password.get_secret_value(),
         )
 
     @staticmethod
     def get_mssql_connection(info: MSSqlConnectionInfo) -> BaseBackend:
         # mssql in ibis does not support connection url
         return ibis.mssql.connect(
-            host=info.host,
-            port=info.port,
-            database=info.database,
-            user=info.user,
+            host=info.host.get_secret_value(),
+            port=info.port.get_secret_value(),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
             driver=info.driver,
         )
@@ -114,33 +116,40 @@ class DataSourceExtension(Enum):
     def get_mysql_connection(
         info: ConnectionUrl | MySqlConnectionInfo,
     ) -> BaseBackend:
-        connection_url = (
-            getattr(info, "connection_url", None)
-            or f"mysql://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
-        )
-        return ibis.connect(
-            connection_url,
+        if hasattr(info, "connection_url"):
+            url = info.connection_url.get_secret_value()
             # ibis miss port of connection url, so we need to pass it explicitly
-            port=urlparse(connection_url).port,
+            return ibis.connect(url, port=urlparse(url).port)
+        return ibis.mysql.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=info.password.get_secret_value(),
         )
 
     @staticmethod
     def get_postgres_connection(
         info: ConnectionUrl | PostgresConnectionInfo,
     ) -> BaseBackend:
-        return ibis.connect(
-            getattr(info, "connection_url", None)
-            or f"postgres://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
+        if hasattr(info, "connection_url"):
+            return ibis.connect(info.connection_url.get_secret_value())
+        return ibis.postgres.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=info.password.get_secret_value(),
         )
 
     @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         return ibis.snowflake.connect(
-            user=info.user,
+            user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
-            account=info.account,
-            database=info.database,
-            schema=info.sf_schema,
+            account=info.account.get_secret_value(),
+            database=info.database.get_secret_value(),
+            schema=info.sf_schema.get_secret_value(),
         )
 
     @staticmethod
@@ -148,8 +157,7 @@ class DataSourceExtension(Enum):
         info: ConnectionUrl | TrinoConnectionInfo,
     ) -> BaseBackend:
         if hasattr(info, "connection_url"):
-            return ibis.connect(info.connection_url)
-
+            return ibis.connect(info.connection_url.get_secret_value())
         return ibis.trino.connect(
             host=info.host,
             port=info.port,

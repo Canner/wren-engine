@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from urllib.parse import urlparse
-
 from pydantic import BaseModel, Field, SecretStr
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
@@ -48,24 +46,24 @@ class QueryTrinoDTO(QueryDTO):
 
 
 class BigQueryConnectionInfo(BaseModel):
-    project_id: str
-    dataset_id: str
+    project_id: SecretStr
+    dataset_id: SecretStr
     credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
 
 
 class ClickHouseConnectionInfo(BaseModel):
-    host: str
-    port: int
-    database: str
-    user: str
+    host: SecretStr
+    port: SecretStr
+    database: SecretStr
+    user: SecretStr
     password: SecretStr
 
 
 class MSSqlConnectionInfo(BaseModel):
-    host: str
-    port: int
-    database: str
-    user: str
+    host: SecretStr
+    port: SecretStr
+    database: SecretStr
+    user: SecretStr
     password: SecretStr
     driver: str = Field(
         default="FreeTDS",
@@ -74,57 +72,43 @@ class MSSqlConnectionInfo(BaseModel):
 
 
 class MySqlConnectionInfo(BaseModel):
-    host: str
-    port: int
-    database: str
-    user: str
+    host: SecretStr
+    port: SecretStr
+    database: SecretStr
+    user: SecretStr
     password: SecretStr
 
 
 class ConnectionUrl(BaseModel):
-    connection_url: str = Field(alias="connectionUrl")
-
-    def __repr__(self):
-        return (
-            f"ConnectionUrl(connection_url='{self.mask_password(self.connection_url)}'"
-        )
-
-    @staticmethod
-    def mask_password(url):
-        result = urlparse(url)
-        if result.password:
-            result = result._replace(
-                netloc=result.netloc.replace(result.password, "********")
-            )
-        return result.geturl()
+    connection_url: SecretStr = Field(alias="connectionUrl")
 
 
 class PostgresConnectionInfo(BaseModel):
-    host: str = Field(examples=["localhost"])
-    port: int = Field(examples=[5432])
-    database: str
-    user: str
+    host: SecretStr = Field(examples=["localhost"])
+    port: SecretStr = Field(examples=[5432])
+    database: SecretStr
+    user: SecretStr
     password: SecretStr
 
 
 class SnowflakeConnectionInfo(BaseModel):
-    user: str
+    user: SecretStr
     password: SecretStr
-    account: str
-    database: str
-    sf_schema: str = Field(
+    account: SecretStr
+    database: SecretStr
+    sf_schema: SecretStr = Field(
         alias="schema"
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
 class TrinoConnectionInfo(BaseModel):
-    host: str
-    port: int = Field(default=8080)
-    catalog: str
-    trino_schema: str = Field(
+    host: SecretStr
+    port: SecretStr = Field(default="8080")
+    catalog: SecretStr
+    trino_schema: SecretStr = Field(
         alias="schema"
     )  # Use `trino_schema` to avoid `schema` shadowing in BaseModel
-    user: str | None = None
+    user: SecretStr | None = None
     password: SecretStr | None = None
 
 
