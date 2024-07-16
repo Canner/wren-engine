@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, SecretStr
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo")
@@ -48,7 +50,7 @@ class QueryTrinoDTO(QueryDTO):
 class BigQueryConnectionInfo(BaseModel):
     project_id: str
     dataset_id: str
-    credentials: str = Field(description="Base64 encode `credentials.json`")
+    credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
 
 
 class ClickHouseConnectionInfo(BaseModel):
@@ -56,7 +58,7 @@ class ClickHouseConnectionInfo(BaseModel):
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
 
 
 class MSSqlConnectionInfo(BaseModel):
@@ -64,7 +66,7 @@ class MSSqlConnectionInfo(BaseModel):
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
     driver: str = Field(
         default="FreeTDS",
         description="On Mac and Linux this is usually `FreeTDS. On Windows, it is usually `ODBC Driver 18 for SQL Server`",
@@ -76,11 +78,25 @@ class MySqlConnectionInfo(BaseModel):
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
 
 
 class ConnectionUrl(BaseModel):
     connection_url: str = Field(alias="connectionUrl")
+
+    def __repr__(self):
+        return (
+            f"ConnectionUrl(connection_url='{self.mask_password(self.connection_url)}'"
+        )
+
+    @staticmethod
+    def mask_password(url):
+        result = urlparse(url)
+        if result.password:
+            result = result._replace(
+                netloc=result.netloc.replace(result.password, "********")
+            )
+        return result.geturl()
 
 
 class PostgresConnectionInfo(BaseModel):
@@ -88,12 +104,12 @@ class PostgresConnectionInfo(BaseModel):
     port: int = Field(examples=[5432])
     database: str
     user: str
-    password: str
+    password: SecretStr
 
 
 class SnowflakeConnectionInfo(BaseModel):
     user: str
-    password: str
+    password: SecretStr
     account: str
     database: str
     sf_schema: str = Field(
@@ -109,7 +125,7 @@ class TrinoConnectionInfo(BaseModel):
         alias="schema"
     )  # Use `trino_schema` to avoid `schema` shadowing in BaseModel
     user: str | None = None
-    password: str | None = None
+    password: SecretStr | None = None
 
 
 ConnectionInfo = (

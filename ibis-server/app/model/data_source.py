@@ -72,7 +72,9 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_bigquery_connection(info: BigQueryConnectionInfo) -> BaseBackend:
-        credits_json = loads(base64.b64decode(info.credentials).decode("utf-8"))
+        credits_json = loads(
+            base64.b64decode(info.credentials.get_secret_value()).decode("utf-8")
+        )
         credentials = service_account.Credentials.from_service_account_info(
             credits_json
         )
@@ -88,7 +90,7 @@ class DataSourceExtension(Enum):
     ) -> BaseBackend:
         connection_url = (
             getattr(info, "connection_url", None)
-            or f"clickhouse://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+            or f"clickhouse://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
         )
         return ibis.connect(
             connection_url,
@@ -104,7 +106,7 @@ class DataSourceExtension(Enum):
             port=info.port,
             database=info.database,
             user=info.user,
-            password=info.password,
+            password=info.password.get_secret_value(),
             driver=info.driver,
         )
 
@@ -114,7 +116,7 @@ class DataSourceExtension(Enum):
     ) -> BaseBackend:
         connection_url = (
             getattr(info, "connection_url", None)
-            or f"mysql://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+            or f"mysql://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
         )
         return ibis.connect(
             connection_url,
@@ -128,14 +130,14 @@ class DataSourceExtension(Enum):
     ) -> BaseBackend:
         return ibis.connect(
             getattr(info, "connection_url", None)
-            or f"postgres://{info.user}:{info.password}@{info.host}:{info.port}/{info.database}"
+            or f"postgres://{info.user}:{info.password.get_secret_value()}@{info.host}:{info.port}/{info.database}"
         )
 
     @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
         return ibis.snowflake.connect(
             user=info.user,
-            password=info.password,
+            password=info.password.get_secret_value(),
             account=info.account,
             database=info.database,
             schema=info.sf_schema,
@@ -154,5 +156,5 @@ class DataSourceExtension(Enum):
             database=info.catalog,
             schema=info.trino_schema,
             user=info.user,
-            password=info.password,
+            password=info.password.get_secret_value(),
         )
