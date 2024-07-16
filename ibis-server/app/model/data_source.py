@@ -159,10 +159,10 @@ class DataSourceExtension(Enum):
         if hasattr(info, "connection_url"):
             return ibis.connect(info.connection_url.get_secret_value())
         return ibis.trino.connect(
-            host=info.host,
-            port=info.port,
-            database=info.catalog,
-            schema=info.trino_schema,
-            user=info.user,
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.catalog.get_secret_value(),
+            schema=info.trino_schema.get_secret_value(),
+            user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
         )
