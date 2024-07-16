@@ -35,7 +35,6 @@ impl RelationChain {
     ) -> datafusion::common::Result<Self> {
         match dataset {
             Dataset::Model(source_model) => {
-                dbg!(&required_fields);
                 Ok(Start(LogicalPlan::Extension(Extension {
                     node: Arc::new(ModelSourceNode::new(
                         Arc::clone(source_model),
@@ -72,7 +71,6 @@ impl RelationChain {
                 analyzed_wren_mdl.wren_mdl().schema(),
                 target.name(),
             );
-            dbg!(&target_ref);
             let Some(fields) = model_required_fields.get(&target_ref) else {
                 return plan_err!("Required fields not found for {}", target_ref);
             };
@@ -131,7 +129,7 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        model_plan.model_name,
+                                        model_plan.plan_name,
                                         field.name()
                                     ))
                                 })

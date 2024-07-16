@@ -89,6 +89,7 @@ impl ModelAnalyzeRule {
                         let model = LogicalPlan::Extension(Extension {
                             node: Arc::new(ModelPlanNode::new(
                                 model,
+                                None,
                                 field,
                                 Some(LogicalPlan::TableScan(table_scan.clone())),
                                 Arc::clone(&self.analyzed_wren_mdl),
@@ -174,6 +175,7 @@ fn analyze_table_scan(
             Ok(LogicalPlan::Extension(Extension {
                 node: Arc::new(ModelPlanNode::new(
                     model,
+                    None,
                     required_field,
                     Some(LogicalPlan::TableScan(table_scan.clone())),
                     Arc::clone(&analyzed_wren_mdl),
@@ -225,14 +227,6 @@ impl ModelGenerationRule {
                     let source_plan = model_plan.relation_chain.clone().plan(
                         ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
                     )?;
-
-                    let model: Arc<Model> = Arc::clone(
-                        &self
-                            .analyzed_wren_mdl
-                            .wren_mdl()
-                            .get_model(&model_plan.model_name)
-                            .expect("Model not found"),
-                    );
                     let result = match source_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)
                             .project(model_plan.required_exprs.clone())?
@@ -244,7 +238,7 @@ impl ModelGenerationRule {
                     // calculated field scope
 
                     let alias = LogicalPlanBuilder::from(result)
-                        .alias(model.name.clone())?
+                        .alias(&model_plan.plan_name)?
                         .build()?;
                     Ok(Transformed::yes(alias))
                 } else if let Some(model_plan) =

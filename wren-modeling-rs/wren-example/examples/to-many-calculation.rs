@@ -76,14 +76,28 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
-    let transformed = transform_sql_with_ctx(
+    let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
-        "select totalprice from wrenai.public.orders",
+        "select customer_state_cf from wrenai.public.order_items",
     )
-    .await?;
-    let df = ctx.sql(&transformed).await?;
-    df.show().await?;
+    .await
+    {
+        Ok(sql) => sql,
+        Err(e) => {
+            eprintln!("Error transforming SQL: {}", e);
+            return Ok(());
+        }
+    };
+    println!("Transformed SQL: {}", transformed);
+    // let df = match ctx.sql(&transformed).await {
+    //     Ok(df) => df,
+    //     Err(e) => {
+    //         eprintln!("Error executing SQL: {}", e);
+    //         return Ok(());
+    //     }
+    // };
+    // df.show().await?;
     Ok(())
 }
 
@@ -95,6 +109,17 @@ fn init_manifest() -> Manifest {
                 .column(ColumnBuilder::new("city", "varchar").build())
                 .column(ColumnBuilder::new("id", "varchar").build())
                 .column(ColumnBuilder::new("state", "varchar").build())
+                .column(
+                    ColumnBuilder::new("orders", "orders")
+                        .relationship("orders_customer")
+                        .build(),
+                )
+                // .column(
+                //     ColumnBuilder::new("totalprice", "double")
+                //         .expression("sum(orders.totalprice)")
+                //         .calculated(true)
+                //         .build(),
+                // )
                 .primary_key("id")
                 .build(),
         )
@@ -117,6 +142,12 @@ fn init_manifest() -> Manifest {
                     ColumnBuilder::new("customer_state", "varchar")
                         .calculated(true)
                         .expression("orders.customers.state")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("customer_state_cf", "varchar")
+                        .calculated(true)
+                        .expression("orders.customer_state")
                         .build(),
                 )
                 .primary_key("id")
