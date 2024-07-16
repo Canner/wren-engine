@@ -29,7 +29,6 @@ import java.util.List;
 
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_CACHE_TASK_RETRY_DELAY;
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CACHE_QUERY_TIMEOUT;
-import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_METADATA_QUERIES;
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MAX_CONCURRENT_TASKS;
 import static io.wren.base.client.duckdb.DuckDBConfig.DUCKDB_MEMORY_LIMIT;
 import static io.wren.base.config.ConfigManager.ConfigEntry.configEntry;
@@ -89,7 +88,7 @@ public class TestConfigResource
     @Test
     public void testuUpdateConfigs()
     {
-        patchConfig(List.of(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"), configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, "20")));
+        patchConfig(List.of(configEntry(DUCKDB_MEMORY_LIMIT, "2GB")));
         assertThat(getConfig(WREN_DATASOURCE_TYPE)).isEqualTo(configEntry(WREN_DATASOURCE_TYPE, DUCKDB.name()));
         assertThat(getConfig(WREN_DIRECTORY)).isEqualTo(configEntry(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString()));
         assertThat(getConfig(DUCKDB_MEMORY_LIMIT)).isEqualTo(configEntry(DUCKDB_MEMORY_LIMIT, "2GB"));
@@ -119,14 +118,12 @@ public class TestConfigResource
         patchConfig(List.of(
                 configEntry(WREN_DIRECTORY, "fake"),
                 configEntry(DUCKDB_MAX_CONCURRENT_TASKS, "100"),
-                configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, "100"),
                 configEntry(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, "1000"),
                 configEntry(DUCKDB_CACHE_TASK_RETRY_DELAY, "1000")));
 
         DuckDBConfig duckDBConfig = new DuckDBConfig();
         assertThat(getConfig(WREN_DIRECTORY)).isEqualTo(configEntry(WREN_DIRECTORY, mdlDir.toAbsolutePath().toString()));
         assertThat(getConfig(DUCKDB_MAX_CONCURRENT_TASKS)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_TASKS, String.valueOf(duckDBConfig.getMaxConcurrentTasks())));
-        assertThat(getConfig(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES)).isEqualTo(configEntry(DUCKDB_MAX_CONCURRENT_METADATA_QUERIES, String.valueOf(duckDBConfig.getMaxConcurrentMetadataQueries())));
         assertThat(getConfig(DUCKDB_MAX_CACHE_QUERY_TIMEOUT)).isEqualTo(configEntry(DUCKDB_MAX_CACHE_QUERY_TIMEOUT, String.valueOf(duckDBConfig.getMaxCacheQueryTimeout())));
         assertThat(getConfig(DUCKDB_CACHE_TASK_RETRY_DELAY)).isEqualTo(configEntry(DUCKDB_CACHE_TASK_RETRY_DELAY, String.valueOf(duckDBConfig.getCacheTaskRetryDelay())));
     }

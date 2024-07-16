@@ -106,10 +106,9 @@ public final class DuckdbClient
         HikariConfig config = new HikariConfig();
         config.setDataSource(dataSource);
         config.setPoolName("DUCKDB_POOL");
-        config.setConnectionTimeout(10000);
+        config.setConnectionTimeout(60000);
         config.setMinimumIdle(duckDBConfig.getMaxConcurrentTasks());
-        // remain some query slots for metadata queries
-        config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks() + duckDBConfig.getMaxConcurrentMetadataQueries());
+        config.setMaximumPoolSize(duckDBConfig.getMaxConcurrentTasks());
         String initSql = buildConnectionInitSql(duckDBSettingSQL, duckDBConfig);
         config.setConnectionInitSql(initSql);
         return config;
