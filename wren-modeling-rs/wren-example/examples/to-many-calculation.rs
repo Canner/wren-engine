@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
-        "select customer_state_cf from wrenai.public.order_items",
+        "select order_id, customer_state_cf from wrenai.public.order_items",
     )
     .await
     {
@@ -90,14 +90,14 @@ async fn main() -> Result<()> {
         }
     };
     println!("Transformed SQL: {}", transformed);
-    // let df = match ctx.sql(&transformed).await {
-    //     Ok(df) => df,
-    //     Err(e) => {
-    //         eprintln!("Error executing SQL: {}", e);
-    //         return Ok(());
-    //     }
-    // };
-    // df.show().await?;
+    let df = match ctx.sql(&transformed).await {
+        Ok(df) => df,
+        Err(e) => {
+            eprintln!("Error executing SQL: {}", e);
+            return Ok(());
+        }
+    };
+    df.show().await?;
     Ok(())
 }
 

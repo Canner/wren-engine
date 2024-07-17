@@ -6,13 +6,16 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
-use datafusion::logical_expr::{col, ident, utils, Extension};
+use datafusion::logical_expr::{
+    col, ident, utils, Extension, UserDefinedLogicalNodeCore,
+};
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
+use datafusion::prelude::Expr::Column;
 use datafusion::sql::TableReference;
 
 use crate::logical_plan::analyze::plan::{
-    CalculationPlanNode, ModelPlanNode, ModelSourceNode,
+    CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
 };
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
@@ -89,7 +92,6 @@ impl ModelAnalyzeRule {
                         let model = LogicalPlan::Extension(Extension {
                             node: Arc::new(ModelPlanNode::new(
                                 model,
-                                None,
                                 field,
                                 Some(LogicalPlan::TableScan(table_scan.clone())),
                                 Arc::clone(&self.analyzed_wren_mdl),
@@ -175,7 +177,6 @@ fn analyze_table_scan(
             Ok(LogicalPlan::Extension(Extension {
                 node: Arc::new(ModelPlanNode::new(
                     model,
-                    None,
                     required_field,
                     Some(LogicalPlan::TableScan(table_scan.clone())),
                     Arc::clone(&analyzed_wren_mdl),
@@ -227,6 +228,8 @@ impl ModelGenerationRule {
                     let source_plan = model_plan.relation_chain.clone().plan(
                         ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
                     )?;
+                    dbg!(&model_plan.required_exprs);
+                    dbg!(&source_plan);
                     let result = match source_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)
                             .project(model_plan.required_exprs.clone())?
@@ -240,6 +243,7 @@ impl ModelGenerationRule {
                     let alias = LogicalPlanBuilder::from(result)
                         .alias(&model_plan.plan_name)?
                         .build()?;
+                    dbg!(&alias);
                     Ok(Transformed::yes(alias))
                 } else if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelSourceNode>()
@@ -322,6 +326,28 @@ impl ModelGenerationRule {
                     } else {
                         return plan_err!("measures should have an alias");
                     }
+                } else if let Some(partial_model) = extension
+                    .node
+                    .as_any()
+                    .downcast_ref::<PartialModelPlanNode>(
+                ) {
+                    dbg!(&partial_model.model_node.relation_chain);
+                    let plan = LogicalPlan::Extension(Extension {
+                        node: Arc::new(partial_model.model_node.clone()),
+                    });
+                    let source_plan = self.generate_model_internal(plan)?.data;
+                    dbg!(&source_plan);
+                    let projection: Vec<_> = partial_model
+                        .schema()
+                        .fields()
+                        .iter()
+                        .map(|f| col(datafusion::common::Column::from((None, f))))
+                        .collect();
+                    let alias = LogicalPlanBuilder::from(source_plan)
+                        .project(projection)?
+                        .alias(partial_model.model_node.plan_name.clone())?
+                        .build()?;
+                    Ok(Transformed::yes(alias))
                 } else {
                     Ok(Transformed::no(LogicalPlan::Extension(extension)))
                 }

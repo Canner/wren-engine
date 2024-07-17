@@ -1,14 +1,16 @@
 use crate::logical_plan::analyze::plan::{
-    CalculationPlanNode, ModelPlanNode, ModelSourceNode, OrdExpr,
+    CalculationPlanNode, ModelPlanNode, ModelSourceNode, OrdExpr, PartialModelPlanNode,
 };
 use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
 use crate::logical_plan::analyze::rule::ModelGenerationRule;
+use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::{AnalyzedWrenMDL, Dataset};
+use datafusion::arrow::ipc::Field;
 use datafusion::catalog::TableReference;
-use datafusion::common::{internal_err, not_impl_err, plan_err};
+use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
 };
@@ -76,7 +78,30 @@ impl RelationChain {
             };
             match target {
                 Dataset::Model(target_model) => {
-                    relation_chain = RelationChain::Chain(
+                    let node = if fields.iter().any(|e| {
+                        e.column.is_some() && e.column.clone().unwrap().is_calculated
+                    }) {
+                        dbg!(&fields);
+                        let schema = create_schema(
+                            fields
+                                .iter()
+                                .filter(|e| e.column.is_some())
+                                .map(|e| e.column.clone().unwrap())
+                                .collect(),
+                        )?;
+                        let plan = ModelPlanNode::new(
+                            Arc::clone(target_model),
+                            fields.iter().cloned().map(|c| c.expr).collect(),
+                            None,
+                            Arc::clone(&analyzed_wren_mdl),
+                        )?;
+
+                        let df_schema =
+                            DFSchemaRef::from(DFSchema::try_from(schema).unwrap());
+                        LogicalPlan::Extension(Extension {
+                            node: Arc::new(PartialModelPlanNode::new(plan, df_schema)),
+                        })
+                    } else {
                         LogicalPlan::Extension(Extension {
                             node: Arc::new(ModelSourceNode::new(
                                 Arc::clone(target_model),
@@ -84,7 +109,10 @@ impl RelationChain {
                                 Arc::clone(&analyzed_wren_mdl),
                                 None,
                             )?),
-                        }),
+                        })
+                    };
+                    relation_chain = RelationChain::Chain(
+                        node,
                         link.join_type,
                         link.condition.clone(),
                         Box::new(relation_chain),
@@ -103,10 +131,8 @@ impl RelationChain {
     ) -> datafusion::common::Result<Option<LogicalPlan>> {
         match self {
             RelationChain::Chain(plan, _, condition, ref mut next) => {
-                let left = rule
-                    .generate_model_internal(plan.clone())
-                    .expect("Failed to generate model plan")
-                    .data;
+                let left = rule.generate_model_internal(plan.clone())?.data;
+                dbg!(&plan, &left);
                 let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
                     .iter()
                     .cloned()
@@ -168,6 +194,22 @@ impl RelationChain {
                                 .for_each(|c| {
                                     required_exprs.insert(OrdExpr::new(c));
                                 });
+                        } else if let Some(partial_model_plan) =
+                            plan.node.as_any().downcast_ref::<PartialModelPlanNode>()
+                        {
+                            UserDefinedLogicalNodeCore::schema(partial_model_plan)
+                                .fields()
+                                .iter()
+                                .map(|field| {
+                                    col(format!(
+                                        "{}.{}",
+                                        partial_model_plan.model_node.plan_name,
+                                        field.name()
+                                    ))
+                                })
+                                .for_each(|c| {
+                                    required_exprs.insert(OrdExpr::new(c));
+                                });
                         } else {
                             return plan_err!("Invalid extension plan node");
                         }
@@ -198,18 +240,16 @@ impl RelationChain {
                     .map(|expr| expr.expr.clone())
                     .collect();
 
+                dbg!(&required_field);
                 Ok(Some(
                     LogicalPlanBuilder::from(left)
                         .join_on(
                             right,
                             datafusion::logical_expr::JoinType::Right,
                             vec![join_condition],
-                        )
-                        .unwrap()
-                        .project(required_field)
-                        .unwrap()
-                        .build()
-                        .unwrap(),
+                        )?
+                        .project(required_field)?
+                        .build()?,
                 ))
             }
             Start(plan) => Ok(Some(
