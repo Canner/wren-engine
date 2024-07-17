@@ -76,12 +76,37 @@ async fn main() -> Result<()> {
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
 
+    // Access totalprice from customer (customer -> orders -> order_items)
     let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
-        "select totalprice from wrenai.public.orders",
+        "select totalprice from wrenai.public.customers",
     )
     .await
+    {
+        Ok(sql) => sql,
+        Err(e) => {
+            eprintln!("Error transforming SQL: {}", e);
+            return Ok(());
+        }
+    };
+    println!("Transformed SQL: {}", transformed);
+    let df = match ctx.sql(&transformed).await {
+        Ok(df) => df,
+        Err(e) => {
+            eprintln!("Error executing SQL: {}", e);
+            return Ok(());
+        }
+    };
+    df.show().await?;
+
+    // access customer_state from order_items (order_items -> orders -> customers)
+    let transformed = match transform_sql_with_ctx(
+        &ctx,
+        Arc::clone(&analyzed_mdl),
+        "select customer_state_cf from wrenai.public.order_items",
+    )
+        .await
     {
         Ok(sql) => sql,
         Err(e) => {
@@ -114,19 +139,21 @@ fn init_manifest() -> Manifest {
                         .relationship("orders_customer")
                         .build(),
                 )
+                .column(
+                    ColumnBuilder::new("totalprice", "double")
+                        .expression("sum(orders.totalprice)")
+                        .calculated(true)
+                        .build(),
+                )
                 .primary_key("id")
                 .build(),
         )
         .model(
             ModelBuilder::new("order_items")
                 .table_reference("datafusion.public.order_items")
-                .column(ColumnBuilder::new("freight_value", "double").build())
                 .column(ColumnBuilder::new("id", "bigint").build())
-                .column(ColumnBuilder::new("item_number", "bigint").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
                 .column(ColumnBuilder::new("price", "double").build())
-                .column(ColumnBuilder::new("product_id", "varchar").build())
-                .column(ColumnBuilder::new("shipping_limit_date", "varchar").build())
                 .column(
                     ColumnBuilder::new("orders", "orders")
                         .relationship("orders_order_items")
@@ -138,18 +165,20 @@ fn init_manifest() -> Manifest {
                         .expression("orders.customers.state")
                         .build(),
                 )
+                .column(
+                    ColumnBuilder::new("customer_state_cf", "varchar")
+                        .calculated(true)
+                        .expression("orders.customer_state")
+                        .build(),
+                )
                 .primary_key("id")
                 .build(),
         )
         .model(
             ModelBuilder::new("orders")
                 .table_reference("datafusion.public.orders")
-                .column(ColumnBuilder::new("approved_timestamp", "varchar").build())
                 .column(ColumnBuilder::new("customer_id", "varchar").build())
-                .column(ColumnBuilder::new("delivered_carrier_date", "varchar").build())
-                .column(ColumnBuilder::new("estimated_delivery_date", "varchar").build())
                 .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
                 .column(
                     ColumnBuilder::new("order_items", "order_items")
                         .relationship("orders_order_items")
