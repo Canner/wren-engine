@@ -892,7 +892,7 @@ public final class SqlFormatter
 
             node.getComment().ifPresent(comment -> builder
                     .append(" COMMENT ")
-                    .append(formatStringLiteral(comment, dialect)));
+                    .append(formatStringLiteral(comment)));
 
             node.getSecurity().ifPresent(security -> builder
                     .append(" SECURITY ")
@@ -957,7 +957,7 @@ public final class SqlFormatter
             builder.append(formatName(node.getName(), dialect));
             node.getComment().ifPresent(comment -> builder
                     .append("\nCOMMENT ")
-                    .append(formatStringLiteral(comment, dialect)));
+                    .append(formatStringLiteral(comment)));
             builder.append(formatPropertiesMultiLine(node.getProperties()));
             builder.append(" AS\n");
 
@@ -1051,11 +1051,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1071,11 +1071,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1091,11 +1091,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1126,11 +1126,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1151,11 +1151,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1167,11 +1167,11 @@ public final class SqlFormatter
 
             node.getLikePattern().ifPresent(value -> builder
                     .append(" LIKE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             node.getEscape().ifPresent(value -> builder
                     .append(" ESCAPE ")
-                    .append(formatStringLiteral(value, dialect)));
+                    .append(formatStringLiteral(value)));
 
             return null;
         }
@@ -1259,7 +1259,7 @@ public final class SqlFormatter
 
             node.getComment().ifPresent(comment -> builder
                     .append("\nCOMMENT ")
-                    .append(formatStringLiteral(comment, dialect)));
+                    .append(formatStringLiteral(comment)));
             builder.append(formatPropertiesMultiLine(node.getProperties()));
 
             builder.append(" AS ");
@@ -1310,7 +1310,7 @@ public final class SqlFormatter
 
             node.getComment().ifPresent(comment -> builder
                     .append("\nCOMMENT ")
-                    .append(formatStringLiteral(comment, dialect)));
+                    .append(formatStringLiteral(comment)));
 
             builder.append(formatPropertiesMultiLine(node.getProperties()));
 
@@ -1351,7 +1351,7 @@ public final class SqlFormatter
             }
             column.getComment().ifPresent(comment -> builder
                     .append(" COMMENT ")
-                    .append(formatStringLiteral(comment, dialect)));
+                    .append(formatStringLiteral(comment)));
             builder.append(formatPropertiesSingleLine(column.getProperties()));
             return builder.toString();
         }
@@ -1442,7 +1442,7 @@ public final class SqlFormatter
         protected Void visitComment(Comment node, Integer context)
         {
             String comment = node.getComment()
-                    .map(str -> formatStringLiteral(str, dialect))
+                    .map(ExpressionFormatter::formatStringLiteral)
                     .orElse("NULL");
 
             switch (node.getType()) {

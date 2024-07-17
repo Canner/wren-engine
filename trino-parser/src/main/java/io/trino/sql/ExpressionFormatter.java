@@ -1,6 +1,5 @@
 package io.trino.sql;
 
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.trino.sql.SqlFormatter.Dialect;
@@ -92,7 +91,6 @@ import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.PrimitiveIterator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -237,13 +235,13 @@ public final class ExpressionFormatter
         @Override
         protected String visitStringLiteral(StringLiteral node, Void context)
         {
-            return formatStringLiteral(node.getValue(), dialect);
+            return formatStringLiteral(node.getValue());
         }
 
         @Override
         protected String visitCharLiteral(CharLiteral node, Void context)
         {
-            return "CHAR " + formatStringLiteral(node.getValue(), dialect);
+            return "CHAR " + formatStringLiteral(node.getValue());
         }
 
         @Override
@@ -327,7 +325,7 @@ public final class ExpressionFormatter
         @Override
         protected String visitGenericLiteral(GenericLiteral node, Void context)
         {
-            return node.getType() + " " + formatStringLiteral(node.getValue(), dialect);
+            return node.getType() + " " + formatStringLiteral(node.getValue());
         }
 
         @Override
@@ -998,61 +996,9 @@ public final class ExpressionFormatter
         }
     }
 
-    static String formatStringLiteral(String s, Dialect dialect)
+    static String formatStringLiteral(String s)
     {
-        if (dialect == BIGQUERY) {
-            s = s.replace("'", "\\'");
-        }
-        else {
-            s = s.replace("'", "''");
-        }
-        if (CharMatcher.inRange((char) 0x20, (char) 0x7E).matchesAllOf(s)) {
-            return "'" + s + "'";
-        }
-
-        StringBuilder builder = new StringBuilder();
-        if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
-            builder.append("U&");
-        }
-        builder.append("'");
-        PrimitiveIterator.OfInt iterator = s.codePoints().iterator();
-        while (iterator.hasNext()) {
-            int codePoint = iterator.nextInt();
-            checkArgument(codePoint >= 0, "Invalid UTF-8 encoding in characters: %s", s);
-            if (isAsciiPrintable(codePoint)) {
-                char ch = (char) codePoint;
-                if (ch == '\\') {
-                    builder.append(ch);
-                }
-                builder.append(ch);
-            }
-            else {
-                if (dialect == DEFAULT || dialect == DUCKDB || dialect == POSTGRES) {
-                    if (codePoint <= 0xFFFF) {
-                        builder.append('\\');
-                        builder.append(format("%04X", codePoint));
-                    }
-                    else {
-                        builder.append("\\+");
-                        builder.append(format("%06X", codePoint));
-                    }
-                }
-                else if (dialect == BIGQUERY) {
-                    if (codePoint <= 0xFFFF) {
-                        builder.append('\\');
-                        builder.append('u');
-                        builder.append(format("%04X", codePoint));
-                    }
-                    else {
-                        builder.append("\\");
-                        builder.append('U');
-                        builder.append(format("%08X", codePoint));
-                    }
-                }
-            }
-        }
-        builder.append("'");
-        return builder.toString();
+        return "'" + s.replace("'", "''") + "'";
     }
 
     public static String formatOrderBy(OrderBy orderBy, Dialect dialect)
