@@ -159,6 +159,22 @@ async fn register_ecommerce_mdl(
                         .expression("orders.customers.state")
                         .build(),
                 )
+                .column(
+                    ColumnBuilder::new_calculated("customer_state_cf", "varchar")
+                        .expression("orders.customers_state")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new_calculated("customer_state_cf_concat", "varchar")
+                        .expression("orders.customers_state || '-test'")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new("totalprice", "double")
+                        .expression("sum(orders.totalprice)")
+                        .calculated(true)
+                        .build(),
+                )
                 .primary_key("id")
                 .build(),
         )

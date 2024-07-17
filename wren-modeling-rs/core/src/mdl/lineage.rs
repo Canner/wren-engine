@@ -237,9 +237,8 @@ impl Lineage {
         }
 
         // resolve pending fields
-        while !pending_fields.is_empty() {
-            let (value, source_column) = pending_fields.pop().unwrap();
-            consume_pending_field(mdl, &mut required_fields_map, value, &source_column)?;
+        while let Some((value, source_column)) = pending_fields.pop() {
+            consume_pending_field(mdl, &mut required_fields_map, value, source_column)?;
         }
 
         Ok(RequiredInfo {

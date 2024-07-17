@@ -106,7 +106,7 @@ async fn main() -> Result<()> {
         Arc::clone(&analyzed_mdl),
         "select customer_state_cf from wrenai.public.order_items",
     )
-        .await
+    .await
     {
         Ok(sql) => sql,
         Err(e) => {

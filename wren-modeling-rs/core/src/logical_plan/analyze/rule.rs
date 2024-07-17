@@ -11,7 +11,6 @@ use datafusion::logical_expr::{
 };
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
-use datafusion::prelude::Expr::Column;
 use datafusion::sql::TableReference;
 
 use crate::logical_plan::analyze::plan::{

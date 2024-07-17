@@ -81,11 +81,7 @@ impl RelationChain {
                         e.column.is_some() && e.column.clone().unwrap().is_calculated
                     }) {
                         let schema = create_schema(
-                            fields
-                                .iter()
-                                .filter(|e| e.column.is_some())
-                                .map(|e| e.column.clone().unwrap())
-                                .collect(),
+                            fields.iter().filter_map(|e| e.column.clone()).collect(),
                         )?;
                         let plan = ModelPlanNode::new(
                             Arc::clone(target_model),
@@ -248,11 +244,7 @@ impl RelationChain {
                         .build()?,
                 ))
             }
-            Start(plan) => Ok(Some(
-                rule.generate_model_internal(plan.clone())
-                    .expect("Failed to generate model plan")
-                    .data,
-            )),
+            Start(plan) => Ok(Some(rule.generate_model_internal(plan.clone())?.data)),
         }
     }
 }
