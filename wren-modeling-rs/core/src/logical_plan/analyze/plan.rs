@@ -158,7 +158,6 @@ impl ModelPlanNodeBuilder {
                     column.name(),
                 );
 
-                dbg!(model.name(), &qualified_column);
                 let Some(column_graph) = self
                     .analyzed_wren_mdl
                     .lineage()
@@ -285,12 +284,6 @@ impl ModelPlanNodeBuilder {
             .unwrap_or_default();
 
         let mut calculate_iter = self.required_calculation.iter();
-        dbg!(
-            model.name(),
-            &model_ref,
-            required_fields.clone(),
-            self.model_required_fields.clone()
-        );
         let source_chain =
             if !source_required_fields.is_empty() || required_fields.is_empty() {
                 if required_fields.is_empty() {
@@ -343,8 +336,6 @@ impl ModelPlanNodeBuilder {
             );
         }
 
-        dbg!(&relation_chain);
-        dbg!(&self.required_exprs_buffer);
         Ok(ModelPlanNode {
             plan_name: model.name().to_string(),
             required_exprs: self

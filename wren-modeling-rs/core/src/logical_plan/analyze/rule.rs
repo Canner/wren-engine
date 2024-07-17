@@ -228,8 +228,6 @@ impl ModelGenerationRule {
                     let source_plan = model_plan.relation_chain.clone().plan(
                         ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
                     )?;
-                    dbg!(&model_plan.required_exprs);
-                    dbg!(&source_plan);
                     let result = match source_plan {
                         Some(plan) => LogicalPlanBuilder::from(plan)
                             .project(model_plan.required_exprs.clone())?
@@ -243,7 +241,6 @@ impl ModelGenerationRule {
                     let alias = LogicalPlanBuilder::from(result)
                         .alias(&model_plan.plan_name)?
                         .build()?;
-                    dbg!(&alias);
                     Ok(Transformed::yes(alias))
                 } else if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelSourceNode>()
@@ -331,12 +328,10 @@ impl ModelGenerationRule {
                     .as_any()
                     .downcast_ref::<PartialModelPlanNode>(
                 ) {
-                    dbg!(&partial_model.model_node.relation_chain);
                     let plan = LogicalPlan::Extension(Extension {
                         node: Arc::new(partial_model.model_node.clone()),
                     });
                     let source_plan = self.generate_model_internal(plan)?.data;
-                    dbg!(&source_plan);
                     let projection: Vec<_> = partial_model
                         .schema()
                         .fields()

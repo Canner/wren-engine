@@ -8,7 +8,6 @@ use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::{AnalyzedWrenMDL, Dataset};
-use datafusion::arrow::ipc::Field;
 use datafusion::catalog::TableReference;
 use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
 use datafusion::logical_expr::{
@@ -81,7 +80,6 @@ impl RelationChain {
                     let node = if fields.iter().any(|e| {
                         e.column.is_some() && e.column.clone().unwrap().is_calculated
                     }) {
-                        dbg!(&fields);
                         let schema = create_schema(
                             fields
                                 .iter()
@@ -132,7 +130,6 @@ impl RelationChain {
         match self {
             RelationChain::Chain(plan, _, condition, ref mut next) => {
                 let left = rule.generate_model_internal(plan.clone())?.data;
-                dbg!(&plan, &left);
                 let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
                     .iter()
                     .cloned()
@@ -240,7 +237,6 @@ impl RelationChain {
                     .map(|expr| expr.expr.clone())
                     .collect();
 
-                dbg!(&required_field);
                 Ok(Some(
                     LogicalPlanBuilder::from(left)
                         .join_on(
