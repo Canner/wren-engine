@@ -877,6 +877,9 @@ impl UserDefinedLogicalNodeCore for CalculationPlanNode {
     }
 }
 
+/// [PartialModelPlanNode] is a logical plan node that represents a partial model.
+/// When a calculation contains the calculation belong to another models, we should construct
+/// a [PartialModelPlanNode] for the calculation.
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub(crate) struct PartialModelPlanNode {
     pub model_node: ModelPlanNode,

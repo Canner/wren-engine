@@ -175,6 +175,19 @@ async fn register_ecommerce_mdl(
                         .calculated(true)
                         .build(),
                 )
+                // TODO: allow multiple calculation in an expression
+                // .column(
+                //     ColumnBuilder::new("customer_location", "varchar")
+                //         .calculated(true)
+                //         .expression("orders.customer_state || '-' || orders.customer_city")
+                //         .build(),
+                // )
+                // .column(
+                //     ColumnBuilder::new("customer_location", "varchar")
+                //         .calculated(true)
+                //         .expression("orders.customers.state || '-' || orders.customers.city")
+                //         .build(),
+                // )
                 .primary_key("id")
                 .build(),
         )
@@ -216,6 +229,11 @@ async fn register_ecommerce_mdl(
                 .column(
                     ColumnBuilder::new_calculated("totalprice", "double")
                         .expression("sum(order_items.price)")
+                        .build(),
+                )
+                .column(
+                    ColumnBuilder::new_calculated("customer_city", "varchar")
+                        .expression("customers.city")
                         .build(),
                 )
                 .primary_key("order_id")

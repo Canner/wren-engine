@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
-        "select totalprice from wrenai.public.orders",
+        "select totalprice from wrenai.public.customers",
     )
     .await
     {
@@ -112,6 +112,12 @@ fn init_manifest() -> Manifest {
                 .column(
                     ColumnBuilder::new("orders", "orders")
                         .relationship("orders_customer")
+                        .build(),
+                )
+                // It's a to-many-relationship chain
+                .column(
+                    ColumnBuilder::new_calculated("totalprice", "double")
+                        .expression("sum(orders.order_items.price)")
                         .build(),
                 )
                 .primary_key("id")
