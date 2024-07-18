@@ -49,6 +49,10 @@ To run the tests:
 - Run the container: `just docker-run`
 
 
+## How to add new data source
+Please see [How to Add a New Data Source](how-to-add-data-source.md) for more information.
+
+
 ## Troubleshooting
 ### MS SQL Server Tests
 If you're having trouble running tests related to MS SQL Server, you may need to install the appropriate driver. For Linux or macOS, we recommend installing the `unixodbc` and `freetds` packages.

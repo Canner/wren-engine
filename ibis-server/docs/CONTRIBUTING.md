@@ -45,3 +45,6 @@ Congratulations :tada::tada: The Canner team thanks you :sparkles:.
 Once your PR is merged, your contributions will be worked on the next release.
 
 Now that you are part of the Canner community.
+
+## How to add new data source
+Please see [How to Add a New Data Source](how-to-add-data-source.md) for more information.
