@@ -68,6 +68,15 @@ client = TestClient(app)
 We use [pytest](https://github.com/pytest-dev/pytest) as our test framework.
 You can learn more about the pytest [marker](https://docs.pytest.org/en/stable/example/markers.html) and [fixtures](https://docs.pytest.org/en/stable/explanation/fixtures.html).
 
+As we use a strict marker strategy in pytest, you need to declare the new marker in the `pyproject.toml` file.
+Open the `pyproject.toml` file and locate the `[tool.pytest.ini_options]` section. Add your new marker to the `markers` list:
+```toml
+[tool.pytest.ini_options]
+markers = [
+    "postgres: mark a test as a postgres test",
+]
+```
+
 If the data source has a Docker image available, you can use [testcontainers-python](https://testcontainers-python.readthedocs.io/en/latest/modules/index.html) to simplify your testing setup:
 ```python
 import pytest
