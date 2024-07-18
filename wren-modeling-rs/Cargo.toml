@@ -14,7 +14,7 @@ version = "0.1.0"
 
 [workspace.dependencies]
 async-trait = "0.1.80"
-datafusion = { version = "39.0.0", features = ["backtrace"] }
+datafusion = { version = "40.0.0", features = ["backtrace"] }
 env_logger = "0.11.3"
 log = { version = "0.4.14" }
 petgraph = "0.6.5"

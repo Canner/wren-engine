@@ -63,10 +63,14 @@ impl ModelAnalyzeRule {
                 let mut buffer = used_columns.borrow_mut();
                 buffer.clear();
                 let mut accum = HashSet::new();
-                let _ = utils::exprlist_to_columns(&aggregate.aggr_expr, &mut accum);
-                let _ = utils::exprlist_to_columns(&aggregate.group_expr, &mut accum);
+                let _ = &aggregate.aggr_expr.iter().for_each(|expr| {
+                    Expr::add_column_refs(expr, &mut accum);
+                });
+                let _ = &aggregate.group_expr.iter().for_each(|expr| {
+                    Expr::add_column_refs(expr, &mut accum);
+                });
                 accum.iter().for_each(|expr| {
-                    buffer.insert(Expr::Column(expr.clone()));
+                    buffer.insert(Expr::Column(expr.to_owned().clone()));
                 });
                 Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)))
             }

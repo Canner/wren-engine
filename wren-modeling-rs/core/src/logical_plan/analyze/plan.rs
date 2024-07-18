@@ -663,7 +663,9 @@ impl ModelSourceNode {
         for expr in required_exprs.iter() {
             if let Expr::Wildcard { qualifier } = expr {
                 let model = if let Some(model) = qualifier {
-                    let Some(model) = analyzed_wren_mdl.wren_mdl.get_model(model) else {
+                    let Some(model) =
+                        analyzed_wren_mdl.wren_mdl.get_model(&format!("{model}"))
+                    else {
                         return plan_err!("Model not found {}", &model);
                     };
                     model
