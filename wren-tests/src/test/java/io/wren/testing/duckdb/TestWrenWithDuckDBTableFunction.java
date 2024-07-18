@@ -33,6 +33,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Test(singleThreaded = true)
 public class TestWrenWithDuckDBTableFunction
         extends RequireWrenServer
 {
