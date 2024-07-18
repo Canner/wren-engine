@@ -26,7 +26,7 @@ pub struct Model {
     pub ref_sql: String,
     #[serde(default)]
     pub base_object: String,
-    #[serde(default)]
+    #[serde(default, with = "table_reference")]
     pub table_reference: String,
     pub columns: Vec<Arc<Column>>,
     #[serde(default)]
@@ -63,6 +63,73 @@ impl Model {
 
     pub fn primary_key(&self) -> Option<&str> {
         self.primary_key.as_deref()
+    }
+}
+
+mod table_reference {
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Deserialize, Serialize, Default)]
+    struct TableReference {
+        catalog: Option<String>,
+        schema: Option<String>,
+        table: String,
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let TableReference {
+            catalog,
+            schema,
+            table,
+        } = TableReference::deserialize(deserializer)?;
+        let mut result = String::new();
+        if let Some(catalog) = catalog.filter(|c| !c.is_empty()) {
+            result.push_str(&catalog);
+            result.push('.');
+        }
+        if let Some(schema) = schema.filter(|s| !s.is_empty()) {
+            result.push_str(&schema);
+            result.push('.');
+        }
+        result.push_str(&table);
+        Ok(result)
+    }
+
+    pub fn serialize<S>(table_ref: &String, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let parts: Vec<&str> = table_ref.split('.').filter(|p| !p.is_empty()).collect();
+        if parts.len() > 3 {
+            return Err(serde::ser::Error::custom(format!(
+                "Invalid table reference: {table_ref}"
+            )));
+        }
+        let table_ref = if parts.len() == 3 {
+            TableReference {
+                catalog: Some(parts[0].to_string()),
+                schema: Some(parts[1].to_string()),
+                table: parts[2].to_string(),
+            }
+        } else if parts.len() == 2 {
+            TableReference {
+                catalog: None,
+                schema: Some(parts[0].to_string()),
+                table: parts[1].to_string(),
+            }
+        } else if parts.len() == 1 {
+            TableReference {
+                catalog: None,
+                schema: None,
+                table: parts[0].to_string(),
+            }
+        } else {
+            TableReference::default()
+        };
+        table_ref.serialize(serializer)
     }
 }
 

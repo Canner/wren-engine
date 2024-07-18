@@ -396,6 +396,21 @@ mod test {
 
         let json_str = serde_json::to_string(&model).unwrap();
         let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, model);
+
+        // test table_reference is null
+        let model = ModelBuilder::new("test")
+            .ref_sql("SELECT * FROM test")
+            .base_object("test")
+            .column(ColumnBuilder::new("id", "integer").build())
+            .primary_key("id")
+            .cached(true)
+            .refresh_time("1h")
+            .property("key", "value")
+            .build();
+
+        let json_str = serde_json::to_string(&model).unwrap();
+        let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, model)
     }
 

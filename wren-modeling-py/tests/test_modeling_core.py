@@ -9,7 +9,10 @@ manifest = {
     "models": [
         {
             "name": "customer",
-            "tableReference": "main.customer",
+            "tableReference": {
+                "schema": "main",
+                "table": "customer",
+            },
             "columns": [
                 {"name": "custkey", "expression": "c_custkey", "type": "integer"},
                 {"name": "name", "expression": "c_name", "type": "varchar"},
