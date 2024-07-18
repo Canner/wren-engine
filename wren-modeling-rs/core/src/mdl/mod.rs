@@ -264,15 +264,13 @@ mod test {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use datafusion::arrow::array::{ArrayRef, Int32Array, RecordBatch, StringArray};
     use datafusion::common::not_impl_err;
-    use datafusion::error::Result;
+    use datafusion::common::Result;
     use datafusion::prelude::SessionContext;
-    use datafusion::sql::planner::SqlToRel;
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
-    use datafusion::sql::sqlparser::parser::Parser;
     use datafusion::sql::unparser::plan_to_sql;
 
-    use crate::logical_plan::context_provider::RemoteContextProvider;
+    use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, AnalyzedWrenMDL};
 
@@ -288,11 +286,10 @@ mod test {
             Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
         };
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
-        let actual = mdl::transform_sql(
+        let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
             "select orderkey + orderkey from test.test.orders",
         )?;
-        plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
         Ok(())
     }
 
@@ -313,9 +310,9 @@ mod test {
                 "select orderkey + orderkey from test.test.orders",
                 "select orderkey from test.test.orders where orders.totalprice > 10",
                 "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                "select orderkey, sum(totalprice) from test.test.orders group by 1",
+                "select orderkey, min(totalprice) from test.test.orders group by 1",
                 "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
-                "select totalcost from test.test.profile",
+                "select min_totalcost from test.test.profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];
@@ -328,26 +325,11 @@ mod test {
                 sql,
             )
             .await?;
-            let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
+            let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
             println!("After roundtrip: {}", after_roundtrip);
         }
 
         Ok(())
-    }
-
-    fn plan_sql(sql: &str, analyzed_mdl: Arc<AnalyzedWrenMDL>) -> Result<String> {
-        let dialect = GenericDialect {};
-        let ast = Parser::parse_sql(&dialect, sql).unwrap();
-        let statement = &ast[0];
-
-        let context_provider = RemoteContextProvider::new(&analyzed_mdl.wren_mdl())?;
-        let sql_to_rel = SqlToRel::new(&context_provider);
-        let rels = sql_to_rel.sql_statement_to_plan(statement.clone())?;
-        // show the planned sql
-        match plan_to_sql(&rels) {
-            Ok(sql) => Ok(sql.to_string()),
-            Err(e) => Err(e),
-        }
     }
 
     #[tokio::test]
@@ -370,8 +352,56 @@ mod test {
             sql,
         )
         .await?;
-        let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl))?;
+        let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
         println!("After roundtrip: {}", after_roundtrip);
         Ok(())
+    }
+
+    async fn plan_sql(sql: &str, analyzed_mdl: Arc<AnalyzedWrenMDL>) -> Result<String> {
+        let ctx = create_ctx_with_mdl(&SessionContext::new(), analyzed_mdl).await?;
+        // To roundtrip testing, we should register the mock table for the planned sql.
+        ctx.register_batch("orders", orders())?;
+        ctx.register_batch("customer", customer())?;
+        ctx.register_batch("profile", profile())?;
+        let plan = ctx.state().create_logical_plan(sql).await?;
+        // show the planned sql
+        plan_to_sql(&plan).map(|sql| sql.to_string())
+    }
+
+    /// Return a RecordBatch with made up data about customer
+    fn customer() -> RecordBatch {
+        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let name: ArrayRef =
+            Arc::new(StringArray::from_iter_values(["Gura", "Azki", "Ina"]));
+        RecordBatch::try_from_iter(vec![("c_custkey", custkey), ("c_name", name)])
+            .unwrap()
+    }
+
+    /// Return a RecordBatch with made up data about profile
+    fn profile() -> RecordBatch {
+        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let phone: ArrayRef = Arc::new(StringArray::from_iter_values([
+            "123456", "234567", "345678",
+        ]));
+        let sex: ArrayRef = Arc::new(StringArray::from_iter_values(["M", "M", "F"]));
+        RecordBatch::try_from_iter(vec![
+            ("p_custkey", custkey),
+            ("p_phone", phone),
+            ("p_sex", sex),
+        ])
+        .unwrap()
+    }
+
+    /// Return a RecordBatch with made up data about orders
+    fn orders() -> RecordBatch {
+        let orderkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let totalprice: ArrayRef = Arc::new(Int32Array::from(vec![100, 200, 300]));
+        RecordBatch::try_from_iter(vec![
+            ("o_orderkey", orderkey),
+            ("o_custkey", custkey),
+            ("o_totalprice", totalprice),
+        ])
+        .unwrap()
     }
 }

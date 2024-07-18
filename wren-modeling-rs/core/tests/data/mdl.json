@@ -13,7 +13,7 @@
         {
           "name": "custkey",
           "type": "integer",
-          "expression": "c_orderkey"
+          "expression": "c_custkey"
         },
         {
           "name": "name",
@@ -61,10 +61,10 @@
           "relationship": "CustomerProfile"
         },
         {
-          "name": "totalcost",
+          "name": "min_totalcost",
           "type": "integer",
           "isCalculated": true,
-          "expression": "sum(customer.orders.totalprice)"
+          "expression": "min(customer.orders.totalprice)"
         }
       ],
       "primaryKey": "custkey"
