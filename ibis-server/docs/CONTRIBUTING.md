@@ -10,10 +10,10 @@ Use the table of contents icon on the top left corner of this document to get to
 
 ## New contributor guide
 
-To get an overview of the project, read the [README](../README.md) and [DEVELOPMENT](development). Here are some resources to help you get started with open source contributions:
+To get an overview of the project, read the [README](../README.md) and [development](development.md). Here are some resources to help you get started with open source contributions:
 
 - [Basic application structure](../README.md#application-structure)
-- [Set up development environment](development#getting-started)
+- [Set up development environment](development.md#getting-started)
 
 ## Getting started
 
