@@ -4,7 +4,11 @@
   "models": [
     {
       "name": "customer",
-      "tableReference": "customer",
+      "tableReference": {
+        "catalog": "",
+        "schema": "",
+        "name": "customer"
+      },
       "columns": [
         {
           "name": "custkey",
@@ -32,7 +36,9 @@
     },
     {
       "name": "profile",
-      "tableReference": "profile",
+      "tableReference": {
+        "name": "profile"
+      },
       "columns": [
         {
           "name": "custkey",
@@ -65,7 +71,11 @@
     },
     {
       "name": "orders",
-      "tableReference": "orders",
+      "tableReference": {
+        "catalog": "",
+        "schema": "",
+        "name": "orders"
+      },
       "columns": [
         {
           "name": "orderkey",

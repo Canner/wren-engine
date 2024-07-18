@@ -179,7 +179,7 @@ pub(crate) fn create_expr_for_model(
     context_provider: DynamicContextProvider,
 ) -> Result<Expr> {
     let wrapped = format!("select {} from {}", expr, &model.table_reference);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
+    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;
     let statement = &parsed[0];
 
     let sql_to_rel = SqlToRel::new(&context_provider);
