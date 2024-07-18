@@ -7,7 +7,7 @@
       "tableReference": {
         "catalog": "",
         "schema": "",
-        "name": "customer"
+        "table": "customer"
       },
       "columns": [
         {
@@ -37,7 +37,7 @@
     {
       "name": "profile",
       "tableReference": {
-        "name": "profile"
+        "table": "profile"
       },
       "columns": [
         {
@@ -74,7 +74,7 @@
       "tableReference": {
         "catalog": "",
         "schema": "",
-        "name": "orders"
+        "table": "orders"
       },
       "columns": [
         {

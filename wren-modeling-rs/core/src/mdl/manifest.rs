@@ -73,7 +73,7 @@ mod table_reference {
     struct TableReference {
         catalog: Option<String>,
         schema: Option<String>,
-        name: String,
+        table: String,
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -83,7 +83,7 @@ mod table_reference {
         let TableReference {
             catalog,
             schema,
-            name,
+            table,
         } = TableReference::deserialize(deserializer)?;
         let mut result = String::new();
         if let Some(catalog) = catalog.filter(|c| !c.is_empty()) {
@@ -94,7 +94,7 @@ mod table_reference {
             result.push_str(&schema);
             result.push('.');
         }
-        result.push_str(&name);
+        result.push_str(&table);
         Ok(result)
     }
 
@@ -112,19 +112,19 @@ mod table_reference {
             TableReference {
                 catalog: Some(parts[0].to_string()),
                 schema: Some(parts[1].to_string()),
-                name: parts[2].to_string(),
+                table: parts[2].to_string(),
             }
         } else if parts.len() == 2 {
             TableReference {
                 catalog: None,
                 schema: Some(parts[0].to_string()),
-                name: parts[1].to_string(),
+                table: parts[1].to_string(),
             }
         } else if parts.len() == 1 {
             TableReference {
                 catalog: None,
                 schema: None,
-                name: parts[0].to_string(),
+                table: parts[0].to_string(),
             }
         } else {
             TableReference::default()
