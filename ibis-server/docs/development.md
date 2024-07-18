@@ -24,7 +24,7 @@ just pre-commit-install
 This installs the pre-commit hooks.
 
 > [!WARNING]  
-> Before working on the application, you need to set up a Python virtual environment and install dependencies in the [wren-modeling-py](../wren-modeling-py) directory.
+> Before working on the application, you need to set up a Python virtual environment and install dependencies in the [wren-modeling-py](../../wren-modeling-py) directory.
 
 
 ## Start the server
@@ -40,14 +40,11 @@ To start the server:
 To run the tests:
 - Execute `just test`
 
-
 ### Environment Variables
 - `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
 - `LOG_LEVEL`: The log level of the server (default is INFO)
 
-
-## Docker
-To use Docker:
+### Docker
 - Build the image: `just docker-build`
 - Run the container: `just docker-run`
 

@@ -10,9 +10,10 @@ The application consists of three main parts:
 3. [wren-modeling-py](../wren-modeling-py): a Python adapter for the modeling core
 
 ## Quick Start
+
 ### Running on Docker
 You can follow the steps below to run the Java engine and ibis.
-- Create `compose.yaml` file and add the following content, edit environment variables if needed (see [Environment Variables](./DEVELOPMENT.md#environment-variables))
+Create `compose.yaml` file and add the following content, edit environment variables if needed (see [Environment Variables](docs/development#environment-variables))
 ```yaml
 services:
   ibis:
@@ -29,21 +30,22 @@ services:
     volumes:
       - ./etc:/usr/src/app/etc
 ```
-- Create `etc` directory and create `config.properties` inside the etc directory
+Create `etc` directory and create `config.properties` inside the etc directory
 ```bash
 mkdir etc
 cd etc
 vim config.properties
 ```
-- Add the following content to the `config.properties` file
+Add the following content to the `config.properties` file
 ```bash
 node.environment=production
 wren.directory=/usr/src/app/etc/mdl
 ```
-- Run the docker compose
+Run the docker compose
 ```bash
 docker compose up
 ```
+
 ### Running on Local
 Requirements:
 - Python 3.11
@@ -63,7 +65,7 @@ Navigate to the `ibis-server` directory
 ```bash
 cd ibis-server
 ```
-Create `.env` file and fill in the environment variables (see [Environment Variables](./DEVELOPMENT.md#environment-variables))
+Create `.env` file and fill in the environment variables (see [Environment Variables](docs/development#environment-variables))
 ```bash
 vim .env
 ```
@@ -76,5 +78,5 @@ Run the server
 just run
 ```
 
-## Developer Guide
-Please see [DEVELOPMENT.md](DEVELOPMENT.md) for more information.
+## Contributing
+Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.

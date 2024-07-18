@@ -2,7 +2,7 @@
 
 Thank you for investing your time in contributing to our project!
 
-Read our [Code of Conduct](../.github/CODE_OF_CONDUCT.md) to keep our community approachable and respectable.
+Read our [Code of Conduct](../../.github/CODE_OF_CONDUCT.md) to keep our community approachable and respectable.
 
 In this guide you will get an overview of the contribution workflow from opening an issue, creating a PR, reviewing, and merging the PR.
 
@@ -10,10 +10,10 @@ Use the table of contents icon on the top left corner of this document to get to
 
 ## New contributor guide
 
-To get an overview of the project, read the [README](./README.md) file. Here are some resources to help you get started with open source contributions:
+To get an overview of the project, read the [README](../README.md) and [DEVELOPMENT](development). Here are some resources to help you get started with open source contributions:
 
-- [Basic application structure](./README.md#application-structure)
-- [Set up development environment](./README.md#developer-guide)
+- [Basic application structure](../README.md#application-structure)
+- [Set up development environment](development#getting-started)
 
 ## Getting started
 
