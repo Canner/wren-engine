@@ -1,4 +1,3 @@
-use datafusion::arrow::datatypes::Field;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::fmt;
@@ -6,19 +5,20 @@ use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 use std::sync::Arc;
 
+use datafusion::arrow::datatypes::Field;
 use datafusion::common::{
-    internal_err, not_impl_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
+    internal_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
 };
 use datafusion::error::Result;
 use datafusion::logical_expr::utils::find_aggregate_exprs;
 use datafusion::logical_expr::{
-    col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
+    col, Expr, Extension, LogicalPlan, UserDefinedLogicalNode, UserDefinedLogicalNodeCore,
 };
-use petgraph::graph::NodeIndex;
+use log::debug;
 use petgraph::Graph;
 
-use crate::logical_plan::analyze::plan::RelationChain::Start;
-use crate::logical_plan::analyze::rule::ModelGenerationRule;
+use crate::logical_plan::analyze::RelationChain;
+use crate::logical_plan::analyze::RelationChain::Start;
 use crate::logical_plan::utils::{from_qualified_name, map_data_type};
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
@@ -29,12 +29,31 @@ use crate::mdl::utils::{
 };
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset};
 
+#[derive(Debug)]
+pub(crate) enum WrenPlan {
+    Calculation(Arc<CalculationPlanNode>),
+}
+
+impl WrenPlan {
+    fn name(&self) -> &str {
+        match self {
+            WrenPlan::Calculation(node) => node.calculation.column.name(),
+        }
+    }
+
+    fn as_ref(&self) -> Arc<dyn UserDefinedLogicalNode> {
+        match self {
+            WrenPlan::Calculation(calculation) => Arc::clone(calculation) as _,
+        }
+    }
+}
+
 /// [ModelPlanNode] is a logical plan node that represents a model. It contains the model name,
 /// required fields, and the relation chain that connects the model with other models.
 /// It only generates the top plan for the model, and the relation chain will generate the source plan.
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub(crate) struct ModelPlanNode {
-    pub(crate) model_name: String,
+    pub(crate) plan_name: String,
     pub(crate) required_exprs: Vec<Expr>,
     pub(crate) relation_chain: Box<RelationChain>,
     schema_ref: DFSchemaRef,
@@ -48,45 +67,78 @@ impl ModelPlanNode {
         original_table_scan: Option<LogicalPlan>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     ) -> Result<Self> {
-        let mut required_exprs_buffer = BTreeSet::new();
-        let mut directed_graph: Graph<Dataset, DatasetLink> = Graph::new();
-        let mut model_required_fields: HashMap<TableReference, BTreeSet<OrdExpr>> =
-            HashMap::new();
-        let mut required_calculation: Vec<CalculationPlanNode> = vec![];
-        let mut fields = VecDeque::new();
+        ModelPlanNodeBuilder::new(analyzed_wren_mdl).build(
+            model,
+            required_fields,
+            original_table_scan,
+        )
+    }
+}
+
+/// The builder of [ModelPlanNode] to build the plan for the model.
+///
+/// required_fields: The required ordered fields for the target model.
+/// original_table_scan: The original table scan plan for the target model.
+/// model_required_fields: The required fields for the source models.
+/// required_calculation: The required calculation plan for the target model.
+/// fields: The fields for the target model to build the schema of this plan.
+/// analyzed_wren_mdl: The analyzed Wren MDL.
+struct ModelPlanNodeBuilder {
+    required_exprs_buffer: BTreeSet<OrdExpr>,
+    directed_graph: Graph<Dataset, DatasetLink>,
+    model_required_fields: HashMap<TableReference, BTreeSet<OrdExpr>>,
+    required_calculation: Vec<WrenPlan>,
+    fields: VecDeque<(Option<TableReference>, Arc<Field>)>,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+}
+
+impl ModelPlanNodeBuilder {
+    fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
+        Self {
+            required_exprs_buffer: BTreeSet::new(),
+            directed_graph: Graph::new(),
+            model_required_fields: HashMap::new(),
+            required_calculation: vec![],
+            fields: VecDeque::new(),
+            analyzed_wren_mdl,
+        }
+    }
+
+    fn build(
+        &mut self,
+        model: Arc<Model>,
+        required_fields: Vec<Expr>,
+        original_table_scan: Option<LogicalPlan>,
+    ) -> Result<ModelPlanNode> {
         let model_ref = TableReference::full(
-            analyzed_wren_mdl.wren_mdl().catalog(),
-            analyzed_wren_mdl.wren_mdl().schema(),
+            self.analyzed_wren_mdl.wren_mdl().catalog(),
+            self.analyzed_wren_mdl.wren_mdl().schema(),
             model.name(),
         );
 
         let required_columns =
             model.get_physical_columns().into_iter().filter(|column| {
-                required_fields.iter().any(|expr| {
-                    if let Expr::Column(column_expr) = expr {
-                        column_expr.name.as_str() == column.name()
-                    } else {
-                        false
-                    }
-                })
+                required_fields
+                    .iter()
+                    .any(|expr| is_required_column(expr, column.name()))
             });
-
         for column in required_columns {
             if column.is_calculated {
                 let expr = if column.expression.is_some() {
-                    let column_rf = analyzed_wren_mdl.wren_mdl().get_column_reference(
-                        &from_qualified_name(
-                            &analyzed_wren_mdl.wren_mdl(),
+                    let column_rf = self
+                        .analyzed_wren_mdl
+                        .wren_mdl()
+                        .get_column_reference(&from_qualified_name(
+                            &self.analyzed_wren_mdl.wren_mdl(),
                             model.name(),
                             column.name(),
-                        ),
-                    );
+                        ));
                     let Some(column_rf) = column_rf else {
                         return plan_err!("Column reference not found for {:?}", column);
                     };
                     let expr = create_wren_calculated_field_expr(
                         column_rf,
-                        Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&self.analyzed_wren_mdl),
                     )?;
                     let expr_plan = expr.alias(column.name());
                     expr_plan
@@ -95,12 +147,13 @@ impl ModelPlanNode {
                 };
 
                 let qualified_column = from_qualified_name(
-                    &analyzed_wren_mdl.wren_mdl(),
+                    &self.analyzed_wren_mdl.wren_mdl(),
                     model.name(),
                     column.name(),
                 );
 
-                let Some(column_graph) = analyzed_wren_mdl
+                let Some(column_graph) = self
+                    .analyzed_wren_mdl
                     .lineage()
                     .required_dataset_topo
                     .get(&qualified_column)
@@ -111,74 +164,38 @@ impl ModelPlanNode {
                     );
                 };
 
-                if !find_aggregate_exprs(&[expr.clone()]).is_empty() {
-                    // The calculation column is provided by the CalculationPlanNode.
-                    required_exprs_buffer.insert(OrdExpr::new(col(format!(
-                        "{}.{}",
-                        column.name(),
-                        column.name()
-                    ))));
-
-                    let column_rf = analyzed_wren_mdl
-                        .wren_mdl()
-                        .get_column_reference(&qualified_column);
-                    let mut partial_model_required_fields = HashMap::new();
-                    let _ = collect_model_required_fields(
-                        qualified_column,
-                        Arc::clone(&analyzed_wren_mdl),
-                        &mut partial_model_required_fields,
-                    );
-
-                    let mut iter = column_graph.node_indices();
-
-                    let start = iter.next().unwrap();
-                    let source_required_fields = partial_model_required_fields
-                        .get(&model_ref)
-                        .map(|c| c.iter().cloned().map(|c| c.expr).collect())
-                        .unwrap_or_default();
-                    let source = column_graph.node_weight(start).unwrap();
-
-                    let source_chain = RelationChain::source(
-                        source,
-                        source_required_fields,
-                        Arc::clone(&analyzed_wren_mdl),
-                    )?;
-
-                    let partial_chain = RelationChain::with_chain(
-                        source_chain,
-                        start,
-                        iter,
-                        column_graph.clone(),
-                        &partial_model_required_fields,
-                        Arc::clone(&analyzed_wren_mdl),
-                    )?;
-
-                    let Some(column_rf) = column_rf else {
-                        return plan_err!("Column reference not found for {:?}", column);
-                    };
-                    let calculation = CalculationPlanNode::new(
-                        column_rf,
+                if self.is_to_many_calculation(expr.clone()) {
+                    let calculation = self.create_partial_calculation(
+                        model_ref.clone(),
+                        Arc::clone(&column),
+                        &qualified_column,
                         expr,
-                        partial_chain,
-                        Arc::clone(&analyzed_wren_mdl),
                     )?;
-                    required_calculation.push(calculation);
+                    self.required_calculation.push(calculation);
                 } else {
-                    required_exprs_buffer.insert(OrdExpr::new(expr.clone()));
-                    merge_graph(&mut directed_graph, column_graph)?;
+                    merge_graph(&mut self.directed_graph, column_graph)?;
+                    if self.is_contain_calculation_source(&qualified_column) {
+                        collect_partial_model_plan(
+                            Arc::clone(&self.analyzed_wren_mdl),
+                            &qualified_column,
+                            &mut self.model_required_fields,
+                        )?;
+                    }
+                    self.required_exprs_buffer
+                        .insert(OrdExpr::new(expr.clone()));
                     let _ = collect_model_required_fields(
-                        qualified_column,
-                        Arc::clone(&analyzed_wren_mdl),
-                        &mut model_required_fields,
+                        &qualified_column,
+                        Arc::clone(&self.analyzed_wren_mdl),
+                        &mut self.model_required_fields,
                     );
                 }
             } else {
                 let expr_plan = get_remote_column_exp(
                     &column,
                     Arc::clone(&model),
-                    Arc::clone(&analyzed_wren_mdl),
+                    Arc::clone(&self.analyzed_wren_mdl),
                 )?;
-                model_required_fields
+                self.model_required_fields
                     .entry(model_ref.clone())
                     .or_default()
                     .insert(OrdExpr::new(expr_plan.clone()));
@@ -187,9 +204,10 @@ impl ModelPlanNode {
                     model_ref.table(),
                     column.name()
                 )));
-                required_exprs_buffer.insert(OrdExpr::new(expr_plan.clone()));
+                self.required_exprs_buffer
+                    .insert(OrdExpr::new(expr_plan.clone()));
             }
-            fields.push_front((
+            self.fields.push_front((
                 Some(TableReference::bare(model.name())),
                 Arc::new(Field::new(
                     column.name(),
@@ -199,30 +217,34 @@ impl ModelPlanNode {
             ));
         }
 
-        directed_graph.add_node(Dataset::Model(Arc::clone(&model)));
-        if !is_dag(&directed_graph) {
+        self.directed_graph
+            .add_node(Dataset::Model(Arc::clone(&model)));
+        if !is_dag(&self.directed_graph) {
             return plan_err!("cyclic dependency detected: {}", model.name());
         }
 
         let schema_ref = DFSchemaRef::new(
-            DFSchema::new_with_metadata(fields.into_iter().collect(), HashMap::new())
-                .expect("create schema failed"),
+            DFSchema::new_with_metadata(
+                self.fields.iter().cloned().collect(),
+                HashMap::new(),
+            )
+            .expect("create schema failed"),
         );
 
-        let mut iter = directed_graph.node_indices();
+        let mut iter = self.directed_graph.node_indices();
         let Some(start) = iter.next() else {
             return internal_err!("Model not found");
         };
-        let Some(source) = directed_graph.node_weight(start) else {
+        let Some(source) = self.directed_graph.node_weight(start) else {
             return internal_err!("Dataset not found");
         };
-        let mut source_required_fields: Vec<Expr> = model_required_fields
+        let mut source_required_fields: Vec<Expr> = self
+            .model_required_fields
             .get(&model_ref)
             .map(|c| c.iter().cloned().map(|c| c.expr).collect())
             .unwrap_or_default();
 
-        let mut calculate_iter = required_calculation.iter();
-
+        let mut calculate_iter = self.required_calculation.iter();
         let source_chain =
             if !source_required_fields.is_empty() || required_fields.is_empty() {
                 if required_fields.is_empty() {
@@ -231,14 +253,14 @@ impl ModelPlanNode {
                 RelationChain::source(
                     source,
                     source_required_fields,
-                    Arc::clone(&analyzed_wren_mdl),
+                    Arc::clone(&self.analyzed_wren_mdl),
                 )?
             } else {
                 let Some(first_calculation) = calculate_iter.next() else {
                     return plan_err!("Calculation not found and no any required field");
                 };
                 Start(LogicalPlan::Extension(Extension {
-                    node: Arc::new(first_calculation.clone()),
+                    node: first_calculation.as_ref(),
                 }))
             };
 
@@ -246,14 +268,13 @@ impl ModelPlanNode {
             source_chain,
             start,
             iter,
-            directed_graph,
-            &model_required_fields,
-            Arc::clone(&analyzed_wren_mdl),
+            self.directed_graph.clone(),
+            &self.model_required_fields.clone(),
+            Arc::clone(&self.analyzed_wren_mdl),
         )?;
 
         for calculation_plan in calculate_iter {
-            let target_ref =
-                TableReference::bare(calculation_plan.calculation.column.name());
+            let target_ref = TableReference::bare(calculation_plan.name());
             let Some(join_key) = model.primary_key() else {
                 return plan_err!(
                     "Model {} should have primary key for calculation",
@@ -262,7 +283,7 @@ impl ModelPlanNode {
             };
             relation_chain = RelationChain::Chain(
                 LogicalPlan::Extension(Extension {
-                    node: Arc::new(calculation_plan.clone()),
+                    node: calculation_plan.as_ref(),
                 }),
                 JoinType::OneToOne,
                 format!(
@@ -275,10 +296,13 @@ impl ModelPlanNode {
                 Box::new(relation_chain),
             );
         }
-        Ok(Self {
-            model_name: model.name.clone(),
-            required_exprs: required_exprs_buffer
-                .into_iter()
+
+        Ok(ModelPlanNode {
+            plan_name: model.name().to_string(),
+            required_exprs: self
+                .required_exprs_buffer
+                .iter()
+                .cloned()
                 .map(|oe| oe.expr)
                 .collect(),
             relation_chain: Box::new(relation_chain),
@@ -286,17 +310,124 @@ impl ModelPlanNode {
             original_table_scan,
         })
     }
+
+    fn is_to_many_calculation(&self, expr: Expr) -> bool {
+        !find_aggregate_exprs(&[expr]).is_empty()
+    }
+
+    fn is_contain_calculation_source(&self, qualified_column: &Column) -> bool {
+        self.analyzed_wren_mdl
+            .lineage()
+            .required_fields_map
+            .get(qualified_column)
+            .map(|required_columns| {
+                required_columns.iter().any(|c| {
+                    self.analyzed_wren_mdl
+                        .wren_mdl()
+                        .get_column_reference(c)
+                        .filter(|r| r.column.is_calculated)
+                        .is_some()
+                })
+            })
+            .unwrap_or_default()
+    }
+
+    fn create_partial_calculation(
+        &mut self,
+        model_ref: TableReference,
+        column: Arc<mdl::manifest::Column>,
+        qualified_column: &Column,
+        col_expr: Expr,
+    ) -> Result<WrenPlan> {
+        let Some(column_graph) = self
+            .analyzed_wren_mdl
+            .lineage()
+            .required_dataset_topo
+            .get(qualified_column)
+        else {
+            return plan_err!("Required dataset not found for {}", qualified_column);
+        };
+
+        // The calculation column is provided by the CalculationPlanNode.
+        let _ = &self.required_exprs_buffer.insert(OrdExpr::new(col(format!(
+            "{}.{}",
+            column.name(),
+            column.name()
+        ))));
+
+        let mut partial_model_required_fields = HashMap::new();
+
+        if self.is_contain_calculation_source(qualified_column) {
+            collect_partial_model_plan(
+                Arc::clone(&self.analyzed_wren_mdl),
+                qualified_column,
+                &mut partial_model_required_fields,
+            )?;
+        }
+
+        collect_model_required_fields(
+            qualified_column,
+            Arc::clone(&self.analyzed_wren_mdl),
+            &mut partial_model_required_fields,
+        )?;
+
+        let mut iter = column_graph.node_indices();
+
+        let start = iter.next().unwrap();
+        let source_required_fields = partial_model_required_fields
+            .get(&model_ref)
+            .map(|c| c.iter().cloned().map(|c| c.expr).collect())
+            .unwrap_or_default();
+        let source = column_graph.node_weight(start).unwrap();
+
+        let source_chain = RelationChain::source(
+            source,
+            source_required_fields,
+            Arc::clone(&self.analyzed_wren_mdl),
+        )?;
+
+        let partial_chain = RelationChain::with_chain(
+            source_chain,
+            start,
+            iter,
+            column_graph.clone(),
+            &partial_model_required_fields,
+            Arc::clone(&self.analyzed_wren_mdl),
+        )?;
+        let Some(column_rf) = self
+            .analyzed_wren_mdl
+            .wren_mdl()
+            .get_column_reference(qualified_column)
+        else {
+            return plan_err!("Column reference not found for {:?}", column);
+        };
+        Ok(WrenPlan::Calculation(Arc::new(CalculationPlanNode::new(
+            column_rf,
+            col_expr,
+            partial_chain,
+            Arc::clone(&self.analyzed_wren_mdl),
+        )?)))
+    }
 }
 
-fn collect_model_required_fields(
-    qualified_column: Column,
+#[inline]
+fn is_required_column(expr: &Expr, name: &str) -> bool {
+    match expr {
+        Expr::Column(column_expr) => column_expr.name.as_str() == name,
+        Expr::Alias(alias) => is_required_column(&alias.expr, name),
+        _ => false,
+    }
+}
+
+fn collect_partial_model_plan(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-    model_required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
+    qualified_column: &Column,
+    required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
         .lineage()
         .required_fields_map
-        .get(&qualified_column)
+        .get(qualified_column)
     else {
         return plan_err!("Required fields not found for {}", qualified_column);
     };
@@ -310,32 +441,83 @@ fn collect_model_required_fields(
         else {
             return plan_err!("Column reference not found for {}", c);
         };
+
+        if column.is_calculated {
+            let expr = create_wren_expr_for_model(
+                &c.name,
+                dataset.try_as_model().unwrap(),
+                Arc::clone(&analyzed_wren_mdl),
+            )?;
+            required_fields
+                .entry(relation_ref.clone())
+                .or_default()
+                .insert(OrdExpr::with_column(
+                    expr.alias(qualified_column.name.clone()),
+                    Arc::clone(&column),
+                ));
+        }
+    }
+    Ok(())
+}
+
+fn collect_model_required_fields(
+    qualified_column: &Column,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    model_required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
+) -> Result<()> {
+    let Some(set) = analyzed_wren_mdl
+        .lineage()
+        .required_fields_map
+        .get(qualified_column)
+    else {
+        return plan_err!("Required fields not found for {}", qualified_column);
+    };
+    debug!("Required fields: {:?}", set);
+    for c in set {
+        let Some(relation_ref) = &c.relation else {
+            return plan_err!("Source dataset not found for {}", c);
+        };
+        let Some(ColumnReference { dataset, column }) =
+            analyzed_wren_mdl.wren_mdl().get_column_reference(c)
+        else {
+            return plan_err!("Column reference not found for {}", c);
+        };
         if let Dataset::Model(m) = dataset {
             if column.is_calculated {
                 let expr_plan = if let Some(expression) = &column.expression {
-                    create_wren_expr_for_model(
+                    let Ok(expr) = create_wren_expr_for_model(
                         expression,
                         Arc::clone(&m),
                         Arc::clone(&analyzed_wren_mdl),
-                    )?
+                    ) else {
+                        // skip the semantic expression (e.g. calculated field or relationship column)
+                        debug!(
+                            "Error creating expression for calculated field: {}",
+                            expression
+                        );
+                        continue;
+                    };
+                    expr
                 } else {
                     return plan_err!("Only support calculated field with expression");
                 }
                 .alias(column.name.clone());
+                debug!("Required Calculated field: {}", &expr_plan);
                 model_required_fields
                     .entry(relation_ref.clone())
                     .or_default()
-                    .insert(OrdExpr::new(expr_plan));
+                    .insert(OrdExpr::with_column(expr_plan, column));
             } else {
                 let expr_plan = get_remote_column_exp(
                     &column,
                     Arc::clone(&m),
                     Arc::clone(&analyzed_wren_mdl),
                 )?;
+                debug!("Required field: {}", &expr_plan);
                 model_required_fields
                     .entry(relation_ref.clone())
                     .or_default()
-                    .insert(OrdExpr::new(expr_plan));
+                    .insert(OrdExpr::with_column(expr_plan, column));
             }
         } else {
             return plan_err!("Only support model as source dataset");
@@ -359,12 +541,23 @@ fn get_remote_column_exp(
 
 #[derive(Eq, PartialEq, Debug, Hash, Clone)]
 pub struct OrdExpr {
-    expr: Expr,
+    pub(crate) expr: Expr,
+    pub(crate) column: Option<Arc<mdl::manifest::Column>>,
 }
 
 impl OrdExpr {
-    fn new(expr: Expr) -> Self {
-        Self { expr }
+    pub(crate) fn new(expr: Expr) -> Self {
+        Self { expr, column: None }
+    }
+
+    pub(crate) fn with_column(
+        expr: Expr,
+        calculated_alias: Arc<mdl::manifest::Column>,
+    ) -> Self {
+        Self {
+            expr,
+            column: Some(calculated_alias),
+        }
     }
 }
 
@@ -407,210 +600,6 @@ fn merge_graph(
     Ok(())
 }
 
-/// RelationChain is a chain of models that are connected by the relationship.
-/// The chain is used to generate the join plan for the model.
-/// The physical layout will be looked like:
-/// (((Model3, Model2), Model1), Nil)
-#[derive(Eq, PartialEq, Debug, Hash, Clone)]
-pub enum RelationChain {
-    Chain(LogicalPlan, JoinType, String, Box<RelationChain>),
-    Start(LogicalPlan),
-}
-
-impl RelationChain {
-    pub(crate) fn source(
-        dataset: &Dataset,
-        required_fields: Vec<Expr>,
-        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-    ) -> Result<Self> {
-        match dataset {
-            Dataset::Model(source_model) => {
-                Ok(Start(LogicalPlan::Extension(Extension {
-                    node: Arc::new(ModelSourceNode::new(
-                        Arc::clone(source_model),
-                        required_fields,
-                        analyzed_wren_mdl,
-                        None,
-                    )?),
-                })))
-            }
-            _ => {
-                not_impl_err!("Only support model as source dataset")
-            }
-        }
-    }
-
-    pub fn with_chain(
-        source: Self,
-        mut start: NodeIndex,
-        iter: impl Iterator<Item = NodeIndex>,
-        directed_graph: Graph<Dataset, DatasetLink>,
-        model_required_fields: &HashMap<TableReference, BTreeSet<OrdExpr>>,
-        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-    ) -> Result<Self> {
-        let mut relation_chain = source;
-
-        for next in iter {
-            let target = directed_graph.node_weight(next).unwrap();
-            let Some(link_index) = directed_graph.find_edge(start, next) else {
-                break;
-            };
-            let link = directed_graph.edge_weight(link_index).unwrap();
-            let target_ref = TableReference::full(
-                analyzed_wren_mdl.wren_mdl().catalog(),
-                analyzed_wren_mdl.wren_mdl().schema(),
-                target.name(),
-            );
-            let Some(fields) = model_required_fields.get(&target_ref) else {
-                return plan_err!("Required fields not found for {}", target_ref);
-            };
-            match target {
-                Dataset::Model(target_model) => {
-                    relation_chain = RelationChain::Chain(
-                        LogicalPlan::Extension(Extension {
-                            node: Arc::new(ModelSourceNode::new(
-                                Arc::clone(target_model),
-                                fields.iter().cloned().map(|c| c.expr).collect(),
-                                Arc::clone(&analyzed_wren_mdl),
-                                None,
-                            )?),
-                        }),
-                        link.join_type,
-                        link.condition.clone(),
-                        Box::new(relation_chain),
-                    );
-                }
-                _ => return plan_err!("Only support model as source dataset"),
-            }
-            start = next;
-        }
-        Ok(relation_chain)
-    }
-
-    pub(crate) fn plan(
-        &mut self,
-        rule: ModelGenerationRule,
-    ) -> Result<Option<LogicalPlan>> {
-        match self {
-            RelationChain::Chain(plan, _, condition, ref mut next) => {
-                let left = rule
-                    .generate_model_internal(plan.clone())
-                    .expect("Failed to generate model plan")
-                    .data;
-                let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
-                    .iter()
-                    .cloned()
-                    .map(|c| col(c.flat_name()))
-                    .collect();
-                let join_condition = join_keys[0].clone().eq(join_keys[1].clone());
-                let Some(right) = next.plan(rule)? else {
-                    return plan_err!("Nil relation chain");
-                };
-                let mut required_exprs = BTreeSet::new();
-                // collect the output calculated fields
-                match plan {
-                    LogicalPlan::Extension(plan) => {
-                        if let Some(model_plan) =
-                            plan.node.as_any().downcast_ref::<ModelPlanNode>()
-                        {
-                            UserDefinedLogicalNodeCore::schema(model_plan)
-                                .fields()
-                                .iter()
-                                .map(|field| {
-                                    col(format!(
-                                        "{}.{}",
-                                        model_plan.model_name,
-                                        field.name()
-                                    ))
-                                })
-                                .for_each(|c| {
-                                    required_exprs.insert(OrdExpr::new(c));
-                                });
-                        } else if let Some(model_source_plan) =
-                            plan.node.as_any().downcast_ref::<ModelSourceNode>()
-                        {
-                            UserDefinedLogicalNodeCore::schema(model_source_plan)
-                                .fields()
-                                .iter()
-                                .map(|field| {
-                                    col(format!(
-                                        "{}.{}",
-                                        model_source_plan.model_name,
-                                        field.name()
-                                    ))
-                                })
-                                .for_each(|c| {
-                                    required_exprs.insert(OrdExpr::new(c));
-                                });
-                        } else if let Some(calculation_plan) =
-                            plan.node.as_any().downcast_ref::<CalculationPlanNode>()
-                        {
-                            UserDefinedLogicalNodeCore::schema(calculation_plan)
-                                .fields()
-                                .iter()
-                                .map(|field| {
-                                    col(format!(
-                                        "{}.{}",
-                                        calculation_plan.calculation.column.name(),
-                                        field.name()
-                                    ))
-                                })
-                                .for_each(|c| {
-                                    required_exprs.insert(OrdExpr::new(c));
-                                });
-                        } else {
-                            return plan_err!("Invalid extension plan node");
-                        }
-                    }
-                    _ => return internal_err!("Invalid plan node"),
-                };
-                // collect the column of the left table
-                for index in 0..left.schema().fields().len() {
-                    let (Some(table_rf), f) = left.schema().qualified_field(index) else {
-                        return plan_err!("Field not found");
-                    };
-                    let qualified_name = format!("{}.{}", table_rf, f.name());
-                    required_exprs.insert(OrdExpr::new(col(qualified_name)));
-                }
-
-                // collect the column of the right table
-                for index in 0..right.schema().fields().len() {
-                    let (Some(table_rf), f) = right.schema().qualified_field(index)
-                    else {
-                        return plan_err!("Field not found");
-                    };
-                    let qualified_name = format!("{}.{}", table_rf, f.name());
-                    required_exprs.insert(OrdExpr::new(col(qualified_name)));
-                }
-
-                let required_field: Vec<Expr> = required_exprs
-                    .iter()
-                    .map(|expr| expr.expr.clone())
-                    .collect();
-
-                Ok(Some(
-                    LogicalPlanBuilder::from(left)
-                        .join_on(
-                            right,
-                            datafusion::logical_expr::JoinType::Right,
-                            vec![join_condition],
-                        )
-                        .unwrap()
-                        .project(required_field)
-                        .unwrap()
-                        .build()
-                        .unwrap(),
-                ))
-            }
-            Start(plan) => Ok(Some(
-                rule.generate_model_internal(plan.clone())
-                    .expect("Failed to generate model plan")
-                    .data,
-            )),
-        }
-    }
-}
-
 impl UserDefinedLogicalNodeCore for ModelPlanNode {
     fn name(&self) -> &str {
         "Model"
@@ -633,7 +622,7 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
     }
 
     fn fmt_for_explain(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Model: name={}", self.model_name)
+        write!(f, "Model: name={}", self.plan_name)
     }
 
     fn with_exprs_and_inputs(
@@ -642,7 +631,7 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
         _: Vec<LogicalPlan>,
     ) -> datafusion::common::Result<Self> {
         Ok(ModelPlanNode {
-            model_name: self.model_name.clone(),
+            plan_name: self.plan_name.clone(),
             required_exprs: self.required_exprs.clone(),
             relation_chain: self.relation_chain.clone(),
             schema_ref: self.schema_ref.clone(),
@@ -713,7 +702,6 @@ impl ModelSourceNode {
                 else {
                     return plan_err!("Field not found {}", expr);
                 };
-
                 if column.is_calculated {
                     return plan_err!("should not use calculated field in source plan");
                 } else {
@@ -779,11 +767,7 @@ impl UserDefinedLogicalNodeCore for ModelSourceNode {
         write!(f, "ModelSource: name={}", self.model_name)
     }
 
-    fn with_exprs_and_inputs(
-        &self,
-        _: Vec<Expr>,
-        _: Vec<LogicalPlan>,
-    ) -> datafusion::common::Result<Self> {
+    fn with_exprs_and_inputs(&self, _: Vec<Expr>, _: Vec<LogicalPlan>) -> Result<Self> {
         Ok(ModelSourceNode {
             model_name: self.model_name.clone(),
             required_exprs: self.required_exprs.clone(),
@@ -889,6 +873,58 @@ impl UserDefinedLogicalNodeCore for CalculationPlanNode {
             dimensions: self.dimensions.clone(),
             measures: self.measures.clone(),
             schema_ref: self.schema_ref.clone(),
+        })
+    }
+}
+
+/// [PartialModelPlanNode] is a logical plan node that represents a partial model.
+/// When a calculation contains the calculation belong to another models, we should construct
+/// a [PartialModelPlanNode] for the calculation.
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub(crate) struct PartialModelPlanNode {
+    pub model_node: ModelPlanNode,
+    schema: DFSchemaRef,
+}
+
+impl PartialModelPlanNode {
+    pub(crate) fn new(model_node: ModelPlanNode, schema: DFSchemaRef) -> Self {
+        Self { model_node, schema }
+    }
+}
+
+impl UserDefinedLogicalNodeCore for PartialModelPlanNode {
+    fn name(&self) -> &str {
+        "PartialModel"
+    }
+
+    fn inputs(&self) -> Vec<&LogicalPlan> {
+        vec![]
+    }
+
+    fn schema(&self) -> &DFSchemaRef {
+        &self.schema
+    }
+
+    fn expressions(&self) -> Vec<Expr> {
+        self.schema
+            .fields()
+            .iter()
+            .map(|field| col(field.name()))
+            .collect()
+    }
+
+    fn fmt_for_explain(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "PartialModel: name={}", self.model_node.plan_name)
+    }
+
+    fn with_exprs_and_inputs(
+        &self,
+        _: Vec<Expr>,
+        _: Vec<LogicalPlan>,
+    ) -> datafusion::common::Result<Self> {
+        Ok(PartialModelPlanNode {
+            model_node: self.model_node.clone(),
+            schema: self.schema.clone(),
         })
     }
 }
