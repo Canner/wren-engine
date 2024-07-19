@@ -279,14 +279,14 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let tests: Vec<&str> = vec![
-            "select orderkey + orderkey from test.test.orders",
-            "select orderkey from test.test.orders where orders.totalprice > 10",
-            "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-            "select orderkey, sum(totalprice) from test.test.orders group by 1",
-            "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
-            "select totalcost from test.test.profile",
-            // TODO: support calculated without relationship
-            // "select orderkey_plus_custkey from orders",
+                "select orderkey + orderkey from test.test.orders",
+                "select orderkey from test.test.orders where orders.totalprice > 10",
+                "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
+                "select orderkey, sum(totalprice) from test.test.orders group by 1",
+                "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
+                "select totalcost from test.test.profile",
+        // TODO: support calculated without relationship
+        //     "select orderkey_plus_custkey from orders",
         ];
 
         for sql in tests {
@@ -297,8 +297,8 @@ mod test {
                 sql,
             )
             .await?;
-            // let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
-            // println!("After roundtrip: {}", after_roundtrip);
+            let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
+            println!("After roundtrip: {}", after_roundtrip);
         }
 
         Ok(())
