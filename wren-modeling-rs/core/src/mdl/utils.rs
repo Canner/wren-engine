@@ -276,7 +276,7 @@ mod tests {
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_wren_expr_for_model(
-            &"name".to_string(),
+            "name",
             Arc::clone(&model),
             ctx.state_ref(),
         )?;
@@ -296,7 +296,7 @@ mod tests {
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_remote_expr_for_model(
-            &"c_name".to_string(),
+            "c_name",
             Arc::clone(&model),
             analyzed_mdl,
             ctx.state_ref(),
