@@ -123,12 +123,6 @@ pub struct Column {
     pub properties: Vec<(String, String)>,
 }
 
-impl Column {
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Relationship {

@@ -2,24 +2,20 @@ use std::collections::{BTreeSet, VecDeque};
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use datafusion::common::{internal_err, plan_err, Column};
+use datafusion::common::{plan_err, Column, DFSchema};
 use datafusion::error::Result;
-use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
-use datafusion::logical_expr::{Expr, LogicalPlan};
-use datafusion::sql::planner::SqlToRel;
+use datafusion::execution::session_state::SessionState;
+use datafusion::logical_expr::Expr;
 use datafusion::sql::sqlparser::ast::Expr::{CompoundIdentifier, Identifier};
-use datafusion::sql::sqlparser::ast::{visit_expressions, visit_expressions_mut};
+use datafusion::sql::sqlparser::ast::{visit_expressions, visit_expressions_mut, Ident};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use log::debug;
 use petgraph::algo::is_cyclic_directed;
 use petgraph::{EdgeType, Graph};
 
-use crate::logical_plan::context_provider::DynamicContextProvider;
-use crate::logical_plan::context_provider::{RemoteContextProvider, WrenContextProvider};
 use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::manifest::Model;
-use crate::mdl::{AnalyzedWrenMDL, ColumnReference};
+use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset, SessionStateRef};
 
 pub fn to_expr_queue(column: Column) -> VecDeque<String> {
     column.name.split('.').map(String::from).collect()
@@ -63,6 +59,7 @@ pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
 pub fn create_wren_calculated_field_expr(
     column_rf: ColumnReference,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 ) -> Result<Expr> {
     if !column_rf.column.is_calculated {
         return plan_err!("Column is not calculated: {}", column_rf.column.name);
@@ -89,105 +86,97 @@ pub fn create_wren_calculated_field_expr(
         .collect::<BTreeSet<_>>() // Collect into a BTreeSet to remove duplicates
         .into_iter() // Convert BTreeSet back into an iterator
         .map(|m| m.to_string())
-        .collect::<Vec<String>>()
-        .join(", ");
-
+        .collect::<Vec<String>>();
     // Remove all relationship fields from the expression. Only keep the target expression and its source table.
     let expr = column_rf.column.expression.clone().unwrap();
-    let wrapped = format!("select {} from {}", expr, models);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
-    let mut statement = parsed[0].clone();
-    visit_expressions_mut(&mut statement, |expr| {
-        if let CompoundIdentifier(ids) = expr {
+    let session_state = session_state.read();
+    let mut expr = session_state.sql_to_expr(
+        &expr,
+        session_state.config_options().sql_parser.dialect.as_str(),
+    )?;
+    visit_expressions_mut(&mut expr, |e| {
+        if let CompoundIdentifier(ids) = e {
             let name_size = ids.len();
             if name_size > 2 {
                 let slice = &ids[name_size - 2..name_size];
-                *expr = CompoundIdentifier(slice.to_vec());
+                *e = CompoundIdentifier(slice.to_vec());
             }
         }
         ControlFlow::<()>::Continue(())
     });
-    debug!("Statement: {:?}", statement.to_string());
-    // Create the expression only has the table prefix. We don't need the catalog and schema prefix when planning.
-    let context_provider = WrenContextProvider::new_bare(&analyzed_wren_mdl.wren_mdl)?;
-    let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
-        Ok(plan) => plan,
-        Err(e) => return plan_err!("Error creating plan: {}", e),
-    };
 
-    let result = match plan {
-        LogicalPlan::Projection(projection) => {
-            if let LogicalPlan::Aggregate(aggregation) = unwrap_arc(projection.input) {
-                aggregation.aggr_expr[0].clone()
-            } else {
-                projection.expr[0].clone()
-            }
-        }
-        _ => return internal_err!("Unexpected plan type: {:?}", plan),
+    let Some(schema) = models
+        .into_iter()
+        .map(|m| analyzed_wren_mdl.wren_mdl().get_model(&m))
+        .filter(|m| m.is_some())
+        .map(|m| Dataset::Model(m.unwrap()))
+        .map(|m| m.to_qualified_schema())
+        .reduce(|acc, schema| acc?.join(&schema?))
+        .transpose()?
+    else {
+        return plan_err!("Error for creating schemas: {}", qualified_col);
     };
-    Ok(result)
+    session_state.create_logical_expr(&expr.to_string(), &schema)
 }
 
 /// Create the Logical Expr for the remote column.
-/// Use [RemoteContextProvider] to provide the context for the remote column.
 pub(crate) fn create_remote_expr_for_model(
-    expr: &String,
+    expr: &str,
     model: Arc<Model>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 ) -> Result<Expr> {
-    let context_provider = RemoteContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
-    create_expr_for_model(
-        expr,
-        model,
-        DynamicContextProvider::new(Box::new(context_provider)),
+    let dataset = Dataset::Model(model);
+    let schema = dataset.to_remote_schema(
+        Some(analyzed_wren_mdl.wren_mdl().get_register_tables()),
+        Arc::clone(&session_state),
+    )?;
+    let session_state = session_state.read();
+    session_state.create_logical_expr(
+        qualified_expr(expr, &schema, &session_state)?.as_str(),
+        &schema,
     )
 }
 
 /// Create the Logical Expr for the remote column.
-/// Use [RemoteContextProvider] to provide the context for the remote column.
 pub(crate) fn create_wren_expr_for_model(
-    expr: &String,
+    expr: &str,
     model: Arc<Model>,
-    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 ) -> Result<Expr> {
-    let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
-    let wrapped = format!(
-        "select {} from {}.{}.{}",
-        expr,
-        analyzed_wren_mdl.wren_mdl().catalog(),
-        analyzed_wren_mdl.wren_mdl().schema(),
-        &model.name
-    );
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped).unwrap();
-    let statement = &parsed[0];
-    debug!("Statement: {:?}", statement.to_string());
-
-    let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = sql_to_rel.sql_statement_to_plan(statement.clone())?;
-
-    match plan {
-        LogicalPlan::Projection(projection) => Ok(projection.expr[0].clone()),
-        _ => internal_err!("Unexpected plan type: {:?}", plan),
-    }
+    let dataset = Dataset::Model(model);
+    let schema = dataset.to_qualified_schema()?;
+    let session_state = session_state.read();
+    session_state.create_logical_expr(
+        qualified_expr(expr, &schema, &session_state)?.as_str(),
+        &schema,
+    )
 }
 
-/// Create the Logical Expr for the column belong to the model according to the context provider
-pub(crate) fn create_expr_for_model(
-    expr: &String,
-    model: Arc<Model>,
-    context_provider: DynamicContextProvider,
-) -> Result<Expr> {
-    let wrapped = format!("select {} from {}", expr, &model.table_reference);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;
-    let statement = &parsed[0];
-
-    let sql_to_rel = SqlToRel::new(&context_provider);
-    let plan = sql_to_rel.sql_statement_to_plan(statement.clone())?;
-    match plan {
-        LogicalPlan::Projection(projection) => Ok(projection.expr[0].clone()),
-        _ => internal_err!("Unexpected plan type: {:?}", plan),
-    }
+/// Add the table prefix for the column expression if it can be resolved by the schema.
+fn qualified_expr(
+    expr: &str,
+    schema: &DFSchema,
+    session_state: &SessionState,
+) -> Result<String> {
+    let mut expr = session_state.sql_to_expr(
+        expr,
+        session_state.config_options().sql_parser.dialect.as_str(),
+    )?;
+    visit_expressions_mut(&mut expr, |e| {
+        if let Identifier(id) = e {
+            if let Ok((Some(qualifier), _)) =
+                schema.qualified_field_with_unqualified_name(&id.value)
+            {
+                let mut parts: Vec<_> =
+                    qualifier.to_vec().into_iter().map(Ident::new).collect();
+                parts.push(id.clone());
+                *e = CompoundIdentifier(parts);
+            }
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    Ok(expr.to_string())
 }
 
 #[cfg(test)]
@@ -196,10 +185,12 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
 
+    use datafusion::error::Result;
+    use datafusion::prelude::SessionContext;
+
     use crate::logical_plan::utils::from_qualified_name;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::AnalyzedWrenMDL;
-    use datafusion::error::Result;
 
     #[test]
     fn test_create_wren_expr() -> Result<()> {
@@ -210,7 +201,7 @@ mod tests {
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
-
+        let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
             .qualified_references
@@ -223,6 +214,7 @@ mod tests {
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
             analyzed_mdl.clone(),
+            ctx.state_ref(),
         )?;
         assert_eq!(expr.to_string(), "customer.name");
         Ok(())
@@ -237,7 +229,7 @@ mod tests {
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
-
+        let ctx = SessionContext::new();
         let column_rf = analyzed_mdl
             .wren_mdl
             .qualified_references
@@ -249,9 +241,10 @@ mod tests {
             .unwrap();
         let expr = super::create_wren_calculated_field_expr(
             column_rf.clone(),
-            analyzed_mdl.clone(),
+            analyzed_mdl,
+            ctx.state_ref(),
         )?;
-        assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
+        assert_eq!(expr.to_string(), "orderkey + custkey");
         Ok(())
     }
 
@@ -268,6 +261,47 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert!(result.contains(&super::Column::new_unqualified("customers.state")));
         assert!(result.contains(&super::Column::new_unqualified("order_id")));
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_wren_expr_for_model() -> Result<()> {
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
+        let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let ctx = SessionContext::new();
+        let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
+        let expr = super::create_wren_expr_for_model(
+            &"name".to_string(),
+            Arc::clone(&model),
+            ctx.state_ref(),
+        )?;
+        assert_eq!(expr.to_string(), "customer.name");
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_remote_expr_for_model() -> Result<()> {
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
+        let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let ctx = SessionContext::new();
+        let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
+        let expr = super::create_remote_expr_for_model(
+            &"c_name".to_string(),
+            Arc::clone(&model),
+            analyzed_mdl,
+            ctx.state_ref(),
+        )?;
+        assert_eq!(expr.to_string(), "customer.c_name");
         Ok(())
     }
 }

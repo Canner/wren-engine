@@ -2633,6 +2633,7 @@ dependencies = [
  "datafusion",
  "env_logger",
  "log",
+ "parking_lot",
  "petgraph",
  "petgraph-evcxr",
  "serde",
