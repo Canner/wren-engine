@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::{
-    internal_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
+    Column, DFSchema, DFSchemaRef, internal_err, plan_err, TableReference,
 };
 use datafusion::error::Result;
 use datafusion::logical_expr::utils::find_aggregate_exprs;
@@ -27,7 +27,8 @@ use crate::mdl::utils::{
     create_remote_expr_for_model, create_wren_calculated_field_expr,
     create_wren_expr_for_model, is_dag,
 };
-use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset};
+use crate::mdl::{AnalyzedWrenMDL, ColumnReference, SessionStateRef};
+use crate::mdl::dataset::Dataset;
 
 #[derive(Debug)]
 pub(crate) enum WrenPlan {
@@ -66,6 +67,7 @@ impl ModelPlanNode {
         required_fields: Vec<Expr>,
         original_table_scan: Option<LogicalPlan>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state: SessionStateRef,
     ) -> Result<Self> {
         ModelPlanNodeBuilder::new(analyzed_wren_mdl).build(
             model,
@@ -90,10 +92,11 @@ struct ModelPlanNodeBuilder {
     required_calculation: Vec<WrenPlan>,
     fields: VecDeque<(Option<TableReference>, Arc<Field>)>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 }
 
 impl ModelPlanNodeBuilder {
-    fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
+    fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>, session_state: SessionStateRef) -> Self {
         Self {
             required_exprs_buffer: BTreeSet::new(),
             directed_graph: Graph::new(),
@@ -101,6 +104,7 @@ impl ModelPlanNodeBuilder {
             required_calculation: vec![],
             fields: VecDeque::new(),
             analyzed_wren_mdl,
+            session_state,
         }
     }
 

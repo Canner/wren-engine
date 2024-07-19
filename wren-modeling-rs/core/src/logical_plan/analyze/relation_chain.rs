@@ -7,9 +7,9 @@ use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
-use crate::mdl::{AnalyzedWrenMDL, Dataset};
+use crate::mdl::AnalyzedWrenMDL;
 use datafusion::catalog::TableReference;
-use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
+use datafusion::common::{DFSchema, DFSchemaRef, internal_err, not_impl_err, plan_err};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
 };
@@ -17,6 +17,7 @@ use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
+use crate::mdl::dataset::Dataset;
 
 /// RelationChain is a chain of models that are connected by the relationship.
 /// The chain is used to generate the join plan for the model.

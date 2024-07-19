@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::sync::Arc;
 
-use datafusion::common::{internal_err, plan_err, Column};
+use datafusion::common::{Column, internal_err, plan_err};
 use datafusion::error::Result;
 use datafusion::sql::TableReference;
 use petgraph::Graph;
@@ -12,7 +12,7 @@ use crate::mdl::{utils, WrenMDL};
 
 use super::manifest::{JoinType, Relationship};
 use super::utils::{collect_identifiers, to_expr_queue};
-use super::Dataset;
+use crate::mdl::dataset::Dataset;
 
 pub struct Lineage {
     pub source_columns_map: HashMap<Column, HashSet<Column>>,
@@ -327,7 +327,8 @@ mod test {
     };
     use crate::mdl::lineage::Lineage;
     use crate::mdl::manifest::JoinType;
-    use crate::mdl::{Dataset, WrenMDL};
+    use crate::mdl::WrenMDL;
+    use crate::mdl::dataset::Dataset;
 
     #[test]
     fn test_collect_source_columns() -> Result<()> {

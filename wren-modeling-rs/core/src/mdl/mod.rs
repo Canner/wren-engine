@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::Arc};
 use datafusion::prelude::SessionContext;
 use datafusion::{error::Result, sql::unparser::plan_to_sql};
 use log::{debug, info};
-
+use dataset::Dataset;
 use manifest::Relationship;
 
 use crate::logical_plan::utils::from_qualified_name_str;
@@ -224,37 +224,6 @@ impl ColumnReference {
 
     pub fn get_qualified_name(&self) -> String {
         format!("{}.{}", self.dataset.name(), self.column.name)
-    }
-}
-
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub enum Dataset {
-    Model(Arc<Model>),
-    Metric(Arc<Metric>),
-}
-
-impl Dataset {
-    pub fn name(&self) -> &str {
-        match self {
-            Dataset::Model(model) => model.name(),
-            Dataset::Metric(metric) => metric.name(),
-        }
-    }
-
-    pub fn try_as_model(&self) -> Option<Arc<Model>> {
-        match self {
-            Dataset::Model(model) => Some(Arc::clone(model)),
-            _ => None,
-        }
-    }
-}
-
-impl Display for Dataset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Dataset::Model(model) => write!(f, "{}", model.name()),
-            Dataset::Metric(metric) => write!(f, "{}", metric.name()),
-        }
     }
 }
 
