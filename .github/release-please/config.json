@@ -1,17 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "pull-request-title-pattern": "chore${scope}: release ${version}",
+  "include-v-in-tag": false,
   "packages": {
     ".": {
-      "package-name": "wren-engine",
       "release-type": "maven"
     },
     "ibis-server": {
-        "package-name": "ibis-server",
-        "release-type": "python"
+      "release-type": "python"
     },
     "wren-modeling-rs": {
-        "package-name": "wren-modeling-rs",
-        "release-type": "rust"
+      "release-type": "rust"
     }
   }
 }
