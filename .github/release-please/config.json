@@ -7,7 +7,8 @@
     ".": {
       "package-name": "wren-engine",
       "component": "wren-engine",
-      "release-type": "maven"
+      "release-type": "maven",
+      "exclude-paths": ["ibis-server", "wren-modeling-rs", "wren-modeling-py"]
     },
     "ibis-server": {
       "package-name": "ibis-server",
@@ -21,6 +22,14 @@
     }
   },
   "plugins": [
+    {
+      "type": "maven-workspace",
+      "merge": false
+    },
+    {
+      "type": "cargo-workspace",
+      "merge": false
+    },
     {
       "type": "linked-versions",
       "groupName": "wren",
