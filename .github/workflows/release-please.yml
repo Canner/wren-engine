@@ -16,5 +16,5 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
-          config-file: config.json
-          manifest-file: manifest.json
+          config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
