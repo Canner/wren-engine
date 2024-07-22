@@ -10,12 +10,12 @@
       "release-type": "maven",
       "exclude-paths": ["ibis-server", "wren-modeling-rs", "wren-modeling-py"]
     },
-    "ibis-server": {
+    "./ibis-server": {
       "package-name": "ibis-server",
       "component": "ibis-server",
       "release-type": "python"
     },
-    "wren-modeling-rs": {
+    "./wren-modeling-rs": {
       "package-name": "wren-modeling-rs",
       "component": "wren-modeling-rs",
       "release-type": "rust"
