@@ -61,10 +61,10 @@
           "relationship": "CustomerProfile"
         },
         {
-          "name": "min_totalcost",
+          "name": "totalcost",
           "type": "integer",
           "isCalculated": true,
-          "expression": "min(customer.orders.totalprice)"
+          "expression": "sum(customer.orders.totalprice)"
         }
       ],
       "primaryKey": "custkey"

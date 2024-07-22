@@ -27,7 +27,8 @@ use crate::mdl::utils::{
     create_remote_expr_for_model, create_wren_calculated_field_expr,
     create_wren_expr_for_model, is_dag,
 };
-use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset};
+use crate::mdl::Dataset;
+use crate::mdl::{AnalyzedWrenMDL, ColumnReference, SessionStateRef};
 
 #[derive(Debug)]
 pub(crate) enum WrenPlan {
@@ -66,8 +67,9 @@ impl ModelPlanNode {
         required_fields: Vec<Expr>,
         original_table_scan: Option<LogicalPlan>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state: SessionStateRef,
     ) -> Result<Self> {
-        ModelPlanNodeBuilder::new(analyzed_wren_mdl).build(
+        ModelPlanNodeBuilder::new(analyzed_wren_mdl, session_state).build(
             model,
             required_fields,
             original_table_scan,
@@ -90,10 +92,14 @@ struct ModelPlanNodeBuilder {
     required_calculation: Vec<WrenPlan>,
     fields: VecDeque<(Option<TableReference>, Arc<Field>)>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 }
 
 impl ModelPlanNodeBuilder {
-    fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
+    fn new(
+        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state: SessionStateRef,
+    ) -> Self {
         Self {
             required_exprs_buffer: BTreeSet::new(),
             directed_graph: Graph::new(),
@@ -101,6 +107,7 @@ impl ModelPlanNodeBuilder {
             required_calculation: vec![],
             fields: VecDeque::new(),
             analyzed_wren_mdl,
+            session_state,
         }
     }
 
@@ -139,6 +146,7 @@ impl ModelPlanNodeBuilder {
                     let expr = create_wren_calculated_field_expr(
                         column_rf,
                         Arc::clone(&self.analyzed_wren_mdl),
+                        Arc::clone(&self.session_state),
                     )?;
                     let expr_plan = expr.alias(column.name());
                     expr_plan
@@ -177,6 +185,7 @@ impl ModelPlanNodeBuilder {
                     if self.is_contain_calculation_source(&qualified_column) {
                         collect_partial_model_plan(
                             Arc::clone(&self.analyzed_wren_mdl),
+                            Arc::clone(&self.session_state),
                             &qualified_column,
                             &mut self.model_required_fields,
                         )?;
@@ -186,6 +195,7 @@ impl ModelPlanNodeBuilder {
                     let _ = collect_model_required_fields(
                         &qualified_column,
                         Arc::clone(&self.analyzed_wren_mdl),
+                        Arc::clone(&self.session_state),
                         &mut self.model_required_fields,
                     );
                 }
@@ -194,6 +204,7 @@ impl ModelPlanNodeBuilder {
                     &column,
                     Arc::clone(&model),
                     Arc::clone(&self.analyzed_wren_mdl),
+                    Arc::clone(&self.session_state),
                 )?;
                 self.model_required_fields
                     .entry(model_ref.clone())
@@ -254,6 +265,7 @@ impl ModelPlanNodeBuilder {
                     source,
                     source_required_fields,
                     Arc::clone(&self.analyzed_wren_mdl),
+                    Arc::clone(&self.session_state),
                 )?
             } else {
                 let Some(first_calculation) = calculate_iter.next() else {
@@ -271,6 +283,7 @@ impl ModelPlanNodeBuilder {
             self.directed_graph.clone(),
             &self.model_required_fields.clone(),
             Arc::clone(&self.analyzed_wren_mdl),
+            Arc::clone(&self.session_state),
         )?;
 
         for calculation_plan in calculate_iter {
@@ -360,6 +373,7 @@ impl ModelPlanNodeBuilder {
         if self.is_contain_calculation_source(qualified_column) {
             collect_partial_model_plan(
                 Arc::clone(&self.analyzed_wren_mdl),
+                Arc::clone(&self.session_state),
                 qualified_column,
                 &mut partial_model_required_fields,
             )?;
@@ -368,6 +382,7 @@ impl ModelPlanNodeBuilder {
         collect_model_required_fields(
             qualified_column,
             Arc::clone(&self.analyzed_wren_mdl),
+            Arc::clone(&self.session_state),
             &mut partial_model_required_fields,
         )?;
 
@@ -384,6 +399,7 @@ impl ModelPlanNodeBuilder {
             source,
             source_required_fields,
             Arc::clone(&self.analyzed_wren_mdl),
+            Arc::clone(&self.session_state),
         )?;
 
         let partial_chain = RelationChain::with_chain(
@@ -393,6 +409,7 @@ impl ModelPlanNodeBuilder {
             column_graph.clone(),
             &partial_model_required_fields,
             Arc::clone(&self.analyzed_wren_mdl),
+            Arc::clone(&self.session_state),
         )?;
         let Some(column_rf) = self
             .analyzed_wren_mdl
@@ -405,7 +422,7 @@ impl ModelPlanNodeBuilder {
             column_rf,
             col_expr,
             partial_chain,
-            Arc::clone(&self.analyzed_wren_mdl),
+            Arc::clone(&self.session_state),
         )?)))
     }
 }
@@ -421,6 +438,7 @@ fn is_required_column(expr: &Expr, name: &str) -> bool {
 
 fn collect_partial_model_plan(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
     qualified_column: &Column,
     required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
@@ -446,7 +464,7 @@ fn collect_partial_model_plan(
             let expr = create_wren_expr_for_model(
                 &c.name,
                 dataset.try_as_model().unwrap(),
-                Arc::clone(&analyzed_wren_mdl),
+                Arc::clone(&session_state_ref),
             )?;
             required_fields
                 .entry(relation_ref.clone())
@@ -463,6 +481,7 @@ fn collect_partial_model_plan(
 fn collect_model_required_fields(
     qualified_column: &Column,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
     model_required_fields: &mut HashMap<TableReference, BTreeSet<OrdExpr>>,
 ) -> Result<()> {
     let Some(set) = analyzed_wren_mdl
@@ -488,7 +507,7 @@ fn collect_model_required_fields(
                     let Ok(expr) = create_wren_expr_for_model(
                         expression,
                         Arc::clone(&m),
-                        Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&session_state_ref),
                     ) else {
                         // skip the semantic expression (e.g. calculated field or relationship column)
                         debug!(
@@ -512,6 +531,7 @@ fn collect_model_required_fields(
                     &column,
                     Arc::clone(&m),
                     Arc::clone(&analyzed_wren_mdl),
+                    Arc::clone(&session_state_ref),
                 )?;
                 debug!("Required field: {}", &expr_plan);
                 model_required_fields
@@ -530,11 +550,22 @@ fn get_remote_column_exp(
     column: &mdl::manifest::Column,
     model: Arc<Model>,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
 ) -> Result<Expr> {
     let expr = if let Some(expression) = &column.expression {
-        create_remote_expr_for_model(expression, model, analyzed_wren_mdl)?
+        create_remote_expr_for_model(
+            expression,
+            model,
+            analyzed_wren_mdl,
+            session_state_ref,
+        )?
     } else {
-        create_remote_expr_for_model(&column.name, model, analyzed_wren_mdl)?
+        create_remote_expr_for_model(
+            &column.name,
+            model,
+            analyzed_wren_mdl,
+            session_state_ref,
+        )?
     };
     Ok(expr.alias(column.name.clone()))
 }
@@ -656,6 +687,7 @@ impl ModelSourceNode {
         model: Arc<Model>,
         required_exprs: Vec<Expr>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state_ref: SessionStateRef,
         original_table_scan: Option<LogicalPlan>,
     ) -> Result<Self> {
         let mut required_exprs_buffer = BTreeSet::new();
@@ -689,6 +721,7 @@ impl ModelSourceNode {
                         &column,
                         Arc::clone(&model),
                         Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&session_state_ref),
                     )?));
                 }
             } else {
@@ -711,6 +744,7 @@ impl ModelSourceNode {
                         &column,
                         Arc::clone(&model),
                         Arc::clone(&analyzed_wren_mdl),
+                        Arc::clone(&session_state_ref),
                     )?;
                     required_exprs_buffer.insert(OrdExpr::new(expr_plan.clone()));
                 }
@@ -793,7 +827,7 @@ impl CalculationPlanNode {
         calculation: ColumnReference,
         calculation_expr: Expr,
         relation_chain: RelationChain,
-        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state_ref: SessionStateRef,
     ) -> Result<Self> {
         let Some(model) = calculation.dataset.try_as_model() else {
             return plan_err!("Only support model as source dataset");
@@ -822,7 +856,7 @@ impl CalculationPlanNode {
         let dimensions = vec![create_wren_expr_for_model(
             &pk_column.name,
             Arc::clone(&model),
-            Arc::clone(&analyzed_wren_mdl),
+            Arc::clone(&session_state_ref),
         )?
         .alias(pk_column.name())];
         let schema_ref = DFSchemaRef::new(

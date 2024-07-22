@@ -26,7 +26,10 @@ pub async fn create_ctx_with_mdl(
     let new_state = ctx
         .state()
         .with_analyzer_rules(vec![
-            Arc::new(ModelAnalyzeRule::new(Arc::clone(&analyzed_mdl))),
+            Arc::new(ModelAnalyzeRule::new(
+                Arc::clone(&analyzed_mdl),
+                ctx.state_ref(),
+            )),
             Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
             Arc::new(RemoveWrenPrefixRule::new(Arc::clone(&analyzed_mdl))),
         ])

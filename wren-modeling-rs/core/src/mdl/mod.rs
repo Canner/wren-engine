@@ -1,21 +1,25 @@
-use std::fmt::Display;
-use std::{collections::HashMap, sync::Arc};
-
+use datafusion::execution::context::SessionState;
 use datafusion::prelude::SessionContext;
 use datafusion::{error::Result, sql::unparser::plan_to_sql};
 use log::{debug, info};
-
 use manifest::Relationship;
+use parking_lot::RwLock;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::create_ctx_with_mdl;
-use crate::mdl::manifest::{Column, Manifest, Metric, Model};
+use crate::mdl::manifest::{Column, Manifest, Model};
 
 pub mod builder;
 pub mod context;
+pub(crate) mod dataset;
 pub mod lineage;
 pub mod manifest;
 pub mod utils;
+
+pub use dataset::Dataset;
+
+pub type SessionStateRef = Arc<RwLock<SessionState>>;
 
 pub struct AnalyzedWrenMDL {
     pub wren_mdl: Arc<WrenMDL>,
@@ -53,11 +57,12 @@ impl AnalyzedWrenMDL {
     }
 }
 
+pub type RegisterTables = HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>;
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
     pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
-    pub register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
+    pub register_tables: RegisterTables,
 }
 
 impl WrenMDL {
@@ -136,9 +141,7 @@ impl WrenMDL {
         self.register_tables.get(name).cloned()
     }
 
-    pub fn get_register_tables(
-        &self,
-    ) -> &HashMap<String, Arc<dyn datafusion::datasource::TableProvider>> {
+    pub fn get_register_tables(&self) -> &RegisterTables {
         &self.register_tables
     }
 
@@ -227,37 +230,6 @@ impl ColumnReference {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Debug, Clone)]
-pub enum Dataset {
-    Model(Arc<Model>),
-    Metric(Arc<Metric>),
-}
-
-impl Dataset {
-    pub fn name(&self) -> &str {
-        match self {
-            Dataset::Model(model) => model.name(),
-            Dataset::Metric(metric) => metric.name(),
-        }
-    }
-
-    pub fn try_as_model(&self) -> Option<Arc<Model>> {
-        match self {
-            Dataset::Model(model) => Some(Arc::clone(model)),
-            _ => None,
-        }
-    }
-}
-
-impl Display for Dataset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Dataset::Model(model) => write!(f, "{}", model.name()),
-            Dataset::Metric(metric) => write!(f, "{}", metric.name()),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::fs;
@@ -310,9 +282,9 @@ mod test {
                 "select orderkey + orderkey from test.test.orders",
                 "select orderkey from test.test.orders where orders.totalprice > 10",
                 "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                "select orderkey, min(totalprice) from test.test.orders group by 1",
+                "select orderkey, sum(totalprice) from test.test.orders group by 1",
                 "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
-                "select min_totalcost from test.test.profile",
+                "select totalcost from test.test.profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];

@@ -18,18 +18,25 @@ use crate::logical_plan::analyze::plan::{
 };
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
-use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
 
 /// [ModelAnalyzeRule] responsible for analyzing the model plan node. Turn TableScan from a model to a ModelPlanNode.
 /// We collect the required fields from the projection, filter, aggregation, and join,
 /// and pass them to the ModelPlanNode.
 pub struct ModelAnalyzeRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 }
 
 impl ModelAnalyzeRule {
-    pub fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
-        Self { analyzed_wren_mdl }
+    pub fn new(
+        analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state: SessionStateRef,
+    ) -> Self {
+        Self {
+            analyzed_wren_mdl,
+            session_state,
+        }
     }
 
     fn analyze_model_internal(
@@ -98,6 +105,7 @@ impl ModelAnalyzeRule {
                                 field,
                                 Some(LogicalPlan::TableScan(table_scan.clone())),
                                 Arc::clone(&self.analyzed_wren_mdl),
+                                Arc::clone(&self.session_state),
                             )?),
                         });
                         used_columns.borrow_mut().clear();
@@ -126,6 +134,7 @@ impl ModelAnalyzeRule {
                 let left = match unwrap_arc(join.left) {
                     LogicalPlan::TableScan(table_scan) => analyze_table_scan(
                         Arc::clone(&self.analyzed_wren_mdl),
+                        Arc::clone(&self.session_state),
                         table_scan,
                         buffer.iter().cloned().collect(),
                     )?,
@@ -135,6 +144,7 @@ impl ModelAnalyzeRule {
                 let right = match unwrap_arc(join.right) {
                     LogicalPlan::TableScan(table_scan) => analyze_table_scan(
                         Arc::clone(&self.analyzed_wren_mdl),
+                        Arc::clone(&self.session_state),
                         table_scan,
                         buffer.iter().cloned().collect(),
                     )?,
@@ -171,6 +181,7 @@ fn belong_to_mdl(mdl: &WrenMDL, table_reference: TableReference) -> bool {
 
 fn analyze_table_scan(
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state_ref: SessionStateRef,
     table_scan: TableScan,
     required_field: Vec<Expr>,
 ) -> Result<LogicalPlan> {
@@ -182,7 +193,8 @@ fn analyze_table_scan(
                     model,
                     required_field,
                     Some(LogicalPlan::TableScan(table_scan.clone())),
-                    Arc::clone(&analyzed_wren_mdl),
+                    analyzed_wren_mdl,
+                    session_state_ref,
                 )?),
             }))
         } else {
@@ -436,10 +448,8 @@ impl AnalyzerRule for RemoveWrenPrefixRule {
 
 #[cfg(test)]
 mod test {
-    use crate::logical_plan::analyze::rule::RemoveWrenPrefixRule;
-    use crate::logical_plan::context_provider::WrenContextProvider;
-    use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-    use crate::mdl::AnalyzedWrenMDL;
+    use std::sync::Arc;
+
     use datafusion::common::DataFusionError;
     use datafusion::config::ConfigOptions;
     use datafusion::error::Result;
@@ -449,9 +459,15 @@ mod test {
     use datafusion::sql::sqlparser::parser::Parser;
     use datafusion::sql::unparser::plan_to_sql;
     use log::info;
-    use std::sync::Arc;
+
+    use crate::logical_plan::analyze::rule::RemoveWrenPrefixRule;
+    #[allow(deprecated)]
+    use crate::logical_plan::context_provider::WrenContextProvider;
+    use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
+    use crate::mdl::AnalyzedWrenMDL;
 
     #[test]
+    #[allow(deprecated)]
     fn test_remove_prefix() -> Result<(), DataFusionError> {
         let manifest = ManifestBuilder::new()
             .model(

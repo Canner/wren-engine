@@ -7,7 +7,8 @@ use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
-use crate::mdl::{AnalyzedWrenMDL, Dataset};
+use crate::mdl::Dataset;
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use datafusion::catalog::TableReference;
 use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
 use datafusion::logical_expr::{
@@ -33,6 +34,7 @@ impl RelationChain {
         dataset: &Dataset,
         required_fields: Vec<Expr>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state_ref: SessionStateRef,
     ) -> datafusion::common::Result<Self> {
         match dataset {
             Dataset::Model(source_model) => {
@@ -41,6 +43,7 @@ impl RelationChain {
                         Arc::clone(source_model),
                         required_fields,
                         analyzed_wren_mdl,
+                        session_state_ref,
                         None,
                     )?),
                 })))
@@ -58,6 +61,7 @@ impl RelationChain {
         directed_graph: Graph<Dataset, DatasetLink>,
         model_required_fields: &HashMap<TableReference, BTreeSet<OrdExpr>>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+        session_state_ref: SessionStateRef,
     ) -> datafusion::common::Result<Self> {
         let mut relation_chain = source;
 
@@ -88,6 +92,7 @@ impl RelationChain {
                             fields.iter().cloned().map(|c| c.expr).collect(),
                             None,
                             Arc::clone(&analyzed_wren_mdl),
+                            Arc::clone(&session_state_ref),
                         )?;
 
                         let df_schema =
@@ -101,6 +106,7 @@ impl RelationChain {
                                 Arc::clone(target_model),
                                 fields.iter().cloned().map(|c| c.expr).collect(),
                                 Arc::clone(&analyzed_wren_mdl),
+                                Arc::clone(&session_state_ref),
                                 None,
                             )?),
                         })

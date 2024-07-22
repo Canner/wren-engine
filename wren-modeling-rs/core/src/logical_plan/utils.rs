@@ -9,9 +9,10 @@ use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 
 use crate::mdl::lineage::DatasetLink;
+use crate::mdl::Dataset;
 use crate::mdl::{
     manifest::{Column, Model},
-    Dataset, WrenMDL,
+    WrenMDL,
 };
 
 pub fn map_data_type(data_type: &str) -> Result<DataType> {
