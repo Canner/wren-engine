@@ -6,6 +6,7 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
+use datafusion::logical_expr::LogicalPlan::Projection;
 use datafusion::logical_expr::{
     col, ident, utils, Extension, UserDefinedLogicalNodeCore,
 };
@@ -396,7 +397,7 @@ impl RemoveWrenPrefixRule {
 impl AnalyzerRule for RemoveWrenPrefixRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         plan.transform_down(&|plan: LogicalPlan| -> Result<Transformed<LogicalPlan>> {
-            plan.map_expressions(&|expr: Expr| {
+            let transformed = plan.clone().map_expressions(&|expr: Expr| {
                 expr.transform_down(&|expr: Expr| -> Result<Transformed<Expr>> {
                     if let Expr::Column(ref column) = expr {
                         if let Some(relation) = &column.relation {
@@ -436,7 +437,23 @@ impl AnalyzerRule for RemoveWrenPrefixRule {
                     }
                     Ok(Transformed::no(expr.clone()))
                 })
-            })
+            })?;
+
+            if transformed.transformed {
+                // The schema of logical plan is static. Because we changed the expression, we should
+                // also recreate the plan.
+                if let Projection(_) = transformed.data {
+                    let new_projection = datafusion::logical_expr::Projection::try_new(
+                        transformed.data.expressions(),
+                        Arc::new(plan.inputs()[0].clone()),
+                    )?;
+                    Ok(Transformed::yes(Projection(new_projection)))
+                } else {
+                    Ok(Transformed::yes(transformed.data))
+                }
+            } else {
+                Ok(transformed)
+            }
         })
         .data()
     }
