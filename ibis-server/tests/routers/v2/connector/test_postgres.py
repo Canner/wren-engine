@@ -1,7 +1,9 @@
 import base64
+from urllib.parse import quote_plus, urlparse
 
 import orjson
 import pandas as pd
+import psycopg2
 import pytest
 import sqlalchemy
 from fastapi.testclient import TestClient
@@ -136,6 +138,31 @@ def test_query_with_connection_url(postgres: PostgresContainer):
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
+
+
+def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
+    postgres: PostgresContainer,
+):
+    connection_url = to_connection_url(postgres)
+    part = urlparse(connection_url)
+    password_with_bracket = quote_plus(f"{part.password}[")
+    connection_url = part._replace(
+        netloc=f"{part.username}:{password_with_bracket}@{part.hostname}:{part.port}"
+    ).geturl()
+
+    with pytest.raises(
+        psycopg2.OperationalError,
+        match='FATAL:  password authentication failed for user "test"',
+    ):
+        client.post(
+            url=f"{base_url}/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": {"connectionUrl": connection_url},
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
 
 
 def test_query_with_column_dtypes(postgres: PostgresContainer):

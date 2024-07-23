@@ -11,7 +11,7 @@ python = ">=3.11,<3.12"
 fastapi = "0.111.0"
 pydantic = "2.6.4"
 uvicorn = { version = "0.29.0", extras = ["standard"] }
-ibis-framework = { version = "9.1.0", extras = [
+ibis-framework = { version = "9.2.0", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
@@ -42,6 +42,7 @@ pre-commit = "3.7.1"
 ruff = "0.4.8"
 maturin = "1.6.0"
 trino = ">=0.321,<1"
+psycopg2 = ">=2.8.4,<3"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
