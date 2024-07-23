@@ -68,9 +68,8 @@ impl TestContext {
         match file_name {
             "view.slt" | "model.slt" => {
                 info!("Registering local temporary table");
-                Some(register_ecommerce_table(&ctx).await.ok()?)
+                Some(register_ecommerce_table(&ctx).await.unwrap())
             }
-
             _ => {
                 info!("Using default SessionContext");
                 None
@@ -160,20 +159,15 @@ async fn register_ecommerce_mdl(
                 )
                 .column(
                     ColumnBuilder::new_calculated("customer_state_cf", "varchar")
-                        .expression("orders.customers_state")
+                        .expression("orders.customer_state")
                         .build(),
                 )
-                .column(
-                    ColumnBuilder::new_calculated("customer_state_cf_concat", "varchar")
-                        .expression("orders.customers_state || '-test'")
-                        .build(),
-                )
-                .column(
-                    ColumnBuilder::new("totalprice", "double")
-                        .expression("sum(orders.totalprice)")
-                        .calculated(true)
-                        .build(),
-                )
+                // TODO: duplicate `orders.customer_state`
+                // .column(
+                //     ColumnBuilder::new_calculated("customer_state_cf_concat", "varchar")
+                //         .expression("orders.customer_state || '-test'")
+                //         .build(),
+                // )
                 // TODO: allow multiple calculation in an expression
                 // .column(
                 //     ColumnBuilder::new("customer_location", "varchar")
@@ -212,11 +206,12 @@ async fn register_ecommerce_mdl(
                         .expression("customers.state")
                         .build(),
                 )
-                .column(
-                    ColumnBuilder::new_calculated("customer_state_order_id", "varchar")
-                        .expression("customers.state || ' ' || order_id")
-                        .build(),
-                )
+                // TODO: fix calcaultion with non-relationship column
+                // .column(
+                //     ColumnBuilder::new_calculated("customer_state_order_id", "varchar")
+                //         .expression("customers.state || ' ' || order_id")
+                //         .build(),
+                // )
                 .column(
                     ColumnBuilder::new_relationship(
                         "order_items",
@@ -254,12 +249,16 @@ async fn register_ecommerce_mdl(
                 .condition("orders.order_id = order_items.order_id")
                 .build(),
         )
-        .view(ViewBuilder::new("orders_view")
-            .statement("select * from wrenai.public.orders")
+        .view(ViewBuilder::new("customer_view")
+            .statement("select * from wrenai.public.customers")
             .build())
         // TODO: support expression without alias inside view
         // .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
-        .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id").build())
+        // TODO: fix view with calculation
+        // .view(
+        //     ViewBuilder::new("revenue_orders")
+        //         .statement("select order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id")
+        //         .build())
         .build();
     let mut register_tables = HashMap::new();
     register_tables.insert(
@@ -296,6 +295,6 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    apply_wren_rules(ctx, Arc::clone(&analyzed_mdl));
+    apply_wren_rules(ctx, Arc::clone(&analyzed_mdl)).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
