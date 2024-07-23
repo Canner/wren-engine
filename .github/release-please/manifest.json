@@ -1,5 +1,5 @@
 {
-  ".": "0.8.0",
+  ".": "0.8.1-SNAPSHOT",
   "ibis-server": "0.8.0",
   "wren-modeling-rs": "0.8.0"
 }
