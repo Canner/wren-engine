@@ -11,7 +11,7 @@ python = ">=3.11,<3.12"
 fastapi = "0.111.0"
 pydantic = "2.6.4"
 uvicorn = { version = "0.29.0", extras = ["standard"] }
-ibis-framework = { version = "9.1.0", extras = [
+ibis-framework = { version = "9.2.0", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
