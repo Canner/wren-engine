@@ -19,6 +19,9 @@ use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
 
+/// Apply Wren Rules to the context for sql generation.
+/// TODO: There're some issue for unparsing the datafusion optimized plans.
+///   Disable all the optimize rule for sql generation temporarily.
 pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,

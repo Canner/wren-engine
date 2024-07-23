@@ -24,12 +24,11 @@ use datafusion::prelude::SessionConfig;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
 use log::info;
 use tempfile::TempDir;
-
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
 use wren_core::mdl::manifest::JoinType;
-use wren_core::mdl::AnalyzedWrenMDL;
+use wren_core::mdl::{apply_wren_rules, AnalyzedWrenMDL};
 
 use crate::engine::utils::read_dir_recursive;
 
@@ -297,17 +296,6 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    // let new_state = ctx
-    //     .state()
-    //     .add_analyzer_rule(Arc::new(ModelAnalyzeRule::
-    //
-    // new(Arc::clone(&analyzed_mdl))))
-    //     .add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-    //         &analyzed_mdl,
-    //     ))))
-    //     // TODO: disable optimize_projections rule
-    //     // There are some conflict with the optimize rule, [datafusion::optimizer::optimize_projections::OptimizeProjections]
-    //     .with_optimizer_rules(vec![]);
-    // let ctx = SessionContext::new_with_state(new_state);
+    apply_wren_rules(ctx, Arc::clone(&analyzed_mdl));
     Ok((ctx.to_owned(), analyzed_mdl))
 }
