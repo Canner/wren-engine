@@ -31,11 +31,12 @@ sqlglot = ">=23.4,<25.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.2.0"
-testcontainers = { version = "4.5.0", extras = [
+testcontainers = { version = "4.7.2", extras = [
   "clickhouse",
   "mssql",
   "mysql",
   "postgres",
+  "trino",
 ] }
 sqlalchemy = "2.0.30"
 pre-commit = "3.7.1"

@@ -2747,13 +2747,13 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7
 
 [[package]]
 name = "testcontainers"
-version = "4.5.0"
+version = "4.7.2"
 description = "Python library for throwaway instances of anything that can run in a Docker container"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "testcontainers-4.5.0-py3-none-any.whl", hash = "sha256:6833df7db4cf8403feb1e4daf69b02a091d9da37aa3e8e808c756abbddb41cf3"},
-    {file = "testcontainers-4.5.0.tar.gz", hash = "sha256:e8610985cae2f0bc4bc3991896a47d5547f3ed896192970826151059a75f4ac2"},
+    {file = "testcontainers-4.7.2-py3-none-any.whl", hash = "sha256:23b13cf8078f615a08c75197f227796d90c46df92d2b282ae7c39b1fc1a9c9ed"},
+    {file = "testcontainers-4.7.2.tar.gz", hash = "sha256:9976b1cdcdeb9feeae6a477073e7c8b02cd40ea44f1daa34b5da6d2c918dff0d"},
 ]
 
 [package.dependencies]
@@ -2762,6 +2762,7 @@ docker = "*"
 pymssql = {version = "*", optional = true, markers = "extra == \"mssql\""}
 pymysql = {version = "*", extras = ["rsa"], optional = true, markers = "extra == \"mysql\""}
 sqlalchemy = {version = "*", optional = true, markers = "extra == \"mssql\" or extra == \"mysql\" or extra == \"oracle\" or extra == \"oracle-free\""}
+trino = {version = "*", optional = true, markers = "extra == \"trino\""}
 typing-extensions = "*"
 urllib3 = "*"
 wrapt = "*"
@@ -2771,11 +2772,14 @@ arangodb = ["python-arango (>=7.8,<8.0)"]
 azurite = ["azure-storage-blob (>=12.19,<13.0)"]
 chroma = ["chromadb-client"]
 clickhouse = ["clickhouse-driver"]
+cosmosdb = ["azure-cosmos"]
+generic = ["httpx"]
 google = ["google-cloud-datastore (>=2)", "google-cloud-pubsub (>=2)"]
 influxdb = ["influxdb", "influxdb-client"]
 k3s = ["kubernetes", "pyyaml"]
 keycloak = ["python-keycloak"]
 localstack = ["boto3"]
+mailpit = ["cryptography"]
 minio = ["minio"]
 mongodb = ["pymongo"]
 mssql = ["pymssql", "sqlalchemy"]
@@ -2790,6 +2794,9 @@ rabbitmq = ["pika"]
 redis = ["redis"]
 registry = ["bcrypt"]
 selenium = ["selenium"]
+sftp = ["cryptography"]
+test-module-import = ["httpx"]
+trino = ["trino"]
 weaviate = ["weaviate-client (>=4.5.4,<5.0.0)"]
 
 [[package]]
@@ -3450,4 +3457,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "8a4de7d12685d76ecb0216157e431d522ee1b2508370b59f9139b0b11a1bfe8e"
+content-hash = "e303b88b243ab1d2cf5327c6c7b28e73c89b38c6b5a8f5ae9d976de11f534b7c"
