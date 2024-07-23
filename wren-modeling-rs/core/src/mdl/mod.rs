@@ -1,5 +1,5 @@
 use crate::logical_plan::utils::from_qualified_name_str;
-use crate::mdl::context::create_ctx_with_mdl;
+use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
 use crate::mdl::manifest::{Column, Manifest, Model};
 use datafusion::execution::context::SessionState;
 use datafusion::prelude::SessionContext;
@@ -213,7 +213,7 @@ pub async fn transform_sql_with_ctx(
 }
 
 /// Apply Wren Rules to a given session context with a WrenMDL
-pub fn apply_wren_rules(ctx: &SessionContext, analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) {
+pub async fn apply_wren_rules(ctx: &SessionContext, analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Result<()>{
     ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
         Arc::clone(&analyzed_wren_mdl),
         ctx.state_ref(),
@@ -224,6 +224,7 @@ pub fn apply_wren_rules(ctx: &SessionContext, analyzed_wren_mdl: Arc<AnalyzedWre
     ctx.add_analyzer_rule(Arc::new(RemoveWrenPrefixRule::new(Arc::clone(
         &analyzed_wren_mdl,
     ))));
+    register_table_with_mdl(ctx, analyzed_wren_mdl.wren_mdl()).await
 }
 
 /// Analyze the decision point. It's same as the /v1/analysis/sql API in wren engine
