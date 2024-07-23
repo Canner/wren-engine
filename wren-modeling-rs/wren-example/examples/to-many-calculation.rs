@@ -8,7 +8,7 @@ use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
 use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::{AnalyzedWrenMDL, apply_wren_rules};
+use wren_core::mdl::{apply_wren_rules, AnalyzedWrenMDL};
 
 #[tokio::main]
 async fn main() -> Result<()> {

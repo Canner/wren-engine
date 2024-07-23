@@ -213,7 +213,10 @@ pub async fn transform_sql_with_ctx(
 }
 
 /// Apply Wren Rules to a given session context with a WrenMDL
-pub async fn apply_wren_rules(ctx: &SessionContext, analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Result<()>{
+pub async fn apply_wren_rules(
+    ctx: &SessionContext,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+) -> Result<()> {
     ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
         Arc::clone(&analyzed_wren_mdl),
         ctx.state_ref(),

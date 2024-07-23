@@ -249,9 +249,11 @@ async fn register_ecommerce_mdl(
                 .condition("orders.order_id = order_items.order_id")
                 .build(),
         )
-        .view(ViewBuilder::new("customer_view")
-            .statement("select * from wrenai.public.customers")
-            .build())
+        .view(
+            ViewBuilder::new("customer_view")
+                .statement("select * from wrenai.public.customers")
+                .build(),
+        )
         // TODO: support expression without alias inside view
         // .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
         // TODO: fix view with calculation
