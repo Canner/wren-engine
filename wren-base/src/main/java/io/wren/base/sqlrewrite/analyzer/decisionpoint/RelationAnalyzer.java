@@ -261,7 +261,7 @@ public class RelationAnalyzer
         {
             scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
                     .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                    .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), node.getLocation().orElse(null))));
+                    .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), field.getSourceColumnName().orElse(null), node.getLocation().orElse(null))));
             return null;
         }
 
@@ -271,7 +271,7 @@ public class RelationAnalyzer
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
                     scope.getRelationType().resolveFields(qualifiedName)
                             .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                            .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), node.getLocation().orElse(null)))));
+                            .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), field.getSourceColumnName().orElse(null), node.getLocation().orElse(null)))));
             return null;
         }
     }

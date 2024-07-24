@@ -165,7 +165,7 @@ public class AnalysisResource
 
     private static QueryAnalysisDto.ExprSourceDto toExprSourceDto(ExprSource exprSource)
     {
-        return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset(), toNodeLocationDto(exprSource.nodeLocation()));
+        return new QueryAnalysisDto.ExprSourceDto(exprSource.expression(), exprSource.sourceDataset(), exprSource.sourceColumn(), toNodeLocationDto(exprSource.nodeLocation()));
     }
 
     private static QueryAnalysisDto.GroupByKeyDto toGroupByKeyDto(QueryAnalysis.GroupByKey groupByKey)

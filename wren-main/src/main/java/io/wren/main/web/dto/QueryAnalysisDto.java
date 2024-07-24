@@ -356,13 +356,15 @@ public class QueryAnalysisDto
     {
         private String expression;
         private String sourceDataset;
+        private String sourceColumn;
         private NodeLocationDto nodeLocation;
 
         @JsonCreator
-        public ExprSourceDto(String expression, String sourceDataset, NodeLocationDto nodeLocation)
+        public ExprSourceDto(String expression, String sourceDataset, String sourceColumn, NodeLocationDto nodeLocation)
         {
             this.expression = expression;
             this.sourceDataset = sourceDataset;
+            this.sourceColumn = sourceColumn;
             this.nodeLocation = nodeLocation;
         }
 
@@ -376,6 +378,12 @@ public class QueryAnalysisDto
         public String getSourceDataset()
         {
             return sourceDataset;
+        }
+
+        @JsonProperty
+        public String getSourceColumn()
+        {
+            return sourceColumn;
         }
 
         @JsonProperty
@@ -395,14 +403,15 @@ public class QueryAnalysisDto
             }
             ExprSourceDto that = (ExprSourceDto) o;
             return Objects.equals(expression, that.expression) &&
-                    Objects.equals(sourceDataset, that.sourceDataset)
-                    && Objects.equals(nodeLocation, that.nodeLocation);
+                    Objects.equals(sourceDataset, that.sourceDataset) &&
+                    Objects.equals(sourceColumn, that.sourceColumn) &&
+                    Objects.equals(nodeLocation, that.nodeLocation);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, sourceDataset, nodeLocation);
+            return Objects.hash(expression, sourceDataset, sourceColumn, nodeLocation);
         }
 
         @Override
@@ -411,6 +420,7 @@ public class QueryAnalysisDto
             return "ExprSourceDto{" +
                     "expression='" + expression + '\'' +
                     ", sourceDataset='" + sourceDataset + '\'' +
+                    ", sourceColumn='" + sourceColumn + '\'' +
                     ", nodeLocation=" + nodeLocation +
                     '}';
         }

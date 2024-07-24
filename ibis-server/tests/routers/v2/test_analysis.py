@@ -101,6 +101,7 @@ def test_analysis_sql_select_all_customer():
             "expression": "custkey",
             "nodeLocation": {"line": 1, "column": 8},
             "sourceDataset": "customer",
+            "sourceColumn": "custkey",
         },
     ]
     assert result[0]["selectItems"][1]["nodeLocation"] == {"line": 1, "column": 8}
@@ -132,6 +133,7 @@ def test_analysis_sql_group_by_customer():
                 "expression": "custkey",
                 "nodeLocation": {"line": 1, "column": 8},
                 "sourceDataset": "customer",
+                "sourceColumn": "custkey",
             },
         ],
     }
@@ -163,14 +165,16 @@ def test_analysis_sql_join_customer_orders():
     }
     assert result[0]["relation"]["exprSources"] == [
         {
-            "expression": "o.custkey",
-            "nodeLocation": {"line": 1, "column": 55},
-            "sourceDataset": "orders",
-        },
-        {
             "expression": "c.custkey",
             "nodeLocation": {"line": 1, "column": 43},
             "sourceDataset": "customer",
+            "sourceColumn": "custkey",
+        },
+        {
+            "expression": "o.custkey",
+            "nodeLocation": {"line": 1, "column": 55},
+            "sourceDataset": "orders",
+            "sourceColumn": "custkey",
         },
     ]
 
@@ -194,6 +198,7 @@ def test_analysis_sql_where_clause():
             "expression": "custkey",
             "nodeLocation": {"line": 1, "column": 30},
             "sourceDataset": "customer",
+            "sourceColumn": "custkey",
         },
     ]
     assert result[0]["filter"]["right"]["type"] == "AND"
@@ -216,6 +221,7 @@ def test_analysis_sql_group_by_multiple_columns():
                 "expression": "custkey",
                 "nodeLocation": {"line": 1, "column": 8},
                 "sourceDataset": "customer",
+                "sourceColumn": "custkey",
             },
         ],
     }
@@ -227,6 +233,7 @@ def test_analysis_sql_group_by_multiple_columns():
                 "expression": "name",
                 "nodeLocation": {"line": 1, "column": 27},
                 "sourceDataset": "customer",
+                "sourceColumn": "name",
             },
         ],
     }
@@ -238,6 +245,7 @@ def test_analysis_sql_group_by_multiple_columns():
                 "expression": "nationkey",
                 "nodeLocation": {"line": 1, "column": 61},
                 "sourceDataset": "customer",
+                "sourceColumn": "nationkey",
             },
         ],
     }
@@ -259,6 +267,7 @@ def test_analysis_sql_order_by():
             "expression": "custkey",
             "nodeLocation": {"line": 1, "column": 8},
             "sourceDataset": "customer",
+            "sourceColumn": "custkey",
         },
     ]
     assert result[0]["sortings"][0]["nodeLocation"] == {"line": 1, "column": 45}
