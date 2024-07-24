@@ -37,9 +37,6 @@ To start the server:
 - Execute `just dev` to start the server in development mode (auto-reloads on code changes)
 - The default port is `8000`. You can change it by running `just port=8001 run` or `just port=8001 dev`
 
-To run the tests:
-- Execute `just test`
-
 ### Environment Variables
 - `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
 - `LOG_LEVEL`: The log level of the server (default is INFO)
@@ -51,13 +48,9 @@ To run the tests:
 ### Run the testing
 - Preapre the Wren Engine server (see [Wren Engine Example](../example/README.md)
 - Run pytest with `WREN_ENGINE_ENDPOINT` env. (The default port of Wren Engine is 8080)
-  - run all test
+  - run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list in [pyproject.toml](https://github.com/Canner/wren-engine/blob/10d71be41ecb630e6d5f56834d2724afbf87710d/ibis-server/pyproject.toml#L50).
   ```
-  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test
-  ```
-  - run specific test using [pytest args](https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name)
-  ```
-  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test -m 'postgres'
+  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test 'postgres'
   ```
 
 ## How to add new data source

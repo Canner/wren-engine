@@ -31,9 +31,9 @@ run:
 dev:
     poetry run fastapi dev --port {{port}}
 
-# run the pytest with given args
-test *ARGS:
-    poetry run pytest {{ ARGS }}
+# run the pytest tests for the given marker
+test MARKER:
+    poetry run pytest -m {{ MARKER }}
 
 docker-build:
 # alias for `docker-build`
