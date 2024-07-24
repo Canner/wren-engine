@@ -46,10 +46,8 @@ class ExternalEngineRewriter(Rewriter):
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            rewritten_sql = (
-                r.text if r.status_code == httpx.codes.OK else r.raise_for_status()
-            )
             logger.debug("Rewritten SQL: %s", rewritten_sql)
+            rewritten_sql = r.raise_for_status().text
             return (
                 rewritten_sql
                 if self.data_source is None

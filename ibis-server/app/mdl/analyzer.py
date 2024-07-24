@@ -14,7 +14,7 @@ def analyze(manifest_str: str, sql: str) -> list[dict]:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             content=orjson.dumps({"manifestStr": manifest_str, "sql": sql}),
         )
-        return r.json() if r.status_code == httpx.codes.OK else r.raise_for_status()
+        return r.raise_for_status().json()
     except httpx.ConnectError as e:
         raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
 
@@ -27,6 +27,6 @@ def analyze_batch(manifest_str: str, sqls: list[str]) -> list[list[dict]]:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             content=orjson.dumps({"manifestStr": manifest_str, "sqls": sqls}),
         )
-        return r.json() if r.status_code == httpx.codes.OK else r.raise_for_status()
+        return r.raise_for_status().json()
     except httpx.ConnectError as e:
         raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
