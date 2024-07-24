@@ -64,7 +64,7 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.1</dep.antlr.version>
-        <dep.airlift.version>243</dep.airlift.version>
+        <dep.airlift.version>251</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.21</dep.drift.version>
         <dep.testcontainers.version>1.16.3</dep.testcontainers.version>
