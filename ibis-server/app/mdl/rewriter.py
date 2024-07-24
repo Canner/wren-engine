@@ -1,6 +1,9 @@
+from abc import ABC, abstractmethod
+
 import httpx
 import orjson
 import sqlglot
+from wren_core import transform_sql
 
 from app.config import get_config
 from app.logger import get_logger
@@ -11,10 +14,26 @@ wren_engine_endpoint = get_config().wren_engine_endpoint
 logger = get_logger("app.mdl.rewriter")
 
 
-class Rewriter:
+class Rewriter(ABC):
     def __init__(self, manifest_str: str, data_source: DataSource = None):
         self.manifest_str = manifest_str
         self.data_source = data_source
+
+    @abstractmethod
+    def rewrite(self, sql: str) -> str:
+        pass
+
+    def transpile(self, rewritten_sql: str) -> str:
+        transpiled_sql = sqlglot.transpile(
+            rewritten_sql, read="trino", write=self.data_source.name
+        )[0]
+        logger.debug("Translated SQL: %s", transpiled_sql)
+        return transpiled_sql
+
+
+class ExternalEngineRewriter(Rewriter):
+    def __init__(self, manifest_str: str, data_source: DataSource = None):
+        super().__init__(manifest_str, data_source)
 
     def rewrite(self, sql: str) -> str:
         try:
@@ -39,9 +58,13 @@ class Rewriter:
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
 
-    def transpile(self, rewritten_sql: str) -> str:
-        transpiled_sql = sqlglot.transpile(
-            rewritten_sql, read="trino", write=self.data_source.name
-        )[0]
-        logger.debug("Translated SQL: %s", transpiled_sql)
-        return transpiled_sql
+
+class EmbeddedEngineRewriter(Rewriter):
+    def __init__(self, manifest_str: str, data_source: DataSource = None):
+        super().__init__(manifest_str, data_source)
+
+    def rewrite(self, sql: str) -> str:
+        rewritten_sql = transform_sql(self.manifest_str, sql)
+        return (
+            rewritten_sql if self.data_source is None else self.transpile(rewritten_sql)
+        )
