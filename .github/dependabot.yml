@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directories:
+      - "/ibis-server"
+      - "/wren-modeling-py"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/wren-modeling-rs"
+    schedule:
+      interval: "weekly"
