@@ -40,7 +40,7 @@ testcontainers = { version = "4.7.2", extras = [
 ] }
 sqlalchemy = "2.0.30"
 pre-commit = "3.7.1"
-ruff = "0.4.8"
+ruff = "0.5.4"
 maturin = "1.6.0"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
