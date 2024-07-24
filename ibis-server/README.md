@@ -78,5 +78,17 @@ Run the server
 just run
 ```
 
+### Run the testing
+- Preapre the Wren Engine server (see [Wren Engine Example](../example/README.md)
+- Run pytest with `WREN_ENGINE_ENDPOINT` env. (The default port of Wren Engine is 8080)
+  - run all test
+  ```
+  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test
+  ```
+  - run specific test using [pytest args](https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name)
+  ```
+  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test -k 'postgres'
+  ```
+
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
