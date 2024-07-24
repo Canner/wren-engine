@@ -135,7 +135,7 @@ public class AnalysisResource
                     joinRelation.getAlias(),
                     toRelationAnalysisDto(joinRelation.getLeft()),
                     toRelationAnalysisDto(joinRelation.getRight()),
-                    joinRelation.getCriteria(),
+                    joinCriteriaDto(joinRelation.getCriteria()),
                     null,
                     null,
                     joinRelation.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList(),
@@ -173,6 +173,11 @@ public class AnalysisResource
         return new QueryAnalysisDto.GroupByKeyDto(groupByKey.getExpression(),
                 toNodeLocationDto(groupByKey.getNodeLocation()),
                 groupByKey.getExprSources().stream().map(AnalysisResource::toExprSourceDto).toList());
+    }
+
+    private static QueryAnalysisDto.JoinCriteriaDto joinCriteriaDto(RelationAnalysis.JoinCriteria joinCriteria)
+    {
+        return new QueryAnalysisDto.JoinCriteriaDto(joinCriteria.getExpression(), toNodeLocationDto(joinCriteria.getNodeLocation()));
     }
 
     private static NodeLocationDto toNodeLocationDto(NodeLocation nodeLocation)

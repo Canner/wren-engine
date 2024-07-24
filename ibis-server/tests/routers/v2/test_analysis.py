@@ -154,7 +154,13 @@ def test_analysis_sql_join_customer_orders():
     assert result[0]["relation"]["left"]["nodeLocation"] == {"line": 1, "column": 15}
     assert result[0]["relation"]["right"]["type"] == "TABLE"
     assert result[0]["relation"]["right"]["nodeLocation"] == {"line": 1, "column": 31}
-    assert result[0]["relation"]["criteria"] == "ON (c.custkey = o.custkey)"
+    assert (
+        result[0]["relation"]["criteria"]["expression"] == "ON (c.custkey = o.custkey)"
+    )
+    assert result[0]["relation"]["criteria"]["nodeLocation"] == {
+        "line": 1,
+        "column": 43,
+    }
     assert result[0]["relation"]["exprSources"] == [
         {
             "expression": "o.custkey",
