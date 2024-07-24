@@ -163,6 +163,6 @@ class DataSourceExtension(Enum):
             port=int(info.port.get_secret_value()),
             database=info.catalog.get_secret_value(),
             schema=info.trino_schema.get_secret_value(),
-            user=info.user.get_secret_value(),
-            password=info.password.get_secret_value(),
+            user=(info.user and info.user.get_secret_value()),
+            password=(info.password and info.password.get_secret_value()),
         )
