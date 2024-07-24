@@ -18,7 +18,7 @@ class BigQueryMetadata(Metadata):
         self.connection = DataSource.bigquery.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        dataset_id = self.connection_info.dataset_id
+        dataset_id = self.connection_info.dataset_id.get_secret_value()
         sql = f"""
             SELECT 
                 c.table_catalog,
@@ -84,7 +84,7 @@ class BigQueryMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
-        dataset_id = self.connection_info.dataset_id
+        dataset_id = self.connection_info.dataset_id.get_secret_value()
         sql = f"""
             SELECT 
                 CONCAT(ccu.table_name, '_', ccu.column_name, '_', kcu.table_name, '_', kcu.column_name) as constraintName,
