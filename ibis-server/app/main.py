@@ -25,8 +25,15 @@ def health():
 
 
 @app.get("/config")
-def config():
+def provide_config():
     return get_config()
+
+
+@app.patch("/config")
+def update_config(diagnose: bool):
+    config = get_config()
+    config.update(diagnose=diagnose)
+    return config
 
 
 @app.exception_handler(UnprocessableEntityError)
