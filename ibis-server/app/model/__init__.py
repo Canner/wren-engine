@@ -142,3 +142,7 @@ class AnalyzeSQLBatchDTO(BaseModel):
 class DryPlanDTO(BaseModel):
     manifest_str: str = manifest_str_field
     sql: str
+
+
+class UnprocessableEntityError(Exception):
+    pass

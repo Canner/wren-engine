@@ -6,7 +6,7 @@ import sqlglot
 from wren_core import transform_sql
 
 from app.config import get_config
-from app.logger import get_logger
+from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
@@ -46,8 +46,8 @@ class ExternalEngineRewriter(Rewriter):
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            logger.debug("Rewritten SQL: %s", rewritten_sql)
             rewritten_sql = r.raise_for_status().text
+            logger.debug("Rewritten SQL: {}", rewritten_sql)
             return (
                 rewritten_sql
                 if self.data_source is None
@@ -55,6 +55,8 @@ class ExternalEngineRewriter(Rewriter):
             )
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
+        except httpx.HTTPStatusError as e:
+            raise RewriteError(e.response.text)
 
 
 class EmbeddedEngineRewriter(Rewriter):
@@ -66,3 +68,8 @@ class EmbeddedEngineRewriter(Rewriter):
         return (
             rewritten_sql if self.data_source is None else self.transpile(rewritten_sql)
         )
+
+
+class RewriteError(UnprocessableEntityError):
+    def __init__(self, message: str):
+        super().__init__(message)

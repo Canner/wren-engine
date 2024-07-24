@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.model import ConnectionInfo
+from app.model import ConnectionInfo, UnprocessableEntityError
 from app.model.data_source import DataSource
 
 
@@ -25,5 +25,5 @@ class Connector:
             raise QueryDryRunError(f"Exception: {type(e)}, message: {e!s}")
 
 
-class QueryDryRunError(Exception):
+class QueryDryRunError(UnprocessableEntityError):
     pass
