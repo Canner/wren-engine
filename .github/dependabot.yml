@@ -4,13 +4,27 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        patterns: [ "*" ]
   - package-ecosystem: "pip"
-    directories:
-      - "/ibis-server"
-      - "/wren-modeling-py"
+    directory: "/ibis-server"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        patterns: [ "*" ]
+  - package-ecosystem: "pip"
+    directory: "/wren-modeling-py"
+    schedule:
+      interval: "weekly"
+    groups:
+      all:
+        patterns: [ "*" ]
   - package-ecosystem: "cargo"
     directory: "/wren-modeling-rs"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        patterns: [ "*" ]
