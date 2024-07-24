@@ -48,7 +48,7 @@ To start the server:
 ### Run the testing
 - Preapre the Wren Engine server (see [Wren Engine Example](../example/README.md)
 - Run pytest with `WREN_ENGINE_ENDPOINT` env. (The default port of Wren Engine is 8080)
-  - run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list in [pyproject.toml](https://github.com/Canner/wren-engine/blob/10d71be41ecb630e6d5f56834d2724afbf87710d/ibis-server/pyproject.toml#L50).
+  - run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list in [pyproject.toml](../pyproject.toml).
   ```
   WREN_ENGINE_ENDPOINT=http://localhost:8080 just test 'postgres'
   ```
