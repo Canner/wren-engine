@@ -1,3 +1,6 @@
+use crate::logical_plan::utils::from_qualified_name_str;
+use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
+use crate::mdl::manifest::{Column, Manifest, Model};
 use datafusion::execution::context::SessionState;
 use datafusion::prelude::SessionContext;
 use datafusion::{error::Result, sql::unparser::plan_to_sql};
@@ -6,10 +9,6 @@ use manifest::Relationship;
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::logical_plan::utils::from_qualified_name_str;
-use crate::mdl::context::create_ctx_with_mdl;
-use crate::mdl::manifest::{Column, Manifest, Model};
-
 pub mod builder;
 pub mod context;
 pub(crate) mod dataset;
@@ -17,6 +16,9 @@ pub mod lineage;
 pub mod manifest;
 pub mod utils;
 
+use crate::logical_plan::analyze::rule::{
+    ModelAnalyzeRule, ModelGenerationRule, RemoveWrenPrefixRule,
+};
 pub use dataset::Dataset;
 
 pub type SessionStateRef = Arc<RwLock<SessionState>>;
@@ -208,6 +210,24 @@ pub async fn transform_sql_with_ctx(
         }
         Err(e) => Err(e),
     }
+}
+
+/// Apply Wren Rules to a given session context with a WrenMDL
+pub async fn apply_wren_rules(
+    ctx: &SessionContext,
+    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+) -> Result<()> {
+    ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
+        Arc::clone(&analyzed_wren_mdl),
+        ctx.state_ref(),
+    )));
+    ctx.add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
+        &analyzed_wren_mdl,
+    ))));
+    ctx.add_analyzer_rule(Arc::new(RemoveWrenPrefixRule::new(Arc::clone(
+        &analyzed_wren_mdl,
+    ))));
+    register_table_with_mdl(ctx, analyzed_wren_mdl.wren_mdl()).await
 }
 
 /// Analyze the decision point. It's same as the /v1/analysis/sql API in wren engine
