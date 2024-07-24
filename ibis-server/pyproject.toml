@@ -55,6 +55,7 @@ markers = [
   "postgres: mark a test as a postgres test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
+  "beta: mark a test as a test for beta versions of the engine",
 ]
 
 [tool.ruff]
