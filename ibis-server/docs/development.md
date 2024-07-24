@@ -36,7 +36,6 @@ To start the server:
 
 ### Environment Variables
 - `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
-- `LOG_LEVEL`: The log level of the server (default is INFO)
 
 ### Docker
 - Build the image: `just docker-build`

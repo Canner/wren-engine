@@ -22,7 +22,6 @@ services:
       - "8000:8000"
     environment:
       - WREN_ENGINE_ENDPOINT=http://java-engine:8080
-      - LOG_LEVEL=INFO
   java-engine:
     image: ghcr.io/canner/wren-engine:latest
     expose:
@@ -49,7 +48,7 @@ docker compose up
 ### Running on Local
 Requirements:
 - Python 3.11
-- [poetry](https://github.com/python-poetry/poetry) 1.7.1 (see [Environment Setup](#Environment-Setup))
+- [poetry](https://github.com/python-poetry/poetry)
 - [Rust](https://www.rust-lang.org/tools/install) and [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 
 Clone the repository

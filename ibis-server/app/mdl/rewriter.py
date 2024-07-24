@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import httpx
 import orjson
 import sqlglot
+from loguru import logger
 from wren_core import transform_sql
 
 from app.config import get_config
@@ -10,8 +11,6 @@ from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
-
-logger = get_logger("app.mdl.rewriter")
 
 
 class Rewriter(ABC):
@@ -27,7 +26,7 @@ class Rewriter(ABC):
         transpiled_sql = sqlglot.transpile(
             rewritten_sql, read="trino", write=self.data_source.name
         )[0]
-        logger.debug("Translated SQL: %s", transpiled_sql)
+        logger.debug("Translated SQL: {}", transpiled_sql)
         return transpiled_sql
 
 
