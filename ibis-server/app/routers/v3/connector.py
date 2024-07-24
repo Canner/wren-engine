@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
 from app.dependencies import verify_query_dto
-from app.logger import log_dto
 from app.mdl.rewriter import EmbeddedEngineRewriter
 from app.model import (
     DryPlanDTO,
@@ -20,7 +19,6 @@ router = APIRouter(prefix="/connector")
 
 
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
-@log_dto
 def query(
     data_source: DataSource,
     dto: QueryDTO,
@@ -43,7 +41,6 @@ def query(
 
 
 @router.post("/dry-plan")
-@log_dto
 def dry_plan(dto: DryPlanDTO) -> str:
     try:
         return EmbeddedEngineRewriter(dto.manifest_str).rewrite(dto.sql)
@@ -52,7 +49,6 @@ def dry_plan(dto: DryPlanDTO) -> str:
 
 
 @router.post("/{data_source}/dry-plan")
-@log_dto
 def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
     try:
         return EmbeddedEngineRewriter(dto.manifest_str, data_source).rewrite(dto.sql)
@@ -61,7 +57,6 @@ def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
 
 
 @router.post("/{data_source}/validate/{rule_name}")
-@log_dto
 def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
     try:
         validator = Validator(

@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from loguru import logger
@@ -12,6 +14,18 @@ app.include_router(v2.router)
 app.include_router(v3.router)
 
 get_config().init_logger()
+
+
+@app.middleware("http")
+async def request_logger(request, call_next):
+    with logger.contextualize(request_id=str(uuid.uuid4())):
+        logger.info("{method} {path}", method=request.method, path=request.url.path)
+        logger.info("Request params: {params}", params=dict(request.query_params))
+        logger.info("Request body: {body}", body=(await request.body()).decode("utf-8"))
+        try:
+            return await call_next(request)
+        finally:
+            logger.info("Request ended")
 
 
 @app.get("/")
