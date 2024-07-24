@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from app.mdl.rewriter import Rewriter
 from app.model.connector import Connector
 
 rules = ["column_is_valid"]
 
 
 class Validator:
-    def __init__(self, connector: Connector):
+    def __init__(self, connector: Connector, rewriter: Rewriter):
         self.connector = connector
+        self.rewriter = rewriter
 
     def validate(self, rule: str, parameters: dict[str, str]):
         if rule not in rules:
@@ -28,9 +30,9 @@ class Validator:
             raise MissingRequiredParameterError("columnName")
 
         try:
-            self.connector.dry_run(
-                f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
-            )
+            sql = f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
+            rewritten_sql = self.rewriter.rewrite(sql)
+            self.connector.dry_run(rewritten_sql)
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
 

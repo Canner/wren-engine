@@ -29,19 +29,23 @@ def query(
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
 ) -> Response:
+    rewritten_sql = Rewriter(dto.manifest_str, data_source).rewrite(dto.sql)
     connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
-        connector.dry_run(dto.sql)
+        connector.dry_run(rewritten_sql)
         return Response(status_code=204)
     return JSONResponse(
-        to_json(connector.query(dto.sql, limit=limit), dto.column_dtypes)
+        to_json(connector.query(rewritten_sql, limit=limit), dto.column_dtypes)
     )
 
 
 @router.post("/{data_source}/validate/{rule_name}")
 @log_dto
 def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
-    validator = Validator(Connector(data_source, dto.connection_info, dto.manifest_str))
+    validator = Validator(
+        Connector(data_source, dto.connection_info, dto.manifest_str),
+        Rewriter(dto.manifest_str, data_source),
+    )
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)
 
