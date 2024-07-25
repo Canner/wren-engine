@@ -18,7 +18,7 @@ import io.trino.sql.tree.NodeLocation;
 
 import java.util.Objects;
 
-public record ExprSource(String expression, String sourceDataset, NodeLocation nodeLocation)
+public record ExprSource(String expression, String sourceDataset, String sourceColumn, NodeLocation nodeLocation)
 {
     @Override
     public boolean equals(Object o)
@@ -34,12 +34,13 @@ public record ExprSource(String expression, String sourceDataset, NodeLocation n
         ExprSource that = (ExprSource) o;
         return Objects.equals(expression, that.expression) &&
                 Objects.equals(sourceDataset, that.sourceDataset)
+                && Objects.equals(sourceColumn, that.sourceColumn)
                 && Objects.equals(nodeLocation, that.nodeLocation);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(expression, sourceDataset, nodeLocation);
+        return Objects.hash(expression, sourceDataset, sourceColumn, nodeLocation);
     }
 }

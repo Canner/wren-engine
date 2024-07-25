@@ -29,6 +29,7 @@ import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.NaturalJoin;
+import io.trino.sql.tree.NodeLocation;
 import io.trino.sql.tree.PatternRecognitionRelation;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuerySpecification;
@@ -50,6 +51,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static io.trino.sql.tree.DereferenceExpression.getQualifiedName;
+import static io.wren.base.sqlrewrite.analyzer.decisionpoint.RelationAnalysis.JoinCriteria.joinCriteria;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
@@ -129,9 +131,10 @@ public class RelationAnalyzer
             Scope scope = analysis.getScope(node);
             List<ExprSource> exprSources = node.getCriteria().map(criteria -> analyzeCriteria(criteria, scope))
                     .orElse(null);
+            Optional<NodeLocation> criteriaLocation = node.getCriteria().flatMap(this::findLocation);
             return new RelationAnalysis.JoinRelation(
                     RelationAnalysis.Type.valueOf(format("%s_JOIN", node.getType())),
-                    null, left, right, node.getCriteria().map(this::formatCriteria).orElse(null),
+                    null, left, right, joinCriteria(node.getCriteria().map(this::formatCriteria).orElse(null), criteriaLocation.orElse(null)),
                     exprSources,
                     node.getLocation().orElse(null));
         }
@@ -155,6 +158,16 @@ public class RelationAnalyzer
                     throw new IllegalArgumentException("Unsupported join criteria: " + criteria);
             }
             return builder.toString();
+        }
+
+        private Optional<NodeLocation> findLocation(JoinCriteria criteria)
+        {
+            return switch (criteria) {
+                case JoinOn joinOn -> joinOn.getNodes().stream().findAny().flatMap(ExpressionLocationAnalyzer::analyze);
+                case JoinUsing joinUsing -> joinUsing.getColumns().stream().findAny().flatMap(ExpressionLocationAnalyzer::analyze);
+                case NaturalJoin ignored -> Optional.empty();
+                default -> throw new IllegalArgumentException("Unsupported join criteria: " + criteria);
+            };
         }
 
         private List<ExprSource> analyzeCriteria(JoinCriteria criteria, Scope scope)
@@ -248,7 +261,7 @@ public class RelationAnalyzer
         {
             scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
                     .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                    .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), node.getLocation().orElse(null))));
+                    .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), field.getSourceColumnName().orElse(null), node.getLocation().orElse(null))));
             return null;
         }
 
@@ -258,7 +271,7 @@ public class RelationAnalyzer
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
                     scope.getRelationType().resolveFields(qualifiedName)
                             .stream().filter(field -> field.getSourceDatasetName().isPresent())
-                            .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), node.getLocation().orElse(null)))));
+                            .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), field.getSourceColumnName().orElse(null), node.getLocation().orElse(null)))));
             return null;
         }
     }

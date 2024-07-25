@@ -143,7 +143,7 @@ public class QueryAnalysisDto
         private String alias;
         private RelationAnalysisDto left;
         private RelationAnalysisDto right;
-        private String criteria;
+        private JoinCriteriaDto criteria;
         private String tableName;
         private List<QueryAnalysisDto> body;
         private List<ExprSourceDto> exprSources;
@@ -155,7 +155,7 @@ public class QueryAnalysisDto
                 String alias,
                 RelationAnalysisDto left,
                 RelationAnalysisDto right,
-                String criteria,
+                JoinCriteriaDto criteria,
                 String tableName,
                 List<QueryAnalysisDto> body,
                 List<ExprSourceDto> exprSources,
@@ -197,7 +197,7 @@ public class QueryAnalysisDto
         }
 
         @JsonProperty
-        public String getCriteria()
+        public JoinCriteriaDto getCriteria()
         {
             return criteria;
         }
@@ -218,6 +218,31 @@ public class QueryAnalysisDto
         public List<ExprSourceDto> getExprSources()
         {
             return exprSources;
+        }
+
+        @JsonProperty
+        public NodeLocationDto getNodeLocation()
+        {
+            return nodeLocation;
+        }
+    }
+
+    public static class JoinCriteriaDto
+    {
+        private String expression;
+        private NodeLocationDto nodeLocation;
+
+        @JsonCreator
+        public JoinCriteriaDto(String expression, NodeLocationDto nodeLocation)
+        {
+            this.expression = expression;
+            this.nodeLocation = nodeLocation;
+        }
+
+        @JsonProperty
+        public String getExpression()
+        {
+            return expression;
         }
 
         @JsonProperty
@@ -331,13 +356,15 @@ public class QueryAnalysisDto
     {
         private String expression;
         private String sourceDataset;
+        private String sourceColumn;
         private NodeLocationDto nodeLocation;
 
         @JsonCreator
-        public ExprSourceDto(String expression, String sourceDataset, NodeLocationDto nodeLocation)
+        public ExprSourceDto(String expression, String sourceDataset, String sourceColumn, NodeLocationDto nodeLocation)
         {
             this.expression = expression;
             this.sourceDataset = sourceDataset;
+            this.sourceColumn = sourceColumn;
             this.nodeLocation = nodeLocation;
         }
 
@@ -351,6 +378,12 @@ public class QueryAnalysisDto
         public String getSourceDataset()
         {
             return sourceDataset;
+        }
+
+        @JsonProperty
+        public String getSourceColumn()
+        {
+            return sourceColumn;
         }
 
         @JsonProperty
@@ -370,14 +403,15 @@ public class QueryAnalysisDto
             }
             ExprSourceDto that = (ExprSourceDto) o;
             return Objects.equals(expression, that.expression) &&
-                    Objects.equals(sourceDataset, that.sourceDataset)
-                    && Objects.equals(nodeLocation, that.nodeLocation);
+                    Objects.equals(sourceDataset, that.sourceDataset) &&
+                    Objects.equals(sourceColumn, that.sourceColumn) &&
+                    Objects.equals(nodeLocation, that.nodeLocation);
         }
 
         @Override
         public int hashCode()
         {
-            return Objects.hash(expression, sourceDataset, nodeLocation);
+            return Objects.hash(expression, sourceDataset, sourceColumn, nodeLocation);
         }
 
         @Override
@@ -386,6 +420,7 @@ public class QueryAnalysisDto
             return "ExprSourceDto{" +
                     "expression='" + expression + '\'' +
                     ", sourceDataset='" + sourceDataset + '\'' +
+                    ", sourceColumn='" + sourceColumn + '\'' +
                     ", nodeLocation=" + nodeLocation +
                     '}';
         }

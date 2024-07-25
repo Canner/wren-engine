@@ -17,13 +17,14 @@ package io.wren.base.sqlrewrite.analyzer.decisionpoint;
 import io.trino.sql.tree.NodeLocation;
 
 import java.util.List;
+import java.util.Objects;
 
 import static io.wren.base.Utils.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public abstract class RelationAnalysis
 {
-    static JoinRelation join(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
+    static JoinRelation join(Type type, String alias, RelationAnalysis left, RelationAnalysis right, JoinCriteria criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
     {
         checkArgument(type != Type.TABLE && type != Type.SUBQUERY, "type should be a join type");
         return new JoinRelation(type, alias, left, right, criteria, exprSources, nodeLocation);
@@ -82,10 +83,10 @@ public abstract class RelationAnalysis
     {
         private final RelationAnalysis left;
         private final RelationAnalysis right;
-        private final String criteria;
+        private final JoinCriteria criteria;
         private final List<ExprSource> exprSources;
 
-        public JoinRelation(Type type, String alias, RelationAnalysis left, RelationAnalysis right, String criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
+        public JoinRelation(Type type, String alias, RelationAnalysis left, RelationAnalysis right, JoinCriteria criteria, List<ExprSource> exprSources, NodeLocation nodeLocation)
         {
             super(type, alias, nodeLocation);
             this.left = requireNonNull(left, "left is null");
@@ -104,7 +105,7 @@ public abstract class RelationAnalysis
             return right;
         }
 
-        public String getCriteria()
+        public JoinCriteria getCriteria()
         {
             return criteria;
         }
@@ -112,6 +113,62 @@ public abstract class RelationAnalysis
         public List<ExprSource> getExprSources()
         {
             return exprSources;
+        }
+    }
+
+    public static class JoinCriteria
+    {
+        public static JoinCriteria joinCriteria(String expression, NodeLocation nodeLocation)
+        {
+            return new JoinCriteria(expression, nodeLocation);
+        }
+
+        private final String expression;
+        private final NodeLocation nodeLocation;
+
+        public JoinCriteria(String expression, NodeLocation nodeLocation)
+        {
+            this.expression = expression;
+            this.nodeLocation = nodeLocation;
+        }
+
+        public String getExpression()
+        {
+            return expression;
+        }
+
+        public NodeLocation getNodeLocation()
+        {
+            return nodeLocation;
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            JoinCriteria that = (JoinCriteria) o;
+            return Objects.equals(expression, that.expression) &&
+                    Objects.equals(nodeLocation, that.nodeLocation);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(expression, nodeLocation);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "JoinCriteria{" +
+                    "expression='" + expression + '\'' +
+                    ", nodeLocation=" + nodeLocation +
+                    '}';
         }
     }
 

@@ -33,6 +33,7 @@ public class Field
     private final CatalogSchemaTableName tableName;
     private final String columnName;
     private final Optional<String> sourceDatasetName;
+    private final Optional<String> sourceColumnName;
     private final Optional<String> name;
 
     private Field(
@@ -40,13 +41,15 @@ public class Field
             CatalogSchemaTableName tableName,
             String columnName,
             String name,
-            String sourceDatasetName)
+            String sourceDatasetName,
+            String sourceColumnName)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.tableName = requireNonNull(tableName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
         this.sourceDatasetName = Optional.ofNullable(sourceDatasetName);
+        this.sourceColumnName = Optional.ofNullable(sourceColumnName);
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -72,6 +75,11 @@ public class Field
     public Optional<String> getSourceDatasetName()
     {
         return sourceDatasetName;
+    }
+
+    public Optional<String> getSourceColumnName()
+    {
+        return sourceColumnName;
     }
 
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
@@ -120,6 +128,7 @@ public class Field
                 ", columnName='" + columnName + '\'' +
                 ", name=" + name +
                 ", sourceDatasetName=" + sourceDatasetName +
+                ", sourceColumnName=" + sourceColumnName +
                 '}';
     }
 
@@ -135,6 +144,7 @@ public class Field
         private String columnName;
         private String name;
         private String sourceModelName;
+        private String sourceColumnName;
 
         public Builder() {}
 
@@ -145,6 +155,7 @@ public class Field
             this.columnName = field.columnName;
             this.name = field.name.orElse(null);
             this.sourceModelName = field.sourceDatasetName.orElse(null);
+            this.sourceColumnName = field.sourceColumnName.orElse(null);
             return this;
         }
 
@@ -178,9 +189,15 @@ public class Field
             return this;
         }
 
+        public Builder sourceColumnName(String sourceColumnName)
+        {
+            this.sourceColumnName = sourceColumnName;
+            return this;
+        }
+
         public Field build()
         {
-            return new Field(relationAlias, tableName, columnName, name, sourceModelName);
+            return new Field(relationAlias, tableName, columnName, name, sourceModelName, sourceColumnName);
         }
     }
 }

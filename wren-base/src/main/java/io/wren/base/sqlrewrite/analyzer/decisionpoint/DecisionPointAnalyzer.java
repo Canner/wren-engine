@@ -140,6 +140,7 @@ public class DecisionPointAnalyzer
                                         List.of(new ExprSource(
                                                 field.getName().orElse(field.getColumnName()),
                                                 field.getTableName().getSchemaTableName().getTableName(),
+                                                field.getSourceColumnName().orElse(null),
                                                 node.getLocation().orElse(null)))));
                             });
                 }
@@ -164,6 +165,7 @@ public class DecisionPointAnalyzer
                                 List.of(new ExprSource(
                                         field.getName().orElse(field.getColumnName()),
                                         field.getTableName().getSchemaTableName().getTableName(),
+                                        field.getSourceColumnName().orElse(null),
                                         node.getLocation().orElse(null)))));
                     });
                 }
