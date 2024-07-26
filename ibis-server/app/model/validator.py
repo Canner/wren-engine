@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.mdl.rewriter import Rewriter
+from app.model import UnprocessableEntityError
 from app.model.connector import Connector
 
 rules = ["column_is_valid"]
@@ -37,7 +38,7 @@ class Validator:
             raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
 
 
-class ValidationError(Exception):
+class ValidationError(UnprocessableEntityError):
     pass
 
 

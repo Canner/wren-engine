@@ -2,6 +2,7 @@ import httpx
 import orjson
 
 from app.config import get_config
+from app.model import UnprocessableEntityError
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 
@@ -14,9 +15,11 @@ def analyze(manifest_str: str, sql: str) -> list[dict]:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             content=orjson.dumps({"manifestStr": manifest_str, "sql": sql}),
         )
-        return r.json() if r.status_code == httpx.codes.OK else r.raise_for_status()
+        return r.raise_for_status().json()
     except httpx.ConnectError as e:
         raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
+    except httpx.HTTPStatusError as e:
+        raise AnalyzeError(e.response.text)
 
 
 def analyze_batch(manifest_str: str, sqls: list[str]) -> list[list[dict]]:
@@ -27,6 +30,13 @@ def analyze_batch(manifest_str: str, sqls: list[str]) -> list[list[dict]]:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             content=orjson.dumps({"manifestStr": manifest_str, "sqls": sqls}),
         )
-        return r.json() if r.status_code == httpx.codes.OK else r.raise_for_status()
+        return r.raise_for_status().json()
     except httpx.ConnectError as e:
         raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
+    except httpx.HTTPStatusError as e:
+        raise AnalyzeError(e.response.text)
+
+
+class AnalyzeError(UnprocessableEntityError):
+    def __init__(self, message: str):
+        super().__init__(message)
