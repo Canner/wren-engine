@@ -22,12 +22,12 @@ class Rewriter(ABC):
     def rewrite(self, sql: str) -> str:
         pass
 
-    def transpile(self, rewritten_sql: str) -> str:
-        transpiled_sql = sqlglot.transpile(
-            rewritten_sql, read="trino", write=self.data_source.name
+    def transpile(self, planned_sql: str) -> str:
+        dialect_sql = sqlglot.transpile(
+            planned_sql, read="trino", write=self.data_source.name
         )[0]
-        logger.debug("Translated SQL: {}", transpiled_sql)
-        return transpiled_sql
+        logger.debug("Dialect SQL: {}", dialect_sql)
+        return dialect_sql
 
 
 class ExternalEngineRewriter(Rewriter):
@@ -45,12 +45,10 @@ class ExternalEngineRewriter(Rewriter):
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            rewritten_sql = r.raise_for_status().text
-            logger.debug("Rewritten SQL: {}", rewritten_sql)
+            planned_sql = r.raise_for_status().text
+            logger.debug("Planned SQL: {}", planned_sql)
             return (
-                rewritten_sql
-                if self.data_source is None
-                else self.transpile(rewritten_sql)
+                planned_sql if self.data_source is None else self.transpile(planned_sql)
             )
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
@@ -63,10 +61,9 @@ class EmbeddedEngineRewriter(Rewriter):
         super().__init__(manifest_str, data_source)
 
     def rewrite(self, sql: str) -> str:
-        rewritten_sql = transform_sql(self.manifest_str, sql)
-        return (
-            rewritten_sql if self.data_source is None else self.transpile(rewritten_sql)
-        )
+        planned_sql = transform_sql(self.manifest_str, sql)
+        logger.debug("Planned SQL: {}", planned_sql)
+        return planned_sql if self.data_source is None else self.transpile(planned_sql)
 
 
 class RewriteError(UnprocessableEntityError):
