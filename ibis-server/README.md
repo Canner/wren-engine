@@ -48,6 +48,7 @@ docker compose up
 ### Running on Local
 Requirements:
 - Python 3.11
+- [casey/just](https://github.com/casey/just)
 - [poetry](https://github.com/python-poetry/poetry)
 - [Rust](https://www.rust-lang.org/tools/install) and [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 
