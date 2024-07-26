@@ -34,20 +34,25 @@ To start the server:
 - Execute `just dev` to start the server in development mode (auto-reloads on code changes)
 - The default port is `8000`. You can change it by running `just port=8001 run` or `just port=8001 dev`
 
-### Environment Variables
-- `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
-
 ### Docker
 - Build the image: `just docker-build`
 - Run the container: `just docker-run`
 
 ### Run the testing
-- Preapre the Wren Engine server (see [Wren Engine Example](../example/README.md)
-- Run pytest with `WREN_ENGINE_ENDPOINT` env. (The default port of Wren Engine is 8080)
-  - run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list in [pyproject.toml](../pyproject.toml).
+- Prepare the Wren Engine server (see [Wren Engine Example](../../example/README.md))
+- Use the `.env` file to set the `WREN_ENGINE_ENDPOINT` environment variable to change the endpoint of the Wren Engine server.
   ```
-  WREN_ENGINE_ENDPOINT=http://localhost:8080 just test 'postgres'
+  WREN_ENGINE_ENDPOINT=http://localhost:8080
   ```
+  More information about the environment variables can be found in the [Environment Variables](#Environment-Variables) section.
+- Run specific data source test using [pytest marker](https://docs.pytest.org/en/stable/example/markers.html). There are some markers for different data sources. See the list in [pyproject.toml](../pyproject.toml).
+  ```
+  just test postgres
+  ```
+
+### Environment Variables
+- `WREN_ENGINE_ENDPOINT`: The endpoint of the Wren Java engine
+
 
 ## How to add new data source
 Please see [How to Add a New Data Source](how-to-add-data-source.md) for more information.
