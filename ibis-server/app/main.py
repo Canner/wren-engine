@@ -51,12 +51,12 @@ def update_config(diagnose: bool):
 
 
 @app.exception_handler(UnprocessableEntityError)
-async def unprocessable_entity_error_handler(request, exc: UnprocessableEntityError):
+def unprocessable_entity_error_handler(request, exc: UnprocessableEntityError):
     logger.exception(exc)
     return PlainTextResponse(str(exc), status_code=422)
 
 
 @app.exception_handler(Exception)
-async def exception_handler(request, exc: Exception):
+def exception_handler(request, exc: Exception):
     logger.exception(exc)
     return PlainTextResponse(str(exc), status_code=500)
