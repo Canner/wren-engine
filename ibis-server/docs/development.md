@@ -23,9 +23,6 @@ just pre-commit-install
 ```
 This installs the pre-commit hooks.
 
-> [!WARNING]  
-> Before working on the application, you need to set up a Python virtual environment and install dependencies in the [wren-modeling-py](../../wren-modeling-py) directory.
-
 
 ## Start the server
 To get the application running:

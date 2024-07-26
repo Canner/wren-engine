@@ -1,0 +1,6 @@
+.venv
+target
+docs
+tests
+.pre-commit-config.yaml
+.env

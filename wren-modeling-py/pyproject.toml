@@ -1,8 +1,6 @@
 [project]
 name = "wren-modeling-py"
-classifiers = [
-    "Programming Language :: Python :: 3.11"
-]
+classifiers = ["Programming Language :: Python :: 3.11"]
 
 [tool.poetry]
 name = "wren-modeling-py"
@@ -12,16 +10,14 @@ authors = ["Canner <dev@cannerdata.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
+maturin = "1.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.1"
-maturin = "1.7.0"
 
 [tool.maturin]
 module-name = "wren_core"
-include = [
-    { path = "Cargo.lock", format = "sdist" }
-]
+include = [{ path = "Cargo.lock", format = "sdist" }]
 exclude = ["tests/**", "target/**"]
 locked = true
 
