@@ -61,9 +61,14 @@ class EmbeddedEngineRewriter(Rewriter):
         super().__init__(manifest_str, data_source)
 
     def rewrite(self, sql: str) -> str:
-        planned_sql = transform_sql(self.manifest_str, sql)
-        logger.debug("Planned SQL: {}", planned_sql)
-        return planned_sql if self.data_source is None else self.transpile(planned_sql)
+        try:
+            planned_sql = transform_sql(self.manifest_str, sql)
+            logger.debug("Planned SQL: {}", planned_sql)
+            return (
+                planned_sql if self.data_source is None else self.transpile(planned_sql)
+            )
+        except Exception as e:
+            raise RewriteError(str(e))
 
 
 class RewriteError(UnprocessableEntityError):

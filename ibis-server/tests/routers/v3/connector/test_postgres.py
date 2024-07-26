@@ -215,6 +215,20 @@ def test_query_with_limit(postgres: PostgresContainer):
     assert len(result["data"]) == 1
 
 
+def test_query_with_invalid_manifest_str(postgres: PostgresContainer):
+    connection_info = to_connection_info(postgres)
+    response = client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": "xxx",
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+    assert response.status_code == 422
+    assert response.text == "Invalid padding"
+
+
 def test_query_without_manifest(postgres: PostgresContainer):
     connection_info = to_connection_info(postgres)
     response = client.post(
