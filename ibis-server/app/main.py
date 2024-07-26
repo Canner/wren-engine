@@ -31,6 +31,9 @@ async def request_logger(request: Request, call_next):
         logger.info("Request body: {body}", body=body.decode("utf-8"))
         try:
             return await call_next(request)
+        except Exception as e:
+            logger.opt(exception=e).error("Request failed")
+            raise e
         finally:
             logger.info("Request ended")
 
@@ -59,11 +62,9 @@ def update_config(diagnose: bool):
 
 @app.exception_handler(UnprocessableEntityError)
 def unprocessable_entity_error_handler(request, exc: UnprocessableEntityError):
-    logger.exception(exc)
     return PlainTextResponse(str(exc), status_code=422)
 
 
 @app.exception_handler(Exception)
 def exception_handler(request, exc: Exception):
-    logger.exception(exc)
     return PlainTextResponse(str(exc), status_code=500)

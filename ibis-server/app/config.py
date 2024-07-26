@@ -5,6 +5,8 @@ import sys
 from dotenv import load_dotenv
 from loguru import logger
 
+logging.getLogger("uvicorn.error").disabled = True
+
 logger_format = (
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
     "<yellow>[{extra[request_id]}]</yellow> | "
