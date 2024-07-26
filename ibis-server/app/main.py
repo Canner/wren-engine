@@ -7,7 +7,7 @@ from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.model import UnprocessableEntityError
+from app.model import ConfigModel, UnprocessableEntityError
 from app.routers import v2, v3
 
 app = FastAPI()
@@ -54,9 +54,9 @@ def provide_config():
 
 
 @app.patch("/config")
-def update_config(diagnose: bool):
+def update_config(config_model: ConfigModel):
     config = get_config()
-    config.update(diagnose=diagnose)
+    config.update(diagnose=config_model.diagnose)
     return config
 
 

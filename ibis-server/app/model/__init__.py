@@ -144,5 +144,9 @@ class DryPlanDTO(BaseModel):
     sql: str
 
 
+class ConfigModel(BaseModel):
+    diagnose: bool
+
+
 class UnprocessableEntityError(Exception):
     pass
