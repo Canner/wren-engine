@@ -20,9 +20,6 @@ install *args:
 pre-commit-install:
     poetry run pre-commit install
 
-maturin:
-    poetry run maturin develop
-
 port := "8000"
 
 run:
