@@ -1,10 +1,12 @@
-use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
-use datafusion::common::not_impl_err;
 use std::{collections::HashMap, sync::Arc};
 
+use datafusion::arrow::datatypes::{
+    DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
+};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
+use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 
@@ -15,15 +17,74 @@ use crate::mdl::{
     WrenMDL,
 };
 
+fn create_mock_list_type() -> DataType {
+    let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
+    DataType::List(string_filed)
+}
+
+fn create_mock_struct_type() -> DataType {
+    let mut builder = SchemaBuilder::new();
+    builder.push(Field::new("a", DataType::Boolean, false));
+    let fields = builder.finish().fields;
+    DataType::Struct(fields)
+}
+
 pub fn map_data_type(data_type: &str) -> Result<DataType> {
+    let lower = data_type.to_lowercase();
+    let data_type = lower.as_str();
+    // Currently, we don't care about the element type of the array or struct.
+    // We only care about the array or struct itself.
+    if data_type.starts_with("array") {
+        return Ok(create_mock_list_type());
+    }
+    if data_type.starts_with("struct") {
+        return Ok(create_mock_struct_type());
+    }
     let result = match data_type {
+        // Wren Definition Types
+        "bool" => DataType::Boolean,
+        "tinyint" => DataType::Int8,
+        "int2" => DataType::Int16,
+        "smallint" => DataType::Int16,
+        "int4" => DataType::Int32,
         "integer" => DataType::Int32,
+        "int8" => DataType::Int64,
         "bigint" => DataType::Int64,
+        "numeric" => DataType::Decimal128(38, 10), // set the default precision and scale
+        "decimal" => DataType::Decimal128(38, 10),
         "varchar" => DataType::Utf8,
+        "char" => DataType::Utf8,
+        "bpchar" => DataType::Utf8, // we don't have a BPCHAR type, so we map it to Utf8
+        "text" => DataType::Utf8,
+        "string" => DataType::Utf8,
+        "name" => DataType::Utf8,
+        "float4" => DataType::Float32,
+        "real" => DataType::Float32,
+        "float8" => DataType::Float64,
         "double" => DataType::Float64,
-        "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None),
+        "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
+        "timestamptz" => DataType::Timestamp(TimeUnit::Nanosecond, None), // don't care about the time zone
         "date" => DataType::Date32,
-        _ => return not_impl_err!("Unsupported data type: {}", &data_type),
+        "interval" => DataType::Interval(IntervalUnit::DayTime),
+        "json" => DataType::Utf8, // we don't have a JSON type, so we map it to Utf8
+        "oid" => DataType::Int32,
+        "bytea" => DataType::Binary,
+        "uuid" => DataType::Utf8, // we don't have a UUID type, so we map it to Utf8
+        "inet" => DataType::Utf8, // we don't have a INET type, so we map it to Utf8
+        "unknown" => DataType::Utf8, // we don't have a UNKNOWN type, so we map it to Utf8
+        // BigQuery Compatible Types
+        "bignumeric" => DataType::Decimal128(38, 10), // set the default precision and scale
+        "bytes" => DataType::Binary,
+        "datetime" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
+        "float64" => DataType::Float64,
+        "int64" => DataType::Int64,
+        "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit
+        "null" => DataType::Null,
+        _ => {
+            // default to string
+            debug!("map unknown type {} to Utf8", data_type);
+            DataType::Utf8
+        }
     };
     Ok(result)
 }
@@ -103,4 +164,70 @@ pub fn from_qualified_name_str(
 pub fn print_graph(graph: &Graph<Dataset, DatasetLink>) {
     let dot = Dot::with_config(graph, &[Config::EdgeNoLabel]);
     println!("graph: {:?}", dot);
+}
+
+#[cfg(test)]
+mod test {
+    use datafusion::arrow::datatypes::{DataType, IntervalUnit, TimeUnit};
+    use datafusion::common::Result;
+
+    use crate::logical_plan::utils::{create_mock_list_type, create_mock_struct_type};
+
+    #[test]
+    pub fn test_map_data_type() -> Result<()> {
+        let test_cases = vec![
+            ("bool", DataType::Boolean),
+            ("tinyint", DataType::Int8),
+            ("int2", DataType::Int16),
+            ("smallint", DataType::Int16),
+            ("int4", DataType::Int32),
+            ("integer", DataType::Int32),
+            ("int8", DataType::Int64),
+            ("bigint", DataType::Int64),
+            ("numeric", DataType::Decimal128(38, 10)),
+            ("decimal", DataType::Decimal128(38, 10)),
+            ("varchar", DataType::Utf8),
+            ("char", DataType::Utf8),
+            ("bpchar", DataType::Utf8),
+            ("text", DataType::Utf8),
+            ("string", DataType::Utf8),
+            ("name", DataType::Utf8),
+            ("float4", DataType::Float32),
+            ("real", DataType::Float32),
+            ("float8", DataType::Float64),
+            ("double", DataType::Float64),
+            ("timestamp", DataType::Timestamp(TimeUnit::Nanosecond, None)),
+            (
+                "timestamptz",
+                DataType::Timestamp(TimeUnit::Nanosecond, None),
+            ),
+            ("date", DataType::Date32),
+            ("interval", DataType::Interval(IntervalUnit::DayTime)),
+            ("json", DataType::Utf8),
+            ("oid", DataType::Int32),
+            ("bytea", DataType::Binary),
+            ("uuid", DataType::Utf8),
+            ("inet", DataType::Utf8),
+            ("unknown", DataType::Utf8),
+            ("bignumeric", DataType::Decimal128(38, 10)),
+            ("bytes", DataType::Binary),
+            ("datetime", DataType::Timestamp(TimeUnit::Nanosecond, None)),
+            ("float64", DataType::Float64),
+            ("int64", DataType::Int64),
+            ("time", DataType::Time32(TimeUnit::Nanosecond)),
+            ("null", DataType::Null),
+            ("geography", DataType::Utf8),
+            ("range", DataType::Utf8),
+            ("array<int64>", create_mock_list_type()),
+            ("struct<name string, age int>", create_mock_struct_type()),
+        ];
+        for (data_type, expected) in test_cases {
+            let result = super::map_data_type(data_type)?;
+            assert_eq!(result, expected);
+            // test case insensitivity
+            let result = super::map_data_type(&data_type.to_uppercase())?;
+            assert_eq!(result, expected);
+        }
+        Ok(())
+    }
 }
