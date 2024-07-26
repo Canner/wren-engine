@@ -2,7 +2,7 @@ default:
     @just --list --unsorted
 
 build-core:
-    cd ../wren-modeling-py && just build
+    cd ../wren-modeling-py && just install && just build
 
 core-wheel-path := "../wren-modeling-py/target/wheels/wren_modeling_py-*.whl"
 
@@ -13,8 +13,8 @@ install-core: build-core
 update-core: build-core
     poetry run pip install --force-reinstall {{core-wheel-path}}
 
-install:
-    poetry install
+install *args:
+    poetry install {{args}}
     just install-core
 
 pre-commit-install:
@@ -38,7 +38,10 @@ test MARKER:
 docker-build:
 # alias for `docker-build`
 dbuild:
-    docker image build . -t wren-engine-ibis
+    docker buildx build -t wren-engine-ibis -f Dockerfile \
+        --build-context wren-modeling-py=../wren-modeling-py \
+        --build-context wren-modeling-rs=../wren-modeling-rs \
+        .
 
 docker-run:
 # alias for `docker-run`

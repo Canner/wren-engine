@@ -1,7 +1,14 @@
-FROM python:3.11-buster as builder
+FROM python:3.11-buster AS builder
 
 # libpq-dev is required for psycopg2
 RUN apt-get update && apt-get -y install libpq-dev
+
+# Install rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# Install justfile
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/bin
 
     # python
 ENV PYTHONUNBUFFERED=1 \
@@ -15,16 +22,17 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
     POETRY_VIRTUALENVS_CREATE=1
 
-RUN pip install poetry==1.7.1
+RUN pip install poetry==1.8.3
+
+COPY --from=wren-modeling-py . /wren-modeling-py
+COPY --from=wren-modeling-rs . /wren-modeling-rs
 
 WORKDIR /app
+COPY . .
+RUN just install --without dev
 
-COPY pyproject.toml ./
-COPY poetry.lock ./
 
-RUN poetry install --without dev
-
-FROM python:3.11-slim-buster as runtime
+FROM python:3.11-slim-buster AS runtime
 
 # libpq-dev is required for psycopg2
 # unixodbc-dev, freetds-dev and tdsodbc are required for pyodbc
@@ -62,4 +70,4 @@ COPY app app
 
 EXPOSE 8000
 
-ENTRYPOINT fastapi run
+CMD ["fastapi", "run"]
