@@ -373,10 +373,10 @@ def to_connection_url(trino: TrinoContainer):
     return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"
 
 
-def test_metadata_list_tables(self, trino: TrinoContainer):
+def test_metadata_list_tables(trino: TrinoContainer):
     connection_info = to_connection_info(trino)
     response = client.post(
-        url=f"{self.base_url}/metadata/tables",
+        url=f"{base_url}/metadata/tables",
         json={
             "connectionInfo": connection_info,
         },
@@ -391,10 +391,10 @@ def test_metadata_list_tables(self, trino: TrinoContainer):
     assert result["properties"] is not None
 
 
-def test_metadata_list_constraints(self, trino: TrinoContainer):
+def test_metadata_list_constraints(trino: TrinoContainer):
     connection_info = to_connection_info(trino)
     response = client.post(
-        url=f"{self.base_url}/metadata/constraints",
+        url=f"{base_url}/metadata/constraints",
         json={
             "connectionInfo": connection_info,
         },
