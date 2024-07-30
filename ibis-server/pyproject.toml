@@ -29,7 +29,7 @@ sqlglot = ">=23.4,<25.7"
 loguru = "0.7.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.1"
+pytest = "8.3.2"
 testcontainers = { version = "4.7.2", extras = [
   "clickhouse",
   "mssql",
@@ -38,11 +38,11 @@ testcontainers = { version = "4.7.2", extras = [
   "trino",
 ] }
 sqlalchemy = "2.0.31"
-pre-commit = "3.7.1"
-ruff = "0.5.4"
+pre-commit = "3.8.0"
+ruff = "0.5.5"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.7.16"
+clickhouse-connect = "0.7.17"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
