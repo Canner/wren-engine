@@ -351,9 +351,7 @@ mod test {
         Ok(())
     }
 
-    async fn assert_sql_valid_executable(
-        sql: &str,
-    ) -> Result<()> {
+    async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
         let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
         ctx.register_batch("orders", orders())?;
