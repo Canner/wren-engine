@@ -321,7 +321,7 @@ mod test {
             )
             .await?;
             println!("After transform: {}", actual);
-            assert_sql_valid_executable(&actual, Arc::clone(&analyzed_mdl)).await?;
+            assert_sql_valid_executable(&actual).await?;
         }
 
         Ok(())
@@ -347,13 +347,12 @@ mod test {
             sql,
         )
         .await?;
-        assert_sql_valid_executable(&actual, Arc::clone(&analyzed_mdl)).await?;
+        assert_sql_valid_executable(&actual).await?;
         Ok(())
     }
 
     async fn assert_sql_valid_executable(
         sql: &str,
-        analyzed_mdl: Arc<AnalyzedWrenMDL>,
     ) -> Result<()> {
         let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
