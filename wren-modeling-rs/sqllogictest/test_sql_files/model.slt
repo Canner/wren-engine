@@ -5,7 +5,16 @@ statement ok
 select cast(freight_value as int) + cast(price as int) from wrenai.public.order_items
 
 statement ok
-select product_id from wrenai.public.order_items where cast(freight_value as double) > 10
+select product_id from wrenai.public.order_items where cast(freight_value as double) > 10.0
+
+statement ok
+select product_id from wrenai.public.order_items where freight_value > 10.0
+
+statement ok
+select product_id, min(price) from wrenai.public.order_items group by product_id
+
+statement ok
+select product_id, min(price) from wrenai.public.order_items where freight_value > 10.0 group by product_id
 
 statement ok
 select * from wrenai.public.order_items;

@@ -254,13 +254,11 @@ async fn register_ecommerce_mdl(
                 .statement("select * from wrenai.public.customers")
                 .build(),
         )
-        // TODO: support expression without alias inside view
-        // .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
-        // TODO: fix view with calculation
-        // .view(
-        //     ViewBuilder::new("revenue_orders")
-        //         .statement("select order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id")
-        //         .build())
+        .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
+        .view(
+            ViewBuilder::new("revenue_orders_alias")
+                .statement("select order_id as order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id")
+                .build())
         .build();
     let mut register_tables = HashMap::new();
     register_tables.insert(
