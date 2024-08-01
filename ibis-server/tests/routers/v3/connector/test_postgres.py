@@ -399,7 +399,7 @@ def test_dry_plan():
     assert response.status_code == 200
     assert (
         response.text
-        == "\"SELECT orders.orderkey, orders.order_cust_key FROM (SELECT orders.order_cust_key, orders.orderkey FROM (SELECT CONCAT(orders.o_orderkey, '_', orders.o_custkey) AS order_cust_key, orders.o_orderkey AS orderkey FROM public.orders) AS orders) AS orders LIMIT 1\""
+        == "\"SELECT orders.orderkey, orders.order_cust_key FROM (SELECT orders.order_cust_key, orders.orderkey FROM (SELECT CONCAT(public.orders.o_orderkey, '_', public.orders.o_custkey) AS order_cust_key, public.orders.o_orderkey AS orderkey FROM public.orders) AS orders) AS orders LIMIT 1\""
     )
 
 
