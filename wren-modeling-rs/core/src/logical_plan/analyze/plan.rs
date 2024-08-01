@@ -75,6 +75,10 @@ impl ModelPlanNode {
             original_table_scan,
         )
     }
+
+    pub fn plan_name(&self) -> &str {
+        &self.plan_name
+    }
 }
 
 /// The builder of [ModelPlanNode] to build the plan for the model.

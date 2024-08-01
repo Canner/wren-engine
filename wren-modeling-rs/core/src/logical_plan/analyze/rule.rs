@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{plan_err, Result};
+use datafusion::common::{plan_err, Column, Result};
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
-use datafusion::logical_expr::LogicalPlan::Projection;
 use datafusion::logical_expr::{
-    col, ident, utils, Extension, UserDefinedLogicalNodeCore,
+    col, ident, utils, Aggregate, Distinct, DistinctOn, Extension, Filter, Projection,
+    SubqueryAlias, UserDefinedLogicalNodeCore, Window,
 };
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
@@ -100,17 +100,20 @@ impl ModelAnalyzeRule {
                     {
                         let field: Vec<Expr> =
                             used_columns.borrow().iter().cloned().collect();
-                        let model = LogicalPlan::Extension(Extension {
+                        let model_plan = LogicalPlan::Extension(Extension {
                             node: Arc::new(ModelPlanNode::new(
-                                model,
+                                Arc::clone(&model),
                                 field,
                                 Some(LogicalPlan::TableScan(table_scan.clone())),
                                 Arc::clone(&self.analyzed_wren_mdl),
                                 Arc::clone(&self.session_state),
                             )?),
                         });
+                        let subquery = LogicalPlanBuilder::from(model_plan)
+                            .alias(model.name())?
+                            .build()?;
                         used_columns.borrow_mut().clear();
-                        Ok(Transformed::yes(model))
+                        Ok(Transformed::yes(subquery))
                     } else {
                         Ok(Transformed::no(LogicalPlan::TableScan(table_scan)))
                     }
@@ -166,6 +169,185 @@ impl ModelAnalyzeRule {
             _ => Ok(Transformed::no(plan)),
         }
     }
+
+    fn replace_model_prefix_and_refresh_schema(
+        &self,
+        plan: LogicalPlan,
+    ) -> Result<Transformed<LogicalPlan>> {
+        match plan {
+            LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
+                let subquery = self
+                    .replace_model_prefix_and_refresh_schema(unwrap_arc(input))?
+                    .data;
+                Ok(Transformed::yes(LogicalPlan::SubqueryAlias(
+                    SubqueryAlias::try_new(Arc::new(subquery), alias)?,
+                )))
+            }
+            LogicalPlan::Distinct(Distinct::On(DistinctOn {
+                on_expr,
+                select_expr,
+                sort_expr,
+                input,
+                ..
+            })) => Ok(Transformed::yes(LogicalPlan::Distinct(Distinct::On(
+                DistinctOn::try_new(on_expr, select_expr, sort_expr, input)?,
+            )))),
+            LogicalPlan::Window(Window {
+                input, window_expr, ..
+            }) => Ok(Transformed::yes(LogicalPlan::Window(Window::try_new(
+                window_expr,
+                input,
+            )?))),
+            LogicalPlan::Projection(Projection { expr, input, .. }) => {
+                let Some(alias_model) = Self::find_alias_model(Arc::clone(&input)) else {
+                    return Ok(Transformed::no(LogicalPlan::Projection(
+                        Projection::try_new(expr, input)?,
+                    )));
+                };
+                let expr = expr
+                    .into_iter()
+                    .map(|e| {
+                        self.map_column_and_rewrite_qualifier(e, &alias_model)
+                            .data()
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(Transformed::yes(LogicalPlan::Projection(
+                    Projection::try_new(expr, input)?,
+                )))
+            }
+            LogicalPlan::Filter(Filter {
+                input, predicate, ..
+            }) => {
+                let Some(alias_model) = Self::find_alias_model(Arc::clone(&input)) else {
+                    return Ok(Transformed::no(LogicalPlan::Filter(Filter::try_new(
+                        predicate, input,
+                    )?)));
+                };
+                let expr = self
+                    .map_column_and_rewrite_qualifier(predicate, &alias_model)?
+                    .data;
+                Ok(Transformed::yes(LogicalPlan::Filter(Filter::try_new(
+                    expr, input,
+                )?)))
+            }
+            LogicalPlan::Aggregate(Aggregate {
+                input,
+                aggr_expr,
+                group_expr,
+                ..
+            }) => {
+                let Some(alias_model) = Self::find_alias_model(Arc::clone(&input)) else {
+                    return Ok(Transformed::no(LogicalPlan::Aggregate(
+                        Aggregate::try_new(input, group_expr, aggr_expr)?,
+                    )));
+                };
+                let aggr_expr = aggr_expr
+                    .into_iter()
+                    .map(|e| {
+                        self.map_column_and_rewrite_qualifier(e, &alias_model)
+                            .data()
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                let group_expr = group_expr
+                    .into_iter()
+                    .map(|e| {
+                        self.map_column_and_rewrite_qualifier(e, &alias_model)
+                            .data()
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(Transformed::yes(LogicalPlan::Aggregate(
+                    Aggregate::try_new(input, group_expr, aggr_expr)?,
+                )))
+            }
+            _ => Ok(Transformed::no(plan)),
+        }
+    }
+
+    fn map_column_and_rewrite_qualifier(
+        &self,
+        expr: Expr,
+        alias_model: &str,
+    ) -> Result<Transformed<Expr>> {
+        match expr {
+            Expr::Column(Column { relation, name }) => {
+                if let Some(relation) = relation {
+                    Ok(self.rewrite_column_qualifier(relation, name, alias_model))
+                } else {
+                    let catalog_schema = format!(
+                        "{}.{}.",
+                        self.analyzed_wren_mdl.wren_mdl().catalog(),
+                        self.analyzed_wren_mdl.wren_mdl().schema()
+                    );
+                    let name = name.replace(&catalog_schema, "");
+                    Ok(Transformed::yes(ident(name)))
+                }
+            }
+            _ => expr
+                .map_children(|e| self.map_column_and_rewrite_qualifier(e, alias_model)),
+        }
+    }
+
+    fn rewrite_column_qualifier(
+        &self,
+        relation: TableReference,
+        name: String,
+        alias_model: &str,
+    ) -> Transformed<Expr> {
+        if belong_to_mdl(&self.analyzed_wren_mdl.wren_mdl(), relation.clone()) {
+            if self
+                .analyzed_wren_mdl
+                .wren_mdl()
+                .get_model(relation.table())
+                .is_some()
+            {
+                Transformed::yes(col(format!("{}.{}", alias_model, name)))
+            } else {
+                // handle Wren View
+                let catalog_schema = format!(
+                    "{}.{}.",
+                    self.analyzed_wren_mdl.wren_mdl().catalog(),
+                    self.analyzed_wren_mdl.wren_mdl().schema()
+                );
+                let name = name.replace(&catalog_schema, "");
+                Transformed::yes(Expr::Column(Column::new(
+                    Some(TableReference::bare(relation.table())),
+                    name,
+                )))
+            }
+        } else {
+            Transformed::no(Expr::Column(Column {
+                relation: Some(relation),
+                name,
+            }))
+        }
+    }
+
+    fn find_alias_model(plan: Arc<LogicalPlan>) -> Option<String> {
+        let plan = unwrap_arc(plan);
+        match plan {
+            LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
+                if let LogicalPlan::Extension(Extension { node }) =
+                    unwrap_arc(Arc::clone(&input))
+                {
+                    if node.as_any().downcast_ref::<ModelPlanNode>().is_some() {
+                        Some(alias.to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    Self::find_alias_model(input)
+                }
+            }
+            LogicalPlan::Filter(Filter { input, .. }) => Self::find_alias_model(input),
+            LogicalPlan::Aggregate(Aggregate { input, .. }) => {
+                Self::find_alias_model(input)
+            }
+            LogicalPlan::Projection(Projection { input, .. }) => {
+                Self::find_alias_model(input)
+            }
+            _ => None,
+        }
+    }
 }
 
 fn belong_to_mdl(mdl: &WrenMDL, table_reference: TableReference) -> bool {
@@ -209,10 +391,16 @@ fn analyze_table_scan(
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         let used_columns = RefCell::new(HashSet::new());
-        plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
-            self.analyze_model_internal(plan, &used_columns)
-        })
-        .data()
+        let analyzed = plan
+            .transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+                self.analyze_model_internal(plan, &used_columns)
+            })
+            .data()?;
+        analyzed
+            .transform_up_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+                self.replace_model_prefix_and_refresh_schema(plan)
+            })
+            .data()
     }
 
     fn name(&self) -> &str {
@@ -237,6 +425,39 @@ impl ModelGenerationRule {
         plan: LogicalPlan,
     ) -> Result<Transformed<LogicalPlan>> {
         match plan {
+            LogicalPlan::Projection(Projection { expr, input, .. }) => {
+                Ok(Transformed::yes(LogicalPlan::Projection(
+                    Projection::try_new(expr, input)?,
+                )))
+            }
+            LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
+                Ok(Transformed::yes(LogicalPlan::SubqueryAlias(
+                    SubqueryAlias::try_new(input, alias)?,
+                )))
+            }
+            LogicalPlan::Aggregate(Aggregate {
+                input,
+                group_expr,
+                aggr_expr,
+                ..
+            }) => Ok(Transformed::yes(LogicalPlan::Aggregate(
+                Aggregate::try_new(input, group_expr, aggr_expr)?,
+            ))),
+            LogicalPlan::Distinct(Distinct::On(DistinctOn {
+                on_expr,
+                select_expr,
+                sort_expr,
+                input,
+                ..
+            })) => Ok(Transformed::yes(LogicalPlan::Distinct(Distinct::On(
+                DistinctOn::try_new(on_expr, select_expr, sort_expr, input)?,
+            )))),
+            LogicalPlan::Window(Window {
+                input, window_expr, ..
+            }) => Ok(Transformed::yes(LogicalPlan::Window(Window::try_new(
+                window_expr,
+                input,
+            )?))),
             LogicalPlan::Extension(extension) => {
                 if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelPlanNode>()
@@ -253,11 +474,7 @@ impl ModelGenerationRule {
                         }
                     };
                     // calculated field scope
-
-                    let alias = LogicalPlanBuilder::from(result)
-                        .alias(&model_plan.plan_name)?
-                        .build()?;
-                    Ok(Transformed::yes(alias))
+                    Ok(Transformed::yes(result))
                 } else if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelSourceNode>()
                 {
@@ -347,7 +564,11 @@ impl ModelGenerationRule {
                     let plan = LogicalPlan::Extension(Extension {
                         node: Arc::new(partial_model.model_node.clone()),
                     });
-                    let source_plan = self.generate_model_internal(plan)?.data;
+
+                    let subquery = LogicalPlanBuilder::from(plan)
+                        .alias(partial_model.model_node.plan_name())?
+                        .build()?;
+                    let source_plan = self.generate_model_internal(subquery)?.data;
                     let projection: Vec<_> = partial_model
                         .schema()
                         .fields()
@@ -370,182 +591,19 @@ impl ModelGenerationRule {
 
 impl AnalyzerRule for ModelGenerationRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
-            self.generate_model_internal(plan)
-        })
-        .data()
+        let transformed_up = plan
+            .transform_up_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+                self.generate_model_internal(plan)
+            })
+            .data()?;
+        transformed_up
+            .transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+                self.generate_model_internal(plan)
+            })
+            .data()
     }
 
     fn name(&self) -> &str {
         "ModelGenerationRule"
-    }
-}
-
-/// [RemoveWrenPrefixRule] is responsible for removing the wren prefix from the column.
-/// After [ModelGenerationRule] generates the model plan node, the column name will keep the schema prefix.
-/// This rule removes the schema prefix from the column name.
-pub struct RemoveWrenPrefixRule {
-    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-}
-
-impl RemoveWrenPrefixRule {
-    pub fn new(analyzed_wren_mdl: Arc<AnalyzedWrenMDL>) -> Self {
-        Self { analyzed_wren_mdl }
-    }
-}
-
-impl AnalyzerRule for RemoveWrenPrefixRule {
-    fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_down(&|plan: LogicalPlan| -> Result<Transformed<LogicalPlan>> {
-            let transformed = plan.clone().map_expressions(&|expr: Expr| {
-                expr.transform_down(&|expr: Expr| -> Result<Transformed<Expr>> {
-                    if let Expr::Column(ref column) = expr {
-                        if let Some(relation) = &column.relation {
-                            match relation {
-                                TableReference::Full {
-                                    catalog,
-                                    schema,
-                                    table,
-                                } => {
-                                    if **catalog
-                                        == *self.analyzed_wren_mdl.wren_mdl().catalog()
-                                        && **schema
-                                            == *self.analyzed_wren_mdl.wren_mdl().schema()
-                                    {
-                                        return Ok(Transformed::yes(col(format!(
-                                            "{}.{}",
-                                            table, column.name
-                                        ))));
-                                    }
-                                }
-                                TableReference::Partial { schema, table } => {
-                                    if **schema
-                                        == *self.analyzed_wren_mdl.wren_mdl().schema()
-                                    {
-                                        return Ok(Transformed::yes(col(format!(
-                                            "{}.{}",
-                                            table, column.name
-                                        ))));
-                                    }
-                                }
-                                TableReference::Bare { table: _ } => {
-                                    return Ok(Transformed::no(expr.clone()));
-                                }
-                            }
-                        }
-                        return Ok(Transformed::no(expr.clone()));
-                    }
-                    Ok(Transformed::no(expr.clone()))
-                })
-            })?;
-
-            if transformed.transformed {
-                // The schema of logical plan is static. Because we changed the expression, we should
-                // also recreate the plan.
-                if let Projection(_) = transformed.data {
-                    let new_projection = datafusion::logical_expr::Projection::try_new(
-                        transformed.data.expressions(),
-                        Arc::new(plan.inputs()[0].clone()),
-                    )?;
-                    Ok(Transformed::yes(Projection(new_projection)))
-                } else {
-                    Ok(Transformed::yes(transformed.data))
-                }
-            } else {
-                Ok(transformed)
-            }
-        })
-        .data()
-    }
-
-    fn name(&self) -> &str {
-        "RemoveWrenPrefixRule"
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use std::sync::Arc;
-
-    use datafusion::common::DataFusionError;
-    use datafusion::config::ConfigOptions;
-    use datafusion::error::Result;
-    use datafusion::optimizer::Analyzer;
-    use datafusion::sql::planner::SqlToRel;
-    use datafusion::sql::sqlparser::dialect::GenericDialect;
-    use datafusion::sql::sqlparser::parser::Parser;
-    use datafusion::sql::unparser::plan_to_sql;
-    use log::info;
-
-    use crate::logical_plan::analyze::rule::RemoveWrenPrefixRule;
-    #[allow(deprecated)]
-    use crate::logical_plan::context_provider::WrenContextProvider;
-    use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
-    use crate::mdl::AnalyzedWrenMDL;
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_remove_prefix() -> Result<(), DataFusionError> {
-        let manifest = ManifestBuilder::new()
-            .model(
-                ModelBuilder::new("a")
-                    .column(ColumnBuilder::new("c1", "integer").build())
-                    .column(ColumnBuilder::new("c2", "varchar").build())
-                    .build(),
-            )
-            .build();
-        let analyzed_wren_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-
-        // [RemoveWrenPrefixRule] only remove the prefix of identifiers, so that the table name in
-        // the expected result will have the schema prefix.
-        let tests = vec![
-            ("select wrenai.public.a.c1, wrenai.public.a.c2 from wrenai.public.a",
-             r#"SELECT a.c1, a.c2 FROM wrenai.public.a"#),
-            ("select wrenai.public.a.c1, wrenai.public.a.c2 from wrenai.public.a where wrenai.public.a.c1 = 1",
-                 r#"SELECT a.c1, a.c2 FROM wrenai.public.a WHERE (a.c1 = 1)"#),
-            ("select wrenai.public.a.c1 + 1 from wrenai.public.a",
-            r#"SELECT (a.c1 + 1) FROM wrenai.public.a"#)
-        ];
-
-        let context_provider = WrenContextProvider::new(&analyzed_wren_mdl.wren_mdl)?;
-        let sql_to_rel = SqlToRel::new(&context_provider);
-        let dialect = GenericDialect {};
-        let analyzer = Analyzer::with_rules(vec![Arc::new(RemoveWrenPrefixRule::new(
-            Arc::clone(&analyzed_wren_mdl),
-        ))]);
-
-        for (sql, expected) in tests {
-            let ast = Parser::parse_sql(&dialect, sql).unwrap();
-            let statement = &ast[0];
-
-            // create a logical query plan
-            let plan = match sql_to_rel.sql_statement_to_plan(statement.clone()) {
-                Ok(plan) => plan,
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    return Err(e);
-                }
-            };
-
-            let config = ConfigOptions::default();
-
-            let analyzed = match analyzer.execute_and_check(plan, &config, |_, _| {}) {
-                Ok(analyzed) => analyzed,
-                Err(e) => {
-                    eprintln!("Error: {:?}", e);
-                    return Err(e);
-                }
-            };
-
-            let actual = match plan_to_sql(&analyzed) {
-                Ok(sql) => {
-                    info!("wren-core planned SQL: {}", sql.to_string());
-                    sql.to_string()
-                }
-                Err(e) => return Err(e),
-            };
-            assert_eq!(actual, expected);
-        }
-        Ok(())
     }
 }
