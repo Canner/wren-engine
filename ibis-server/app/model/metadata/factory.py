@@ -12,6 +12,7 @@ from app.model.metadata.metadata import Metadata
 from app.model.metadata.mssql import MSSQLMetadata
 from app.model.metadata.mysql import MySQLMetadata
 from app.model.metadata.postgres import PostgresMetadata
+from app.model.metadata.trino import TrinoMetadata
 
 
 class MetadataFactory:
@@ -29,6 +30,8 @@ class MetadataFactory:
             return MSSQLMetadata(connection_info)
         if data_source == DataSource.clickhouse:
             return ClickHouseMetadata(connection_info)
+        if data_source == DataSource.trino:
+            return TrinoMetadata(connection_info)
 
         raise NotImplementedError(f"Unsupported data source: {self}")
 
