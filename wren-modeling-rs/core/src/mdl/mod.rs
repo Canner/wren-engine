@@ -1,13 +1,18 @@
-use crate::logical_plan::utils::from_qualified_name_str;
-use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
-use crate::mdl::manifest::{Column, Manifest, Model};
+use std::{collections::HashMap, sync::Arc};
+
 use datafusion::execution::context::SessionState;
 use datafusion::prelude::SessionContext;
 use datafusion::{error::Result, sql::unparser::plan_to_sql};
 use log::{debug, info};
-use manifest::Relationship;
 use parking_lot::RwLock;
-use std::{collections::HashMap, sync::Arc};
+
+pub use dataset::Dataset;
+use manifest::Relationship;
+
+use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
+use crate::logical_plan::utils::from_qualified_name_str;
+use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
+use crate::mdl::manifest::{Column, Manifest, Model};
 
 pub mod builder;
 pub mod context;
@@ -15,11 +20,6 @@ pub(crate) mod dataset;
 pub mod lineage;
 pub mod manifest;
 pub mod utils;
-
-use crate::logical_plan::analyze::rule::{
-    ModelAnalyzeRule, ModelGenerationRule, RemoveWrenPrefixRule,
-};
-pub use dataset::Dataset;
 
 pub type SessionStateRef = Arc<RwLock<SessionState>>;
 
@@ -195,6 +195,11 @@ pub async fn transform_sql_with_ctx(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
 ) -> Result<String> {
+    let catalog_schema = format!(
+        "{}.{}.",
+        analyzed_mdl.wren_mdl().catalog(),
+        analyzed_mdl.wren_mdl().schema()
+    );
     info!("wren-core received SQL: {}", sql);
     let ctx = create_ctx_with_mdl(ctx, analyzed_mdl).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
@@ -205,8 +210,10 @@ pub async fn transform_sql_with_ctx(
     // show the planned sql
     match plan_to_sql(&analyzed) {
         Ok(sql) => {
-            info!("wren-core planned SQL: {}", sql.to_string());
-            Ok(sql.to_string())
+            // TODO: workaround to remove unnecessary catalog and schema of mdl
+            let replaced = sql.to_string().replace(&catalog_schema, "");
+            info!("wren-core planned SQL: {}", replaced);
+            Ok(replaced)
         }
         Err(e) => Err(e),
     }
@@ -222,9 +229,6 @@ pub async fn apply_wren_rules(
         ctx.state_ref(),
     )));
     ctx.add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-        &analyzed_wren_mdl,
-    ))));
-    ctx.add_analyzer_rule(Arc::new(RemoveWrenPrefixRule::new(Arc::clone(
         &analyzed_wren_mdl,
     ))));
     register_table_with_mdl(ctx, analyzed_wren_mdl.wren_mdl()).await
@@ -256,13 +260,12 @@ mod test {
     use std::path::PathBuf;
     use std::sync::Arc;
 
-    use datafusion::arrow::array::{ArrayRef, Int32Array, RecordBatch, StringArray};
+    use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::prelude::SessionContext;
     use datafusion::sql::unparser::plan_to_sql;
 
-    use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, AnalyzedWrenMDL};
 
@@ -317,8 +320,8 @@ mod test {
                 sql,
             )
             .await?;
-            let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
-            println!("After roundtrip: {}", after_roundtrip);
+            println!("After transform: {}", actual);
+            assert_sql_valid_executable(&actual).await?;
         }
 
         Ok(())
@@ -344,25 +347,33 @@ mod test {
             sql,
         )
         .await?;
-        let after_roundtrip = plan_sql(&actual, Arc::clone(&analyzed_mdl)).await?;
-        println!("After roundtrip: {}", after_roundtrip);
+        assert_sql_valid_executable(&actual).await?;
         Ok(())
     }
 
-    async fn plan_sql(sql: &str, analyzed_mdl: Arc<AnalyzedWrenMDL>) -> Result<String> {
-        let ctx = create_ctx_with_mdl(&SessionContext::new(), analyzed_mdl).await?;
+    async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
+        let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
         ctx.register_batch("orders", orders())?;
         ctx.register_batch("customer", customer())?;
         ctx.register_batch("profile", profile())?;
-        let plan = ctx.state().create_logical_plan(sql).await?;
+        let df = ctx.sql(sql).await?;
+        let plan = df.into_optimized_plan()?;
         // show the planned sql
-        plan_to_sql(&plan).map(|sql| sql.to_string())
+        let after_roundtrip = plan_to_sql(&plan).map(|sql| sql.to_string())?;
+        println!("After roundtrip: {}", after_roundtrip);
+        match ctx.sql(sql).await?.collect().await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Error: {e}");
+                Err(e)
+            }
+        }
     }
 
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
-        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
         let name: ArrayRef =
             Arc::new(StringArray::from_iter_values(["Gura", "Azki", "Ina"]));
         RecordBatch::try_from_iter(vec![("c_custkey", custkey), ("c_name", name)])
@@ -371,7 +382,7 @@ mod test {
 
     /// Return a RecordBatch with made up data about profile
     fn profile() -> RecordBatch {
-        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
+        let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
         let phone: ArrayRef = Arc::new(StringArray::from_iter_values([
             "123456", "234567", "345678",
         ]));
@@ -386,9 +397,9 @@ mod test {
 
     /// Return a RecordBatch with made up data about orders
     fn orders() -> RecordBatch {
-        let orderkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
-        let custkey: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
-        let totalprice: ArrayRef = Arc::new(Int32Array::from(vec![100, 200, 300]));
+        let orderkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
+        let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
+        let totalprice: ArrayRef = Arc::new(Int64Array::from(vec![100, 200, 300]));
         RecordBatch::try_from_iter(vec![
             ("o_orderkey", orderkey),
             ("o_custkey", custkey),

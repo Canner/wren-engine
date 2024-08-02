@@ -12,9 +12,7 @@ use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 
-use crate::logical_plan::analyze::rule::{
-    ModelAnalyzeRule, ModelGenerationRule, RemoveWrenPrefixRule,
-};
+use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
@@ -34,7 +32,6 @@ pub async fn create_ctx_with_mdl(
                 ctx.state_ref(),
             )),
             Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
-            Arc::new(RemoveWrenPrefixRule::new(Arc::clone(&analyzed_mdl))),
         ])
         // TODO: there're some issues for the optimize rule.
         .with_optimizer_rules(vec![]);
