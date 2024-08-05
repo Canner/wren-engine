@@ -160,7 +160,8 @@ public final class StatementAnalyzer
                 if (withQuery.isPresent()) {
                     // currently we only care about the table that is actually a model instead of a alias table that use cte table
                     // return empty scope here.
-                    Scope outputScope = createScopeForCommonTableExpression(node, withQuery.get(), scope);
+                    Optional<Scope> withScope = analysis.tryGetScope(withQuery.get().getQuery());
+                    Scope outputScope = createScopeForCommonTableExpression(node, withQuery.get(), withScope);
                     analysis.setScope(node, outputScope);
                     return outputScope;
                 }
@@ -202,8 +203,7 @@ public final class StatementAnalyzer
         private Scope createScopeForCommonTableExpression(Table table, WithQuery withQuery, Optional<Scope> scope)
         {
             Query query = withQuery.getQuery();
-            Analysis analyzed = new Analysis(query);
-            Optional<Scope> queryScope = Optional.ofNullable(analyze(analyzed, query, sessionContext, wrenMDL));
+            Optional<Scope> queryScope = analysis.tryGetScope(query);
             List<Field> fields;
             Optional<List<Identifier>> columnNames = withQuery.getColumnNames();
             if (columnNames.isPresent()) {
@@ -243,7 +243,7 @@ public final class StatementAnalyzer
                     else {
                         SingleColumn singleColumn = (SingleColumn) selectItem;
                         String name = singleColumn.getAlias().map(Identifier::getValue)
-                                .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression())).map(QualifiedName::toString))
+                                .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression()).getSuffix()))
                                 .orElse(singleColumn.getExpression().toString());
                         if (scope.isPresent()) {
                             Optional<Field> fieldOptional = scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
@@ -402,7 +402,7 @@ public final class StatementAnalyzer
 
         private void analyzeWhere(Expression node, Scope scope)
         {
-            ExpressionAnalysis expressionAnalysis = analyzeExpression(node, scope);
+            analyzeExpression(node, scope);
         }
 
         private void analyzeWindowSpecification(WindowSpecification windowSpecification, Scope scope)
@@ -561,7 +561,7 @@ public final class StatementAnalyzer
         private Optional<Scope> analyzeWith(Query node, Optional<Scope> scope)
         {
             if (node.getWith().isEmpty()) {
-                return Optional.empty();
+                return scope.map(s -> Scope.builder().parent(Optional.of(s)).build());
             }
 
             With with = node.getWith().get();
@@ -572,7 +572,8 @@ public final class StatementAnalyzer
                 if (withScopeBuilder.containsNamedQuery(name)) {
                     throw new IllegalArgumentException(format("WITH query name '%s' specified more than once", name));
                 }
-                process(withQuery.getQuery(), withScopeBuilder.build());
+                Scope withQueryScope = process(withQuery.getQuery(), withScopeBuilder.build());
+                analysis.setScope(withQuery.getQuery(), withQueryScope);
                 withScopeBuilder.namedQuery(name, withQuery);
             }
 
