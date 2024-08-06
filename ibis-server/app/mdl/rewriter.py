@@ -1,3 +1,4 @@
+import importlib
 from abc import ABC, abstractmethod
 
 import httpx
@@ -11,6 +12,9 @@ from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
+
+# To register custom dialects from ibis library for sqlglot
+importlib.import_module("ibis.backends.sql.dialects")
 
 
 class Rewriter(ABC):
