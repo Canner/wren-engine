@@ -676,6 +676,58 @@ public class TestDecisionPointAnalyzer
                     new ExprSource("t1.custkey", "customer", "custkey", new NodeLocation(2, 33)),
                     new ExprSource("t2.custkey", "orders", "custkey", new NodeLocation(2, 50))));
         }
+
+        statement = parseSql("""
+                WITH t1 as (SELECT customer.custkey FROM customer),
+                t2 as (SELECT t1.custkey FROM t1)
+                SELECT t2.custkey FROM t2
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        QueryAnalysis queryAnalysis = result.get(2);
+        assertThat(queryAnalysis.getSelectItems().get(0).getExprSources().size()).isEqualTo(1);
+
+        statement = parseSql("""
+                WITH t1 as (SELECT customer.custkey FROM customer),
+                t2 as (SELECT t1.custkey as custkey_alias FROM t1)
+                SELECT custkey_alias FROM t2
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        queryAnalysis = result.get(2);
+        assertThat(queryAnalysis.getSelectItems().get(0).getExprSources().size()).isEqualTo(1);
+
+        statement = parseSql("""
+                WITH t1 as (SELECT customer.custkey FROM customer),
+                t2 as (SELECT * FROM t1)
+                SELECT custkey FROM t2
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        queryAnalysis = result.get(2);
+        assertThat(queryAnalysis.getSelectItems().get(0).getExprSources().size()).isEqualTo(1);
+
+        statement = parseSql("""
+                WITH t1 as (SELECT customer.custkey FROM customer),
+                t2 as (SELECT * FROM t1)
+                SELECT custkey FROM t2
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        queryAnalysis = result.get(2);
+        assertThat(queryAnalysis.getSelectItems().get(0).getExprSources().size()).isEqualTo(1);
+
+
+        // we only analyze the top-level expression
+        statement = parseSql("""
+                WITH t1 as (SELECT customer.custkey FROM customer),
+                t2 as (SELECT (t1.custkey + 1) as custkey_plus FROM t1)
+                SELECT custkey_plus FROM t2
+                """);
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(3);
+        queryAnalysis = result.get(2);
+        assertThat(queryAnalysis.getSelectItems().get(0).getExprSources().size()).isEqualTo(0);
     }
 
     @Test
