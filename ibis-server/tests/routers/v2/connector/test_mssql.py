@@ -73,7 +73,7 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 @pytest.fixture(scope="module")
 def mssql(request) -> SqlServerContainer:
     mssql = SqlServerContainer(
-        "mcr.microsoft.com/mssql/server:2019-latest", dialect="mssql+pyodbc"
+        "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04", dialect="mssql+pyodbc"
     ).start()
     engine = sqlalchemy.create_engine(f"{mssql.get_connection_url()}?driver=FreeTDS")
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
