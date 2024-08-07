@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{plan_err, Column, Result};
+use datafusion::common::{plan_err, Column, DFSchemaRef, Result};
+use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{
     col, ident, utils, Aggregate, Distinct, DistinctOn, Extension, Filter, Projection,
@@ -207,8 +208,12 @@ impl ModelAnalyzeRule {
                 let expr = expr
                     .into_iter()
                     .map(|e| {
-                        self.map_column_and_rewrite_qualifier(e, &alias_model)
-                            .data()
+                        self.map_column_and_rewrite_qualifier(
+                            e,
+                            &alias_model,
+                            input.schema().clone(),
+                        )
+                        .data()
                     })
                     .collect::<Result<Vec<_>>>()?;
                 Ok(Transformed::yes(LogicalPlan::Projection(
@@ -224,7 +229,11 @@ impl ModelAnalyzeRule {
                     )?)));
                 };
                 let expr = self
-                    .map_column_and_rewrite_qualifier(predicate, &alias_model)?
+                    .map_column_and_rewrite_qualifier(
+                        predicate,
+                        &alias_model,
+                        input.schema().clone(),
+                    )?
                     .data;
                 Ok(Transformed::yes(LogicalPlan::Filter(Filter::try_new(
                     expr, input,
@@ -244,15 +253,23 @@ impl ModelAnalyzeRule {
                 let aggr_expr = aggr_expr
                     .into_iter()
                     .map(|e| {
-                        self.map_column_and_rewrite_qualifier(e, &alias_model)
-                            .data()
+                        self.map_column_and_rewrite_qualifier(
+                            e,
+                            &alias_model,
+                            input.schema().clone(),
+                        )
+                        .data()
                     })
                     .collect::<Result<Vec<_>>>()?;
                 let group_expr = group_expr
                     .into_iter()
                     .map(|e| {
-                        self.map_column_and_rewrite_qualifier(e, &alias_model)
-                            .data()
+                        self.map_column_and_rewrite_qualifier(
+                            e,
+                            &alias_model,
+                            input.schema().clone(),
+                        )
+                        .data()
                     })
                     .collect::<Result<Vec<_>>>()?;
                 Ok(Transformed::yes(LogicalPlan::Aggregate(
@@ -267,6 +284,7 @@ impl ModelAnalyzeRule {
         &self,
         expr: Expr,
         alias_model: &str,
+        schema: DFSchemaRef,
     ) -> Result<Transformed<Expr>> {
         match expr {
             Expr::Column(Column { relation, name }) => {
@@ -282,8 +300,22 @@ impl ModelAnalyzeRule {
                     Ok(Transformed::yes(ident(name)))
                 }
             }
-            _ => expr
-                .map_children(|e| self.map_column_and_rewrite_qualifier(e, alias_model)),
+            Expr::Alias(Alias {
+                expr,
+                relation,
+                name,
+            }) => {
+                let expr =
+                    self.map_column_and_rewrite_qualifier(*expr, alias_model, schema)?;
+                Ok(Transformed::yes(Expr::Alias(Alias {
+                    expr: Box::new(expr.data),
+                    relation,
+                    name,
+                })))
+            }
+            _ => expr.map_children(|e| {
+                self.map_column_and_rewrite_qualifier(e, alias_model, schema.clone())
+            }),
         }
     }
 
@@ -391,16 +423,20 @@ fn analyze_table_scan(
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         let used_columns = RefCell::new(HashSet::new());
-        let analyzed = plan
-            .transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+        plan.transform_down_with_subqueries(
+            &|plan| -> Result<Transformed<LogicalPlan>> {
                 self.analyze_model_internal(plan, &used_columns)
-            })
-            .data()?;
-        analyzed
-            .transform_up_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
-                self.replace_model_prefix_and_refresh_schema(plan)
-            })
-            .data()
+            },
+        )?
+        .map_data(|plan| {
+            plan.transform_up_with_subqueries(
+                &|plan| -> Result<Transformed<LogicalPlan>> {
+                    self.replace_model_prefix_and_refresh_schema(plan)
+                },
+            )
+        })?
+        .map_data(|plan| plan.data.recompute_schema())
+        .data()
     }
 
     fn name(&self) -> &str {
@@ -597,9 +633,12 @@ impl AnalyzerRule for ModelGenerationRule {
             })
             .data()?;
         transformed_up
-            .transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
-                self.generate_model_internal(plan)
-            })
+            .transform_down_with_subqueries(
+                &|plan| -> Result<Transformed<LogicalPlan>> {
+                    self.generate_model_internal(plan)
+                },
+            )?
+            .map_data(|plan| plan.recompute_schema())
             .data()
     }
 
