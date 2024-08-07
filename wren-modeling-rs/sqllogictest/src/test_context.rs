@@ -28,7 +28,6 @@ use tempfile::TempDir;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
-use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::manifest::JoinType;
 use wren_core::mdl::AnalyzedWrenMDL;
 

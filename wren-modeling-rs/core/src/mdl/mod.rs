@@ -5,7 +5,7 @@ use datafusion::prelude::SessionContext;
 use datafusion::{error::Result, sql::unparser::plan_to_sql};
 use log::{debug, info};
 use parking_lot::RwLock;
-use tokio::io::AsyncWriteExt;
+
 pub use dataset::Dataset;
 use manifest::Relationship;
 
