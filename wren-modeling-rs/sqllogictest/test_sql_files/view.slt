@@ -7,7 +7,10 @@ SELECT * FROM wrenai.public.revenue_orders
 statement ok
 SELECT * FROM wrenai.public.revenue_orders_alias
 
-#query TR
-#SELECT totalprice FROM wrenai.public.revenue_orders where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'
-#----
-#76754c0e642c8f99a8c3fcb8a14ac700 287.4
+statement ok
+SELECT totalprice FROM wrenai.public.revenue_orders_alias
+
+query TR
+SELECT order_id, totalprice FROM wrenai.public.revenue_orders_alias where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'
+----
+76754c0e642c8f99a8c3fcb8a14ac700 287.4
