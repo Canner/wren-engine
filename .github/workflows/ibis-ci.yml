@@ -43,8 +43,7 @@ jobs:
         with:
           python-version-file: ./ibis-server/pyproject.toml
           cache: 'poetry'
-      - name: Install dependencies
-        run: poetry install
+      - uses: extractions/setup-just@v2
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
@@ -55,10 +54,6 @@ jobs:
             ~/.cargo/git/db/
             wren-modeling-py/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('wren-modeling-py/Cargo.lock') }}
-      - uses: PyO3/maturin-action@v1
-        with:
-          working-directory: wren-modeling-py
-          command: build
       - name: Install FreeTDS to be a ODBC driver
         run: |
           sudo apt-get update -y && sudo apt-get install -y unixodbc-dev freetds-dev tdsodbc
@@ -69,8 +64,8 @@ jobs:
           Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
           EOF
           sudo odbcinst -i -d -f free.tds.ini
-      - name: Install wren-modeling-py
-        run: poetry run pip install ../wren-modeling-py/target/wheels/wren_modeling_py-*.whl
+      - name: Install dependencies
+        run: just install
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
@@ -81,7 +76,7 @@ jobs:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
           TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}
           TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON: ${{ secrets.TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON }}
-        run: poetry run pytest -m bigquery
+        run: just test bigquery
       - name: Test snowflake if need
         if: contains(github.event.pull_request.labels.*.name, 'snowflake')
         env:
@@ -89,9 +84,9 @@ jobs:
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-        run: poetry run pytest -m snowflake
+        run: just test snowflake
       - name: Test trino if need
         if: contains(github.event.pull_request.labels.*.name, 'trino')
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
-        run: poetry run pytest -m trino
+        run: just test trino
