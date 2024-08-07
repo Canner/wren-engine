@@ -18,19 +18,19 @@
 use std::sync::Arc;
 use std::{path::PathBuf, time::Duration};
 
-use crate::TestContext;
-use async_trait::async_trait;
-use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::prelude::SessionContext;
-use log::info;
-use sqllogictest::DBOutput;
-
 use super::{
     error::Result,
     normalize,
     output::{DFColumnType, DFOutput},
     DFSqlLogicTestError,
 };
+use crate::TestContext;
+use async_trait::async_trait;
+use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::prelude::SessionContext;
+use log::info;
+use sqllogictest::DBOutput;
+use wren_core::mdl::transform_sql_with_ctx;
 
 pub struct DataFusion {
     ctx: Arc<TestContext>,
@@ -54,6 +54,13 @@ impl sqllogictest::AsyncDB for DataFusion {
             self.relative_path.display(),
             sql
         );
+        let sql = transform_sql_with_ctx(
+            self.ctx.session_ctx(),
+            self.ctx.analyzed_wren_mdl().to_owned(),
+            sql,
+        )
+        .await?;
+        info!("wren-core generate SQL: {}", &sql);
         run_query(self.ctx.session_ctx(), sql).await
     }
 
