@@ -220,6 +220,9 @@ pub async fn transform_sql_with_ctx(
 }
 
 /// Apply Wren Rules to a given session context with a WrenMDL
+///
+/// TODO: There're some issue about apply the rule with the native optimize rules of datafusion
+/// Recommend to use [transform_sql_with_ctx] generated the SQL text instead.
 pub async fn apply_wren_rules(
     ctx: &SessionContext,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,

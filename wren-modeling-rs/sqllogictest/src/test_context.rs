@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::engine::utils::read_dir_recursive;
 use datafusion::error::Result;
 use datafusion::prelude::SessionConfig;
 use datafusion::prelude::{CsvReadOptions, SessionContext};
@@ -28,9 +29,7 @@ use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
 use wren_core::mdl::manifest::JoinType;
-use wren_core::mdl::{apply_wren_rules, AnalyzedWrenMDL};
-
-use crate::engine::utils::read_dir_recursive;
+use wren_core::mdl::AnalyzedWrenMDL;
 
 const TEST_RESOURCES: &str = "tests/resources";
 
@@ -295,6 +294,7 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    apply_wren_rules(ctx, Arc::clone(&analyzed_mdl)).await?;
+    // TODO: there're some conflicts for datafusion optimization rules.
+    // let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
