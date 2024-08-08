@@ -21,7 +21,9 @@ import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
 import io.wren.base.WrenTypes;
 import io.wren.base.dto.Column;
+import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
+import io.wren.base.dto.Relationship;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.DecisionPointAnalyzer;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.ExprSource;
 import io.wren.base.sqlrewrite.analyzer.decisionpoint.FilterAnalysis;
@@ -72,7 +74,9 @@ public class TestDecisionPointAnalyzer
                 Column.column("orderpriority", WrenTypes.VARCHAR, null, true),
                 Column.column("clerk", WrenTypes.VARCHAR, null, true),
                 Column.column("shippriority", WrenTypes.INTEGER, null, true),
-                Column.column("comment", WrenTypes.VARCHAR, null, true));
+                Column.column("comment", WrenTypes.VARCHAR, null, true),
+                Column.column("customer", "customer", "CustomerOrders", false),
+                Column.caluclatedColumn("customer_name", WrenTypes.VARCHAR, "customer.name"));
         List<Column> lineitemColumns = List.of(
                 Column.column("orderkey", WrenTypes.INTEGER, null, true),
                 Column.column("partkey", WrenTypes.INTEGER, null, true),
@@ -97,6 +101,7 @@ public class TestDecisionPointAnalyzer
                 .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, "custkey"),
                         onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, "orderkey"),
                         onTableReference("lineitem", tableReference(null, "main", "lineitem"), lineitemColumns, null)))
+                .setRelationships(List.of(Relationship.relationship("CustomerOrders", List.of("customer", "orders"), JoinType.ONE_TO_MANY, "customer.custkey = orders.custkey")))
                 .build());
     }
 
@@ -185,6 +190,20 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("c.*");
+
+        statement = parseSql("SELECT customer_name FROM orders");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("customer_name");
+        assertThat(result.get(0).getSelectItems().get(0).getExprSources()).isEqualTo(List.of(new ExprSource("customer_name", "orders", "customer_name", new NodeLocation(1, 8))));
+
+        statement = parseSql("SELECT customer FROM orders");
+        result = DecisionPointAnalyzer.analyze(statement, DEFAULT_SESSION_CONTEXT, mdl);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
+        assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("customer");
+        assertThat(result.get(0).getSelectItems().get(0).getExprSources()).isEqualTo(List.of(new ExprSource("customer", "orders", "customer", new NodeLocation(1, 8))));
     }
 
     @Test
