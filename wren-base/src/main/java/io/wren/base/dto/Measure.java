@@ -81,6 +81,11 @@ public class Measure
         return properties;
     }
 
+    public Column toColumn()
+    {
+        return new Column(name, type, null, false, false, refColumn, properties);
+    }
+
     @Override
     public boolean equals(Object o)
     {

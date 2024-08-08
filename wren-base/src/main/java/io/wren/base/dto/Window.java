@@ -17,6 +17,7 @@ package io.wren.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import io.wren.base.WrenTypes;
 
 import java.util.Map;
 import java.util.Objects;
@@ -93,6 +94,11 @@ public class Window
     public Map<String, String> getProperties()
     {
         return properties;
+    }
+
+    public Column toColumn()
+    {
+        return new Column(name, WrenTypes.TIMESTAMP, null, false, false, refColumn, properties);
     }
 
     @Override
