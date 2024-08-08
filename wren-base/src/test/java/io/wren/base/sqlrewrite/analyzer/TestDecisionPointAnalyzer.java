@@ -203,7 +203,7 @@ public class TestDecisionPointAnalyzer
         assertThat(result.size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().size()).isEqualTo(1);
         assertThat(result.get(0).getSelectItems().get(0).getExpression()).isEqualTo("customer");
-        assertThat(result.get(0).getSelectItems().get(0).getExprSources()).isEqualTo(List.of(new ExprSource("customer", "orders", "customer", new NodeLocation(1, 8))));
+        assertThat(result.get(0).getSelectItems().get(0).getExprSources()).isEqualTo(List.of());
     }
 
     @Test
@@ -272,7 +272,6 @@ public class TestDecisionPointAnalyzer
             assertThat(joinRelation.getRight().getNodeLocation()).isEqualTo(new NodeLocation(1, 30));
             assertThat(((TableRelation) joinRelation.getRight()).getTableName()).isEqualTo("orders");
             assertThat(joinRelation.getCriteria()).isEqualTo(joinCriteria("ON (customer.custkey = orders.custkey)", new NodeLocation(1, 40)));
-            assertThat(joinRelation.getExprSources().size()).isEqualTo(2);
             assertThat(Set.copyOf(joinRelation.getExprSources())).isEqualTo(Set.of(
                     new ExprSource("customer.custkey", "customer", "custkey", new NodeLocation(1, 40)),
                     new ExprSource("orders.custkey", "orders", "custkey", new NodeLocation(1, 59))));

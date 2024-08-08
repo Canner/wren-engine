@@ -47,6 +47,7 @@ public class RelationType
     public List<Field> resolveFields(QualifiedName name)
     {
         return fields.stream()
+                .filter(input -> input.getSourceColumn().stream().anyMatch(column -> column.getRelationship().isEmpty()))
                 .filter(input -> input.canResolve(name))
                 .collect(toImmutableList());
     }
@@ -54,6 +55,7 @@ public class RelationType
     public Optional<Field> resolveAnyField(QualifiedName name)
     {
         return fields.stream()
+                .filter(input -> input.getSourceColumn().stream().anyMatch(column -> column.getRelationship().isEmpty()))
                 .filter(input -> input.canResolve(name))
                 .findAny();
     }
