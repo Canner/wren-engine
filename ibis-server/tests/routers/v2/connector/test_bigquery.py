@@ -4,8 +4,16 @@ import os
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from loguru import logger
 
 from app.main import app
+from tests.routers.v2.connector.func_test_case import (
+    aggregate_functions,
+    date_time_functions,
+    math_functions,
+    operators,
+    string_functions,
+)
 
 pytestmark = pytest.mark.bigquery
 
@@ -322,3 +330,33 @@ def test_metadata_list_constraints():
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+
+
+def test_handle_trino_function():
+    with logger.contextualize(request_id="test_handle_trino_function"):
+        success = []
+        fail = []
+        result = (
+            string_functions
+            + math_functions
+            + date_time_functions
+            + aggregate_functions
+            + operators
+        )
+        for func in result:
+            try:
+                response = client.post(
+                    url=f"{base_url}/query",
+                    json={
+                        "connectionInfo": connection_info,
+                        "manifestStr": manifest_str,
+                        "sql": func,
+                    },
+                )
+                if response.status_code == 200:
+                    success.append(func)
+            except Exception:
+                fail.append(func)
+        logger.info("success cases: {body}", body=success)
+        logger.info("fail cases: {body}", body=fail)
+        assert len(success) == len(result)
