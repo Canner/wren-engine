@@ -237,7 +237,7 @@ public final class StatementAnalyzer
                                         .name(f.getName().orElse(f.getColumnName()))
                                         .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
                                         .sourceModelName(f.getSourceDatasetName().orElse(null))
-                                        .sourceColumnName(f.getSourceColumnName().orElse(null))
+                                        .sourceColumn(f.getSourceColumn().orElse(null))
                                         .build())));
                     }
                     else {
@@ -254,7 +254,7 @@ public final class StatementAnalyzer
                                         .name(name)
                                         .tableName(toCatalogSchemaTableName(sessionContext, scopeName))
                                         .sourceModelName(f.getSourceDatasetName().orElse(null))
-                                        .sourceColumnName(f.getSourceColumnName().orElse(null))
+                                        .sourceColumn(f.getSourceColumn().orElse(null))
                                         .build());
                                 continue;
                             }
@@ -282,7 +282,7 @@ public final class StatementAnalyzer
                                 .columnName(column.getName())
                                 .name(column.getName())
                                 .sourceModelName(tableName.getSchemaTableName().getTableName())
-                                .sourceColumnName(column.getName())
+                                .sourceColumn(column)
                                 .build())
                         .collect(toImmutableList());
             }
@@ -296,7 +296,7 @@ public final class StatementAnalyzer
                                 .columnName(column.getName())
                                 .name(column.getName())
                                 .sourceModelName(tableName.getSchemaTableName().getTableName())
-                                .sourceColumnName(column.getName())
+                                .sourceColumn(column)
                                 .build())
                         .collect(toImmutableList());
             }
@@ -308,14 +308,14 @@ public final class StatementAnalyzer
                                 .columnName(cumulativeMetric.getWindow().getName())
                                 .name(cumulativeMetric.getWindow().getName())
                                 .sourceModelName(tableName.getSchemaTableName().getTableName())
-                                .sourceColumnName(cumulativeMetric.getWindow().getName())
+                                .sourceColumn(cumulativeMetric.getWindow().toColumn())
                                 .build(),
                         Field.builder()
                                 .tableName(tableName)
                                 .columnName(cumulativeMetric.getMeasure().getName())
                                 .name(cumulativeMetric.getMeasure().getName())
                                 .sourceModelName(tableName.getSchemaTableName().getTableName())
-                                .sourceColumnName(cumulativeMetric.getMeasure().getName())
+                                .sourceColumn(cumulativeMetric.getMeasure().toColumn())
                                 .build());
             }
             return ImmutableList.of();
