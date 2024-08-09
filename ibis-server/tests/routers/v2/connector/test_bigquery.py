@@ -4,8 +4,16 @@ import os
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from loguru import logger
 
 from app.main import app
+from tests.routers.v2.connector.func_test_case import (
+    aggregate_functions,
+    date_time_functions,
+    math_functions,
+    operators,
+    string_functions,
+)
 
 pytestmark = pytest.mark.bigquery
 
@@ -322,3 +330,58 @@ def test_metadata_list_constraints():
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+
+
+def test_handle_trino_function():
+    with logger.contextualize(request_id="test_handle_trino_function"):
+        success = []
+        fail = []
+        expected_success = []
+        expected_fail = []
+        unexpected = []
+        groups = [
+            string_functions,
+            math_functions,
+            date_time_functions,
+            aggregate_functions,
+            operators,
+        ]
+
+        for group in groups:
+            expected_success += group["supported"]
+            expected_fail += group["unsupported"]
+            for func in group["supported"]:
+                response = client.post(
+                    url=f"{base_url}/query",
+                    json={
+                        "connectionInfo": connection_info,
+                        "manifestStr": manifest_str,
+                        "sql": func,
+                    },
+                )
+                if response.status_code == 200:
+                    success.append(func)
+                else:
+                    unexpected.append(func)
+            for func in group["unsupported"]:
+                try:
+                    response = client.post(
+                        url=f"{base_url}/query",
+                        json={
+                            "connectionInfo": connection_info,
+                            "manifestStr": manifest_str,
+                            "sql": func,
+                        },
+                    )
+
+                    # expected thrown expection here
+                    unexpected.append(func)
+                except Exception:
+                    fail.append(func)
+        logger.debug("success cases: {body}", body=success)
+        logger.debug("fail cases: {body}", body=fail)
+        logger.debug("unexpected cases: {body}", body=unexpected)
+
+        assert len(unexpected) == 0
+        assert len(success) == len(expected_success)
+        assert len(fail) == len(expected_fail)
