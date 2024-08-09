@@ -336,15 +336,21 @@ def test_handle_trino_function():
     with logger.contextualize(request_id="test_handle_trino_function"):
         success = []
         fail = []
-        result = (
-            string_functions
-            + math_functions
-            + date_time_functions
-            + aggregate_functions
-            + operators
-        )
-        for func in result:
-            try:
+        expected_success = []
+        expected_fail = []
+        unexpected = []
+        groups = [
+            string_functions,
+            math_functions,
+            date_time_functions,
+            aggregate_functions,
+            operators,
+        ]
+
+        for group in groups:
+            expected_success += group["supported"]
+            expected_fail += group["unsupported"]
+            for func in group["supported"]:
                 response = client.post(
                     url=f"{base_url}/query",
                     json={
@@ -355,8 +361,27 @@ def test_handle_trino_function():
                 )
                 if response.status_code == 200:
                     success.append(func)
-            except Exception:
-                fail.append(func)
-        logger.info("success cases: {body}", body=success)
-        logger.info("fail cases: {body}", body=fail)
-        assert len(success) == len(result)
+                else:
+                    unexpected.append(func)
+            for func in group["unsupported"]:
+                try:
+                    response = client.post(
+                        url=f"{base_url}/query",
+                        json={
+                            "connectionInfo": connection_info,
+                            "manifestStr": manifest_str,
+                            "sql": func,
+                        },
+                    )
+
+                    # expected thrown expection here
+                    unexpected.append(func)
+                except Exception:
+                    fail.append(func)
+        logger.debug("success cases: {body}", body=success)
+        logger.debug("fail cases: {body}", body=fail)
+        logger.debug("unexpected cases: {body}", body=unexpected)
+
+        assert len(unexpected) == 0
+        assert len(success) == len(expected_success)
+        assert len(fail) == len(expected_fail)
