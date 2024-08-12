@@ -16,6 +16,7 @@ package io.wren.base.sqlrewrite.analyzer;
 
 import io.trino.sql.tree.QualifiedName;
 import io.wren.base.CatalogSchemaTableName;
+import io.wren.base.dto.Column;
 import io.wren.base.sqlrewrite.Utils;
 
 import java.util.Optional;
@@ -33,7 +34,7 @@ public class Field
     private final CatalogSchemaTableName tableName;
     private final String columnName;
     private final Optional<String> sourceDatasetName;
-    private final Optional<String> sourceColumnName;
+    private final Optional<Column> sourceColumn;
     private final Optional<String> name;
 
     private Field(
@@ -42,14 +43,14 @@ public class Field
             String columnName,
             String name,
             String sourceDatasetName,
-            String sourceColumnName)
+            Column sourceColumn)
     {
         this.relationAlias = Optional.ofNullable(relationAlias);
         this.tableName = requireNonNull(tableName, "modelName is null");
         this.columnName = requireNonNull(columnName, "columnName is null");
         this.name = Optional.ofNullable(name);
         this.sourceDatasetName = Optional.ofNullable(sourceDatasetName);
-        this.sourceColumnName = Optional.ofNullable(sourceColumnName);
+        this.sourceColumn = Optional.ofNullable(sourceColumn);
     }
 
     public Optional<QualifiedName> getRelationAlias()
@@ -77,9 +78,9 @@ public class Field
         return sourceDatasetName;
     }
 
-    public Optional<String> getSourceColumnName()
+    public Optional<Column> getSourceColumn()
     {
-        return sourceColumnName;
+        return sourceColumn;
     }
 
     public boolean matchesPrefix(Optional<QualifiedName> prefix)
@@ -128,7 +129,7 @@ public class Field
                 ", columnName='" + columnName + '\'' +
                 ", name=" + name +
                 ", sourceDatasetName=" + sourceDatasetName +
-                ", sourceColumnName=" + sourceColumnName +
+                ", sourceColumn=" + sourceColumn +
                 '}';
     }
 
@@ -144,7 +145,7 @@ public class Field
         private String columnName;
         private String name;
         private String sourceModelName;
-        private String sourceColumnName;
+        private Column sourceColumn;
 
         public Builder() {}
 
@@ -155,7 +156,7 @@ public class Field
             this.columnName = field.columnName;
             this.name = field.name.orElse(null);
             this.sourceModelName = field.sourceDatasetName.orElse(null);
-            this.sourceColumnName = field.sourceColumnName.orElse(null);
+            this.sourceColumn = field.sourceColumn.orElse(null);
             return this;
         }
 
@@ -189,15 +190,15 @@ public class Field
             return this;
         }
 
-        public Builder sourceColumnName(String sourceColumnName)
+        public Builder sourceColumn(Column sourceColumn)
         {
-            this.sourceColumnName = sourceColumnName;
+            this.sourceColumn = sourceColumn;
             return this;
         }
 
         public Field build()
         {
-            return new Field(relationAlias, tableName, columnName, name, sourceModelName, sourceColumnName);
+            return new Field(relationAlias, tableName, columnName, name, sourceModelName, sourceColumn);
         }
     }
 }

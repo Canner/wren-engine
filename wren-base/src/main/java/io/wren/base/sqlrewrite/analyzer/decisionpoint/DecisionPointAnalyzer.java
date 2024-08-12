@@ -33,6 +33,7 @@ import io.trino.sql.tree.With;
 import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenMDL;
+import io.wren.base.dto.Column;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
 import io.wren.base.sqlrewrite.analyzer.Field;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
@@ -131,6 +132,7 @@ public class DecisionPointAnalyzer
                 else {
                     scopedFields.stream()
                             .filter(field -> field.getRelationAlias().filter(alias -> alias.toString().equals(target)).isPresent() || field.getTableName().equals(catalogSchemaTableName))
+                            .filter(field -> field.getSourceColumn().stream().anyMatch(column -> !column.isCalculated() && column.getRelationship().isEmpty()))
                             .forEach(field -> {
                                 decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
                                         Optional.empty(),
@@ -140,7 +142,7 @@ public class DecisionPointAnalyzer
                                         List.of(new ExprSource(
                                                 field.getName().orElse(field.getColumnName()),
                                                 field.getTableName().getSchemaTableName().getTableName(),
-                                                field.getSourceColumnName().orElse(null),
+                                                field.getSourceColumn().map(Column::getName).orElse(null),
                                                 node.getLocation().orElse(null)))));
                             });
                 }
@@ -156,18 +158,20 @@ public class DecisionPointAnalyzer
                             List.of()));
                 }
                 else {
-                    scopedFields.forEach(field -> {
-                        decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
-                                Optional.empty(),
-                                field.getName().orElse(field.getColumnName()),
-                                DEFAULT_ANALYSIS.toMap(),
-                                node.getLocation().orElse(null),
-                                List.of(new ExprSource(
+                    scopedFields.stream()
+                            .filter(field -> field.getSourceColumn().stream().anyMatch(column -> !column.isCalculated() && column.getRelationship().isEmpty()))
+                            .forEach(field -> {
+                                decisionPointContext.getBuilder().addSelectItem(new ColumnAnalysis(
+                                        Optional.empty(),
                                         field.getName().orElse(field.getColumnName()),
-                                        field.getTableName().getSchemaTableName().getTableName(),
-                                        field.getSourceColumnName().orElse(null),
-                                        node.getLocation().orElse(null)))));
-                    });
+                                        DEFAULT_ANALYSIS.toMap(),
+                                        node.getLocation().orElse(null),
+                                        List.of(new ExprSource(
+                                                field.getName().orElse(field.getColumnName()),
+                                                field.getTableName().getSchemaTableName().getTableName(),
+                                                field.getSourceColumn().map(Column::getName).orElse(null),
+                                                node.getLocation().orElse(null)))));
+                            });
                 }
             }
             return null;
