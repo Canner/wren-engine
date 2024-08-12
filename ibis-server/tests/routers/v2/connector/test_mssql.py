@@ -75,7 +75,9 @@ def mssql(request) -> SqlServerContainer:
     mssql = SqlServerContainer(
         "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04", dialect="mssql+pyodbc"
     ).start()
-    engine = sqlalchemy.create_engine(f"{mssql.get_connection_url()}?driver=FreeTDS")
+    engine = sqlalchemy.create_engine(
+        f"{mssql.get_connection_url()}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
+    )
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
@@ -387,6 +389,7 @@ def to_connection_info(mssql: SqlServerContainer):
         "user": mssql.username,
         "password": mssql.password,
         "database": mssql.dbname,
+        "kwargs": {"TrustServerCertificate": "YES"},
     }
 
 

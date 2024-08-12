@@ -65,10 +65,8 @@ class MSSqlConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr
-    driver: str = Field(
-        default="FreeTDS",
-        description="On Mac and Linux this is usually `FreeTDS. On Windows, it is usually `ODBC Driver 18 for SQL Server`",
-    )
+    driver: str = Field(default="ODBC Driver 18 for SQL Server")
+    kwargs: dict[str, str] | None = None
 
 
 class MySqlConnectionInfo(BaseModel):
