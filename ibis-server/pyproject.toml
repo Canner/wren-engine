@@ -10,7 +10,6 @@ packages = [{ include = "app" }]
 python = ">=3.11,<3.12"
 fastapi = { version = "0.112.0", extras = ["standard"] }
 pydantic = "2.8.2"
-uvicorn = { version = "0.30.5", extras = ["standard"] }
 ibis-framework = { version = "9.2.0", extras = [
   "bigquery",
   "clickhouse",
