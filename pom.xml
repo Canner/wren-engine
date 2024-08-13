@@ -274,6 +274,12 @@
             </dependency>
 
             <dependency>
+                <groupId>io.opentelemetry.semconv</groupId>
+                <artifactId>opentelemetry-semconv</artifactId>
+                <version>1.26.0-alpha</version>
+            </dependency>
+
+            <dependency>
                 <groupId>io.wren</groupId>
                 <artifactId>trino-parser</artifactId>
                 <version>${project.version}</version>
