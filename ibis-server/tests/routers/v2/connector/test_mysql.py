@@ -53,6 +53,11 @@ manifest = {
                     "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)",
                     "type": "timestamp",
                 },
+                {
+                    "name": "test_null_time",
+                    "expression": "cast(NULL as timestamp)",
+                    "type": "timestamp",
+                },
             ],
             "primaryKey": "orderkey",
         },
@@ -117,6 +122,7 @@ def test_query(mysql: MySqlContainer):
         "1_370",
         1704153599000,
         1704153599000,
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -127,6 +133,7 @@ def test_query(mysql: MySqlContainer):
         "order_cust_key": "object",
         "timestamp": "datetime64[ns]",
         "timestamptz": "datetime64[ns]",
+        "test_null_time": "datetime64[ns]",
     }
 
 
@@ -177,6 +184,7 @@ def test_query_with_column_dtypes(mysql: MySqlContainer):
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -187,6 +195,7 @@ def test_query_with_column_dtypes(mysql: MySqlContainer):
         "order_cust_key": "object",
         "timestamp": "object",
         "timestamptz": "object",
+        "test_null_time": "datetime64[ns]",
     }
 
 

@@ -49,6 +49,11 @@ manifest = {
                     "expression": "with_timezone(TIMESTAMP '2024-01-01 23:59:59', 'UTC')",
                     "type": "timestamp",
                 },
+                {
+                    "name": "test_null_time",
+                    "expression": "cast(NULL as timestamp)",
+                    "type": "timestamp",
+                },
             ],
             "primaryKey": "orderkey",
         },
@@ -88,6 +93,7 @@ def test_query(trino: TrinoContainer):
         "1_370",
         1704153599000,
         1704153599000,
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int64",
@@ -98,6 +104,7 @@ def test_query(trino: TrinoContainer):
         "order_cust_key": "object",
         "timestamp": "datetime64[ns]",
         "timestamptz": "datetime64[ns, UTC]",
+        "test_null_time": "datetime64[ns]",
     }
 
 
@@ -148,6 +155,7 @@ def test_query_with_column_dtypes(trino: TrinoContainer):
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int64",
@@ -158,6 +166,7 @@ def test_query_with_column_dtypes(trino: TrinoContainer):
         "order_cust_key": "object",
         "timestamp": "object",
         "timestamptz": "object",
+        "test_null_time": "datetime64[ns]",
     }
 
 

@@ -35,17 +35,18 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
     data = df.to_dict(orient="split", index=False)
 
     def default(d):
-        match d:
-            case decimal.Decimal():
-                return float(d)
-            case pd.Timestamp():
-                return d.value // 10**6
-            case datetime.datetime():
-                return int(d.timestamp())
-            case datetime.date():
-                return calendar.timegm(d.timetuple()) * 1000
-            case _:
-                raise d
+        if pd.isnull(d):
+            return None
+        if isinstance(d, decimal.Decimal):
+            return float(d)
+        elif isinstance(d, pd.Timestamp):
+            return d.value // 10**6
+        elif isinstance(d, datetime.datetime):
+            return int(d.timestamp())
+        elif isinstance(d, datetime.date):
+            return calendar.timegm(d.timetuple()) * 1000
+        else:
+            raise d
 
     json_obj = orjson.loads(
         orjson.dumps(

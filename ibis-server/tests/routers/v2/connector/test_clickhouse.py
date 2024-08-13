@@ -53,6 +53,11 @@ manifest = {
                     "type": "timestamp",
                 },
                 {
+                    "name": "test_null_time",
+                    "expression": "toDateTime64(NULL, 9)",
+                    "type": "timestamp",
+                },
+                {
                     "name": "customer",
                     "type": "Customer",
                     "relationship": "OrdersCustomer",
@@ -162,7 +167,7 @@ def test_query(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 9
+    assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         1,
@@ -173,6 +178,7 @@ def test_query(clickhouse: ClickHouseContainer):
         "1_370",
         1704153599000,
         1704153599000,
+        None,
         "Customer#000000370",
     ]
     assert result["dtypes"] == {
@@ -184,6 +190,7 @@ def test_query(clickhouse: ClickHouseContainer):
         "order_cust_key": "object",
         "timestamp": "datetime64[ns]",
         "timestamptz": "datetime64[ns, UTC]",
+        "test_null_time": "object",
         "customer_name": "object",
     }
 
@@ -200,7 +207,7 @@ def test_query_with_connection_url(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 9
+    assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
@@ -224,7 +231,7 @@ def test_query_with_column_dtypes(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 9
+    assert len(result["columns"]) == 10
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         1,
@@ -235,6 +242,7 @@ def test_query_with_column_dtypes(clickhouse: ClickHouseContainer):
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
+        None,
         "Customer#000000370",
     ]
     assert result["dtypes"] == {
@@ -246,6 +254,7 @@ def test_query_with_column_dtypes(clickhouse: ClickHouseContainer):
         "order_cust_key": "object",
         "timestamp": "object",
         "timestamptz": "object",
+        "test_null_time": "object",
         "customer_name": "object",
     }
 

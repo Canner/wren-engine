@@ -54,6 +54,11 @@ manifest = {
                     "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)",
                     "type": "timestamp",
                 },
+                {
+                    "name": "test_null_time",
+                    "expression": "cast(NULL as timestamp)",
+                    "type": "timestamp",
+                },
             ],
             "primaryKey": "orderkey",
         },
@@ -109,6 +114,7 @@ def test_query(postgres: PostgresContainer):
         "1_370",
         1704153599000,
         1704153599000,
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -119,6 +125,7 @@ def test_query(postgres: PostgresContainer):
         "order_cust_key": "object",
         "timestamp": "datetime64[ns]",
         "timestamptz": "datetime64[ns, UTC]",
+        "test_null_time": "datetime64[ns]",
     }
 
 
@@ -194,6 +201,7 @@ def test_query_with_column_dtypes(postgres: PostgresContainer):
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
+        None,
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -204,6 +212,7 @@ def test_query_with_column_dtypes(postgres: PostgresContainer):
         "order_cust_key": "object",
         "timestamp": "object",
         "timestamptz": "object",
+        "test_null_time": "datetime64[ns]",
     }
 
 
@@ -437,7 +446,7 @@ def test_dry_plan():
     assert response.status_code == 200
     assert (
         response.text
-        == '''"WITH \\"Orders\\" AS (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\" FROM (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\" FROM (SELECT o_orderkey AS \\"orderkey\\", o_custkey AS \\"custkey\\", o_orderstatus AS \\"orderstatus\\", o_totalprice AS \\"totalprice\\", o_orderdate AS \\"orderdate\\", CONCAT(o_orderkey, '_', o_custkey) AS \\"order_cust_key\\", CAST('2024-01-01T23:59:59' AS TIMESTAMP) AS \\"timestamp\\", CAST('2024-01-01T23:59:59' AS TIMESTAMPTZ) AS \\"timestamptz\\" FROM (SELECT * FROM public.orders) AS \\"Orders\\") AS \\"Orders\\") AS \\"Orders\\") SELECT orderkey, order_cust_key FROM \\"Orders\\" LIMIT 1"'''
+        == '''"WITH \\"Orders\\" AS (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\", \\"Orders\\".\\"test_null_time\\" AS \\"test_null_time\\" FROM (SELECT \\"Orders\\".\\"orderkey\\" AS \\"orderkey\\", \\"Orders\\".\\"custkey\\" AS \\"custkey\\", \\"Orders\\".\\"orderstatus\\" AS \\"orderstatus\\", \\"Orders\\".\\"totalprice\\" AS \\"totalprice\\", \\"Orders\\".\\"orderdate\\" AS \\"orderdate\\", \\"Orders\\".\\"order_cust_key\\" AS \\"order_cust_key\\", \\"Orders\\".\\"timestamp\\" AS \\"timestamp\\", \\"Orders\\".\\"timestamptz\\" AS \\"timestamptz\\", \\"Orders\\".\\"test_null_time\\" AS \\"test_null_time\\" FROM (SELECT o_orderkey AS \\"orderkey\\", o_custkey AS \\"custkey\\", o_orderstatus AS \\"orderstatus\\", o_totalprice AS \\"totalprice\\", o_orderdate AS \\"orderdate\\", CONCAT(o_orderkey, '_', o_custkey) AS \\"order_cust_key\\", CAST('2024-01-01T23:59:59' AS TIMESTAMP) AS \\"timestamp\\", CAST('2024-01-01T23:59:59' AS TIMESTAMPTZ) AS \\"timestamptz\\", CAST(NULL AS TIMESTAMP) AS \\"test_null_time\\" FROM (SELECT * FROM public.orders) AS \\"Orders\\") AS \\"Orders\\") AS \\"Orders\\") SELECT orderkey, order_cust_key FROM \\"Orders\\" LIMIT 1"'''
     )
 
 
