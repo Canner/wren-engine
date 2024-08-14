@@ -3,11 +3,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::catalog::schema::MemorySchemaProvider;
-use datafusion::catalog::{CatalogProvider, MemoryCatalogProvider};
+use datafusion::catalog::Session;
+use datafusion::catalog_common::memory::{MemorySchemaProvider, MemoryCatalogProvider};
+use datafusion::catalog_common::CatalogProvider;
 use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};
-use datafusion::execution::context::SessionState;
+use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
@@ -24,8 +25,7 @@ pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
 ) -> Result<SessionContext> {
-    let new_state = ctx
-        .state()
+    let new_state = SessionStateBuilder::new_from_existing(ctx.state())
         .with_analyzer_rules(vec![
             Arc::new(ModelAnalyzeRule::new(
                 Arc::clone(&analyzed_mdl),
@@ -34,7 +34,8 @@ pub async fn create_ctx_with_mdl(
             Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
         ])
         // TODO: there're some issues for the optimize rule.
-        .with_optimizer_rules(vec![]);
+        .with_optimizer_rules(vec![])
+        .build();
     let ctx = SessionContext::new_with_state(new_state);
     register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
     Ok(ctx)
@@ -101,7 +102,7 @@ impl TableProvider for WrenDataSource {
 
     async fn scan(
         &self,
-        _state: &SessionState,
+        _state: &dyn Session,
         _projection: Option<&Vec<usize>>,
         // filters and limit can be used here to inject some push-down operations if needed
         _filters: &[Expr],
