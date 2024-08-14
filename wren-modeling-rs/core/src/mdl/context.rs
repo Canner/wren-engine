@@ -4,7 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::Session;
-use datafusion::catalog_common::memory::{MemorySchemaProvider, MemoryCatalogProvider};
+use datafusion::catalog_common::memory::{MemoryCatalogProvider, MemorySchemaProvider};
 use datafusion::catalog_common::CatalogProvider;
 use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};

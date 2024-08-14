@@ -244,7 +244,7 @@ mod tests {
             analyzed_mdl,
             ctx.state_ref(),
         )?;
-        assert_eq!(expr.to_string(), "orderkey + custkey");
+        assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
         Ok(())
     }
 
