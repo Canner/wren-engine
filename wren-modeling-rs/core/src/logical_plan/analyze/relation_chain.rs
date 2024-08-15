@@ -9,7 +9,7 @@ use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
-use datafusion::catalog::TableReference;
+use datafusion::common::TableReference;
 use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
