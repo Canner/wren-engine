@@ -76,6 +76,7 @@ public final class DuckdbClient
             initPool();
             if (duckDBSettingSQL != null) {
                 if (duckDBSettingSQL.getInitSQL() != null) {
+                    LOG.info("Initialize by init SQL"); // Not print the SQL to avoid leaking sensitive information
                     executeDDL(duckDBSettingSQL.getInitSQL());
                 }
             }
@@ -123,6 +124,7 @@ public final class DuckdbClient
         sql.add("SET autoinstall_known_extensions = true");
         if (duckDBSettingSQL != null) {
             if (duckDBSettingSQL.getSessionSQL() != null) {
+                LOG.info("Append session SQL to connection init SQL"); // Not print the SQL to avoid leaking sensitive information
                 sql.add(duckDBSettingSQL.getSessionSQL());
             }
         }
