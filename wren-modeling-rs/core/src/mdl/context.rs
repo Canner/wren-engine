@@ -25,6 +25,9 @@ pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
 ) -> Result<SessionContext> {
+    let config = ctx
+        .copied_config()
+        .with_create_default_catalog_and_schema(false);
     let new_state = SessionStateBuilder::new_from_existing(ctx.state())
         .with_analyzer_rules(vec![
             Arc::new(ModelAnalyzeRule::new(
@@ -35,6 +38,7 @@ pub async fn create_ctx_with_mdl(
         ])
         // TODO: there're some issues for the optimize rule.
         .with_optimizer_rules(vec![])
+        .with_config(config)
         .build();
     let ctx = SessionContext::new_with_state(new_state);
     register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;

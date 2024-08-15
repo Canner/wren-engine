@@ -156,11 +156,12 @@ async fn register_ecommerce_mdl(
                         .expression("orders.customers.state")
                         .build(),
                 )
-                .column(
-                    ColumnBuilder::new_calculated("customer_state_cf", "varchar")
-                        .expression("orders.customer_state")
-                        .build(),
-                )
+                // TODO: it cause a stack overflow issue.
+                // .column(
+                //     ColumnBuilder::new_calculated("customer_state_cf", "varchar")
+                //         .expression("orders.customer_state")
+                //         .build(),
+                // )
                 // TODO: duplicate `orders.customer_state`
                 // .column(
                 //     ColumnBuilder::new_calculated("customer_state_cf_concat", "varchar")
