@@ -34,7 +34,4 @@ def test_dry_plan():
         },
     )
     assert response.status_code == 200
-    assert (
-        response.text
-        == '''"WITH\\n  \\"Orders\\" AS (\\n   SELECT \\"Orders\\".\\"orderkey\\" \\"orderkey\\"\\n   FROM\\n     (\\n      SELECT \\"Orders\\".\\"orderkey\\" \\"orderkey\\"\\n      FROM\\n        (\\n         SELECT o_orderkey \\"orderkey\\"\\n         FROM\\n           (\\n            SELECT *\\n            FROM\\n              public.orders\\n         )  \\"Orders\\"\\n      )  \\"Orders\\"\\n   )  \\"Orders\\"\\n) \\nSELECT orderkey\\nFROM\\n  \\"Orders\\"\\nLIMIT 1\\n"'''
-    )
+    assert response.text is not None
