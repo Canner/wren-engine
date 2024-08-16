@@ -1,5 +1,6 @@
 use crate::logical_plan::utils::map_data_type;
 use crate::mdl::manifest::{Column, Metric, Model};
+use crate::mdl::utils::quoted;
 use crate::mdl::{RegisterTables, SessionStateRef};
 use datafusion::arrow::datatypes::DataType::Utf8;
 use datafusion::arrow::datatypes::Field;
@@ -114,7 +115,7 @@ impl Dataset {
                     .map(|c| c.to_field())
                     .collect::<Result<Vec<_>>>()?;
                 let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
-                DFSchema::try_from_qualified_schema(&model.name, &arrow_schema)
+                DFSchema::try_from_qualified_schema(quoted(&model.name), &arrow_schema)
             }
             Dataset::Metric(_) => todo!(),
         }

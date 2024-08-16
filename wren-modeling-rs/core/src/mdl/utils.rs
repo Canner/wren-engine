@@ -29,6 +29,11 @@ where
     g.is_directed() && !is_cyclic_directed(g)
 }
 
+/// Collect all identifiers in the expression. The output [Column] is unqualified.
+/// Because the number of the CompoundIdentifier elements length would be greater than 3 in Wren Core,
+/// we use the unqualified [Column] to represent the [CompoundIdentifier] in the expression.
+///
+/// For example, a [CompoundIdentifier] with 3 elements: `orders.customer.name` would be represented as `"orders.customer.name"`.
 pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     let wrapped = format!("select {}", expr);
     let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;

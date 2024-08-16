@@ -7,6 +7,7 @@ use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
+use crate::mdl::utils::quoted;
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use datafusion::common::TableReference;
@@ -154,8 +155,8 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        model_plan.plan_name,
-                                        field.name()
+                                        quoted(&model_plan.plan_name),
+                                        quoted(field.name()),
                                     ))
                                 })
                                 .for_each(|c| {
@@ -170,8 +171,8 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        model_source_plan.model_name,
-                                        field.name()
+                                        quoted(&model_source_plan.model_name),
+                                        quoted(field.name()),
                                     ))
                                 })
                                 .for_each(|c| {
@@ -186,8 +187,10 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        calculation_plan.calculation.column.name(),
-                                        field.name()
+                                        quoted(
+                                            calculation_plan.calculation.column.name()
+                                        ),
+                                        quoted(field.name()),
                                     ))
                                 })
                                 .for_each(|c| {
@@ -202,8 +205,8 @@ impl RelationChain {
                                 .map(|field| {
                                     col(format!(
                                         "{}.{}",
-                                        partial_model_plan.model_node.plan_name,
-                                        field.name()
+                                        quoted(&partial_model_plan.model_node.plan_name),
+                                        quoted(field.name()),
                                     ))
                                 })
                                 .for_each(|c| {
@@ -220,7 +223,8 @@ impl RelationChain {
                     let (Some(table_rf), f) = left.schema().qualified_field(index) else {
                         return plan_err!("Field not found");
                     };
-                    let qualified_name = format!("{}.{}", table_rf, f.name());
+                    let qualified_name =
+                        format!("{}.{}", table_rf.to_quoted_string(), quoted(f.name()));
                     required_exprs.insert(OrdExpr::new(col(qualified_name)));
                 }
 
@@ -230,7 +234,8 @@ impl RelationChain {
                     else {
                         return plan_err!("Field not found");
                     };
-                    let qualified_name = format!("{}.{}", table_rf, f.name());
+                    let qualified_name =
+                        format!("{}.{}", table_rf.to_quoted_string(), quoted(f.name()));
                     required_exprs.insert(OrdExpr::new(col(qualified_name)));
                 }
 
