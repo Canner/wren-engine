@@ -125,11 +125,11 @@ async fn register_ecommerce_mdl(
                 .column(ColumnBuilder::new("City", "varchar").expression("city").build())
                 .column(ColumnBuilder::new("Id", "varchar").expression("id").build())
                 .column(ColumnBuilder::new("State", "varchar").expression("state").build())
-                // .column(
-                //     ColumnBuilder::new_calculated("City_state", "varchar")
-                //         .expression(r#""City" || ' ' || "State""#)
-                //         .build(),
-                // )
+                .column(
+                    ColumnBuilder::new_calculated("City_state", "varchar")
+                        .expression(r#""City" || ' ' || "State""#)
+                        .build(),
+                )
                 .primary_key("Id")
                 .build(),
         )

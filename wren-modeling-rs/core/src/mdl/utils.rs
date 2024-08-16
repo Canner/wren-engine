@@ -36,14 +36,17 @@ where
 /// For example, a [CompoundIdentifier] with 3 elements: `orders.customer.name` would be represented as `"orders.customer.name"`.
 pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     let wrapped = format!("select {}", expr);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;
+    let parsed = match Parser::parse_sql(&GenericDialect {}, &wrapped) {
+        Ok(v) => v,
+        Err(e) => return plan_err!("Error parsing SQL: {}", e),
+    };
     let statement = parsed[0].clone();
     let mut visited: BTreeSet<Column> = BTreeSet::new();
 
     visit_expressions(&statement, |expr| {
         match expr {
             Identifier(id) => {
-                visited.insert(Column::from(id.value.clone()));
+                visited.insert(Column::from(quoted(&id.value)));
             }
             CompoundIdentifier(ids) => {
                 let name = ids
@@ -176,7 +179,7 @@ fn qualified_expr(
                     .into_iter()
                     .map(|q| Ident::with_quote('"', q))
                     .collect();
-                parts.push(id.clone());
+                parts.push(Ident::with_quote('"', id.value.clone()));
                 *e = CompoundIdentifier(parts);
             }
         }
@@ -271,6 +274,11 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert!(result.contains(&super::Column::new_unqualified("customers.state")));
         assert!(result.contains(&super::Column::new_unqualified("order_id")));
+
+        let expr = r#""City" || ' ' || "State""#;
+        let result = super::collect_identifiers(expr)?;
+        assert!(result.contains(&super::Column::new_unqualified("City")));
+        assert!(result.contains(&super::Column::new_unqualified("State")));
         Ok(())
     }
 

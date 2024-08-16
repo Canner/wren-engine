@@ -291,7 +291,7 @@ impl ModelPlanNodeBuilder {
         )?;
 
         for calculation_plan in calculate_iter {
-            let target_ref = TableReference::bare(quoted(calculation_plan.name()));
+            let target_ref = TableReference::bare(calculation_plan.name());
             let Some(join_key) = model.primary_key() else {
                 return plan_err!(
                     "Model {} should have primary key for calculation",
@@ -368,8 +368,8 @@ impl ModelPlanNodeBuilder {
         // The calculation column is provided by the CalculationPlanNode.
         let _ = &self.required_exprs_buffer.insert(OrdExpr::new(col(format!(
             "{}.{}",
-            column.name(),
-            column.name()
+            quoted(column.name()),
+            quoted(column.name()),
         ))));
 
         let mut partial_model_required_fields = HashMap::new();
