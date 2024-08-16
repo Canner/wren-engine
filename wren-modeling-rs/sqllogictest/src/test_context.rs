@@ -120,144 +120,144 @@ async fn register_ecommerce_mdl(
 ) -> Result<(SessionContext, Arc<AnalyzedWrenMDL>)> {
     let manifest = ManifestBuilder::new()
         .model(
-            ModelBuilder::new("customers")
+            ModelBuilder::new("Customers")
                 .table_reference("datafusion.public.customers")
-                .column(ColumnBuilder::new("city", "varchar").build())
-                .column(ColumnBuilder::new("id", "varchar").build())
-                .column(ColumnBuilder::new("state", "varchar").build())
-                .column(
-                    ColumnBuilder::new_calculated("city_state", "varchar")
-                        .expression("city || ' ' || state")
-                        .build(),
-                )
-                .primary_key("id")
+                .column(ColumnBuilder::new("City", "varchar").expression("city").build())
+                .column(ColumnBuilder::new("Id", "varchar").expression("id").build())
+                .column(ColumnBuilder::new("State", "varchar").expression("state").build())
+                // .column(
+                //     ColumnBuilder::new_calculated("City_state", "varchar")
+                //         .expression(r#""City" || ' ' || "State""#)
+                //         .build(),
+                // )
+                .primary_key("Id")
                 .build(),
         )
         .model(
-            ModelBuilder::new("order_items")
+            ModelBuilder::new("Order_items")
                 .table_reference("datafusion.public.order_items")
-                .column(ColumnBuilder::new("freight_value", "double").build())
-                .column(ColumnBuilder::new("id", "bigint").build())
-                .column(ColumnBuilder::new("item_number", "bigint").build())
-                .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("price", "double").build())
-                .column(ColumnBuilder::new("product_id", "varchar").build())
-                .column(ColumnBuilder::new("shipping_limit_date", "varchar").build())
+                .column(ColumnBuilder::new("Freight_value", "double").expression("freight_value").build())
+                .column(ColumnBuilder::new("Id", "bigint").expression("id").build())
+                .column(ColumnBuilder::new("Item_number", "bigint").expression("item_number").build())
+                .column(ColumnBuilder::new("Order_id", "varchar").expression("order_id").build())
+                .column(ColumnBuilder::new("Price", "double").expression("price").build())
+                .column(ColumnBuilder::new("Product_id", "varchar").expression("product_id").build())
+                .column(ColumnBuilder::new("Shipping_limit_date", "varchar").expression("shipping_limit_date").build())
                 .column(
                     ColumnBuilder::new_relationship(
-                        "orders",
-                        "orders",
-                        "orders_order_items",
+                        "Orders",
+                        "Orders",
+                        "Orders_order_items",
                     )
                     .build(),
                 )
                 .column(
-                    ColumnBuilder::new_calculated("customer_state", "varchar")
-                        .expression("orders.customers.state")
+                    ColumnBuilder::new_calculated("Customer_state", "varchar")
+                        .expression(r#""Orders"."Customers"."State""#)
                         .build(),
                 )
                 // TODO: it cause a stack overflow issue.
                 // .column(
-                //     ColumnBuilder::new_calculated("customer_state_cf", "varchar")
-                //         .expression("orders.customer_state")
+                //     ColumnBuilder::new_calculated("Customer_state_cf", "varchar")
+                //         .expression(r#""Orders"."Customer_state""#)
                 //         .build(),
                 // )
                 // TODO: duplicate `orders.customer_state`
                 // .column(
-                //     ColumnBuilder::new_calculated("customer_state_cf_concat", "varchar")
-                //         .expression("orders.customer_state || '-test'")
+                //     ColumnBuilder::new_calculated("Customer_state_cf_concat", "varchar")
+                //         .expression(r#""Orders"."Customer_state" || '-test'"#)
                 //         .build(),
                 // )
                 // TODO: allow multiple calculation in an expression
                 // .column(
-                //     ColumnBuilder::new("customer_location", "varchar")
+                //     ColumnBuilder::new("Customer_location", "varchar")
                 //         .calculated(true)
-                //         .expression("orders.customer_state || '-' || orders.customer_city")
+                //         .expression(r#""Orders"."Customer_state" || '-' || "Orders."Customer_city""#)
                 //         .build(),
                 // )
                 // .column(
-                //     ColumnBuilder::new("customer_location", "varchar")
+                //     ColumnBuilder::new("Customer_location", "varchar")
                 //         .calculated(true)
-                //         .expression("orders.customers.state || '-' || orders.customers.city")
+                //         .expression(r#""Orders"."Customers"."State" || '-' || "Orders"."Customers"."City""#)
                 //         .build(),
                 // )
-                .primary_key("id")
+                .primary_key("Id")
                 .build(),
         )
         .model(
-            ModelBuilder::new("orders")
+            ModelBuilder::new("Orders")
                 .table_reference("datafusion.public.orders")
-                .column(ColumnBuilder::new("approved_timestamp", "varchar").build())
-                .column(ColumnBuilder::new("customer_id", "varchar").build())
-                .column(ColumnBuilder::new("delivered_carrier_date", "varchar").build())
-                .column(ColumnBuilder::new("estimated_delivery_date", "varchar").build())
-                .column(ColumnBuilder::new("order_id", "varchar").build())
-                .column(ColumnBuilder::new("purchase_timestamp", "varchar").build())
+                .column(ColumnBuilder::new("Approved_timestamp", "varchar").expression("approved_timestamp").build())
+                .column(ColumnBuilder::new("Customer_id", "varchar").expression("customer_id").build())
+                .column(ColumnBuilder::new("Delivered_carrier_date", "varchar").expression("delivered_carrier_date").build())
+                .column(ColumnBuilder::new("Estimated_delivery_date", "varchar").expression("estimated_delivery_date").build())
+                .column(ColumnBuilder::new("Order_id", "varchar").expression("order_id").build())
+                .column(ColumnBuilder::new("Purchase_timestamp", "varchar").expression("purchase_timestamp").build())
                 .column(
                     ColumnBuilder::new_relationship(
-                        "customers",
-                        "customers",
-                        "orders_customer",
+                        "Customers",
+                        "Customers",
+                        "Orders_customer",
                     )
                     .build(),
                 )
                 .column(
-                    ColumnBuilder::new_calculated("customer_state", "varchar")
-                        .expression("customers.state")
+                    ColumnBuilder::new_calculated("Customer_state", "varchar")
+                        .expression(r#""Customers"."State""#)
                         .build(),
                 )
                 // TODO: fix calcaultion with non-relationship column
                 // .column(
-                //     ColumnBuilder::new_calculated("customer_state_order_id", "varchar")
-                //         .expression("customers.state || ' ' || order_id")
+                //     ColumnBuilder::new_calculated("Customer_state_order_id", "varchar")
+                //         .expression(r#""Customers"."State" || ' ' || "Order_id""#)
                 //         .build(),
                 // )
                 .column(
                     ColumnBuilder::new_relationship(
-                        "order_items",
-                        "order_items",
-                        "orders_order_items",
+                        "Order_items",
+                        "Order_items",
+                        "Orders_order_items",
                     )
                     .build(),
                 )
                 .column(
-                    ColumnBuilder::new_calculated("totalprice", "double")
-                        .expression("sum(order_items.price)")
+                    ColumnBuilder::new_calculated("Totalprice", "double")
+                        .expression(r#"sum("Order_items"."Price")"#)
                         .build(),
                 )
                 .column(
-                    ColumnBuilder::new_calculated("customer_city", "varchar")
-                        .expression("customers.city")
+                    ColumnBuilder::new_calculated("Customer_city", "varchar")
+                        .expression(r#""Customers"."City""#)
                         .build(),
                 )
-                .primary_key("order_id")
+                .primary_key("Order_id")
                 .build(),
         )
         .relationship(
-            RelationshipBuilder::new("orders_customer")
-                .model("orders")
-                .model("customers")
+            RelationshipBuilder::new("Orders_customer")
+                .model("Orders")
+                .model("Customers")
                 .join_type(JoinType::ManyToOne)
-                .condition("orders.customer_id = customers.id")
+                .condition(r#""Orders"."Customer_id" = "Customers"."Id""#)
                 .build(),
         )
         .relationship(
-            RelationshipBuilder::new("orders_order_items")
-                .model("orders")
-                .model("order_items")
+            RelationshipBuilder::new("Orders_order_items")
+                .model("Orders")
+                .model("Order_items")
                 .join_type(JoinType::ManyToOne)
-                .condition("orders.order_id = order_items.order_id")
+                .condition(r#""Orders"."Order_id" = "Order_items"."Order_id""#)
                 .build(),
         )
         .view(
-            ViewBuilder::new("customer_view")
-                .statement("select * from wrenai.public.customers")
+            ViewBuilder::new("Customer_view")
+                .statement(r#"select * from wrenai.public."Customers""#)
                 .build(),
         )
-        .view(ViewBuilder::new("revenue_orders").statement("select order_id, sum(price) from wrenai.public.order_items group by order_id").build())
+        .view(ViewBuilder::new("Revenue_orders").statement(r#"select "Order_id", sum("Price") from wrenai.public."Order_items" group by "Order_id""#).build())
         .view(
-            ViewBuilder::new("revenue_orders_alias")
-                .statement("select order_id as order_id, sum(price) as totalprice from wrenai.public.order_items group by order_id")
+            ViewBuilder::new("Revenue_orders_alias")
+                .statement(r#"select "Order_id" as "Order_id", sum("Price") as "Totalprice" from wrenai.public."Order_items" group by "Order_id""#)
                 .build())
         .build();
     let mut register_tables = HashMap::new();
