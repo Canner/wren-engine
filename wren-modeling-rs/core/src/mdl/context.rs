@@ -1,6 +1,10 @@
 use std::any::Any;
 use std::sync::Arc;
 
+use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
+use crate::logical_plan::utils::create_schema;
+use crate::mdl::manifest::Model;
+use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::catalog::Session;
@@ -12,11 +16,7 @@ use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
-
-use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
-use crate::logical_plan::utils::create_schema;
-use crate::mdl::manifest::Model;
-use crate::mdl::{AnalyzedWrenMDL, WrenMDL};
+use datafusion::sql::TableReference;
 
 /// Apply Wren Rules to the context for sql generation.
 /// TODO: There're some issue for unparsing the datafusion optimized plans.
@@ -58,10 +58,7 @@ pub async fn register_table_with_mdl(
     for model in wren_mdl.manifest.models.iter() {
         let table = WrenDataSource::new(Arc::clone(model))?;
         ctx.register_table(
-            format!(
-                "{}.{}.{}",
-                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &model.name
-            ),
+            TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), model.name()),
             Arc::new(table),
         )?;
     }
@@ -69,10 +66,7 @@ pub async fn register_table_with_mdl(
         let plan = ctx.state().create_logical_plan(&view.statement).await?;
         let view_table = ViewTable::try_new(plan, Some(view.statement.clone()))?;
         ctx.register_table(
-            format!(
-                "{}.{}.{}",
-                &wren_mdl.manifest.catalog, &wren_mdl.manifest.schema, &view.name
-            ),
+            TableReference::full(wren_mdl.catalog(), wren_mdl.schema(), view.name()),
             Arc::new(view_table),
         )?;
     }

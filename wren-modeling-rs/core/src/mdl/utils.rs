@@ -132,10 +132,8 @@ pub(crate) fn create_remote_expr_for_model(
         Arc::clone(&session_state),
     )?;
     let session_state = session_state.read();
-    session_state.create_logical_expr(
-        qualified_expr(expr, &schema, &session_state)?.as_str(),
-        &schema,
-    )
+    let input_expr = qualified_expr(expr, &schema, &session_state)?;
+    session_state.create_logical_expr(input_expr.as_str(), &schema)
 }
 
 /// Create the Logical Expr for the remote column.
@@ -168,8 +166,11 @@ fn qualified_expr(
             if let Ok((Some(qualifier), _)) =
                 schema.qualified_field_with_unqualified_name(&id.value)
             {
-                let mut parts: Vec<_> =
-                    qualifier.to_vec().into_iter().map(Ident::new).collect();
+                let mut parts: Vec<_> = qualifier
+                    .to_vec()
+                    .into_iter()
+                    .map(|q| Ident::with_quote('"', q))
+                    .collect();
                 parts.push(id.clone());
                 *e = CompoundIdentifier(parts);
             }
@@ -177,6 +178,10 @@ fn qualified_expr(
         ControlFlow::<()>::Continue(())
     });
     Ok(expr.to_string())
+}
+
+pub fn quoted(s: &str) -> String {
+    format!("\"{}\"", s)
 }
 
 #[cfg(test)]

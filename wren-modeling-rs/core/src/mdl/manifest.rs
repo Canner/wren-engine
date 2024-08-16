@@ -205,3 +205,9 @@ pub struct View {
     #[serde(default)]
     pub properties: Vec<(String, String)>,
 }
+
+impl View {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
