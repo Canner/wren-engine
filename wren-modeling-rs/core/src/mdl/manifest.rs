@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -36,7 +37,7 @@ pub struct Model {
     #[serde(default)]
     pub refresh_time: String,
     #[serde(default)]
-    pub properties: Vec<(String, String)>,
+    pub properties: BTreeMap<String, String>,
 }
 
 mod table_reference {
@@ -120,7 +121,7 @@ pub struct Column {
     #[serde(default)]
     pub expression: Option<String>,
     #[serde(default)]
-    pub properties: Vec<(String, String)>,
+    pub properties: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
@@ -131,7 +132,7 @@ pub struct Relationship {
     pub join_type: JoinType,
     pub condition: String,
     #[serde(default)]
-    pub properties: Vec<(String, String)>,
+    pub properties: BTreeMap<String, String>,
 }
 
 // handle case insensitive
@@ -171,7 +172,7 @@ pub struct Metric {
     pub time_grain: Vec<TimeGrain>,
     pub cached: bool,
     pub refresh_time: String,
-    pub properties: Vec<(String, String)>,
+    pub properties: BTreeMap<String, String>,
 }
 
 impl Metric {
@@ -203,5 +204,5 @@ pub struct View {
     pub name: String,
     pub statement: String,
     #[serde(default)]
-    pub properties: Vec<(String, String)>,
+    pub properties: BTreeMap<String, String>,
 }
