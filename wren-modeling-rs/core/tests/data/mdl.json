@@ -29,10 +29,18 @@
         {
           "name": "orders",
           "type": "orders",
-          "relationship": "CustomerOrders"
+          "relationship": "CustomerOrders",
+          "properties": {
+            "description": "This is a customer orders relationship",
+            "maintainer": "test"
+          }
         }
       ],
-      "primaryKey": "custkey"
+      "primaryKey": "custkey",
+      "properties": {
+        "description": "This is a customer table",
+        "maintainer": "test"
+      }
     },
     {
       "name": "profile",

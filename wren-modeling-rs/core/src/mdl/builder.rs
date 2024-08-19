@@ -3,6 +3,7 @@
 use crate::mdl::manifest::{
     Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// A builder for creating a Manifest
@@ -81,7 +82,7 @@ impl ModelBuilder {
                 primary_key: None,
                 cached: false,
                 refresh_time: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -124,7 +125,7 @@ impl ModelBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.model
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -147,7 +148,7 @@ impl ColumnBuilder {
                 is_calculated: false,
                 no_null: false,
                 expression: None,
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -183,7 +184,7 @@ impl ColumnBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.column
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -204,7 +205,7 @@ impl RelationshipBuilder {
                 models: vec![],
                 join_type: JoinType::OneToOne,
                 condition: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -227,7 +228,7 @@ impl RelationshipBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.relationship
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -251,7 +252,7 @@ impl MetricBuilder {
                 time_grain: vec![],
                 cached: false,
                 refresh_time: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -284,7 +285,7 @@ impl MetricBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.metric
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -333,7 +334,7 @@ impl ViewBuilder {
             view: View {
                 name: name.to_string(),
                 statement: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -346,7 +347,7 @@ impl ViewBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.view
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
