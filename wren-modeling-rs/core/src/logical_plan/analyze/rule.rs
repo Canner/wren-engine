@@ -339,7 +339,7 @@ impl ModelAnalyzeRule {
                 .get_model(relation.table())
                 .is_some()
             {
-                Transformed::yes(col(format!(r#"{}.{}"#, alias_model, quoted(&name))))
+                Transformed::yes(col(format!("{}.{}", alias_model, quoted(&name))))
             } else {
                 // handle Wren View
                 // TODO: catalog and schema should be case sensitive
