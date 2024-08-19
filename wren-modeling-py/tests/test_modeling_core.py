@@ -30,5 +30,5 @@ def test_transform_sql():
     rewritten_sql = wren_core.transform_sql(manifest_str, sql)
     assert (
         rewritten_sql
-        == 'SELECT customer.custkey, customer."name" FROM (SELECT customer.custkey, customer."name" FROM (SELECT main.customer.c_custkey AS custkey, main.customer.c_name AS "name" FROM main.customer) AS customer) AS customer'
+        == 'select customer.custkey, customer."name" from (select customer.custkey, customer."name" from (select main.customer.c_custkey as custkey, main.customer.c_name as "name" from main.customer) as customer) as customer'
     )
