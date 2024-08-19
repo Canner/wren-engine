@@ -177,9 +177,9 @@ fn qualified_expr(
                 let mut parts: Vec<_> = qualifier
                     .to_vec()
                     .into_iter()
-                    .map(|q| Ident::with_quote('"', q))
+                    .map(|q| quoted_ident(&q))
                     .collect();
-                parts.push(Ident::with_quote('"', id.value.clone()));
+                parts.push(quoted_ident(id.value.as_str()));
                 *e = CompoundIdentifier(parts);
             }
         }
@@ -188,6 +188,12 @@ fn qualified_expr(
     Ok(expr.to_string())
 }
 
+#[inline]
+pub fn quoted_ident(s: &str) -> Ident {
+    Ident::with_quote('"', s)
+}
+
+#[inline]
 pub fn quoted(s: &str) -> String {
     format!("\"{}\"", s)
 }

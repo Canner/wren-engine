@@ -190,6 +190,8 @@ pub fn transform_sql(analyzed_mdl: Arc<AnalyzedWrenMDL>, sql: &str) -> Result<St
 }
 
 /// Transform the SQL based on the MDL with the SessionContext
+/// Wren engine will normalize the SQL to the lower case to solve the case sensitive
+/// issue for the Wren view
 pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
@@ -211,7 +213,12 @@ pub async fn transform_sql_with_ctx(
     match plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
-            let replaced = sql.to_string().replace(&catalog_schema, "");
+            let replaced = sql
+                .to_string()
+                .replace(&catalog_schema, "")
+                // TODO: There're some issue about datafusion unparsing the expr column name with different case
+                // The workaround is to normalize the SQL to the lower case to support Wren View.
+                .to_lowercase();
             info!("wren-core planned SQL: {}", replaced);
             Ok(replaced)
         }

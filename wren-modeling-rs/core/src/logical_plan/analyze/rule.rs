@@ -290,11 +290,7 @@ impl ModelAnalyzeRule {
         match expr {
             Expr::Column(Column { relation, name }) => {
                 if let Some(relation) = relation {
-                    Ok(self.rewrite_column_qualifier(
-                        relation,
-                        name,
-                        alias_model,
-                    ))
+                    Ok(self.rewrite_column_qualifier(relation, name, alias_model))
                 } else {
                     // TODO: catalog and schema should be case sensitive
                     let catalog_schema = format!(

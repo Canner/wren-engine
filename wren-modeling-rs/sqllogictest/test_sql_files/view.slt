@@ -8,7 +8,7 @@ statement ok
 SELECT * FROM wrenai.public."Revenue_orders_alias"
 
 statement ok
-SELECT totalprice FROM wrenai.public."Revenue_orders_alias"
+SELECT "Totalprice" FROM wrenai.public."Revenue_orders_alias"
 
 query TR
 SELECT "Order_id", "Totalprice" FROM wrenai.public."Revenue_orders_alias" where "Order_id" = '76754c0e642c8f99a8c3fcb8a14ac700'
