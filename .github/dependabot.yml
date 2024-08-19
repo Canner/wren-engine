@@ -7,6 +7,12 @@ updates:
     groups:
       all:
         patterns: [ "*" ]
+    commit-message:
+      prefix: "chore(java-deps)"
+    labels:
+      - "dependencies"
+      - "java"
+      - "v1-engine-changed"
   - package-ecosystem: "pip"
     directory: "/ibis-server"
     schedule:
@@ -14,6 +20,12 @@ updates:
     groups:
       all:
         patterns: [ "*" ]
+    commit-message:
+      prefix: "chore(ibis-deps)"
+    labels:
+      - "dependencies"
+      - "python"
+      - "ibis"
   - package-ecosystem: "pip"
     directory: "/wren-modeling-py"
     schedule:
@@ -21,6 +33,11 @@ updates:
     groups:
       all:
         patterns: [ "*" ]
+    commit-message:
+      prefix: "chore(modeling-py-deps)"
+    labels:
+      - "dependencies"
+      - "python"
   - package-ecosystem: "cargo"
     directory: "/wren-modeling-rs"
     schedule:
@@ -28,3 +45,9 @@ updates:
     groups:
       all:
         patterns: [ "*" ]
+    commit-message:
+      prefix: "chore(modeling-rs-deps)"
+    labels:
+      - "dependencies"
+      - "modeling-rs"
+      - "rust"
