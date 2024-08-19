@@ -292,7 +292,7 @@ impl ModelAnalyzeRule {
                 if let Some(relation) = relation {
                     Ok(self.rewrite_column_qualifier(
                         relation,
-                        quoted(&name),
+                        name,
                         alias_model,
                     ))
                 } else {
@@ -303,7 +303,7 @@ impl ModelAnalyzeRule {
                         self.analyzed_wren_mdl.wren_mdl().schema()
                     );
                     let name = name.replace(&catalog_schema, "");
-                    let ident = ident(quoted(&name));
+                    let ident = ident(&name);
                     Ok(Transformed::yes(ident))
                 }
             }
@@ -339,7 +339,7 @@ impl ModelAnalyzeRule {
                 .get_model(relation.table())
                 .is_some()
             {
-                Transformed::yes(col(format!(r#"{}.{}"#, alias_model, name)))
+                Transformed::yes(col(format!(r#"{}.{}"#, alias_model, quoted(&name))))
             } else {
                 // handle Wren View
                 // TODO: catalog and schema should be case sensitive
@@ -351,7 +351,7 @@ impl ModelAnalyzeRule {
                 let name = name.replace(&catalog_schema, "");
                 Transformed::yes(Expr::Column(Column::new(
                     Some(TableReference::bare(relation.table())),
-                    quoted(&name),
+                    &name,
                 )))
             }
         } else {
