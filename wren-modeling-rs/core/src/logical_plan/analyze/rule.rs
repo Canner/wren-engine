@@ -292,7 +292,6 @@ impl ModelAnalyzeRule {
                 if let Some(relation) = relation {
                     Ok(self.rewrite_column_qualifier(relation, name, alias_model))
                 } else {
-                    // TODO: catalog and schema should be case sensitive
                     let catalog_schema = format!(
                         "{}.{}.",
                         self.analyzed_wren_mdl.wren_mdl().catalog(),
@@ -338,7 +337,6 @@ impl ModelAnalyzeRule {
                 Transformed::yes(col(format!("{}.{}", alias_model, quoted(&name))))
             } else {
                 // handle Wren View
-                // TODO: catalog and schema should be case sensitive
                 let catalog_schema = format!(
                     "{}.{}.",
                     self.analyzed_wren_mdl.wren_mdl().catalog(),
