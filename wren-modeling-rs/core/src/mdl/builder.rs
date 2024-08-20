@@ -431,6 +431,38 @@ mod test {
     }
 
     #[test]
+    fn test_join_type_case_insensitive() {
+        let case = ["one_to_one", "ONE_TO_ONE"];
+        let expected = JoinType::OneToOne;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["one_to_many", "ONE_TO_MANY"];
+        let expected = JoinType::OneToMany;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["many_to_one", "MANY_TO_ONE"];
+        let expected = JoinType::ManyToOne;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["many_to_many", "MANY_TO_MANY"];
+        let expected = JoinType::ManyToMany;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+    }
+
+    fn assert_serde(json_str: &str, expected: JoinType) {
+        let actual: JoinType = serde_json::from_str(json_str).unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
     fn test_metric_roundtrip() {
         let model = MetricBuilder::new("test")
             .dimension(ColumnBuilder::new("dim", "integer").build())

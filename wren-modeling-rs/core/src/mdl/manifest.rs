@@ -135,13 +135,16 @@ pub struct Relationship {
     pub properties: BTreeMap<String, String>,
 }
 
-// handle case insensitive
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum JoinType {
+    #[serde(alias = "one_to_one")]
     OneToOne,
+    #[serde(alias = "one_to_many")]
     OneToMany,
+    #[serde(alias = "many_to_one")]
     ManyToOne,
+    #[serde(alias = "many_to_many")]
     ManyToMany,
 }
 
