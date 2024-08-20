@@ -17,8 +17,8 @@ use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
-use parking_lot::RwLock;
 use datafusion::sql::TableReference;
+use parking_lot::RwLock;
 
 /// Apply Wren Rules to the context for sql generation.
 /// TODO: There're some issue for unparsing the datafusion optimized plans.
