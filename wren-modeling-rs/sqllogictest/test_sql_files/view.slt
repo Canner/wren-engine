@@ -2,6 +2,12 @@ statement ok
 SELECT * FROM wrenai.public."Customer_view"
 
 statement ok
+SELECT * FROM public."Customer_view"
+
+statement ok
+SELECT * FROM "Customer_view"
+
+statement ok
 SELECT * FROM wrenai.public."Revenue_orders"
 
 statement ok

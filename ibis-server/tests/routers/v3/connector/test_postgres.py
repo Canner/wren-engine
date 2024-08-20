@@ -322,18 +322,17 @@ def test_validate_with_unknown_rule(postgres: PostgresContainer):
     )
 
 
-# TODO: enable this test after supporting the default catalog and default schema
-# def test_validate_rule_column_is_valid(postgres: PostgresContainer):
-#     connection_info = to_connection_info(postgres)
-#     response = client.post(
-#         url=f"{base_url}/validate/column_is_valid",
-#         json={
-#             "connectionInfo": connection_info,
-#             "manifestStr": manifest_str,
-#             "parameters": {"modelName": "orders", "columnName": "orderkey"},
-#         },
-#     )
-#     assert response.status_code == 204
+def test_validate_rule_column_is_valid(postgres: PostgresContainer):
+    connection_info = to_connection_info(postgres)
+    response = client.post(
+        url=f"{base_url}/validate/column_is_valid",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "parameters": {"modelName": "orders", "columnName": "orderkey"},
+        },
+    )
+    assert response.status_code == 204
 
 
 def test_validate_rule_column_is_valid_with_invalid_parameters(

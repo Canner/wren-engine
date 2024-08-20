@@ -42,6 +42,10 @@ impl ModelAnalyzeRule {
         }
     }
 
+    fn session_state(&self) -> SessionStateRef {
+        Arc::clone(&self.session_state)
+    }
+
     fn analyze_model_internal(
         &self,
         plan: LogicalPlan,
@@ -88,6 +92,7 @@ impl ModelAnalyzeRule {
                 if belong_to_mdl(
                     &self.analyzed_wren_mdl.wren_mdl(),
                     table_scan.table_name.clone(),
+                    self.session_state(),
                 ) {
                     let table_name = table_scan.table_name.table();
                     // transform ViewTable to a subquery plan
@@ -327,7 +332,11 @@ impl ModelAnalyzeRule {
         name: String,
         alias_model: &str,
     ) -> Transformed<Expr> {
-        if belong_to_mdl(&self.analyzed_wren_mdl.wren_mdl(), relation.clone()) {
+        if belong_to_mdl(
+            &self.analyzed_wren_mdl.wren_mdl(),
+            relation.clone(),
+            self.session_state(),
+        ) {
             if self
                 .analyzed_wren_mdl
                 .wren_mdl()
@@ -384,14 +393,21 @@ impl ModelAnalyzeRule {
     }
 }
 
-fn belong_to_mdl(mdl: &WrenMDL, table_reference: TableReference) -> bool {
-    let catalog_match = table_reference
+fn belong_to_mdl(
+    mdl: &WrenMDL,
+    table_reference: TableReference,
+    session: SessionStateRef,
+) -> bool {
+    let session = session.read();
+    let catalog = table_reference
         .catalog()
-        .map_or(false, |c| c == mdl.catalog());
+        .unwrap_or(&session.config_options().catalog.default_catalog);
+    let catalog_match = catalog == mdl.catalog();
 
-    let schema_match = table_reference
+    let schema = table_reference
         .schema()
-        .map_or(false, |s| s == mdl.schema());
+        .unwrap_or(&session.config_options().catalog.default_schema);
+    let schema_match = schema == mdl.schema();
 
     catalog_match && schema_match
 }
@@ -402,7 +418,11 @@ fn analyze_table_scan(
     table_scan: TableScan,
     required_field: Vec<Expr>,
 ) -> Result<LogicalPlan> {
-    if belong_to_mdl(&analyzed_wren_mdl.wren_mdl(), table_scan.table_name.clone()) {
+    if belong_to_mdl(
+        &analyzed_wren_mdl.wren_mdl(),
+        table_scan.table_name.clone(),
+        Arc::clone(&session_state_ref),
+    ) {
         let table_name = table_scan.table_name.table();
         if let Some(model) = analyzed_wren_mdl.wren_mdl.get_model(table_name) {
             Ok(LogicalPlan::Extension(Extension {

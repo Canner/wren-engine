@@ -2,6 +2,12 @@ statement ok
 SELECT * from wrenai.public."Orders"
 
 statement ok
+SELECT * from public."Orders"
+
+statement ok
+SELECT * from "Orders"
+
+statement ok
 select cast("Freight_value" as int) + cast("Price" as int) from wrenai.public."Order_items"
 
 statement ok

@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
@@ -17,6 +18,7 @@ use datafusion::logical_expr::Expr;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
+use parking_lot::RwLock;
 
 /// Apply Wren Rules to the context for sql generation.
 /// TODO: There're some issue for unparsing the datafusion optimized plans.
@@ -27,19 +29,31 @@ pub async fn create_ctx_with_mdl(
 ) -> Result<SessionContext> {
     let config = ctx
         .copied_config()
-        .with_create_default_catalog_and_schema(false);
-    let new_state = SessionStateBuilder::new_from_existing(ctx.state())
-        .with_analyzer_rules(vec![
-            Arc::new(ModelAnalyzeRule::new(
-                Arc::clone(&analyzed_mdl),
-                ctx.state_ref(),
-            )),
-            Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
-        ])
-        // TODO: there're some issues for the optimize rule.
-        .with_optimizer_rules(vec![])
-        .with_config(config)
-        .build();
+        .with_create_default_catalog_and_schema(false)
+        .with_default_catalog_and_schema(
+            analyzed_mdl.wren_mdl.catalog(),
+            analyzed_mdl.wren_mdl.schema(),
+        );
+    let reset_default_catalog_schema = Arc::new(RwLock::new(
+        SessionStateBuilder::new_from_existing(ctx.state())
+            .with_config(config.clone())
+            .build(),
+    ));
+
+    let new_state = SessionStateBuilder::new_from_existing(
+        reset_default_catalog_schema.clone().read().deref().clone(),
+    )
+    .with_analyzer_rules(vec![
+        Arc::new(ModelAnalyzeRule::new(
+            Arc::clone(&analyzed_mdl),
+            reset_default_catalog_schema,
+        )),
+        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
+    ])
+    // TODO: there're some issues for the optimize rule.
+    .with_optimizer_rules(vec![])
+    .with_config(config)
+    .build();
     let ctx = SessionContext::new_with_state(new_state);
     register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
     Ok(ctx)

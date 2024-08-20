@@ -319,6 +319,7 @@ mod test {
                 "select orderkey, sum(totalprice) from test.test.orders group by 1",
                 "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
                 "select totalcost from test.test.profile",
+                "select totalcost from profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];
