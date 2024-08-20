@@ -3,6 +3,7 @@
 use crate::mdl::manifest::{
     Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// A builder for creating a Manifest
@@ -81,7 +82,7 @@ impl ModelBuilder {
                 primary_key: None,
                 cached: false,
                 refresh_time: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -124,7 +125,7 @@ impl ModelBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.model
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -147,7 +148,7 @@ impl ColumnBuilder {
                 is_calculated: false,
                 no_null: false,
                 expression: None,
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -183,7 +184,7 @@ impl ColumnBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.column
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -204,7 +205,7 @@ impl RelationshipBuilder {
                 models: vec![],
                 join_type: JoinType::OneToOne,
                 condition: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -227,7 +228,7 @@ impl RelationshipBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.relationship
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -251,7 +252,7 @@ impl MetricBuilder {
                 time_grain: vec![],
                 cached: false,
                 refresh_time: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -284,7 +285,7 @@ impl MetricBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.metric
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -333,7 +334,7 @@ impl ViewBuilder {
             view: View {
                 name: name.to_string(),
                 statement: "".to_string(),
-                properties: vec![],
+                properties: BTreeMap::default(),
             },
         }
     }
@@ -346,7 +347,7 @@ impl ViewBuilder {
     pub fn property(mut self, key: &str, value: &str) -> Self {
         self.view
             .properties
-            .push((key.to_string(), value.to_string()));
+            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -427,6 +428,38 @@ mod test {
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: Arc<Relationship> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_join_type_case_insensitive() {
+        let case = ["one_to_one", "ONE_TO_ONE"];
+        let expected = JoinType::OneToOne;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["one_to_many", "ONE_TO_MANY"];
+        let expected = JoinType::OneToMany;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["many_to_one", "MANY_TO_ONE"];
+        let expected = JoinType::ManyToOne;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+
+        let case = ["many_to_many", "MANY_TO_MANY"];
+        let expected = JoinType::ManyToMany;
+        for case in case.iter() {
+            assert_serde(&format!("\"{}\"", case), expected);
+        }
+    }
+
+    fn assert_serde(json_str: &str, expected: JoinType) {
+        let actual: JoinType = serde_json::from_str(json_str).unwrap();
+        assert_eq!(actual, expected);
     }
 
     #[test]

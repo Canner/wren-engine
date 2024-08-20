@@ -1,23 +1,22 @@
 statement ok
-SELECT * FROM wrenai.public.customer_view
+SELECT * FROM wrenai.public."Customer_view"
 
 statement ok
-SELECT * FROM public.customer_view
+SELECT * FROM public."Customer_view"
 
 statement ok
-SELECT * FROM customer_view
-
-
-statement ok
-SELECT * FROM wrenai.public.revenue_orders
+SELECT * FROM "Customer_view"
 
 statement ok
-SELECT * FROM wrenai.public.revenue_orders_alias
+SELECT * FROM wrenai.public."Revenue_orders"
 
 statement ok
-SELECT totalprice FROM wrenai.public.revenue_orders_alias
+SELECT * FROM wrenai.public."Revenue_orders_alias"
+
+statement ok
+SELECT "Totalprice" FROM wrenai.public."Revenue_orders_alias"
 
 query TR
-SELECT order_id, totalprice FROM wrenai.public.revenue_orders_alias where order_id = '76754c0e642c8f99a8c3fcb8a14ac700'
+SELECT "Order_id", "Totalprice" FROM wrenai.public."Revenue_orders_alias" where "Order_id" = '76754c0e642c8f99a8c3fcb8a14ac700'
 ----
 76754c0e642c8f99a8c3fcb8a14ac700 287.4

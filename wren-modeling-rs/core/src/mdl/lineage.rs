@@ -11,7 +11,7 @@ use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::{utils, WrenMDL};
 
 use super::manifest::{JoinType, Relationship};
-use super::utils::{collect_identifiers, to_expr_queue};
+use super::utils::{collect_identifiers, quoted, to_expr_queue};
 use crate::mdl::Dataset;
 
 pub struct Lineage {
@@ -160,9 +160,14 @@ impl Lineage {
                                                 .insert(Column::from_qualified_name(
                                                     format!(
                                                         "{}.{}.{}",
-                                                        mdl.catalog(),
-                                                        mdl.schema(),
-                                                        ident.flat_name()
+                                                        quoted(mdl.catalog()),
+                                                        quoted(mdl.schema()),
+                                                        ident
+                                                            .flat_name()
+                                                            .split(".")
+                                                            .map(quoted)
+                                                            .collect::<Vec<String>>()
+                                                            .join(".")
                                                     ),
                                                 ));
                                         });
@@ -208,7 +213,7 @@ impl Lineage {
                                 }
                                 let value = Column::new(
                                     Some(relation_ref.clone()),
-                                    source_column_ref.column.name().to_string(),
+                                    source_column_ref.column.name(),
                                 );
                                 if source_column_ref.column.is_calculated {
                                     pending_fields.push((value.clone(), column));
@@ -417,6 +422,65 @@ mod test {
             relation: Some(TableReference::full("wrenai", "public", "a")),
             name: "b.c.c1".to_string()
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn test_case_sensitive() -> Result<()> {
+        let manifest = ManifestBuilder::new()
+            .model(
+                model_a_upper_case()
+                    .column(
+                        ColumnBuilder::new("A1_concat_native", "varchar")
+                            .expression("A1 || A2")
+                            .build(),
+                    )
+                    .build(),
+            )
+            .model(
+                model_b()
+                    .column(ColumnBuilder::new_relationship("A", "A", "a_b").build())
+                    .column(
+                        ColumnBuilder::new_calculated("a_id", "varchar")
+                            .expression(r#""A"."Id""#)
+                            .build(),
+                    )
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("a_b")
+                    .model("A")
+                    .model("b")
+                    .join_type(JoinType::OneToOne)
+                    .condition(r#""A"."A1" = b.a1"#)
+                    .build(),
+            )
+            .build();
+        let wren_mdl = WrenMDL::new(manifest);
+        let lineage = Lineage::new(&wren_mdl)?;
+        assert_eq!(lineage.source_columns_map.len(), 7);
+        assert!(lineage
+            .source_columns_map
+            .contains_key(&Column::from_qualified_name(r#"wrenai.public."A"."A1""#)));
+
+        assert!(lineage
+            .source_columns_map
+            .contains_key(&Column::from_qualified_name(
+                r#"wrenai.public."A"."A1_concat_native""#
+            )));
+
+        let a1_concat_c1 = lineage
+            .required_fields_map
+            .get(&Column::from_qualified_name("wrenai.public.b.a_id"))
+            .unwrap();
+        let expected: HashSet<Column> = HashSet::from([
+            Column::from_qualified_name(r#"wrenai.public."A"."A1""#),
+            Column::from_qualified_name(r#"wrenai.public."A"."Id""#),
+            Column::from_qualified_name("wrenai.public.b.a1"),
+        ]);
+        assert_eq!(a1_concat_c1.len(), 3);
+        assert_eq!(a1_concat_c1, &expected);
+
         Ok(())
     }
 
@@ -654,6 +718,14 @@ mod test {
             .column(ColumnBuilder::new("id", "varchar").build())
             .column(ColumnBuilder::new("a1", "varchar").build())
             .primary_key("id")
+    }
+
+    fn model_a_upper_case() -> ModelBuilder {
+        ModelBuilder::new("A")
+            .table_reference("a")
+            .column(ColumnBuilder::new("Id", "varchar").build())
+            .column(ColumnBuilder::new("A1", "varchar").build())
+            .primary_key("Id")
     }
 
     fn model_b() -> ModelBuilder {

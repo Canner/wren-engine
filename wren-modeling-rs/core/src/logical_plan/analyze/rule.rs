@@ -20,6 +20,7 @@ use crate::logical_plan::analyze::plan::{
 };
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
+use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
 
 /// [ModelAnalyzeRule] responsible for analyzing the model plan node. Turn TableScan from a model to a ModelPlanNode.
@@ -97,7 +98,7 @@ impl ModelAnalyzeRule {
                     // transform ViewTable to a subquery plan
                     if let Some(logical_plan) = table_scan.source.get_logical_plan() {
                         let subquery = LogicalPlanBuilder::from(logical_plan.clone())
-                            .alias(table_name)?
+                            .alias(quoted(table_name))?
                             .build()?;
                         return Ok(Transformed::yes(subquery));
                     }
@@ -116,7 +117,7 @@ impl ModelAnalyzeRule {
                             )?),
                         });
                         let subquery = LogicalPlanBuilder::from(model_plan)
-                            .alias(model.name())?
+                            .alias(quoted(model.name()))?
                             .build()?;
                         used_columns.borrow_mut().clear();
                         Ok(Transformed::yes(subquery))
@@ -302,7 +303,8 @@ impl ModelAnalyzeRule {
                         self.analyzed_wren_mdl.wren_mdl().schema()
                     );
                     let name = name.replace(&catalog_schema, "");
-                    Ok(Transformed::yes(ident(name)))
+                    let ident = ident(&name);
+                    Ok(Transformed::yes(ident))
                 }
             }
             Expr::Alias(Alias {
@@ -341,7 +343,7 @@ impl ModelAnalyzeRule {
                 .get_model(relation.table())
                 .is_some()
             {
-                Transformed::yes(col(format!("{}.{}", alias_model, name)))
+                Transformed::yes(col(format!("{}.{}", alias_model, quoted(&name))))
             } else {
                 // handle Wren View
                 let catalog_schema = format!(
@@ -352,7 +354,7 @@ impl ModelAnalyzeRule {
                 let name = name.replace(&catalog_schema, "");
                 Transformed::yes(Expr::Column(Column::new(
                     Some(TableReference::bare(relation.table())),
-                    name,
+                    &name,
                 )))
             }
         } else {
@@ -371,7 +373,7 @@ impl ModelAnalyzeRule {
                     unwrap_arc(Arc::clone(&input))
                 {
                     if node.as_any().downcast_ref::<ModelPlanNode>().is_some() {
-                        Some(alias.to_string())
+                        Some(alias.to_quoted_string())
                     } else {
                         None
                     }
@@ -576,7 +578,7 @@ impl ModelGenerationRule {
                         return Ok(Transformed::no(table_scan));
                     }
                     let result = LogicalPlanBuilder::from(table_scan)
-                        .alias(model.name.clone())?
+                        .alias(quoted(model.name()))?
                         .build()?;
                     Ok(Transformed::yes(result))
                 } else if let Some(calculation_plan) = extension
@@ -606,7 +608,7 @@ impl ModelGenerationRule {
                             }
                         };
                         let alias = LogicalPlanBuilder::from(result)
-                            .alias(calculation_plan.calculation.column.name())?
+                            .alias(quoted(calculation_plan.calculation.column.name()))?
                             .build()?;
                         Ok(Transformed::yes(alias))
                     } else {
@@ -622,7 +624,7 @@ impl ModelGenerationRule {
                     });
 
                     let subquery = LogicalPlanBuilder::from(plan)
-                        .alias(partial_model.model_node.plan_name())?
+                        .alias(quoted(partial_model.model_node.plan_name()))?
                         .build()?;
                     let source_plan = self.generate_model_internal(subquery)?.data;
                     let projection: Vec<_> = partial_model
@@ -633,7 +635,7 @@ impl ModelGenerationRule {
                         .collect();
                     let alias = LogicalPlanBuilder::from(source_plan)
                         .project(projection)?
-                        .alias(partial_model.model_node.plan_name.clone())?
+                        .alias(quoted(&partial_model.model_node.plan_name))?
                         .build()?;
                     Ok(Transformed::yes(alias))
                 } else {

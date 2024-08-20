@@ -25,7 +25,7 @@ use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::{JoinType, Model};
 use crate::mdl::utils::{
     create_remote_expr_for_model, create_wren_calculated_field_expr,
-    create_wren_expr_for_model, is_dag,
+    create_wren_expr_for_model, is_dag, quoted,
 };
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference, SessionStateRef};
@@ -216,14 +216,14 @@ impl ModelPlanNodeBuilder {
                     .insert(OrdExpr::new(expr_plan.clone()));
                 let expr_plan = Expr::Column(Column::from_qualified_name(format!(
                     "{}.{}",
-                    model_ref.table(),
-                    column.name()
+                    quoted(model_ref.table()),
+                    quoted(column.name()),
                 )));
                 self.required_exprs_buffer
                     .insert(OrdExpr::new(expr_plan.clone()));
             }
             self.fields.push_front((
-                Some(TableReference::bare(model.name())),
+                Some(TableReference::bare(quoted(model.name()))),
                 Arc::new(Field::new(
                     column.name(),
                     map_data_type(&column.r#type)?,
@@ -305,10 +305,10 @@ impl ModelPlanNodeBuilder {
                 JoinType::OneToOne,
                 format!(
                     "{}.{} = {}.{}",
-                    model_ref.table(),
-                    join_key,
-                    target_ref.table(),
-                    join_key,
+                    quoted(model_ref.table()),
+                    quoted(join_key),
+                    quoted(target_ref.table()),
+                    quoted(join_key),
                 ),
                 Box::new(relation_chain),
             );
@@ -368,8 +368,8 @@ impl ModelPlanNodeBuilder {
         // The calculation column is provided by the CalculationPlanNode.
         let _ = &self.required_exprs_buffer.insert(OrdExpr::new(col(format!(
             "{}.{}",
-            column.name(),
-            column.name()
+            quoted(column.name()),
+            quoted(column.name()),
         ))));
 
         let mut partial_model_required_fields = HashMap::new();
@@ -565,7 +565,7 @@ fn get_remote_column_exp(
         )?
     } else {
         create_remote_expr_for_model(
-            &column.name,
+            quoted(&column.name).as_str(),
             model,
             analyzed_wren_mdl,
             session_state_ref,
@@ -714,7 +714,7 @@ impl ModelSourceNode {
                         continue;
                     }
                     fields_buffer.insert((
-                        Some(TableReference::bare(model.name())),
+                        Some(TableReference::bare(quoted(model.name()))),
                         Arc::new(Field::new(
                             column.name(),
                             map_data_type(&column.r#type)?,
@@ -754,7 +754,7 @@ impl ModelSourceNode {
                 }
 
                 fields_buffer.insert((
-                    Some(TableReference::bare(model.name())),
+                    Some(TableReference::bare(quoted(model.name()))),
                     Arc::new(Field::new(
                         column.name(),
                         map_data_type(&column.r#type)?,
@@ -855,7 +855,7 @@ impl CalculationPlanNode {
             )),
         ]
         .into_iter()
-        .map(|f| (Some(TableReference::bare(model.name())), f))
+        .map(|f| (Some(TableReference::bare(quoted(model.name()))), f))
         .collect();
         let dimensions = vec![create_wren_expr_for_model(
             &pk_column.name,
