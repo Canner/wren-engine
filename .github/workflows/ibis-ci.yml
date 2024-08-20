@@ -54,13 +54,16 @@ jobs:
             ~/.cargo/git/db/
             wren-modeling-py/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('wren-modeling-py/Cargo.lock') }}
-      - name: Install MS ODBC SQL driver
+      - name: Install FreeTDS to be a ODBC driver
         run: |
-          sudo apt-get update
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
-          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-          sudo apt-get update
-          sudo ACCEPT_EULA=Y apt-get -y install unixodbc-dev msodbcsql18
+          sudo apt-get update -y && sudo apt-get install -y unixodbc-dev freetds-dev tdsodbc
+          cat << EOF > free.tds.ini
+          [FreeTDS]
+          Description = FreeTDS driver
+          Driver = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+          Setup = /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+          EOF
+          sudo odbcinst -i -d -f free.tds.ini
       - name: Install dependencies
         run: just install
       - name: Run tests

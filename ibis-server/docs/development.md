@@ -59,21 +59,15 @@ Please see [How to Add a New Data Source](how-to-add-data-source.md) for more in
 
 
 ## Troubleshooting
-### No driver for MS SQL Server
-If you want to run tests related to MS SQL Server, you may need to install the `Microsoft ODBC 18 driver`. \
-You can follow the instructions to install the driver:
-- [Microsoft ODBC driver for SQL Server (Linux)](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server).
-- [Microsoft ODBC driver for SQL Server (macOS)](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/install-microsoft-odbc-driver-sql-server-macos).
-- [Microsoft ODBC driver for SQL Server (Windows)](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server).
-
-### [ODBC Driver 18 for SQL Server]SSL Provider: [error:1416F086:SSL routines:tls_process_server_certificate:certificate verify failed:self signed certificate]
-If you encounter this error, you can add the `TrustServerCertificate` parameter to the connection string.
-```json
-{
-  "connectionInfo": {
-    "kwargs": {
-      "TrustServerCertificate": "YES"
-    }
-  }
-}
+### MS SQL Server Tests
+If you're having trouble running tests related to MS SQL Server, you may need to install the appropriate driver. For Linux or macOS, we recommend installing the `unixodbc` and `freetds` packages.
+After installation, run `odbcinst -j` to check the path of the `odbcinst.ini` file. Then, find the path of `libtdsodbc.so` in freetds and add the following content to the odbcinst.ini file:
+```ini
+[FreeTDS]
+Description = FreeTDS driver
+Driver = /opt/homebrew/Cellar/freetds/1.4.17/lib/libtdsodbc.so
+Setup = /opt/homebrew/Cellar/freetds/1.4.17/lib/libtdsodbc.so
+FileUsage = 1
 ```
+Adjust the paths as necessary for your system.
+
