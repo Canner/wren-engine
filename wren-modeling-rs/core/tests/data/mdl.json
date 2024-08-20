@@ -123,13 +123,13 @@
     {
       "name": "CustomerOrders",
       "models": ["customer", "orders"],
-      "joinType": "one_to_many",
+      "joinType": "ONE_TO_MANY",
       "condition": "customer.custkey = orders.custkey"
     },
     {
       "name" : "CustomerProfile",
       "models": ["customer", "profile"],
-      "joinType": "one_to_one",
+      "joinType": "ONE_TO_ONE",
       "condition": "customer.custkey = profile.custkey"
     }
   ],
