@@ -430,8 +430,7 @@ mod test {
     }
 
     #[test]
-    fn test_join_type_case_insensitive()
-    {
+    fn test_join_type_case_insensitive() {
         let case = ["one_to_one", "ONE_TO_ONE"];
         let expected = JoinType::OneToOne;
         for case in case.iter() {
