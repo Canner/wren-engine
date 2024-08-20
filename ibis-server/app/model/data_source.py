@@ -110,7 +110,6 @@ class DataSourceExtension(Enum):
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
             driver=info.driver,
-            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
