@@ -206,3 +206,9 @@ pub struct View {
     #[serde(default)]
     pub properties: BTreeMap<String, String>,
 }
+
+impl View {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}

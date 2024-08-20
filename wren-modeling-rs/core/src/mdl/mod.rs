@@ -190,6 +190,8 @@ pub fn transform_sql(analyzed_mdl: Arc<AnalyzedWrenMDL>, sql: &str) -> Result<St
 }
 
 /// Transform the SQL based on the MDL with the SessionContext
+/// Wren engine will normalize the SQL to the lower case to solve the case sensitive
+/// issue for the Wren view
 pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
@@ -211,7 +213,12 @@ pub async fn transform_sql_with_ctx(
     match plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
-            let replaced = sql.to_string().replace(&catalog_schema, "");
+            let replaced = sql
+                .to_string()
+                .replace(&catalog_schema, "")
+                // TODO: There're some issue about datafusion unparsing the expr column name with different case
+                // The workaround is to normalize the SQL to the lower case to support Wren View.
+                .to_lowercase();
             info!("wren-core planned SQL: {}", replaced);
             Ok(replaced)
         }
@@ -269,6 +276,7 @@ mod test {
     use datafusion::prelude::SessionContext;
     use datafusion::sql::unparser::plan_to_sql;
 
+    use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, AnalyzedWrenMDL};
 
@@ -351,6 +359,36 @@ mod test {
         )
         .await?;
         assert_sql_valid_executable(&actual).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_uppercase_catalog_schema() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("customer", customer())?;
+        let manifest = ManifestBuilder::new()
+            .catalog("CTest")
+            .schema("STest")
+            .model(
+                ModelBuilder::new("Customer")
+                    .table_reference("datafusion.public.customer")
+                    .column(ColumnBuilder::new("Custkey", "int").build())
+                    .column(ColumnBuilder::new("Name", "string").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = r#"select * from "CTest"."STest"."Customer""#;
+        let actual = mdl::transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            sql,
+        )
+        .await?;
+        assert_eq!(actual,
+                   "select customer.custkey, customer.\"name\" from (select customer.custkey, customer.\"name\" from \
+                   (select datafusion.public.customer.custkey as custkey, datafusion.public.customer.\"name\" as \"name\" \
+                   from datafusion.public.customer) as customer) as customer");
         Ok(())
     }
 

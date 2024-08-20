@@ -11,6 +11,7 @@ use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 
 use crate::mdl::lineage::DatasetLink;
+use crate::mdl::utils::quoted;
 use crate::mdl::Dataset;
 use crate::mdl::{
     manifest::{Column, Model},
@@ -138,7 +139,13 @@ pub fn format_qualified_name(
     dataset: &str,
     column: &str,
 ) -> String {
-    format!("{}.{}.{}.{}", catalog, schema, dataset, column)
+    format!(
+        "{}.{}.{}.{}",
+        quoted(catalog),
+        quoted(schema),
+        quoted(dataset),
+        quoted(column)
+    )
 }
 
 pub fn from_qualified_name(

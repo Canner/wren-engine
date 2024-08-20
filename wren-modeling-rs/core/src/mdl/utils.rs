@@ -29,16 +29,24 @@ where
     g.is_directed() && !is_cyclic_directed(g)
 }
 
+/// Collect all identifiers in the expression. The output [Column] is unqualified.
+/// Because the number of the CompoundIdentifier elements length would be greater than 3 in Wren Core,
+/// we use the unqualified [Column] to represent the [CompoundIdentifier] in the expression.
+///
+/// For example, a [CompoundIdentifier] with 3 elements: `orders.customer.name` would be represented as `"orders.customer.name"`.
 pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     let wrapped = format!("select {}", expr);
-    let parsed = Parser::parse_sql(&GenericDialect {}, &wrapped)?;
+    let parsed = match Parser::parse_sql(&GenericDialect {}, &wrapped) {
+        Ok(v) => v,
+        Err(e) => return plan_err!("Error parsing SQL: {}", e),
+    };
     let statement = parsed[0].clone();
     let mut visited: BTreeSet<Column> = BTreeSet::new();
 
     visit_expressions(&statement, |expr| {
         match expr {
             Identifier(id) => {
-                visited.insert(Column::from(id.value.clone()));
+                visited.insert(Column::from(quoted(&id.value)));
             }
             CompoundIdentifier(ids) => {
                 let name = ids
@@ -132,10 +140,8 @@ pub(crate) fn create_remote_expr_for_model(
         Arc::clone(&session_state),
     )?;
     let session_state = session_state.read();
-    session_state.create_logical_expr(
-        qualified_expr(expr, &schema, &session_state)?.as_str(),
-        &schema,
-    )
+    let input_expr = qualified_expr(expr, &schema, &session_state)?;
+    session_state.create_logical_expr(input_expr.as_str(), &schema)
 }
 
 /// Create the Logical Expr for the remote column.
@@ -168,15 +174,28 @@ fn qualified_expr(
             if let Ok((Some(qualifier), _)) =
                 schema.qualified_field_with_unqualified_name(&id.value)
             {
-                let mut parts: Vec<_> =
-                    qualifier.to_vec().into_iter().map(Ident::new).collect();
-                parts.push(id.clone());
+                let mut parts: Vec<_> = qualifier
+                    .to_vec()
+                    .into_iter()
+                    .map(|q| quoted_ident(&q))
+                    .collect();
+                parts.push(quoted_ident(id.value.as_str()));
                 *e = CompoundIdentifier(parts);
             }
         }
         ControlFlow::<()>::Continue(())
     });
     Ok(expr.to_string())
+}
+
+#[inline]
+pub fn quoted_ident(s: &str) -> Ident {
+    Ident::with_quote('"', s)
+}
+
+#[inline]
+pub fn quoted(s: &str) -> String {
+    format!("\"{}\"", s)
 }
 
 #[cfg(test)]
@@ -261,6 +280,11 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert!(result.contains(&super::Column::new_unqualified("customers.state")));
         assert!(result.contains(&super::Column::new_unqualified("order_id")));
+
+        let expr = r#""City" || ' ' || "State""#;
+        let result = super::collect_identifiers(expr)?;
+        assert!(result.contains(&super::Column::new_unqualified("City")));
+        assert!(result.contains(&super::Column::new_unqualified("State")));
         Ok(())
     }
 
