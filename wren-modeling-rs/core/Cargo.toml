@@ -20,6 +20,7 @@ log = { workspace = true }
 parking_lot = "0.12.3"
 petgraph = "0.6.5"
 petgraph-evcxr = "*"
+regex = "1.10.5"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }

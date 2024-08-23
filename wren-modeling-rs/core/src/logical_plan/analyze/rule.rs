@@ -544,9 +544,15 @@ impl ModelGenerationRule {
                         ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
                     )?;
                     let result = match source_plan {
-                        Some(plan) => LogicalPlanBuilder::from(plan)
-                            .project(model_plan.required_exprs.clone())?
-                            .build()?,
+                        Some(plan) => {
+                            if model_plan.required_exprs.is_empty() {
+                                plan
+                            } else {
+                                LogicalPlanBuilder::from(plan)
+                                    .project(model_plan.required_exprs.clone())?
+                                    .build()?
+                            }
+                        }
                         _ => {
                             return plan_err!("Failed to generate source plan");
                         }

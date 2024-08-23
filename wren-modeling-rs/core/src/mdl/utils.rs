@@ -63,6 +63,18 @@ pub fn collect_identifiers(expr: &str) -> Result<BTreeSet<Column>> {
     Ok(visited)
 }
 
+/// Provide a qualified name from a [Column] name.
+///
+/// Example: if a column name is `"orders.customer.name"`, the qualified name would be `"orders"."customer"."name"`.
+pub fn qualify_name_from_column_name(column: &Column) -> String {
+    column
+        .flat_name()
+        .split(".")
+        .map(quoted)
+        .collect::<Vec<String>>()
+        .join(".")
+}
+
 /// Create the Logical Expr for the calculated field
 pub fn create_wren_calculated_field_expr(
     column_rf: ColumnReference,
