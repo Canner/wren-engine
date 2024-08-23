@@ -9,7 +9,7 @@ use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::logical_plan::tree_node::unwrap_arc;
 use datafusion::logical_expr::{
     col, ident, utils, Aggregate, Distinct, DistinctOn, Extension, Filter, Projection,
-    SubqueryAlias, UserDefinedLogicalNodeCore, Window,
+    Subquery, SubqueryAlias, UserDefinedLogicalNodeCore, Window,
 };
 use datafusion::logical_expr::{Expr, Join, LogicalPlan, LogicalPlanBuilder, TableScan};
 use datafusion::optimizer::analyzer::AnalyzerRule;
@@ -189,6 +189,18 @@ impl ModelAnalyzeRule {
                 Ok(Transformed::yes(LogicalPlan::SubqueryAlias(
                     SubqueryAlias::try_new(Arc::new(subquery), alias)?,
                 )))
+            }
+            LogicalPlan::Subquery(Subquery {
+                subquery,
+                outer_ref_columns,
+            }) => {
+                let subquery = self
+                    .replace_model_prefix_and_refresh_schema(unwrap_arc(subquery))?
+                    .data;
+                Ok(Transformed::yes(LogicalPlan::Subquery(Subquery {
+                    subquery: Arc::new(subquery),
+                    outer_ref_columns,
+                })))
             }
             LogicalPlan::Distinct(Distinct::On(DistinctOn {
                 on_expr,
@@ -445,11 +457,19 @@ fn analyze_table_scan(
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         let used_columns = RefCell::new(HashSet::new());
-        plan.transform_down_with_subqueries(
-            &|plan| -> Result<Transformed<LogicalPlan>> {
-                self.analyze_model_internal(plan, &used_columns)
-            },
-        )?
+        // replace the top level plan node with ModelPlanNode first
+        plan.transform_down(&|plan| -> Result<Transformed<LogicalPlan>> {
+            self.analyze_model_internal(plan, &used_columns)
+        })?
+        // After planned the top-level, replace the ModelPlanNode in the subquery
+        .map_data(|plan| {
+            plan.transform_down_with_subqueries(
+                &|plan| -> Result<Transformed<LogicalPlan>> {
+                    self.analyze_model_internal(plan, &used_columns)
+                },
+            )
+            .data()
+        })?
         .map_data(|plan| {
             plan.transform_up_with_subqueries(
                 &|plan| -> Result<Transformed<LogicalPlan>> {
