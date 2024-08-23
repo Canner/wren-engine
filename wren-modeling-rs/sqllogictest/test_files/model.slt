@@ -1,0 +1,43 @@
+statement ok
+SELECT * from wrenai.public."Orders"
+
+statement ok
+SELECT * from public."Orders"
+
+statement ok
+SELECT * from "Orders"
+
+statement ok
+select cast("Freight_value" as int) + cast("Price" as int) from wrenai.public."Order_items"
+
+statement ok
+select "Product_id" from wrenai.public."Order_items" where cast("Freight_value" as double) > 10.0
+
+statement ok
+select "Product_id" from wrenai.public."Order_items" where "Freight_value" > 10.0
+
+statement ok
+select "Product_id", min("Price") from wrenai.public."Order_items" group by "Product_id"
+
+statement ok
+select "Product_id", min("Price") from wrenai.public."Order_items" where "Freight_value" > 10.0 group by "Product_id"
+
+statement ok
+select * from wrenai.public."Order_items";
+
+statement ok
+select * from wrenai.public."Customers";
+
+statement ok
+select count(*) from wrenai.public."Order_items";
+
+# check the count of order_items won't be increased by the relationship calculation
+query B
+select cnt1 = cnt2 from (select count(*) as cnt1 from (select "Customer_state" from wrenai.public."Order_items")), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
+----
+true
+
+query B
+select actual = expected from (select "Totalprice" as actual from wrenai.public."Orders" where "Order_id" = '76754c0e642c8f99a8c3fcb8a14ac700'), (select sum(price) as expected from datafusion.public.order_items where order_id = '76754c0e642c8f99a8c3fcb8a14ac700') limit 1;
+----
+true
