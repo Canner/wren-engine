@@ -208,17 +208,11 @@ pub async fn transform_sql_with_ctx(
     debug!("wren-core original plan:\n {plan:?}");
     let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed:?}");
-
     // show the planned sql
     match plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
-            let replaced = sql
-                .to_string()
-                .replace(&catalog_schema, "")
-                // TODO: There're some issue about datafusion unparsing the expr column name with different case
-                // The workaround is to normalize the SQL to the lower case to support Wren View.
-                .to_lowercase();
+            let replaced = sql.to_string().replace(&catalog_schema, "");
             info!("wren-core planned SQL: {}", replaced);
             Ok(replaced)
         }
