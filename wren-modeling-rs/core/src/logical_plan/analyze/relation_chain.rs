@@ -7,7 +7,7 @@ use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
-use crate::mdl::utils::quoted;
+use crate::mdl::utils::{qualify_name_from_column_name, quoted};
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 use datafusion::common::TableReference;
@@ -135,8 +135,7 @@ impl RelationChain {
                 let left = rule.generate_model_internal(plan.clone())?.data;
                 let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
                     .iter()
-                    .cloned()
-                    .map(|c| col(c.flat_name()))
+                    .map(|c| col(qualify_name_from_column_name(c)))
                     .collect();
                 let join_condition = join_keys[0].clone().eq(join_keys[1].clone());
                 let Some(right) = next.plan(rule)? else {

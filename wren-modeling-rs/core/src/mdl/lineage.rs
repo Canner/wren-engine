@@ -11,7 +11,9 @@ use crate::logical_plan::utils::from_qualified_name;
 use crate::mdl::{utils, WrenMDL};
 
 use super::manifest::{JoinType, Relationship};
-use super::utils::{collect_identifiers, quoted, to_expr_queue};
+use super::utils::{
+    collect_identifiers, qualify_name_from_column_name, quoted, to_expr_queue,
+};
 use crate::mdl::Dataset;
 
 pub struct Lineage {
@@ -162,12 +164,9 @@ impl Lineage {
                                                         "{}.{}.{}",
                                                         quoted(mdl.catalog()),
                                                         quoted(mdl.schema()),
-                                                        ident
-                                                            .flat_name()
-                                                            .split(".")
-                                                            .map(quoted)
-                                                            .collect::<Vec<String>>()
-                                                            .join(".")
+                                                        qualify_name_from_column_name(
+                                                            &ident
+                                                        )
                                                     ),
                                                 ));
                                         });

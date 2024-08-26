@@ -1,18 +1,21 @@
 use std::{collections::HashMap, sync::Arc};
 
+use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
+use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::prelude::SessionContext;
-use datafusion::{error::Result, sql::unparser::plan_to_sql};
+use datafusion::sql::unparser::dialect::Dialect;
+use datafusion::sql::unparser::Unparser;
 use log::{debug, info};
 use parking_lot::RwLock;
-
-pub use dataset::Dataset;
-use manifest::Relationship;
 
 use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
 use crate::mdl::manifest::{Column, Manifest, Model};
+pub use dataset::Dataset;
+use manifest::Relationship;
+use regex::Regex;
 
 pub mod builder;
 pub mod context;
@@ -208,8 +211,10 @@ pub async fn transform_sql_with_ctx(
     debug!("wren-core original plan:\n {plan:?}");
     let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed:?}");
+
+    let unparser = Unparser::new(&WrenDialect {});
     // show the planned sql
-    match plan_to_sql(&analyzed) {
+    match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
             let replaced = sql.to_string().replace(&catalog_schema, "");
@@ -218,6 +223,30 @@ pub async fn transform_sql_with_ctx(
         }
         Err(e) => Err(e),
     }
+}
+
+/// WrenDialect is a dialect for Wren engine. Handle the identifier quote style based on the
+/// original Datafusion Dialect implementation but with more strict rules.
+/// If the identifier isn't lowercase, it will be quoted.
+pub struct WrenDialect {}
+
+impl Dialect for WrenDialect {
+    fn identifier_quote_style(&self, identifier: &str) -> Option<char> {
+        let identifier_regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
+        if ALL_KEYWORDS.contains(&identifier.to_uppercase().as_str())
+            || !identifier_regex.is_match(identifier)
+            || non_lowercase(identifier)
+        {
+            Some('"')
+        } else {
+            None
+        }
+    }
+}
+
+fn non_lowercase(sql: &str) -> bool {
+    let lowercase = sql.to_lowercase();
+    lowercase != sql
 }
 
 /// Apply Wren Rules to a given session context with a WrenMDL
@@ -381,9 +410,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT Customer.Custkey, Customer.\"Name\" FROM (SELECT Customer.Custkey, Customer.\"Name\" \
-                   FROM (SELECT datafusion.public.customer.Custkey AS Custkey, datafusion.public.customer.\"Name\" AS \"Name\" \
-                   FROM datafusion.public.customer) AS Customer) AS Customer");
+                   "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
+                   FROM (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
+                   FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\"");
         Ok(())
     }
 
