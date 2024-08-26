@@ -32,7 +32,7 @@ use datafusion::common::runtime::SpawnedTask;
 use datafusion::common::{exec_err, DataFusionError, Result};
 use wren_sqllogictest::engine::utils::read_dir_recursive;
 
-const TEST_DIRECTORY: &str = "test_sql_files/";
+const TEST_DIRECTORY: &str = "test_files/";
 
 #[cfg(target_family = "windows")]
 pub fn main() {
@@ -58,7 +58,7 @@ pub async fn main() -> Result<()> {
     run_tests().await
 }
 
-/// Sets up an empty directory at test_sql_files/scratch/<name>
+/// Sets up an empty directory at test_files/scratch/<name>
 /// creating it if needed and clearing any file contents if it exists
 /// This allows tests for inserting to external tables or copy to
 /// to persist data to disk and have consistent state when running

@@ -657,7 +657,11 @@ impl UserDefinedLogicalNodeCore for ModelPlanNode {
     }
 
     fn fmt_for_explain(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Model: name={}", self.plan_name)
+        write!(
+            f,
+            "Model: name={}, schema={}",
+            self.plan_name, self.schema_ref
+        )
     }
 
     fn with_exprs_and_inputs(

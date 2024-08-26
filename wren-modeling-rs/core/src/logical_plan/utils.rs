@@ -48,6 +48,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "int2" => DataType::Int16,
         "smallint" => DataType::Int16,
         "int4" => DataType::Int32,
+        "int" => DataType::Int32,
         "integer" => DataType::Int32,
         "int8" => DataType::Int64,
         "bigint" => DataType::Int64,
@@ -61,6 +62,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "name" => DataType::Utf8,
         "float4" => DataType::Float32,
         "real" => DataType::Float32,
+        "float" => DataType::Float32,
         "float8" => DataType::Float64,
         "double" => DataType::Float64,
         "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
