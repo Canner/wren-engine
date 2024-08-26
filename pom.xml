@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>167</version>
+        <version>168</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.45.3</version>
+                <version>3.45.4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -276,7 +276,7 @@
             <dependency>
                 <groupId>io.opentelemetry.semconv</groupId>
                 <artifactId>opentelemetry-semconv</artifactId>
-                <version>1.26.0-alpha</version>
+                <version>1.27.0-alpha</version>
             </dependency>
 
             <dependency>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.14.19</version>
+                <version>1.15.0</version>
             </dependency>
 
             <dependency>
@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.3</version>
+                <version>42.7.4</version>
             </dependency>
 
             <dependency>
