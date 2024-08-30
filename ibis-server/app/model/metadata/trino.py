@@ -20,7 +20,8 @@ class TrinoMetadata(Metadata):
         super().__init__(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        sql = """SELECT
+        schema = self._get_schema_name()
+        sql = f"""SELECT
                 t.table_catalog,
                 t.table_schema,
                 t.table_name,
@@ -35,7 +36,8 @@ class TrinoMetadata(Metadata):
               AND t.table_name = c.table_name
               WHERE
                 t.table_type IN ('BASE TABLE', 'VIEW')
-              AND t.table_schema NOT IN ('information_schema', 'pg_catalog')"""
+              AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
+              AND t.table_schema = '{schema}'"""
 
         sql_cursor = DataSource.trino.get_connection(self.connection_info).raw_sql(sql)
         column_names = [col[0] for col in sql_cursor.description]
@@ -64,16 +66,16 @@ class TrinoMetadata(Metadata):
                     primaryKey="",
                 )
 
-                # table exists, and add column to the table
-                unique_tables[schema_table].columns.append(
-                    Column(
-                        name=row["column_name"],
-                        type=self._transform_column_type(row["data_type"]),
-                        notNull=row["is_nullable"].lower() == "no",
-                        description="",
-                        properties=None,
-                    )
+            # table exists, and add column to the table
+            unique_tables[schema_table].columns.append(
+                Column(
+                    name=row["column_name"],
+                    type=self._transform_column_type(row["data_type"]),
+                    notNull=row["is_nullable"].lower() == "no",
+                    description="",
+                    properties=None,
                 )
+            )
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
