@@ -173,11 +173,11 @@ def test_query(clickhouse: ClickHouseContainer):
         1,
         370,
         "O",
-        172799.49,
-        820540800000,
+        "172799.49",
+        "1996-01-02",
         "1_370",
-        1704153599000,
-        1704153599000,
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000 UTC",
         None,
         "Customer#000000370",
     ]
@@ -188,8 +188,8 @@ def test_query(clickhouse: ClickHouseContainer):
         "totalprice": "object",
         "orderdate": "object",
         "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
+        "timestamp": "object",
+        "timestamptz": "object",
         "test_null_time": "object",
         "customer_name": "object",
     }
@@ -296,7 +296,7 @@ def test_query_to_many_relationship(clickhouse: ClickHouseContainer):
     result = response.json()
     assert len(result["columns"]) == 1
     assert len(result["data"]) == 1
-    assert result["data"][0] == [2860895.79]
+    assert result["data"][0] == ["2860895.79"]
     assert result["dtypes"] == {
         "totalprice": "object",
     }

@@ -98,11 +98,11 @@ def test_query():
         1,
         36901,
         "O",
-        173665.47,
-        820540800000,
+        "173665.47",
+        "1996-01-02 00:00:00.000000",
         "1_36901",
-        1704153599000,
-        1704153599000,
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000 UTC",
         None,
     ]
     assert result["dtypes"] == {
@@ -112,8 +112,8 @@ def test_query():
         "totalprice": "object",
         "orderdate": "object",
         "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
+        "timestamp": "object",
+        "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
     }
 

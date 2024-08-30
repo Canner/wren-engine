@@ -118,10 +118,10 @@ def test_query(mysql: MySqlContainer):
         370,
         "O",
         "172799.49",
-        820540800000,
+        "1996-01-02",
         "1_370",
-        1704153599000,
-        1704153599000,
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000",
         None,
     ]
     assert result["dtypes"] == {
@@ -131,8 +131,8 @@ def test_query(mysql: MySqlContainer):
         "totalprice": "object",
         "orderdate": "object",
         "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns]",
+        "timestamp": "object",
+        "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
     }
 
