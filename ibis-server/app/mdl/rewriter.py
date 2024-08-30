@@ -5,7 +5,6 @@ import httpx
 import orjson
 import sqlglot
 from loguru import logger
-from wren_core import transform_sql
 
 from app.config import get_config
 from app.model import UnprocessableEntityError
@@ -65,6 +64,8 @@ class EmbeddedEngineRewriter(Rewriter):
         super().__init__(manifest_str, data_source)
 
     def rewrite(self, sql: str) -> str:
+        from wren_core import transform_sql
+
         try:
             planned_sql = transform_sql(self.manifest_str, sql)
             logger.debug("Planned SQL: {}", planned_sql)
