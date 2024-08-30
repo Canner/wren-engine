@@ -9,11 +9,6 @@ connection_info_field = Field(alias="connectionInfo")
 class QueryDTO(BaseModel):
     sql: str
     manifest_str: str = manifest_str_field
-    column_dtypes: dict[str, str] | None = Field(
-        alias="columnDtypes",
-        description="If this field is set, it will forcibly convert the type.",
-        default=None,
-    )
     connection_info: ConnectionInfo = connection_info_field
 
 

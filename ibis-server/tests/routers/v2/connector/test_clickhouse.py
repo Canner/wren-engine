@@ -213,52 +213,6 @@ def test_query_with_connection_url(clickhouse: ClickHouseContainer):
     assert result["dtypes"] is not None
 
 
-def test_query_with_column_dtypes(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-            "columnDtypes": {
-                "totalprice": "float",
-                "orderdate": "datetime64",
-                "timestamp": "datetime64",
-                "timestamptz": "datetime64",
-            },
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 10
-    assert len(result["data"]) == 1
-    assert result["data"][0] == [
-        1,
-        370,
-        "O",
-        172799.49,
-        "1996-01-02 00:00:00.000000",
-        "1_370",
-        "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
-        None,
-        "Customer#000000370",
-    ]
-    assert result["dtypes"] == {
-        "orderkey": "int32",
-        "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "object",
-        "customer_name": "object",
-    }
-
-
 def test_query_with_limit(clickhouse: ClickHouseContainer):
     connection_info = to_connection_info(clickhouse)
     response = client.post(
