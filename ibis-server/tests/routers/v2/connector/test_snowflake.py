@@ -98,50 +98,7 @@ def test_query():
         1,
         36901,
         "O",
-        173665.47,
-        820540800000,
-        "1_36901",
-        1704153599000,
-        1704153599000,
-        None,
-    ]
-    assert result["dtypes"] == {
-        "orderkey": "int64",
-        "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
-        "test_null_time": "datetime64[ns]",
-    }
-
-
-def test_query_with_column_dtypes():
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY "orderkey" LIMIT 1',
-            "columnDtypes": {
-                "totalprice": "float",
-                "orderdate": "datetime64",
-                "timestamp": "datetime64",
-                "timestamptz": "datetime64",
-            },
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-    assert len(result["data"]) == 1
-    assert result["data"][0] == [
-        1,
-        36901,
-        "O",
-        173665.47,
+        "173665.47",
         "1996-01-02 00:00:00.000000",
         "1_36901",
         "2024-01-01 23:59:59.000000",
@@ -152,7 +109,7 @@ def test_query_with_column_dtypes():
         "orderkey": "int64",
         "custkey": "int64",
         "orderstatus": "object",
-        "totalprice": "float64",
+        "totalprice": "object",
         "orderdate": "object",
         "order_cust_key": "object",
         "timestamp": "object",

@@ -89,10 +89,10 @@ def test_query(trino: TrinoContainer):
         370,
         "O",
         172799.49,
-        820540800000,
+        "1996-01-02",
         "1_370",
-        1704153599000,
-        1704153599000,
+        "2024-01-01 23:59:59.000000",
+        "2024-01-01 23:59:59.000000 UTC",
         None,
     ]
     assert result["dtypes"] == {
@@ -102,8 +102,8 @@ def test_query(trino: TrinoContainer):
         "totalprice": "float64",
         "orderdate": "object",
         "order_cust_key": "object",
-        "timestamp": "datetime64[ns]",
-        "timestamptz": "datetime64[ns, UTC]",
+        "timestamp": "object",
+        "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
     }
 
@@ -124,50 +124,6 @@ def test_query_with_connection_url(trino: TrinoContainer):
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
-
-
-def test_query_with_column_dtypes(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
-            "columnDtypes": {
-                "totalprice": "float",
-                "orderdate": "datetime64",
-                "timestamp": "datetime64",
-                "timestamptz": "datetime64",
-            },
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-    assert len(result["data"]) == 1
-    assert result["data"][0] == [
-        1,
-        370,
-        "O",
-        172799.49,
-        "1996-01-02 00:00:00.000000",
-        "1_370",
-        "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
-        None,
-    ]
-    assert result["dtypes"] == {
-        "orderkey": "int64",
-        "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-    }
 
 
 def test_query_with_limit(trino: TrinoContainer):

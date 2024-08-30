@@ -34,9 +34,7 @@ def query(
     if dry_run:
         connector.dry_run(rewritten_sql)
         return Response(status_code=204)
-    return JSONResponse(
-        to_json(connector.query(rewritten_sql, limit=limit), dto.column_dtypes)
-    )
+    return JSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
 
 
 @router.post("/{data_source}/validate/{rule_name}")
