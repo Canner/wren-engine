@@ -198,4 +198,11 @@ public class TestWrenWithDuckDB
                 .isEqualTo(List.of(column("totalprice", "DECIMAL(15,2)")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
+
+    @Test
+    public void testCountWithCalculatedFieldFilter()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select count(*) from \"Orders\" where nation_name = 'ALGERIA'");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(691);
+    }
 }
