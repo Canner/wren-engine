@@ -205,4 +205,20 @@ public class TestWrenWithDuckDB
         QueryResultDto queryResultDto = query(manifest, "select count(*) from \"Orders\" where nation_name = 'ALGERIA'");
         assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(691);
     }
+
+    @Test
+    public void testCountJoin()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select count(*) from Orders a");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders, Customer");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(22500000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders a, Customer b");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(22500000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders a JOIN Customer b ON a.custkey = b.custkey");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+    }
 }

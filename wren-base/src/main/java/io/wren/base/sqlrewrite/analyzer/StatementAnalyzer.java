@@ -19,6 +19,7 @@ import io.trino.sql.QueryUtil;
 import io.trino.sql.tree.AliasedRelation;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.AstVisitor;
+import io.trino.sql.tree.DefaultTraversalVisitor;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FrameBound;
@@ -387,8 +388,20 @@ public final class StatementAnalyzer
             ExpressionAnalysis expressionAnalysis = analyzeExpression(singleColumn.getExpression(), scope);
 
             if (expressionAnalysis.isRequireRelation()) {
-                analysis.addRequiredSourceNode(scope.getRelationId().getSourceNode()
-                        .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source")));
+                Node source = scope.getRelationId().getSourceNode()
+                        .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source"));
+
+                // collect only the source node that is a table for generating the required column for models
+                DefaultTraversalVisitor<Void> visitor = new DefaultTraversalVisitor<>()
+                {
+                    @Override
+                    protected Void visitTable(Table node, Void scope)
+                    {
+                        analysis.addRequiredSourceNode(node);
+                        return null;
+                    }
+                };
+                visitor.process(source, null);
             }
         }
 
