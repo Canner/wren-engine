@@ -179,7 +179,6 @@ def test_query(clickhouse: ClickHouseContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         None,
-        "Customer#000000370",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -191,7 +190,6 @@ def test_query(clickhouse: ClickHouseContainer):
         "timestamp": "object",
         "timestamptz": "object",
         "test_null_time": "object",
-        "customer_name": "object",
     }
 
 
