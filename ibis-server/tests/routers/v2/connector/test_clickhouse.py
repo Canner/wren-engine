@@ -167,7 +167,7 @@ def test_query(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 10
+    assert len(result["columns"]) == 9
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         1,
@@ -207,7 +207,7 @@ def test_query_with_connection_url(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 10
+    assert len(result["columns"]) == 9
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None

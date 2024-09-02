@@ -373,7 +373,12 @@ public final class StatementAnalyzer
                 // TODO handle target.*
             }
             else {
-                analysis.addCollectedColumns(scope.getRelationType().getFields());
+                List<Field> fields = scope.getRelationType()
+                        .getFields()
+                        .stream()
+                        .filter(f -> f.getSourceColumn().map(c -> !c.isCalculated()).orElse(true))
+                        .collect(toImmutableList());
+                analysis.addCollectedColumns(fields);
                 scope.getRelationType().getFields().stream().map(field ->
                                 field.getRelationAlias().map(DereferenceExpression::from)
                                         .orElse(DereferenceExpression.from(QualifiedName.of(field.getTableName().getSchemaTableName().getTableName(), field.getColumnName()))))
