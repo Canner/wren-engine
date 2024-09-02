@@ -103,7 +103,8 @@ public class WrenSqlRewrite
                 if (!tableRequiredFields.containsKey(tableName)) {
                     Relationable relationable = wrenMDL.getRelationable(tableName)
                             .orElseThrow(() -> new IllegalArgumentException(format("dataset not found: %s", tableName)));
-                    tableRequiredFields.put(tableName, relationable.getColumns().stream().filter(column -> !column.isCalculated()).map(Column::getName).collect(toImmutableSet()));                }
+                    tableRequiredFields.put(tableName, relationable.getColumns().stream().filter(column -> !column.isCalculated()).map(Column::getName).collect(toImmutableSet()));
+                }
             });
 
             ImmutableList.Builder<QueryDescriptor> descriptorsBuilder = ImmutableList.builder();
