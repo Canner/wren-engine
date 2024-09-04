@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>167</version>
+        <version>171</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -64,11 +64,11 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.2</dep.antlr.version>
-        <dep.airlift.version>260</dep.airlift.version>
+        <dep.airlift.version>262</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.1</dep.testcontainers.version>
-        <dep.errorprone.version>2.30.0</dep.errorprone.version>
+        <dep.errorprone.version>2.31.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.45.3</version>
+                <version>3.45.4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -156,7 +156,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.27.3</version>
+                <version>4.28.0</version>
             </dependency>
 
             <dependency>
@@ -276,7 +276,7 @@
             <dependency>
                 <groupId>io.opentelemetry.semconv</groupId>
                 <artifactId>opentelemetry-semconv</artifactId>
-                <version>1.26.0-alpha</version>
+                <version>1.27.0-alpha</version>
             </dependency>
 
             <dependency>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.14.19</version>
+                <version>1.15.1</version>
             </dependency>
 
             <dependency>
@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.3</version>
+                <version>42.7.4</version>
             </dependency>
 
             <dependency>
@@ -536,7 +536,7 @@
                 <plugin>
                     <groupId>ca.vanzyl.provisio.maven.plugins</groupId>
                     <artifactId>provisio-maven-plugin</artifactId>
-                    <version>1.0.25</version>
+                    <version>1.0.26</version>
                 </plugin>
             </plugins>
         </pluginManagement>
