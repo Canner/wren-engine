@@ -167,7 +167,7 @@ def test_query(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 10
+    assert len(result["columns"]) == 9
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         1,
@@ -179,7 +179,6 @@ def test_query(clickhouse: ClickHouseContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         None,
-        "Customer#000000370",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -191,7 +190,6 @@ def test_query(clickhouse: ClickHouseContainer):
         "timestamp": "object",
         "timestamptz": "object",
         "test_null_time": "object",
-        "customer_name": "object",
     }
 
 
@@ -207,7 +205,7 @@ def test_query_with_connection_url(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 10
+    assert len(result["columns"]) == 9
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None

@@ -87,7 +87,6 @@ public class TestWrenWithDuckDB
                         column("custkey", "integer"),
                         column("orderstatus", "varchar"),
                         column("totalprice", "DECIMAL(15,2)"),
-                        column("nation_name", "varchar"),
                         column("orderdate", "date")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
@@ -139,7 +138,6 @@ public class TestWrenWithDuckDB
                         column("custkey", "integer"),
                         column("orderstatus", "varchar"),
                         column("totalprice", "DECIMAL(15,2)"),
-                        column("nation_name", "varchar"),
                         column("orderdate", "date")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
 
@@ -161,7 +159,6 @@ public class TestWrenWithDuckDB
                         column("custkey", "integer"),
                         column("orderstatus", "varchar"),
                         column("totalprice", "DECIMAL(15,2)"),
-                        column("nation_name", "varchar"),
                         column("orderdate", "date")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
     }
@@ -197,5 +194,40 @@ public class TestWrenWithDuckDB
         assertThat(queryResultDto.getColumns())
                 .isEqualTo(List.of(column("totalprice", "DECIMAL(15,2)")));
         assertThat(queryResultDto.getData().size()).isEqualTo(100);
+    }
+
+    @Test
+    public void testCountWithCalculatedFieldFilter()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select count(*) from \"Orders\" where nation_name = 'ALGERIA'");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(691);
+    }
+
+    @Test
+    public void testCountJoin()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select count(*) from Orders a");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders, Customer");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(22500000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders a, Customer b");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(22500000);
+
+        queryResultDto = query(manifest, "select count(*) from Orders a JOIN Customer b ON a.custkey = b.custkey");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+    }
+
+    @Test
+    public void testSelectAllExcludeCalculatedField()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select * from Orders limit 100");
+        assertThat(queryResultDto.getColumns())
+                .isEqualTo(List.of(column("orderkey", "INTEGER"),
+                        column("custkey", "INTEGER"),
+                        column("orderstatus", "VARCHAR"),
+                        column("totalprice", "DECIMAL(15,2)"),
+                        column("orderdate", "DATE")));
     }
 }
