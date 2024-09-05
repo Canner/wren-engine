@@ -231,6 +231,9 @@ impl Lineage {
                         Dataset::Metric(_) => {
                             todo!("Metric dataset not supported");
                         }
+                        Dataset::UnKnown => {
+                            return plan_err!("Unknown dataset");
+                        }
                     }
                 }
             }

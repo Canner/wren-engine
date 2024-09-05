@@ -52,6 +52,11 @@ pub async fn create_ctx_with_mdl(
     ])
     // TODO: there're some issues for the optimize rule.
     .with_optimizer_rules(vec![])
+    // .with_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
+    //     Arc::clone(&analyzed_mdl),
+    //     reset_default_catalog_schema,
+    // )))
+    // .with_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))))
     .with_config(config)
     .build();
     let ctx = SessionContext::new_with_state(new_state);

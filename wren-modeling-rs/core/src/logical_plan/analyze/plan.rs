@@ -434,7 +434,8 @@ impl ModelPlanNodeBuilder {
 #[inline]
 fn is_required_column(expr: &Expr, name: &str) -> bool {
     match expr {
-        Expr::Column(column_expr) => column_expr.name.as_str() == name,
+        Expr::Column(column_expr) => column_expr.name() == name,
+        Expr::OuterReferenceColumn(_, column) => column.name() == name,
         Expr::Alias(alias) => is_required_column(&alias.expr, name),
         _ => false,
     }
