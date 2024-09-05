@@ -1,4 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
@@ -8,14 +7,16 @@ use datafusion::sql::unparser::dialect::Dialect;
 use datafusion::sql::unparser::Unparser;
 use log::{debug, info};
 use parking_lot::RwLock;
+use std::{collections::HashMap, sync::Arc};
 
-use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
+use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
 use crate::mdl::manifest::{Column, Manifest, Model};
 pub use dataset::Dataset;
 use manifest::Relationship;
 use regex::Regex;
+use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 
 pub mod builder;
 pub mod context;
@@ -131,18 +132,11 @@ impl WrenMDL {
         Arc::new(WrenMDL::new(manifest))
     }
 
-    pub fn register_table(
-        &mut self,
-        name: String,
-        table: Arc<dyn TableProvider>,
-    ) {
+    pub fn register_table(&mut self, name: String, table: Arc<dyn TableProvider>) {
         self.register_tables.insert(name, table);
     }
 
-    pub fn get_table(
-        &self,
-        name: &str,
-    ) -> Option<Arc<dyn TableProvider>> {
+    pub fn get_table(&self, name: &str) -> Option<Arc<dyn TableProvider>> {
         self.register_tables.get(name).cloned()
     }
 
