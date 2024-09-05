@@ -77,7 +77,6 @@ impl ModelAnalyzeRule {
             LogicalPlan::Aggregate(aggregate) => {
                 let mut analysis_mut = analysis.borrow_mut();
                 let mut buffer = analysis_mut.required_columns_mut();
-                buffer.clear();
                 let mut accum = HashSet::new();
                 let _ = &aggregate.aggr_expr.iter().for_each(|expr| {
                     Expr::add_column_refs(expr, &mut accum);
@@ -120,7 +119,7 @@ impl ModelAnalyzeRule {
                         )))
                     },
                     ignore => {
-                        Ok(Transformed::no(ignore))
+                        Ok(Transformed::no(LogicalPlan::SubqueryAlias(SubqueryAlias::try_new(Arc::new(ignore), alias)?)))
                     },
                 }
             }
