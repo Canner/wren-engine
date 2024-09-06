@@ -1,5 +1,4 @@
 import importlib
-from abc import ABC, abstractmethod
 
 import httpx
 import orjson
@@ -16,26 +15,36 @@ wren_engine_endpoint = get_config().wren_engine_endpoint
 importlib.import_module("ibis.backends.sql.dialects")
 
 
-class Rewriter(ABC):
-    def __init__(self, manifest_str: str, data_source: DataSource = None):
+class Rewriter:
+    def __init__(
+        self,
+        manifest_str: str,
+        data_source: DataSource = None,
+        experiment=False,
+    ):
         self.manifest_str = manifest_str
         self.data_source = data_source
+        if experiment:
+            self._rewriter = EmbeddedEngineRewriter(manifest_str)
+        else:
+            self._rewriter = ExternalEngineRewriter(manifest_str)
 
-    @abstractmethod
     def rewrite(self, sql: str) -> str:
-        pass
-
-    def transpile(self, planned_sql: str) -> str:
-        dialect_sql = sqlglot.transpile(
-            planned_sql, read="trino", write=self.data_source.name
-        )[0]
+        planned_sql = self._rewriter.rewrite(sql)
+        logger.debug("Planned SQL: {}", planned_sql)
+        dialect_sql = self._transpile(planned_sql) if self.data_source else planned_sql
         logger.debug("Dialect SQL: {}", dialect_sql)
         return dialect_sql
 
+    def _transpile(self, planned_sql: str) -> str:
+        return sqlglot.transpile(
+            planned_sql, read="trino", write=self.data_source.name
+        )[0]
 
-class ExternalEngineRewriter(Rewriter):
-    def __init__(self, manifest_str: str, data_source: DataSource = None):
-        super().__init__(manifest_str, data_source)
+
+class ExternalEngineRewriter:
+    def __init__(self, manifest_str: str):
+        self.manifest_str = manifest_str
 
     def rewrite(self, sql: str) -> str:
         try:
@@ -48,30 +57,22 @@ class ExternalEngineRewriter(Rewriter):
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            planned_sql = r.raise_for_status().text
-            logger.debug("Planned SQL: {}", planned_sql)
-            return (
-                planned_sql if self.data_source is None else self.transpile(planned_sql)
-            )
+            return r.raise_for_status().text
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
         except httpx.HTTPStatusError as e:
             raise RewriteError(e.response.text)
 
 
-class EmbeddedEngineRewriter(Rewriter):
-    def __init__(self, manifest_str: str, data_source: DataSource = None):
-        super().__init__(manifest_str, data_source)
+class EmbeddedEngineRewriter:
+    def __init__(self, manifest_str: str):
+        self.manifest_str = manifest_str
 
     def rewrite(self, sql: str) -> str:
         from wren_core import transform_sql
 
         try:
-            planned_sql = transform_sql(self.manifest_str, sql)
-            logger.debug("Planned SQL: {}", planned_sql)
-            return (
-                planned_sql if self.data_source is None else self.transpile(planned_sql)
-            )
+            return transform_sql(self.manifest_str, sql)
         except Exception as e:
             raise RewriteError(str(e))
 
