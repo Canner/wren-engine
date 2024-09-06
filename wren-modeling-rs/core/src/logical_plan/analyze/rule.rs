@@ -57,7 +57,7 @@ impl ModelAnalyzeRule {
                 let mut buffer = analysis_mut.required_columns_mut();
                 projection.expr.iter().try_for_each(|expr| {
                     let mut acuum = HashSet::new();
-                    let _ = utils::expr_to_columns(expr, &mut acuum);
+                    utils::expr_to_columns(expr, &mut acuum)?;
                     acuum.iter().try_for_each(|expr| {
                         self.collect_column(Expr::Column(expr.clone()), &mut buffer)
                     })
@@ -66,7 +66,7 @@ impl ModelAnalyzeRule {
             }
             LogicalPlan::Filter(filter) => {
                 let mut acuum = HashSet::new();
-                let _ = utils::expr_to_columns(&filter.predicate, &mut acuum);
+                utils::expr_to_columns(&filter.predicate, &mut acuum)?;
                 let mut analysis_mut = analysis.borrow_mut();
                 let mut buffer = analysis_mut.required_columns_mut();
                 acuum.iter().try_for_each(|expr| {
@@ -513,6 +513,9 @@ fn belong_to_mdl(
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         let analysis = RefCell::new(Analysis::default());
+        // plan.map_subqueries(&|plan| {
+        //     self.analyze_model_internal(plan, &analysis)
+        // })?;
         // replace the top level plan node with ModelPlanNode first
         plan.transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
             self.analyze_model_internal(plan, &analysis)
