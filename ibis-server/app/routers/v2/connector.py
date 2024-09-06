@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
 from app.dependencies import verify_query_dto
-from app.mdl.rewriter import ExternalEngineRewriter
+from app.mdl.rewriter import Rewriter
 from app.model import (
     DryPlanDTO,
     QueryDTO,
@@ -27,9 +27,7 @@ def query(
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
 ) -> Response:
-    rewritten_sql = ExternalEngineRewriter(dto.manifest_str, data_source).rewrite(
-        dto.sql
-    )
+    rewritten_sql = Rewriter(dto.manifest_str, data_source=data_source).rewrite(dto.sql)
     connector = Connector(data_source, dto.connection_info, dto.manifest_str)
     if dry_run:
         connector.dry_run(rewritten_sql)
@@ -41,7 +39,7 @@ def query(
 def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
     validator = Validator(
         Connector(data_source, dto.connection_info, dto.manifest_str),
-        ExternalEngineRewriter(dto.manifest_str, data_source),
+        Rewriter(dto.manifest_str, data_source=data_source),
     )
     validator.validate(rule_name, dto.parameters)
     return Response(status_code=204)
@@ -61,9 +59,9 @@ def get_constraints(data_source: DataSource, dto: MetadataDTO) -> list[Constrain
 
 @router.post("/dry-plan")
 def dry_plan(dto: DryPlanDTO) -> str:
-    return ExternalEngineRewriter(dto.manifest_str).rewrite(dto.sql)
+    return Rewriter(dto.manifest_str).rewrite(dto.sql)
 
 
 @router.post("/{data_source}/dry-plan")
 def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
-    return ExternalEngineRewriter(dto.manifest_str, data_source).rewrite(dto.sql)
+    return Rewriter(dto.manifest_str, data_source=data_source).rewrite(dto.sql)
