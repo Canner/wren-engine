@@ -58,6 +58,11 @@ manifest = {
                     "expression": "cast(NULL as timestamp)",
                     "type": "timestamp",
                 },
+                {
+                    "name": "bytea_column",
+                    "expression": "cast('abc' as bytea)",
+                    "type": "bytea",
+                },
             ],
             "primaryKey": "orderkey",
         },
@@ -123,6 +128,7 @@ def test_query(mysql: MySqlContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
         None,
+        "616263",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -134,6 +140,7 @@ def test_query(mysql: MySqlContainer):
         "timestamp": "object",
         "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
+        "bytea_column": "object",
     }
 
 

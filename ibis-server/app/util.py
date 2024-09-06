@@ -30,6 +30,8 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             return None
         if isinstance(obj, decimal.Decimal):
             return str(obj)
+        if isinstance(obj, (bytes, bytearray)):
+            return obj.hex()
         raise TypeError
 
     json_obj = orjson.loads(
