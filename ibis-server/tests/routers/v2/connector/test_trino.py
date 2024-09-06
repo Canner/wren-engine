@@ -46,7 +46,7 @@ manifest = {
                 },
                 {
                     "name": "timestamptz",
-                    "expression": "with_timezone(TIMESTAMP '2024-01-01 23:59:59', 'UTC')",
+                    "expression": "TIMESTAMP '2024-01-01 23:59:59 UTC'",
                     "type": "timestamp",
                 },
                 {
