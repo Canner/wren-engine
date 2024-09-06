@@ -60,15 +60,6 @@ manifest = {
             ],
             "primaryKey": "orderkey",
         },
-        {
-            "name": "Customer",
-            "refSql": "select * from dbo.customer",
-            "columns": [
-                {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                {"name": "name", "expression": "c_name", "type": "varchar"},
-            ],
-            "primaryKey": "custkey",
-        },
     ],
 }
 
@@ -83,9 +74,6 @@ def mssql(request) -> SqlServerContainer:
     engine = sqlalchemy.create_engine(f"{mssql.get_connection_url()}?driver=FreeTDS")
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
-    )
-    pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
-        "customer", engine, index=False
     )
     request.addfinalizer(mssql.stop)
     return mssql

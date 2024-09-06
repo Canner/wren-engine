@@ -66,15 +66,6 @@ manifest = {
             ],
             "primaryKey": "orderkey",
         },
-        {
-            "name": "Customer",
-            "refSql": "select * from TPCH_SF1.CUSTOMER",
-            "columns": [
-                {"name": "custkey", "expression": "C_CUSTKEY", "type": "integer"},
-                {"name": "name", "expression": "C_NAME", "type": "varchar"},
-            ],
-            "primaryKey": "custkey",
-        },
     ],
 }
 
