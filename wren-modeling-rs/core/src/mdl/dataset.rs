@@ -5,7 +5,7 @@ use crate::mdl::{RegisterTables, SessionStateRef};
 use datafusion::arrow::datatypes::DataType::Utf8;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::Result;
-use datafusion::common::{not_impl_err, DFSchema};
+use datafusion::common::DFSchema;
 use datafusion::logical_expr::sqlparser::ast::Expr::CompoundIdentifier;
 use datafusion::sql::sqlparser::ast::Expr::Identifier;
 use datafusion::sql::sqlparser::ast::{visit_expressions, Expr, Ident};
@@ -89,7 +89,6 @@ impl Column {
 pub enum Dataset {
     Model(Arc<Model>),
     Metric(Arc<Metric>),
-    UnKnown,
 }
 
 impl Dataset {
@@ -97,7 +96,6 @@ impl Dataset {
         match self {
             Dataset::Model(model) => model.name(),
             Dataset::Metric(metric) => metric.name(),
-            Dataset::UnKnown => unimplemented!("Unknown dataset"),
         }
     }
 
@@ -120,7 +118,6 @@ impl Dataset {
                 DFSchema::try_from_qualified_schema(quoted(&model.name), &arrow_schema)
             }
             Dataset::Metric(_) => todo!(),
-            Dataset::UnKnown => not_impl_err!("Unknown dataset"),
         }
     }
 
@@ -158,7 +155,6 @@ impl Dataset {
                 }
             }
             Dataset::Metric(_) => todo!(),
-            Dataset::UnKnown => not_impl_err!("Unknown dataset"),
         }
     }
 }
@@ -168,7 +164,6 @@ impl Display for Dataset {
         match self {
             Dataset::Model(model) => write!(f, "{}", model.name()),
             Dataset::Metric(metric) => write!(f, "{}", metric.name()),
-            Dataset::UnKnown => write!(f, "Unknown"),
         }
     }
 }

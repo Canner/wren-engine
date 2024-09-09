@@ -16,7 +16,7 @@ use datafusion::optimizer::AnalyzerRule;
 
 use crate::logical_plan::analyze::plan::ModelPlanNode;
 use crate::mdl::utils::quoted;
-use crate::mdl::{AnalyzedWrenMDL, Dataset, SessionStateRef, WrenMDL};
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
 
 /// [ModelAnalyzeRule] responsible for analyzing the model plan node. Turn TableScan from a model to a ModelPlanNode.
 /// We collect the required fields from the projection, filter, aggregation, and join,
@@ -243,7 +243,7 @@ impl ModelAnalyzeRule {
 
             if let Some(model) = analyzed_wren_mdl.wren_mdl.get_model(table_name) {
                 let table_ref = alias.unwrap_or(table_scan.table_name.clone());
-                let mut used_columns = analysis.required_columns_mut();
+                let used_columns = analysis.required_columns_mut();
                 let buffer = used_columns.get(&table_ref);
                 let field: Vec<Expr> = buffer
                     .map(|s| s.iter().cloned().collect())
@@ -555,31 +555,10 @@ impl AnalyzerRule for ModelAnalyzeRule {
 struct Analysis {
     /// The columns required by the dataset
     required_columns: HashMap<TableReference, HashSet<Expr>>,
-    /// The map from alias to dataset
-    visited_alias_table: HashMap<TableReference, Dataset>,
 }
 
 impl Analysis {
-    fn new() -> Self {
-        Self {
-            required_columns: HashMap::new(),
-            visited_alias_table: HashMap::new(),
-        }
-    }
-
-    fn required_columns(&self) -> &HashMap<TableReference, HashSet<Expr>> {
-        &self.required_columns
-    }
-
     fn required_columns_mut(&mut self) -> &mut HashMap<TableReference, HashSet<Expr>> {
         &mut self.required_columns
-    }
-
-    fn visited_alias_table(&self) -> &HashMap<TableReference, Dataset> {
-        &self.visited_alias_table
-    }
-
-    fn visited_alias_table_mut(&mut self) -> &mut HashMap<TableReference, Dataset> {
-        &mut self.visited_alias_table
     }
 }
