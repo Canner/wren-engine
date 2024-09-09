@@ -2,6 +2,7 @@ use std::any::Any;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
@@ -19,7 +20,6 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
 use parking_lot::RwLock;
-use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 
 /// Apply Wren Rules to the context for sql generation.
 /// TODO: There're some issue for unparsing the datafusion optimized plans.

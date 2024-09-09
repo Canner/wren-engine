@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
         "sqllogictest/tests/resources/ecommerce/orders.csv",
         CsvReadOptions::new(),
     )
-        .await?;
+    .await?;
     let provider = ctx
         .catalog("datafusion")
         .unwrap()
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
         "sqllogictest/tests/resources/ecommerce/customers.csv",
         CsvReadOptions::new(),
     )
-        .await?;
+    .await?;
     let customers_provider = ctx
         .catalog("datafusion")
         .unwrap()
@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
         "sqllogictest/tests/resources/ecommerce/order_items.csv",
         CsvReadOptions::new(),
     )
-        .await?;
+    .await?;
     let order_items_provider = ctx
         .catalog("datafusion")
         .unwrap()
