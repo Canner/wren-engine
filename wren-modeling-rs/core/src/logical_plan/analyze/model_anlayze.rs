@@ -529,24 +529,11 @@ fn belong_to_mdl(
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
         let analysis = RefCell::new(Analysis::default());
-        // plan.map_subqueries(&|plan| {
-        //     self.analyze_model_internal(plan, &analysis)
-        // })?;
-        // replace the top level plan node with ModelPlanNode first
         plan.transform_down_with_subqueries(
             &|plan| -> Result<Transformed<LogicalPlan>> {
                 self.analyze_model_internal(plan, &analysis)
             },
         )?
-        // After planned the top-level, replace the ModelPlanNode in the subquery
-        // .map_data(|plan| {
-        //     plan.transform_down_with_subqueries(
-        //         &|plan| -> Result<Transformed<LogicalPlan>> {
-        //             self.analyze_model_internal(plan, &analysis)
-        //         },
-        //     )
-        //     .data()
-        // })?
         .map_data(|plan| {
             plan.transform_up_with_subqueries(
                 &|plan| -> Result<Transformed<LogicalPlan>> {
