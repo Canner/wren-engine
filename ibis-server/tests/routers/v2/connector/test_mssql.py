@@ -57,17 +57,13 @@ manifest = {
                     "expression": "cast(NULL as timestamp)",
                     "type": "timestamp",
                 },
+                {
+                    "name": "bytea_column",
+                    "expression": "cast('abc' as bytea)",
+                    "type": "bytea",
+                },
             ],
             "primaryKey": "orderkey",
-        },
-        {
-            "name": "Customer",
-            "refSql": "select * from dbo.customer",
-            "columns": [
-                {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                {"name": "name", "expression": "c_name", "type": "varchar"},
-            ],
-            "primaryKey": "custkey",
         },
     ],
 }
@@ -83,9 +79,6 @@ def mssql(request) -> SqlServerContainer:
     engine = sqlalchemy.create_engine(f"{mssql.get_connection_url()}?driver=FreeTDS")
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
-    )
-    pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
-        "customer", engine, index=False
     )
     request.addfinalizer(mssql.stop)
     return mssql
@@ -115,6 +108,7 @@ def test_query(mssql: SqlServerContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         None,
+        "616263",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -126,6 +120,7 @@ def test_query(mssql: SqlServerContainer):
         "timestamp": "object",
         "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
+        "bytea_column": "object",
     }
 
 

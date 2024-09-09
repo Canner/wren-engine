@@ -14,6 +14,9 @@ wren_engine_endpoint = get_config().wren_engine_endpoint
 # To register custom dialects from ibis library for sqlglot
 importlib.import_module("ibis.backends.sql.dialects")
 
+# Register custom dialects
+importlib.import_module("app.custom_sqlglot.dialects")
+
 
 class Rewriter:
     def __init__(

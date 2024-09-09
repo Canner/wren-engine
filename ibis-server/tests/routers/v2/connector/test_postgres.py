@@ -59,17 +59,13 @@ manifest = {
                     "expression": "cast(NULL as timestamp)",
                     "type": "timestamp",
                 },
+                {
+                    "name": "bytea_column",
+                    "expression": "cast('abc' as bytea)",
+                    "type": "bytea",
+                },
             ],
             "primaryKey": "orderkey",
-        },
-        {
-            "name": "Customer",
-            "refSql": "select * from public.customer",
-            "columns": [
-                {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                {"name": "name", "expression": "c_name", "type": "varchar"},
-            ],
-            "primaryKey": "custkey",
         },
     ],
 }
@@ -83,9 +79,6 @@ def postgres(request) -> PostgresContainer:
     engine = sqlalchemy.create_engine(pg.get_connection_url())
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
-    )
-    pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
-        "customer", engine, index=False
     )
     request.addfinalizer(pg.stop)
     return pg
@@ -103,7 +96,7 @@ def test_query(postgres: PostgresContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 9
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         1,
@@ -115,6 +108,7 @@ def test_query(postgres: PostgresContainer):
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
         None,
+        "616263",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -126,6 +120,7 @@ def test_query(postgres: PostgresContainer):
         "timestamp": "object",
         "timestamptz": "object",
         "test_null_time": "datetime64[ns]",
+        "bytea_column": "object",
     }
 
 
@@ -141,7 +136,7 @@ def test_query_with_connection_url(postgres: PostgresContainer):
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["columns"]) == 9
+    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
     assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
