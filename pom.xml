@@ -64,7 +64,7 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.2</dep.antlr.version>
-        <dep.airlift.version>262</dep.airlift.version>
+        <dep.airlift.version>265</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.1</dep.testcontainers.version>
@@ -349,7 +349,7 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.46.0</version>
+                <version>3.47.0</version>
             </dependency>
 
             <dependency>
@@ -536,7 +536,7 @@
                 <plugin>
                     <groupId>ca.vanzyl.provisio.maven.plugins</groupId>
                     <artifactId>provisio-maven-plugin</artifactId>
-                    <version>1.0.26</version>
+                    <version>1.1.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
