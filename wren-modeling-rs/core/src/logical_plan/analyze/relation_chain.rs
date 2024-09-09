@@ -1,8 +1,8 @@
+use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, OrdExpr, PartialModelPlanNode,
 };
 use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
-use crate::logical_plan::analyze::rule::ModelGenerationRule;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;

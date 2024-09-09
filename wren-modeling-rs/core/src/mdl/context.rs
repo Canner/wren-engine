@@ -2,7 +2,8 @@ use std::any::Any;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
+use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
+use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, WrenMDL};

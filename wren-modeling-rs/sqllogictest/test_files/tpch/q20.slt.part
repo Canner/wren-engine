@@ -16,11 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# TODO:
-# External error: query failed: DataFusion error: ModelAnalyzeRule
-#  caused by
-#  Schema error: No field named partsupp.ps_suppkey.
-#query TT
+# TODO: error: query failed: DataFusion error: Arrow error: Parser error: Invalid input syntax for type interval: "0 YEARS 12 MONS 0 DAYS 0 HOURS 0 MINS 0.000000000 SECS seconds"
+# query TT
 query error
 select
     s_name,

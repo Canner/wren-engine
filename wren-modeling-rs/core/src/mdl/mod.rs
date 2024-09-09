@@ -1,5 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
-
+use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
@@ -8,8 +7,10 @@ use datafusion::sql::unparser::dialect::Dialect;
 use datafusion::sql::unparser::Unparser;
 use log::{debug, info};
 use parking_lot::RwLock;
+use std::{collections::HashMap, sync::Arc};
 
-use crate::logical_plan::analyze::rule::{ModelAnalyzeRule, ModelGenerationRule};
+use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
+use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
 use crate::mdl::manifest::{Column, Manifest, Model};
@@ -40,7 +41,7 @@ impl AnalyzedWrenMDL {
 
     pub fn analyze_with_tables(
         manifest: Manifest,
-        register_tables: HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>,
+        register_tables: HashMap<String, Arc<dyn TableProvider>>,
     ) -> Result<Self> {
         let mut wren_mdl = WrenMDL::new(manifest);
         for (name, table) in register_tables {
@@ -62,7 +63,7 @@ impl AnalyzedWrenMDL {
     }
 }
 
-pub type RegisterTables = HashMap<String, Arc<dyn datafusion::datasource::TableProvider>>;
+pub type RegisterTables = HashMap<String, Arc<dyn TableProvider>>;
 // This is the main struct that holds the manifest and provides methods to access the models
 pub struct WrenMDL {
     pub manifest: Manifest,
@@ -131,18 +132,11 @@ impl WrenMDL {
         Arc::new(WrenMDL::new(manifest))
     }
 
-    pub fn register_table(
-        &mut self,
-        name: String,
-        table: Arc<dyn datafusion::datasource::TableProvider>,
-    ) {
+    pub fn register_table(&mut self, name: String, table: Arc<dyn TableProvider>) {
         self.register_tables.insert(name, table);
     }
 
-    pub fn get_table(
-        &self,
-        name: &str,
-    ) -> Option<Arc<dyn datafusion::datasource::TableProvider>> {
+    pub fn get_table(&self, name: &str) -> Option<Arc<dyn TableProvider>> {
         self.register_tables.get(name).cloned()
     }
 
@@ -212,7 +206,7 @@ pub async fn transform_sql_with_ctx(
     let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed:?}");
 
-    let unparser = Unparser::new(&WrenDialect {});
+    let unparser = Unparser::new(&WrenDialect {}).with_pretty(true);
     // show the planned sql
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
