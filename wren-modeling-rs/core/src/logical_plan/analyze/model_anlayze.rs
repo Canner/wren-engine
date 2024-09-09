@@ -80,10 +80,7 @@ impl ModelAnalyzeRule {
                     Expr::add_column_refs(expr, &mut accum);
                 });
                 accum.iter().try_for_each(|expr| {
-                    self.collect_column(
-                        Expr::Column(expr.to_owned().clone()),
-                        buffer,
-                    )
+                    self.collect_column(Expr::Column(expr.to_owned().clone()), buffer)
                 })?;
                 Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)))
             }
@@ -93,9 +90,9 @@ impl ModelAnalyzeRule {
             }) => {
                 let mut analysis_mut = analysis.borrow_mut();
                 let buffer = analysis_mut.required_columns_mut();
-                outer_ref_columns.iter().try_for_each(|expr| {
-                    self.collect_column(expr.clone(), buffer)
-                })?;
+                outer_ref_columns
+                    .iter()
+                    .try_for_each(|expr| self.collect_column(expr.clone(), buffer))?;
                 Ok(Transformed::no(LogicalPlan::Subquery(Subquery {
                     subquery,
                     outer_ref_columns,
