@@ -45,16 +45,16 @@ impl ModelAnalyzeRule {
         &self,
         plan: LogicalPlan,
         analysis: &RefCell<Analysis>,
-    ) -> datafusion::common::Result<Transformed<LogicalPlan>> {
+    ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::Projection(projection) => {
                 let mut analysis_mut = analysis.borrow_mut();
-                let mut buffer = analysis_mut.required_columns_mut();
+                let buffer = analysis_mut.required_columns_mut();
                 projection.expr.iter().try_for_each(|expr| {
                     let mut acuum = HashSet::new();
                     utils::expr_to_columns(expr, &mut acuum)?;
                     acuum.iter().try_for_each(|expr| {
-                        self.collect_column(Expr::Column(expr.clone()), &mut buffer)
+                        self.collect_column(Expr::Column(expr.clone()), buffer)
                     })
                 })?;
                 Ok(Transformed::no(LogicalPlan::Projection(projection)))
@@ -63,15 +63,15 @@ impl ModelAnalyzeRule {
                 let mut acuum = HashSet::new();
                 utils::expr_to_columns(&filter.predicate, &mut acuum)?;
                 let mut analysis_mut = analysis.borrow_mut();
-                let mut buffer = analysis_mut.required_columns_mut();
+                let buffer = analysis_mut.required_columns_mut();
                 acuum.iter().try_for_each(|expr| {
-                    self.collect_column(Expr::Column(expr.clone()), &mut buffer)
+                    self.collect_column(Expr::Column(expr.clone()), buffer)
                 })?;
                 Ok(Transformed::no(LogicalPlan::Filter(filter)))
             }
             LogicalPlan::Aggregate(aggregate) => {
                 let mut analysis_mut = analysis.borrow_mut();
-                let mut buffer = analysis_mut.required_columns_mut();
+                let buffer = analysis_mut.required_columns_mut();
                 let mut accum = HashSet::new();
                 let _ = &aggregate.aggr_expr.iter().for_each(|expr| {
                     Expr::add_column_refs(expr, &mut accum);
@@ -82,7 +82,7 @@ impl ModelAnalyzeRule {
                 accum.iter().try_for_each(|expr| {
                     self.collect_column(
                         Expr::Column(expr.to_owned().clone()),
-                        &mut buffer,
+                        buffer,
                     )
                 })?;
                 Ok(Transformed::no(LogicalPlan::Aggregate(aggregate)))
@@ -92,9 +92,9 @@ impl ModelAnalyzeRule {
                 outer_ref_columns,
             }) => {
                 let mut analysis_mut = analysis.borrow_mut();
-                let mut buffer = analysis_mut.required_columns_mut();
+                let buffer = analysis_mut.required_columns_mut();
                 outer_ref_columns.iter().try_for_each(|expr| {
-                    self.collect_column(expr.clone(), &mut buffer)
+                    self.collect_column(expr.clone(), buffer)
                 })?;
                 Ok(Transformed::no(LogicalPlan::Subquery(Subquery {
                     subquery,
@@ -132,7 +132,7 @@ impl ModelAnalyzeRule {
             ),
             LogicalPlan::Join(join) => {
                 let mut analysis_mut = analysis.borrow_mut();
-                let mut buffer = analysis_mut.required_columns_mut();
+                let buffer = analysis_mut.required_columns_mut();
                 let mut accum = HashSet::new();
                 join.on.iter().for_each(|expr| {
                     let _ = utils::expr_to_columns(&expr.0, &mut accum);
@@ -142,7 +142,7 @@ impl ModelAnalyzeRule {
                     let _ = utils::expr_to_columns(filter_expr, &mut accum);
                 }
                 accum.iter().try_for_each(|expr| {
-                    self.collect_column(Expr::Column(expr.clone()), &mut buffer)
+                    self.collect_column(Expr::Column(expr.clone()), buffer)
                 })?;
 
                 let left = match Arc::unwrap_or_clone(join.left) {
@@ -247,7 +247,7 @@ impl ModelAnalyzeRule {
                 let buffer = used_columns.get(&table_ref);
                 let field: Vec<Expr> = buffer
                     .map(|s| s.iter().cloned().collect())
-                    .unwrap_or(vec![]);
+                    .unwrap_or_default();
                 let model_plan = LogicalPlan::Extension(Extension {
                     node: Arc::new(ModelPlanNode::new(
                         Arc::clone(&model),
