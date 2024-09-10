@@ -13,7 +13,7 @@ use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
-use crate::mdl::manifest::{Column, Manifest, Model};
+use crate::mdl::manifest::{Column, Manifest, Model, View};
 pub use dataset::Dataset;
 use manifest::Relationship;
 use regex::Regex;
@@ -157,6 +157,14 @@ impl WrenMDL {
             .models
             .iter()
             .find(|model| model.name == name)
+            .cloned()
+    }
+
+    pub fn get_view(&self, name: &str) -> Option<Arc<View>> {
+        self.manifest
+            .views
+            .iter()
+            .find(|view| view.name == name)
             .cloned()
     }
 

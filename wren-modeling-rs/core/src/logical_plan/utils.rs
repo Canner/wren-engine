@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
+use datafusion::catalog_common::TableReference;
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
@@ -12,11 +13,11 @@ use petgraph::Graph;
 
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::utils::quoted;
-use crate::mdl::Dataset;
 use crate::mdl::{
     manifest::{Column, Model},
     WrenMDL,
 };
+use crate::mdl::{Dataset, SessionStateRef};
 
 fn create_mock_list_type() -> DataType {
     let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
@@ -173,6 +174,26 @@ pub fn from_qualified_name_str(
 pub fn print_graph(graph: &Graph<Dataset, DatasetLink>) {
     let dot = Dot::with_config(graph, &[Config::EdgeNoLabel]);
     println!("graph: {:?}", dot);
+}
+
+/// Check if the table reference belongs to the mdl
+pub fn belong_to_mdl(
+    mdl: &WrenMDL,
+    table_reference: TableReference,
+    session: SessionStateRef,
+) -> bool {
+    let session = session.read();
+    let catalog = table_reference
+        .catalog()
+        .unwrap_or(&session.config_options().catalog.default_catalog);
+    let catalog_match = catalog == mdl.catalog();
+
+    let schema = table_reference
+        .schema()
+        .unwrap_or(&session.config_options().catalog.default_schema);
+    let schema_match = schema == mdl.schema();
+
+    catalog_match && schema_match
 }
 
 #[cfg(test)]
