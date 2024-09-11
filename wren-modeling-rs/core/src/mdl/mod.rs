@@ -69,6 +69,7 @@ pub struct WrenMDL {
     pub manifest: Manifest,
     pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
     pub register_tables: RegisterTables,
+    pub catalog_schema_prefix: String,
 }
 
 impl WrenMDL {
@@ -122,6 +123,7 @@ impl WrenMDL {
         });
 
         WrenMDL {
+            catalog_schema_prefix: format!("{}.{}.", &manifest.catalog, &manifest.schema),
             manifest,
             qualified_references: qualifed_references,
             register_tables: HashMap::new(),
@@ -182,6 +184,10 @@ impl WrenMDL {
     ) -> Option<ColumnReference> {
         self.qualified_references.get(column).cloned()
     }
+
+    pub fn catalog_schema_prefix(&self) -> &str {
+        &self.catalog_schema_prefix
+    }
 }
 
 /// Transform the SQL based on the MDL
@@ -202,13 +208,8 @@ pub async fn transform_sql_with_ctx(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
 ) -> Result<String> {
-    let catalog_schema = format!(
-        "{}.{}.",
-        analyzed_mdl.wren_mdl().catalog(),
-        analyzed_mdl.wren_mdl().schema()
-    );
     info!("wren-core received SQL: {}", sql);
-    let ctx = create_ctx_with_mdl(ctx, analyzed_mdl).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan:?}");
     let analyzed = ctx.state().optimize(&plan)?;
@@ -219,7 +220,9 @@ pub async fn transform_sql_with_ctx(
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
-            let replaced = sql.to_string().replace(&catalog_schema, "");
+            let replaced = sql
+                .to_string()
+                .replace(analyzed_mdl.wren_mdl().catalog_schema_prefix(), "");
             info!("wren-core planned SQL: {}", replaced);
             Ok(replaced)
         }

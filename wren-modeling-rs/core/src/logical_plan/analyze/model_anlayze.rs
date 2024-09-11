@@ -646,12 +646,10 @@ impl ModelAnalyzeRule {
                 if let Some(relation) = relation {
                     Ok(self.rewrite_column_qualifier(relation, name, alias_model))
                 } else {
-                    let catalog_schema = format!(
-                        "{}.{}.",
-                        self.analyzed_wren_mdl.wren_mdl().catalog(),
-                        self.analyzed_wren_mdl.wren_mdl().schema()
+                    let name = name.replace(
+                        self.analyzed_wren_mdl.wren_mdl().catalog_schema_prefix(),
+                        "",
                     );
-                    let name = name.replace(&catalog_schema, "");
                     let ident = ident(&name);
                     Ok(Transformed::yes(ident))
                 }
@@ -695,12 +693,10 @@ impl ModelAnalyzeRule {
                 Transformed::yes(col(format!("{}.{}", alias_model, quoted(&name))))
             } else {
                 // handle Wren View
-                let catalog_schema = format!(
-                    "{}.{}.",
-                    self.analyzed_wren_mdl.wren_mdl().catalog(),
-                    self.analyzed_wren_mdl.wren_mdl().schema()
+                let name = name.replace(
+                    self.analyzed_wren_mdl.wren_mdl().catalog_schema_prefix(),
+                    "",
                 );
-                let name = name.replace(&catalog_schema, "");
                 Transformed::yes(Expr::Column(Column::new(
                     Some(TableReference::bare(relation.table())),
                     &name,
