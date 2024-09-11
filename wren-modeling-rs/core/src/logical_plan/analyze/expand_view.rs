@@ -34,22 +34,17 @@ impl AnalyzerRule for ExpandWrenViewRule {
                         &self.analyzed_wren_mdl.wren_mdl(),
                         table_scan.table_name.clone(),
                         Arc::clone(&self.session_state),
-                    ) {
-                        if self
-                            .analyzed_wren_mdl
-                            .wren_mdl()
-                            .get_view(table_scan.table_name.table())
-                            .is_some()
-                        {
-                            if let Some(logical_plan) =
-                                table_scan.source.get_logical_plan()
-                            {
-                                let subquery =
-                                    LogicalPlanBuilder::from(logical_plan.clone())
-                                        .alias(quoted(table_scan.table_name.table()))?
-                                        .build()?;
-                                return Ok(Transformed::yes(subquery));
-                            }
+                    ) && self
+                        .analyzed_wren_mdl
+                        .wren_mdl()
+                        .get_view(table_scan.table_name.table())
+                        .is_some()
+                    {
+                        if let Some(logical_plan) = table_scan.source.get_logical_plan() {
+                            let subquery = LogicalPlanBuilder::from(logical_plan.clone())
+                                .alias(quoted(table_scan.table_name.table()))?
+                                .build()?;
+                            return Ok(Transformed::yes(subquery));
                         }
                     }
                     Ok(Transformed::no(plan))
