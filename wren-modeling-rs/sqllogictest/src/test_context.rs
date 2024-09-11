@@ -307,7 +307,7 @@ async fn register_ecommerce_mdl(
 
 pub async fn register_tpch_table(ctx: &SessionContext) -> Result<TestContext> {
     let path = PathBuf::from(TEST_RESOURCES).join("tpch");
-    let data = read_dir_recursive(&path).unwrap();
+    let data = read_dir_recursive(&path)?;
 
     // register parquet file with the execution context
     for file in data.iter() {
@@ -317,8 +317,7 @@ pub async fn register_tpch_table(ctx: &SessionContext) -> Result<TestContext> {
             file.to_str().unwrap(),
             ParquetReadOptions::default(),
         )
-        .await
-        .unwrap();
+        .await?;
     }
     let (ctx, mdl) = register_tpch_mdl(ctx).await?;
 
@@ -446,7 +445,92 @@ async fn register_tpch_mdl(
                 .build(),
         )
         .build();
-    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+    let mut register_tables = HashMap::new();
+    register_tables.insert(
+        "datafusion.public.customer".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("customer")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.orders".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("orders")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.lineitem".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("lineitem")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.part".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("part")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.supplier".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("supplier")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.partsupp".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("partsupp")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.nation".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("nation")
+            .await?
+            .unwrap(),
+    );
+    register_tables.insert(
+        "datafusion.public.region".to_string(),
+        ctx.catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("region")
+            .await?
+            .unwrap(),
+    );
+
+    let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze_with_tables(
+        manifest,
+        register_tables,
+    )?);
     // TODO: there're some conflicts for datafusion optimization rules.
     // let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     Ok((ctx.to_owned(), analyzed_mdl))

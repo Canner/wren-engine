@@ -1,15 +1,16 @@
-use std::{collections::HashMap, sync::Arc};
-
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
 use datafusion::catalog_common::TableReference;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
-use datafusion::logical_expr::{builder::LogicalTableSource, TableSource};
+use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
 use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
+use std::collections::HashSet;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::utils::quoted;
@@ -126,6 +127,7 @@ pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn Table
                 } else {
                     column.name.clone()
                 };
+                // TODO: find a way for the remote table to provide the data type
                 // We don't know the data type of the remote table, so we just mock a Int32 type here
                 Field::new(name, DataType::Int8, column.no_null)
             })
@@ -194,6 +196,60 @@ pub fn belong_to_mdl(
     let schema_match = schema == mdl.schema();
 
     catalog_match && schema_match
+}
+
+/// Collect all the Columns and OuterReferenceColumns in the expression
+pub fn expr_to_columns(
+    expr: &Expr,
+    accum: &mut HashSet<datafusion::common::Column>,
+) -> Result<()> {
+    expr.apply(|expr| {
+        match expr {
+            Expr::Column(qc) => {
+                accum.insert(qc.clone());
+            }
+            Expr::OuterReferenceColumn(_, column) => {
+                accum.insert(column.clone());
+            }
+            // Use explicit pattern match instead of a default
+            // implementation, so that in the future if someone adds
+            // new Expr types, they will check here as well
+            Expr::Unnest(_)
+            | Expr::ScalarVariable(_, _)
+            | Expr::Alias(_)
+            | Expr::Literal(_)
+            | Expr::BinaryExpr { .. }
+            | Expr::Like { .. }
+            | Expr::SimilarTo { .. }
+            | Expr::Not(_)
+            | Expr::IsNotNull(_)
+            | Expr::IsNull(_)
+            | Expr::IsTrue(_)
+            | Expr::IsFalse(_)
+            | Expr::IsUnknown(_)
+            | Expr::IsNotTrue(_)
+            | Expr::IsNotFalse(_)
+            | Expr::IsNotUnknown(_)
+            | Expr::Negative(_)
+            | Expr::Between { .. }
+            | Expr::Case { .. }
+            | Expr::Cast { .. }
+            | Expr::TryCast { .. }
+            | Expr::Sort { .. }
+            | Expr::ScalarFunction(..)
+            | Expr::WindowFunction { .. }
+            | Expr::AggregateFunction { .. }
+            | Expr::GroupingSet(_)
+            | Expr::InList { .. }
+            | Expr::Exists { .. }
+            | Expr::InSubquery(_)
+            | Expr::ScalarSubquery(_)
+            | Expr::Wildcard { .. }
+            | Expr::Placeholder(_) => {}
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })
+    .map(|_| ())
 }
 
 #[cfg(test)]

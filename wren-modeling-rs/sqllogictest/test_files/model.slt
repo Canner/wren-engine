@@ -46,3 +46,10 @@ query IR
 select "Id", "Price" from "Order_items" where "Order_id" in (SELECT "Order_id" FROM "Orders" WHERE "Customer_id" = 'f6c39f83de772dd502809cee2fee4c41')
 ----
 105 287.4
+
+# TODO: DataFusion has some case sensitivity issue with the outer reference column name
+# Test the query with outer reference column
+# query I
+# select "Customer_id" from wrenai.public."Orders" where not exists (select 1 from wrenai.public."Order_items" where "Orders"."Order_id" = "Order_items"."Order_id")
+# ----
+# 1

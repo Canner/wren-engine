@@ -1,5 +1,5 @@
 use crate::logical_plan::analyze::plan::ModelPlanNode;
-use crate::logical_plan::utils::belong_to_mdl;
+use crate::logical_plan::utils::{belong_to_mdl, expr_to_columns};
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, Dataset, SessionStateRef};
 use datafusion::catalog_common::TableReference;
@@ -8,7 +8,6 @@ use datafusion::common::{internal_err, plan_err, Column, DFSchemaRef, Result};
 use datafusion::config::ConfigOptions;
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::Alias;
-use datafusion::logical_expr::utils::expr_to_columns;
 use datafusion::logical_expr::{
     col, ident, Aggregate, Distinct, DistinctOn, Expr, Extension, Filter, Join,
     LogicalPlan, LogicalPlanBuilder, Projection, Subquery, SubqueryAlias, TableScan,
@@ -49,17 +48,24 @@ impl ModelAnalyzeRule {
         scope_buffer: &RefCell<VecDeque<RefCell<Scope>>>,
     ) -> Result<Transformed<LogicalPlan>> {
         plan.transform_up(&|plan| -> Result<Transformed<LogicalPlan>> {
-            let plan = self.analyze_scope_internal(plan, &root, scope_buffer)?.data;
+            let plan = self.analyze_scope_internal(plan, root)?.data;
             plan.map_subqueries(|plan| {
-                if let LogicalPlan::Subquery(Subquery { subquery, .. }) = &plan {
+                if let LogicalPlan::Subquery(Subquery {
+                    subquery,
+                    outer_ref_columns,
+                }) = &plan
+                {
+                    outer_ref_columns.iter().try_for_each(|expr| {
+                        let mut scope_mut = root.borrow_mut();
+                        self.collect_required_column(expr.clone(), &mut scope_mut)
+                    })?;
                     let child_scope =
                         RefCell::new(Scope::new_child(RefCell::clone(root)));
                     self.analyze_scope(
                         Arc::unwrap_or_clone(Arc::clone(subquery)),
                         &child_scope,
                         scope_buffer,
-                    )?
-                    .data;
+                    )?;
                     let mut scope_buffer = scope_buffer.borrow_mut();
                     scope_buffer.push_back(child_scope);
                 }
@@ -73,7 +79,6 @@ impl ModelAnalyzeRule {
         &self,
         plan: LogicalPlan,
         scope: &RefCell<Scope>,
-        scope_buffer: &RefCell<VecDeque<RefCell<Scope>>>,
     ) -> Result<Transformed<LogicalPlan>> {
         match &plan {
             LogicalPlan::TableScan(table_scan) => {
@@ -155,18 +160,6 @@ impl ModelAnalyzeRule {
                 })?;
                 Ok(Transformed::no(plan))
             }
-            LogicalPlan::Subquery(subquery) => {
-                subquery.outer_ref_columns.iter().try_for_each(|expr| {
-                    let mut scope_mut = scope.borrow_mut();
-                    self.collect_required_column(expr.clone(), &mut scope_mut)
-                })?;
-                // create a new scope for the subquery
-                let child_scope = RefCell::new(Scope::new_child(RefCell::clone(&scope)));
-                let plan = self.analyze_scope(plan, &child_scope, scope_buffer)?.data;
-                let mut scope_buffer = scope_buffer.borrow_mut();
-                scope_buffer.push_back(child_scope);
-                Ok(Transformed::no(plan))
-            }
             LogicalPlan::SubqueryAlias(subquery_alias) => {
                 let mut scope_mut = scope.borrow_mut();
                 if let LogicalPlan::TableScan(table_scan) =
@@ -211,18 +204,16 @@ impl ModelAnalyzeRule {
                     &self.analyzed_wren_mdl.wren_mdl(),
                     relation.clone(),
                     Arc::clone(&self.session_state),
-                ) {
-                    if self
-                        .analyzed_wren_mdl
-                        .wren_mdl()
-                        .get_view(relation.table())
-                        .is_none()
-                    {
-                        scope.add_required_column(
-                            relation.clone(),
-                            Expr::Column(Column::new(Some(relation), name)),
-                        )?;
-                    }
+                ) && self
+                    .analyzed_wren_mdl
+                    .wren_mdl()
+                    .get_view(relation.table())
+                    .is_none()
+                {
+                    scope.add_required_column(
+                        relation.clone(),
+                        Expr::Column(Column::new(Some(relation), name)),
+                    )?;
                 }
             }
             // It is possible that the column is a rebase column from the aggregation or join
@@ -353,9 +344,8 @@ impl ModelAnalyzeRule {
                                 scope,
                             )?
                             .data;
-                        let subquery = LogicalPlanBuilder::from(model_plan)
-                            .alias(alias)?
-                            .build()?;
+                        let subquery =
+                            LogicalPlanBuilder::from(model_plan).alias(alias)?.build()?;
                         Ok(Transformed::yes(subquery))
                     }
                     _ => Ok(Transformed::no(LogicalPlan::SubqueryAlias(
@@ -714,10 +704,10 @@ impl ModelAnalyzeRule {
 
 impl AnalyzerRule for ModelAnalyzeRule {
     fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        let mut queue = RefCell::new(VecDeque::new());
-        let mut root = RefCell::new(Scope::new());
-        self.analyze_scope(plan, &mut root, &mut queue)?
-            .map_data(|plan| self.analyze_model(plan, &root, &mut queue).data())?
+        let queue = RefCell::new(VecDeque::new());
+        let root = RefCell::new(Scope::new());
+        self.analyze_scope(plan, &root, &queue)?
+            .map_data(|plan| self.analyze_model(plan, &root, &queue).data())?
             .map_data(|plan| {
                 plan.transform_up_with_subqueries(&|plan| -> Result<
                     Transformed<LogicalPlan>,
@@ -734,7 +724,7 @@ impl AnalyzerRule for ModelAnalyzeRule {
         "ModelAnalyzeRule"
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug, Default)]
 pub struct Scope {
     /// The columns required by the dataset
     required_columns: HashMap<TableReference, HashSet<Expr>>,
@@ -770,7 +760,7 @@ impl Scope {
         if self.visited_dataset.contains_key(&table_ref) {
             self.required_columns
                 .entry(table_ref)
-                .or_insert(HashSet::new())
+                .or_default()
                 .insert(expr);
             Ok(())
         } else if let Some(ref parent) = &self.parent {
@@ -787,11 +777,7 @@ impl Scope {
         }
     }
 
-    pub fn add_visited_dataset(
-        &mut self,
-        table_ref: TableReference,
-        dataset: Dataset,
-    ) {
+    pub fn add_visited_dataset(&mut self, table_ref: TableReference, dataset: Dataset) {
         self.visited_dataset.insert(table_ref, dataset);
     }
 
