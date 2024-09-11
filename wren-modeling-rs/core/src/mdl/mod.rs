@@ -9,6 +9,7 @@ use log::{debug, info};
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 
+use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::from_qualified_name_str;
@@ -262,6 +263,11 @@ pub async fn apply_wren_rules(
     ctx: &SessionContext,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
 ) -> Result<()> {
+    // expand the view should be the first rule
+    ctx.add_analyzer_rule(Arc::new(ExpandWrenViewRule::new(
+        Arc::clone(&analyzed_wren_mdl),
+        ctx.state_ref(),
+    )));
     ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
         Arc::clone(&analyzed_wren_mdl),
         ctx.state_ref(),
