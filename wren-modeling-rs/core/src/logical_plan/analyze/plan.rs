@@ -69,7 +69,7 @@ impl ModelPlanNode {
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state: SessionStateRef,
     ) -> Result<Self> {
-       ModelPlanNodeBuilder::new(analyzed_wren_mdl, session_state).build(
+        ModelPlanNodeBuilder::new(analyzed_wren_mdl, session_state).build(
             model,
             required_fields,
             original_table_scan,
