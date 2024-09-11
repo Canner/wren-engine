@@ -21,9 +21,40 @@ use std::sync::Arc;
 /// [ModelAnalyzeRule] responsible for analyzing the model plan node. Turn TableScan from a model to a ModelPlanNode.
 /// We collect the required fields from the projection, filter, aggregation, and join,
 /// and pass them to the ModelPlanNode.
+///
+/// There are three main steps in this rule:
+/// 1. Analyze the scope of the logical plan and collect the required columns for models and visited tables. (button-up and depth-first)
+/// 2. Analyze the model and generate the ModelPlanNode according to the scope analysis. (button-up and depth-first)
+/// 3. Remove the catalog and schema prefix of Wren for the column and refresh the schema. (top-down)
+///
+/// The traverse path of step 1 and step 2 should be same.
+/// The corresponding scope will be pushed to or popped from the scope_queue sequentially.
 pub struct ModelAnalyzeRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state: SessionStateRef,
+}
+
+impl AnalyzerRule for ModelAnalyzeRule {
+    fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
+        let scope_queue = RefCell::new(VecDeque::new());
+        let root = RefCell::new(Scope::new());
+        self.analyze_scope(plan, &root, &scope_queue)?
+            .map_data(|plan| self.analyze_model(plan, &root, &scope_queue).data())?
+            .map_data(|plan| {
+                plan.transform_up_with_subqueries(&|plan| -> Result<
+                    Transformed<LogicalPlan>,
+                > {
+                    self.remove_wren_catalog_schema_prefix_and_refresh_schema(plan)
+                })
+                .data()
+            })?
+            .map_data(|plan| plan.recompute_schema())
+            .data()
+    }
+
+    fn name(&self) -> &str {
+        "ModelAnalyzeRule"
+    }
 }
 
 impl ModelAnalyzeRule {
@@ -41,11 +72,14 @@ impl ModelAnalyzeRule {
         Arc::clone(&self.session_state)
     }
 
+    /// The goal of this function is to analyze the scope of the logical plan and collect the required columns for models and visited tables.
+    /// If the plan contains subquery, we should create a new child scope and analyze the subquery recursively.
+    /// After leaving the subquery, we should push(push_back) the child scope to the scope_queue.
     fn analyze_scope(
         &self,
         plan: LogicalPlan,
         root: &RefCell<Scope>,
-        scope_buffer: &RefCell<VecDeque<RefCell<Scope>>>,
+        scope_queue: &RefCell<VecDeque<RefCell<Scope>>>,
     ) -> Result<Transformed<LogicalPlan>> {
         plan.transform_up(&|plan| -> Result<Transformed<LogicalPlan>> {
             let plan = self.analyze_scope_internal(plan, root)?.data;
@@ -64,10 +98,10 @@ impl ModelAnalyzeRule {
                     self.analyze_scope(
                         Arc::unwrap_or_clone(Arc::clone(subquery)),
                         &child_scope,
-                        scope_buffer,
+                        scope_queue,
                     )?;
-                    let mut scope_buffer = scope_buffer.borrow_mut();
-                    scope_buffer.push_back(child_scope);
+                    let mut scope_queue = scope_queue.borrow_mut();
+                    scope_queue.push_back(child_scope);
                 }
                 Ok(Transformed::no(plan))
             })
@@ -189,6 +223,7 @@ impl ModelAnalyzeRule {
         }
     }
 
+    /// This function only collects the model required columns
     fn collect_required_column(
         &self,
         expr: Expr,
@@ -232,25 +267,29 @@ impl ModelAnalyzeRule {
         Ok(())
     }
 
+    /// Analyze the table scan and rewrite the table scan to the ModelPlanNode according to the scope analysis.
+    /// If the plan contains subquery, we should analyze the subquery recursively.
+    /// Before enter the subquery, the corresponding child scope should be popped (pop_front) from the scope_queue.
     fn analyze_model(
         &self,
         plan: LogicalPlan,
         root: &RefCell<Scope>,
-        scope_buffer: &RefCell<VecDeque<RefCell<Scope>>>,
+        scope_queue: &RefCell<VecDeque<RefCell<Scope>>>,
     ) -> Result<Transformed<LogicalPlan>> {
         plan.transform_up(&|plan| -> Result<Transformed<LogicalPlan>> {
-            let plan = self.analyze_model_internal(plan, root, scope_buffer)?.data;
+            let plan = self.analyze_model_internal(plan, root, scope_queue)?.data;
+            // If the plan contains subquery, we should analyze the subquery recursively
             plan.map_subqueries(|plan| {
                 if let LogicalPlan::Subquery(subquery) = &plan {
-                    let mut scope_buffer_mut = scope_buffer.borrow_mut();
-                    let Some(child_scope) = scope_buffer_mut.pop_front() else {
+                    let mut scope_queue_mut = scope_queue.borrow_mut();
+                    let Some(child_scope) = scope_queue_mut.pop_front() else {
                         return internal_err!("No child scope found for subquery");
                     };
                     let transformed = self
                         .analyze_model(
                             Arc::unwrap_or_clone(Arc::clone(&subquery.subquery)),
                             &child_scope,
-                            scope_buffer,
+                            scope_queue,
                         )?
                         .data;
                     return Ok(Transformed::yes(LogicalPlan::Subquery(
@@ -267,12 +306,12 @@ impl ModelAnalyzeRule {
         &self,
         plan: LogicalPlan,
         scope: &RefCell<Scope>,
-        scope_buffer: &RefCell<VecDeque<RefCell<Scope>>>,
+        scope_queue: &RefCell<VecDeque<RefCell<Scope>>>,
     ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
                 // Because the bottom-up transformation is used, the table_scan is already transformed
-                // to the ModelPlanNode before the SubqueryAlias. We should check the patten like:
+                // to the ModelPlanNode before the SubqueryAlias. We should check the patten of Wren-generated model plan like:
                 //      SubqueryAlias -> SubqueryAlias -> Extension -> ModelPlanNode
                 // to get the correct required columns
                 match Arc::unwrap_or_clone(Arc::clone(&input)) {
@@ -400,14 +439,14 @@ impl ModelAnalyzeRule {
                 })))
             }
             LogicalPlan::Subquery(Subquery { subquery, .. }) => {
-                let mut scope_buffer_mut = scope_buffer.borrow_mut();
-                let Some(child_scope) = scope_buffer_mut.pop_front() else {
+                let mut scope_queue_mut = scope_queue.borrow_mut();
+                let Some(child_scope) = scope_queue_mut.pop_front() else {
                     return internal_err!("No child scope found for subquery");
                 };
                 self.analyze_model(
                     Arc::unwrap_or_clone(subquery),
                     &child_scope,
-                    scope_buffer,
+                    scope_queue,
                 )
             }
             _ => Ok(Transformed::no(plan)),
@@ -467,14 +506,20 @@ impl ModelAnalyzeRule {
         }
     }
 
-    fn replace_model_prefix_and_refresh_schema(
+    /// Remove the catalog and schema prefix of Wren for the column and refresh the schema.
+    /// The plan created by DataFusion is always with the Wren prefix for the column name.
+    /// Something like "wrenai.public.order_items_model.price". However, the model plan will be rewritten to a subquery alias
+    /// The catalog and schema are invalid for the subquery alias. We should remove the prefix and refresh the schema.
+    fn remove_wren_catalog_schema_prefix_and_refresh_schema(
         &self,
         plan: LogicalPlan,
     ) -> Result<Transformed<LogicalPlan>> {
         match plan {
             LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
                 let subquery = self
-                    .replace_model_prefix_and_refresh_schema(Arc::unwrap_or_clone(input))?
+                    .remove_wren_catalog_schema_prefix_and_refresh_schema(
+                        Arc::unwrap_or_clone(input),
+                    )?
                     .data;
                 Ok(Transformed::yes(LogicalPlan::SubqueryAlias(
                     SubqueryAlias::try_new(Arc::new(subquery), alias)?,
@@ -485,9 +530,9 @@ impl ModelAnalyzeRule {
                 outer_ref_columns,
             }) => {
                 let subquery = self
-                    .replace_model_prefix_and_refresh_schema(Arc::unwrap_or_clone(
-                        subquery,
-                    ))?
+                    .remove_wren_catalog_schema_prefix_and_refresh_schema(
+                        Arc::unwrap_or_clone(subquery),
+                    )?
                     .data;
                 Ok(Transformed::yes(LogicalPlan::Subquery(Subquery {
                     subquery: Arc::new(subquery),
@@ -702,34 +747,22 @@ impl ModelAnalyzeRule {
     }
 }
 
-impl AnalyzerRule for ModelAnalyzeRule {
-    fn analyze(&self, plan: LogicalPlan, _: &ConfigOptions) -> Result<LogicalPlan> {
-        let queue = RefCell::new(VecDeque::new());
-        let root = RefCell::new(Scope::new());
-        self.analyze_scope(plan, &root, &queue)?
-            .map_data(|plan| self.analyze_model(plan, &root, &queue).data())?
-            .map_data(|plan| {
-                plan.transform_up_with_subqueries(&|plan| -> Result<
-                    Transformed<LogicalPlan>,
-                > {
-                    self.replace_model_prefix_and_refresh_schema(plan)
-                })
-                .data()
-            })?
-            .map_data(|plan| plan.recompute_schema())
-            .data()
-    }
-
-    fn name(&self) -> &str {
-        "ModelAnalyzeRule"
-    }
-}
+/// [Scope] is used to collect the required columns for models and visited tables in a query scope.
+/// A query scope means is a full query body contain projection, relation. e.g.
+///    SELECT a, b, c FROM table
+///
+/// To avoid the table name be ambiguous, the relation name should be unique in the scope.
+/// The relation of parent scope can be accessed by the child scope.
+/// The child scope can also add the required columns to the parent scope.
 #[derive(Clone, Debug, Default)]
 pub struct Scope {
     /// The columns required by the dataset
     required_columns: HashMap<TableReference, HashSet<Expr>>,
+    /// The Wren dataset visited in the scope (only the Wren dataset)
     visited_dataset: HashMap<TableReference, Dataset>,
+    /// The table name visited in the scope (not only the Wren dataset)
     visited_tables: HashSet<TableReference>,
+    /// The parent scope
     parent: Option<Box<RefCell<Scope>>>,
 }
 
