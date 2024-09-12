@@ -2,6 +2,7 @@ use std::any::Any;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::create_schema;
@@ -45,6 +46,11 @@ pub async fn create_ctx_with_mdl(
         reset_default_catalog_schema.clone().read().deref().clone(),
     )
     .with_analyzer_rules(vec![
+        // expand the view should be the first rule
+        Arc::new(ExpandWrenViewRule::new(
+            Arc::clone(&analyzed_mdl),
+            Arc::clone(&reset_default_catalog_schema),
+        )),
         Arc::new(ModelAnalyzeRule::new(
             Arc::clone(&analyzed_mdl),
             reset_default_catalog_schema,

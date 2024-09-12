@@ -9,11 +9,12 @@ use log::{debug, info};
 use parking_lot::RwLock;
 use std::{collections::HashMap, sync::Arc};
 
+use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::from_qualified_name_str;
 use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
-use crate::mdl::manifest::{Column, Manifest, Model};
+use crate::mdl::manifest::{Column, Manifest, Model, View};
 pub use dataset::Dataset;
 use manifest::Relationship;
 use regex::Regex;
@@ -69,6 +70,7 @@ pub struct WrenMDL {
     pub manifest: Manifest,
     pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
     pub register_tables: RegisterTables,
+    pub catalog_schema_prefix: String,
 }
 
 impl WrenMDL {
@@ -122,6 +124,7 @@ impl WrenMDL {
         });
 
         WrenMDL {
+            catalog_schema_prefix: format!("{}.{}.", &manifest.catalog, &manifest.schema),
             manifest,
             qualified_references: qualifed_references,
             register_tables: HashMap::new(),
@@ -160,6 +163,14 @@ impl WrenMDL {
             .cloned()
     }
 
+    pub fn get_view(&self, name: &str) -> Option<Arc<View>> {
+        self.manifest
+            .views
+            .iter()
+            .find(|view| view.name == name)
+            .cloned()
+    }
+
     pub fn get_relationship(&self, name: &str) -> Option<Arc<Relationship>> {
         self.manifest
             .relationships
@@ -173,6 +184,10 @@ impl WrenMDL {
         column: &datafusion::common::Column,
     ) -> Option<ColumnReference> {
         self.qualified_references.get(column).cloned()
+    }
+
+    pub fn catalog_schema_prefix(&self) -> &str {
+        &self.catalog_schema_prefix
     }
 }
 
@@ -194,13 +209,8 @@ pub async fn transform_sql_with_ctx(
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
     sql: &str,
 ) -> Result<String> {
-    let catalog_schema = format!(
-        "{}.{}.",
-        analyzed_mdl.wren_mdl().catalog(),
-        analyzed_mdl.wren_mdl().schema()
-    );
     info!("wren-core received SQL: {}", sql);
-    let ctx = create_ctx_with_mdl(ctx, analyzed_mdl).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan:?}");
     let analyzed = ctx.state().optimize(&plan)?;
@@ -211,7 +221,9 @@ pub async fn transform_sql_with_ctx(
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
             // TODO: workaround to remove unnecessary catalog and schema of mdl
-            let replaced = sql.to_string().replace(&catalog_schema, "");
+            let replaced = sql
+                .to_string()
+                .replace(analyzed_mdl.wren_mdl().catalog_schema_prefix(), "");
             info!("wren-core planned SQL: {}", replaced);
             Ok(replaced)
         }
@@ -251,6 +263,11 @@ pub async fn apply_wren_rules(
     ctx: &SessionContext,
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
 ) -> Result<()> {
+    // expand the view should be the first rule
+    ctx.add_analyzer_rule(Arc::new(ExpandWrenViewRule::new(
+        Arc::clone(&analyzed_wren_mdl),
+        ctx.state_ref(),
+    )));
     ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
         Arc::clone(&analyzed_wren_mdl),
         ctx.state_ref(),

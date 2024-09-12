@@ -21,8 +21,7 @@
 #caused by
 #Schema error: No field named customer.c_phone.
 
-# query TIR
-query error
+query TIR
 select
     cntrycode,
     count(*) as numcust,
@@ -60,11 +59,11 @@ group by
     cntrycode
 order by
     cntrycode;
-#----
-#13 10 75359.29
-#17 8 62288.98
-#18 14 111072.45
-#23 5 40458.86
-#29 11 88722.85
-#30 17 122189.33
-#31 8 66313.16
+----
+13 10 75359.29
+17 8 62288.98
+18 14 111072.45
+23 5 40458.86
+29 11 88722.85
+30 17 122189.33
+31 8 66313.16
