@@ -13,7 +13,7 @@ python = ">=3.11,<3.12"
 maturin = "1.7.1"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.2"
+pytest = "8.3.3"
 
 [tool.maturin]
 module-name = "wren_core"
