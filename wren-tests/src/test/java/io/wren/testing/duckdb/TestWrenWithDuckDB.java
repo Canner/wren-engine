@@ -232,6 +232,12 @@ public class TestWrenWithDuckDB
 
         queryResultDto = query(manifest, "with t1 as (select * from Orders) select * from (select count(*) from t1) s1");
         assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select 15000 = (select count(*) from t1)");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(true);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select 1 from Orders where 15000 = (select count(*) from t1)");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(1);
     }
 
     @Test

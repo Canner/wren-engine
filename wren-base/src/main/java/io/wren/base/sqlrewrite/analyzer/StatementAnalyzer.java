@@ -394,7 +394,6 @@ public final class StatementAnalyzer
         private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
             outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
-            // TODO: handle when singleColumn is a subquery
             ExpressionAnalysis expressionAnalysis = analyzeExpression(singleColumn.getExpression(), scope);
 
             if (expressionAnalysis.isRequireRelation()) {

@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -140,7 +141,7 @@ public class ExpressionAnalyzer
         @Override
         protected Void visitSubqueryExpression(SubqueryExpression node, Void context)
         {
-            StatementAnalyzer.analyze(analysis, node.getQuery(), sessionContext, wrenMDL);
+            StatementAnalyzer.analyze(analysis, node.getQuery(), sessionContext, wrenMDL, Optional.of(scope));
             return null;
         }
 
