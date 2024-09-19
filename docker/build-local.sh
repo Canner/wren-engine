@@ -15,7 +15,6 @@ popd
 
 WORK_DIR="$(mktemp -d)"
 cp ${SOURCE_DIR}wren-server/target/wren-server-${WREN_VERSION}-executable.jar ${WORK_DIR}
-cp -r ${SOURCE_DIR}wren-sqlglot-server ${WORK_DIR}
 cp ./entrypoint.sh ${WORK_DIR}
 
 CONTAINER="wren-engine:${WREN_VERSION}"
