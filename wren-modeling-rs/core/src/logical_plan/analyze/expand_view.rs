@@ -41,7 +41,7 @@ impl AnalyzerRule for ExpandWrenViewRule {
                         .is_some()
                     {
                         if let Some(logical_plan) = table_scan.source.get_logical_plan() {
-                            let subquery = LogicalPlanBuilder::from(logical_plan.clone())
+                            let subquery = LogicalPlanBuilder::from(logical_plan.into_owned())
                                 .alias(quoted(table_scan.table_name.table()))?
                                 .build()?;
                             return Ok(Transformed::yes(subquery));
