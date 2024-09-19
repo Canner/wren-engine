@@ -83,7 +83,12 @@ public final class StatementAnalyzer
 
     public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, WrenMDL wrenMDL)
     {
-        Scope queryScope = new Visitor(sessionContext, analysis, wrenMDL).process(statement, Optional.empty());
+        return analyze(analysis, statement, sessionContext, wrenMDL, Optional.empty());
+    }
+
+    public static Scope analyze(Analysis analysis, Statement statement, SessionContext sessionContext, WrenMDL wrenMDL, Optional<Scope> scope)
+    {
+        Scope queryScope = new Visitor(sessionContext, analysis, wrenMDL).process(statement, scope);
         // add models directly used in sql query
         analysis.addModels(
                 wrenMDL.listModels().stream()
@@ -244,7 +249,7 @@ public final class StatementAnalyzer
                     else {
                         SingleColumn singleColumn = (SingleColumn) selectItem;
                         String name = singleColumn.getAlias().map(Identifier::getValue)
-                                .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression()).getSuffix()))
+                                .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression())).map(QualifiedName::getSuffix))
                                 .orElse(singleColumn.getExpression().toString());
                         if (scope.isPresent()) {
                             Optional<Field> fieldOptional = scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
@@ -389,7 +394,6 @@ public final class StatementAnalyzer
         private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
             outputExpressions.add(singleColumn.getAlias().map(name -> (Expression) name).orElse(singleColumn.getExpression()));
-            // TODO: handle when singleColumn is a subquery
             ExpressionAnalysis expressionAnalysis = analyzeExpression(singleColumn.getExpression(), scope);
 
             if (expressionAnalysis.isRequireRelation()) {
@@ -397,16 +401,18 @@ public final class StatementAnalyzer
                         .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source"));
 
                 // collect only the source node that is a table for generating the required column for models
-                DefaultTraversalVisitor<Void> visitor = new DefaultTraversalVisitor<>()
+                DefaultTraversalVisitor<Scope> visitor = new DefaultTraversalVisitor<>()
                 {
                     @Override
-                    protected Void visitTable(Table node, Void scope)
+                    protected Void visitTable(Table node, Scope scope)
                     {
-                        analysis.addRequiredSourceNode(node);
+                        if (scope.getNamedQuery(node.getName().getSuffix()).isEmpty()) {
+                            analysis.addRequiredSourceNode(node);
+                        }
                         return null;
                     }
                 };
-                visitor.process(source, null);
+                visitor.process(source, scope);
             }
         }
 
@@ -570,7 +576,7 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitTableSubquery(TableSubquery node, Optional<Scope> scope)
         {
-            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, wrenMDL))
+            return Optional.ofNullable(analyze(analysis, node.getQuery(), sessionContext, wrenMDL, scope))
                     .map(value -> createAndAssignScope(node, scope, value))
                     .orElseGet(() -> Scope.builder().parent(scope).build());
         }

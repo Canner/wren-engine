@@ -204,7 +204,7 @@ public class TestWrenWithDuckDB
     }
 
     @Test
-    public void testCountJoin()
+    public void testCount()
     {
         QueryResultDto queryResultDto = query(manifest, "select count(*) from Orders a");
         assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
@@ -217,6 +217,27 @@ public class TestWrenWithDuckDB
 
         queryResultDto = query(manifest, "select count(*) from Orders a JOIN Customer b ON a.custkey = b.custkey");
         assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "select count(*) from (select * from Orders) t1");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "select count(*) from (Orders a JOIN Customer b ON a.custkey = b.custkey) t1");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select count(*) from t1");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders), t2 as (select count(*) from t1) select * from t2");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select * from (select count(*) from t1) s1");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(15000);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select 15000 = (select count(*) from t1)");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(true);
+
+        queryResultDto = query(manifest, "with t1 as (select * from Orders) select 1 from Orders where 15000 = (select count(*) from t1)");
+        assertThat(queryResultDto.getData().getFirst()[0]).isEqualTo(1);
     }
 
     @Test
