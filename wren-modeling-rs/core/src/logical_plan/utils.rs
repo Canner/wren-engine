@@ -43,7 +43,7 @@ pub fn map_data_type(data_type: &str) -> DataType {
     if data_type.starts_with("struct") {
         return create_mock_struct_type();
     }
-    let result = match data_type {
+    match data_type {
         // Wren Definition Types
         "bool" => DataType::Boolean,
         "tinyint" => DataType::Int8,
@@ -90,8 +90,7 @@ pub fn map_data_type(data_type: &str) -> DataType {
             debug!("map unknown type {} to Utf8", data_type);
             DataType::Utf8
         }
-    };
-    result
+    }
 }
 
 pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
