@@ -49,9 +49,9 @@ impl Column {
         self.expression.as_deref()
     }
 
-    pub fn to_field(&self) -> Result<Field> {
-        let data_type = map_data_type(&self.r#type)?;
-        Ok(Field::new(&self.name, data_type, self.no_null))
+    pub fn to_field(&self) -> Field {
+        let data_type = map_data_type(&self.r#type);
+        Field::new(&self.name, data_type, self.no_null)
     }
 
     pub fn to_remote_field(&self, session_state: SessionStateRef) -> Result<Vec<Field>> {
@@ -67,7 +67,7 @@ impl Column {
                 .map(|c| Field::new(c.value, Utf8, false))
                 .collect())
         } else {
-            Ok(vec![self.to_field()?])
+            Ok(vec![self.to_field()])
         }
     }
 
@@ -109,11 +109,11 @@ impl Dataset {
     pub fn to_qualified_schema(&self) -> Result<DFSchema> {
         match self {
             Dataset::Model(model) => {
-                let fields = model
+                let fields: Vec<_> = model
                     .get_physical_columns()
                     .iter()
                     .map(|c| c.to_field())
-                    .collect::<Result<Vec<_>>>()?;
+                    .collect();
                 let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
                 DFSchema::try_from_qualified_schema(quoted(&model.name), &arrow_schema)
             }

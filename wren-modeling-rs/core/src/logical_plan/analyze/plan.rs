@@ -226,7 +226,7 @@ impl ModelPlanNodeBuilder {
                 Some(TableReference::bare(quoted(model.name()))),
                 Arc::new(Field::new(
                     column.name(),
-                    map_data_type(&column.r#type)?,
+                    map_data_type(&column.r#type),
                     column.no_null,
                 )),
             ));
@@ -722,7 +722,7 @@ impl ModelSourceNode {
                         Some(TableReference::bare(quoted(model.name()))),
                         Arc::new(Field::new(
                             column.name(),
-                            map_data_type(&column.r#type)?,
+                            map_data_type(&column.r#type),
                             column.no_null,
                         )),
                     ));
@@ -762,7 +762,7 @@ impl ModelSourceNode {
                     Some(TableReference::bare(quoted(model.name()))),
                     Arc::new(Field::new(
                         column.name(),
-                        map_data_type(&column.r#type)?,
+                        map_data_type(&column.r#type),
                         column.no_null,
                     )),
                 ));
@@ -850,12 +850,12 @@ impl CalculationPlanNode {
         let output_field = vec![
             Arc::new(Field::new(
                 calculation.column.name(),
-                map_data_type(&calculation.column.r#type)?,
+                map_data_type(&calculation.column.r#type),
                 calculation.column.no_null,
             )),
             Arc::new(Field::new(
                 pk_column.name(),
-                map_data_type(&pk_column.r#type)?,
+                map_data_type(&pk_column.r#type),
                 pk_column.no_null,
             )),
         ]

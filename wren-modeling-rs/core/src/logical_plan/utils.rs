@@ -32,18 +32,18 @@ fn create_mock_struct_type() -> DataType {
     DataType::Struct(fields)
 }
 
-pub fn map_data_type(data_type: &str) -> Result<DataType> {
+pub fn map_data_type(data_type: &str) -> DataType {
     let lower = data_type.to_lowercase();
     let data_type = lower.as_str();
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
     if data_type.starts_with("array") {
-        return Ok(create_mock_list_type());
+        return create_mock_list_type();
     }
     if data_type.starts_with("struct") {
-        return Ok(create_mock_struct_type());
+        return create_mock_struct_type();
     }
-    let result = match data_type {
+    match data_type {
         // Wren Definition Types
         "bool" => DataType::Boolean,
         "tinyint" => DataType::Int8,
@@ -90,8 +90,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
             debug!("map unknown type {} to Utf8", data_type);
             DataType::Utf8
         }
-    };
-    Ok(result)
+    }
 }
 
 pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
@@ -103,7 +102,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type)?;
+            let data_type = map_data_type(&column.r#type);
             Ok(Field::new(&column.name, data_type, column.no_null))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -308,10 +307,10 @@ mod test {
             ("struct<name string, age int>", create_mock_struct_type()),
         ];
         for (data_type, expected) in test_cases {
-            let result = super::map_data_type(data_type)?;
+            let result = super::map_data_type(data_type);
             assert_eq!(result, expected);
             // test case insensitivity
-            let result = super::map_data_type(&data_type.to_uppercase())?;
+            let result = super::map_data_type(&data_type.to_uppercase());
             assert_eq!(result, expected);
         }
         Ok(())
