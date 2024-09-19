@@ -346,7 +346,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let tests: Vec<&str> = vec![
-                // "select orderkey + orderkey from test.test.orders",
+                "select orderkey + orderkey from test.test.orders",
                 "select orderkey from test.test.orders where orders.totalprice > 10",
                 "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
                 "select orderkey, sum(totalprice) from test.test.orders group by 1",
