@@ -9,7 +9,7 @@ use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::unparser::dialect::Dialect;
+use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
@@ -282,6 +282,10 @@ impl Dialect for WrenDialect {
         } else {
             None
         }
+    }
+
+    fn interval_style(&self) -> IntervalStyle {
+        IntervalStyle::SQLStandard
     }
 }
 

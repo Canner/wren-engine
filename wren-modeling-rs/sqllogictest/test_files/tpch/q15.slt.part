@@ -16,9 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# TODO: External error: query failed: DataFusion error: Arrow error: Parser error: Invalid input syntax for type interval: "0 YEARS 3 MONS 0 DAYS 0 HOURS 0 MINS 0.000000000 SECS seconds"
-#query ITTTR
-query error
+query ITTTR
 with revenue0 (supplier_no, total_revenue) as (
 	select
 		l_suppkey,
@@ -50,5 +48,5 @@ where
 	)
 order by
 	s_suppkey;
-#----
-#21 Supplier#000000021 TZoQwNFFO i,baXpbpin02,hvuhE,GRVIKm  12-253-590-5816 1161099.4636
+----
+21 Supplier#000000021 TZoQwNFFO i,baXpbpin02,hvuhE,GRVIKm  12-253-590-5816 1161099.4636
