@@ -11,19 +11,17 @@
       },
       "columns": [
         {
-          "name": "custkey",
-          "type": "integer",
-          "expression": "c_custkey"
+          "name": "c_custkey",
+          "type": "integer"
         },
         {
-          "name": "name",
-          "type": "varchar",
-          "expression": "c_name"
+          "name": "c_name",
+          "type": "varchar"
         },
         {
           "name": "custkey_plus",
           "type": "integer",
-          "expression": "custkey + 1",
+          "expression": "c_custkey + 1",
           "isCalculated": true
         },
         {
@@ -36,7 +34,7 @@
           }
         }
       ],
-      "primaryKey": "custkey",
+      "primaryKey": "c_custkey",
       "properties": {
         "description": "This is a customer table",
         "maintainer": "test"
@@ -49,19 +47,16 @@
       },
       "columns": [
         {
-          "name": "custkey",
-          "type": "integer",
-          "expression": "p_custkey"
+          "name": "p_custkey",
+          "type": "integer"
         },
         {
-          "name": "phone",
-          "type": "varchar",
-          "expression": "p_phone"
+          "name": "p_phone",
+          "type": "varchar"
         },
         {
-          "name": "sex",
-          "type": "varchar",
-          "expression": "p_sex"
+          "name": "p_sex",
+          "type": "varchar"
         },
         {
           "name": "customer",
@@ -72,10 +67,10 @@
           "name": "totalcost",
           "type": "integer",
           "isCalculated": true,
-          "expression": "sum(customer.orders.totalprice)"
+          "expression": "sum(customer.orders.o_totalprice)"
         }
       ],
-      "primaryKey": "custkey"
+      "primaryKey": "p_custkey"
     },
     {
       "name": "orders",
@@ -86,19 +81,16 @@
       },
       "columns": [
         {
-          "name": "orderkey",
-          "type": "integer",
-          "expression": "o_orderkey"
+          "name": "o_orderkey",
+          "type": "integer"
         },
         {
-          "name": "custkey",
-          "type": "integer",
-          "expression": "o_custkey"
+          "name": "o_custkey",
+          "type": "integer"
         },
         {
-          "name": "totalprice",
-          "type": "integer",
-          "expression": "o_totalprice"
+          "name": "o_totalprice",
+          "type": "integer"
         },
         {
           "name": "customer",
@@ -108,23 +100,23 @@
         {
           "name": "customer_name",
           "type": "varchar",
-          "expression": "customer.name",
+          "expression": "customer.c_name",
           "isCalculated": true
         },
         {
           "name": "orderkey_plus_custkey",
           "type": "integer",
-          "expression": "orderkey + custkey",
+          "expression": "o_orderkey + o_custkey",
           "isCalculated": true
         },
         {
           "name": "hash_orderkey",
           "type": "varchar",
-          "expression": "md5(orderkey)",
+          "expression": "md5(o_orderkey)",
           "isCalculated": true
         }
       ],
-      "primaryKey": "orderkey"
+      "primaryKey": "o_orderkey"
     }
   ],
   "relationships": [
@@ -132,13 +124,13 @@
       "name": "CustomerOrders",
       "models": ["customer", "orders"],
       "joinType": "ONE_TO_MANY",
-      "condition": "customer.custkey = orders.custkey"
+      "condition": "customer.c_custkey = orders.o_custkey"
     },
     {
       "name" : "CustomerProfile",
       "models": ["customer", "profile"],
       "joinType": "ONE_TO_ONE",
-      "condition": "customer.custkey = profile.custkey"
+      "condition": "customer.c_custkey = profile.p_custkey"
     }
   ],
   "views": [
