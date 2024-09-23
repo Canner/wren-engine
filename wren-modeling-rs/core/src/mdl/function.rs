@@ -2,9 +2,15 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::common::internal_err;
 use datafusion::common::Result;
 use datafusion::logical_expr::function::AccumulatorArgs;
-use datafusion::logical_expr::{Accumulator, AggregateUDFImpl, ColumnarValue, PartitionEvaluator, ScalarUDFImpl, Signature, TypeSignature, Volatility, WindowUDFImpl};
+use datafusion::logical_expr::{
+    Accumulator, AggregateUDFImpl, ColumnarValue, PartitionEvaluator, ScalarUDFImpl,
+    Signature, TypeSignature, Volatility, WindowUDFImpl,
+};
 use std::any::Any;
 
+/// A scalar UDF that will be bypassed when planning logical plan.
+/// This is used to register the remote function to the context. The function should not be
+/// invoked by DataFusion. It's only used to generate the logical plan and unparsed them to SQL.
 #[derive(Debug)]
 pub struct ByPassScalarUDF {
     name: String,
@@ -17,7 +23,13 @@ impl ByPassScalarUDF {
         Self {
             name: name.to_string(),
             return_type,
-            signature: Signature::one_of(vec![TypeSignature::VariadicAny, TypeSignature::Uniform(0, vec![])], Volatility::Volatile),
+            signature: Signature::one_of(
+                vec![
+                    TypeSignature::VariadicAny,
+                    TypeSignature::Uniform(0, vec![]),
+                ],
+                Volatility::Volatile,
+            ),
         }
     }
 }
@@ -35,21 +47,17 @@ impl ScalarUDFImpl for ByPassScalarUDF {
         &self.signature
     }
 
-    fn return_type(
-        &self,
-        _arg_types: &[DataType],
-    ) -> Result<DataType> {
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(self.return_type.clone())
     }
 
-    fn invoke(
-        &self,
-        _args: &[ColumnarValue],
-    ) -> Result<ColumnarValue> {
+    fn invoke(&self, _args: &[ColumnarValue]) -> Result<ColumnarValue> {
         internal_err!("This function should not be called")
     }
 }
 
+/// An aggregate UDF that will be bypassed when planning logical plan.
+/// See [ByPassScalarUDF] for more details.
 #[derive(Debug)]
 pub struct ByPassAggregateUDF {
     name: String,
@@ -80,21 +88,17 @@ impl AggregateUDFImpl for ByPassAggregateUDF {
         &self.signature
     }
 
-    fn return_type(
-        &self,
-        _arg_types: &[DataType],
-    ) -> Result<DataType> {
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(self.return_type.clone())
     }
 
-    fn accumulator(
-        &self,
-        _acc_args: AccumulatorArgs,
-    ) -> Result<Box<dyn Accumulator>> {
+    fn accumulator(&self, _acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
         internal_err!("This function should not be called")
     }
 }
 
+/// A window UDF that will be bypassed when planning logical plan.
+/// See [ByPassScalarUDF] for more details.
 #[derive(Debug)]
 pub struct ByPassWindowFunction {
     name: String,
@@ -125,27 +129,24 @@ impl WindowUDFImpl for ByPassWindowFunction {
         &self.signature
     }
 
-    fn return_type(
-        &self,
-        _arg_types: &[DataType],
-    ) -> Result<DataType> {
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(self.return_type.clone())
     }
 
-    fn partition_evaluator(
-        &self,
-    ) -> Result<Box<dyn PartitionEvaluator>> {
+    fn partition_evaluator(&self) -> Result<Box<dyn PartitionEvaluator>> {
         internal_err!("This function should not be called")
     }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::mdl::function::{
+        ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction,
+    };
     use datafusion::arrow::datatypes::DataType;
     use datafusion::common::Result;
     use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
     use datafusion::prelude::SessionContext;
-    use crate::mdl::function::{ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction};
 
     #[tokio::test]
     async fn test_by_pass_scalar_udf() -> Result<()> {
@@ -153,7 +154,10 @@ mod test {
         let ctx = SessionContext::new();
         ctx.register_udf(ScalarUDF::new_from_impl(udf));
 
-        let plan = ctx.sql("SELECT date_diff(1, 2)").await?.into_unoptimized_plan();
+        let plan = ctx
+            .sql("SELECT date_diff(1, 2)")
+            .await?
+            .into_unoptimized_plan();
         let expected = "Projection: date_diff(Int64(1), Int64(2))\n  EmptyRelation";
         assert_eq!(format!("{plan}"), expected);
         Ok(())
@@ -181,7 +185,10 @@ mod test {
         let ctx = SessionContext::new();
         ctx.register_udwf(WindowUDF::new_from_impl(udf));
 
-        let plan = ctx.sql("SELECT custom_window(1, 2) OVER ()").await?.into_unoptimized_plan();
+        let plan = ctx
+            .sql("SELECT custom_window(1, 2) OVER ()")
+            .await?
+            .into_unoptimized_plan();
         let expected = "Projection: custom_window(Int64(1),Int64(2)) ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\
         \n  WindowAggr: windowExpr=[[custom_window(Int64(1), Int64(2)) ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING]]\
         \n    EmptyRelation";
