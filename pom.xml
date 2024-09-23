@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>175</version>
+        <version>176</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -64,7 +64,7 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.2</dep.antlr.version>
-        <dep.airlift.version>267</dep.airlift.version>
+        <dep.airlift.version>268</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.1</dep.testcontainers.version>
@@ -391,7 +391,7 @@
             <dependency>
                 <groupId>org.threeten</groupId>
                 <artifactId>threetenbp</artifactId>
-                <version>1.6.9</version>
+                <version>1.7.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
