@@ -27,19 +27,17 @@ manifest = {
                 "table": "orders",
             },
             "columns": [
-                {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
-                {"name": "custkey", "expression": "o_custkey", "type": "integer"},
+                {"name": "o_orderkey", "type": "integer"},
+                {"name": "o_custkey", "type": "integer"},
                 {
-                    "name": "orderstatus",
-                    "expression": "o_orderstatus",
+                    "name": "o_orderstatus",
                     "type": "varchar",
                 },
                 {
-                    "name": "totalprice",
-                    "expression": "o_totalprice",
+                    "name": "o_totalprice",
                     "type": "double",
                 },
-                {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
+                {"name": "o_orderdate", "type": "date"},
                 {
                     "name": "order_cust_key",
                     "expression": "concat(o_orderkey, '_', o_custkey)",
@@ -56,7 +54,7 @@ manifest = {
                     "type": "timestamp",
                 },
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": "o_orderkey",
         },
         {
             "name": "customer",
@@ -65,10 +63,10 @@ manifest = {
                 "table": "customer",
             },
             "columns": [
-                {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                {"name": "name", "expression": "c_name", "type": "varchar"},
+                {"name": "c_custkey", "type": "integer"},
+                {"name": "c_name", "type": "varchar"},
             ],
-            "primaryKey": "custkey",
+            "primaryKey": "c_custkey",
         },
     ],
 }
@@ -115,11 +113,11 @@ def test_query(postgres: PostgresContainer):
         "172799.49",
     ]
     assert result["dtypes"] == {
-        "orderkey": "int32",
-        "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
+        "o_orderkey": "int32",
+        "o_custkey": "int32",
+        "o_orderstatus": "object",
+        "o_totalprice": "object",
+        "o_orderdate": "object",
         "order_cust_key": "object",
         "timestamp": "object",
         "timestamptz": "object",
@@ -270,7 +268,7 @@ def test_validate_with_unknown_rule(postgres: PostgresContainer):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "parameters": {"modelName": "orders", "columnName": "orderkey"},
+            "parameters": {"modelName": "orders", "columnName": "o_orderkey"},
         },
     )
     assert response.status_code == 422
@@ -287,7 +285,7 @@ def test_validate_rule_column_is_valid(postgres: PostgresContainer):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "parameters": {"modelName": "orders", "columnName": "orderkey"},
+            "parameters": {"modelName": "orders", "columnName": "o_orderkey"},
         },
     )
     assert response.status_code == 204
@@ -302,7 +300,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "parameters": {"modelName": "X", "columnName": "orderkey"},
+            "parameters": {"modelName": "X", "columnName": "o_orderkey"},
         },
     )
     assert response.status_code == 422
@@ -352,7 +350,7 @@ def test_validate_rule_column_is_valid_without_one_parameter(
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
+            "parameters": {"columnName": "o_orderkey"},
         },
     )
     assert response.status_code == 422
@@ -364,7 +362,7 @@ def test_dry_plan():
         url=f"{base_url}/dry-plan",
         json={
             "manifestStr": manifest_str,
-            "sql": "SELECT orderkey, order_cust_key FROM wren.public.orders LIMIT 1",
+            "sql": "SELECT o_orderkey, order_cust_key FROM wren.public.orders LIMIT 1",
         },
     )
     assert response.status_code == 200
