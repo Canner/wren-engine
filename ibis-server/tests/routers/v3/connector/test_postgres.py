@@ -105,14 +105,14 @@ def test_query(postgres: PostgresContainer):
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
     assert result["data"][0] == [
-        1,
-        370,
-        "O",
-        "172799.49",
-        "1996-01-02",
-        "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
+        "1_370",
+        370,
+        1,
+        "1996-01-02",
+        "O",
+        "172799.49",
     ]
     assert result["dtypes"] == {
         "orderkey": "int32",
@@ -140,7 +140,7 @@ def test_query_with_connection_url(postgres: PostgresContainer):
     result = response.json()
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
-    assert result["data"][0][0] == 1
+    assert result["data"][0][0] == "2024-01-01 23:59:59.000000"
     assert result["dtypes"] is not None
 
 

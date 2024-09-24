@@ -234,7 +234,6 @@ pub fn expr_to_columns(
             | Expr::Case { .. }
             | Expr::Cast { .. }
             | Expr::TryCast { .. }
-            | Expr::Sort { .. }
             | Expr::ScalarFunction(..)
             | Expr::WindowFunction { .. }
             | Expr::AggregateFunction { .. }

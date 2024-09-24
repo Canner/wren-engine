@@ -10,6 +10,7 @@ use datafusion::common::{
     internal_err, plan_err, Column, DFSchema, DFSchemaRef, TableReference,
 };
 use datafusion::error::Result;
+use datafusion::logical_expr::expr::WildcardOptions;
 use datafusion::logical_expr::utils::find_aggregate_exprs;
 use datafusion::logical_expr::{
     col, Expr, Extension, LogicalPlan, UserDefinedLogicalNode, UserDefinedLogicalNodeCore,
@@ -263,7 +264,13 @@ impl ModelPlanNodeBuilder {
         let source_chain =
             if !source_required_fields.is_empty() || required_fields.is_empty() {
                 if required_fields.is_empty() {
-                    source_required_fields.insert(0, Expr::Wildcard { qualifier: None });
+                    source_required_fields.insert(
+                        0,
+                        Expr::Wildcard {
+                            qualifier: None,
+                            options: WildcardOptions::default(),
+                        },
+                    );
                 }
                 RelationChain::source(
                     source,
@@ -702,7 +709,7 @@ impl ModelSourceNode {
         let mut required_exprs_buffer = BTreeSet::new();
         let mut fields_buffer = BTreeSet::new();
         for expr in required_exprs.iter() {
-            if let Expr::Wildcard { qualifier } = expr {
+            if let Expr::Wildcard { qualifier, .. } = expr {
                 let model = if let Some(model) = qualifier {
                     let Some(model) =
                         analyzed_wren_mdl.wren_mdl.get_model(&format!("{model}"))
