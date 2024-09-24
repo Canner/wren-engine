@@ -90,8 +90,7 @@ pub fn map_data_type(data_type: &str) -> DataType {
             debug!("map unknown type {} to Utf8", data_type);
             DataType::Utf8
         }
-    };
-    Ok(result)
+    }
 }
 
 pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
@@ -103,7 +102,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type)?;
+            let data_type = map_data_type(&column.r#type);
             Ok(Field::new(&column.name, data_type, column.no_null))
         })
         .collect::<Result<Vec<_>>>()?;
