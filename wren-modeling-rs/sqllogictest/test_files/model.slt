@@ -37,6 +37,18 @@ select cnt1 = cnt2 from (select count(*) as cnt1 from (select "Customer_state" f
 ----
 true
 
+query I rowsort
+WITH w1 as (select "Id" from "Order_items" where "Price" in
+    (select distinct "Price" from "Order_items" order by "Price" DESC LIMIT 5))
+select * from w1;
+----
+123
+175
+178
+201
+56
+9
+
 # TODO: occurred fatal runtime error: stack overflow
 #query B
 #select actual = expected from (select "Totalprice" as actual from wrenai.public."Orders" where "Order_id" = '76754c0e642c8f99a8c3fcb8a14ac700'), (select sum(price) as expected from datafusion.public.order_items where order_id = '76754c0e642c8f99a8c3fcb8a14ac700') limit 1;
@@ -48,9 +60,11 @@ select "Id", "Price" from "Order_items" where "Order_id" in (SELECT "Order_id" F
 ----
 105 287.4
 
-# TODO: DataFusion has some case sensitivity issue with the outer reference column name
-# Test the query with outer reference column
-# query I
-# select "Customer_id" from wrenai.public."Orders" where not exists (select 1 from wrenai.public."Order_items" where "Orders"."Order_id" = "Order_items"."Order_id")
-# ----
-# 1
+query T
+select "Customer_id" from wrenai.public."Orders" where exists (select 1 from wrenai.public."Order_items" where "Orders"."Order_id" = "Order_items"."Order_id") order by 1 limit 5;
+----
+0049e8442c2a3e4a8d1ff5a9549abd53
+024dad8e71332c433bc9a494565b9c49
+02d1b5b8831241174c6ef13efd35abbd
+04eafb40a16989307464f27f1fed8907
+0732c0881c70ebcda536a4b14e9db106

@@ -16,10 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# TODO
-#  DataFusion error: Arrow error: Parser error: Invalid input syntax for type interval: "0 YEARS 3 MONS 0 DAYS 0 HOURS 0 MINS 0.000000000 SECS seconds"
-#query TI
-query error
+query TI
 select
     o_orderpriority,
     count(*) as order_count
@@ -41,9 +38,9 @@ group by
     o_orderpriority
 order by
     o_orderpriority;
-#----
-#1-URGENT 93
-#2-HIGH 103
-#3-MEDIUM 109
-#4-NOT SPECIFIED 102
-#5-LOW 128
+----
+1-URGENT 93
+2-HIGH 103
+3-MEDIUM 109
+4-NOT SPECIFIED 102
+5-LOW 128

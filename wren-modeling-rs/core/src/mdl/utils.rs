@@ -247,7 +247,7 @@ mod tests {
             analyzed_mdl.clone(),
             ctx.state_ref(),
         )?;
-        assert_eq!(expr.to_string(), "customer.name");
+        assert_eq!(expr.to_string(), "customer.c_name");
         Ok(())
     }
 
@@ -275,7 +275,7 @@ mod tests {
             analyzed_mdl,
             ctx.state_ref(),
         )?;
-        assert_eq!(expr.to_string(), "orders.orderkey + orders.custkey");
+        assert_eq!(expr.to_string(), "orders.o_orderkey + orders.o_custkey");
         Ok(())
     }
 
@@ -312,11 +312,11 @@ mod tests {
         let ctx = SessionContext::new();
         let model = analyzed_mdl.wren_mdl().get_model("customer").unwrap();
         let expr = super::create_wren_expr_for_model(
-            "name",
+            "c_name",
             Arc::clone(&model),
             ctx.state_ref(),
         )?;
-        assert_eq!(expr.to_string(), "customer.name");
+        assert_eq!(expr.to_string(), "customer.c_name");
         Ok(())
     }
 

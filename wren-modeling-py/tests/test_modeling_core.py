@@ -14,10 +14,10 @@ manifest = {
                 "table": "customer",
             },
             "columns": [
-                {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                {"name": "name", "expression": "c_name", "type": "varchar"},
+                {"name": "c_custkey", "type": "integer"},
+                {"name": "c_name", "type": "varchar"},
             ],
-            "primaryKey": "custkey",
+            "primaryKey": "c_custkey",
         },
     ],
 }
@@ -30,5 +30,5 @@ def test_transform_sql():
     rewritten_sql = wren_core.transform_sql(manifest_str, sql)
     assert (
         rewritten_sql
-        == 'SELECT * FROM (SELECT main.customer.c_custkey AS custkey, main.customer.c_name AS "name" FROM main.customer) AS customer'
+        == 'SELECT * FROM (SELECT main.customer.c_custkey AS c_custkey, main.customer.c_name AS c_name FROM main.customer) AS customer'
     )

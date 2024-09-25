@@ -57,10 +57,10 @@ mod tests {
                         "table": "customer"
                     },
                     "columns": [
-                        {"name": "custkey", "expression": "c_custkey", "type": "integer"},
-                        {"name": "name", "expression": "c_name", "type": "varchar"}
+                        {"name": "c_custkey", "type": "integer"},
+                        {"name": "c_name", "type": "varchar"}
                     ],
-                    "primaryKey": "custkey"
+                    "primaryKey": "c_custkey"
                 }
             ]
         }"#;
@@ -71,7 +71,7 @@ mod tests {
                 .unwrap();
         assert_eq!(
             transformed_sql,
-            r#"SELECT * FROM (SELECT main.customer.c_custkey AS custkey, main.customer.c_name AS "name" FROM main.customer) AS customer"#
+            r#"SELECT * FROM (SELECT main.customer.c_custkey AS c_custkey, main.customer.c_name AS c_name FROM main.customer) AS customer"#
         );
     }
 }

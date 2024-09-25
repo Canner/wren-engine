@@ -94,7 +94,7 @@ pub async fn register_table_with_mdl(
     Ok(())
 }
 
-struct WrenDataSource {
+pub struct WrenDataSource {
     schema: SchemaRef,
 }
 
@@ -102,6 +102,10 @@ impl WrenDataSource {
     pub fn new(model: Arc<Model>) -> Result<Self> {
         let schema = create_schema(model.get_physical_columns().clone())?;
         Ok(Self { schema })
+    }
+
+    pub fn new_with_schema(schema: SchemaRef) -> Self {
+        Self { schema }
     }
 }
 

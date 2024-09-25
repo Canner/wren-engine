@@ -16,9 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# TODO: error: query failed: DataFusion error: Arrow error: Parser error: Invalid input syntax for type interval: "0 YEARS 12 MONS 0 DAYS 0 HOURS 0 MINS 0.000000000 SECS seconds"
-# query TT
-query error
+query TT
 select
     s_name,
     s_address
@@ -56,4 +54,4 @@ where
   and n_name = 'CANADA'
 order by
     s_name;
-#----
+----

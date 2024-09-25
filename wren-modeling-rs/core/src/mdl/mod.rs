@@ -1,27 +1,28 @@
+use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
+use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
+use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
+use crate::logical_plan::utils::from_qualified_name_str;
+use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl, WrenDataSource};
+use crate::mdl::manifest::{Column, Manifest, Model, View};
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::unparser::dialect::Dialect;
+use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
-use log::{debug, info};
-use parking_lot::RwLock;
-use std::{collections::HashMap, sync::Arc};
-
-use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
-use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
-use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
-use crate::logical_plan::utils::from_qualified_name_str;
-use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl};
-use crate::mdl::manifest::{Column, Manifest, Model, View};
+use datafusion::sql::TableReference;
 pub use dataset::Dataset;
+use log::{debug, info};
 use manifest::Relationship;
+use parking_lot::RwLock;
 use regex::Regex;
+use std::{collections::HashMap, sync::Arc};
 
 pub mod builder;
 pub mod context;
 pub(crate) mod dataset;
+pub mod function;
 pub mod lineage;
 pub mod manifest;
 pub mod utils;
@@ -35,7 +36,7 @@ pub struct AnalyzedWrenMDL {
 
 impl AnalyzedWrenMDL {
     pub fn analyze(manifest: Manifest) -> Result<Self> {
-        let wren_mdl = Arc::new(WrenMDL::new(manifest));
+        let wren_mdl = Arc::new(WrenMDL::new_and_register_table_ref(manifest));
         let lineage = Arc::new(lineage::Lineage::new(&wren_mdl)?);
         Ok(AnalyzedWrenMDL { wren_mdl, lineage })
     }
@@ -135,6 +136,36 @@ impl WrenMDL {
         Arc::new(WrenMDL::new(manifest))
     }
 
+    /// Create a WrenMDL from a manifest and register the table reference of the model as a remote table.
+    /// All the column without expression will be considered a column
+    pub fn new_and_register_table_ref(manifest: Manifest) -> Self {
+        let mut mdl = WrenMDL::new(manifest);
+        let sources: Vec<_> = mdl
+            .models()
+            .iter()
+            .map(|model| {
+                let name = TableReference::from(&model.table_reference);
+                let fields: Vec<_> = model
+                    .columns
+                    .iter()
+                    .filter(|column| {
+                        !column.is_calculated
+                            && column.expression.is_none()
+                            && column.relationship.is_none()
+                    })
+                    .map(|column| column.to_field())
+                    .collect();
+                let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
+                let datasource = WrenDataSource::new_with_schema(schema);
+                (name.to_quoted_string(), Arc::new(datasource))
+            })
+            .collect();
+        sources
+            .into_iter()
+            .for_each(|(name, ds_ref)| mdl.register_table(name, ds_ref));
+        mdl
+    }
+
     pub fn register_table(&mut self, name: String, table: Arc<dyn TableProvider>) {
         self.register_tables.insert(name, table);
     }
@@ -153,6 +184,10 @@ impl WrenMDL {
 
     pub fn schema(&self) -> &str {
         &self.manifest.schema
+    }
+
+    pub fn models(&self) -> &[Arc<Model>] {
+        &self.manifest.models
     }
 
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {
@@ -248,6 +283,10 @@ impl Dialect for WrenDialect {
             None
         }
     }
+
+    fn interval_style(&self) -> IntervalStyle {
+        IntervalStyle::SQLStandard
+    }
 }
 
 fn non_lowercase(sql: &str) -> bool {
@@ -327,7 +366,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
-            "select orderkey + orderkey from test.test.orders",
+            "select o_orderkey + o_orderkey from test.test.orders",
         )?;
         Ok(())
     }
@@ -346,11 +385,11 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
 
         let tests: Vec<&str> = vec![
-                "select orderkey + orderkey from test.test.orders",
-                "select orderkey from test.test.orders where orders.totalprice > 10",
-                "select orders.orderkey from test.test.orders left join test.test.customer on (orders.custkey = customer.custkey) where orders.totalprice > 10",
-                "select orderkey, sum(totalprice) from test.test.orders group by 1",
-                "select orderkey, count(*) from test.test.orders where orders.totalprice > 10 group by 1",
+                "select o_orderkey + o_orderkey from test.test.orders",
+                "select o_orderkey from test.test.orders where orders.o_totalprice > 10",
+                "select orders.o_orderkey from test.test.orders left join test.test.customer on (orders.o_custkey = customer.c_custkey) where orders.o_totalprice > 10",
+                "select o_orderkey, sum(o_totalprice) from test.test.orders group by 1",
+                "select o_orderkey, count(*) from test.test.orders where orders.o_totalprice > 10 group by 1",
                 "select totalcost from test.test.profile",
                 "select totalcost from profile",
         // TODO: support calculated without relationship
