@@ -16,7 +16,7 @@ path = "src/lib.rs"
 [dependencies]
 async-trait = "0.1.80"
 bigdecimal = "0.4.3"
-datafusion = { workspace = true }
+datafusion = { workspace = true, default-features = true }
 half = { version = "2.4.1", default-features = true }
 log = { workspace = true }
 rust_decimal = { version = "1.27.0" }
