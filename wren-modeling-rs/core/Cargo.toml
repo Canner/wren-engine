@@ -14,8 +14,14 @@ path = "src/lib.rs"
 
 [dependencies]
 async-trait = { workspace = true }
-datafusion = { workspace = true }
-env_logger = { workspace = true }
+datafusion = { workspace = true, default-features = false, features = [
+    "nested_expressions",
+    "crypto_expressions",
+    "datetime_expressions",
+    "encoding_expressions",
+    "regex_expressions",
+    "unicode_expressions",
+] }
 log = { workspace = true }
 parking_lot = "0.12.3"
 petgraph = "0.6.5"

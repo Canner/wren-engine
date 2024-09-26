@@ -9,11 +9,14 @@ name = "wren_modeling_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21.2", features = ["extension-module", "generate-import-lib"] }
+pyo3 = { version = "0.21.2", features = [
+  "extension-module",
+  "generate-import-lib",
+] }
 wren-core = { path = "../wren-modeling-rs/core" }
 base64 = "0.22.1"
 serde_json = "1.0.117"
 thiserror = "1.0"
 
 [build-dependencies]
-pyo3-build-config =  "0.21.2"
+pyo3-build-config = "0.21.2"
