@@ -3,9 +3,10 @@ FROM python:3.11-buster AS builder
 # libpq-dev is required for psycopg2
 RUN apt-get update && apt-get -y install libpq-dev
 
+# TODO: enable rust after fix the issue with the build
 # Install rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
-ENV PATH="/root/.cargo/bin:$PATH"
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+# ENV PATH="/root/.cargo/bin:$PATH"
 
 # Install justfile
 RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/bin
@@ -24,12 +25,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN pip install poetry==1.8.3
 
-COPY --from=wren-modeling-py . /wren-modeling-py
-COPY --from=wren-modeling-rs . /wren-modeling-rs
+# TODO: enable rust after fix the issue with the build
+# COPY --from=wren-modeling-py . /wren-modeling-py
+# COPY --from=wren-modeling-rs . /wren-modeling-rs
 
 WORKDIR /app
 COPY . .
-RUN just install --without dev
+# TODO: enable rust after fix the issue with the build
+# RUN just install --without dev
+RUN poetry install --without dev
 
 
 FROM python:3.11-slim-buster AS runtime
