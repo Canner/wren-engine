@@ -10,7 +10,7 @@ authors = ["Canner <dev@cannerdata.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-maturin = "1.7.1"
+maturin = "1.7.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.3"
