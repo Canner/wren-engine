@@ -19,14 +19,20 @@ class ClickHouseMetadata(Metadata):
     def get_table_list(self) -> list[Table]:
         sql = """
             SELECT
-                database AS table_schema,
-                table AS table_name,
-                name AS column_name,
-                type AS data_type
+                c.database AS table_schema,
+                c.table AS table_name,
+                t.comment AS table_comment,
+                c.name AS column_name,
+                c.type AS data_type,
+                c.comment AS column_comment
             FROM
-                system.columns
+                system.columns AS c
+            JOIN
+                system.tables AS t
+                ON c.database = t.database
+                AND c.table = t.name
             WHERE
-                database NOT IN ('system', 'INFORMATION_SCHEMA', 'information_schema', 'pg_catalog');
+                c.database NOT IN ('system', 'INFORMATION_SCHEMA', 'information_schema', 'pg_catalog');
             """
         response = loads(
             DataSource.clickhouse.get_connection(self.connection_info)
@@ -45,7 +51,7 @@ class ClickHouseMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         catalog=None,
@@ -61,7 +67,7 @@ class ClickHouseMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
                     notNull=False,
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )

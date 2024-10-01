@@ -131,10 +131,11 @@ def clickhouse(request) -> ClickHouseContainer:
             o_orderpriority  String,
             o_clerk          String,
             o_shippriority   Int32,
-            o_comment        String
+            o_comment        String COMMENT 'This is a comment'
         ) 
         ENGINE = MergeTree
         ORDER BY (o_orderkey)
+        COMMENT 'This is a table comment'
     """)
     client.insert_df(
         "orders", pd.read_parquet(file_path("resource/tpch/data/orders.parquet"))
@@ -505,12 +506,24 @@ def test_metadata_list_tables(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = response.json()[1]
+    assert result["name"] == "test.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "schema": "test",
+        "catalog": None,
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(clickhouse: ClickHouseContainer):
