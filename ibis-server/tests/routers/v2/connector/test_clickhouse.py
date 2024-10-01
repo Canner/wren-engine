@@ -511,8 +511,8 @@ def test_metadata_list_tables(clickhouse: ClickHouseContainer):
     assert result["primaryKey"] is not None
     assert result["description"] == "This is a table comment"
     assert result["properties"] == {
-        "schema": "test",
         "catalog": None,
+        "schema": "test",
         "table": "orders",
     }
     assert len(result["columns"]) == 9
