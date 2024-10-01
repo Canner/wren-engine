@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 import sqlalchemy
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from testcontainers.mssql import SqlServerContainer
 
 from app.main import app
@@ -80,6 +81,26 @@ def mssql(request) -> SqlServerContainer:
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                EXEC sys.sp_addextendedproperty
+                    @name = N'MS_Description',
+                    @value = N'This is a table comment',
+                    @level0type = N'SCHEMA', @level0name = 'dbo',
+                    @level1type = N'TABLE',  @level1name = 'orders';
+            """)
+        )
+        conn.execute(
+            text("""
+                EXEC sys.sp_addextendedproperty 
+                    @name = N'MS_Description', 
+                    @value = N'This is a comment', 
+                    @level0type = N'SCHEMA', @level0name = 'dbo',
+                    @level1type = N'TABLE',  @level1name = 'orders',
+                    @level2type = N'COLUMN', @level2name = 'o_comment';
+            """)
+        )
     request.addfinalizer(mssql.stop)
     return mssql
 
@@ -323,12 +344,24 @@ def test_metadata_list_tables(mssql: SqlServerContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(filter(lambda x: x["name"] == "dbo.orders", response.json()))
+    assert result["name"] == "dbo.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "tempdb",
+        "schema": "dbo",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(mssql: SqlServerContainer):

@@ -26,7 +26,9 @@ class MSSQLMetadata(Metadata):
                 col.COLUMN_NAME AS column_name,
                 col.DATA_TYPE AS data_type,
                 CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'YES' ELSE 'NO' END AS is_pk,
-                col.IS_NULLABLE AS is_nullable
+                col.IS_NULLABLE AS is_nullable,
+                CAST(tprop.value AS NVARCHAR(MAX)) AS table_comment,
+                CAST(cprop.value AS NVARCHAR(MAX)) AS column_comment
             FROM 
                 INFORMATION_SCHEMA.COLUMNS col
             LEFT JOIN 
@@ -40,6 +42,26 @@ class MSSQLMetadata(Metadata):
                 AND col.TABLE_NAME = pk.TABLE_NAME
                 AND col.COLUMN_NAME = pk.COLUMN_NAME
                 AND pk.CONSTRAINT_NAME = tab.CONSTRAINT_NAME
+            LEFT JOIN 
+                sys.tables st
+                ON st.name = col.TABLE_NAME 
+                AND SCHEMA_NAME(st.schema_id) = col.TABLE_SCHEMA
+            LEFT JOIN 
+                sys.extended_properties tprop
+                ON tprop.major_id = st.object_id 
+                AND tprop.minor_id = 0 
+                AND tprop.name = 'MS_Description'
+            LEFT JOIN 
+                sys.columns sc
+                ON sc.object_id = st.object_id 
+                AND sc.name = col.COLUMN_NAME
+            LEFT JOIN 
+                sys.extended_properties cprop
+                ON cprop.major_id = sc.object_id 
+                AND cprop.minor_id = sc.column_id 
+                AND cprop.name = 'MS_Description'
+            WHERE
+                col.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA');
             """
         response = loads(
             DataSource.mssql.get_connection(self.connection_info)
@@ -58,7 +80,7 @@ class MSSQLMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -74,7 +96,7 @@ class MSSQLMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )
