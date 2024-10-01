@@ -27,7 +27,6 @@ class BigQueryMetadata(Metadata):
                 c.column_name,
                 c.ordinal_position,
                 c.is_nullable,
-                c.data_type,
                 c.is_generated,
                 c.generation_expression,
                 c.is_stored,
@@ -39,6 +38,8 @@ class BigQueryMetadata(Metadata):
                 c.collation_name,
                 c.column_default,
                 c.rounding_mode,
+                cf.data_type,
+                cf.field_path,
                 cf.description AS column_description, 
                 table_options.option_value AS table_description
             FROM {dataset_id}.INFORMATION_SCHEMA.COLUMNS c 
@@ -47,14 +48,28 @@ class BigQueryMetadata(Metadata):
                 AND cf.column_name = c.column_name
             LEFT JOIN {dataset_id}.INFORMATION_SCHEMA.TABLE_OPTIONS table_options
                 ON c.table_name = table_options.table_name
-            WHERE
-                cf.column_name = cf.field_path
-                AND NOT REGEXP_CONTAINS(cf.data_type, r'^(STRUCT|ARRAY<STRUCT)')
             """
         response = loads(self.connection.sql(sql).to_pandas().to_json(orient="records"))
 
+        def get_data_type(data_type) -> str:
+            if "STRUCT" in data_type:
+                return "RECORD"
+            return data_type
+
+        def get_column(row, nestedColumns=None) -> Column:
+            return Column(
+                # field_path supports both column & nested column
+                name=row["field_path"],
+                type=row["data_type"],
+                notNull=row["is_nullable"].lower() == "no",
+                description=row["column_description"],
+                properties={},
+                nestedColumns=nestedColumns,
+            )
+
         unique_tables = {}
-        for row in response:
+        current_struct = None
+        for index, row in enumerate(response):
             # generate unique table name
             table_name = row["table_name"]
             # init table if not exists
@@ -71,16 +86,27 @@ class BigQueryMetadata(Metadata):
                     primaryKey="",
                 )
             # table exists, and add column to the table
-            unique_tables[table_name].columns.append(
-                Column(
-                    name=row["column_name"],
-                    type=row["data_type"],
-                    notNull=row["is_nullable"].lower() == "no",
-                    description=row["column_description"],
-                    properties={},
-                )
-            )
-        # TODO: BigQuery data type mapping
+            if "STRUCT" in row["data_type"]:
+                if current_struct:
+                    current_struct.nestedColumns.append(get_column(row, []))
+                    current_struct = current_struct.nestedColumns[-1]
+                else:
+                    unique_tables[table_name].columns.append(get_column(row, []))
+                    current_struct = unique_tables[table_name].columns[-1]
+            elif current_struct:
+                # add nested column to current_struct
+                current_struct.nestedColumns.append(get_column(row))
+            else:
+                # add table column
+                unique_tables[table_name].columns.append(get_column(row))
+            # reset current_struct if next column name different
+            is_not_last_item = index + 1 < len(response)
+            if (
+                is_not_last_item
+                and response[index + 1].get("column_name") != row["column_name"]
+            ):
+                current_struct = None
+
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:

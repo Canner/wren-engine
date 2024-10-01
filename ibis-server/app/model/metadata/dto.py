@@ -71,6 +71,7 @@ class Column(BaseModel):
     notNull: bool
     description: str | None = None
     properties: dict[str, Any] | None = None
+    nestedColumns: list["Column"] | None = None
 
 
 class TableProperties(BaseModel):
