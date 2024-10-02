@@ -93,7 +93,14 @@ def mysql(request) -> MySqlContainer:
         "customer", engine, index=False
     )
     with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE orders ADD PRIMARY KEY(o_orderkey);"))
+        conn.execute(
+            text("""
+            ALTER TABLE orders
+                ADD PRIMARY KEY (o_orderkey),
+                COMMENT = 'This is a table comment',
+                MODIFY COLUMN o_comment VARCHAR(255) COMMENT 'This is a comment';
+            """)
+        )
         conn.execute(text("ALTER TABLE customer Add PRIMARY KEY(c_custkey);"))
         conn.execute(
             text(
@@ -338,12 +345,27 @@ def test_metadata_list_tables(mysql: MySqlContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(filter(lambda x: x["name"] == "test.orders", response.json()))
+    assert result["name"] == "test.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "",
+        "schema": "test",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    o_comment_column = next(
+        filter(lambda x: x["name"] == "o_comment", result["columns"])
+    )
+    assert o_comment_column == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(mysql: MySqlContainer):

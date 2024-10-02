@@ -20,16 +20,22 @@ class MySQLMetadata(Metadata):
     def get_table_list(self) -> list[Table]:
         sql = """
             SELECT
-                TABLE_SCHEMA as table_schema,
-                TABLE_NAME as table_name,
-                COLUMN_NAME as column_name,
-                DATA_TYPE as data_type,
-                IS_NULLABLE as is_nullable,
-                COLUMN_KEY as column_key
+                c.TABLE_SCHEMA AS table_schema,
+                c.TABLE_NAME AS table_name,
+                c.COLUMN_NAME AS column_name,
+                c.DATA_TYPE AS data_type,
+                c.IS_NULLABLE AS is_nullable,
+                c.COLUMN_KEY AS column_key,
+                c.COLUMN_COMMENT AS column_comment,
+                t.TABLE_COMMENT AS table_comment
             FROM
-                information_schema.COLUMNS
+                information_schema.COLUMNS c
+            JOIN
+                information_schema.TABLES t
+                ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
+                AND c.TABLE_NAME = t.TABLE_NAME
             WHERE
-                TABLE_SCHEMA not IN ("mysql", "information_schema", "performance_schema", "sys")
+                c.TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
             """
         response = loads(
             DataSource.mysql.get_connection(self.connection_info)
@@ -48,7 +54,7 @@ class MySQLMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -65,7 +71,7 @@ class MySQLMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )
