@@ -1,7 +1,4 @@
-from json import loads
 from urllib.parse import urlparse
-
-import pandas as pd
 
 from app.model import ConnectionUrl, TrinoConnectionInfo
 from app.model.data_source import DataSource
@@ -21,30 +18,47 @@ class TrinoMetadata(Metadata):
 
     def get_table_list(self) -> list[Table]:
         schema = self._get_schema_name()
-        sql = f"""SELECT
-                t.table_catalog,
-                t.table_schema,
-                t.table_name,
-                c.column_name,
-                c.data_type,
-                c.is_nullable
-              FROM
-                information_schema.tables t
-              JOIN
-                information_schema.columns c 
-              ON t.table_schema = c.table_schema 
-              AND t.table_name = c.table_name
-              WHERE
-                t.table_type IN ('BASE TABLE', 'VIEW')
-              AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
-              AND t.table_schema = '{schema}'"""
+        sql = f"""
+                SELECT
+                    t.table_catalog,
+                    t.table_schema,
+                    t.table_name,
+                    c.column_name,
+                    c.data_type,
+                    c.is_nullable,
+                    c.column_comment
+                FROM
+                    information_schema.tables AS t
+                INNER JOIN
+                    information_schema.columns AS c
+                    ON t.table_catalog = c.table_catalog
+                    AND t.table_schema = c.table_schema
+                    AND t.table_name = c.table_name
+                WHERE t.table_schema = '{schema}'
+                """
+        response = (
+            DataSource.trino.get_connection(self.connection_info)
+            .sql(sql)
+            .to_pandas()
+            .to_dict(orient="records")
+        )
 
-        sql_cursor = DataSource.trino.get_connection(self.connection_info).raw_sql(sql)
-        column_names = [col[0] for col in sql_cursor.description]
-        response = loads(
-            pd.DataFrame(sql_cursor.fetchall(), columns=column_names).to_json(
-                orient="records"
-            )
+        sql = f"""
+                SELECT
+                    catalog_name,
+                    schema_name,
+                    table_name,
+                    comment
+                FROM
+                    system.metadata.table_comments
+                WHERE 
+                    schema_name = '{schema}'
+                """
+        table_comment_map = self._build_table_comment_map(
+            DataSource.trino.get_connection(self.connection_info)
+            .sql(sql)
+            .to_pandas()
+            .to_dict(orient="records")
         )
         unique_tables = {}
         for row in response:
@@ -56,7 +70,7 @@ class TrinoMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=table_comment_map[schema_table],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -72,7 +86,7 @@ class TrinoMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )
@@ -131,3 +145,11 @@ class TrinoMetadata(Metadata):
         }
 
         return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
+
+    def _build_table_comment_map(self, response):
+        return {
+            self._format_trino_compact_table_name(
+                row["catalog_name"], row["schema_name"], row["table_name"]
+            ): row["comment"]
+            for row in response
+        }

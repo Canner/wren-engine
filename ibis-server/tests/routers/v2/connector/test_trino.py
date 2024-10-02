@@ -5,6 +5,7 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from testcontainers.trino import TrinoContainer
+from trino.dbapi import connect
 
 from app.main import app
 
@@ -75,6 +76,19 @@ def trino(request) -> TrinoContainer:
 
     # To avoid `TrinoQueryError(type=INTERNAL_ERROR, name=GENERIC_INTERNAL_ERROR, message="nodes is empty")`
     time.sleep(10)
+
+    conn = connect(
+        host=db.get_container_host_ip(),
+        port=db.get_exposed_port(db.port),
+        user="test",
+    )
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE memory.default.orders AS SELECT * from tpch.tiny.orders")
+    cur.execute("COMMENT ON TABLE memory.default.orders IS 'This is a table comment'")
+    cur.execute(
+        "COMMENT ON COLUMN memory.default.orders.comment IS 'This is a comment'"
+    )
+
     request.addfinalizer(db.stop)
     return db
 
@@ -350,7 +364,13 @@ def to_connection_url(trino: TrinoContainer):
 
 
 def test_metadata_list_tables(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = {
+        "host": trino.get_container_host_ip(),
+        "port": trino.get_exposed_port(trino.port),
+        "catalog": "memory",
+        "schema": "default",
+        "user": "test",
+    }
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={
@@ -359,12 +379,27 @@ def test_metadata_list_tables(trino: TrinoContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(
+        filter(lambda x: x["name"] == "memory.default.orders", response.json())
+    )
+    assert result["name"] == "memory.default.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "memory",
+        "schema": "default",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    comment_column = next(filter(lambda x: x["name"] == "comment", result["columns"]))
+    assert comment_column == {
+        "name": "comment",
+        "nestedColumns": None,
+        "type": "UNKNOWN",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(trino: TrinoContainer):
