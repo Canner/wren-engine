@@ -134,7 +134,11 @@ impl WindowUDFImpl for ByPassWindowFunction {
     }
 
     fn field(&self, field_args: WindowUDFFieldArgs) -> Result<Field> {
-        Ok(Field::new(field_args.name(), self.return_type.clone(), false))
+        Ok(Field::new(
+            field_args.name(),
+            self.return_type.clone(),
+            false,
+        ))
     }
 }
 
