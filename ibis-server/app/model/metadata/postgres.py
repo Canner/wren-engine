@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import PostgresConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -16,6 +14,7 @@ from app.model.metadata.metadata import Metadata
 class PostgresMetadata(Metadata):
     def __init__(self, connection_info: PostgresConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.postgres.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -49,12 +48,7 @@ class PostgresMetadata(Metadata):
                 t.table_type IN ('BASE TABLE', 'VIEW')
                 AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
             """
-        response = loads(
-            DataSource.postgres.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -105,12 +99,7 @@ class PostgresMetadata(Metadata):
                 ON ccu.constraint_name = tc.constraint_name
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
-        res = loads(
-            DataSource.postgres.get_connection(self.connection_info)
-            .sql(sql, dialect="trino")
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         constraints = []
         for row in res:
             constraints.append(
@@ -177,9 +166,3 @@ class PostgresMetadata(Metadata):
         }
 
         return switcher.get(data_type, WrenEngineColumnType.UNKNOWN)
-
-
-def to_json(df):
-    json_obj = loads(df.to_json(orient="split"))
-    del json_obj["index"]
-    return json_obj

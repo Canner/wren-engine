@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import ClickHouseConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -15,6 +13,7 @@ from app.model.metadata.metadata import Metadata
 class ClickHouseMetadata(Metadata):
     def __init__(self, connection_info: ClickHouseConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.clickhouse.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -34,12 +33,7 @@ class ClickHouseMetadata(Metadata):
             WHERE
                 c.database NOT IN ('system', 'INFORMATION_SCHEMA', 'information_schema', 'pg_catalog');
             """
-        response = loads(
-            DataSource.clickhouse.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -109,9 +103,3 @@ class ClickHouseMetadata(Metadata):
         }
 
         return switcher.get(data_type, WrenEngineColumnType.UNKNOWN)
-
-
-def to_json(df):
-    json_obj = loads(df.to_json(orient="split"))
-    del json_obj["index"]
-    return json_obj

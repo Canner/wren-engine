@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import MySqlConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -16,6 +14,7 @@ from app.model.metadata.metadata import Metadata
 class MySQLMetadata(Metadata):
     def __init__(self, connection_info: MySqlConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.mysql.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -37,12 +36,7 @@ class MySQLMetadata(Metadata):
             WHERE
                 c.TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
             """
-        response = loads(
-            DataSource.mysql.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -99,12 +93,7 @@ class MySQLMetadata(Metadata):
                 ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME 
                 AND rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
             """
-        res = loads(
-            DataSource.mysql.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         constraints = []
         for row in res:
             constraints.append(
@@ -173,9 +162,3 @@ class MySQLMetadata(Metadata):
         }
 
         return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
-
-
-def to_json(df):
-    json_obj = loads(df.to_json(orient="split"))
-    del json_obj["index"]
-    return json_obj

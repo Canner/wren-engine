@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-from app.model import ConnectionUrl, TrinoConnectionInfo
+from app.model import TrinoConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
     Column,
@@ -13,8 +13,9 @@ from app.model.metadata.metadata import Metadata
 
 
 class TrinoMetadata(Metadata):
-    def __init__(self, connection_info: TrinoConnectionInfo | ConnectionUrl):
+    def __init__(self, connection_info: TrinoConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.postgres.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         schema = self._get_schema_name()
@@ -36,12 +37,7 @@ class TrinoMetadata(Metadata):
                     AND t.table_name = c.table_name
                 WHERE t.table_schema = '{schema}'
                 """
-        response = (
-            DataSource.trino.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_dict(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         sql = f"""
                 SELECT
@@ -55,10 +51,7 @@ class TrinoMetadata(Metadata):
                     schema_name = '{schema}'
                 """
         table_comment_map = self._build_table_comment_map(
-            DataSource.trino.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_dict(orient="records")
+            self.connection.sql(sql).to_pandas().to_dict(orient="records")
         )
         unique_tables = {}
         for row in response:

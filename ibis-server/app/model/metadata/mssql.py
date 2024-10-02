@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import MSSqlConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -16,6 +14,7 @@ from app.model.metadata.metadata import Metadata
 class MSSQLMetadata(Metadata):
     def __init__(self, connection_info: MSSqlConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.mssql.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -63,12 +62,7 @@ class MSSQLMetadata(Metadata):
             WHERE
                 col.TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA');
             """
-        response = loads(
-            DataSource.mssql.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -143,12 +137,7 @@ class MSSQLMetadata(Metadata):
                 ON fkc.referenced_column_id = ref_c.column_id 
                 AND ref_c.object_id = ref_t.object_id
             """
-        res = loads(
-            DataSource.mssql.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         constraints = []
         for row in res:
             constraints.append(
@@ -218,9 +207,3 @@ class MSSQLMetadata(Metadata):
         }
 
         return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
-
-
-def to_json(df):
-    json_obj = loads(df.to_json(orient="split"))
-    del json_obj["index"]
-    return json_obj
