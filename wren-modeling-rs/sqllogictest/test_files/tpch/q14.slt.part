@@ -16,7 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# the value should be `15.486545812284` but sqllogictests will round it to `15.48654581`
 query R
 select
             100.00 * sum(case
@@ -32,5 +31,5 @@ where
   and l_shipdate >= date '1995-09-01'
   and l_shipdate < date '1995-10-01';
 ----
-15.48654581
+15.486545812284
 
