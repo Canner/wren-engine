@@ -94,6 +94,7 @@ pub async fn register_table_with_mdl(
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct WrenDataSource {
     schema: SchemaRef,
 }

@@ -26,4 +26,4 @@ wren-core = { path = "core" }
 # We require the following commits
 # https://github.com/apache/datafusion/pull/12605
 # https://github.com/apache/datafusion/pull/12603
-datafusion = { git = "https://github.com/apache/datafusion.git", rev = "65595cf7f88d5393fded416f8d001a9e90b18169" }
+datafusion = { git = "https://github.com/apache/datafusion.git", rev = "35adf47fdbd626d79051799921146b96e3345e3b" }
