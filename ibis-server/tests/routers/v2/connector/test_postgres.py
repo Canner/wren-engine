@@ -89,7 +89,7 @@ def postgres(request) -> PostgresContainer:
 
 
 def test_query(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -129,7 +129,7 @@ def test_query(postgres: PostgresContainer):
 
 
 def test_query_with_connection_url(postgres: PostgresContainer):
-    connection_url = to_connection_url(postgres)
+    connection_url = _to_connection_url(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -149,7 +149,7 @@ def test_query_with_connection_url(postgres: PostgresContainer):
 def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
     postgres: PostgresContainer,
 ):
-    connection_url = to_connection_url(postgres)
+    connection_url = _to_connection_url(postgres)
     part = urlparse(connection_url)
     password_with_bracket = quote_plus(f"{part.password}[")
     connection_url = part._replace(
@@ -172,7 +172,7 @@ def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_
 
 
 def test_query_with_limit(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"limit": 1},
@@ -201,7 +201,7 @@ def test_query_with_limit(postgres: PostgresContainer):
 
 
 def test_query_without_manifest(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -218,7 +218,7 @@ def test_query_without_manifest(postgres: PostgresContainer):
 
 
 def test_query_without_sql(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -248,7 +248,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -262,7 +262,7 @@ def test_query_with_dry_run(postgres: PostgresContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -277,7 +277,7 @@ def test_query_with_dry_run_and_invalid_sql(postgres: PostgresContainer):
 
 
 def test_validate_with_unknown_rule(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -294,7 +294,7 @@ def test_validate_with_unknown_rule(postgres: PostgresContainer):
 
 
 def test_validate_rule_column_is_valid(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -309,7 +309,7 @@ def test_validate_rule_column_is_valid(postgres: PostgresContainer):
 def test_validate_rule_column_is_valid_with_invalid_parameters(
     postgres: PostgresContainer,
 ):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -332,7 +332,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
 
 
 def test_validate_rule_column_is_valid_without_parameters(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -348,7 +348,7 @@ def test_validate_rule_column_is_valid_without_parameters(postgres: PostgresCont
 def test_validate_rule_column_is_valid_without_one_parameter(
     postgres: PostgresContainer,
 ):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -373,7 +373,7 @@ def test_validate_rule_column_is_valid_without_one_parameter(
 
 
 def test_metadata_list_tables(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
@@ -401,7 +401,7 @@ def test_metadata_list_tables(postgres: PostgresContainer):
 
 
 def test_metadata_list_constraints(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={"connectionInfo": connection_info},
@@ -421,7 +421,7 @@ def test_dry_plan():
     assert response.text is not None
 
 
-def to_connection_info(pg: PostgresContainer):
+def _to_connection_info(pg: PostgresContainer):
     return {
         "host": pg.get_container_host_ip(),
         "port": pg.get_exposed_port(pg.port),
@@ -431,6 +431,6 @@ def to_connection_info(pg: PostgresContainer):
     }
 
 
-def to_connection_url(pg: PostgresContainer):
-    info = to_connection_info(pg)
+def _to_connection_url(pg: PostgresContainer):
+    info = _to_connection_info(pg)
     return f"postgres://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"

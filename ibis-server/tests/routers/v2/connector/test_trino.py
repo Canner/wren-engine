@@ -94,7 +94,7 @@ def trino(request) -> TrinoContainer:
 
 
 def test_query(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -134,7 +134,7 @@ def test_query(trino: TrinoContainer):
 
 
 def test_query_with_connection_url(trino: TrinoContainer):
-    connection_url = to_connection_url(trino)
+    connection_url = _to_connection_url(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -152,7 +152,7 @@ def test_query_with_connection_url(trino: TrinoContainer):
 
 
 def test_query_with_limit(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"limit": 1},
@@ -181,7 +181,7 @@ def test_query_with_limit(trino: TrinoContainer):
 
 
 def test_query_without_manifest(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -198,7 +198,7 @@ def test_query_without_manifest(trino: TrinoContainer):
 
 
 def test_query_without_sql(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -228,7 +228,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -242,7 +242,7 @@ def test_query_with_dry_run(trino: TrinoContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -257,7 +257,7 @@ def test_query_with_dry_run_and_invalid_sql(trino: TrinoContainer):
 
 
 def test_validate_with_unknown_rule(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -274,7 +274,7 @@ def test_validate_with_unknown_rule(trino: TrinoContainer):
 
 
 def test_validate_rule_column_is_valid(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -287,7 +287,7 @@ def test_validate_rule_column_is_valid(trino: TrinoContainer):
 
 
 def test_validate_rule_column_is_valid_with_invalid_parameters(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -310,7 +310,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(trino: TrinoConta
 
 
 def test_validate_rule_column_is_valid_without_parameters(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -324,7 +324,7 @@ def test_validate_rule_column_is_valid_without_parameters(trino: TrinoContainer)
 
 
 def test_validate_rule_column_is_valid_without_one_parameter(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -346,21 +346,6 @@ def test_validate_rule_column_is_valid_without_one_parameter(trino: TrinoContain
     )
     assert response.status_code == 422
     assert response.text == "Missing required parameter: `modelName`"
-
-
-def to_connection_info(trino: TrinoContainer):
-    return {
-        "host": trino.get_container_host_ip(),
-        "port": trino.get_exposed_port(trino.port),
-        "catalog": "tpch",
-        "schema": "sf1",
-        "user": "test",
-    }
-
-
-def to_connection_url(trino: TrinoContainer):
-    info = to_connection_info(trino)
-    return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"
 
 
 def test_metadata_list_tables(trino: TrinoContainer):
@@ -403,7 +388,7 @@ def test_metadata_list_tables(trino: TrinoContainer):
 
 
 def test_metadata_list_constraints(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={
@@ -414,3 +399,18 @@ def test_metadata_list_constraints(trino: TrinoContainer):
 
     result = response.json()
     assert len(result) == 0
+
+
+def _to_connection_info(trino: TrinoContainer):
+    return {
+        "host": trino.get_container_host_ip(),
+        "port": trino.get_exposed_port(trino.port),
+        "catalog": "tpch",
+        "schema": "sf1",
+        "user": "test",
+    }
+
+
+def _to_connection_url(trino: TrinoContainer):
+    info = _to_connection_info(trino)
+    return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"

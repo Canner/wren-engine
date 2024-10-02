@@ -106,7 +106,7 @@ def mssql(request) -> SqlServerContainer:
 
 
 def test_query(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -149,7 +149,7 @@ def test_query(mssql: SqlServerContainer):
     reason="ibis does not support mssql using connection url, wait fix PR in ibis repo"
 )
 def test_query_with_connection_url(mssql: SqlServerContainer):
-    connection_url = to_connection_url(mssql)
+    connection_url = _to_connection_url(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -167,7 +167,7 @@ def test_query_with_connection_url(mssql: SqlServerContainer):
 
 
 def test_query_without_manifest(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -184,7 +184,7 @@ def test_query_without_manifest(mssql: SqlServerContainer):
 
 
 def test_query_without_sql(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -214,7 +214,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -228,7 +228,7 @@ def test_query_with_dry_run(mssql: SqlServerContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -243,7 +243,7 @@ def test_query_with_dry_run_and_invalid_sql(mssql: SqlServerContainer):
 
 
 def test_validate_with_unknown_rule(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -260,7 +260,7 @@ def test_validate_with_unknown_rule(mssql: SqlServerContainer):
 
 
 def test_validate_rule_column_is_valid(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -275,7 +275,7 @@ def test_validate_rule_column_is_valid(mssql: SqlServerContainer):
 def test_validate_rule_column_is_valid_with_invalid_parameters(
     mssql: SqlServerContainer,
 ):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -298,7 +298,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
 
 
 def test_validate_rule_column_is_valid_without_parameters(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -312,7 +312,7 @@ def test_validate_rule_column_is_valid_without_parameters(mssql: SqlServerContai
 
 
 def test_validate_rule_column_is_valid_without_one_parameter(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -337,7 +337,7 @@ def test_validate_rule_column_is_valid_without_one_parameter(mssql: SqlServerCon
 
 
 def test_metadata_list_tables(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
@@ -365,7 +365,7 @@ def test_metadata_list_tables(mssql: SqlServerContainer):
 
 
 def test_metadata_list_constraints(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={"connectionInfo": connection_info},
@@ -373,7 +373,7 @@ def test_metadata_list_constraints(mssql: SqlServerContainer):
     assert response.status_code == 200
 
 
-def to_connection_info(mssql: SqlServerContainer):
+def _to_connection_info(mssql: SqlServerContainer):
     return {
         "host": mssql.get_container_host_ip(),
         "port": mssql.get_exposed_port(mssql.port),
@@ -383,6 +383,6 @@ def to_connection_info(mssql: SqlServerContainer):
     }
 
 
-def to_connection_url(mssql: SqlServerContainer):
-    info = to_connection_info(mssql)
+def _to_connection_url(mssql: SqlServerContainer):
+    info = _to_connection_info(mssql)
     return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
