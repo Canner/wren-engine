@@ -1,4 +1,5 @@
 import base64
+import time
 
 import orjson
 import pytest
@@ -71,6 +72,9 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 @pytest.fixture(scope="module")
 def trino(request) -> TrinoContainer:
     db = TrinoContainer().start()
+
+    # To avoid `TrinoQueryError(type=INTERNAL_ERROR, name=GENERIC_INTERNAL_ERROR, message="nodes is empty")`
+    time.sleep(10)
     request.addfinalizer(db.stop)
     return db
 
