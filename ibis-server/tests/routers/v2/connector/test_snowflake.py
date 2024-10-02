@@ -266,3 +266,13 @@ def test_validate_rule_column_is_valid_without_one_parameter():
     )
     assert response.status_code == 422
     assert response.text == "Missing required parameter: `modelName`"
+
+
+@pytest.mark.skip(reason="Not implemented")
+def test_metadata_list_tables():
+    pass
+
+
+@pytest.mark.skip(reason="Not implemented")
+def test_metadata_list_constraints():
+    pass
