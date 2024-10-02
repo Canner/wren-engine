@@ -26,14 +26,28 @@ class PostgresMetadata(Metadata):
                 c.column_name,
                 c.data_type,
                 c.is_nullable,
-                c.ordinal_position
+                c.ordinal_position,
+                obj_description(cls.oid) AS table_comment,
+                col_description(cls.oid, a.attnum) AS column_comment
             FROM
                 information_schema.tables t
             JOIN
-                information_schema.columns c ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+                information_schema.columns c
+                ON t.table_schema = c.table_schema
+                AND t.table_name = c.table_name
+            LEFT JOIN
+                pg_class cls
+                ON cls.relname = t.table_name
+                AND cls.relnamespace = (
+                    SELECT oid FROM pg_namespace WHERE nspname = t.table_schema
+                )
+            LEFT JOIN
+                pg_attribute a
+                ON a.attrelid = cls.oid
+                AND a.attname = c.column_name
             WHERE
-                t.table_type in ('BASE TABLE', 'VIEW')
-                and t.table_schema not in ('information_schema', 'pg_catalog')
+                t.table_type IN ('BASE TABLE', 'VIEW')
+                AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
             """
         response = loads(
             DataSource.postgres.get_connection(self.connection_info)
@@ -52,7 +66,7 @@ class PostgresMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -68,7 +82,7 @@ class PostgresMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_postgres_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )

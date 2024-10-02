@@ -7,6 +7,7 @@ import psycopg2
 import pytest
 import sqlalchemy
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 
 from app.main import app
@@ -80,6 +81,9 @@ def postgres(request) -> PostgresContainer:
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
+    with engine.begin() as conn:
+        conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
+        conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
     request.addfinalizer(pg.stop)
     return pg
 
@@ -375,6 +379,25 @@ def test_metadata_list_tables(postgres: PostgresContainer):
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+
+    result = next(filter(lambda x: x["name"] == "public.orders", response.json()))
+    assert result["name"] == "public.orders"
+    assert result["primaryKey"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "test",
+        "schema": "public",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "TEXT",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(postgres: PostgresContainer):
