@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use datafusion::common::config::ConfigOptions;
@@ -203,6 +204,12 @@ impl ModelGenerationRule {
             }
             _ => Ok(Transformed::no(plan)),
         }
+    }
+}
+
+impl Debug for ModelGenerationRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelGenerationRule").finish()
     }
 }
 

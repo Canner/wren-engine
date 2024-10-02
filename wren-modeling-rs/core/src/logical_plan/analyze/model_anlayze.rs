@@ -16,6 +16,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use std::cell::{RefCell, RefMut};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// [ModelAnalyzeRule] responsible for analyzing the model plan node. Turn TableScan from a model to a ModelPlanNode.
@@ -32,6 +33,12 @@ use std::sync::Arc;
 pub struct ModelAnalyzeRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
     session_state: SessionStateRef,
+}
+
+impl Debug for ModelAnalyzeRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelAnalyzeRule").finish()
+    }
 }
 
 impl AnalyzerRule for ModelAnalyzeRule {

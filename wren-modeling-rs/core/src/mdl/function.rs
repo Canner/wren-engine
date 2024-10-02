@@ -1,7 +1,7 @@
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::internal_err;
 use datafusion::common::Result;
-use datafusion::logical_expr::function::AccumulatorArgs;
+use datafusion::logical_expr::function::{AccumulatorArgs, WindowUDFFieldArgs};
 use datafusion::logical_expr::{
     Accumulator, AggregateUDFImpl, ColumnarValue, PartitionEvaluator, ScalarUDFImpl,
     Signature, TypeSignature, Volatility, WindowUDFImpl,
@@ -129,12 +129,12 @@ impl WindowUDFImpl for ByPassWindowFunction {
         &self.signature
     }
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(self.return_type.clone())
-    }
-
     fn partition_evaluator(&self) -> Result<Box<dyn PartitionEvaluator>> {
         internal_err!("This function should not be called")
+    }
+
+    fn field(&self, field_args: WindowUDFFieldArgs) -> Result<Field> {
+        Ok(Field::new(field_args.name(), self.return_type.clone(), false))
     }
 }
 

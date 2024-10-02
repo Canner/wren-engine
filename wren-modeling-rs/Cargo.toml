@@ -21,3 +21,9 @@ serde = { version = "1.0.201", features = ["derive", "rc"] }
 serde_json = { version = "1.0.117" }
 tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
 wren-core = { path = "core" }
+
+[patch.crates-io]
+# We require the following commits
+# https://github.com/apache/datafusion/pull/12605
+# https://github.com/apache/datafusion/pull/12603
+datafusion = { git = "https://github.com/apache/datafusion.git", rev = "65595cf7f88d5393fded416f8d001a9e90b18169" }
