@@ -24,6 +24,7 @@ class TrinoMetadata(Metadata):
                     t.table_catalog,
                     t.table_schema,
                     t.table_name,
+                    tc.comment AS table_comment,
                     c.column_name,
                     c.data_type,
                     c.is_nullable,
@@ -35,24 +36,14 @@ class TrinoMetadata(Metadata):
                     ON t.table_catalog = c.table_catalog
                     AND t.table_schema = c.table_schema
                     AND t.table_name = c.table_name
+                INNER JOIN
+                    system.metadata.table_comments AS tc
+                    ON t.table_catalog = c.table_catalog
+                    AND t.table_schema = tc.schema_name
+                    AND t.table_name = tc.table_name
                 WHERE t.table_schema = '{schema}'
                 """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
-
-        sql = f"""
-                SELECT
-                    catalog_name,
-                    schema_name,
-                    table_name,
-                    comment
-                FROM
-                    system.metadata.table_comments
-                WHERE 
-                    schema_name = '{schema}'
-                """
-        table_comment_map = self._build_table_comment_map(
-            self.connection.sql(sql).to_pandas().to_dict(orient="records")
-        )
         unique_tables = {}
         for row in response:
             # generate unique table name
@@ -63,7 +54,7 @@ class TrinoMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description=table_comment_map[schema_table],
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -138,11 +129,3 @@ class TrinoMetadata(Metadata):
         }
 
         return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
-
-    def _build_table_comment_map(self, response):
-        return {
-            self._format_trino_compact_table_name(
-                row["catalog_name"], row["schema_name"], row["table_name"]
-            ): row["comment"]
-            for row in response
-        }
