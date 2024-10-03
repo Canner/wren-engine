@@ -643,6 +643,12 @@ fn merge_graph(
     Ok(())
 }
 
+impl PartialOrd for ModelPlanNode {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
+    }
+}
+
 impl UserDefinedLogicalNodeCore for ModelPlanNode {
     fn name(&self) -> &str {
         "Model"
@@ -794,6 +800,12 @@ impl ModelSourceNode {
     }
 }
 
+impl PartialOrd for ModelSourceNode {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
+    }
+}
+
 impl UserDefinedLogicalNodeCore for ModelSourceNode {
     fn name(&self) -> &str {
         "ModelSource"
@@ -889,6 +901,12 @@ impl CalculationPlanNode {
     }
 }
 
+impl PartialOrd for CalculationPlanNode {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
+    }
+}
+
 impl UserDefinedLogicalNodeCore for CalculationPlanNode {
     fn name(&self) -> &str {
         "Calculation"
@@ -941,6 +959,12 @@ pub(crate) struct PartialModelPlanNode {
 impl PartialModelPlanNode {
     pub(crate) fn new(model_node: ModelPlanNode, schema: DFSchemaRef) -> Self {
         Self { model_node, schema }
+    }
+}
+
+impl PartialOrd for PartialModelPlanNode {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
     }
 }
 
