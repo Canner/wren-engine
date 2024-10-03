@@ -124,9 +124,6 @@ def test_query(mssql: SqlServerContainer):
     }
 
 
-@pytest.mark.skip(
-    reason="ibis does not support mssql using connection url, wait fix PR in ibis repo"
-)
 def test_query_with_connection_url(mssql: SqlServerContainer):
     connection_url = to_connection_url(mssql)
     response = client.post(
@@ -352,4 +349,4 @@ def to_connection_info(mssql: SqlServerContainer):
 
 def to_connection_url(mssql: SqlServerContainer):
     info = to_connection_info(mssql)
-    return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
+    return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=FreeTDS"
