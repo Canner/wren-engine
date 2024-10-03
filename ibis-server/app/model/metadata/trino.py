@@ -15,7 +15,7 @@ from app.model.metadata.metadata import Metadata
 class TrinoMetadata(Metadata):
     def __init__(self, connection_info: TrinoConnectionInfo):
         super().__init__(connection_info)
-        self.connection = DataSource.postgres.get_connection(connection_info)
+        self.connection = DataSource.trino.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         schema = self._get_schema_name()
