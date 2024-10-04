@@ -6,6 +6,7 @@ use datafusion::common::Result;
 use datafusion::config::ConfigOptions;
 use datafusion::logical_expr::{LogicalPlan, LogicalPlanBuilder};
 use datafusion::optimizer::AnalyzerRule;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 pub struct ExpandWrenViewRule {
@@ -22,6 +23,12 @@ impl ExpandWrenViewRule {
             analyzed_wren_mdl,
             session_state,
         }
+    }
+}
+
+impl Debug for ExpandWrenViewRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExpandWrenViewRule").finish()
     }
 }
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 from enum import Enum, StrEnum, auto
 from json import loads
-from urllib.parse import urlparse
 
 import ibis
 from google.oauth2 import service_account
@@ -13,7 +12,6 @@ from app.model import (
     BigQueryConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
-    ConnectionUrl,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
@@ -66,6 +64,8 @@ class DataSourceExtension(Enum):
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
+            if hasattr(info, "connection_url"):
+                return ibis.connect(info.connection_url.get_secret_value())
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")
@@ -85,13 +85,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def get_clickhouse_connection(
-        info: ConnectionUrl | ClickHouseConnectionInfo,
-    ) -> BaseBackend:
-        if hasattr(info, "connection_url"):
-            url = info.connection_url.get_secret_value()
-            # ibis miss port of connection url, so we need to pass it explicitly
-            return ibis.connect(url, port=urlparse(url).port)
+    def get_clickhouse_connection(info: ClickHouseConnectionInfo) -> BaseBackend:
         return ibis.clickhouse.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
@@ -102,7 +96,6 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def get_mssql_connection(info: MSSqlConnectionInfo) -> BaseBackend:
-        # mssql in ibis does not support connection url
         return ibis.mssql.connect(
             host=info.host.get_secret_value(),
             port=info.port.get_secret_value(),
@@ -113,13 +106,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def get_mysql_connection(
-        info: ConnectionUrl | MySqlConnectionInfo,
-    ) -> BaseBackend:
-        if hasattr(info, "connection_url"):
-            url = info.connection_url.get_secret_value()
-            # ibis miss port of connection url, so we need to pass it explicitly
-            return ibis.connect(url, port=urlparse(url).port)
+    def get_mysql_connection(info: MySqlConnectionInfo) -> BaseBackend:
         return ibis.mysql.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
@@ -129,11 +116,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def get_postgres_connection(
-        info: ConnectionUrl | PostgresConnectionInfo,
-    ) -> BaseBackend:
-        if hasattr(info, "connection_url"):
-            return ibis.connect(info.connection_url.get_secret_value())
+    def get_postgres_connection(info: PostgresConnectionInfo) -> BaseBackend:
         return ibis.postgres.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
@@ -153,11 +136,7 @@ class DataSourceExtension(Enum):
         )
 
     @staticmethod
-    def get_trino_connection(
-        info: ConnectionUrl | TrinoConnectionInfo,
-    ) -> BaseBackend:
-        if hasattr(info, "connection_url"):
-            return ibis.connect(info.connection_url.get_secret_value())
+    def get_trino_connection(info: TrinoConnectionInfo) -> BaseBackend:
         return ibis.trino.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),

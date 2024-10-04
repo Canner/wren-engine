@@ -21,7 +21,7 @@ class QueryClickHouseDTO(QueryDTO):
 
 
 class QueryMSSqlDTO(QueryDTO):
-    connection_info: MSSqlConnectionInfo = connection_info_field
+    connection_info: ConnectionUrl | MSSqlConnectionInfo = connection_info_field
 
 
 class QueryMySqlDTO(QueryDTO):
