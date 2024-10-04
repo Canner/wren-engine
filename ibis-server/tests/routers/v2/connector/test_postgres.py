@@ -7,6 +7,7 @@ import psycopg2
 import pytest
 import sqlalchemy
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 
 from app.main import app
@@ -80,12 +81,15 @@ def postgres(request) -> PostgresContainer:
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
+    with engine.begin() as conn:
+        conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
+        conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
     request.addfinalizer(pg.stop)
     return pg
 
 
 def test_query(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -125,7 +129,7 @@ def test_query(postgres: PostgresContainer):
 
 
 def test_query_with_connection_url(postgres: PostgresContainer):
-    connection_url = to_connection_url(postgres)
+    connection_url = _to_connection_url(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -145,7 +149,7 @@ def test_query_with_connection_url(postgres: PostgresContainer):
 def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
     postgres: PostgresContainer,
 ):
-    connection_url = to_connection_url(postgres)
+    connection_url = _to_connection_url(postgres)
     part = urlparse(connection_url)
     password_with_bracket = quote_plus(f"{part.password}[")
     connection_url = part._replace(
@@ -168,7 +172,7 @@ def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_
 
 
 def test_query_with_limit(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"limit": 1},
@@ -197,7 +201,7 @@ def test_query_with_limit(postgres: PostgresContainer):
 
 
 def test_query_without_manifest(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -214,7 +218,7 @@ def test_query_without_manifest(postgres: PostgresContainer):
 
 
 def test_query_without_sql(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -244,7 +248,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -258,7 +262,7 @@ def test_query_with_dry_run(postgres: PostgresContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -273,7 +277,7 @@ def test_query_with_dry_run_and_invalid_sql(postgres: PostgresContainer):
 
 
 def test_validate_with_unknown_rule(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -290,7 +294,7 @@ def test_validate_with_unknown_rule(postgres: PostgresContainer):
 
 
 def test_validate_rule_column_is_valid(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -305,7 +309,7 @@ def test_validate_rule_column_is_valid(postgres: PostgresContainer):
 def test_validate_rule_column_is_valid_with_invalid_parameters(
     postgres: PostgresContainer,
 ):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -328,7 +332,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
 
 
 def test_validate_rule_column_is_valid_without_parameters(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -344,7 +348,7 @@ def test_validate_rule_column_is_valid_without_parameters(postgres: PostgresCont
 def test_validate_rule_column_is_valid_without_one_parameter(
     postgres: PostgresContainer,
 ):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -369,16 +373,35 @@ def test_validate_rule_column_is_valid_without_one_parameter(
 
 
 def test_metadata_list_tables(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
 
+    result = next(filter(lambda x: x["name"] == "public.orders", response.json()))
+    assert result["name"] == "public.orders"
+    assert result["primaryKey"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "test",
+        "schema": "public",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "TEXT",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
+
 
 def test_metadata_list_constraints(postgres: PostgresContainer):
-    connection_info = to_connection_info(postgres)
+    connection_info = _to_connection_info(postgres)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={"connectionInfo": connection_info},
@@ -398,7 +421,7 @@ def test_dry_plan():
     assert response.text is not None
 
 
-def to_connection_info(pg: PostgresContainer):
+def _to_connection_info(pg: PostgresContainer):
     return {
         "host": pg.get_container_host_ip(),
         "port": pg.get_exposed_port(pg.port),
@@ -408,6 +431,6 @@ def to_connection_info(pg: PostgresContainer):
     }
 
 
-def to_connection_url(pg: PostgresContainer):
-    info = to_connection_info(pg)
+def _to_connection_url(pg: PostgresContainer):
+    info = _to_connection_info(pg)
     return f"postgres://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"

@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import PostgresConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -16,6 +14,7 @@ from app.model.metadata.metadata import Metadata
 class PostgresMetadata(Metadata):
     def __init__(self, connection_info: PostgresConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.postgres.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         sql = """
@@ -26,21 +25,30 @@ class PostgresMetadata(Metadata):
                 c.column_name,
                 c.data_type,
                 c.is_nullable,
-                c.ordinal_position
+                c.ordinal_position,
+                obj_description(cls.oid) AS table_comment,
+                col_description(cls.oid, a.attnum) AS column_comment
             FROM
                 information_schema.tables t
             JOIN
-                information_schema.columns c ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+                information_schema.columns c
+                ON t.table_schema = c.table_schema
+                AND t.table_name = c.table_name
+            LEFT JOIN
+                pg_class cls
+                ON cls.relname = t.table_name
+                AND cls.relnamespace = (
+                    SELECT oid FROM pg_namespace WHERE nspname = t.table_schema
+                )
+            LEFT JOIN
+                pg_attribute a
+                ON a.attrelid = cls.oid
+                AND a.attname = c.column_name
             WHERE
-                t.table_type in ('BASE TABLE', 'VIEW')
-                and t.table_schema not in ('information_schema', 'pg_catalog')
+                t.table_type IN ('BASE TABLE', 'VIEW')
+                AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
             """
-        response = loads(
-            DataSource.postgres.get_connection(self.connection_info)
-            .sql(sql)
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         unique_tables = {}
         for row in response:
@@ -52,7 +60,7 @@ class PostgresMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -68,7 +76,7 @@ class PostgresMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_postgres_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )
@@ -91,12 +99,7 @@ class PostgresMetadata(Metadata):
                 ON ccu.constraint_name = tc.constraint_name
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
-        res = loads(
-            DataSource.postgres.get_connection(self.connection_info)
-            .sql(sql, dialect="trino")
-            .to_pandas()
-            .to_json(orient="records")
-        )
+        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         constraints = []
         for row in res:
             constraints.append(
@@ -163,9 +166,3 @@ class PostgresMetadata(Metadata):
         }
 
         return switcher.get(data_type, WrenEngineColumnType.UNKNOWN)
-
-
-def to_json(df):
-    json_obj = loads(df.to_json(orient="split"))
-    del json_obj["index"]
-    return json_obj

@@ -1,9 +1,11 @@
 import base64
+import time
 
 import orjson
 import pytest
 from fastapi.testclient import TestClient
 from testcontainers.trino import TrinoContainer
+from trino.dbapi import connect
 
 from app.main import app
 
@@ -71,12 +73,28 @@ manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 @pytest.fixture(scope="module")
 def trino(request) -> TrinoContainer:
     db = TrinoContainer().start()
+
+    # To avoid `TrinoQueryError(type=INTERNAL_ERROR, name=GENERIC_INTERNAL_ERROR, message="nodes is empty")`
+    time.sleep(10)
+
+    conn = connect(
+        host=db.get_container_host_ip(),
+        port=db.get_exposed_port(db.port),
+        user="test",
+    )
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE memory.default.orders AS SELECT * from tpch.tiny.orders")
+    cur.execute("COMMENT ON TABLE memory.default.orders IS 'This is a table comment'")
+    cur.execute(
+        "COMMENT ON COLUMN memory.default.orders.comment IS 'This is a comment'"
+    )
+
     request.addfinalizer(db.stop)
     return db
 
 
 def test_query(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -97,7 +115,7 @@ def test_query(trino: TrinoContainer):
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
+        "2024-01-01 23:59:59.000000",
         None,
         "616263",
     ]
@@ -116,7 +134,7 @@ def test_query(trino: TrinoContainer):
 
 
 def test_query_with_connection_url(trino: TrinoContainer):
-    connection_url = to_connection_url(trino)
+    connection_url = _to_connection_url(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -134,7 +152,7 @@ def test_query_with_connection_url(trino: TrinoContainer):
 
 
 def test_query_with_limit(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"limit": 1},
@@ -163,7 +181,7 @@ def test_query_with_limit(trino: TrinoContainer):
 
 
 def test_query_without_manifest(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -180,7 +198,7 @@ def test_query_without_manifest(trino: TrinoContainer):
 
 
 def test_query_without_sql(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -210,7 +228,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -224,7 +242,7 @@ def test_query_with_dry_run(trino: TrinoContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -239,7 +257,7 @@ def test_query_with_dry_run_and_invalid_sql(trino: TrinoContainer):
 
 
 def test_validate_with_unknown_rule(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -256,7 +274,7 @@ def test_validate_with_unknown_rule(trino: TrinoContainer):
 
 
 def test_validate_rule_column_is_valid(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -269,7 +287,7 @@ def test_validate_rule_column_is_valid(trino: TrinoContainer):
 
 
 def test_validate_rule_column_is_valid_with_invalid_parameters(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -292,7 +310,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(trino: TrinoConta
 
 
 def test_validate_rule_column_is_valid_without_parameters(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -306,7 +324,7 @@ def test_validate_rule_column_is_valid_without_parameters(trino: TrinoContainer)
 
 
 def test_validate_rule_column_is_valid_without_one_parameter(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -330,23 +348,14 @@ def test_validate_rule_column_is_valid_without_one_parameter(trino: TrinoContain
     assert response.text == "Missing required parameter: `modelName`"
 
 
-def to_connection_info(trino: TrinoContainer):
-    return {
+def test_metadata_list_tables(trino: TrinoContainer):
+    connection_info = {
         "host": trino.get_container_host_ip(),
         "port": trino.get_exposed_port(trino.port),
-        "catalog": "tpch",
-        "schema": "sf1",
+        "catalog": "memory",
+        "schema": "default",
         "user": "test",
     }
-
-
-def to_connection_url(trino: TrinoContainer):
-    info = to_connection_info(trino)
-    return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"
-
-
-def test_metadata_list_tables(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={
@@ -355,16 +364,31 @@ def test_metadata_list_tables(trino: TrinoContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(
+        filter(lambda x: x["name"] == "memory.default.orders", response.json())
+    )
+    assert result["name"] == "memory.default.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "memory",
+        "schema": "default",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    comment_column = next(filter(lambda x: x["name"] == "comment", result["columns"]))
+    assert comment_column == {
+        "name": "comment",
+        "nestedColumns": None,
+        "type": "UNKNOWN",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(trino: TrinoContainer):
-    connection_info = to_connection_info(trino)
+    connection_info = _to_connection_info(trino)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={
@@ -375,3 +399,18 @@ def test_metadata_list_constraints(trino: TrinoContainer):
 
     result = response.json()
     assert len(result) == 0
+
+
+def _to_connection_info(trino: TrinoContainer):
+    return {
+        "host": trino.get_container_host_ip(),
+        "port": trino.get_exposed_port(trino.port),
+        "catalog": "tpch",
+        "schema": "sf1",
+        "user": "test",
+    }
+
+
+def _to_connection_url(trino: TrinoContainer):
+    info = _to_connection_info(trino)
+    return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"

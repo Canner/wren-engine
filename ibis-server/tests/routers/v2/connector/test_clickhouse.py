@@ -131,10 +131,11 @@ def clickhouse(request) -> ClickHouseContainer:
             o_orderpriority  String,
             o_clerk          String,
             o_shippriority   Int32,
-            o_comment        String
+            o_comment        String COMMENT 'This is a comment'
         ) 
         ENGINE = MergeTree
         ORDER BY (o_orderkey)
+        COMMENT 'This is a table comment'
     """)
     client.insert_df(
         "orders", pd.read_parquet(file_path("resource/tpch/data/orders.parquet"))
@@ -161,7 +162,7 @@ def clickhouse(request) -> ClickHouseContainer:
 
 
 def test_query(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -201,7 +202,7 @@ def test_query(clickhouse: ClickHouseContainer):
 
 
 def test_query_with_connection_url(clickhouse: ClickHouseContainer):
-    connection_url = to_connection_url(clickhouse)
+    connection_url = _to_connection_url(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -219,7 +220,7 @@ def test_query_with_connection_url(clickhouse: ClickHouseContainer):
 
 
 def test_query_with_limit(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         params={"limit": 1},
@@ -248,7 +249,7 @@ def test_query_with_limit(clickhouse: ClickHouseContainer):
 
 
 def test_query_join(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -268,7 +269,7 @@ def test_query_join(clickhouse: ClickHouseContainer):
 
 
 def test_query_to_one_relationship(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -288,7 +289,7 @@ def test_query_to_one_relationship(clickhouse: ClickHouseContainer):
 
 
 def test_query_to_many_relationship(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -308,7 +309,7 @@ def test_query_to_many_relationship(clickhouse: ClickHouseContainer):
 
 
 def test_query_alias_join(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     # ClickHouse does not support alias join
     with pytest.raises(Exception):
         client.post(
@@ -322,7 +323,7 @@ def test_query_alias_join(clickhouse: ClickHouseContainer):
 
 
 def test_query_without_manifest(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -339,7 +340,7 @@ def test_query_without_manifest(clickhouse: ClickHouseContainer):
 
 
 def test_query_without_sql(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -369,7 +370,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -383,7 +384,7 @@ def test_query_with_dry_run(clickhouse: ClickHouseContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -398,7 +399,7 @@ def test_query_with_dry_run_and_invalid_sql(clickhouse: ClickHouseContainer):
 
 
 def test_validate_with_unknown_rule(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -415,7 +416,7 @@ def test_validate_with_unknown_rule(clickhouse: ClickHouseContainer):
 
 
 def test_validate_rule_column_is_valid(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -430,7 +431,7 @@ def test_validate_rule_column_is_valid(clickhouse: ClickHouseContainer):
 def test_validate_rule_column_is_valid_with_invalid_parameters(
     clickhouse: ClickHouseContainer,
 ):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -455,7 +456,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
 def test_validate_rule_column_is_valid_without_parameters(
     clickhouse: ClickHouseContainer,
 ):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -471,7 +472,7 @@ def test_validate_rule_column_is_valid_without_parameters(
 def test_validate_rule_column_is_valid_without_one_parameter(
     clickhouse: ClickHouseContainer,
 ):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -496,7 +497,7 @@ def test_validate_rule_column_is_valid_without_one_parameter(
 
 
 def test_metadata_list_tables(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={
@@ -505,16 +506,28 @@ def test_metadata_list_tables(clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = response.json()[1]
+    assert result["name"] == "test.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": None,
+        "schema": "test",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(clickhouse: ClickHouseContainer):
-    connection_info = to_connection_info(clickhouse)
+    connection_info = _to_connection_info(clickhouse)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={
@@ -527,7 +540,7 @@ def test_metadata_list_constraints(clickhouse: ClickHouseContainer):
     assert len(result) == 0
 
 
-def to_connection_info(db: ClickHouseContainer):
+def _to_connection_info(db: ClickHouseContainer):
     return {
         "host": db.get_container_host_ip(),
         "port": db.get_exposed_port(db.port),
@@ -537,6 +550,6 @@ def to_connection_info(db: ClickHouseContainer):
     }
 
 
-def to_connection_url(ch: ClickHouseContainer):
-    info = to_connection_info(ch)
+def _to_connection_url(ch: ClickHouseContainer):
+    info = _to_connection_info(ch)
     return f"clickhouse://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"

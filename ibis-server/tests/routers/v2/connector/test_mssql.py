@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 import sqlalchemy
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from testcontainers.mssql import SqlServerContainer
 
 from app.main import app
@@ -80,12 +81,32 @@ def mssql(request) -> SqlServerContainer:
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
+    with engine.begin() as conn:
+        conn.execute(
+            text("""
+                EXEC sys.sp_addextendedproperty
+                    @name = N'MS_Description',
+                    @value = N'This is a table comment',
+                    @level0type = N'SCHEMA', @level0name = 'dbo',
+                    @level1type = N'TABLE',  @level1name = 'orders';
+            """)
+        )
+        conn.execute(
+            text("""
+                EXEC sys.sp_addextendedproperty 
+                    @name = N'MS_Description', 
+                    @value = N'This is a comment', 
+                    @level0type = N'SCHEMA', @level0name = 'dbo',
+                    @level1type = N'TABLE',  @level1name = 'orders',
+                    @level2type = N'COLUMN', @level2name = 'o_comment';
+            """)
+        )
     request.addfinalizer(mssql.stop)
     return mssql
 
 
 def test_query(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -125,7 +146,7 @@ def test_query(mssql: SqlServerContainer):
 
 
 def test_query_with_connection_url(mssql: SqlServerContainer):
-    connection_url = to_connection_url(mssql)
+    connection_url = _to_connection_url(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -143,7 +164,7 @@ def test_query_with_connection_url(mssql: SqlServerContainer):
 
 
 def test_query_without_manifest(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -160,7 +181,7 @@ def test_query_without_manifest(mssql: SqlServerContainer):
 
 
 def test_query_without_sql(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -190,7 +211,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -204,7 +225,7 @@ def test_query_with_dry_run(mssql: SqlServerContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -219,7 +240,7 @@ def test_query_with_dry_run_and_invalid_sql(mssql: SqlServerContainer):
 
 
 def test_validate_with_unknown_rule(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -236,7 +257,7 @@ def test_validate_with_unknown_rule(mssql: SqlServerContainer):
 
 
 def test_validate_rule_column_is_valid(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -251,7 +272,7 @@ def test_validate_rule_column_is_valid(mssql: SqlServerContainer):
 def test_validate_rule_column_is_valid_with_invalid_parameters(
     mssql: SqlServerContainer,
 ):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -274,7 +295,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(
 
 
 def test_validate_rule_column_is_valid_without_parameters(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -288,7 +309,7 @@ def test_validate_rule_column_is_valid_without_parameters(mssql: SqlServerContai
 
 
 def test_validate_rule_column_is_valid_without_one_parameter(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -313,23 +334,35 @@ def test_validate_rule_column_is_valid_without_one_parameter(mssql: SqlServerCon
 
 
 def test_metadata_list_tables(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(filter(lambda x: x["name"] == "dbo.orders", response.json()))
+    assert result["name"] == "dbo.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "tempdb",
+        "schema": "dbo",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(mssql: SqlServerContainer):
-    connection_info = to_connection_info(mssql)
+    connection_info = _to_connection_info(mssql)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={"connectionInfo": connection_info},
@@ -337,7 +370,7 @@ def test_metadata_list_constraints(mssql: SqlServerContainer):
     assert response.status_code == 200
 
 
-def to_connection_info(mssql: SqlServerContainer):
+def _to_connection_info(mssql: SqlServerContainer):
     return {
         "host": mssql.get_container_host_ip(),
         "port": mssql.get_exposed_port(mssql.port),
@@ -347,6 +380,6 @@ def to_connection_info(mssql: SqlServerContainer):
     }
 
 
-def to_connection_url(mssql: SqlServerContainer):
-    info = to_connection_info(mssql)
+def _to_connection_url(mssql: SqlServerContainer):
+    info = _to_connection_info(mssql)
     return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=FreeTDS"

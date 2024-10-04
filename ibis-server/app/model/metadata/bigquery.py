@@ -1,5 +1,3 @@
-from json import loads
-
 from app.model import BigQueryConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -49,7 +47,7 @@ class BigQueryMetadata(Metadata):
             LEFT JOIN {dataset_id}.INFORMATION_SCHEMA.TABLE_OPTIONS table_options
                 ON c.table_name = table_options.table_name
             """
-        response = loads(self.connection.sql(sql).to_pandas().to_json(orient="records"))
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         def get_data_type(data_type) -> str:
             if "STRUCT" in data_type:
@@ -123,7 +121,7 @@ class BigQueryMetadata(Metadata):
                 ON ccu.constraint_name = tc.constraint_name
             WHERE tc.constraint_type = 'FOREIGN KEY'
             """
-        response = loads(self.connection.sql(sql).to_pandas().to_json(orient="records"))
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
         constraints = []
         for row in response:

@@ -1,9 +1,6 @@
-from json import loads
 from urllib.parse import urlparse
 
-import pandas as pd
-
-from app.model import ConnectionUrl, TrinoConnectionInfo
+from app.model import TrinoConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
     Column,
@@ -16,36 +13,37 @@ from app.model.metadata.metadata import Metadata
 
 
 class TrinoMetadata(Metadata):
-    def __init__(self, connection_info: TrinoConnectionInfo | ConnectionUrl):
+    def __init__(self, connection_info: TrinoConnectionInfo):
         super().__init__(connection_info)
+        self.connection = DataSource.trino.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
         schema = self._get_schema_name()
-        sql = f"""SELECT
-                t.table_catalog,
-                t.table_schema,
-                t.table_name,
-                c.column_name,
-                c.data_type,
-                c.is_nullable
-              FROM
-                information_schema.tables t
-              JOIN
-                information_schema.columns c 
-              ON t.table_schema = c.table_schema 
-              AND t.table_name = c.table_name
-              WHERE
-                t.table_type IN ('BASE TABLE', 'VIEW')
-              AND t.table_schema NOT IN ('information_schema', 'pg_catalog')
-              AND t.table_schema = '{schema}'"""
-
-        sql_cursor = DataSource.trino.get_connection(self.connection_info).raw_sql(sql)
-        column_names = [col[0] for col in sql_cursor.description]
-        response = loads(
-            pd.DataFrame(sql_cursor.fetchall(), columns=column_names).to_json(
-                orient="records"
-            )
-        )
+        sql = f"""
+                SELECT
+                    t.table_catalog,
+                    t.table_schema,
+                    t.table_name,
+                    tc.comment AS table_comment,
+                    c.column_name,
+                    c.data_type,
+                    c.is_nullable,
+                    c.column_comment
+                FROM
+                    information_schema.tables AS t
+                INNER JOIN
+                    information_schema.columns AS c
+                    ON t.table_catalog = c.table_catalog
+                    AND t.table_schema = c.table_schema
+                    AND t.table_name = c.table_name
+                INNER JOIN
+                    system.metadata.table_comments AS tc
+                    ON t.table_catalog = c.table_catalog
+                    AND t.table_schema = tc.schema_name
+                    AND t.table_name = tc.table_name
+                WHERE t.table_schema = '{schema}'
+                """
+        response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
         unique_tables = {}
         for row in response:
             # generate unique table name
@@ -56,7 +54,7 @@ class TrinoMetadata(Metadata):
             if schema_table not in unique_tables:
                 unique_tables[schema_table] = Table(
                     name=schema_table,
-                    description="",
+                    description=row["table_comment"],
                     columns=[],
                     properties=TableProperties(
                         schema=row["table_schema"],
@@ -72,7 +70,7 @@ class TrinoMetadata(Metadata):
                     name=row["column_name"],
                     type=self._transform_column_type(row["data_type"]),
                     notNull=row["is_nullable"].lower() == "no",
-                    description="",
+                    description=row["column_comment"],
                     properties=None,
                 )
             )

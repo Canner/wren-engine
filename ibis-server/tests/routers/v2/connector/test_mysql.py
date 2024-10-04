@@ -93,7 +93,14 @@ def mysql(request) -> MySqlContainer:
         "customer", engine, index=False
     )
     with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE orders ADD PRIMARY KEY(o_orderkey);"))
+        conn.execute(
+            text("""
+            ALTER TABLE orders
+                ADD PRIMARY KEY (o_orderkey),
+                COMMENT = 'This is a table comment',
+                MODIFY COLUMN o_comment VARCHAR(255) COMMENT 'This is a comment';
+            """)
+        )
         conn.execute(text("ALTER TABLE customer Add PRIMARY KEY(c_custkey);"))
         conn.execute(
             text(
@@ -105,7 +112,7 @@ def mysql(request) -> MySqlContainer:
 
 
 def test_query(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -145,7 +152,7 @@ def test_query(mysql: MySqlContainer):
 
 
 def test_query_with_connection_url(mysql: MySqlContainer):
-    connection_url = to_connection_url(mysql)
+    connection_url = _to_connection_url(mysql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -163,7 +170,7 @@ def test_query_with_connection_url(mysql: MySqlContainer):
 
 
 def test_query_without_manifest(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/query",
         json={
@@ -180,7 +187,7 @@ def test_query_without_manifest(mysql: MySqlContainer):
 
 
 def test_query_without_sql(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/query",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -210,7 +217,7 @@ def test_query_without_connection_info():
 
 
 def test_query_with_dry_run(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -224,7 +231,7 @@ def test_query_with_dry_run(mysql: MySqlContainer):
 
 
 def test_query_with_dry_run_and_invalid_sql(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/query",
         params={"dryRun": True},
@@ -239,7 +246,7 @@ def test_query_with_dry_run_and_invalid_sql(mysql: MySqlContainer):
 
 
 def test_validate_with_unknown_rule(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
         json={
@@ -256,7 +263,7 @@ def test_validate_with_unknown_rule(mysql: MySqlContainer):
 
 
 def test_validate_rule_column_is_valid(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -269,7 +276,7 @@ def test_validate_rule_column_is_valid(mysql: MySqlContainer):
 
 
 def test_validate_rule_column_is_valid_with_invalid_parameters(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -292,7 +299,7 @@ def test_validate_rule_column_is_valid_with_invalid_parameters(mysql: MySqlConta
 
 
 def test_validate_rule_column_is_valid_without_parameters(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={"connectionInfo": connection_info, "manifestStr": manifest_str},
@@ -306,7 +313,7 @@ def test_validate_rule_column_is_valid_without_parameters(mysql: MySqlContainer)
 
 
 def test_validate_rule_column_is_valid_without_one_parameter(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/validate/column_is_valid",
         json={
@@ -331,23 +338,38 @@ def test_validate_rule_column_is_valid_without_one_parameter(mysql: MySqlContain
 
 
 def test_metadata_list_tables(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] is not None
-    assert result["columns"] is not None
+    result = next(filter(lambda x: x["name"] == "test.orders", response.json()))
+    assert result["name"] == "test.orders"
     assert result["primaryKey"] is not None
-    assert result["description"] is not None
-    assert result["properties"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "",
+        "schema": "test",
+        "table": "orders",
+    }
+    assert len(result["columns"]) == 9
+    o_comment_column = next(
+        filter(lambda x: x["name"] == "o_comment", result["columns"])
+    )
+    assert o_comment_column == {
+        "name": "o_comment",
+        "nestedColumns": None,
+        "type": "VARCHAR",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 def test_metadata_list_constraints(mysql: MySqlContainer):
-    connection_info = to_connection_info(mysql)
+    connection_info = _to_connection_info(mysql)
     response = client.post(
         url=f"{base_url}/metadata/constraints",
         json={"connectionInfo": connection_info},
@@ -363,7 +385,7 @@ def test_metadata_list_constraints(mysql: MySqlContainer):
     assert result["constraintedColumn"] is not None
 
 
-def to_connection_info(mysql: MySqlContainer):
+def _to_connection_info(mysql: MySqlContainer):
     return {
         "host": mysql.get_container_host_ip(),
         "port": mysql.get_exposed_port(mysql.port),
@@ -373,6 +395,6 @@ def to_connection_info(mysql: MySqlContainer):
     }
 
 
-def to_connection_url(mysql: MySqlContainer):
-    info = to_connection_info(mysql)
+def _to_connection_url(mysql: MySqlContainer):
+    info = _to_connection_info(mysql)
     return f"mysql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"

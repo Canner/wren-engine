@@ -47,14 +47,16 @@ def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Respo
 
 @router.post("/{data_source}/metadata/tables", response_model=list[Table])
 def get_table_list(data_source: DataSource, dto: MetadataDTO) -> list[Table]:
-    metadata = MetadataFactory(data_source, dto.connection_info)
-    return metadata.get_table_list()
+    return MetadataFactory.get_metadata(
+        data_source, dto.connection_info
+    ).get_table_list()
 
 
 @router.post("/{data_source}/metadata/constraints", response_model=list[Constraint])
 def get_constraints(data_source: DataSource, dto: MetadataDTO) -> list[Constraint]:
-    metadata = MetadataFactory(data_source, dto.connection_info)
-    return metadata.get_constraints()
+    return MetadataFactory.get_metadata(
+        data_source, dto.connection_info
+    ).get_constraints()
 
 
 @router.post("/dry-plan")
