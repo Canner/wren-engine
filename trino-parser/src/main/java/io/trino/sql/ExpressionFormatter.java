@@ -153,8 +153,7 @@ public final class ExpressionFormatter
         @Override
         protected String visitRow(Row node, Void context)
         {
-            String rowPrefix = (dialect == DEFAULT || dialect == BIGQUERY) ? "ROW" : "";
-            return rowPrefix + " (" + Joiner.on(", ").join(node.getItems().stream()
+            return "(" + Joiner.on(", ").join(node.getItems().stream()
                     .map(child -> process(child, context))
                     .collect(toList())) + ")";
         }
