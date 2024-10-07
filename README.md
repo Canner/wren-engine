@@ -39,7 +39,7 @@
 
 Useful links
 - [Wren AI Website](https://getwren.ai)
-- [Wren Engine Documentation](https://docs.getwren.ai/engine/get_started/what_is)
+- [Wren Engine Documentation](https://docs.getwren.ai/oss/engine/get_started/what_is)
 
 ## 🎯 Our Mission
 
@@ -47,14 +47,14 @@ The Wren engine aims to be compatible with composable data systems. It follows t
 
 <img src="./misc/wrenai_vision.png">
 
-🤩 [About our Vision - The new wave of Composable Data Systems and the Interface to LLM agents](https://blog.getwren.ai/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents-ec8f0a2e7141)
+🤩 [About our Vision - The new wave of Composable Data Systems and the Interface to LLM agents](https://getwren.ai/post/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents)
 
 ## 🤔 Concepts
 
-- [Introducing Wren Engine](https://docs.getwren.ai/engine/get_started/what_is)
-- [What is semantics?](https://docs.getwren.ai/engine/concept/what_is_semantics)
-- [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/engine/concept/what_is_mdl)
-- [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/engine/concept/benefits_llm)
+- [Introducing Wren Engine](https://docs.getwren.ai/oss/engine/get_started/what_is)
+- [What is semantics?](https://docs.getwren.ai/oss/engine/concept/what_is_semantics)
+- [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
+- [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/oss/engine/concept/benefits_llm)
 
 ## 🚧 Project Status
 Wren Engine is currently in the beta version. The project team is actively working on progress and aiming to release new versions at least biweekly.
@@ -66,7 +66,7 @@ Wren Engine is currently in the beta version. The project team is actively worki
 
 ## 🚀 Get Started
 
-Check out our latest documentation to get a [Quick start](https://docs.getwren.ai/engine/get_started/quickstart).
+Check out our latest documentation to get a [Quick start](https://docs.getwren.ai/oss/engine/get_started/quickstart).
 
 ## 🙌 How to build?
 
