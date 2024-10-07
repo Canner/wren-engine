@@ -411,7 +411,7 @@ def test_validate_with_unknown_rule(clickhouse: ClickHouseContainer):
     assert response.status_code == 422
     assert (
         response.text
-        == "The rule `unknown_rule` is not in the rules, rules: ['column_is_valid']"
+        == "The rule `unknown_rule` is not in the rules, rules: ['column_is_valid', 'relationship_is_valid']"
     )
 
 
