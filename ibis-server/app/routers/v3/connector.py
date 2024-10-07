@@ -53,5 +53,5 @@ def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Respo
         Connector(data_source, dto.connection_info, dto.manifest_str),
         Rewriter(dto.manifest_str, data_source=data_source, experiment=True),
     )
-    validator.validate(rule_name, dto.parameters)
+    validator.validate(rule_name, dto.parameters, dto.manifest_str)
     return Response(status_code=204)
