@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>175</version>
+        <version>185</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -64,11 +64,11 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
         <dep.antlr.version>4.13.2</dep.antlr.version>
-        <dep.airlift.version>267</dep.airlift.version>
+        <dep.airlift.version>269</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
-        <dep.testcontainers.version>1.20.1</dep.testcontainers.version>
-        <dep.errorprone.version>2.32.0</dep.errorprone.version>
+        <dep.testcontainers.version>1.20.2</dep.testcontainers.version>
+        <dep.errorprone.version>2.33.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -108,13 +108,13 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.17.2</version>
+                <version>2.18.0</version>
             </dependency>
 
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.17.2</version>
+                <version>2.18.0</version>
             </dependency>
 
             <dependency>
@@ -126,7 +126,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-yaml</artifactId>
-                <version>2.17.2</version>
+                <version>2.18.0</version>
             </dependency>
 
             <dependency>
@@ -174,7 +174,7 @@
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
-                <version>5.1.0</version>
+                <version>6.0.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.15.1</version>
+                <version>1.15.3</version>
             </dependency>
 
             <dependency>
@@ -349,19 +349,19 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.47.0</version>
+                <version>3.48.0</version>
             </dependency>
 
             <dependency>
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
-                <version>1.1.0</version>
+                <version>1.1.1</version>
             </dependency>
 
             <dependency>
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
-                <version>24.1.0</version>
+                <version>25.0.0</version>
             </dependency>
 
             <dependency>
@@ -391,7 +391,7 @@
             <dependency>
                 <groupId>org.threeten</groupId>
                 <artifactId>threetenbp</artifactId>
-                <version>1.6.9</version>
+                <version>1.7.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
