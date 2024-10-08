@@ -118,7 +118,7 @@ def test_validation_relationship_not_found(postgres: PostgresContainer):
     )
 
     assert response.status_code == 422
-    assert response.content == b"Relationship not_found not found in manifest"
+    assert response.text == "Relationship not_found not found in manifest"
 
     connection_info = _to_connection_info(postgres)
     response = client.post(
@@ -131,7 +131,7 @@ def test_validation_relationship_not_found(postgres: PostgresContainer):
     )
 
     assert response.status_code == 422
-    assert response.content == b"Missing required parameter: `relationship`"
+    assert response.text == "Missing required parameter: `relationship`"
 
 
 def test_validation_faliure(postgres: PostgresContainer):
