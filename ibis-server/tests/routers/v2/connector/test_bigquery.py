@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.model.validator import rules
 
 pytestmark = pytest.mark.bigquery
 
@@ -185,6 +186,20 @@ def test_query_with_dry_run_and_invalid_sql():
     assert response.text is not None
 
 
+def test_query_values():
+    response = client.post(
+        url=f"{base_url}/query",
+        params={"dryRun": True},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM (VALUES (1, 2), (3, 4))",
+        },
+    )
+
+    assert response.status_code == 204
+
+
 def test_validate_with_unknown_rule():
     response = client.post(
         url=f"{base_url}/validate/unknown_rule",
@@ -194,10 +209,10 @@ def test_validate_with_unknown_rule():
             "parameters": {"modelName": "Orders", "columnName": "orderkey"},
         },
     )
+
     assert response.status_code == 422
     assert (
-        response.text
-        == "The rule `unknown_rule` is not in the rules, rules: ['column_is_valid']"
+        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 

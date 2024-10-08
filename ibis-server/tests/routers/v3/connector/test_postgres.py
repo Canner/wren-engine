@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from testcontainers.postgres import PostgresContainer
 
 from app.main import app
+from app.model.validator import rules
 from tests.confest import file_path
 
 pytestmark = pytest.mark.beta
@@ -273,8 +274,7 @@ def test_validate_with_unknown_rule(postgres: PostgresContainer):
     )
     assert response.status_code == 422
     assert (
-        response.text
-        == "The rule `unknown_rule` is not in the rules, rules: ['column_is_valid']"
+        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
     )
 
 

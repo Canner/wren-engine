@@ -90,7 +90,7 @@ public class TestDuckDBSqlConverter
                 FROM
                   (
                  VALUES\s
-                      (1, 2, ARRAY[1,2,3])
+                     (1, 2, ARRAY[1,2,3])
                 )\s
                 """);
     }
