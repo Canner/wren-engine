@@ -17,14 +17,38 @@ use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
+use datafusion::optimizer::analyzer::count_wildcard_rule::CountWildcardRule;
+use datafusion::optimizer::analyzer::expand_wildcard_rule::ExpandWildcardRule;
+use datafusion::optimizer::analyzer::inline_table_scan::InlineTableScan;
+use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
+use datafusion::optimizer::common_subexpr_eliminate::CommonSubexprEliminate;
+use datafusion::optimizer::decorrelate_predicate_subquery::DecorrelatePredicateSubquery;
+use datafusion::optimizer::eliminate_cross_join::EliminateCrossJoin;
+use datafusion::optimizer::eliminate_duplicated_expr::EliminateDuplicatedExpr;
+use datafusion::optimizer::eliminate_filter::EliminateFilter;
+use datafusion::optimizer::eliminate_group_by_constant::EliminateGroupByConstant;
+use datafusion::optimizer::eliminate_join::EliminateJoin;
+use datafusion::optimizer::eliminate_limit::EliminateLimit;
+use datafusion::optimizer::eliminate_nested_union::EliminateNestedUnion;
+use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
+use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
+use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
+use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
+use datafusion::optimizer::optimize_projections::OptimizeProjections;
+use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
+use datafusion::optimizer::push_down_filter::PushDownFilter;
+use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
+use datafusion::optimizer::rewrite_disjunctive_predicate::RewriteDisjunctivePredicate;
+use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
+use datafusion::optimizer::simplify_expressions::SimplifyExpressions;
+use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
+use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
 use parking_lot::RwLock;
 
 /// Apply Wren Rules to the context for sql generation.
-/// TODO: There're some issue for unparsing the datafusion optimized plans.
-///   Disable all the optimize rule for sql generation temporarily.
 pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
@@ -56,9 +80,50 @@ pub async fn create_ctx_with_mdl(
             reset_default_catalog_schema,
         )),
         Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
+        Arc::new(InlineTableScan::new()),
+        // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
+        Arc::new(ExpandWildcardRule::new()),
+        // [Expr::Wildcard] should be expanded before [TypeCoercion]
+        Arc::new(TypeCoercion::new()),
+        Arc::new(CountWildcardRule::new()),
     ])
-    // TODO: there're some issues for the optimize rule.
-    .with_optimizer_rules(vec![])
+    .with_optimizer_rules(vec![
+        Arc::new(EliminateNestedUnion::new()),
+        Arc::new(SimplifyExpressions::new()),
+        Arc::new(UnwrapCastInComparison::new()),
+        Arc::new(ReplaceDistinctWithAggregate::new()),
+        Arc::new(EliminateJoin::new()),
+        Arc::new(DecorrelatePredicateSubquery::new()),
+        Arc::new(ScalarSubqueryToJoin::new()),
+        Arc::new(ExtractEquijoinPredicate::new()),
+        // simplify expressions does not simplify expressions in subqueries, so we
+        // run it again after running the optimizations that potentially converted
+        // subqueries to joins
+        Arc::new(SimplifyExpressions::new()),
+        Arc::new(RewriteDisjunctivePredicate::new()),
+        Arc::new(EliminateDuplicatedExpr::new()),
+        Arc::new(EliminateFilter::new()),
+        Arc::new(EliminateCrossJoin::new()),
+        Arc::new(CommonSubexprEliminate::new()),
+        Arc::new(EliminateLimit::new()),
+        Arc::new(PropagateEmptyRelation::new()),
+        // Must be after PropagateEmptyRelation
+        Arc::new(EliminateOneUnion::new()),
+        Arc::new(FilterNullJoinKeys::default()),
+        Arc::new(EliminateOuterJoin::new()),
+        // Filters can't be pushed down past Limits, we should do PushDownFilter after PushDownLimit
+        // TODO: Sort with pushdown-limit doesn't support to be unparse
+        // Arc::new(PushDownLimit::new()),
+        Arc::new(PushDownFilter::new()),
+        Arc::new(SingleDistinctToGroupBy::new()),
+        // The previous optimizations added expressions and projections,
+        // that might benefit from the following rules
+        Arc::new(SimplifyExpressions::new()),
+        Arc::new(UnwrapCastInComparison::new()),
+        Arc::new(CommonSubexprEliminate::new()),
+        Arc::new(EliminateGroupByConstant::new()),
+        Arc::new(OptimizeProjections::new()),
+    ])
     .with_config(config)
     .build();
     let ctx = SessionContext::new_with_state(new_state);
