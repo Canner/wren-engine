@@ -37,11 +37,11 @@ testcontainers = { version = "4.8.1", extras = [
   "trino",
 ] }
 sqlalchemy = "2.0.35"
-pre-commit = "3.8.0"
-ruff = "0.6.8"
+pre-commit = "4.0.0"
+ruff = "0.6.9"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.1"
+clickhouse-connect = "0.8.2"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
