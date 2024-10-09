@@ -1,4 +1,5 @@
 from functools import cache
+from typing import Any
 
 import ibis
 import ibis.expr.datatypes as dt
@@ -23,7 +24,7 @@ class Connector:
 
     def dry_run(self, sql: str) -> None:
         try:
-            self._connector.connection.sql(sql)
+            self._connector.dry_run(sql)
         except Exception as e:
             raise QueryDryRunError(f"Exception: {type(e)}, message: {e!s}")
 
@@ -36,6 +37,9 @@ class SimpleConnector:
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         return self.connection.sql(sql).limit(limit).to_pandas()
 
+    def dry_run(self, sql: str) -> None:
+        self.connection.sql(sql)
+
 
 class CannerConnector:
     def __init__(self, connection_info: ConnectionInfo):
@@ -46,10 +50,13 @@ class CannerConnector:
         schema = self._get_schema(sql)
         return self.connection.sql(sql, schema=schema).limit(limit).to_pandas()
 
+    # Canner enterprise does not support dry-run, so we have to query with limit zero
+    def dry_run(self, sql: str) -> Any:
+        return self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
+
     def _get_schema(self, sql: str) -> sch.Schema:
-        # Canner enterprise does not support dry-run, so we have to get schema from the query with limit zero
-        cur = self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
-        type_names = _get_canner_type_names(self.connection)
+        cur = self.dry_run(sql)
+        type_names = _get_pg_type_names(self.connection)
         return ibis.schema(
             {
                 desc.name: self._oid_to_ibis_type(desc.type_code, type_names)
@@ -63,7 +70,7 @@ class CannerConnector:
 
 
 @cache
-def _get_canner_type_names(connection: BaseBackend) -> dict[int, str]:
+def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
     cur = connection.raw_sql("SELECT oid, typname FROM pg_type")
     return dict(cur.fetchall())
 
