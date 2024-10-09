@@ -1,10 +1,13 @@
+from functools import cache
+
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import pandas as pd
+from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
-from app.model import PG_TYPE_OID_NAMES, ConnectionInfo, UnprocessableEntityError
+from app.model import ConnectionInfo, UnprocessableEntityError
 from app.model.data_source import DataSource
 
 
@@ -46,16 +49,23 @@ class CannerConnector:
     def _get_schema(self, sql: str) -> sch.Schema:
         # Canner enterprise does not support dry-run, so we have to get schema from the query with limit zero
         cur = self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
+        type_names = _get_canner_type_names(self.connection)
         return ibis.schema(
             {
-                desc.name: self._oid_to_ibis_type(desc.type_code)
+                desc.name: self._oid_to_ibis_type(desc.type_code, type_names)
                 for desc in cur.description
             }
         )
 
     @staticmethod
-    def _oid_to_ibis_type(oid: int) -> dt.DataType:
-        return postgres_compiler.type_mapper.from_string(PG_TYPE_OID_NAMES[oid])
+    def _oid_to_ibis_type(oid: int, type_names: dict[int, str]) -> dt.DataType:
+        return postgres_compiler.type_mapper.from_string(type_names[oid])
+
+
+@cache
+def _get_canner_type_names(connection: BaseBackend) -> dict[int, str]:
+    cur = connection.raw_sql("SELECT oid, typname FROM pg_type")
+    return dict(cur.fetchall())
 
 
 class QueryDryRunError(UnprocessableEntityError):
