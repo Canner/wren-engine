@@ -65,7 +65,9 @@ jobs:
           EOF
           sudo odbcinst -i -d -f free.tds.ini
       - name: Install dependencies
-        run: just install
+        run: |
+        just install
+        just install-core
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
