@@ -56,6 +56,9 @@ class CannerConnectionInfo(BaseModel):
     user: SecretStr
     pat: SecretStr
     workspace: SecretStr
+    enable_ssl: bool = Field(
+        description="Enable SSL connection", default=False, alias="enableSSL"
+    )
 
 
 class ClickHouseConnectionInfo(BaseModel):

@@ -8,6 +8,16 @@ from orjson import orjson
 from app.main import app
 from app.model.validator import rules
 
+"""
+The Canner Enterprise must setup below:
+- A user with PAT
+- A data source with TPCH Tiny
+- A workspace
+- A TPCH table `orders` in the workspace
+- The table `orders` must be with a comment `This is a table comment`
+- The table `orders` must have a column `o_comment` with a comment `This is a comment`
+"""
+
 pytestmark = pytest.mark.canner
 
 client = TestClient(app)
@@ -81,7 +91,7 @@ def test_query():
             "sql": 'SELECT * FROM "Orders" LIMIT 1',
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     result = response.json()
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
@@ -318,6 +328,16 @@ def test_metadata_list_tables():
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+    result = next(filter(lambda x: x["name"] == "orders", response.json()))
+    assert result["name"] == "orders"
+    assert result["primaryKey"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"]["catalog"] == "canner"
+    assert result["properties"]["schema"] == "tpch_tiny"
+    assert result["properties"]["table"] == "orders"
+    assert len(result["columns"]) == 9
+    comment_column = next(filter(lambda x: x["name"] == "o_comment", result["columns"]))
+    assert comment_column["description"] == "This is a comment"
 
 
 def test_metadata_list_constraints():
@@ -326,6 +346,7 @@ def test_metadata_list_constraints():
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_dry_plan():

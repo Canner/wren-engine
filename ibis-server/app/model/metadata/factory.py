@@ -1,5 +1,6 @@
 from app.model.data_source import DataSource
 from app.model.metadata.bigquery import BigQueryMetadata
+from app.model.metadata.canner import CannerMetadata
 from app.model.metadata.clickhouse import ClickHouseMetadata
 from app.model.metadata.metadata import Metadata
 from app.model.metadata.mssql import MSSQLMetadata
@@ -9,6 +10,7 @@ from app.model.metadata.trino import TrinoMetadata
 
 mapping = {
     DataSource.bigquery: BigQueryMetadata,
+    DataSource.canner: CannerMetadata,
     DataSource.clickhouse: ClickHouseMetadata,
     DataSource.mssql: MSSQLMetadata,
     DataSource.mysql: MySQLMetadata,

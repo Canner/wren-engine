@@ -41,7 +41,12 @@ pre-commit = "4.0.1"
 ruff = "0.6.9"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
+gql = { extras = ["aiohttp"], version = "3.5.0" }
 clickhouse-connect = "0.8.3"
+strawberry-graphql = { extras = [
+  "debug-server",
+  "fastapi",
+], version = "0.243.0" }
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
