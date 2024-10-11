@@ -4,10 +4,7 @@ use std::sync::Arc;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult};
 use datafusion::common::{plan_err, Result};
-use datafusion::logical_expr::{
-    col, ident, Aggregate, Distinct, DistinctOn, Extension, Projection, SubqueryAlias,
-    UserDefinedLogicalNodeCore, Window,
-};
+use datafusion::logical_expr::{col, ident, Extension, UserDefinedLogicalNodeCore};
 use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder};
 use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::sql::TableReference;
@@ -37,39 +34,6 @@ impl ModelGenerationRule {
         plan: LogicalPlan,
     ) -> Result<Transformed<LogicalPlan>> {
         match plan {
-            LogicalPlan::Projection(Projection { expr, input, .. }) => {
-                Ok(Transformed::yes(LogicalPlan::Projection(
-                    Projection::try_new(expr, input)?,
-                )))
-            }
-            LogicalPlan::SubqueryAlias(SubqueryAlias { input, alias, .. }) => {
-                Ok(Transformed::yes(LogicalPlan::SubqueryAlias(
-                    SubqueryAlias::try_new(input, alias)?,
-                )))
-            }
-            LogicalPlan::Aggregate(Aggregate {
-                input,
-                group_expr,
-                aggr_expr,
-                ..
-            }) => Ok(Transformed::yes(LogicalPlan::Aggregate(
-                Aggregate::try_new(input, group_expr, aggr_expr)?,
-            ))),
-            LogicalPlan::Distinct(Distinct::On(DistinctOn {
-                on_expr,
-                select_expr,
-                sort_expr,
-                input,
-                ..
-            })) => Ok(Transformed::yes(LogicalPlan::Distinct(Distinct::On(
-                DistinctOn::try_new(on_expr, select_expr, sort_expr, input)?,
-            )))),
-            LogicalPlan::Window(Window {
-                input, window_expr, ..
-            }) => Ok(Transformed::yes(LogicalPlan::Window(Window::try_new(
-                window_expr,
-                input,
-            )?))),
             LogicalPlan::Extension(extension) => {
                 if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelPlanNode>()
@@ -202,7 +166,7 @@ impl ModelGenerationRule {
                     Ok(Transformed::no(LogicalPlan::Extension(extension)))
                 }
             }
-            _ => Ok(Transformed::no(plan)),
+            _ => Ok(Transformed::yes(plan.recompute_schema()?)),
         }
     }
 }
@@ -221,12 +185,9 @@ impl AnalyzerRule for ModelGenerationRule {
             })
             .data()?;
         transformed_up
-            .transform_down_with_subqueries(
-                &|plan| -> Result<Transformed<LogicalPlan>> {
-                    self.generate_model_internal(plan)
-                },
-            )?
-            .map_data(|plan| plan.recompute_schema())
+            .transform_down_with_subqueries(&|plan| -> Result<Transformed<LogicalPlan>> {
+                self.generate_model_internal(plan)
+            })
             .data()
     }
 

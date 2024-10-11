@@ -128,6 +128,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./ibis-server
+          build-args: |
+            RUST_PROFILE=--release
           build-contexts: |
             wren-modeling-py=./wren-modeling-py
             wren-modeling-rs=./wren-modeling-rs

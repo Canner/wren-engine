@@ -28,6 +28,7 @@ use tempfile::TempDir;
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
 };
+use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::manifest::JoinType;
 use wren_core::mdl::AnalyzedWrenMDL;
 
@@ -300,8 +301,7 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    // TODO: there're some conflicts for datafusion optimization rules.
-    // let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
 
@@ -331,12 +331,12 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("customer")
                 .table_reference("datafusion.public.customer")
-                .column(ColumnBuilder::new("c_custkey", "bigint").build())
+                .column(ColumnBuilder::new("c_custkey", "int").build())
                 .column(ColumnBuilder::new("c_name", "varchar").build())
                 .column(ColumnBuilder::new("c_address", "varchar").build())
-                .column(ColumnBuilder::new("c_nationkey", "bigint").build())
+                .column(ColumnBuilder::new("c_nationkey", "int").build())
                 .column(ColumnBuilder::new("c_phone", "varchar").build())
-                .column(ColumnBuilder::new("c_acctbal", "double").build())
+                .column(ColumnBuilder::new("c_acctbal", "decimal").build())
                 .column(ColumnBuilder::new("c_mktsegment", "varchar").build())
                 .column(ColumnBuilder::new("c_comment", "varchar").build())
                 .primary_key("c_custkey")
@@ -346,10 +346,10 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("orders")
                 .table_reference("datafusion.public.orders")
-                .column(ColumnBuilder::new("o_orderkey", "bigint").build())
-                .column(ColumnBuilder::new("o_custkey", "bigint").build())
+                .column(ColumnBuilder::new("o_orderkey", "int").build())
+                .column(ColumnBuilder::new("o_custkey", "int").build())
                 .column(ColumnBuilder::new("o_orderstatus", "char").build())
-                .column(ColumnBuilder::new("o_totalprice", "double").build())
+                .column(ColumnBuilder::new("o_totalprice", "decimal").build())
                 .column(ColumnBuilder::new("o_orderdate", "date").build())
                 .column(ColumnBuilder::new("o_orderpriority", "varchar").build())
                 .column(ColumnBuilder::new("o_clerk", "varchar").build())
@@ -362,14 +362,14 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("lineitem")
                 .table_reference("datafusion.public.lineitem")
-                .column(ColumnBuilder::new("l_orderkey", "bigint").build())
-                .column(ColumnBuilder::new("l_partkey", "bigint").build())
-                .column(ColumnBuilder::new("l_suppkey", "bigint").build())
+                .column(ColumnBuilder::new("l_orderkey", "int").build())
+                .column(ColumnBuilder::new("l_partkey", "int").build())
+                .column(ColumnBuilder::new("l_suppkey", "int").build())
                 .column(ColumnBuilder::new("l_linenumber", "int").build())
-                .column(ColumnBuilder::new("l_quantity", "double").build())
-                .column(ColumnBuilder::new("l_extendedprice", "double").build())
-                .column(ColumnBuilder::new("l_discount", "double").build())
-                .column(ColumnBuilder::new("l_tax", "double").build())
+                .column(ColumnBuilder::new("l_quantity", "decimal").build())
+                .column(ColumnBuilder::new("l_extendedprice", "decimal").build())
+                .column(ColumnBuilder::new("l_discount", "decimal").build())
+                .column(ColumnBuilder::new("l_tax", "decimal").build())
                 .column(ColumnBuilder::new("l_returnflag", "char").build())
                 .column(ColumnBuilder::new("l_linestatus", "char").build())
                 .column(ColumnBuilder::new("l_shipdate", "date").build())
@@ -385,14 +385,14 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("part")
                 .table_reference("datafusion.public.part")
-                .column(ColumnBuilder::new("p_partkey", "bigint").build())
+                .column(ColumnBuilder::new("p_partkey", "int").build())
                 .column(ColumnBuilder::new("p_name", "varchar").build())
                 .column(ColumnBuilder::new("p_mfgr", "varchar").build())
                 .column(ColumnBuilder::new("p_brand", "varchar").build())
                 .column(ColumnBuilder::new("p_type", "varchar").build())
                 .column(ColumnBuilder::new("p_size", "int").build())
                 .column(ColumnBuilder::new("p_container", "varchar").build())
-                .column(ColumnBuilder::new("p_retailprice", "double").build())
+                .column(ColumnBuilder::new("p_retailprice", "decimal").build())
                 .column(ColumnBuilder::new("p_comment", "varchar").build())
                 .primary_key("p_partkey")
                 .build(),
@@ -401,12 +401,12 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("supplier")
                 .table_reference("datafusion.public.supplier")
-                .column(ColumnBuilder::new("s_suppkey", "bigint").build())
+                .column(ColumnBuilder::new("s_suppkey", "int").build())
                 .column(ColumnBuilder::new("s_name", "varchar").build())
                 .column(ColumnBuilder::new("s_address", "varchar").build())
-                .column(ColumnBuilder::new("s_nationkey", "bigint").build())
+                .column(ColumnBuilder::new("s_nationkey", "int").build())
                 .column(ColumnBuilder::new("s_phone", "varchar").build())
-                .column(ColumnBuilder::new("s_acctbal", "double").build())
+                .column(ColumnBuilder::new("s_acctbal", "decimal").build())
                 .column(ColumnBuilder::new("s_comment", "varchar").build())
                 .primary_key("s_suppkey")
                 .build(),
@@ -415,10 +415,10 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("partsupp")
                 .table_reference("datafusion.public.partsupp")
-                .column(ColumnBuilder::new("ps_partkey", "bigint").build())
-                .column(ColumnBuilder::new("ps_suppkey", "bigint").build())
+                .column(ColumnBuilder::new("ps_partkey", "int").build())
+                .column(ColumnBuilder::new("ps_suppkey", "int").build())
                 .column(ColumnBuilder::new("ps_availqty", "int").build())
-                .column(ColumnBuilder::new("ps_supplycost", "double").build())
+                .column(ColumnBuilder::new("ps_supplycost", "decimal").build())
                 .column(ColumnBuilder::new("ps_comment", "varchar").build())
                 .primary_key("ps_partkey") // ps_partkey and ps_suppkey should be composite primary key
                 .build(),
@@ -427,9 +427,9 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("nation")
                 .table_reference("datafusion.public.nation")
-                .column(ColumnBuilder::new("n_nationkey", "bigint").build())
+                .column(ColumnBuilder::new("n_nationkey", "int").build())
                 .column(ColumnBuilder::new("n_name", "varchar").build())
-                .column(ColumnBuilder::new("n_regionkey", "bigint").build())
+                .column(ColumnBuilder::new("n_regionkey", "int").build())
                 .column(ColumnBuilder::new("n_comment", "varchar").build())
                 .primary_key("n_nationkey")
                 .build(),
@@ -438,7 +438,7 @@ async fn register_tpch_mdl(
         .model(
             ModelBuilder::new("region")
                 .table_reference("datafusion.public.region")
-                .column(ColumnBuilder::new("r_regionkey", "bigint").build())
+                .column(ColumnBuilder::new("r_regionkey", "int").build())
                 .column(ColumnBuilder::new("r_name", "varchar").build())
                 .column(ColumnBuilder::new("r_comment", "varchar").build())
                 .primary_key("r_regionkey")
@@ -531,7 +531,6 @@ async fn register_tpch_mdl(
         manifest,
         register_tables,
     )?);
-    // TODO: there're some conflicts for datafusion optimization rules.
-    // let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }

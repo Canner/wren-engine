@@ -17,7 +17,6 @@ pytest = "8.3.3"
 
 [tool.maturin]
 module-name = "wren_core"
-profile = "release"
 include = [{ path = "Cargo.lock", format = "sdist" }]
 exclude = ["tests/**", "target/**"]
 locked = true
