@@ -22,6 +22,7 @@ import io.wren.base.CatalogSchemaTableName;
 import io.wren.base.SessionContext;
 import io.wren.base.WrenTypes;
 import io.wren.base.dto.Column;
+import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
 import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
@@ -29,12 +30,15 @@ import io.wren.base.sqlrewrite.AbstractTestFramework;
 import org.assertj.core.api.Assertions;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
 import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.WrenMDL.EMPTY;
 import static io.wren.base.WrenMDL.fromManifest;
+import static io.wren.base.dto.Column.relationshipColumn;
+import static io.wren.base.dto.Relationship.relationship;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.analyzer.StatementAnalyzer.analyze;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -207,6 +211,28 @@ public class TestStatementAnalyzer
         assertThat(scope.get().getRelationType().getFields()).hasSize(2);
         assertThat(scope.get().getRelationType().getFields().get(0).getName().get()).isEqualTo("c1");
         assertThat(scope.get().getRelationType().getFields().get(1).getName().get()).isEqualTo("c2");
+    }
+
+    @Test
+    public void testScopeWithRelationship()
+    {
+        SessionContext sessionContext = SessionContext.builder().setCatalog("test").setSchema("test").build();
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        Model.model("table_1", "SELECT * FROM foo", ImmutableList.of(
+                                varcharColumn("c1"), varcharColumn("c2"), relationshipColumn("table_2", "table_2", "relationship_1_2"))),
+                        Model.model("table_2", "SELECT * FROM bar", ImmutableList.of(varcharColumn("c1"), varcharColumn("c2")))))
+                .setRelationships(ImmutableList.of(
+                        relationship("relationship_1_2", List.of("table_1", "table_2"), JoinType.ONE_TO_ONE, "table_1.c1 = table_2.c1")))
+                .build();
+
+        Statement statement = parseSql("SELECT table_2.c2 FROM table_1 JOIN table_2 ON table_1.c1 = table_2.c1");
+        Analysis analysis = new Analysis(statement);
+        analyze(analysis, statement, sessionContext, fromManifest(manifest));
+        assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "table_1"))).containsExactly("c1");
+        assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "table_2"))).containsExactly("c1", "c2");
     }
 
     private static Column varcharColumn(String name)

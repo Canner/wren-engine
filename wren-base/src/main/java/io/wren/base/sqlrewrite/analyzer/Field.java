@@ -32,9 +32,13 @@ public class Field
     // e.g. select table.col_1 from select * from table; => is this legal ? this is false
     private final Optional<QualifiedName> relationAlias;
     private final CatalogSchemaTableName tableName;
+    // the name of the column in the table
     private final String columnName;
+    // the name of the dataset where the column comes from
     private final Optional<String> sourceDatasetName;
+    // the name of the column in the dataset where the column comes from
     private final Optional<Column> sourceColumn;
+    // the name of the column in the query (If the column is aliased, this is the alias, otherwise it's the column name)
     private final Optional<String> name;
 
     private Field(
