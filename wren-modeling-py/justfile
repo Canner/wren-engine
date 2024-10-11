@@ -4,8 +4,8 @@ default:
 install:
     poetry install --no-root
 
-build:
-    poetry run maturin build
+build *args:
+    poetry run maturin build {{args}}
 
 develop:
     poetry run maturin develop

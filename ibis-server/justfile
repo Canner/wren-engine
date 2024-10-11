@@ -1,12 +1,13 @@
 default:
     @just --list --unsorted
 
-build-core:
-    cd ../wren-modeling-py && just install && just build
+build-core *args:
+    cd ../wren-modeling-py && just install && just build {{args}}
 
 core-wheel-path := "../wren-modeling-py/target/wheels/wren_modeling_py-*.whl"
 
-install-core: build-core
+install-core *args:
+    just build-core {{args}}
     # Using pip install to avoid adding wheel to pyproject.toml
     poetry run pip install {{core-wheel-path}}
 
@@ -15,7 +16,6 @@ update-core: build-core
 
 install *args:
     poetry install {{args}}
-    just install-core
 
 pre-commit-install:
     poetry run pre-commit install
