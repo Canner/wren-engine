@@ -71,7 +71,8 @@ mod tests {
                 .unwrap();
         assert_eq!(
             transformed_sql,
-            r#"SELECT * FROM (SELECT main.customer.c_custkey AS c_custkey, main.customer.c_name AS c_name FROM main.customer) AS customer"#
+            "SELECT main.customer.c_custkey AS c_custkey, main.customer.c_name AS c_name FROM \
+            (SELECT main.customer.c_custkey, main.customer.c_name FROM main.customer) AS customer"
         );
     }
 }
