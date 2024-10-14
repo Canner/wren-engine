@@ -105,7 +105,7 @@ def test_query(postgres: PostgresContainer):
     assert len(result["data"]) == 1
     assert result["data"][0] == [
         "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
+        "2024-01-01 23:59:59.000000",
         "1_370",
         370,
         "1996-01-02",

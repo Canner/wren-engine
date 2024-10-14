@@ -245,7 +245,7 @@ pub async fn transform_sql_with_ctx(
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
     let analyzed = ctx.state().optimize(&plan)?;
@@ -390,9 +390,8 @@ mod test {
                 "select orders.o_orderkey from test.test.orders left join test.test.customer on (orders.o_custkey = customer.c_custkey) where orders.o_totalprice > 10",
                 "select o_orderkey, sum(o_totalprice) from test.test.orders group by 1",
                 "select o_orderkey, count(*) from test.test.orders where orders.o_totalprice > 10 group by 1",
-                // TODO: calculated issue
-                // "select totalcost from test.test.profile",
-                // "select totalcost from profile",
+                "select totalcost from test.test.profile",
+                "select totalcost from profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];
@@ -412,8 +411,6 @@ mod test {
         Ok(())
     }
 
-    // TODO: wren view issue
-    #[ignore]
     #[tokio::test]
     async fn test_access_view() -> Result<()> {
         let test_data: PathBuf =
@@ -462,10 +459,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
-                    FROM (SELECT datafusion.public.customer.\"Custkey\", \
-                    datafusion.public.customer.\"Name\" \
-                    FROM datafusion.public.customer) AS \"Customer\"");
+            "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+            (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", \
+            datafusion.public.customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
         Ok(())
     }
 

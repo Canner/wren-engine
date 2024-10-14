@@ -301,7 +301,7 @@ async fn register_ecommerce_mdl(
         manifest,
         register_tables,
     )?);
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), true).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
 
@@ -531,6 +531,6 @@ async fn register_tpch_mdl(
         manifest,
         register_tables,
     )?);
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), true).await?;
     Ok((ctx.to_owned(), analyzed_mdl))
 }
