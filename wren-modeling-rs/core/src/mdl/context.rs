@@ -34,7 +34,6 @@ use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
 use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
-use datafusion::optimizer::OptimizerRule;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::push_down_filter::PushDownFilter;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
@@ -43,6 +42,7 @@ use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
 use datafusion::optimizer::simplify_expressions::SimplifyExpressions;
 use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
+use datafusion::optimizer::OptimizerRule;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::SessionContext;
 use datafusion::sql::TableReference;
@@ -92,14 +92,11 @@ pub async fn create_ctx_with_mdl(
     let new_state = if is_local_runtime {
         //  The plan will be executed locally, so apply the default optimizer rules
         new_state
-    }
-    else {
+    } else {
         new_state.with_optimizer_rules(optimize_rule_for_unparsing())
     };
 
-    let new_state = new_state
-    .with_config(config)
-    .build();
+    let new_state = new_state.with_config(config).build();
     let ctx = SessionContext::new_with_state(new_state);
     register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
     Ok(ctx)
