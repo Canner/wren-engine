@@ -139,7 +139,7 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),
-        // TODO
+        // TODO: This rule would generate a plan that is not supported by the current unparser
         // Arc::new(OptimizeProjections::new()),
     ]
 }
