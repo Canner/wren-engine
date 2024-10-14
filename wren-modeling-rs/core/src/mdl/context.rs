@@ -34,7 +34,7 @@ use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
 use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
-use datafusion::optimizer::optimize_projections::OptimizeProjections;
+use datafusion::optimizer::OptimizerRule;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::push_down_filter::PushDownFilter;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
@@ -52,6 +52,7 @@ use parking_lot::RwLock;
 pub async fn create_ctx_with_mdl(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    is_local_runtime: bool,
 ) -> Result<SessionContext> {
     let config = ctx
         .copied_config()
@@ -86,8 +87,27 @@ pub async fn create_ctx_with_mdl(
         // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
         Arc::new(CountWildcardRule::new()),
-    ])
-    .with_optimizer_rules(vec![
+    ]);
+
+    let new_state = if is_local_runtime {
+        //  The plan will be executed locally, so apply the default optimizer rules
+        new_state
+    }
+    else {
+        new_state.with_optimizer_rules(optimize_rule_for_unparsing())
+    };
+
+    let new_state = new_state
+    .with_config(config)
+    .build();
+    let ctx = SessionContext::new_with_state(new_state);
+    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
+    Ok(ctx)
+}
+
+/// Optimizer rules for unparse
+fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
+    vec![
         Arc::new(EliminateNestedUnion::new()),
         Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),
@@ -122,13 +142,9 @@ pub async fn create_ctx_with_mdl(
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),
-        Arc::new(OptimizeProjections::new()),
-    ])
-    .with_config(config)
-    .build();
-    let ctx = SessionContext::new_with_state(new_state);
-    register_table_with_mdl(&ctx, analyzed_mdl.wren_mdl()).await?;
-    Ok(ctx)
+        // TODO
+        // Arc::new(OptimizeProjections::new()),
+    ]
 }
 
 pub async fn register_table_with_mdl(

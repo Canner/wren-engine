@@ -245,7 +245,7 @@ pub async fn transform_sql_with_ctx(
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
-    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl)).await?;
+    let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
     let analyzed = ctx.state().optimize(&plan)?;
