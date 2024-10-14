@@ -8,7 +8,7 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.115.0", extras = ["standard"] }
+fastapi = { version = "0.115.2", extras = ["standard"] }
 pydantic = "2.9.2"
 ibis-framework = { version = "9.5.0", extras = [
   "bigquery",
@@ -29,7 +29,7 @@ loguru = "0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.3"
-testcontainers = { version = "4.8.1", extras = [
+testcontainers = { version = "4.8.2", extras = [
   "clickhouse",
   "mssql",
   "mysql",
@@ -37,11 +37,11 @@ testcontainers = { version = "4.8.1", extras = [
   "trino",
 ] }
 sqlalchemy = "2.0.35"
-pre-commit = "4.0.0"
+pre-commit = "4.0.1"
 ruff = "0.6.9"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.2"
+clickhouse-connect = "0.8.3"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
