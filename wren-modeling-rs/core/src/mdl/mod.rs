@@ -390,9 +390,8 @@ mod test {
                 "select orders.o_orderkey from test.test.orders left join test.test.customer on (orders.o_custkey = customer.c_custkey) where orders.o_totalprice > 10",
                 "select o_orderkey, sum(o_totalprice) from test.test.orders group by 1",
                 "select o_orderkey, count(*) from test.test.orders where orders.o_totalprice > 10 group by 1",
-                // TODO: calculated issue
-                // "select totalcost from test.test.profile",
-                // "select totalcost from profile",
+                "select totalcost from test.test.profile",
+                "select totalcost from profile",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];
@@ -412,8 +411,6 @@ mod test {
         Ok(())
     }
 
-    // TODO: wren view issue
-    #[ignore]
     #[tokio::test]
     async fn test_access_view() -> Result<()> {
         let test_data: PathBuf =
