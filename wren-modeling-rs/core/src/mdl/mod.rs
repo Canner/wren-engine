@@ -462,10 +462,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
-                    FROM (SELECT datafusion.public.customer.\"Custkey\", \
-                    datafusion.public.customer.\"Name\" \
-                    FROM datafusion.public.customer) AS \"Customer\"");
+            "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+            (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", \
+            datafusion.public.customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
         Ok(())
     }
 
