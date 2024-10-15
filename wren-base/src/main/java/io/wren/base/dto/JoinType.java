@@ -16,7 +16,6 @@ package io.wren.base.dto;
 
 import static io.wren.base.dto.JoinType.GenericJoinType.TO_MANY;
 import static io.wren.base.dto.JoinType.GenericJoinType.TO_ONE;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public enum JoinType
@@ -41,15 +40,12 @@ public enum JoinType
 
     public static JoinType reverse(JoinType joinType)
     {
-        switch (joinType) {
-            case ONE_TO_ONE:
-                return ONE_TO_ONE;
-            case ONE_TO_MANY:
-                return MANY_TO_ONE;
-            case MANY_TO_ONE:
-                return ONE_TO_MANY;
-        }
-        throw new IllegalArgumentException(format("Invalid join type %s", joinType));
+        return switch (joinType) {
+            case ONE_TO_ONE -> ONE_TO_ONE;
+            case ONE_TO_MANY -> MANY_TO_ONE;
+            case MANY_TO_ONE -> ONE_TO_MANY;
+            case MANY_TO_MANY -> MANY_TO_MANY;
+        };
     }
 
     public GenericJoinType getType()
