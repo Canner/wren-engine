@@ -321,6 +321,18 @@ def test_validate_rule_column_is_valid_without_one_parameter():
     assert response.text == "Missing required parameter: `modelName`"
 
 
+def test_dry_plan():
+    response = client.post(
+        url=f"{base_url}/dry-plan",
+        json={
+            "manifestStr": manifest_str,
+            "sql": 'SELECT orderkey, order_cust_key FROM "Orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
+    assert response.text is not None
+
+
 def test_metadata_list_tables():
     response = client.post(
         url=f"{base_url}/metadata/tables",
@@ -346,18 +358,6 @@ def test_metadata_list_constraints():
     )
     assert response.status_code == 200
     assert response.json() == []
-
-
-def test_dry_plan():
-    response = client.post(
-        url=f"{base_url}/dry-plan",
-        json={
-            "manifestStr": manifest_str,
-            "sql": 'SELECT orderkey, order_cust_key FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    assert response.text is not None
 
 
 def _to_connection_url():
