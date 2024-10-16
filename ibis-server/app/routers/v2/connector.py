@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
+from app.config import get_config
 from app.dependencies import verify_query_dto
 from app.mdl.rewriter import Rewriter
 from app.model import (
@@ -18,6 +19,7 @@ from app.model.validator import Validator
 from app.util import to_json
 
 router = APIRouter(prefix="/connector")
+config = get_config()
 
 
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])

@@ -28,7 +28,9 @@ class Rewriter:
         self.manifest_str = manifest_str
         self.data_source = data_source
         if experiment:
-            self._rewriter = EmbeddedEngineRewriter(manifest_str)
+            config = get_config()
+            function_path = config.remote_function_list_path
+            self._rewriter = EmbeddedEngineRewriter(manifest_str, function_path)
         else:
             self._rewriter = ExternalEngineRewriter(manifest_str)
 
@@ -68,14 +70,16 @@ class ExternalEngineRewriter:
 
 
 class EmbeddedEngineRewriter:
-    def __init__(self, manifest_str: str):
+    def __init__(self, manifest_str: str, function_path: str):
         self.manifest_str = manifest_str
+        self.function_path = function_path
 
     def rewrite(self, sql: str) -> str:
-        from wren_core import transform_sql
+        from wren_core import read_remote_function_list, transform_sql
 
         try:
-            return transform_sql(self.manifest_str, sql)
+            functions = read_remote_function_list(self.function_path)
+            return transform_sql(self.manifest_str, functions, sql)
         except Exception as e:
             raise RewriteError(str(e))
 
