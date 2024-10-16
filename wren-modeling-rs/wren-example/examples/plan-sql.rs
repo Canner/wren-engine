@@ -14,7 +14,7 @@ async fn main() -> datafusion::common::Result<()> {
     let sql = "select customer_state from wrenai.public.orders_model";
     println!("Original SQL: \n{}", sql);
     let sql =
-        transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, vec![], sql).await?;
+        transform_sql_with_ctx(&SessionContext::new(), analyzed_mdl, &[], sql).await?;
     println!("Wren engine generated SQL: \n{}", sql);
     Ok(())
 }

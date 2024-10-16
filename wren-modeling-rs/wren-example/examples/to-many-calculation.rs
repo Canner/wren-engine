@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
     ]);
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
-    let ctx = create_ctx_with_mdl(&ctx, analyzed_mdl).await?;
+    let ctx = create_ctx_with_mdl(&ctx, analyzed_mdl, true).await?;
     let df = match ctx
         .sql("select totalprice from wrenai.public.customers")
         .await

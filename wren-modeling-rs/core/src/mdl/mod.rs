@@ -1,8 +1,5 @@
-use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
-use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
-use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
 use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
-use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl, WrenDataSource};
+use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
@@ -519,8 +516,8 @@ mod test {
         )
         .await?;
         assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM \
-        (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\" FROM \
-        (SELECT datafusion.public.customer.\"Custkey\" FROM datafusion.public.customer)) AS \"Customer\"");
+        (SELECT \"Customer\".\"Custkey\" FROM (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\" \
+        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
             &ctx,
@@ -530,10 +527,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM \
-        (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", \
-        datafusion.public.customer.\"Name\" AS \"Name\" FROM \
-        (SELECT datafusion.public.customer.\"Custkey\", datafusion.public.customer.\"Name\" \
-        FROM datafusion.public.customer)) AS \"Customer\" GROUP BY \"Customer\".\"Name\"");
+        (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+        (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
+        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\" GROUP BY \"Customer\".\"Name\"");
 
         // TODO: support window functions analysis
         // let actual = transform_sql_with_ctx(
