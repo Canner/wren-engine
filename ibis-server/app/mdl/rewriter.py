@@ -40,10 +40,14 @@ class Rewriter:
         return dialect_sql
 
     def _transpile(self, planned_sql: str) -> str:
-        write = (
-            "trino" if self.data_source == DataSource.canner else self.data_source.name
-        )
+        write = self._get_write_dialect(self.data_source)
         return sqlglot.transpile(planned_sql, read="trino", write=write)[0]
+
+    @classmethod
+    def _get_write_dialect(cls, data_source: DataSource) -> str:
+        if data_source == DataSource.canner:
+            return "trino"
+        return data_source.name
 
 
 class ExternalEngineRewriter:
