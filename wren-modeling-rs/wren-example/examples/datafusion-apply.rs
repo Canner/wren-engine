@@ -78,7 +78,7 @@ async fn main() -> Result<()> {
     // TODO: there're some issue for optimize rules
     // let ctx = create_ctx_with_mdl(&ctx, analyzed_mdl).await?;
     let sql = "select * from wrenai.public.order_items";
-    let sql = transform_sql_with_ctx(&ctx, analyzed_mdl, sql).await?;
+    let sql = transform_sql_with_ctx(&ctx, analyzed_mdl, &vec![], sql).await?;
     println!("Wren engine generated SQL: \n{}", sql);
     // create a plan to run a SQL query
     let df = match ctx.sql(&sql).await {

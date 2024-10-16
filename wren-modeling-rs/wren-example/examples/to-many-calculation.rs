@@ -7,8 +7,9 @@ use datafusion::prelude::{CsvReadOptions, SessionContext};
 use wren_core::mdl::builder::{
     ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder,
 };
+use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::manifest::{JoinType, Manifest};
-use wren_core::mdl::{apply_wren_rules, AnalyzedWrenMDL};
+use wren_core::mdl::AnalyzedWrenMDL;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -75,7 +76,7 @@ async fn main() -> Result<()> {
     ]);
     let analyzed_mdl =
         Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, register)?);
-    apply_wren_rules(&ctx, analyzed_mdl).await?;
+    let ctx = create_ctx_with_mdl(&ctx, analyzed_mdl).await?;
     let df = match ctx
         .sql("select totalprice from wrenai.public.customers")
         .await
