@@ -7,9 +7,9 @@ from testcontainers.postgres import PostgresContainer
 
 from app.main import app
 
-client = TestClient(app)
+base_url = "/v2/connector/postgres"
 
-relationship_test_manifest = {
+manifest = {
     "catalog": "wrenai",
     "schema": "public",
     "models": [
@@ -59,11 +59,10 @@ relationship_test_manifest = {
     ],
 }
 
-manifest_str = base64.b64encode(orjson.dumps(relationship_test_manifest)).decode(
-    "utf-8"
-)
 
-base_url = "/v2/connector/postgres"
+@pytest.fixture
+def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -73,90 +72,92 @@ def postgres(request) -> PostgresContainer:
     return pg
 
 
-def test_validation_relationship(postgres: PostgresContainer):
-    connection_info = _to_connection_info(postgres)
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"relationshipName": "t1_id_t2_id"},
-        },
-    )
-    assert response.status_code == 204
+with TestClient(app) as client:
 
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"relationshipName": "t1_id_t2_many"},
-        },
-    )
-    assert response.status_code == 204
+    def test_validation_relationship(manifest_str, postgres: PostgresContainer):
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"relationshipName": "t1_id_t2_id"},
+            },
+        )
+        assert response.status_code == 204
 
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"relationshipName": "t1_many_t2_id"},
-        },
-    )
-    assert response.status_code == 204
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"relationshipName": "t1_id_t2_many"},
+            },
+        )
+        assert response.status_code == 204
 
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"relationshipName": "t1_many_t2_id"},
+            },
+        )
+        assert response.status_code == 204
 
-def test_validation_relationship_not_found(postgres: PostgresContainer):
-    connection_info = _to_connection_info(postgres)
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"relationshipName": "not_found"},
-        },
-    )
+    def test_validation_relationship_not_found(
+        manifest_str, postgres: PostgresContainer
+    ):
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"relationshipName": "not_found"},
+            },
+        )
 
-    assert response.status_code == 422
-    assert response.text == "Relationship not_found not found in manifest"
+        assert response.status_code == 422
+        assert response.text == "Relationship not_found not found in manifest"
 
-    connection_info = _to_connection_info(postgres)
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {},
-        },
-    )
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {},
+            },
+        )
 
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `relationship`"
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `relationship`"
 
+    def test_validation_failure(manifest_str, postgres: PostgresContainer):
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/validate/relationship_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"relationshipName": "invalid_t1_many_t2_id"},
+            },
+        )
 
-def test_validation_faliure(postgres: PostgresContainer):
-    connection_info = _to_connection_info(postgres)
-    response = client.post(
-        url=f"{base_url}/validate/relationship_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"relationshipName": "invalid_t1_many_t2_id"},
-        },
-    )
+        assert response.status_code == 422
+        assert (
+            response.text
+            == "Exception: <class 'app.model.validator.ValidationError'>, message: Relationship invalid_t1_many_t2_id is not valid: {'result': 'False', 'is_related': 'True', "
+            "'left_table_unique': 'False', 'right_table_unique': 'True'}"
+        )
 
-    assert response.status_code == 422
-    assert (
-        response.content
-        == b"Exception: <class 'app.model.validator.ValidationError'>, message: Relationship invalid_t1_many_t2_id is not valid: {'result': 'False', 'is_related': 'True', 'left_table_unique': 'False', 'right_table_unique': 'True'}"
-    )
-
-
-def _to_connection_info(pg: PostgresContainer):
-    return {
-        "host": pg.get_container_host_ip(),
-        "port": pg.get_exposed_port(pg.port),
-        "user": pg.username,
-        "password": pg.password,
-        "database": pg.dbname,
-    }
+    def _to_connection_info(pg: PostgresContainer):
+        return {
+            "host": pg.get_container_host_ip(),
+            "port": pg.get_exposed_port(pg.port),
+            "user": pg.username,
+            "password": pg.password,
+            "database": pg.dbname,
+        }

@@ -13,8 +13,6 @@ from tests.confest import file_path
 
 pytestmark = pytest.mark.clickhouse
 
-client = TestClient(app)
-
 base_url = "/v2/connector/clickhouse"
 
 manifest = {
@@ -108,7 +106,10 @@ manifest = {
     ],
 }
 
-manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+@pytest.fixture
+def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -162,394 +163,381 @@ def clickhouse(request) -> ClickHouseContainer:
     return ch
 
 
-def test_query(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 10
-    assert len(result["data"]) == 1
-    assert result["data"][0] == [
-        1,
-        370,
-        "O",
-        "172799.49",
-        "1996-01-02",
-        "1_370",
-        "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000 UTC",
-        None,
-        "abc",  # Clickhouse does not support bytea, so it is returned as string
-    ]
-    assert result["dtypes"] == {
-        "orderkey": "int32",
-        "custkey": "int32",
-        "orderstatus": "object",
-        "totalprice": "object",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "object",
-        "bytea_column": "object",
-    }
+with TestClient(app) as client:
 
-
-def test_query_with_connection_url(clickhouse: ClickHouseContainer):
-    connection_url = _to_connection_url(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": {"connectionUrl": connection_url},
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 10
-    assert len(result["data"]) == 1
-    assert result["data"][0][0] == 1
-    assert result["dtypes"] is not None
-
-
-def test_query_with_limit(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"limit": 1},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders"',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["data"]) == 1
-
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"limit": 1},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 10',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["data"]) == 1
-
-
-def test_query_join(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT name as customer_name FROM "Orders" join "Customer" on "Orders".custkey = "Customer".custkey WHERE custkey = 370 LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 1
-    assert len(result["data"]) == 1
-    assert result["data"][0] == ["Customer#000000370"]
-    assert result["dtypes"] == {
-        "customer_name": "object",
-    }
-
-
-def test_query_to_one_relationship(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT customer_name FROM "Orders" where custkey = 370 LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 1
-    assert len(result["data"]) == 1
-    assert result["data"][0] == ["Customer#000000370"]
-    assert result["dtypes"] == {
-        "customer_name": "object",
-    }
-
-
-def test_query_to_many_relationship(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT totalprice FROM "Customer" where custkey = 370 LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == 1
-    assert len(result["data"]) == 1
-    assert result["data"][0] == ["2860895.79"]
-    assert result["dtypes"] == {
-        "totalprice": "object",
-    }
-
-
-def test_query_alias_join(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    # ClickHouse does not support alias join
-    with pytest.raises(Exception):
-        client.post(
+    def test_query(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
             url=f"{base_url}/query",
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": manifest_str,
-                "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
             },
         )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 10
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            1,
+            370,
+            "O",
+            "172799.49",
+            "1996-01-02",
+            "1_370",
+            "2024-01-01 23:59:59.000000",
+            "2024-01-01 23:59:59.000000 UTC",
+            None,
+            "abc",  # Clickhouse does not support bytea, so it is returned as string
+        ]
+        assert result["dtypes"] == {
+            "orderkey": "int32",
+            "custkey": "int32",
+            "orderstatus": "object",
+            "totalprice": "object",
+            "orderdate": "object",
+            "order_cust_key": "object",
+            "timestamp": "object",
+            "timestamptz": "object",
+            "test_null_time": "object",
+            "bytea_column": "object",
+        }
 
+    def test_query_with_connection_url(manifest_str, clickhouse: ClickHouseContainer):
+        connection_url = _to_connection_url(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": {"connectionUrl": connection_url},
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 10
+        assert len(result["data"]) == 1
+        assert result["data"][0][0] == 1
+        assert result["dtypes"] is not None
 
-def test_query_without_manifest(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "manifestStr"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_with_limit(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders"',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["data"]) == 1
 
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 10',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["data"]) == 1
 
-def test_query_without_sql(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "sql"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_join(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT name as customer_name FROM "Orders" join "Customer" on "Orders".custkey = "Customer".custkey WHERE custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == ["Customer#000000370"]
+        assert result["dtypes"] == {
+            "customer_name": "object",
+        }
 
+    def test_query_to_one_relationship(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT customer_name FROM "Orders" where custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == ["Customer#000000370"]
+        assert result["dtypes"] == {
+            "customer_name": "object",
+        }
 
-def test_query_without_connection_info():
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_to_many_relationship(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT totalprice FROM "Customer" where custkey = 370 LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == ["2860895.79"]
+        assert result["dtypes"] == {
+            "totalprice": "object",
+        }
 
+    def test_query_alias_join(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        # ClickHouse does not support alias join
+        with pytest.raises(Exception):
+            client.post(
+                url=f"{base_url}/query",
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": manifest_str,
+                    "sql": 'SELECT orderstatus FROM ("Orders" o JOIN "Customer" c ON o.custkey = c.custkey) j1 LIMIT 1',
+                },
+            )
 
-def test_query_with_dry_run(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"dryRun": True},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 204
+    def test_query_without_manifest(clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "manifestStr"]
+        assert result["detail"][0]["msg"] == "Field required"
 
+    def test_query_without_sql(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={"connectionInfo": connection_info, "manifestStr": manifest_str},
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "sql"]
+        assert result["detail"][0]["msg"] == "Field required"
 
-def test_query_with_dry_run_and_invalid_sql(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"dryRun": True},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": "SELECT * FROM X",
-        },
-    )
-    assert response.status_code == 422
-    assert response.text is not None
+    def test_query_without_connection_info(manifest_str):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
+        assert result["detail"][0]["msg"] == "Field required"
 
+    def test_query_with_dry_run(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 204
 
-def test_validate_with_unknown_rule(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
+    def test_query_with_dry_run_and_invalid_sql(
+        manifest_str, clickhouse: ClickHouseContainer
+    ):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT * FROM X",
+            },
+        )
+        assert response.status_code == 422
+        assert response.text is not None
 
+    def test_validate_with_unknown_rule(manifest_str, clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/validate/unknown_rule",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert (
+            response.text
+            == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        )
 
-def test_validate_rule_column_is_valid(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 204
+    def test_validate_rule_column_is_valid(
+        manifest_str, clickhouse: ClickHouseContainer
+    ):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 204
 
+    def test_validate_rule_column_is_valid_with_invalid_parameters(
+        manifest_str, clickhouse: ClickHouseContainer
+    ):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "X", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
 
-def test_validate_rule_column_is_valid_with_invalid_parameters(
-    clickhouse: ClickHouseContainer,
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "X", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "X"},
+            },
+        )
+        assert response.status_code == 422
 
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "X"},
-        },
-    )
-    assert response.status_code == 422
+    def test_validate_rule_column_is_valid_without_parameters(
+        manifest_str, clickhouse: ClickHouseContainer
+    ):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={"connectionInfo": connection_info, "manifestStr": manifest_str},
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "parameters"]
+        assert result["detail"][0]["msg"] == "Field required"
 
+    def test_validate_rule_column_is_valid_without_one_parameter(
+        manifest_str, clickhouse: ClickHouseContainer
+    ):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `columnName`"
 
-def test_validate_rule_column_is_valid_without_parameters(
-    clickhouse: ClickHouseContainer,
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `modelName`"
 
+    def test_metadata_list_tables(clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/metadata/tables",
+            json={
+                "connectionInfo": connection_info,
+            },
+        )
+        assert response.status_code == 200
 
-def test_validate_rule_column_is_valid_without_one_parameter(
-    clickhouse: ClickHouseContainer,
-):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
+        result = response.json()[1]
+        assert result["name"] == "test.orders"
+        assert result["primaryKey"] is not None
+        assert result["description"] == "This is a table comment"
+        assert result["properties"] == {
+            "catalog": None,
+            "schema": "test",
+            "table": "orders",
+        }
+        assert len(result["columns"]) == 9
+        assert result["columns"][8] == {
+            "name": "o_comment",
+            "nestedColumns": None,
+            "type": "VARCHAR",
+            "notNull": False,
+            "description": "This is a comment",
+            "properties": None,
+        }
 
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
+    def test_metadata_list_constraints(clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/metadata/constraints",
+            json={
+                "connectionInfo": connection_info,
+            },
+        )
+        assert response.status_code == 200
 
+        result = response.json()
+        assert len(result) == 0
 
-def test_metadata_list_tables(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/metadata/tables",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
+    def _to_connection_info(db: ClickHouseContainer):
+        return {
+            "host": db.get_container_host_ip(),
+            "port": db.get_exposed_port(db.port),
+            "user": db.username,
+            "password": db.password,
+            "database": db.dbname,
+        }
 
-    result = response.json()[1]
-    assert result["name"] == "test.orders"
-    assert result["primaryKey"] is not None
-    assert result["description"] == "This is a table comment"
-    assert result["properties"] == {
-        "catalog": None,
-        "schema": "test",
-        "table": "orders",
-    }
-    assert len(result["columns"]) == 9
-    assert result["columns"][8] == {
-        "name": "o_comment",
-        "nestedColumns": None,
-        "type": "VARCHAR",
-        "notNull": False,
-        "description": "This is a comment",
-        "properties": None,
-    }
-
-
-def test_metadata_list_constraints(clickhouse: ClickHouseContainer):
-    connection_info = _to_connection_info(clickhouse)
-    response = client.post(
-        url=f"{base_url}/metadata/constraints",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
-
-    result = response.json()
-    assert len(result) == 0
-
-
-def _to_connection_info(db: ClickHouseContainer):
-    return {
-        "host": db.get_container_host_ip(),
-        "port": db.get_exposed_port(db.port),
-        "user": db.username,
-        "password": db.password,
-        "database": db.dbname,
-    }
-
-
-def _to_connection_url(ch: ClickHouseContainer):
-    info = _to_connection_info(ch)
-    return f"clickhouse://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
+    def _to_connection_url(ch: ClickHouseContainer):
+        info = _to_connection_info(ch)
+        return f"clickhouse://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
