@@ -1,11 +1,10 @@
 import base64
 
 import orjson
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-
-client = TestClient(app)
 
 manifest = {
     "catalog": "my_catalog",
@@ -17,21 +16,25 @@ manifest = {
             "columns": [
                 {"name": "orderkey", "expression": "o_orderkey", "type": "integer"}
             ],
-            "primaryKey": "orderkey",
         },
     ],
 }
 
-manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+@pytest.fixture
+def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
-def test_dry_plan():
-    response = client.post(
-        url="/v2/connector/dry-plan",
-        json={
-            "manifestStr": manifest_str,
-            "sql": 'SELECT orderkey FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    assert response.text is not None
+with TestClient(app) as client:
+
+    def test_dry_plan(manifest_str):
+        response = client.post(
+            url="/v2/connector/dry-plan",
+            json={
+                "manifestStr": manifest_str,
+                "sql": 'SELECT orderkey FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        assert response.text is not None

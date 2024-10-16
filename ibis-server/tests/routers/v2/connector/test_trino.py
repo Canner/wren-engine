@@ -12,8 +12,6 @@ from app.model.validator import rules
 
 pytestmark = pytest.mark.trino
 
-client = TestClient(app)
-
 base_url = "/v2/connector/trino"
 
 manifest = {
@@ -68,8 +66,6 @@ manifest = {
     ],
 }
 
-manifest_str = base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
-
 
 @pytest.fixture(scope="module")
 def trino(request) -> TrinoContainer:
@@ -94,323 +90,323 @@ def trino(request) -> TrinoContainer:
     return db
 
 
-def test_query(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-    assert len(result["data"]) == 1
-    assert result["data"][0] == [
-        1,
-        370,
-        "O",
-        172799.49,
-        "1996-01-02",
-        "1_370",
-        "2024-01-01 23:59:59.000000",
-        "2024-01-01 23:59:59.000000",
-        None,
-        "616263",
-    ]
-    assert result["dtypes"] == {
-        "orderkey": "int64",
-        "custkey": "int64",
-        "orderstatus": "object",
-        "totalprice": "float64",
-        "orderdate": "object",
-        "order_cust_key": "object",
-        "timestamp": "object",
-        "timestamptz": "object",
-        "test_null_time": "datetime64[ns]",
-        "bytea_column": "object",
-    }
+@pytest.fixture
+def manifest_str():
+    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
-def test_query_with_connection_url(trino: TrinoContainer):
-    connection_url = _to_connection_url(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": {"connectionUrl": connection_url},
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-    assert len(result["data"]) == 1
-    assert result["data"][0][0] == 1
-    assert result["dtypes"] is not None
+with TestClient(app) as client:
 
+    def test_query(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            1,
+            370,
+            "O",
+            172799.49,
+            "1996-01-02",
+            "1_370",
+            "2024-01-01 23:59:59.000000",
+            "2024-01-01 23:59:59.000000",
+            None,
+            "616263",
+        ]
+        assert result["dtypes"] == {
+            "orderkey": "int64",
+            "custkey": "int64",
+            "orderstatus": "object",
+            "totalprice": "float64",
+            "orderdate": "object",
+            "order_cust_key": "object",
+            "timestamp": "object",
+            "timestamptz": "object",
+            "test_null_time": "datetime64[ns]",
+            "bytea_column": "object",
+        }
 
-def test_query_with_limit(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"limit": 1},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders"',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["data"]) == 1
+    def test_query_with_connection_url(manifest_str, trino: TrinoContainer):
+        connection_url = _to_connection_url(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": {"connectionUrl": connection_url},
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["data"][0][0] == 1
+        assert result["dtypes"] is not None
 
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"limit": 1},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 10',
-        },
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert len(result["data"]) == 1
+    def test_query_with_limit(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders"',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["data"]) == 1
 
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 10',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["data"]) == 1
 
-def test_query_without_manifest(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "connectionInfo": connection_info,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "manifestStr"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_without_manifest(trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "manifestStr"]
+        assert result["detail"][0]["msg"] == "Field required"
 
+    def test_query_without_sql(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={"connectionInfo": connection_info, "manifestStr": manifest_str},
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "sql"]
+        assert result["detail"][0]["msg"] == "Field required"
 
-def test_query_without_sql(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "sql"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_without_connection_info(manifest_str):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
+        assert result["detail"][0]["msg"] == "Field required"
 
+    def test_query_with_dry_run(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            },
+        )
+        assert response.status_code == 204
 
-def test_query_without_connection_info():
-    response = client.post(
-        url=f"{base_url}/query",
-        json={
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "connectionInfo"]
-    assert result["detail"][0]["msg"] == "Field required"
+    def test_query_with_dry_run_and_invalid_sql(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"dryRun": True},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT * FROM X",
+            },
+        )
+        assert response.status_code == 422
+        assert response.text is not None
 
+    def test_validate_with_unknown_rule(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/validate/unknown_rule",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert (
+            response.text
+            == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
+        )
 
-def test_query_with_dry_run(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"dryRun": True},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
-        },
-    )
-    assert response.status_code == 204
+    def test_validate_rule_column_is_valid(manifest_str, trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 204
 
+    def test_validate_rule_column_is_valid_with_invalid_parameters(
+        manifest_str, trino: TrinoContainer
+    ):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "X", "columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
 
-def test_query_with_dry_run_and_invalid_sql(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/query",
-        params={"dryRun": True},
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "sql": "SELECT * FROM X",
-        },
-    )
-    assert response.status_code == 422
-    assert response.text is not None
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders", "columnName": "X"},
+            },
+        )
+        assert response.status_code == 422
 
+    def test_validate_rule_column_is_valid_without_parameters(
+        manifest_str, trino: TrinoContainer
+    ):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={"connectionInfo": connection_info, "manifestStr": manifest_str},
+        )
+        assert response.status_code == 422
+        result = response.json()
+        assert result["detail"][0] is not None
+        assert result["detail"][0]["type"] == "missing"
+        assert result["detail"][0]["loc"] == ["body", "parameters"]
+        assert result["detail"][0]["msg"] == "Field required"
 
-def test_validate_with_unknown_rule(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/validate/unknown_rule",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert (
-        response.text == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
-    )
+    def test_validate_rule_column_is_valid_without_one_parameter(
+        manifest_str, trino: TrinoContainer
+    ):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"modelName": "Orders"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `columnName`"
 
+        response = client.post(
+            url=f"{base_url}/validate/column_is_valid",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "parameters": {"columnName": "orderkey"},
+            },
+        )
+        assert response.status_code == 422
+        assert response.text == "Missing required parameter: `modelName`"
 
-def test_validate_rule_column_is_valid(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 204
+    def test_metadata_list_tables(trino: TrinoContainer):
+        connection_info = {
+            "host": trino.get_container_host_ip(),
+            "port": trino.get_exposed_port(trino.port),
+            "catalog": "memory",
+            "schema": "default",
+            "user": "test",
+        }
+        response = client.post(
+            url=f"{base_url}/metadata/tables",
+            json={
+                "connectionInfo": connection_info,
+            },
+        )
+        assert response.status_code == 200
 
+        result = next(
+            filter(lambda x: x["name"] == "memory.default.orders", response.json())
+        )
+        assert result["name"] == "memory.default.orders"
+        assert result["primaryKey"] is not None
+        assert result["description"] == "This is a table comment"
+        assert result["properties"] == {
+            "catalog": "memory",
+            "schema": "default",
+            "table": "orders",
+        }
+        assert len(result["columns"]) == 9
+        comment_column = next(
+            filter(lambda x: x["name"] == "comment", result["columns"])
+        )
+        assert comment_column == {
+            "name": "comment",
+            "nestedColumns": None,
+            "type": "UNKNOWN",
+            "notNull": False,
+            "description": "This is a comment",
+            "properties": None,
+        }
 
-def test_validate_rule_column_is_valid_with_invalid_parameters(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "X", "columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
+    def test_metadata_list_constraints(trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/metadata/constraints",
+            json={
+                "connectionInfo": connection_info,
+            },
+        )
+        assert response.status_code == 200
 
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders", "columnName": "X"},
-        },
-    )
-    assert response.status_code == 422
+        result = response.json()
+        assert len(result) == 0
 
+    def _to_connection_info(trino: TrinoContainer):
+        return {
+            "host": trino.get_container_host_ip(),
+            "port": trino.get_exposed_port(trino.port),
+            "catalog": "tpch",
+            "schema": "sf1",
+            "user": "test",
+        }
 
-def test_validate_rule_column_is_valid_without_parameters(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={"connectionInfo": connection_info, "manifestStr": manifest_str},
-    )
-    assert response.status_code == 422
-    result = response.json()
-    assert result["detail"][0] is not None
-    assert result["detail"][0]["type"] == "missing"
-    assert result["detail"][0]["loc"] == ["body", "parameters"]
-    assert result["detail"][0]["msg"] == "Field required"
-
-
-def test_validate_rule_column_is_valid_without_one_parameter(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"modelName": "Orders"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `columnName`"
-
-    response = client.post(
-        url=f"{base_url}/validate/column_is_valid",
-        json={
-            "connectionInfo": connection_info,
-            "manifestStr": manifest_str,
-            "parameters": {"columnName": "orderkey"},
-        },
-    )
-    assert response.status_code == 422
-    assert response.text == "Missing required parameter: `modelName`"
-
-
-def test_metadata_list_tables(trino: TrinoContainer):
-    connection_info = {
-        "host": trino.get_container_host_ip(),
-        "port": trino.get_exposed_port(trino.port),
-        "catalog": "memory",
-        "schema": "default",
-        "user": "test",
-    }
-    response = client.post(
-        url=f"{base_url}/metadata/tables",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
-
-    result = next(
-        filter(lambda x: x["name"] == "memory.default.orders", response.json())
-    )
-    assert result["name"] == "memory.default.orders"
-    assert result["primaryKey"] is not None
-    assert result["description"] == "This is a table comment"
-    assert result["properties"] == {
-        "catalog": "memory",
-        "schema": "default",
-        "table": "orders",
-    }
-    assert len(result["columns"]) == 9
-    comment_column = next(filter(lambda x: x["name"] == "comment", result["columns"]))
-    assert comment_column == {
-        "name": "comment",
-        "nestedColumns": None,
-        "type": "UNKNOWN",
-        "notNull": False,
-        "description": "This is a comment",
-        "properties": None,
-    }
-
-
-def test_metadata_list_constraints(trino: TrinoContainer):
-    connection_info = _to_connection_info(trino)
-    response = client.post(
-        url=f"{base_url}/metadata/constraints",
-        json={
-            "connectionInfo": connection_info,
-        },
-    )
-    assert response.status_code == 200
-
-    result = response.json()
-    assert len(result) == 0
-
-
-def _to_connection_info(trino: TrinoContainer):
-    return {
-        "host": trino.get_container_host_ip(),
-        "port": trino.get_exposed_port(trino.port),
-        "catalog": "tpch",
-        "schema": "sf1",
-        "user": "test",
-    }
-
-
-def _to_connection_url(trino: TrinoContainer):
-    info = _to_connection_info(trino)
-    return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"
+    def _to_connection_url(trino: TrinoContainer):
+        info = _to_connection_info(trino)
+        return f"trino://{info['user']}@{info['host']}:{info['port']}/{info['catalog']}/{info['schema']}"
