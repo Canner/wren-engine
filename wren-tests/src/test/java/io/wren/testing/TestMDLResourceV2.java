@@ -192,6 +192,61 @@ public class TestMDLResourceV2
                 """);
     }
 
+    @Test
+    public void testSetManyToMany()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("wrenai")
+                .setSchema("tpch")
+                .setModels(List.of(
+                        model("Customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey"),
+                                        column("name", "varchar", null, false, "c_name"))),
+                        model("Orders", "SELECT * FROM tpch.orders",
+                                List.of(column("orderkey", "integer", null, false, "o_orderkey"),
+                                        column("custkey", "integer", null, false, "o_custkey"),
+                                        column("customer", "Customer", "CustomerOrders", false),
+                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                "orderkey")))
+                .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.MANY_TO_MANY, "Customer.custkey = Orders.custkey")))
+                .build();
+
+        String manifestStr = base64Encode(toJson(manifest));
+        DryPlanDtoV2 dryPlanDto = new DryPlanDtoV2(manifestStr, "select orderkey from Orders limit 200");
+        String dryPlan = dryPlanV2(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                WITH
+                  "Orders" AS (
+                   SELECT
+                     "Orders"."orderkey" "orderkey"
+                   , "Orders"."custkey" "custkey"
+                   FROM
+                     (
+                      SELECT
+                        "Orders"."orderkey" "orderkey"
+                      , "Orders"."custkey" "custkey"
+                      FROM
+                        (
+                         SELECT
+                           o_orderkey "orderkey"
+                         , o_custkey "custkey"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.orders
+                         )  "Orders"
+                      )  "Orders"
+                   )  "Orders"
+                )\s
+                SELECT orderkey
+                FROM
+                  Orders
+                LIMIT 200
+                """);
+
+    }
+
     private String toJson(Manifest manifest)
     {
         return MANIFEST_JSON_CODEC.toJson(manifest);
