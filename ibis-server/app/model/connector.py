@@ -50,8 +50,8 @@ class CannerConnector:
         schema = self._get_schema(sql)
         return self.connection.sql(sql, schema=schema).limit(limit).to_pandas()
 
-    # Canner enterprise does not support dry-run, so we have to query with limit zero
     def dry_run(self, sql: str) -> Any:
+        # Canner enterprise does not support dry-run, so we have to query with limit zero
         return self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
 
     def _get_schema(self, sql: str) -> sch.Schema:
