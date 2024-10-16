@@ -22,6 +22,7 @@ def test_config():
     assert response.status_code == 200
     assert response.json() == {
         "wren_engine_endpoint": "http://localhost:8080",
+        "remote_function_list_path": None,
         "diagnose": False,
     }
 

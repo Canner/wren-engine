@@ -387,6 +387,8 @@ with TestClient(app) as client:
             "unistr": "object",
         }
 
+        config.set_remote_function_list_path(None)
+
     def _to_connection_info(pg: PostgresContainer):
         return {
             "host": pg.get_container_host_ip(),
