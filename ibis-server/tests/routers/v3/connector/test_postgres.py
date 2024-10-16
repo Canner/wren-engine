@@ -363,11 +363,11 @@ with TestClient(app) as client:
         assert response.status_code == 200
         assert response.text is not None
 
-    def test_query_with_remote_function(postgres: PostgresContainer):
+    def test_query_with_remote_function(manifest_str, postgres: PostgresContainer):
         config = get_config()
         config.set_remote_function_list_path(file_path("resource/functions.csv"))
 
-        connection_info = to_connection_info(postgres)
+        connection_info = _to_connection_info(postgres)
         response = client.post(
             url=f"{base_url}/query",
             json={
