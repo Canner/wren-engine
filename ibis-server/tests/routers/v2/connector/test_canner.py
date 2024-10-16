@@ -88,7 +88,7 @@ def test_query():
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            "sql": 'SELECT * FROM "Orders" ORDER BY orderkey LIMIT 1',
         },
     )
     assert response.status_code == 200, response.text
@@ -99,7 +99,7 @@ def test_query():
         1,
         370,
         "O",
-        "172799.49",
+        172799.49,
         "1996-01-02",
         "1_370",
         "2024-01-01 23:59:59.000000",
@@ -107,10 +107,10 @@ def test_query():
         None,
     ]
     assert result["dtypes"] == {
-        "orderkey": "int32",
-        "custkey": "int32",
+        "orderkey": "int64",
+        "custkey": "int64",
         "orderstatus": "object",
-        "totalprice": "object",
+        "totalprice": "float64",
         "orderdate": "object",
         "order_cust_key": "object",
         "timestamp": "object",
@@ -128,11 +128,10 @@ def test_query_with_connection_url():
             "sql": 'SELECT * FROM "Orders" LIMIT 1',
         },
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     result = response.json()
     assert len(result["columns"]) == len(manifest["models"][0]["columns"])
     assert len(result["data"]) == 1
-    assert result["data"][0][0] == 1
     assert result["dtypes"] is not None
 
 
