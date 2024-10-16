@@ -59,14 +59,14 @@ class CannerConnector:
         type_names = _get_pg_type_names(self.connection)
         return ibis.schema(
             {
-                desc.name: self._oid_to_ibis_type(desc.type_code, type_names)
+                desc.name: self._to_ibis_type(type_names[desc.type_code])
                 for desc in cur.description
             }
         )
 
     @staticmethod
-    def _oid_to_ibis_type(oid: int, type_names: dict[int, str]) -> dt.DataType:
-        return postgres_compiler.type_mapper.from_string(type_names[oid])
+    def _to_ibis_type(type_name: str) -> dt.DataType:
+        return postgres_compiler.type_mapper.from_string(type_name)
 
 
 @cache
