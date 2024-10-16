@@ -379,7 +379,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
-            &vec![],
+            &[],
             "select o_orderkey + o_orderkey from test.test.orders",
         )?;
         Ok(())
@@ -415,7 +415,7 @@ mod test {
             let actual = mdl::transform_sql_with_ctx(
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
-                &vec![],
+                &[],
                 sql,
             )
             .await?;
@@ -443,7 +443,7 @@ mod test {
         let actual = mdl::transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
-            &vec![],
+            &[],
             sql,
         )
         .await?;
@@ -471,7 +471,7 @@ mod test {
         let actual = mdl::transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
-            &vec![],
+            &[],
             sql,
         )
         .await?;
