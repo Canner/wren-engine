@@ -19,6 +19,7 @@ class Config:
     def __init__(self):
         load_dotenv(override=True)
         self.wren_engine_endpoint = os.getenv("WREN_ENGINE_ENDPOINT")
+        self.remote_function_list_path = os.getenv("REMOTE_FUNCTION_LIST_PATH")
         self.validate_wren_engine_endpoint(self.wren_engine_endpoint)
         self.diagnose = False
         self.init_logger()
@@ -56,6 +57,9 @@ class Config:
             self.logger_diagnose()
         else:
             self.init_logger()
+
+    def set_remote_function_list_path(self, path: str):
+        self.remote_function_list_path = path
 
 
 config = Config()

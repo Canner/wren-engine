@@ -1,13 +1,15 @@
-use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
-use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
-use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
-use crate::logical_plan::utils::from_qualified_name_str;
-use crate::mdl::context::{create_ctx_with_mdl, register_table_with_mdl, WrenDataSource};
+use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
+use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
+use crate::mdl::function::{
+    ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
+    RemoteFunction,
+};
 use crate::mdl::manifest::{Column, Manifest, Model, View};
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
+use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
@@ -227,24 +229,34 @@ impl WrenMDL {
 }
 
 /// Transform the SQL based on the MDL
-pub fn transform_sql(analyzed_mdl: Arc<AnalyzedWrenMDL>, sql: &str) -> Result<String> {
+pub fn transform_sql(
+    analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    remote_functions: &[RemoteFunction],
+    sql: &str,
+) -> Result<String> {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(transform_sql_with_ctx(
         &SessionContext::new(),
         analyzed_mdl,
+        remote_functions,
         sql,
     ))
 }
 
 /// Transform the SQL based on the MDL with the SessionContext
-/// Wren engine will normalize the SQL to the lower case to solve the case sensitive
+/// Wren engine will normalize the SQL to the lower case to solve the case-sensitive
 /// issue for the Wren view
 pub async fn transform_sql_with_ctx(
     ctx: &SessionContext,
     analyzed_mdl: Arc<AnalyzedWrenMDL>,
+    remote_functions: &[RemoteFunction],
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
+    remote_functions.iter().for_each(|remote_function| {
+        debug!("Registering remote function: {:?}", remote_function);
+        register_remote_function(ctx, remote_function);
+    });
     let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
@@ -263,6 +275,29 @@ pub async fn transform_sql_with_ctx(
             Ok(replaced)
         }
         Err(e) => Err(e),
+    }
+}
+
+fn register_remote_function(ctx: &SessionContext, remote_function: &RemoteFunction) {
+    match &remote_function.function_type {
+        FunctionType::Scalar => {
+            ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
+                &remote_function.name,
+                map_data_type(&remote_function.return_type),
+            )))
+        }
+        FunctionType::Aggregate => {
+            ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
+                &remote_function.name,
+                map_data_type(&remote_function.return_type),
+            )))
+        }
+        FunctionType::Window => {
+            ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
+                &remote_function.name,
+                map_data_type(&remote_function.return_type),
+            )))
+        }
     }
 }
 
@@ -294,29 +329,6 @@ fn non_lowercase(sql: &str) -> bool {
     lowercase != sql
 }
 
-/// Apply Wren Rules to a given session context with a WrenMDL
-///
-/// TODO: There're some issue about apply the rule with the native optimize rules of datafusion
-/// Recommend to use [transform_sql_with_ctx] generated the SQL text instead.
-pub async fn apply_wren_rules(
-    ctx: &SessionContext,
-    analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
-) -> Result<()> {
-    // expand the view should be the first rule
-    ctx.add_analyzer_rule(Arc::new(ExpandWrenViewRule::new(
-        Arc::clone(&analyzed_wren_mdl),
-        ctx.state_ref(),
-    )));
-    ctx.add_analyzer_rule(Arc::new(ModelAnalyzeRule::new(
-        Arc::clone(&analyzed_wren_mdl),
-        ctx.state_ref(),
-    )));
-    ctx.add_analyzer_rule(Arc::new(ModelGenerationRule::new(Arc::clone(
-        &analyzed_wren_mdl,
-    ))));
-    register_table_with_mdl(ctx, analyzed_wren_mdl.wren_mdl()).await
-}
-
 /// Analyze the decision point. It's same as the /v1/analysis/sql API in wren engine
 pub fn decision_point_analyze(_wren_mdl: Arc<WrenMDL>, _sql: &str) {}
 
@@ -344,8 +356,9 @@ mod test {
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
+    use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
-    use crate::mdl::{self, AnalyzedWrenMDL};
+    use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
@@ -366,6 +379,7 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
         let _ = mdl::transform_sql(
             Arc::clone(&analyzed_mdl),
+            &[],
             "select o_orderkey + o_orderkey from test.test.orders",
         )?;
         Ok(())
@@ -401,6 +415,7 @@ mod test {
             let actual = mdl::transform_sql_with_ctx(
                 &SessionContext::new(),
                 Arc::clone(&analyzed_mdl),
+                &[],
                 sql,
             )
             .await?;
@@ -428,6 +443,7 @@ mod test {
         let actual = mdl::transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
+            &[],
             sql,
         )
         .await?;
@@ -455,6 +471,7 @@ mod test {
         let actual = mdl::transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
+            &[],
             sql,
         )
         .await?;
@@ -462,6 +479,67 @@ mod test {
             "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", \
             datafusion.public.customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_remote_function() -> Result<()> {
+        env_logger::init();
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "functions.csv"]
+                .iter()
+                .collect();
+        let ctx = SessionContext::new();
+        let functions = csv::Reader::from_path(test_data)
+            .unwrap()
+            .into_deserialize::<RemoteFunction>()
+            .filter_map(Result::ok)
+            .collect::<Vec<_>>();
+        dbg!(&functions);
+        let manifest = ManifestBuilder::new()
+            .catalog("CTest")
+            .schema("STest")
+            .model(
+                ModelBuilder::new("Customer")
+                    .table_reference("datafusion.public.customer")
+                    .column(ColumnBuilder::new("Custkey", "int").build())
+                    .column(ColumnBuilder::new("Name", "string").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &functions,
+            r#"select add_two("Custkey") from "Customer""#,
+        )
+        .await?;
+        assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM \
+        (SELECT \"Customer\".\"Custkey\" FROM (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\" \
+        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\"");
+
+        let actual = transform_sql_with_ctx(
+            &ctx,
+            Arc::clone(&analyzed_mdl),
+            &functions,
+            r#"select median("Custkey") from "CTest"."STest"."Customer" group by "Name""#,
+        )
+        .await?;
+        assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM \
+        (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
+        (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
+        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\" GROUP BY \"Customer\".\"Name\"");
+
+        // TODO: support window functions analysis
+        // let actual = transform_sql_with_ctx(
+        //     &ctx,
+        //     Arc::clone(&analyzed_mdl),
+        //     &functions,
+        //     r#"select max_if("Custkey") OVER (PARTITION BY "Name") from "Customer""#,
+        // ).await?;
+        // assert_eq!(actual, "");
+
         Ok(())
     }
 

@@ -6,7 +6,50 @@ use datafusion::logical_expr::{
     Accumulator, AggregateUDFImpl, ColumnarValue, PartitionEvaluator, ScalarUDFImpl,
     Signature, TypeSignature, Volatility, WindowUDFImpl,
 };
+use serde::{Deserialize, Serialize};
 use std::any::Any;
+use std::fmt::Display;
+use std::str::FromStr;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RemoteFunction {
+    pub function_type: FunctionType,
+    pub name: String,
+    pub return_type: String,
+    pub description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum FunctionType {
+    Scalar,
+    Aggregate,
+    Window,
+}
+
+impl Display for FunctionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            FunctionType::Scalar => "scalar".to_string(),
+            FunctionType::Aggregate => "aggregate".to_string(),
+            FunctionType::Window => "window".to_string(),
+        };
+        write!(f, "{}", str)
+    }
+}
+
+impl FromStr for FunctionType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "scalar" => Ok(FunctionType::Scalar),
+            "aggregate" => Ok(FunctionType::Aggregate),
+            "window" => Ok(FunctionType::Window),
+            _ => Err(format!("Unknown function type: {}", s)),
+        }
+    }
+}
 
 /// A scalar UDF that will be bypassed when planning logical plan.
 /// This is used to register the remote function to the context. The function should not be

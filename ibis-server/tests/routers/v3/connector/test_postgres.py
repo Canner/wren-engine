@@ -7,6 +7,7 @@ import sqlalchemy
 from fastapi.testclient import TestClient
 from testcontainers.postgres import PostgresContainer
 
+from app.config import get_config
 from app.main import app
 from app.model.validator import rules
 from tests.confest import file_path
@@ -361,6 +362,32 @@ with TestClient(app) as client:
         )
         assert response.status_code == 200
         assert response.text is not None
+
+    def test_query_with_remote_function(manifest_str, postgres: PostgresContainer):
+        config = get_config()
+        config.set_remote_function_list_path(file_path("resource/functions.csv"))
+
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT unistr(o_orderstatus) FROM wren.public.orders LIMIT 1",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            "O",
+        ]
+        assert result["dtypes"] == {
+            "unistr": "object",
+        }
+
+        config.set_remote_function_list_path(None)
 
     def _to_connection_info(pg: PostgresContainer):
         return {
