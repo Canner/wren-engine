@@ -354,8 +354,8 @@ with TestClient(app) as client:
         assert response.status_code == 200
         tables = response.json()
         assert len(tables) == 8
-        table = next(filter(lambda t: t["name"] == "tpch.tiny.orders", tables))
-        assert len(table["columns"]) == 9
+        table = next(filter(lambda t: t["name"] == "tpch.tiny.customer", tables))
+        assert len(table["columns"]) == 8
 
         connection_info = {
             "host": trino.get_container_host_ip(),
