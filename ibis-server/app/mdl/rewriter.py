@@ -60,7 +60,7 @@ class ExternalEngineRewriter:
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            return r.raise_for_status().text
+            return r.raise_for_status().text.replace("\n", "")
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
         except httpx.HTTPStatusError as e:
