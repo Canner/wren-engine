@@ -63,6 +63,8 @@ class ExternalEngineRewriter:
             return r.raise_for_status().text.replace("\n", "")
         except httpx.ConnectError as e:
             raise ConnectionError(f"Can not connect to Wren Engine: {e}")
+        except httpx.TimeoutException as e:
+            raise ConnectionError(f"Timeout when connecting to Wren Engine: {e}")
         except httpx.HTTPStatusError as e:
             raise RewriteError(e.response.text)
 
