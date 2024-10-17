@@ -4,11 +4,10 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from loguru import logger
-from middleware.process_time import ProcessTimeMiddleware
-from middleware.request_log import RequestLogMiddleware
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
+from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
 
