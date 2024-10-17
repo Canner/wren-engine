@@ -9,7 +9,7 @@ from middleware.request_log import RequestLogMiddleware
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.model import ConfigModel, UnprocessableEntityError
+from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
 
 get_config().init_logger()
@@ -55,8 +55,8 @@ def exception_handler(request, exc: Exception):
 
 
 # In Starlette, the exceptions other than the Exception are not raised when call_next in the middleware.
-@app.exception_handler(UnprocessableEntityError)
-def unprocessable_entity_error_handler(request, exc: UnprocessableEntityError):
+@app.exception_handler(CustomHttpError)
+def custom_http_error_handler(request, exc: CustomHttpError):
     with logger.contextualize(correlation_id=request.headers.get("X-Correlation-ID")):
         logger.opt(exception=exc).error("Request failed")
-    return PlainTextResponse(str(exc), status_code=422)
+    return PlainTextResponse(str(exc), status_code=exc.status_code)
