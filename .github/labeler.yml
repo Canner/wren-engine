@@ -1,6 +1,6 @@
 ibis:
 - changed-files:
-  - any-glob-to-all-files: ['ibis-server/**']
+  - any-glob-to-any-files: ['ibis-server/**']
 
 dependencies:
 - changed-files:
@@ -8,15 +8,15 @@ dependencies:
 
 python:
 - changed-files:
-  - any-glob-to-all-files: ['ibis-server/**', 'wren-modeling-py/**']
+  - any-glob-to-any-files: ['ibis-server/**', 'wren-modeling-py/**']
 
 rust:
 - changed-files:
-  - any-glob-to-all-files: ['wren-modeling-rs/**']
+  - any-glob-to-any-files: ['wren-modeling-rs/**']
 
 core:
 - changed-files:
-  - any-glob-to-all-files: ['wren-modeling-rs/**']
+  - any-glob-to-any-files: ['wren-modeling-rs/**']
 
 documentation:
 - changed-files:
