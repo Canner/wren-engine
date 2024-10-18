@@ -147,5 +147,10 @@ class ConfigModel(BaseModel):
     diagnose: bool
 
 
+class UnknownIbisError(Exception):
+    def __init__(self, message):
+        self.message = f"Unknown ibis error: {message!s}"
+
+
 class UnprocessableEntityError(Exception):
     pass

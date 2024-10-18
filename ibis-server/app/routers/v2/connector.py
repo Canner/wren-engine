@@ -28,7 +28,7 @@ def query(
     limit: int | None = None,
 ) -> Response:
     rewritten_sql = Rewriter(dto.manifest_str, data_source=data_source).rewrite(dto.sql)
-    connector = Connector(data_source, dto.connection_info, dto.manifest_str)
+    connector = Connector(data_source, dto.connection_info)
     if dry_run:
         connector.dry_run(rewritten_sql)
         return Response(status_code=204)
@@ -38,7 +38,7 @@ def query(
 @router.post("/{data_source}/validate/{rule_name}")
 def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
     validator = Validator(
-        Connector(data_source, dto.connection_info, dto.manifest_str),
+        Connector(data_source, dto.connection_info),
         Rewriter(dto.manifest_str, data_source=data_source),
     )
     validator.validate(rule_name, dto.parameters, dto.manifest_str)
