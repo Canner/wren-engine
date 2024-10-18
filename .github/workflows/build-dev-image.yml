@@ -1,4 +1,4 @@
-name: Build dev image
+name: Build dev image on push to main automatically
 
 on:
   push:
