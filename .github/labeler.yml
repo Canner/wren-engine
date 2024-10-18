@@ -1,6 +1,6 @@
 ibis:
 - changed-files:
-  - any-glob-to-any-files: ['ibis-server/**']
+  - any-glob-to-any-file: ['ibis-server/**']
 
 dependencies:
 - changed-files:
@@ -8,15 +8,15 @@ dependencies:
 
 python:
 - changed-files:
-  - any-glob-to-any-files: ['ibis-server/**', 'wren-modeling-py/**']
+  - any-glob-to-any-file: ['ibis-server/**', 'wren-modeling-py/**']
 
 rust:
 - changed-files:
-  - any-glob-to-any-files: ['wren-modeling-rs/**']
+  - any-glob-to-any-file: ['wren-modeling-rs/**']
 
 core:
 - changed-files:
-  - any-glob-to-any-files: ['wren-modeling-rs/**']
+  - any-glob-to-any-file: ['wren-modeling-rs/**']
 
 documentation:
 - changed-files:
@@ -28,4 +28,4 @@ trino:
 
 bigquery:
 - changed-files:
-    - any-glob-to-any-file: ['**/*bigquery*']
+  - any-glob-to-any-file: ['**/*bigquery*']
