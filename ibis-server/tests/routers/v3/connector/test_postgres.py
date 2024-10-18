@@ -268,7 +268,7 @@ with TestClient(app) as client:
                 "parameters": {"modelName": "orders", "columnName": "o_orderkey"},
             },
         )
-        assert response.status_code == 422
+        assert response.status_code == 404
         assert (
             response.text
             == f"The rule `unknown_rule` is not in the rules, rules: {rules}"
