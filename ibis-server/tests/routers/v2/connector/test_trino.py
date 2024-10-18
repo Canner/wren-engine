@@ -346,6 +346,17 @@ with TestClient(app) as client:
         assert response.text == "Missing required parameter: `modelName`"
 
     def test_metadata_list_tables(trino: TrinoContainer):
+        connection_info = _to_connection_info(trino)
+        response = client.post(
+            url=f"{base_url}/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        tables = response.json()
+        assert len(tables) == 8
+        table = next(filter(lambda t: t["name"] == "tpch.tiny.customer", tables))
+        assert len(table["columns"]) == 8
+
         connection_info = {
             "host": trino.get_container_host_ip(),
             "port": trino.get_exposed_port(trino.port),
@@ -355,28 +366,23 @@ with TestClient(app) as client:
         }
         response = client.post(
             url=f"{base_url}/metadata/tables",
-            json={
-                "connectionInfo": connection_info,
-            },
+            json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
-
-        result = next(
-            filter(lambda x: x["name"] == "memory.default.orders", response.json())
-        )
-        assert result["name"] == "memory.default.orders"
-        assert result["primaryKey"] is not None
-        assert result["description"] == "This is a table comment"
-        assert result["properties"] == {
+        tables = response.json()
+        assert len(tables) == 1
+        table = next(filter(lambda t: t["name"] == "memory.default.orders", tables))
+        assert table["name"] == "memory.default.orders"
+        assert table["primaryKey"] is not None
+        assert table["description"] == "This is a table comment"
+        assert table["properties"] == {
             "catalog": "memory",
             "schema": "default",
             "table": "orders",
         }
-        assert len(result["columns"]) == 9
-        comment_column = next(
-            filter(lambda x: x["name"] == "comment", result["columns"])
-        )
-        assert comment_column == {
+        assert len(table["columns"]) == 9
+        column = next(filter(lambda c: c["name"] == "comment", table["columns"]))
+        assert column == {
             "name": "comment",
             "nestedColumns": None,
             "type": "UNKNOWN",
@@ -389,9 +395,7 @@ with TestClient(app) as client:
         connection_info = _to_connection_info(trino)
         response = client.post(
             url=f"{base_url}/metadata/constraints",
-            json={
-                "connectionInfo": connection_info,
-            },
+            json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
 
@@ -403,7 +407,7 @@ with TestClient(app) as client:
             "host": trino.get_container_host_ip(),
             "port": trino.get_exposed_port(trino.port),
             "catalog": "tpch",
-            "schema": "sf1",
+            "schema": "tiny",
             "user": "test",
         }
 
