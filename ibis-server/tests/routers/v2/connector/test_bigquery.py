@@ -206,7 +206,7 @@ with TestClient(app) as client:
             },
         )
 
-        assert response.status_code == 422
+        assert response.status_code == 404
         assert (
             response.text
             == f"The rule `unknown_rule` is not in the rules, rules: {rules}"

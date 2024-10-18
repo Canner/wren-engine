@@ -1,41 +1,28 @@
-import uuid
+from uuid import uuid4
 
-import orjson
-from fastapi import FastAPI, Request
+from asgi_correlation_id import CorrelationIdMiddleware
+from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.model import ConfigModel, UnprocessableEntityError
+from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
+from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
+
+get_config().init_logger()
 
 app = FastAPI()
 app.include_router(v2.router)
 app.include_router(v3.router)
-
-get_config().init_logger()
-
-
-@app.middleware("http")
-async def request_logger(request: Request, call_next):
-    with logger.contextualize(request_id=str(uuid.uuid4())):
-        logger.info("{method} {path}", method=request.method, path=request.url.path)
-        logger.info("Request params: {params}", params=dict(request.query_params))
-        body = await request.body()
-        if body:
-            json_obj = orjson.loads(body)
-            if "connectionInfo" in json_obj:
-                json_obj["connectionInfo"] = "REMOVED_SENSITIVE_DATA"
-            body = orjson.dumps(json_obj)
-        logger.info("Request body: {body}", body=body.decode("utf-8"))
-        try:
-            return await call_next(request)
-        except Exception as e:
-            logger.opt(exception=e).error("Request failed")
-            raise e
-        finally:
-            logger.info("Request ended")
+app.add_middleware(RequestLogMiddleware)
+app.add_middleware(ProcessTimeMiddleware)
+app.add_middleware(
+    CorrelationIdMiddleware,
+    header_name="X-Correlation-ID",
+    generator=lambda: str(uuid4()),
+)
 
 
 @app.get("/")
@@ -60,11 +47,15 @@ def update_config(config_model: ConfigModel):
     return config
 
 
-@app.exception_handler(UnprocessableEntityError)
-def unprocessable_entity_error_handler(request, exc: UnprocessableEntityError):
-    return PlainTextResponse(str(exc), status_code=422)
-
-
+# In Starlette, the Exception is special and is not included in normal exception handlers.
 @app.exception_handler(Exception)
 def exception_handler(request, exc: Exception):
     return PlainTextResponse(str(exc), status_code=500)
+
+
+# In Starlette, the exceptions other than the Exception are not raised when call_next in the middleware.
+@app.exception_handler(CustomHttpError)
+def custom_http_error_handler(request, exc: CustomHttpError):
+    with logger.contextualize(correlation_id=request.headers.get("X-Correlation-ID")):
+        logger.opt(exception=exc).error("Request failed")
+    return PlainTextResponse(str(exc), status_code=exc.status_code)

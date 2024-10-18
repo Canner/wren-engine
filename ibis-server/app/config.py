@@ -9,7 +9,7 @@ logging.getLogger("uvicorn.error").disabled = True
 
 logger_format = (
     "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-    "<yellow>[{extra[request_id]}]</yellow> | "
+    "<yellow>[{extra[correlation_id]}]</yellow> | "
     "<level>{level: <8}</level> | "
     "<cyan>{module}.{function}:{line}</cyan> - <level>{message}</level>"
 )

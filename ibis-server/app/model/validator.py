@@ -4,7 +4,7 @@ import base64
 import json
 
 from app.mdl.rewriter import Rewriter
-from app.model import UnprocessableEntityError
+from app.model import NotFoundError, UnprocessableEntityError
 from app.model.connector import Connector
 
 rules = ["column_is_valid", "relationship_is_valid"]
@@ -152,10 +152,11 @@ class Validator:
 
 
 class ValidationError(UnprocessableEntityError):
-    pass
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
-class RuleNotFoundError(ValidationError):
+class RuleNotFoundError(NotFoundError):
     def __init__(self, rule: str):
         super().__init__(f"The rule `{rule}` is not in the rules, rules: {rules}")
 
