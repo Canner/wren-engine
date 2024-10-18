@@ -45,8 +45,8 @@ jobs:
       - name: Prepare
         id: prepare
         run: |
-          cp ./wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./docker
           WREN_VERSION=$(./mvnw --quiet help:evaluate -Dexpression=project.version -DforceStdout)
+          cp ./wren-server/target/wren-server-${WREN_VERSION}-executable.jar ./docker
           echo "WREN_VERSION=$WREN_VERSION" >> "$GITHUB_OUTPUT"
       - name: Build and push
         uses: docker/build-push-action@v5
