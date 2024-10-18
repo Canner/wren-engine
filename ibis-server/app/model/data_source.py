@@ -10,12 +10,14 @@ from ibis import BaseBackend
 
 from app.model import (
     BigQueryConnectionInfo,
+    CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
     QueryBigQueryDTO,
+    QueryCannerDTO,
     QueryClickHouseDTO,
     QueryDTO,
     QueryMSSqlDTO,
@@ -30,6 +32,7 @@ from app.model import (
 
 class DataSource(StrEnum):
     bigquery = auto()
+    canner = auto()
     clickhouse = auto()
     mssql = auto()
     mysql = auto()
@@ -52,6 +55,7 @@ class DataSource(StrEnum):
 
 class DataSourceExtension(Enum):
     bigquery = QueryBigQueryDTO
+    canner = QueryCannerDTO
     clickhouse = QueryClickHouseDTO
     mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
@@ -82,6 +86,16 @@ class DataSourceExtension(Enum):
             project_id=info.project_id.get_secret_value(),
             dataset_id=info.dataset_id.get_secret_value(),
             credentials=credentials,
+        )
+
+    @staticmethod
+    def get_canner_connection(info: CannerConnectionInfo) -> BaseBackend:
+        return ibis.postgres.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.workspace.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=info.pat.get_secret_value(),
         )
 
     @staticmethod
