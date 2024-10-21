@@ -1,5 +1,4 @@
-# Run secret-dependent integration tests
-name: Integration tests
+name: Maven tests
 
 on:
   pull_request:
@@ -16,26 +15,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Branch-based in origin repo pull request
-  integration-trusted:
+  maven-tests:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.label.name == 'v1-engine-changed' }}
+    if: ${{ github.event.label.name == 'v1-engine-changed' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up JDK 21
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
           java-version: '21'
-      - uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          cache: 'maven'
       - name: build
         run: |
           ./mvnw clean install -B -DskipTests
+      - name: unit tests
+        run: |
+          ./mvnw test -B --fail-at-end -pl !:wren-tests
       - name: integration tests
         env:
           TEST_BIG_QUERY_PROJECT_ID: ${{ secrets.TEST_BIG_QUERY_PROJECT_ID }}

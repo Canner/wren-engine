@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci --pytest github
 #
-name: Modeling Python CI
+name: Modeling Python CI (multi-platform)
 
 # We don't ready to run this workflow on stable release flow yet
 on:

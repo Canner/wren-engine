@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+from abc import ABC
+
 from pydantic import BaseModel, Field, SecretStr
+from starlette.status import (
+    HTTP_404_NOT_FOUND,
+    HTTP_422_UNPROCESSABLE_ENTITY,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+)
 
 manifest_str_field = Field(alias="manifestStr", description="Base64 manifest")
 connection_info_field = Field(alias="connectionInfo")
@@ -152,5 +159,17 @@ class UnknownIbisError(Exception):
         self.message = f"Unknown ibis error: {message!s}"
 
 
-class UnprocessableEntityError(Exception):
-    pass
+class CustomHttpError(ABC, Exception):
+    status_code: int
+
+
+class InternalServerError(CustomHttpError):
+    status_code = HTTP_500_INTERNAL_SERVER_ERROR
+
+
+class UnprocessableEntityError(CustomHttpError):
+    status_code = HTTP_422_UNPROCESSABLE_ENTITY
+
+
+class NotFoundError(CustomHttpError):
+    status_code = HTTP_404_NOT_FOUND

@@ -6,7 +6,7 @@ import sqlglot
 from loguru import logger
 
 from app.config import get_config
-from app.model import UnprocessableEntityError
+from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
@@ -62,9 +62,11 @@ class ExternalEngineRewriter:
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            return r.raise_for_status().text
+            return r.raise_for_status().text.replace("\n", " ")
         except httpx.ConnectError as e:
-            raise ConnectionError(f"Can not connect to Wren Engine: {e}")
+            raise WrenEngineError(f"Can not connect to Wren Engine: {e}")
+        except httpx.TimeoutException as e:
+            raise WrenEngineError(f"Timeout when connecting to Wren Engine: {e}")
         except httpx.HTTPStatusError as e:
             raise RewriteError(e.response.text)
 
@@ -85,5 +87,10 @@ class EmbeddedEngineRewriter:
 
 
 class RewriteError(UnprocessableEntityError):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class WrenEngineError(InternalServerError):
     def __init__(self, message: str):
         super().__init__(message)
