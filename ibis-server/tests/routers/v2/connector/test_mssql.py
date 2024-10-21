@@ -236,7 +236,7 @@ with TestClient(app) as client:
             },
         )
         assert response.status_code == 422
-        assert response.text is not None
+        assert "Invalid object name 'X'" in response.text
 
     def test_validate_with_unknown_rule(manifest_str, mssql: SqlServerContainer):
         connection_info = _to_connection_info(mssql)
