@@ -57,7 +57,7 @@ impl RunOpt {
             let start = Instant::now();
             let sql = &get_query_sql(query_id)?;
             for query in sql {
-                transform_sql_with_ctx(&ctx, Arc::clone(&mdl), query).await?;
+                transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], query).await?;
             }
 
             let elapsed = start.elapsed(); //.as_secs_f64() * 1000.0;

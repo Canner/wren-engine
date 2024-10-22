@@ -80,6 +80,7 @@ async fn main() -> Result<()> {
     let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
+        &[],
         "select totalprice from wrenai.public.customers",
     )
     .await
@@ -104,6 +105,7 @@ async fn main() -> Result<()> {
     let transformed = match transform_sql_with_ctx(
         &ctx,
         Arc::clone(&analyzed_mdl),
+        &[],
         "select customer_state_cf from wrenai.public.order_items",
     )
     .await

@@ -10,7 +10,7 @@
 
     <groupId>io.wren</groupId>
     <artifactId>wren-root</artifactId>
-    <version>0.10.5-SNAPSHOT</version>
+    <version>0.11.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>WrenEngine</name>

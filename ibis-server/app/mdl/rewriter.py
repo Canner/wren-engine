@@ -6,7 +6,7 @@ import sqlglot
 from loguru import logger
 
 from app.config import get_config
-from app.model import UnprocessableEntityError
+from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
@@ -28,7 +28,9 @@ class Rewriter:
         self.manifest_str = manifest_str
         self.data_source = data_source
         if experiment:
-            self._rewriter = EmbeddedEngineRewriter(manifest_str)
+            config = get_config()
+            function_path = config.remote_function_list_path
+            self._rewriter = EmbeddedEngineRewriter(manifest_str, function_path)
         else:
             self._rewriter = ExternalEngineRewriter(manifest_str)
 
@@ -65,26 +67,35 @@ class ExternalEngineRewriter:
                 },
                 content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
             )
-            return r.raise_for_status().text
+            return r.raise_for_status().text.replace("\n", " ")
         except httpx.ConnectError as e:
-            raise ConnectionError(f"Can not connect to Wren Engine: {e}")
+            raise WrenEngineError(f"Can not connect to Wren Engine: {e}")
+        except httpx.TimeoutException as e:
+            raise WrenEngineError(f"Timeout when connecting to Wren Engine: {e}")
         except httpx.HTTPStatusError as e:
             raise RewriteError(e.response.text)
 
 
 class EmbeddedEngineRewriter:
-    def __init__(self, manifest_str: str):
+    def __init__(self, manifest_str: str, function_path: str):
         self.manifest_str = manifest_str
+        self.function_path = function_path
 
     def rewrite(self, sql: str) -> str:
-        from wren_core import transform_sql
+        from wren_core import read_remote_function_list, transform_sql
 
         try:
-            return transform_sql(self.manifest_str, sql)
+            functions = read_remote_function_list(self.function_path)
+            return transform_sql(self.manifest_str, functions, sql)
         except Exception as e:
             raise RewriteError(str(e))
 
 
 class RewriteError(UnprocessableEntityError):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class WrenEngineError(InternalServerError):
     def __init__(self, message: str):
         super().__init__(message)

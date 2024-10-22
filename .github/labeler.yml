@@ -1,0 +1,31 @@
+ibis:
+- changed-files:
+  - any-glob-to-any-file: ['ibis-server/**']
+
+dependencies:
+- changed-files:
+  - any-glob-to-any-file: ['**/*.toml']
+
+python:
+- changed-files:
+  - any-glob-to-any-file: ['ibis-server/**', 'wren-modeling-py/**']
+
+rust:
+- changed-files:
+  - any-glob-to-any-file: ['wren-modeling-rs/**']
+
+core:
+- changed-files:
+  - any-glob-to-any-file: ['wren-modeling-rs/**']
+
+documentation:
+- changed-files:
+  - any-glob-to-any-file: ['**/*.md']
+
+trino:
+- changed-files:
+  - any-glob-to-any-file: ['**/*trino*']
+
+bigquery:
+- changed-files:
+  - any-glob-to-any-file: ['**/*bigquery*']

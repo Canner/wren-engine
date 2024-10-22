@@ -38,7 +38,7 @@ class TrinoMetadata(Metadata):
                     AND t.table_name = c.table_name
                 INNER JOIN
                     system.metadata.table_comments AS tc
-                    ON t.table_catalog = c.table_catalog
+                    ON t.table_catalog = tc.catalog_name
                     AND t.table_schema = tc.schema_name
                     AND t.table_name = tc.table_name
                 WHERE t.table_schema = '{schema}'

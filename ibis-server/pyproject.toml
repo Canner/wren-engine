@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wren-engine"
-version = "0.10.4"
+version = "0.11.1"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
@@ -26,6 +26,7 @@ orjson = "3.10.7"
 pandas = "2.2.3"
 sqlglot = ">=23.4,<25.21"
 loguru = "0.7.2"
+asgi-correlation-id = "4.3.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.3"
