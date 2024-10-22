@@ -23,6 +23,10 @@ class QueryBigQueryDTO(QueryDTO):
     connection_info: BigQueryConnectionInfo = connection_info_field
 
 
+class QueryCannerDTO(QueryDTO):
+    connection_info: ConnectionUrl | CannerConnectionInfo = connection_info_field
+
+
 class QueryClickHouseDTO(QueryDTO):
     connection_info: ConnectionUrl | ClickHouseConnectionInfo = connection_info_field
 
@@ -51,6 +55,17 @@ class BigQueryConnectionInfo(BaseModel):
     project_id: SecretStr
     dataset_id: SecretStr
     credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
+
+
+class CannerConnectionInfo(BaseModel):
+    host: SecretStr = Field(examples=["localhost"])
+    port: SecretStr = Field(examples=[7432])
+    user: SecretStr
+    pat: SecretStr
+    workspace: SecretStr
+    enable_ssl: bool = Field(
+        description="Enable SSL connection", default=False, alias="enableSSL"
+    )
 
 
 class ClickHouseConnectionInfo(BaseModel):
@@ -120,6 +135,7 @@ class TrinoConnectionInfo(BaseModel):
 
 ConnectionInfo = (
     BigQueryConnectionInfo
+    | CannerConnectionInfo
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
