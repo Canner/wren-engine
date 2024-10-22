@@ -14,8 +14,8 @@ The Canner Enterprise must setup below:
 - A data source with TPCH Tiny
 - A workspace
 - A TPCH table `orders` in the workspace
-- The table `orders` must be with a comment `This is a table comment`
-- The table `orders` must have a column `o_comment` with a comment `This is a comment`
+- The table `orders` must be with a description `This is a table comment`
+- The table `orders` must have a column `o_comment` with a description `This is a comment`
 """
 
 pytestmark = pytest.mark.canner
