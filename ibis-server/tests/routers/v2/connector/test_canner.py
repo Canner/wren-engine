@@ -44,10 +44,6 @@ manifest = {
                     "name": "orderstatus",
                     "expression": "o_orderstatus",
                     "type": "varchar",
-                    "rls": {
-                        "name": "SESSION_STATUS",
-                        "operator": "EQUALS",
-                    },
                 },
                 {"name": "totalprice", "expression": "o_totalprice", "type": "float"},
                 {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
