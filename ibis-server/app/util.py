@@ -32,6 +32,8 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             return str(obj)
         if isinstance(obj, (bytes, bytearray)):
             return obj.hex()
+        if isinstance(obj, pd.tseries.offsets.DateOffset):
+            return _date_offset_to_str(obj)
         raise TypeError
 
     json_obj = orjson.loads(
@@ -43,3 +45,20 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
     )
     json_obj["dtypes"] = df.dtypes.astype(str).to_dict()
     return json_obj
+
+
+def _date_offset_to_str(offset: pd.tseries.offsets.DateOffset) -> str:
+    parts = []
+    units = [
+        "months",
+        "days",
+        "microseconds",
+        "nanoseconds",
+    ]
+
+    for unit in units:
+        value = getattr(offset, unit, 0)
+        if value:
+            parts.append(f"{value} {unit if value > 1 else unit.rstrip('s')}")
+
+    return " ".join(parts)
