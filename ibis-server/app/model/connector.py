@@ -1,3 +1,4 @@
+import importlib
 from functools import cache
 from typing import Any
 
@@ -11,6 +12,9 @@ from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
 from app.model import ConnectionInfo, UnknownIbisError, UnprocessableEntityError
 from app.model.data_source import DataSource
+
+# Override datatypes of ibis
+importlib.import_module("app.custom_ibis.backends.sql.datatypes")
 
 
 class Connector:
