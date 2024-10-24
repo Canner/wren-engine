@@ -228,7 +228,7 @@ impl ModelPlanNodeBuilder {
                 Arc::new(Field::new(
                     column.name(),
                     map_data_type(&column.r#type),
-                    column.no_null,
+                    column.not_null,
                 )),
             ));
         }
@@ -736,7 +736,7 @@ impl ModelSourceNode {
                         Arc::new(Field::new(
                             column.name(),
                             map_data_type(&column.r#type),
-                            column.no_null,
+                            column.not_null,
                         )),
                     ));
                     required_exprs_buffer.insert(OrdExpr::new(get_remote_column_exp(
@@ -776,7 +776,7 @@ impl ModelSourceNode {
                     Arc::new(Field::new(
                         column.name(),
                         map_data_type(&column.r#type),
-                        column.no_null,
+                        column.not_null,
                     )),
                 ));
             }
@@ -870,12 +870,12 @@ impl CalculationPlanNode {
             Arc::new(Field::new(
                 calculation.column.name(),
                 map_data_type(&calculation.column.r#type),
-                calculation.column.no_null,
+                calculation.column.not_null,
             )),
             Arc::new(Field::new(
                 pk_column.name(),
                 map_data_type(&pk_column.r#type),
-                pk_column.no_null,
+                pk_column.not_null,
             )),
         ]
         .into_iter()

@@ -151,7 +151,7 @@ impl WrenMDL {
             .models()
             .iter()
             .map(|model| {
-                let name = TableReference::from(&model.table_reference);
+                let name = TableReference::from(model.table_reference());
                 let fields: Vec<_> = model
                     .columns
                     .iter()
@@ -188,7 +188,7 @@ impl WrenMDL {
                 Field::new(
                     name.value.clone(),
                     map_data_type(&column.r#type),
-                    column.no_null,
+                    column.not_null,
                 )
             })
         } else {

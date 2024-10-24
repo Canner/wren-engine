@@ -103,7 +103,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
         .iter()
         .map(|column| {
             let data_type = map_data_type(&column.r#type);
-            Ok(Field::new(&column.name, data_type, column.no_null))
+            Ok(Field::new(&column.name, data_type, column.not_null))
         })
         .collect::<Result<Vec<_>>>()?;
     Ok(SchemaRef::new(Schema::new_with_metadata(
@@ -113,7 +113,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
 }
 
 pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {
-    if let Some(table_provider) = mdl.get_table(&model.table_reference) {
+    if let Some(table_provider) = mdl.get_table(model.table_reference()) {
         Arc::new(DefaultTableSource::new(table_provider))
     } else {
         let fields: Vec<Field> = model
@@ -128,7 +128,7 @@ pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn Table
                 };
                 // TODO: find a way for the remote table to provide the data type
                 // We don't know the data type of the remote table, so we just mock a Int32 type here
-                Field::new(name, DataType::Int8, column.no_null)
+                Field::new(name, DataType::Int8, column.not_null)
             })
             .collect();
 

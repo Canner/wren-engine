@@ -71,7 +71,7 @@ impl ModelGenerationRule {
                     let table_scan = match &model_plan.original_table_scan {
                         Some(LogicalPlan::TableScan(original_scan)) => {
                             LogicalPlanBuilder::scan_with_filters(
-                                TableReference::from(&model.table_reference),
+                                TableReference::from(model.table_reference()),
                                 create_remote_table_source(
                                     &model,
                                     &self.analyzed_wren_mdl.wren_mdl(),
@@ -88,7 +88,7 @@ impl ModelGenerationRule {
                         )),
                         None => {
                             LogicalPlanBuilder::scan(
-                                TableReference::from(&model.table_reference),
+                                TableReference::from(model.table_reference()),
                                 create_remote_table_source(&model, &self.analyzed_wren_mdl.wren_mdl()),
                                 None,
                             ).expect("Failed to create table scan")

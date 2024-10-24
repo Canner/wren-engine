@@ -51,7 +51,7 @@ impl Column {
 
     pub fn to_field(&self) -> Field {
         let data_type = map_data_type(&self.r#type);
-        Field::new(&self.name, data_type, self.no_null)
+        Field::new(&self.name, data_type, self.not_null)
     }
 
     pub fn to_remote_field(&self, session_state: SessionStateRef) -> Result<Vec<Field>> {
@@ -130,12 +130,12 @@ impl Dataset {
         match self {
             Dataset::Model(model) => {
                 let schema = register_tables
-                    .map(|rt| rt.get(&model.table_reference))
+                    .map(|rt| rt.get(model.table_reference()))
                     .filter(|rt| rt.is_some())
                     .map(|rt| rt.unwrap().schema());
 
                 if let Some(schema) = schema {
-                    DFSchema::try_from_qualified_schema(&model.table_reference, &schema)
+                    DFSchema::try_from_qualified_schema(model.table_reference(), &schema)
                 } else {
                     let fields: Vec<Field> = model
                         .get_physical_columns()
@@ -149,7 +149,7 @@ impl Dataset {
                     let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
 
                     DFSchema::try_from_qualified_schema(
-                        &model.table_reference,
+                        model.table_reference(),
                         &arrow_schema,
                     )
                 }
