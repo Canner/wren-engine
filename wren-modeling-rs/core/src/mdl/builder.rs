@@ -402,7 +402,7 @@ mod test {
         }
         "#;
 
-        let actual: Arc<Column> = serde_json::from_str(&json).unwrap();
+        let actual: Arc<Column> = serde_json::from_str(json).unwrap();
         assert!(actual.is_calculated);
         assert!(!actual.not_null);
 
@@ -415,7 +415,7 @@ mod test {
         }
         "#;
 
-        let actual: Arc<Column> = serde_json::from_str(&json).unwrap();
+        let actual: Arc<Column> = serde_json::from_str(json).unwrap();
         assert!(actual.is_calculated);
         assert!(!actual.not_null);
     }
