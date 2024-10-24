@@ -188,7 +188,7 @@ impl WrenMDL {
                 Field::new(
                     name.value.clone(),
                     map_data_type(&column.r#type),
-                    column.no_null,
+                    column.not_null,
                 )
             })
         } else {
