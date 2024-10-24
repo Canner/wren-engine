@@ -1,9 +1,9 @@
 [project]
-name = "wren-modeling-py"
+name = "wren-core-py"
 classifiers = ["Programming Language :: Python :: 3.11"]
 
 [tool.poetry]
-name = "wren-modeling-py"
+name = "wren-core-py"
 version = "0.1.0"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]

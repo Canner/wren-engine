@@ -1,4 +1,4 @@
-# Modeling Module
+# Wren Core Module
 
 This is just a very early version of transforming SQL with DataFusion. The main program is a simple use case demonstrating how to use the mdl library.
 

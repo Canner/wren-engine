@@ -84,8 +84,8 @@ jobs:
         with:
           context: ./ibis-server
           build-contexts: |
-            wren-modeling-py=./wren-modeling-py
-            wren-modeling-rs=./wren-modeling-rs
+            wren-core-py=./wren-core-py
+            wren-core=./wren-core
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

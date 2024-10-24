@@ -1,14 +1,14 @@
-name: Modeling Python CI
+name: Core Python CI
 
 on:
   pull_request:
     paths:
-      - 'wren-modeling-py/**'
-      - 'wren-modeling-rs/**'
+      - 'wren-core-py/**'
+      - 'wren-core/**'
 
 defaults:
   run:
-    working-directory: wren-modeling-py
+    working-directory: wren-core-py
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
@@ -30,7 +30,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ./wren-modeling-py/target/
+            ./wren-core-py/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install poetry
         run: pipx install poetry

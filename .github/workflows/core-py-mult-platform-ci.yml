@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci --pytest github
 #
-name: Modeling Python CI (multi-platform)
+name: Core Python CI (multi-platform)
 
 # We don't ready to run this workflow on stable release flow yet
 on:
@@ -39,7 +39,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: wren-modeling-py
+          working-directory: wren-core-py
           target: ${{ matrix.platform.target }}
           args: -o dist --find-interpreter
           sccache: 'true'
@@ -49,10 +49,10 @@ jobs:
         shell: bash
         run: |
           set -e
-          cd wren-modeling-py
+          cd wren-core-py
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install wren-modeling-py --find-links dist --force-reinstall
+          pip install wren-core-py --find-links dist --force-reinstall
           pip install pytest
           pytest
       - name: pytest
@@ -68,8 +68,8 @@ jobs:
             pip3 install -U pip pytest
           run: |
             set -e
-            cd wren-modeling-py
-            pip3 install wren-modeling-py --find-links dist --force-reinstall
+            cd wren-core-py
+            pip3 install wren-core-py --find-links dist --force-reinstall
             pytest
 
   musllinux:
@@ -93,7 +93,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: wren-modeling-py
+          working-directory: wren-core-py
           target: ${{ matrix.platform.target }}
           args: -o dist --find-interpreter
           sccache: 'true'
@@ -107,10 +107,10 @@ jobs:
           run: |
             set -e
             apk add py3-pip py3-virtualenv
-            cd wren-modeling-py
+            cd wren-core-py
             python3 -m virtualenv .venv
             source .venv/bin/activate
-            pip install wren-modeling-py --no-index --find-links dist --force-reinstall
+            pip install wren-core-py --no-index --find-links dist --force-reinstall
             pip install pytest
             pytest
       - name: pytest
@@ -124,11 +124,11 @@ jobs:
             apk add py3-virtualenv
           run: |
             set -e
-            cd wren-modeling-py
+            cd wren-core-py
             python3 -m virtualenv .venv
             source .venv/bin/activate
             pip install pytest
-            pip install wren-modeling-py --find-links dist --force-reinstall
+            pip install wren-core-py --find-links dist --force-reinstall
             pytest
 
   windows:
@@ -149,7 +149,7 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: wren-modeling-py
+          working-directory: wren-core-py
           target: ${{ matrix.platform.target }}
           args: -o dist --find-interpreter
           sccache: 'true'
@@ -158,10 +158,10 @@ jobs:
         shell: bash
         run: |
           set -e
-          cd wren-modeling-py
+          cd wren-core-py
           python3 -m venv .venv
           source .venv/Scripts/activate
-          pip install wren-modeling-py --find-links dist --force-reinstall
+          pip install wren-core-py --find-links dist --force-reinstall
           pip install pytest
           pytest
 
@@ -182,16 +182,16 @@ jobs:
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          working-directory: wren-modeling-py
+          working-directory: wren-core-py
           target: ${{ matrix.platform.target }}
           args: -o dist --find-interpreter
           sccache: 'true'
       - name: pytest
         run: |
           set -e
-          cd wren-modeling-py
+          cd wren-core-py
           python3 -m venv .venv
           source .venv/bin/activate
-          pip install wren-modeling-py --find-links dist --force-reinstall
+          pip install wren-core-py --find-links dist --force-reinstall
           pip install pytest
           pytest

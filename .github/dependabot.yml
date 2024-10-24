@@ -27,27 +27,27 @@ updates:
       - "python"
       - "ibis"
   - package-ecosystem: "pip"
-    directory: "/wren-modeling-py"
+    directory: "/wren-core-py"
     schedule:
       interval: "weekly"
     groups:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(modeling-py-deps)"
+      prefix: "chore(core-py-deps)"
     labels:
       - "dependencies"
       - "python"
   - package-ecosystem: "cargo"
-    directory: "/wren-modeling-rs"
+    directory: "/wren-core"
     schedule:
       interval: "weekly"
     groups:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(modeling-rs-deps)"
+      prefix: "chore(core-deps)"
     labels:
       - "dependencies"
-      - "modeling-rs"
+      - "core"
       - "rust"

@@ -8,15 +8,15 @@ dependencies:
 
 python:
 - changed-files:
-  - any-glob-to-any-file: ['ibis-server/**', 'wren-modeling-py/**']
+  - any-glob-to-any-file: ['ibis-server/**', 'wren-core-py/**']
 
 rust:
 - changed-files:
-  - any-glob-to-any-file: ['wren-modeling-rs/**']
+  - any-glob-to-any-file: ['wren-core/**']
 
 core:
 - changed-files:
-  - any-glob-to-any-file: ['wren-modeling-rs/**']
+  - any-glob-to-any-file: ['wren-core/**']
 
 documentation:
 - changed-files:
