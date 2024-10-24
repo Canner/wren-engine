@@ -3,7 +3,7 @@ name: Rust
 on:
   pull_request:
     paths:
-      - 'wren-modeling-rs/**'
+      - 'wren-core/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
@@ -11,7 +11,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: wren-modeling-rs
+    working-directory: wren-core
 
 jobs:
   # Check crate compiles
@@ -35,9 +35,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ./wren-modeling-rs/target/
+            ./wren-core/target/
           # this key equals the ones on `linux-build-lib` for re-use
-          key: cargo-cache-benchmark-${{ hashFiles('wren-modeling-rs/Cargo.toml') }}
+          key: cargo-cache-benchmark-${{ hashFiles('wren-core/Cargo.toml') }}
 
       - name: Check datafusion-common without default features
         run: cargo check --all-targets

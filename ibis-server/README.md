@@ -6,8 +6,8 @@ We continuously integrate the Rust core with the Ibis server now.
 ## Application structure
 The application consists of three main parts:
 1. [ibis-server](./): a Python web server powered by FastAPI and Ibis
-2. [wren-modeling-rs](../wren-modeling-rs): a modeling core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
-3. [wren-modeling-py](../wren-modeling-py): a Python adapter for the modeling core
+2. [wren-core](../wren-cores): a modeling core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
+3. [wren-core-py](../wren-core-py): a Python adapter for the modeling core
 
 ## Quick Start
 
