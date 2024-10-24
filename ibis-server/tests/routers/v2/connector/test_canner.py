@@ -346,6 +346,14 @@ with TestClient(app) as client:
         assert response.status_code == 200
         assert response.json() == []
 
+    def test_metadata_db_version():
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text is not None
+
     def _to_connection_url():
         info = connection_info
         return f"postgres://{info['user']}:{info['pat']}@{info['host']}:{info['port']}/{info['workspace']}"

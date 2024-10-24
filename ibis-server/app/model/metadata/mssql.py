@@ -161,6 +161,9 @@ class MSSQLMetadata(Metadata):
             )
         return constraints
 
+    def get_version(self) -> str:
+        return self.connection.sql("SELECT @@VERSION").to_pandas().iloc[0, 0]
+
     def _format_compact_table_name(self, schema: str, table: str):
         return f"{schema}.{table}"
 

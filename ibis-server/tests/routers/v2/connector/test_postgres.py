@@ -78,7 +78,7 @@ def manifest_str():
 
 @pytest.fixture(scope="module")
 def postgres(request) -> PostgresContainer:
-    pg = PostgresContainer("postgres:16-alpine").start()
+    pg = PostgresContainer("postgres:16.4-alpine").start()
     engine = sqlalchemy.create_engine(pg.get_connection_url())
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
@@ -400,6 +400,15 @@ with TestClient(app) as client:
             json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
+
+    def test_metadata_db_version(postgres: PostgresContainer):
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert "PostgreSQL 16.4" in response.text
 
     def test_dry_plan(manifest_str):
         response = client.post(

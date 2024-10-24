@@ -75,30 +75,30 @@ impl ModelBuilder {
         Self {
             model: Model {
                 name: name.to_string(),
-                ref_sql: "".to_string(),
-                base_object: "".to_string(),
-                table_reference: "".to_string(),
+                ref_sql: None,
+                base_object: None,
+                table_reference: None,
                 columns: vec![],
                 primary_key: None,
                 cached: false,
-                refresh_time: "".to_string(),
+                refresh_time: None,
                 properties: BTreeMap::default(),
             },
         }
     }
 
     pub fn ref_sql(mut self, ref_sql: &str) -> Self {
-        self.model.ref_sql = ref_sql.to_string();
+        self.model.ref_sql = Some(ref_sql.to_string());
         self
     }
 
     pub fn base_object(mut self, base_object: &str) -> Self {
-        self.model.base_object = base_object.to_string();
+        self.model.base_object = Some(base_object.to_string());
         self
     }
 
     pub fn table_reference(mut self, table_reference: &str) -> Self {
-        self.model.table_reference = table_reference.to_string();
+        self.model.table_reference = Some(table_reference.to_string());
         self
     }
 
@@ -118,7 +118,7 @@ impl ModelBuilder {
     }
 
     pub fn refresh_time(mut self, refresh_time: &str) -> Self {
-        self.model.refresh_time = refresh_time.to_string();
+        self.model.refresh_time = Some(refresh_time.to_string());
         self
     }
 
@@ -146,7 +146,7 @@ impl ColumnBuilder {
                 r#type: r#type.to_string(),
                 relationship: None,
                 is_calculated: false,
-                no_null: false,
+                not_null: false,
                 expression: None,
                 properties: BTreeMap::default(),
             },
@@ -171,8 +171,8 @@ impl ColumnBuilder {
         self
     }
 
-    pub fn no_null(mut self, no_null: bool) -> Self {
-        self.column.no_null = no_null;
+    pub fn not_null(mut self, not_null: bool) -> Self {
+        self.column.not_null = not_null;
         self
     }
 
@@ -251,7 +251,7 @@ impl MetricBuilder {
                 measure: vec![],
                 time_grain: vec![],
                 cached: false,
-                refresh_time: "".to_string(),
+                refresh_time: None,
                 properties: BTreeMap::default(),
             },
         }
@@ -278,7 +278,7 @@ impl MetricBuilder {
     }
 
     pub fn refresh_time(mut self, refresh_time: &str) -> Self {
-        self.metric.refresh_time = refresh_time.to_string();
+        self.metric.refresh_time = Some(refresh_time.to_string());
         self
     }
 
@@ -372,7 +372,7 @@ mod test {
         let expected = ColumnBuilder::new("id", "integer")
             .relationship("test")
             .calculated(true)
-            .no_null(true)
+            .not_null(true)
             .expression("test")
             .property("key", "value")
             .build();
@@ -380,6 +380,44 @@ mod test {
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: Arc<Column> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_expression_empty_as_none() {
+        let expected = ColumnBuilder::new("id", "integer").expression("").build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Column> = serde_json::from_str(&json_str).unwrap();
+        assert!(actual.expression.is_none())
+    }
+
+    #[test]
+    fn test_bool_from_int() {
+        let json = r#"
+        {
+            "name": "id",
+            "type": "integer",
+            "isCalculated": 1,
+            "notNull": 0
+        }
+        "#;
+
+        let actual: Arc<Column> = serde_json::from_str(json).unwrap();
+        assert!(actual.is_calculated);
+        assert!(!actual.not_null);
+
+        let json = r#"
+        {
+            "name": "id",
+            "type": "integer",
+            "isCalculated": true,
+            "notNull": false
+        }
+        "#;
+
+        let actual: Arc<Column> = serde_json::from_str(json).unwrap();
+        assert!(actual.is_calculated);
+        assert!(!actual.not_null);
     }
 
     #[test]
@@ -412,7 +450,17 @@ mod test {
 
         let json_str = serde_json::to_string(&model).unwrap();
         let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
-        assert_eq!(actual, model)
+        assert_eq!(actual, model);
+
+        // test only table_reference
+        let model = ModelBuilder::new("test")
+            .table_reference("test")
+            .column(ColumnBuilder::new("id", "integer").build())
+            .build();
+
+        let json_str = serde_json::to_string(&model).unwrap();
+        let actual: Arc<Model> = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(actual, model);
     }
 
     #[test]

@@ -33,6 +33,16 @@ class CannerMetadata(Metadata):
     def get_constraints(self) -> list[Constraint]:
         return []
 
+    def get_version(self) -> str:
+        query = gql("""
+            query SystemInfo {
+                systemInfo {
+                  version
+                }
+            }
+        """)
+        return self.client.execute(query)["systemInfo"]["version"]
+
     def _get_workspace_sql_name(self) -> str:
         if hasattr(self.connection_info, "connection_url"):
             return urlparse(
