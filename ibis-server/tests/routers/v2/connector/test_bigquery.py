@@ -65,7 +65,6 @@ manifest = {
                     "type": "bytea",
                 },
             ],
-            "primaryKey": "orderkey",
         },
     ],
 }
@@ -195,6 +194,34 @@ with TestClient(app) as client:
         )
 
         assert response.status_code == 204
+
+    def test_interval(manifest_str):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT INTERVAL '1' YEAR + INTERVAL '100' MONTH + INTERVAL '100' DAY + INTERVAL '1' HOUR AS col",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["data"][0] == ["112 months 100 days 3600000000 microseconds"]
+        assert result["dtypes"] == {"col": "object"}
+
+    def test_avg_interval(manifest_str):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT AVG(DATE '2024-01-01' - orderdate) AS col from \"Orders\"",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["data"][0] == ["10484 days 32054400000 microseconds"]
+        assert result["dtypes"] == {"col": "object"}
 
     def test_validate_with_unknown_rule(manifest_str):
         response = client.post(
