@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>187</version>
+        <version>189</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -68,7 +68,7 @@
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.2</dep.testcontainers.version>
-        <dep.errorprone.version>2.33.0</dep.errorprone.version>
+        <dep.errorprone.version>2.34.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.45.4</version>
+                <version>3.46.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -276,7 +276,7 @@
             <dependency>
                 <groupId>io.opentelemetry.semconv</groupId>
                 <artifactId>opentelemetry-semconv</artifactId>
-                <version>1.27.0-alpha</version>
+                <version>1.28.0-alpha</version>
             </dependency>
 
             <dependency>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.15.4</version>
+                <version>1.15.5</version>
             </dependency>
 
             <dependency>
@@ -355,7 +355,7 @@
             <dependency>
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
-                <version>1.1.1</version>
+                <version>1.1.2</version>
             </dependency>
 
             <dependency>
