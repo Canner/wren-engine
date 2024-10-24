@@ -529,6 +529,15 @@ with TestClient(app) as client:
         result = response.json()
         assert len(result) == 0
 
+    def test_metadata_db_version(clickhouse: ClickHouseContainer):
+        connection_info = _to_connection_info(clickhouse)
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text is not None
+
     def _to_connection_info(db: ClickHouseContainer):
         return {
             "host": db.get_container_host_ip(),

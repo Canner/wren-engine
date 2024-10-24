@@ -59,6 +59,11 @@ def get_constraints(data_source: DataSource, dto: MetadataDTO) -> list[Constrain
     ).get_constraints()
 
 
+@router.post("/{data_source}/metadata/version")
+def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
+    return MetadataFactory.get_metadata(data_source, dto.connection_info).get_version()
+
+
 @router.post("/dry-plan")
 def dry_plan(dto: DryPlanDTO) -> str:
     return Rewriter(dto.manifest_str).rewrite(dto.sql)

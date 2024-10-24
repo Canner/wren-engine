@@ -136,3 +136,6 @@ class BigQueryMetadata(Metadata):
                 )
             )
         return constraints
+
+    def get_version(self) -> str:
+        return "Follow BigQuery release version"

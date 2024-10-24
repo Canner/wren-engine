@@ -15,3 +15,7 @@ class Metadata(ABC):
     @abstractmethod
     def get_constraints(self) -> list[Constraint]:
         pass
+
+    @abstractmethod
+    def get_version(self) -> str:
+        pass

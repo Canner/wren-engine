@@ -268,3 +268,7 @@ with TestClient(app) as client:
     @pytest.mark.skip(reason="Not implemented")
     def test_metadata_list_constraints():
         pass
+
+    @pytest.mark.skip(reason="Not implemented")
+    def test_metadata_get_version():
+        pass

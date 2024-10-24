@@ -366,6 +366,15 @@ with TestClient(app) as client:
         )
         assert response.status_code == 200
 
+    def test_metadata_db_version(mssql: SqlServerContainer):
+        connection_info = _to_connection_info(mssql)
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert "Microsoft SQL Server 2019" in response.text
+
     def _to_connection_info(mssql: SqlServerContainer):
         return {
             "host": mssql.get_container_host_ip(),
