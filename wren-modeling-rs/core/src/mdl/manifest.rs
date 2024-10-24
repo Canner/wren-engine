@@ -3,8 +3,10 @@ use std::fmt::Display;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::NoneAsEmptyString;
 
-// This is the main struct that holds all the information about the manifest
+/// This is the main struct that holds all the information about the manifest
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct Manifest {
     pub catalog: String,
@@ -19,6 +21,7 @@ pub struct Manifest {
     pub views: Vec<Arc<View>>,
 }
 
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
@@ -32,7 +35,7 @@ pub struct Model {
     pub columns: Vec<Arc<Column>>,
     #[serde(default)]
     pub primary_key: Option<String>,
-    #[serde(default)]
+    #[serde(default, with = "bool_from_int")]
     pub cached: bool,
     #[serde(default)]
     pub refresh_time: Option<String>,
@@ -127,6 +130,30 @@ mod table_reference {
     }
 }
 
+mod bool_from_int {
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<bool, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+        match value {
+            serde_json::Value::Bool(b) => Ok(b),
+            serde_json::Value::Number(n) if n.is_u64() => Ok(n.as_u64().unwrap() != 0),
+            _ => Err(serde::de::Error::custom("invalid type for boolean")),
+        }
+    }
+
+    pub fn serialize<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        Serialize::serialize(&(*value), serializer)
+    }
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct Column {
@@ -134,10 +161,11 @@ pub struct Column {
     pub r#type: String,
     #[serde(default)]
     pub relationship: Option<String>,
-    #[serde(default)]
+    #[serde(default, with = "bool_from_int")]
     pub is_calculated: bool,
-    #[serde(default)]
-    pub no_null: bool,
+    #[serde(default, with = "bool_from_int")]
+    pub not_null: bool,
+    #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
     pub expression: Option<String>,
     #[serde(default)]
@@ -193,6 +221,7 @@ pub struct Metric {
     pub dimension: Vec<Arc<Column>>,
     pub measure: Vec<Arc<Column>>,
     pub time_grain: Vec<TimeGrain>,
+    #[serde(default, with = "bool_from_int")]
     pub cached: bool,
     pub refresh_time: Option<String>,
     pub properties: BTreeMap<String, String>,

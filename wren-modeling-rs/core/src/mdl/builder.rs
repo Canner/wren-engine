@@ -146,7 +146,7 @@ impl ColumnBuilder {
                 r#type: r#type.to_string(),
                 relationship: None,
                 is_calculated: false,
-                no_null: false,
+                not_null: false,
                 expression: None,
                 properties: BTreeMap::default(),
             },
@@ -171,8 +171,8 @@ impl ColumnBuilder {
         self
     }
 
-    pub fn no_null(mut self, no_null: bool) -> Self {
-        self.column.no_null = no_null;
+    pub fn not_null(mut self, not_null: bool) -> Self {
+        self.column.not_null = not_null;
         self
     }
 
@@ -372,7 +372,7 @@ mod test {
         let expected = ColumnBuilder::new("id", "integer")
             .relationship("test")
             .calculated(true)
-            .no_null(true)
+            .not_null(true)
             .expression("test")
             .property("key", "value")
             .build();
@@ -380,6 +380,44 @@ mod test {
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: Arc<Column> = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_expression_empty_as_none() {
+        let expected = ColumnBuilder::new("id", "integer").expression("").build();
+
+        let json_str = serde_json::to_string(&expected).unwrap();
+        let actual: Arc<Column> = serde_json::from_str(&json_str).unwrap();
+        assert!(actual.expression.is_none())
+    }
+
+    #[test]
+    fn test_bool_from_int() {
+        let json = r#"
+        {
+            "name": "id",
+            "type": "integer",
+            "isCalculated": 1,
+            "notNull": 0
+        }
+        "#;
+
+        let actual: Arc<Column> = serde_json::from_str(&json).unwrap();
+        assert!(actual.is_calculated);
+        assert!(!actual.not_null);
+
+        let json = r#"
+        {
+            "name": "id",
+            "type": "integer",
+            "isCalculated": true,
+            "notNull": false
+        }
+        "#;
+
+        let actual: Arc<Column> = serde_json::from_str(&json).unwrap();
+        assert!(actual.is_calculated);
+        assert!(!actual.not_null);
     }
 
     #[test]

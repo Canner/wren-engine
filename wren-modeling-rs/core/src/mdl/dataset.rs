@@ -51,7 +51,7 @@ impl Column {
 
     pub fn to_field(&self) -> Field {
         let data_type = map_data_type(&self.r#type);
-        Field::new(&self.name, data_type, self.no_null)
+        Field::new(&self.name, data_type, self.not_null)
     }
 
     pub fn to_remote_field(&self, session_state: SessionStateRef) -> Result<Vec<Field>> {
