@@ -85,7 +85,7 @@ def manifest_str():
 
 @pytest.fixture(scope="module")
 def mysql(request) -> MySqlContainer:
-    mysql = MySqlContainer("mysql:8.0").start()
+    mysql = MySqlContainer("mysql:8.0.40").start()
     connection_url = mysql.get_connection_url()
     engine = sqlalchemy.create_engine(connection_url)
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
@@ -380,6 +380,15 @@ with TestClient(app) as client:
         assert result["constraintColumn"] is not None
         assert result["constraintedTable"] is not None
         assert result["constraintedColumn"] is not None
+
+    def test_metadata_db_version(mysql: MySqlContainer):
+        connection_info = _to_connection_info(mysql)
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text == '"8.0.40"'
 
     def _to_connection_info(mysql: MySqlContainer):
         return {

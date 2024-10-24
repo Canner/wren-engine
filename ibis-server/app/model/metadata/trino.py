@@ -79,6 +79,9 @@ class TrinoMetadata(Metadata):
     def get_constraints(self) -> list[Constraint]:
         return []
 
+    def get_version(self) -> str:
+        return self.connection.sql("SELECT version()").to_pandas().iloc[0, 0]
+
     def _format_trino_compact_table_name(
         self, catalog: str, schema: str, table: str
     ) -> str:

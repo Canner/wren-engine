@@ -319,3 +319,11 @@ with TestClient(app) as client:
             json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
+
+    def test_metadata_db_version():
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text == '"Follow BigQuery release version"'
