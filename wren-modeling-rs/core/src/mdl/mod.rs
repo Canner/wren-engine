@@ -146,7 +146,7 @@ impl WrenMDL {
             .models()
             .iter()
             .map(|model| {
-                let name = TableReference::from(&model.table_reference);
+                let name = TableReference::from(model.table_reference());
                 let fields: Vec<_> = model
                     .columns
                     .iter()

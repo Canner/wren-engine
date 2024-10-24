@@ -130,12 +130,12 @@ impl Dataset {
         match self {
             Dataset::Model(model) => {
                 let schema = register_tables
-                    .map(|rt| rt.get(&model.table_reference))
+                    .map(|rt| rt.get(model.table_reference()))
                     .filter(|rt| rt.is_some())
                     .map(|rt| rt.unwrap().schema());
 
                 if let Some(schema) = schema {
-                    DFSchema::try_from_qualified_schema(&model.table_reference, &schema)
+                    DFSchema::try_from_qualified_schema(model.table_reference(), &schema)
                 } else {
                     let fields: Vec<Field> = model
                         .get_physical_columns()
@@ -149,7 +149,7 @@ impl Dataset {
                     let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
 
                     DFSchema::try_from_qualified_schema(
-                        &model.table_reference,
+                        model.table_reference(),
                         &arrow_schema,
                     )
                 }

@@ -113,7 +113,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
 }
 
 pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {
-    if let Some(table_provider) = mdl.get_table(&model.table_reference) {
+    if let Some(table_provider) = mdl.get_table(model.table_reference()) {
         Arc::new(DefaultTableSource::new(table_provider))
     } else {
         let fields: Vec<Field> = model
