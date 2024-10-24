@@ -215,12 +215,12 @@ with TestClient(app) as client:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": manifest_str,
-                "sql": 'SELECT AVG(CURRENT_DATE - orderdate) AS col from "Orders"',
+                "sql": "SELECT AVG(DATE '2024-01-01' - orderdate) AS col from \"Orders\"",
             },
         )
         assert response.status_code == 200
         result = response.json()
-        assert result["data"][0] == ["10780 days 32054400000 microseconds"]
+        assert result["data"][0] == ["10484 days 32054400000 microseconds"]
         assert result["dtypes"] == {"col": "object"}
 
     def test_validate_with_unknown_rule(manifest_str):
