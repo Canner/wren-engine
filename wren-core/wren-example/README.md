@@ -7,7 +7,7 @@ To run the examples, use the `cargo run` command, such as:
 
 ```bash
 git clone https://github.com/Canner/wren-engine.git
-cd wren-engine/wren-modeling-rs
+cd wren-engine/wren-core
 
 # Run the `datafusion_apply` example:
 # ... use the equivalent for other examples

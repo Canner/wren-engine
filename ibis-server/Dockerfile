@@ -24,8 +24,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN pip install poetry==1.8.3
 
-COPY --from=wren-modeling-py . /wren-modeling-py
-COPY --from=wren-modeling-rs . /wren-modeling-rs
+COPY --from=wren-core-py . /wren-core-py
+COPY --from=wren-core . /wren-core
 
 WORKDIR /app
 COPY . .

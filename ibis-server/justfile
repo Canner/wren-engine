@@ -2,9 +2,9 @@ default:
     @just --list --unsorted
 
 build-core *args:
-    cd ../wren-modeling-py && just install && just build {{args}}
+    cd ../wren-core-py && just install && just build {{args}}
 
-core-wheel-path := "../wren-modeling-py/target/wheels/wren_modeling_py-*.whl"
+core-wheel-path := "../wren-core-py/target/wheels/wren_core_py-*.whl"
 
 install-core *args:
     just build-core {{args}}
@@ -36,8 +36,8 @@ docker-build:
 # alias for `docker-build`
 dbuild:
     docker buildx build -t wren-engine-ibis -f Dockerfile \
-        --build-context wren-modeling-py=../wren-modeling-py \
-        --build-context wren-modeling-rs=../wren-modeling-rs \
+        --build-context wren-core-py=../wren-core-py \
+        --build-context wren-core=../wren-core \
         .
 
 docker-run:

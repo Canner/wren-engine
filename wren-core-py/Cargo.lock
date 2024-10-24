@@ -2730,7 +2730,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "wren-modeling-py"
+name = "wren-core-py"
 version = "0.1.0"
 dependencies = [
  "base64",
