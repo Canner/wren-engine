@@ -151,7 +151,7 @@ mod bool_from_int {
     where
         S: Serializer,
     {
-        Serialize::serialize(&(*value), serializer)
+        Serialize::serialize(value, serializer)
     }
 }
 
