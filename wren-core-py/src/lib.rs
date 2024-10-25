@@ -4,19 +4,20 @@ use base64::prelude::*;
 use pyo3::prelude::*;
 
 use crate::errors::CoreError;
-use crate::remote_functions::RemoteFunction;
+use remote_functions::PyRemoteFunction;
 use log::debug;
 use wren_core::mdl;
 use wren_core::mdl::manifest::Manifest;
 use wren_core::mdl::AnalyzedWrenMDL;
 
 mod errors;
-mod remote_functions;
+pub mod context;
+pub mod remote_functions;
 
 #[pyfunction]
 fn transform_sql(
     mdl_base64: &str,
-    remote_functions: Vec<RemoteFunction>,
+    remote_functions: Vec<PyRemoteFunction>,
     sql: &str,
 ) -> Result<String, CoreError> {
     let mdl_json_bytes = BASE64_STANDARD
@@ -39,7 +40,7 @@ fn transform_sql(
 }
 
 #[pyfunction]
-fn read_remote_function_list(path: Option<&str>) -> Vec<RemoteFunction> {
+fn read_remote_function_list(path: Option<&str>) -> Vec<PyRemoteFunction> {
     debug!(
         "Reading remote function list from {}",
         path.unwrap_or("path is not provided")
@@ -47,7 +48,7 @@ fn read_remote_function_list(path: Option<&str>) -> Vec<RemoteFunction> {
     if let Some(path) = path {
         csv::Reader::from_path(path)
             .unwrap()
-            .into_deserialize::<RemoteFunction>()
+            .into_deserialize::<PyRemoteFunction>()
             .filter_map(Result::ok)
             .collect::<Vec<_>>()
     } else {
