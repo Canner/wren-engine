@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>192</version>
+        <version>193</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -68,7 +68,7 @@
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.3</dep.testcontainers.version>
-        <dep.errorprone.version>2.34.0</dep.errorprone.version>
+        <dep.errorprone.version>2.35.1</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>org.jdbi</groupId>
                 <artifactId>jdbi3-bom</artifactId>
-                <version>3.46.0</version>
+                <version>3.47.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
