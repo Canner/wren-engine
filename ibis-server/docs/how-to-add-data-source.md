@@ -29,7 +29,7 @@ class PostgresConnectionInfo(BaseModel):
     user: SecretStr
     password: SecretStr
 ```
-We use bass model of [Pydantic](https://docs.pydantic.dev/latest/api/base_model/) to support our class definitions.
+We use the base model of [Pydantic](https://docs.pydantic.dev/latest/api/base_model/) to support our class definitions.
 Pydantic provides a convenient field type called [Secret Types](https://docs.pydantic.dev/2.0/usage/types/secrets/) that can protect the sensitive information.
 
 Return to the `DataSourceExtension` enum class to implement the `get_{data_source}_connection` function.
