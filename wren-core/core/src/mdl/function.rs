@@ -11,15 +11,17 @@ use std::any::Any;
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct RemoteFunction {
     pub function_type: FunctionType,
     pub name: String,
     pub return_type: String,
+    pub param_names: Option<Vec<String>>,
+    pub param_types: Option<Vec<String>>,
     pub description: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum FunctionType {
     Scalar,
