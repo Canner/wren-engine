@@ -44,14 +44,16 @@ def test_session_context():
 
 def test_read_function_list():
     path = "tests/functions.csv"
-    functions = wren_core.read_remote_function_list(path)
-    assert len(functions) == 3
+    session_context = SessionContext(manifest_str, path)
+    functions = session_context.get_available_functions()
+    assert len(functions) == 260
 
-    rewritten_sql = wren_core.transform_sql(manifest_str, functions, "SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer")
+    rewritten_sql = session_context.transform_sql("SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer")
     assert rewritten_sql == 'SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT main.customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer'
 
-    functions = wren_core.read_remote_function_list(None)
-    assert len(functions) == 0
+    session_context = SessionContext(manifest_str, None)
+    functions = session_context.get_available_functions()
+    assert len(functions) == 258
 
 
 def test_get_available_functions():
