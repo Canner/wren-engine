@@ -3,7 +3,6 @@
 use crate::mdl::manifest::{
     Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// A builder for creating a Manifest
