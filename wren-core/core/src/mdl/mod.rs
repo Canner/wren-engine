@@ -25,6 +25,8 @@ use manifest::Relationship;
 use parking_lot::RwLock;
 use regex::Regex;
 use std::{collections::HashMap, sync::Arc};
+use std::hash::Hash;
+use crate::mdl::builder::ManifestBuilder;
 
 pub mod builder;
 pub mod context;
@@ -39,6 +41,24 @@ pub type SessionStateRef = Arc<RwLock<SessionState>>;
 pub struct AnalyzedWrenMDL {
     pub wren_mdl: Arc<WrenMDL>,
     pub lineage: Arc<lineage::Lineage>,
+}
+
+impl Hash for AnalyzedWrenMDL {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.wren_mdl.hash(state);
+    }
+}
+
+impl Default for AnalyzedWrenMDL {
+    fn default() -> Self {
+        let manifest = ManifestBuilder::default().build();
+        let wren_mdl = WrenMDL::new(manifest);
+        let lineage = lineage::Lineage::new(&wren_mdl).unwrap();
+        AnalyzedWrenMDL {
+            wren_mdl: Arc::new(wren_mdl),
+            lineage: Arc::new(lineage),
+        }
+    }
 }
 
 impl AnalyzedWrenMDL {
@@ -79,6 +99,12 @@ pub struct WrenMDL {
     pub qualified_references: HashMap<datafusion::common::Column, ColumnReference>,
     pub register_tables: RegisterTables,
     pub catalog_schema_prefix: String,
+}
+
+impl Hash for WrenMDL {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.manifest.hash(state);
+    }
 }
 
 impl WrenMDL {

@@ -24,6 +24,12 @@ impl From<CoreError> for PyErr {
     }
 }
 
+impl From<PyErr> for CoreError {
+    fn from(err: PyErr) -> Self {
+        CoreError::new(&err.to_string())
+    }
+}
+
 impl From<DecodeError> for CoreError {
     fn from(err: DecodeError) -> Self {
         CoreError::new(&err.to_string())
@@ -38,6 +44,12 @@ impl From<FromUtf8Error> for CoreError {
 
 impl From<serde_json::Error> for CoreError {
     fn from(err: serde_json::Error) -> Self {
+        CoreError::new(&err.to_string())
+    }
+}
+
+impl From<wren_core::DataFusionError> for CoreError {
+    fn from(err: wren_core::DataFusionError) -> Self {
         CoreError::new(&err.to_string())
     }
 }

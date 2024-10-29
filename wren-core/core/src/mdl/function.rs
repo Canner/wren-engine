@@ -16,6 +16,8 @@ pub struct RemoteFunction {
     pub function_type: FunctionType,
     pub name: String,
     pub return_type: String,
+    pub param_names: Option<Vec<String>>,
+    pub param_types: Option<Vec<String>>,
     pub description: Option<String>,
 }
 
