@@ -53,3 +53,15 @@ impl From<wren_core::DataFusionError> for CoreError {
         CoreError::new(&format!("DataFusion error: {}", err))
     }
 }
+
+impl From<csv::Error> for CoreError {
+    fn from(err: csv::Error) -> Self {
+        CoreError::new(&format!("CSV error: {}", err))
+    }
+}
+
+impl From<std::io::Error> for CoreError {
+    fn from(err: std::io::Error) -> Self {
+        CoreError::new(&format!("IO error: {}", err))
+    }
+}
