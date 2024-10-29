@@ -29,7 +29,7 @@ class Rewriter:
         self.data_source = data_source
         if experiment:
             config = get_config()
-            function_path = config.remote_function_list_path
+            function_path = config.get_remote_function_list_path(data_source)
             self._rewriter = EmbeddedEngineRewriter(manifest_str, function_path)
         else:
             self._rewriter = ExternalEngineRewriter(manifest_str)
