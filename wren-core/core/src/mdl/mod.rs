@@ -1,4 +1,5 @@
 use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
+use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
@@ -24,9 +25,8 @@ use log::{debug, info};
 use manifest::Relationship;
 use parking_lot::RwLock;
 use regex::Regex;
-use std::{collections::HashMap, sync::Arc};
 use std::hash::Hash;
-use crate::mdl::builder::ManifestBuilder;
+use std::{collections::HashMap, sync::Arc};
 
 pub mod builder;
 pub mod context;
