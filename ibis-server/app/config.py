@@ -60,7 +60,7 @@ class Config:
 
     def get_remote_function_list_path(self, data_source: str) -> str:
         return (
-            f"{self.remote_function_list_path}/{data_source}/functions.csv"
+            f"{self.remote_function_list_path}/{data_source}.csv"
             if self.remote_function_list_path
             else None
         )
