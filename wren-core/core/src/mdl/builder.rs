@@ -82,7 +82,6 @@ impl ModelBuilder {
                 primary_key: None,
                 cached: false,
                 refresh_time: None,
-                properties: BTreeMap::default(),
             },
         }
     }
@@ -122,13 +121,6 @@ impl ModelBuilder {
         self
     }
 
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.model
-            .properties
-            .insert(key.to_string(), value.to_string());
-        self
-    }
-
     pub fn build(self) -> Arc<Model> {
         Arc::new(self.model)
     }
@@ -148,7 +140,6 @@ impl ColumnBuilder {
                 is_calculated: false,
                 not_null: false,
                 expression: None,
-                properties: BTreeMap::default(),
             },
         }
     }
@@ -181,13 +172,6 @@ impl ColumnBuilder {
         self
     }
 
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.column
-            .properties
-            .insert(key.to_string(), value.to_string());
-        self
-    }
-
     pub fn build(self) -> Arc<Column> {
         Arc::new(self.column)
     }
@@ -205,7 +189,6 @@ impl RelationshipBuilder {
                 models: vec![],
                 join_type: JoinType::OneToOne,
                 condition: "".to_string(),
-                properties: BTreeMap::default(),
             },
         }
     }
@@ -222,13 +205,6 @@ impl RelationshipBuilder {
 
     pub fn condition(mut self, condition: &str) -> Self {
         self.relationship.condition = condition.to_string();
-        self
-    }
-
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.relationship
-            .properties
-            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -252,7 +228,6 @@ impl MetricBuilder {
                 time_grain: vec![],
                 cached: false,
                 refresh_time: None,
-                properties: BTreeMap::default(),
             },
         }
     }
@@ -279,13 +254,6 @@ impl MetricBuilder {
 
     pub fn refresh_time(mut self, refresh_time: &str) -> Self {
         self.metric.refresh_time = Some(refresh_time.to_string());
-        self
-    }
-
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.metric
-            .properties
-            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -334,20 +302,12 @@ impl ViewBuilder {
             view: View {
                 name: name.to_string(),
                 statement: "".to_string(),
-                properties: BTreeMap::default(),
             },
         }
     }
 
     pub fn statement(mut self, statement: &str) -> Self {
         self.view.statement = statement.to_string();
-        self
-    }
-
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.view
-            .properties
-            .insert(key.to_string(), value.to_string());
         self
     }
 
@@ -374,7 +334,6 @@ mod test {
             .calculated(true)
             .not_null(true)
             .expression("test")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
@@ -430,7 +389,6 @@ mod test {
             .primary_key("id")
             .cached(true)
             .refresh_time("1h")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&model).unwrap();
@@ -445,7 +403,6 @@ mod test {
             .primary_key("id")
             .cached(true)
             .refresh_time("1h")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&model).unwrap();
@@ -470,7 +427,6 @@ mod test {
             .model("testB")
             .join_type(JoinType::OneToMany)
             .condition("test")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
@@ -523,7 +479,6 @@ mod test {
             )
             .cached(true)
             .refresh_time("1h")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&model).unwrap();
@@ -535,7 +490,6 @@ mod test {
     fn test_view_roundtrip() {
         let expected = ViewBuilder::new("test")
             .statement("SELECT * FROM test")
-            .property("key", "value")
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
@@ -553,7 +507,6 @@ mod test {
             .primary_key("id")
             .cached(true)
             .refresh_time("1h")
-            .property("key", "value")
             .build();
 
         let relationship = RelationshipBuilder::new("test")
@@ -561,7 +514,6 @@ mod test {
             .model("testB")
             .join_type(JoinType::OneToMany)
             .condition("test")
-            .property("key", "value")
             .build();
 
         let metric = MetricBuilder::new("test")
@@ -575,12 +527,10 @@ mod test {
             )
             .cached(true)
             .refresh_time("1h")
-            .property("key", "value")
             .build();
 
         let view = ViewBuilder::new("test")
             .statement("SELECT * FROM test")
-            .property("key", "value")
             .build();
 
         let expected = crate::mdl::builder::ManifestBuilder::new()

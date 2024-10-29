@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -39,8 +38,6 @@ pub struct Model {
     pub cached: bool,
     #[serde(default)]
     pub refresh_time: Option<String>,
-    #[serde(default)]
-    pub properties: BTreeMap<String, String>,
 }
 
 impl Model {
@@ -170,8 +167,6 @@ pub struct Column {
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
     pub expression: Option<String>,
-    #[serde(default)]
-    pub properties: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
@@ -181,8 +176,6 @@ pub struct Relationship {
     pub models: Vec<String>,
     pub join_type: JoinType,
     pub condition: String,
-    #[serde(default)]
-    pub properties: BTreeMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -226,7 +219,6 @@ pub struct Metric {
     #[serde(default, with = "bool_from_int")]
     pub cached: bool,
     pub refresh_time: Option<String>,
-    pub properties: BTreeMap<String, String>,
 }
 
 impl Metric {
@@ -257,8 +249,6 @@ pub enum TimeUnit {
 pub struct View {
     pub name: String,
     pub statement: String,
-    #[serde(default)]
-    pub properties: BTreeMap<String, String>,
 }
 
 impl View {
