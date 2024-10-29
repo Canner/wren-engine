@@ -58,6 +58,13 @@ class Config:
         else:
             self.init_logger()
 
+    def get_remote_function_list_path(self, data_source: str) -> str:
+        return (
+            f"{self.remote_function_list_path}/{data_source}.csv"
+            if self.remote_function_list_path
+            else None
+        )
+
     def set_remote_function_list_path(self, path: str):
         self.remote_function_list_path = path
 

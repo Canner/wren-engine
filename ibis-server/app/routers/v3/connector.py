@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
+from app.config import get_config
 from app.dependencies import verify_query_dto
 from app.mdl.rewriter import Rewriter
 from app.model import (
@@ -57,14 +58,12 @@ def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Respo
     return Response(status_code=204)
 
 
-@router.get("/functions")
-def functions() -> Response:
+@router.get("/{data_source}/functions")
+def functions(data_source: DataSource) -> Response:
     from wren_core import SessionContext
 
-    from app.config import get_config
+    file_path = get_config().get_remote_function_list_path(data_source)
+    session_context = SessionContext(None, file_path)
+    func_list = [f.to_dict() for f in session_context.get_available_functions()]
 
-    config = get_config()
-    session_context = SessionContext(None, config.remote_function_list_path)
-    functions = [f.to_dict() for f in session_context.get_available_functions()]
-
-    return JSONResponse(functions)
+    return JSONResponse(func_list)

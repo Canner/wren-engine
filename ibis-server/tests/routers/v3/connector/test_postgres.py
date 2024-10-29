@@ -365,7 +365,7 @@ with TestClient(app) as client:
 
     def test_query_with_remote_function(manifest_str, postgres: PostgresContainer):
         config = get_config()
-        config.set_remote_function_list_path(file_path("resource/functions.csv"))
+        config.set_remote_function_list_path(file_path("resource/function_list"))
 
         connection_info = _to_connection_info(postgres)
         response = client.post(
@@ -391,22 +391,25 @@ with TestClient(app) as client:
 
     def test_function_list():
         config = get_config()
-        config.set_remote_function_list_path(file_path("resource/functions.csv"))
+        config.set_remote_function_list_path(file_path("resource/function_list"))
 
-        response = client.get(
-            url="/v3/connector/functions",
-        )
+        response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
         assert len(result) == 261
-        add_two = next(filter(lambda x: x["name"] == "add_two", result))
-        assert add_two["name"] == "add_two"
+        the_func = next(filter(lambda x: x["name"] == "add_two", result))
+        assert the_func == {
+            "name": "add_two",
+            "description": "Adds two numbers together.",
+            "function_type": "scalar",
+            "param_names": None,
+            "param_types": None,
+            "return_type": "int",
+        }
 
         config.set_remote_function_list_path(None)
 
-        response = client.get(
-            url="/v3/connector/functions",
-        )
+        response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
         assert len(result) == 258
