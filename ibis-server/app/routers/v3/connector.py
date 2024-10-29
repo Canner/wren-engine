@@ -55,3 +55,16 @@ def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Respo
     )
     validator.validate(rule_name, dto.parameters, dto.manifest_str)
     return Response(status_code=204)
+
+
+@router.get("/functions")
+def functions() -> Response:
+    from wren_core import SessionContext
+
+    from app.config import get_config
+
+    config = get_config()
+    session_context = SessionContext(None, config.remote_function_list_path)
+    functions = [f.to_dict() for f in session_context.get_available_functions()]
+
+    return JSONResponse(functions)

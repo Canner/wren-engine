@@ -82,11 +82,11 @@ class EmbeddedEngineRewriter:
         self.function_path = function_path
 
     def rewrite(self, sql: str) -> str:
-        from wren_core import read_remote_function_list, transform_sql
+        from wren_core import SessionContext
 
         try:
-            functions = read_remote_function_list(self.function_path)
-            return transform_sql(self.manifest_str, functions, sql)
+            session_context = SessionContext(self.manifest_str, self.function_path)
+            return session_context.transform_sql(sql)
         except Exception as e:
             raise RewriteError(str(e))
 

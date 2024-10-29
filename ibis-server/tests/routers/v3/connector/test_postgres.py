@@ -389,6 +389,28 @@ with TestClient(app) as client:
 
         config.set_remote_function_list_path(None)
 
+    def test_function_list():
+        config = get_config()
+        config.set_remote_function_list_path(file_path("resource/functions.csv"))
+
+        response = client.get(
+            url="/v3/connector/functions",
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) == 261
+        add_two = next(filter(lambda x: x["name"] == "add_two", result))
+        assert add_two["name"] == "add_two"
+
+        config.set_remote_function_list_path(None)
+
+        response = client.get(
+            url="/v3/connector/functions",
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) == 258
+
     def _to_connection_info(pg: PostgresContainer):
         return {
             "host": pg.get_container_host_ip(),
