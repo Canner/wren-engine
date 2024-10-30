@@ -26,30 +26,42 @@ impl From<CoreError> for PyErr {
 
 impl From<PyErr> for CoreError {
     fn from(err: PyErr) -> Self {
-        CoreError::new(&err.to_string())
+        CoreError::new(&format!("PyError: {}", &err))
     }
 }
 
 impl From<DecodeError> for CoreError {
     fn from(err: DecodeError) -> Self {
-        CoreError::new(&err.to_string())
+        CoreError::new(&format!("Base64 decode error: {}", err))
     }
 }
 
 impl From<FromUtf8Error> for CoreError {
     fn from(err: FromUtf8Error) -> Self {
-        CoreError::new(&err.to_string())
+        CoreError::new(&format!("FromUtf8Error: {}", err))
     }
 }
 
 impl From<serde_json::Error> for CoreError {
     fn from(err: serde_json::Error) -> Self {
-        CoreError::new(&err.to_string())
+        CoreError::new(&format!("Serde JSON error: {}", err))
     }
 }
 
 impl From<wren_core::DataFusionError> for CoreError {
     fn from(err: wren_core::DataFusionError) -> Self {
-        CoreError::new(&err.to_string())
+        CoreError::new(&format!("DataFusion error: {}", err))
+    }
+}
+
+impl From<csv::Error> for CoreError {
+    fn from(err: csv::Error) -> Self {
+        CoreError::new(&format!("CSV error: {}", err))
+    }
+}
+
+impl From<std::io::Error> for CoreError {
+    fn from(err: std::io::Error) -> Self {
+        CoreError::new(&format!("IO error: {}", err))
     }
 }

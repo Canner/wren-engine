@@ -184,7 +184,7 @@ with TestClient(app) as client:
             },
         )
         assert response.status_code == 422
-        assert response.text == "Invalid padding"
+        assert response.text == "Base64 decode error: Invalid padding"
 
     def test_query_without_manifest(postgres: PostgresContainer):
         connection_info = _to_connection_info(postgres)
