@@ -177,13 +177,6 @@ impl ColumnBuilder {
         self
     }
 
-    pub fn property(mut self, key: &str, value: &str) -> Self {
-        self.column
-            .properties
-            .insert(key.to_string(), value.to_string());
-        self
-    }
-
     pub fn build(self) -> Arc<Column> {
         Arc::new(self.column)
     }
