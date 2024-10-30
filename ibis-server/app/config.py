@@ -59,12 +59,13 @@ class Config:
             self.init_logger()
 
     def get_remote_function_list_path(self, data_source: str) -> str:
-        path = (
-            f"{self.remote_function_list_path}/{data_source}.csv"
-            if self.remote_function_list_path
-            else None
-        )
-        return path if path and os.path.isfile(path) else None
+        if not self.remote_function_list_path:
+            return None
+        base_path = os.path.normpath(self.remote_function_list_path)
+        path = os.path.normpath(os.path.join(base_path, f"{data_source}.csv"))
+        if not path.startswith(base_path):
+            raise ValueError("Invalid data source path")
+        return path if os.path.isfile(path) else None
 
     def set_remote_function_list_path(self, path: str):
         self.remote_function_list_path = path
