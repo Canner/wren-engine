@@ -8,7 +8,7 @@ updates:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(java-deps)"
+      prefix: "deps(java)"
     labels:
       - "dependencies"
       - "java"
@@ -21,7 +21,7 @@ updates:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(ibis-deps)"
+      prefix: "deps(ibis)"
     labels:
       - "dependencies"
       - "python"
@@ -34,7 +34,7 @@ updates:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(core-py-deps)"
+      prefix: "deps(core-py)"
     labels:
       - "dependencies"
       - "python"
@@ -46,7 +46,7 @@ updates:
       all:
         patterns: [ "*" ]
     commit-message:
-      prefix: "chore(core-deps)"
+      prefix: "deps(core)"
     labels:
       - "dependencies"
       - "core"
