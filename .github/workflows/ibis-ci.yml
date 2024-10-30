@@ -52,7 +52,6 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            wren-core-py/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('wren-core-py/Cargo.lock') }}
       - name: Install FreeTDS to be a ODBC driver
         run: |
