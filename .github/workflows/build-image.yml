@@ -69,8 +69,6 @@ jobs:
           build-args: |
             WREN_VERSION=${{ steps.prepare.outputs.WREN_VERSION }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
   build-ibis-image:
     needs: prepare-tag
     runs-on: ubuntu-latest
@@ -103,5 +101,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
