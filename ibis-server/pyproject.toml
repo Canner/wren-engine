@@ -62,6 +62,7 @@ markers = [
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+exclude = ["tools/"]
 
 [tool.ruff.lint]
 select = [
