@@ -40,7 +40,7 @@ impl Lineage {
         let mut source_columns_map = HashMap::new();
 
         for model in mdl.manifest.models.iter() {
-            for column in model.columns.iter() {
+            for column in model.get_visible_columns() {
                 if column.is_calculated {
                     let expr: &String = match column.expression {
                         Some(ref exp) => exp,
@@ -79,13 +79,13 @@ impl Lineage {
     }
     fn collect_required_fields(
         mdl: &WrenMDL,
-        source_colums_map: &HashMap<Column, HashSet<Column>>,
+        source_columns_map: &HashMap<Column, HashSet<Column>>,
     ) -> Result<RequiredInfo> {
         let mut required_fields_map: HashMap<Column, HashSet<Column>> = HashMap::new();
         let mut required_dataset_topo: HashMap<Column, Graph<Dataset, DatasetLink>> =
             HashMap::new();
         let mut pending_fields = Vec::new();
-        for (column, source_columns) in source_colums_map.iter() {
+        for (column, source_columns) in source_columns_map.iter() {
             let Some(relation) = column.clone().relation else {
                 return internal_err!("relation not found: {}", column);
             };

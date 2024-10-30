@@ -111,7 +111,7 @@ impl WrenMDL {
     pub fn new(manifest: Manifest) -> Self {
         let mut qualifed_references = HashMap::new();
         manifest.models.iter().for_each(|model| {
-            model.columns.iter().for_each(|column| {
+            model.get_visible_columns().for_each(|column| {
                 qualifed_references.insert(
                     from_qualified_name_str(
                         &manifest.catalog,
@@ -121,7 +121,7 @@ impl WrenMDL {
                     ),
                     ColumnReference::new(
                         Dataset::Model(Arc::clone(model)),
-                        Arc::clone(column),
+                        Arc::clone(&column),
                     ),
                 );
             });
@@ -747,6 +747,66 @@ mod test {
                 "ModelAnalyzeRule\ncaused by\nSchema error: No field named \"名字\"."
             )
         });
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_query_hidden_column() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("artist", artist())?;
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("artist")
+                    .table_reference("artist")
+                    .column(ColumnBuilder::new("名字", "string").hidden(true).build())
+                    .column(
+                        ColumnBuilder::new("串接名字", "string")
+                            .expression(r#""名字" || "名字""#)
+                            .build(),
+                    )
+                    .build(),
+            )
+            .build();
+
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = r#"select "串接名字" from wren.test.artist"#;
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(actual,
+                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM \
+                   (SELECT artist.\"名字\" || artist.\"名字\" AS \"串接名字\" FROM artist) AS artist) AS artist");
+
+        let sql = r#"select * from wren.test.artist"#;
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(actual,
+                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"名字\" || artist.\"名字\" AS \"串接名字\" FROM artist) AS artist");
+
+        let sql = r#"select "名字" from wren.test.artist"#;
+        let _ = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+            .await.map_err(|e| {
+                assert_eq!(
+                    e.to_string(),
+                    "Schema error: No field named \"名字\". Valid fields are wren.test.artist.\"串接名字\"."
+                )
+            });
         Ok(())
     }
 

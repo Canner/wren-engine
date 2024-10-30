@@ -167,6 +167,8 @@ pub struct Column {
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
     pub expression: Option<String>,
+    #[serde(default, with = "bool_from_int")]
+    pub is_hidden: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
