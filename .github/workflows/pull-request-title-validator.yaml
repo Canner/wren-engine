@@ -17,3 +17,5 @@ jobs:
     steps:
       - name: validate pull request title
         uses: kontrolplane/pull-request-title-validator@v1.3.2
+        with:
+          types: "feat,fix,perf,deps,revert,docs,chore,refactor,test,build,ci"
