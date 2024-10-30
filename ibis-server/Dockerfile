@@ -64,10 +64,12 @@ odbcinst -i -d -f free.tds.ini
 EOT
 
 ENV VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    REMOTE_FUNCTION_LIST_PATH=/resources/function_list
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app app
+COPY resources resources
 
 EXPOSE 8000
 

@@ -365,7 +365,7 @@ with TestClient(app) as client:
 
     def test_query_with_remote_function(manifest_str, postgres: PostgresContainer):
         config = get_config()
-        config.set_remote_function_list_path(file_path("resource/function_list"))
+        config.set_remote_function_list_path(file_path("../resources/function_list"))
 
         connection_info = _to_connection_info(postgres)
         response = client.post(
@@ -391,7 +391,7 @@ with TestClient(app) as client:
 
     def test_function_list():
         config = get_config()
-        config.set_remote_function_list_path(file_path("resource/function_list"))
+        config.set_remote_function_list_path(file_path("../resources/function_list"))
 
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
