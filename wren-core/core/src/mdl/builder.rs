@@ -146,6 +146,7 @@ impl ColumnBuilder {
                 r#type: r#type.to_string(),
                 relationship: None,
                 is_calculated: false,
+                is_hidden: false,
                 not_null: false,
                 expression: None,
                 properties: BTreeMap::default(),
@@ -178,6 +179,11 @@ impl ColumnBuilder {
 
     pub fn expression(mut self, expression: &str) -> Self {
         self.column.expression = Some(expression.to_string());
+        self
+    }
+
+    pub fn hidden(mut self, is_hidden: bool) -> Self {
+        self.column.is_hidden = is_hidden;
         self
     }
 
@@ -373,6 +379,7 @@ mod test {
             .relationship("test")
             .calculated(true)
             .not_null(true)
+            .hidden(true)
             .expression("test")
             .property("key", "value")
             .build();

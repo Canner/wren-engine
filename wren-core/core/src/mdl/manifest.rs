@@ -170,6 +170,8 @@ pub struct Column {
     #[serde_as(as = "NoneAsEmptyString")]
     #[serde(default)]
     pub expression: Option<String>,
+    #[serde(default, with = "bool_from_int")]
+    pub is_hidden: bool,
     #[serde(default)]
     pub properties: BTreeMap<String, String>,
 }

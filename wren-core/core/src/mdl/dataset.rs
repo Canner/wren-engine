@@ -15,45 +15,56 @@ use std::sync::Arc;
 
 impl Model {
     /// Physical columns are columns that can be selected from the model.
+    /// All physical columns are visible columns, but not all visible columns are physical columns
     /// e.g. columns that are not a relationship column
     pub fn get_physical_columns(&self) -> Vec<Arc<Column>> {
-        self.columns
-            .iter()
+        self.get_visible_columns()
             .filter(|c| c.relationship.is_none())
-            .map(Arc::clone)
+            .map(|c| Arc::clone(&c))
             .collect()
     }
 
+    /// Return the name of the model
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
-        self.columns
-            .iter()
-            .find(|c| c.name == column_name)
-            .map(Arc::clone)
+    /// Return the iterator of all visible columns
+    pub fn get_visible_columns(&self) -> impl Iterator<Item = Arc<Column>> + '_ {
+        self.columns.iter().filter(|f| !f.is_hidden).map(Arc::clone)
     }
 
+    /// Get the specified visible column by name
+    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
+        self.get_visible_columns()
+            .find(|c| c.name == column_name)
+            .map(|c| Arc::clone(&c))
+    }
+
+    /// Return the primary key of the model
     pub fn primary_key(&self) -> Option<&str> {
         self.primary_key.as_deref()
     }
 }
 
 impl Column {
+    /// Return the name of the column
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Return the expression of the column
     pub fn expression(&self) -> Option<&str> {
         self.expression.as_deref()
     }
 
+    /// Transform the column to a datafusion field
     pub fn to_field(&self) -> Field {
         let data_type = map_data_type(&self.r#type);
         Field::new(&self.name, data_type, self.not_null)
     }
 
+    /// Transform the column to a datafusion field for a remote table
     pub fn to_remote_field(&self, session_state: SessionStateRef) -> Result<Vec<Field>> {
         if self.expression().is_some() {
             let session_state = session_state.read();
