@@ -71,8 +71,8 @@ impl PySessionContext {
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
     ) -> PyResult<Self> {
-        let remote_functions =
-            Self::read_remote_function_list(remote_functions_path).unwrap();
+        let remote_functions = Self::read_remote_function_list(remote_functions_path)
+            .map_err(CoreError::from)?;
         let remote_functions: Vec<RemoteFunction> = remote_functions
             .into_iter()
             .map(|f| f.into())
@@ -101,7 +101,7 @@ impl PySessionContext {
 
         let analyzed_mdl = Arc::new(analyzed_mdl);
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new().map_err(CoreError::from)?;
         let ctx = runtime
             .block_on(create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), false))
             .map_err(CoreError::from)?;
@@ -229,7 +229,7 @@ impl PySessionContext {
         );
         if let Some(path) = path {
             Ok(csv::Reader::from_path(path)
-                .unwrap()
+                .map_err(CoreError::from)?
                 .into_deserialize::<PyRemoteFunction>()
                 .filter_map(Result::ok)
                 .collect::<Vec<_>>())
