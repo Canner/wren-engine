@@ -67,7 +67,7 @@ class Config:
             raise ValueError("Invalid data source path")
         return path if os.path.isfile(path) else None
 
-    def set_remote_function_list_path(self, path: str):
+    def set_remote_function_list_path(self, path: str | None):
         self.remote_function_list_path = path
 
 
