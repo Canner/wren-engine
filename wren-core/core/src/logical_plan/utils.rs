@@ -1,16 +1,3 @@
-use datafusion::arrow::datatypes::{
-    DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
-};
-use datafusion::catalog_common::TableReference;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
-use datafusion::error::Result;
-use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
-use log::debug;
-use petgraph::dot::{Config, Dot};
-use petgraph::Graph;
-use std::collections::HashSet;
-use std::{collections::HashMap, sync::Arc};
-
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::utils::quoted;
 use crate::mdl::{
@@ -18,6 +5,19 @@ use crate::mdl::{
     WrenMDL,
 };
 use crate::mdl::{Dataset, SessionStateRef};
+use datafusion::arrow::datatypes::{
+    DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
+};
+use datafusion::catalog_common::TableReference;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::datasource::DefaultTableSource;
+use datafusion::error::Result;
+use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
+use log::debug;
+use petgraph::dot::{Config, Dot};
+use petgraph::Graph;
+use std::collections::HashSet;
+use std::{collections::HashMap, sync::Arc};
 
 fn create_mock_list_type() -> DataType {
     let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
@@ -112,15 +112,20 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
 }
 
 pub fn create_remote_table_source(
-    dataset: &Dataset,
+    model: Arc<Model>,
     mdl: &WrenMDL,
     session_state_ref: SessionStateRef,
 ) -> Result<Arc<dyn TableSource>> {
-    let schema =
-        dataset.to_remote_schema(Some(mdl.get_register_tables()), session_state_ref)?;
-    Ok(Arc::new(LogicalTableSource::new(Arc::new(
-        schema.as_arrow().clone(),
-    ))))
+    if let Some(table_provider) = mdl.get_table(model.table_reference()) {
+        Ok(Arc::new(DefaultTableSource::new(table_provider)))
+    } else {
+        let dataset = Dataset::Model(model);
+        let schema = dataset
+            .to_remote_schema(Some(mdl.get_register_tables()), session_state_ref)?;
+        Ok(Arc::new(LogicalTableSource::new(Arc::new(
+            schema.as_arrow().clone(),
+        ))))
+    }
 }
 
 pub fn format_qualified_name(

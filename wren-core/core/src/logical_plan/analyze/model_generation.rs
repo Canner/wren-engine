@@ -15,7 +15,7 @@ use crate::logical_plan::analyze::plan::{
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
 use crate::mdl::utils::quoted;
-use crate::mdl::{AnalyzedWrenMDL, Dataset, SessionStateRef};
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 
 /// [ModelGenerationRule] is responsible for generating the model plan node.
 pub struct ModelGenerationRule {
@@ -72,14 +72,13 @@ impl ModelGenerationRule {
                             .get_model(&model_plan.model_name)
                             .expect("Model not found"),
                     );
-                    let dataset = Dataset::Model(Arc::clone(&model));
                     // support table reference
                     let table_scan = match &model_plan.original_table_scan {
                         Some(LogicalPlan::TableScan(original_scan)) => {
                             LogicalPlanBuilder::scan_with_filters(
                                 TableReference::from(model.table_reference()),
                                 create_remote_table_source(
-                                    &dataset,
+                                    Arc::clone(&model),
                                     &self.analyzed_wren_mdl.wren_mdl(),
                                     Arc::clone(&self.session_state),
                                 )?,
@@ -97,7 +96,7 @@ impl ModelGenerationRule {
                             LogicalPlanBuilder::scan(
                                 TableReference::from(model.table_reference()),
                                 create_remote_table_source(
-                                    &dataset,
+                                    Arc::clone(&model),
                                     &self.analyzed_wren_mdl.wren_mdl(),
                                     Arc::clone(&self.session_state))?,
                                 None,
