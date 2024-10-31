@@ -2,7 +2,6 @@ use crate::logical_plan::utils::map_data_type;
 use crate::mdl::manifest::{Column, Metric, Model};
 use crate::mdl::utils::quoted;
 use crate::mdl::{RegisterTables, SessionStateRef};
-use datafusion::arrow::datatypes::DataType::Utf8;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::DFSchema;
 use datafusion::common::Result;
@@ -75,7 +74,7 @@ impl Column {
             let columns = Self::collect_columns(expr);
             Ok(columns
                 .into_iter()
-                .map(|c| Field::new(c.value, Utf8, false))
+                .map(|c| Field::new(c.value, map_data_type(&self.r#type), false))
                 .collect())
         } else {
             Ok(vec![self.to_field()])

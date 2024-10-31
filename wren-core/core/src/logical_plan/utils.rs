@@ -3,7 +3,6 @@ use datafusion::arrow::datatypes::{
 };
 use datafusion::catalog_common::TableReference;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
-use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
 use log::debug;
@@ -112,29 +111,16 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     )))
 }
 
-pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {
-    if let Some(table_provider) = mdl.get_table(model.table_reference()) {
-        Arc::new(DefaultTableSource::new(table_provider))
-    } else {
-        let fields: Vec<Field> = model
-            .get_physical_columns()
-            .iter()
-            .map(|column| {
-                let column = Arc::clone(column);
-                let name = if let Some(ref expression) = column.expression {
-                    expression.clone()
-                } else {
-                    column.name.clone()
-                };
-                // TODO: find a way for the remote table to provide the data type
-                // We don't know the data type of the remote table, so we just mock a Int32 type here
-                Field::new(name, DataType::Int8, column.not_null)
-            })
-            .collect();
-
-        let schema = SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()));
-        Arc::new(LogicalTableSource::new(schema))
-    }
+pub fn create_remote_table_source(
+    dataset: &Dataset,
+    mdl: &WrenMDL,
+    session_state_ref: SessionStateRef,
+) -> Result<Arc<dyn TableSource>> {
+    let schema =
+        dataset.to_remote_schema(Some(mdl.get_register_tables()), session_state_ref)?;
+    Ok(Arc::new(LogicalTableSource::new(Arc::new(
+        schema.as_arrow().clone(),
+    ))))
 }
 
 pub fn format_qualified_name(
