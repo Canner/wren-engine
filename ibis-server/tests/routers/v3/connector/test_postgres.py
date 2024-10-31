@@ -391,12 +391,18 @@ with TestClient(app) as client:
 
     def test_function_list():
         config = get_config()
-        config.set_remote_function_list_path(file_path("../resources/function_list"))
 
+        config.set_remote_function_list_path(None)
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 261
+        assert len(result) == 258
+
+        config.set_remote_function_list_path(file_path("../resources/function_list"))
+        response = client.get(url=f"{base_url}/functions")
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result) > 258
         the_func = next(filter(lambda x: x["name"] == "add_two", result))
         assert the_func == {
             "name": "add_two",
@@ -408,7 +414,6 @@ with TestClient(app) as client:
         }
 
         config.set_remote_function_list_path(None)
-
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
