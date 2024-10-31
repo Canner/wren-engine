@@ -39,7 +39,6 @@ use datafusion::optimizer::push_down_filter::PushDownFilter;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
 use datafusion::optimizer::rewrite_disjunctive_predicate::RewriteDisjunctivePredicate;
 use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
-use datafusion::optimizer::simplify_expressions::SimplifyExpressions;
 use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::OptimizerRule;
@@ -78,9 +77,12 @@ pub async fn create_ctx_with_mdl(
         )),
         Arc::new(ModelAnalyzeRule::new(
             Arc::clone(&analyzed_mdl),
+            Arc::clone(&reset_default_catalog_schema),
+        )),
+        Arc::new(ModelGenerationRule::new(
+            Arc::clone(&analyzed_mdl),
             reset_default_catalog_schema,
         )),
-        Arc::new(ModelGenerationRule::new(Arc::clone(&analyzed_mdl))),
         Arc::new(InlineTableScan::new()),
         // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
         Arc::new(ExpandWildcardRule::new()),
@@ -106,17 +108,16 @@ pub async fn create_ctx_with_mdl(
 fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     vec![
         Arc::new(EliminateNestedUnion::new()),
-        Arc::new(SimplifyExpressions::new()),
+        // Disable SimplifyExpressions to avoid apply some function locally
+        // Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(ReplaceDistinctWithAggregate::new()),
         Arc::new(EliminateJoin::new()),
         Arc::new(DecorrelatePredicateSubquery::new()),
         Arc::new(ScalarSubqueryToJoin::new()),
         Arc::new(ExtractEquijoinPredicate::new()),
-        // simplify expressions does not simplify expressions in subqueries, so we
-        // run it again after running the optimizations that potentially converted
-        // subqueries to joins
-        Arc::new(SimplifyExpressions::new()),
+        // Disable SimplifyExpressions to avoid apply some function locally
+        // Arc::new(SimplifyExpressions::new()),
         Arc::new(RewriteDisjunctivePredicate::new()),
         Arc::new(EliminateDuplicatedExpr::new()),
         Arc::new(EliminateFilter::new()),
@@ -133,9 +134,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(PushDownLimit::new()),
         Arc::new(PushDownFilter::new()),
         Arc::new(SingleDistinctToGroupBy::new()),
-        // The previous optimizations added expressions and projections,
-        // that might benefit from the following rules
-        Arc::new(SimplifyExpressions::new()),
+        // Disable SimplifyExpressions to avoid apply some function locally
+        // Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),

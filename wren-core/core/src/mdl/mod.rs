@@ -810,6 +810,19 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_simplify_expression() -> Result<()> {
+        let sql = "select current_date";
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            sql,
+        ).await?;
+        assert_eq!(actual, "SELECT current_date()");
+        Ok(())
+    }
+
     async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
         let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
