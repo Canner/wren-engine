@@ -389,4 +389,4 @@ with TestClient(app) as client:
 
     def _to_connection_url(mssql: SqlServerContainer):
         info = _to_connection_info(mssql)
-        return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=FreeTDS"
+        return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
