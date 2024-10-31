@@ -6,6 +6,7 @@ import sqlglot
 from loguru import logger
 
 from app.config import get_config
+from app.mdl.context import get_session_context
 from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
 
@@ -82,10 +83,8 @@ class EmbeddedEngineRewriter:
         self.function_path = function_path
 
     def rewrite(self, sql: str) -> str:
-        from wren_core import SessionContext
-
         try:
-            session_context = SessionContext(self.manifest_str, self.function_path)
+            session_context = get_session_context(self.manifest_str, self.function_path)
             return session_context.transform_sql(sql)
         except Exception as e:
             raise RewriteError(str(e))
