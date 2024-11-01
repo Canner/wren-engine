@@ -68,7 +68,7 @@ jobs:
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
-        run: poetry run pytest -m "not bigquery and not snowflake and not trino and not canner"
+        run: poetry run pytest -m "not bigquery and not snowflake and not canner"
       - name: Test bigquery if need
         if: contains(github.event.pull_request.labels.*.name, 'bigquery')
         env:
@@ -84,8 +84,3 @@ jobs:
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
         run: just test snowflake
-      - name: Test trino if need
-        if: contains(github.event.pull_request.labels.*.name, 'trino')
-        env:
-          WREN_ENGINE_ENDPOINT: http://localhost:8080
-        run: just test trino
