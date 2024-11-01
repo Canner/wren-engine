@@ -1,3 +1,10 @@
+use crate::mdl::lineage::DatasetLink;
+use crate::mdl::utils::quoted;
+use crate::mdl::{
+    manifest::{Column, Model},
+    WrenMDL,
+};
+use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
@@ -11,14 +18,6 @@ use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
-
-use crate::mdl::lineage::DatasetLink;
-use crate::mdl::utils::quoted;
-use crate::mdl::{
-    manifest::{Column, Model},
-    WrenMDL,
-};
-use crate::mdl::{Dataset, SessionStateRef};
 
 fn create_mock_list_type() -> DataType {
     let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
@@ -112,28 +111,20 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     )))
 }
 
-pub fn create_remote_table_source(model: &Model, mdl: &WrenMDL) -> Arc<dyn TableSource> {
+pub fn create_remote_table_source(
+    model: Arc<Model>,
+    mdl: &WrenMDL,
+    session_state_ref: SessionStateRef,
+) -> Result<Arc<dyn TableSource>> {
     if let Some(table_provider) = mdl.get_table(model.table_reference()) {
-        Arc::new(DefaultTableSource::new(table_provider))
+        Ok(Arc::new(DefaultTableSource::new(table_provider)))
     } else {
-        let fields: Vec<Field> = model
-            .get_physical_columns()
-            .iter()
-            .map(|column| {
-                let column = Arc::clone(column);
-                let name = if let Some(ref expression) = column.expression {
-                    expression.clone()
-                } else {
-                    column.name.clone()
-                };
-                // TODO: find a way for the remote table to provide the data type
-                // We don't know the data type of the remote table, so we just mock a Int32 type here
-                Field::new(name, DataType::Int8, column.not_null)
-            })
-            .collect();
-
-        let schema = SchemaRef::new(Schema::new_with_metadata(fields, HashMap::new()));
-        Arc::new(LogicalTableSource::new(schema))
+        let dataset = Dataset::Model(model);
+        let schema = dataset
+            .to_remote_schema(Some(mdl.get_register_tables()), session_state_ref)?;
+        Ok(Arc::new(LogicalTableSource::new(Arc::new(
+            schema.as_arrow().clone(),
+        ))))
     }
 }
 

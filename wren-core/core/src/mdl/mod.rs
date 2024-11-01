@@ -434,7 +434,9 @@ mod test {
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
-    use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray};
+    use datafusion::arrow::array::{
+        ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
+    };
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::prelude::SessionContext;
@@ -810,6 +812,51 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_simplify_expression() -> Result<()> {
+        let sql = "select current_date";
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::new(AnalyzedWrenMDL::default()),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(actual, "SELECT current_date()");
+        Ok(())
+    }
+
+    /// This test will be failed if the `出道時間` is not inferred as a timestamp column correctly.
+    #[tokio::test]
+    async fn test_infer_timestamp_column() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("artist", artist())?;
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("artist")
+                    .table_reference("artist")
+                    .column(ColumnBuilder::new("出道時間", "timestamp").build())
+                    .build(),
+            )
+            .build();
+
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = r#"select current_date > "出道時間" from wren.test.artist"#;
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(actual,
+                   "SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
+                   (SELECT artist.\"出道時間\" FROM (SELECT artist.\"出道時間\" AS \"出道時間\" FROM artist) AS artist) AS artist");
+        Ok(())
+    }
+
     async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
         let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
@@ -873,10 +920,13 @@ mod test {
             Arc::new(StringArray::from_iter_values(["Ina", "Azki", "Kaela"]));
         let group: ArrayRef = Arc::new(StringArray::from_iter_values(["EN", "JP", "ID"]));
         let subscribe: ArrayRef = Arc::new(Int64Array::from(vec![100, 200, 300]));
+        let debut_time: ArrayRef =
+            Arc::new(TimestampNanosecondArray::from(vec![1, 2, 3]));
         RecordBatch::try_from_iter(vec![
             ("名字", name),
             ("組別", group),
             ("訂閱數", subscribe),
+            ("出道時間", debut_time),
         ])
         .unwrap()
     }

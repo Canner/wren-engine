@@ -15,17 +15,19 @@ use crate::logical_plan::analyze::plan::{
 use crate::logical_plan::utils::create_remote_table_source;
 use crate::mdl::manifest::Model;
 use crate::mdl::utils::quoted;
-use crate::mdl::AnalyzedWrenMDL;
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
 
 /// [ModelGenerationRule] is responsible for generating the model plan node.
 pub struct ModelGenerationRule {
     analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
+    session_state: SessionStateRef,
 }
 
 impl ModelGenerationRule {
-    pub fn new(mdl: Arc<AnalyzedWrenMDL>) -> Self {
+    pub fn new(mdl: Arc<AnalyzedWrenMDL>, session_state: SessionStateRef) -> Self {
         Self {
             analyzed_wren_mdl: mdl,
+            session_state,
         }
     }
 
@@ -39,7 +41,10 @@ impl ModelGenerationRule {
                     extension.node.as_any().downcast_ref::<ModelPlanNode>()
                 {
                     let source_plan = model_plan.relation_chain.clone().plan(
-                        ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
+                        ModelGenerationRule::new(
+                            Arc::clone(&self.analyzed_wren_mdl),
+                            Arc::clone(&self.session_state),
+                        ),
                     )?;
                     let result = match source_plan {
                         Some(plan) => {
@@ -73,9 +78,10 @@ impl ModelGenerationRule {
                             LogicalPlanBuilder::scan_with_filters(
                                 TableReference::from(model.table_reference()),
                                 create_remote_table_source(
-                                    &model,
+                                    Arc::clone(&model),
                                     &self.analyzed_wren_mdl.wren_mdl(),
-                                ),
+                                    Arc::clone(&self.session_state),
+                                )?,
                                 None,
                                 original_scan.filters.clone(),
                             ).expect("Failed to create table scan")
@@ -89,7 +95,10 @@ impl ModelGenerationRule {
                         None => {
                             LogicalPlanBuilder::scan(
                                 TableReference::from(model.table_reference()),
-                                create_remote_table_source(&model, &self.analyzed_wren_mdl.wren_mdl()),
+                                create_remote_table_source(
+                                    Arc::clone(&model),
+                                    &self.analyzed_wren_mdl.wren_mdl(),
+                                    Arc::clone(&self.session_state))?,
                                 None,
                             ).expect("Failed to create table scan")
                                 .project(model_plan.required_exprs.clone())?
@@ -111,7 +120,10 @@ impl ModelGenerationRule {
                     .downcast_ref::<CalculationPlanNode>(
                 ) {
                     let source_plan = calculation_plan.relation_chain.clone().plan(
-                        ModelGenerationRule::new(Arc::clone(&self.analyzed_wren_mdl)),
+                        ModelGenerationRule::new(
+                            Arc::clone(&self.analyzed_wren_mdl),
+                            Arc::clone(&self.session_state),
+                        ),
                     )?;
 
                     if let Expr::Alias(alias) = calculation_plan.measures[0].clone() {
