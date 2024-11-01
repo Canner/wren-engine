@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.config import get_config
 from app.main import app
 from tests.conftest import file_path
-from tests.routers.v3.connector.bigquery.conftest import base_url
+from tests.routers.v3.connector.mssql.conftest import base_url
 
 manifest = {
     "catalog": "my_catalog",
@@ -59,11 +59,11 @@ with TestClient(app) as client:
         the_func = next(filter(lambda x: x["name"] == "ABS", result))
         assert the_func == {
             "name": "ABS",
-            "description": "Returns the absolute value of a number.",
+            "description": "Returns absolute value.",
             "function_type": "scalar",
             "param_names": None,
             "param_types": None,
-            "return_type": "FLOAT64",
+            "return_type": "Numeric",
         }
 
         config.set_remote_function_list_path(None)
@@ -86,7 +86,7 @@ with TestClient(app) as client:
         assert result == {
             "columns": ["col"],
             "data": [[1]],
-            "dtypes": {"col": "int64"},
+            "dtypes": {"col": "int32"},
         }
 
     def test_aggregate_function(manifest_str: str, connection_info):

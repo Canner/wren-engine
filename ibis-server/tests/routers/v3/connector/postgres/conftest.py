@@ -7,7 +7,7 @@ from testcontainers.postgres import PostgresContainer
 
 from tests.conftest import file_path
 
-pytestmark = pytest.mark.beta
+pytestmark = pytest.mark.postgres
 
 base_url = "/v3/connector/postgres"
 

@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-pytestmark = pytest.mark.beta
+pytestmark = pytest.mark.bigquery
 
 base_url = "/v3/connector/bigquery"
 

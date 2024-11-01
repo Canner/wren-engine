@@ -1,5 +1,5 @@
 function_type,name,return_type,description
-scalar,ABS,decimal/int,"Returns the absolute value of a number"
+scalar,ABS,int,"Returns the absolute value of a number"
 scalar,CONCAT,varchar,"Concatenates two or more strings together"
 scalar,SUBSTR,varchar,"Returns a substring from a string starting at a specified position"
 scalar,UPPER,varchar,"Converts a string to uppercase"

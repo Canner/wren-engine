@@ -95,7 +95,7 @@ with TestClient(app) as client:
             json={
                 "connectionInfo": connection_info,
                 "manifestStr": manifest_str,
-                "sql": "SELECT COUNT(*) AS col FROM (SELECT 1)",
+                "sql": "SELECT COUNT(*) AS col FROM (SELECT 1) AS temp_table",
             },
         )
         assert response.status_code == 200
