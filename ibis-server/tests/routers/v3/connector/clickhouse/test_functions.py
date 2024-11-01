@@ -38,6 +38,8 @@ def manifest_str():
 def set_remote_function_list_path():
     config = get_config()
     config.set_remote_function_list_path(function_list_path)
+    yield
+    config.set_remote_function_list_path(None)
 
 
 with TestClient(app) as client:
