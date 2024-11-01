@@ -1,5 +1,5 @@
 function_type,name,return_type,description
-scalar,unistr,varchar,"Postgres: Evaluate escaped Unicode characters in the argument".
+scalar,unistr,varchar,"Postgres: Evaluate escaped Unicode characters in the argument"
 aggregate,array_agg,array,"Aggregates values into array"
 aggregate,avg,numeric,"Returns average of non-null values"
 aggregate,bit_and,same as input,"Bitwise AND of non-null values"
