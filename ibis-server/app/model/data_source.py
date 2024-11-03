@@ -13,6 +13,7 @@ from app.model import (
     CannerConnectionInfo,
     ClickHouseConnectionInfo,
     ConnectionInfo,
+    DruidConnectionInfo,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
@@ -20,6 +21,7 @@ from app.model import (
     QueryCannerDTO,
     QueryClickHouseDTO,
     QueryDTO,
+    QueryDruidDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
@@ -39,6 +41,7 @@ class DataSource(StrEnum):
     postgres = auto()
     snowflake = auto()
     trino = auto()
+    druid = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -62,6 +65,7 @@ class DataSourceExtension(Enum):
     postgres = QueryPostgresDTO
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
+    druid = QueryDruidDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
@@ -106,6 +110,14 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
+        )
+        
+    @staticmethod
+    def get_druid_connection(info: DruidConnectionInfo) -> BaseBackend:
+        return ibis.druid.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            path=info.path,
         )
 
     @staticmethod
