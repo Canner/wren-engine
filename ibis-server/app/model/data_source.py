@@ -22,6 +22,7 @@ from app.model import (
     QueryClickHouseDTO,
     QueryDruidDTO,
     QueryDTO,
+    QueryDruidDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
@@ -110,6 +111,14 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
+        )
+        
+    @staticmethod
+    def get_druid_connection(info: DruidConnectionInfo) -> BaseBackend:
+        return ibis.druid.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            path=info.path,
         )
 
     @staticmethod

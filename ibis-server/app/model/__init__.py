@@ -45,7 +45,9 @@ class QueryPostgresDTO(QueryDTO):
 
 class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
-
+    
+class QueryDruidDTO(QueryDTO):
+    connection_info: DruidConnectionInfo = connection_info_field
 
 class QueryDruidDTO(QueryDTO):
     connection_info: DruidConnectionInfo = connection_info_field
@@ -79,6 +81,10 @@ class ClickHouseConnectionInfo(BaseModel):
     user: SecretStr
     password: SecretStr
 
+class DruidConnectionInfo(BaseModel):
+    host: SecretStr = Field(examples=["localhost"])
+    port: SecretStr = Field(examples=[8082])
+    path: str
 
 class DruidConnectionInfo(BaseModel):
     host: SecretStr = Field(examples=["localhost"])
@@ -138,7 +144,6 @@ class TrinoConnectionInfo(BaseModel):
     )  # Use `trino_schema` to avoid `schema` shadowing in BaseModel
     user: SecretStr | None = None
     password: SecretStr | None = None
-
 
 ConnectionInfo = (
     BigQueryConnectionInfo
