@@ -77,11 +77,12 @@ pub async fn create_ctx_with_mdl(
         ))
         //  The plan will be executed locally, so apply the default optimizer rules
     } else {
-         new_state.with_analyzer_rules(analyze_rule_for_unparsing(
-            Arc::clone(&analyzed_mdl),
-            reset_default_catalog_schema.clone(),
-        ))
-        .with_optimizer_rules(optimize_rule_for_unparsing())
+        new_state
+            .with_analyzer_rules(analyze_rule_for_unparsing(
+                Arc::clone(&analyzed_mdl),
+                reset_default_catalog_schema.clone(),
+            ))
+            .with_optimizer_rules(optimize_rule_for_unparsing())
     };
 
     let new_state = new_state.with_config(config).build();
