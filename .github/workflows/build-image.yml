@@ -103,7 +103,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
   build-ibis-arm64-image:
     needs: prepare-tag
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Docker meta

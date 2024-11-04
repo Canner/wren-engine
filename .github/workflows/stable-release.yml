@@ -150,7 +150,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
   stable-release-ibis-arm64:
     needs: prepare-version
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Docker meta
