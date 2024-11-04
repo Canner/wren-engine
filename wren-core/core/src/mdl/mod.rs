@@ -857,6 +857,18 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_count_wildcard_rule() -> Result<()> {
+        let ctx = SessionContext::new();
+
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
+        let sql = "select count(*) from (select 1)";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT count(*) FROM (SELECT 1)");
+        Ok(())
+    }
+
     async fn assert_sql_valid_executable(sql: &str) -> Result<()> {
         let ctx = SessionContext::new();
         // To roundtrip testing, we should register the mock table for the planned sql.
