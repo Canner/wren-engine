@@ -65,6 +65,7 @@ jobs:
         run: |
           just install
           just install-core
+          just update-core
       - name: Run tests
         env:
           WREN_ENGINE_ENDPOINT: http://localhost:8080
