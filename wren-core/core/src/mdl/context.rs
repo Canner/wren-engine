@@ -17,7 +17,6 @@ use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
-use datafusion::optimizer::analyzer::count_wildcard_rule::CountWildcardRule;
 use datafusion::optimizer::analyzer::expand_wildcard_rule::ExpandWildcardRule;
 use datafusion::optimizer::analyzer::inline_table_scan::InlineTableScan;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
@@ -88,7 +87,9 @@ pub async fn create_ctx_with_mdl(
         Arc::new(ExpandWildcardRule::new()),
         // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
-        Arc::new(CountWildcardRule::new()),
+        // Disable it to avoid generate the alias name, `count(*)` because BigQuery doesn't allow
+        // the special character `*` in the alias name
+        // Arc::new(CountWildcardRule::new()),
     ]);
 
     let new_state = if is_local_runtime {
