@@ -58,7 +58,6 @@ jobs:
             WREN_VERSION=${{ steps.prepare.outputs.WREN_VERSION }}
           push: true
   build-ibis-amd64-image:
-    needs: prepare-tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +90,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
   build-ibis-arm64-image:
-    needs: prepare-tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
