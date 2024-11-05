@@ -73,7 +73,6 @@ scalar,REGEXP_REPLACE,STRING,"Replaces all matches of the regex with a replaceme
 scalar,SUBSTR,STRING,"Returns a substring."
 scalar,CAST,ANY,"Converts a value to a different data type."
 scalar,SAFE_CAST,ANY,"Converts a value to a different data type, returning NULL on error."
-scalar,CURRENT_TIMESTAMP,TIMESTAMP,"Returns the current timestamp."
 scalar,CURRENT_DATE,DATE,"Returns the current date."
 scalar,DATE_ADD,DATE,"Adds a specified interval to a date."
 scalar,DATE_SUB,DATE,"Subtracts a specified interval from a date."
