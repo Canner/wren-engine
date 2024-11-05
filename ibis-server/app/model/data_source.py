@@ -20,8 +20,8 @@ from app.model import (
     QueryBigQueryDTO,
     QueryCannerDTO,
     QueryClickHouseDTO,
-    QueryDTO,
     QueryDruidDTO,
+    QueryDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
@@ -111,7 +111,7 @@ class DataSourceExtension(Enum):
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
         )
-        
+
     @staticmethod
     def get_druid_connection(info: DruidConnectionInfo) -> BaseBackend:
         return ibis.druid.connect(
