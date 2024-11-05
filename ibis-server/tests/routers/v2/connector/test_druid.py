@@ -1,92 +1,92 @@
-import base64
+import json
+import time
 
-import orjson
-import pandas as pd
 import pytest
-import sqlalchemy
-from sqlalchemy import text
-from testcontainers.core.container import DockerContainer
-from testcontainers.core.image import DockerImage
-
-from tests.confest import file_path
+import requests
+from testcontainers.compose import DockerCompose
 
 pytestmark = pytest.mark.druid
 
 base_url = "/v2/connector/druid"
 
-manifest = {
-    "catalog": "my_catalog",
-    "schema": "my_schema",
-    "models": [
-        {
-            "name": "Orders",
-            "refSql": "select * from public.orders",
-            "columns": [
-                {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
-                {"name": "custkey", "expression": "o_custkey", "type": "integer"},
-                {
-                    "name": "orderstatus",
-                    "expression": "o_orderstatus",
-                    "type": "varchar",
-                },
-                {
-                    "name": "totalprice",
-                    "expression": "o_totalprice",
-                    "type": "float",
-                },
-                {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
-                {
-                    "name": "order_cust_key",
-                    "expression": "concat(o_orderkey, '_', o_custkey)",
-                    "type": "varchar",
-                },
-                {
-                    "name": "timestamp",
-                    "expression": "cast('2024-01-01T23:59:59' as timestamp)",
-                    "type": "timestamp",
-                },
-                {
-                    "name": "timestamptz",
-                    "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)",
-                    "type": "timestamp",
-                },
-                {
-                    "name": "test_null_time",
-                    "expression": "cast(NULL as timestamp)",
-                    "type": "timestamp",
-                },
-                {
-                    "name": "bytea_column",
-                    "expression": "cast('abc' as bytea)",
-                    "type": "bytea",
-                },
-            ],
-            "primaryKey": "orderkey",
-        },
-    ],
-}
 
+def wait_for_druid_service(url, timeout=300, interval=5):
+    """Wait for the Druid service to be ready.
 
-@pytest.fixture
-def manifest_str():
-    return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+    :param url: The URL to check.
+    :param timeout: The maximum time to wait (in seconds).
+    :param interval: The interval between checks (in seconds).
+    :return: True if the service is ready, False if the timeout is reached.
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return True
+        except requests.ConnectionError:
+            pass
+        time.sleep(interval)
+    return False
 
 
 @pytest.fixture(scope="module")
-def docker(request) -> DockerContainer:
-    with DockerImage(tag="apache/druid:latest") as image:
-        with DockerContainer(str(image)) as container:
-            druid = container.start()
-            engine = sqlalchemy.create_engine(druid.get_connection_url())
-            pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
-                "orders", engine, index=False
-            )
-            with engine.begin() as conn:
-                conn.execute(
-                    text("COMMENT ON TABLE orders IS 'This is a table comment'")
-                )
-                conn.execute(
-                    text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'")
-                )
-            request.addfinalizer(druid.stop)
-            return druid
+def druid(request) -> DockerCompose:
+    with DockerCompose(
+        "tests/resource/druid", compose_file_name="docker-compose.yml", wait=True
+    ) as compose:
+        druid_url = "http://localhost:8081/status"
+        if not wait_for_druid_service(druid_url):
+            compose.stop()
+            raise Exception("Druid service did not become ready in time")
+
+        yield compose
+
+
+def test_create_datasource(druid: DockerCompose):
+    url = "http://localhost:8081/druid/indexer/v1/task"
+    payload = json.dumps(
+        {
+            "type": "index_parallel",
+            "spec": {
+                "dataSchema": {
+                    "dataSource": "orders",
+                    "timestampSpec": {"column": "timestamp_column", "format": "auto"},
+                    "dimensionsSpec": {
+                        "dimensions": ["dimension1", "dimension2", "dimension3"]
+                    },
+                    "metricsSpec": [
+                        {"type": "count", "name": "count"},
+                        {
+                            "type": "doubleSum",
+                            "name": "metric1",
+                            "fieldName": "metric1",
+                        },
+                    ],
+                    "granularitySpec": {
+                        "type": "uniform",
+                        "segmentGranularity": "day",
+                        "queryGranularity": "none",
+                    },
+                },
+                "ioConfig": {
+                    "type": "index_parallel",
+                    "inputSource": {
+                        "type": "local",
+                        "baseDir": "tests/resource/tpch/data",
+                        "filter": "orders.parquet",
+                    },
+                    "inputFormat": {"type": "parquet"},
+                },
+                "tuningConfig": {
+                    "type": "index_parallel",
+                    "maxRowsPerSegment": 5000000,
+                    "maxRowsInMemory": 25000,
+                },
+            },
+        }
+    )
+    headers = {"Content-Type": "application/json"}
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    assert response.status_code == 200
