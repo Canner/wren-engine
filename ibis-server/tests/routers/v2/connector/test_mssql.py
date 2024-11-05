@@ -77,7 +77,9 @@ def manifest_str():
 @pytest.fixture(scope="module")
 def mssql(request) -> SqlServerContainer:
     mssql = SqlServerContainer(
-        "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04", dialect="mssql+pyodbc"
+        "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04",
+        dialect="mssql+pyodbc",
+        password="{R;3G1/8Al2AniRye",
     ).start()
     engine = sqlalchemy.create_engine(
         f"{mssql.get_connection_url()}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
