@@ -166,7 +166,4 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def _escape_special_characters_for_odbc(value: str) -> str:
-        if ";" in value or value.startswith("{"):
-            return "{" + value.replace("}", "}}") + "}"
-        else:
-            return value
+        return "{" + value.replace("}", "}}") + "}"
