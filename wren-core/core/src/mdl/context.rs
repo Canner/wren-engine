@@ -37,7 +37,6 @@ use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::push_down_filter::PushDownFilter;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
-use datafusion::optimizer::rewrite_disjunctive_predicate::RewriteDisjunctivePredicate;
 use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
 use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
@@ -163,7 +162,6 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(ExtractEquijoinPredicate::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
-        Arc::new(RewriteDisjunctivePredicate::new()),
         Arc::new(EliminateDuplicatedExpr::new()),
         Arc::new(EliminateFilter::new()),
         Arc::new(EliminateCrossJoin::new()),

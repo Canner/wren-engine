@@ -517,14 +517,17 @@ mod test {
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
         let sql = "select * from test.test.customer_view";
         println!("Original: {}", sql);
-        let actual = mdl::transform_sql_with_ctx(
+        let _ = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
             &[],
             sql,
         )
         .await?;
-        assert_sql_valid_executable(&actual).await?;
+        // TODO: There are some issues for round trip of the view plan
+        // Disable the roundtrip testing before fixed.
+        // see https://github.com/apache/datafusion/issues/13272
+        // assert_sql_valid_executable(&actual).await?;
         Ok(())
     }
 
@@ -554,8 +557,8 @@ mod test {
         .await?;
         assert_eq!(actual,
             "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
-            (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", \
-            datafusion.public.customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
+            (SELECT customer.\"Custkey\" AS \"Custkey\", \
+            customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
         Ok(())
     }
 
@@ -593,7 +596,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM \
-        (SELECT \"Customer\".\"Custkey\" FROM (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\" \
+        (SELECT \"Customer\".\"Custkey\" FROM (SELECT customer.\"Custkey\" AS \"Custkey\" \
         FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
@@ -605,7 +608,7 @@ mod test {
         .await?;
         assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM \
         (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
-        (SELECT datafusion.public.customer.\"Custkey\" AS \"Custkey\", datafusion.public.customer.\"Name\" AS \"Name\" \
+        (SELECT customer.\"Custkey\" AS \"Custkey\", customer.\"Name\" AS \"Name\" \
         FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\" GROUP BY \"Customer\".\"Name\"");
 
         // TODO: support window functions analysis
