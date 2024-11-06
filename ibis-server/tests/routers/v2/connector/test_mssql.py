@@ -11,7 +11,7 @@ from testcontainers.mssql import SqlServerContainer
 
 from app.main import app
 from app.model.validator import rules
-from tests.confest import file_path
+from tests.conftest import file_path
 
 pytestmark = pytest.mark.mssql
 
