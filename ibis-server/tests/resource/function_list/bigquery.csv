@@ -1,0 +1,2 @@
+function_type,name,return_type,description
+scalar,timestamp_millis,timestamp,""

@@ -31,7 +31,7 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
             rewritten_sql
-            == 'SELECT customer.c_custkey, customer.c_name FROM (SELECT main.customer.c_custkey AS c_custkey, main.customer.c_name AS c_name FROM main.customer) AS customer'
+            == 'SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey AS c_custkey, customer.c_name AS c_name FROM main.customer) AS customer'
     )
 
     session_context = SessionContext(manifest_str, "tests/functions.csv")
@@ -39,21 +39,21 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
             rewritten_sql
-            == 'SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT main.customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer'
+            == 'SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer'
     )
 
 def test_read_function_list():
     path = "tests/functions.csv"
     session_context = SessionContext(manifest_str, path)
     functions = session_context.get_available_functions()
-    assert len(functions) == 260
+    assert len(functions) == 271
 
     rewritten_sql = session_context.transform_sql("SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer")
-    assert rewritten_sql == 'SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT main.customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer'
+    assert rewritten_sql == 'SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer'
 
     session_context = SessionContext(manifest_str, None)
     functions = session_context.get_available_functions()
-    assert len(functions) == 258
+    assert len(functions) == 269
 
 
 def test_get_available_functions():
