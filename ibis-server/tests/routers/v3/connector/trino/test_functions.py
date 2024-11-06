@@ -57,7 +57,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 296
+        assert len(result) == 295
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
