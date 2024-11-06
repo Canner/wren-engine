@@ -3,7 +3,7 @@ import base64
 import orjson
 
 from app.mdl.context import get_session_context
-from tests.confest import file_path
+from tests.conftest import file_path
 
 
 def test_cache():

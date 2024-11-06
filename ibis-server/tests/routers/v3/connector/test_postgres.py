@@ -426,3 +426,4 @@ with TestClient(app) as client:
     def _to_connection_url(pg: PostgresContainer):
         info = _to_connection_info(pg)
         return f"postgres://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
+
