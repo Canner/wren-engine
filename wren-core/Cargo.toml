@@ -15,9 +15,8 @@ version = "0.1.0"
 [workspace.dependencies]
 async-trait = "0.1.80"
 # We require the following commits
-# https://github.com/apache/datafusion/pull/12605
-# https://github.com/apache/datafusion/pull/12603
-datafusion = { git = "https://github.com/apache/datafusion.git", rev = "35adf47fdbd626d79051799921146b96e3345e3b" }
+# https://github.com/apache/datafusion/pull/13241
+datafusion = { git = "https://github.com/apache/datafusion.git", rev = "7c6f891b4b5a007e29fb3890ed5315ef916ae1d3" }
 env_logger = "0.11.3"
 log = { version = "0.4.14" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
