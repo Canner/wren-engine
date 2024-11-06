@@ -51,13 +51,13 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 258
+        assert len(result) == 269
 
         config.set_remote_function_list_path(function_list_path)
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 338
+        assert len(result) == 348
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
@@ -72,7 +72,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 258
+        assert len(result) == 269
 
     def test_scalar_function(manifest_str: str, connection_info):
         response = client.post(
