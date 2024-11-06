@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 21
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -69,7 +69,7 @@ jobs:
           build-args: |
             WREN_VERSION=${{ steps.prepare.outputs.WREN_VERSION }}
           push: true
-  build-ibis-image:
+  build-ibis-amd64-image:
     needs: prepare-tag
     runs-on: ubuntu-latest
     steps:
@@ -98,6 +98,38 @@ jobs:
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+  build-ibis-arm64-image:
+    needs: prepare-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/canner/wren-engine-ibis
+          tags: |
+            type=raw,value=${{ needs.prepare-tag.outputs.tag_name }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ibis-server
+          build-contexts: |
+            wren-core-py=./wren-core-py
+            wren-core=./wren-core
+          platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

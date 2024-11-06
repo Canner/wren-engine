@@ -75,7 +75,8 @@ class Column(BaseModel):
 
 
 class TableProperties(BaseModel):
-    schema: str | None
+    # To prevent schema shadowing in Pydantic, avoid using schema as a field name
+    schema_: str | None = Field(alias="schema", default=None)
     catalog: str | None
     table: str | None  # only table name without schema or catalog
 
