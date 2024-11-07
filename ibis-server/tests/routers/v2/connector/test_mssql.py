@@ -1,5 +1,4 @@
 import base64
-import urllib
 
 import orjson
 import pandas as pd
@@ -75,16 +74,13 @@ def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
+mssql_image = "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04"
+
+
 @pytest.fixture(scope="module")
 def mssql(request) -> SqlServerContainer:
-    mssql = SqlServerContainer(
-        "mcr.microsoft.com/mssql/server:2019-CU27-ubuntu-20.04",
-        dialect="mssql+pyodbc",
-        password="{R;3G1/8Al2AniRye",
-    ).start()
-    engine = sqlalchemy.create_engine(
-        f"{mssql.get_connection_url()}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
-    )
+    mssql = SqlServerContainer(mssql_image, dialect="mssql+pyodbc").start()
+    engine = sqlalchemy.create_engine(_to_connection_url(mssql))
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
@@ -153,7 +149,6 @@ with TestClient(app) as client:
             "bytea_column": "object",
         }
 
-    @pytest.mark.skip("Wait ibis handle special characters in connection string")
     def test_query_with_connection_url(manifest_str, mssql: SqlServerContainer):
         connection_url = _to_connection_url(mssql)
         response = client.post(
@@ -381,6 +376,21 @@ with TestClient(app) as client:
         assert response.status_code == 200
         assert "Microsoft SQL Server 2019" in response.text
 
+    def test_password_with_special_characters():
+        pwd = "{R;3G1/8Al2AniRye"
+        with SqlServerContainer(
+            mssql_image,
+            dialect="mssql+pyodbc",
+            password=pwd,
+        ) as mssql:
+            connection_info = _to_connection_info(mssql)
+            response = client.post(
+                url=f"{base_url}/metadata/version",
+                json={"connectionInfo": connection_info},
+            )
+            assert response.status_code == 200
+            assert "Microsoft SQL Server 2019" in response.text
+
     def _to_connection_info(mssql: SqlServerContainer):
         return {
             "host": mssql.get_container_host_ip(),
@@ -393,4 +403,4 @@ with TestClient(app) as client:
 
     def _to_connection_url(mssql: SqlServerContainer):
         info = _to_connection_info(mssql)
-        return f"mssql://{info['user']}:{urllib.parse.quote_plus(info['password'])}@{info['host']}:{info['port']}/{info['database']}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
+        return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
