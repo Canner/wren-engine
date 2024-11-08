@@ -84,17 +84,19 @@ jobs:
           push: true
   build-ibis-image:
     needs: prepare-tag
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
+        arch:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: linux_arm64_runner
+            platform: linux/arm64
+    runs-on: ${{ matrix.arch.runner }}
     steps:
       - name: Prepare platform
         run: |
-          platform=${{ matrix.platform }}
+          platform=${{ matrix.arch.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Docker meta
@@ -116,7 +118,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          platforms: ${{ matrix.platform }}
+          platforms: ${{ matrix.arch.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           context: ./ibis-server
           build-contexts: |
