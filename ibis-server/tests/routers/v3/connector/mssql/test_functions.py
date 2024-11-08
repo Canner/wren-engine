@@ -58,9 +58,9 @@ with TestClient(app) as client:
         assert response.status_code == 200
         result = response.json()
         assert len(result) == 321
-        the_func = next(filter(lambda x: x["name"] == "ABS", result))
+        the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
-            "name": "ABS",
+            "name": "abs",
             "description": "Returns absolute value.",
             "function_type": "scalar",
             "param_names": None,

@@ -61,11 +61,11 @@ with TestClient(app) as client:
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
-            "description": "Returns absolute value of the argument",
+            "description": "Returns absolute value",
             "function_type": "scalar",
             "param_names": None,
             "param_types": None,
-            "return_type": "double",
+            "return_type": "number",
         }
 
         config.set_remote_function_list_path(None)
