@@ -7,6 +7,10 @@ on:
         type: string
         description: Specific version number (Optional). Default will be the current version plus 0.0.1.
 
+env:
+  ENGINE_IMAGE: ghcr.io/canner/wren-engine
+  IBIS_IMAGE: ghcr.io/canner/wren-engine-ibis
+
 jobs:
   prepare-version:
     runs-on: ubuntu-latest
@@ -84,7 +88,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/canner/wren-engine
+          images: ${{ env.ENGINE_IMAGE }}
           tags: |
             type=raw,value=${{ needs.prepare-version.outputs.maven_version }}
             type=raw,value=latest
@@ -113,19 +117,26 @@ jobs:
           build-args: |
             WREN_VERSION=${{ steps.prepare.outputs.WREN_VERSION }}
           push: true
-  stable-release-ibis-amd64:
+  stable-release-ibis:
     needs: prepare-version
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     steps:
+      - name: Prepare platform
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/canner/wren-engine-ibis
-          tags: |
-            type=raw,value=${{ needs.prepare-version.outputs.next_version }}
-            type=raw,value=latest
+          images: ${{ env.IBIS_IMAGE }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -136,28 +147,48 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
         with:
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
           context: ./ibis-server
           build-args: |
             RUST_PROFILE=--release
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-  stable-release-ibis-arm64:
-    needs: prepare-version
+          outputs: type=image,name=${{ env.IBIS_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+  merge:
     runs-on: ubuntu-latest
+    needs: [ prepare-version, stable-release-ibis ]
     steps:
-      - uses: actions/checkout@v4
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/canner/wren-engine-ibis
+          images: ${{ env.IBIS_IMAGE }}
           tags: |
             type=raw,value=${{ needs.prepare-version.outputs.next_version }}
             type=raw,value=latest
@@ -167,19 +198,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./ibis-server
-          build-args: |
-            RUST_PROFILE=--release
-          build-contexts: |
-            wren-core-py=./wren-core-py
-            wren-core=./wren-core
-          platforms: linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IBIS_IMAGE }}@sha256:%s ' *) \
+            --tag ${{ steps.meta.outputs.tags }}
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ steps.meta.outputs.tags }}
