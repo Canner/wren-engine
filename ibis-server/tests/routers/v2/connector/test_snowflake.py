@@ -94,7 +94,7 @@ with TestClient(app) as client:
             36901,
             "O",
             "173665.47",
-            "1996-01-02 00:00:00.000000",
+            "1996-01-02",
             "1_36901",
             "2024-01-01 23:59:59.000000",
             "2024-01-01 23:59:59.000000 UTC",
@@ -261,14 +261,24 @@ with TestClient(app) as client:
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_metadata_list_tables():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_metadata_list_constraints():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_metadata_get_version():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text is not None
