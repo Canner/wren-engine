@@ -21,7 +21,8 @@ class SnowflakeMetadata(Metadata):
         self.connection = DataSource.snowflake.get_connection(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        sql = """
+        schema = self._get_schema_name()
+        sql = f"""
             SELECT
                 c.TABLE_CATALOG AS TABLE_CATALOG,
                 c.TABLE_SCHEMA AS TABLE_SCHEMA,
@@ -38,7 +39,7 @@ class SnowflakeMetadata(Metadata):
                 ON c.TABLE_SCHEMA = t.TABLE_SCHEMA
                 AND c.TABLE_NAME = t.TABLE_NAME
             WHERE
-                c.TABLE_SCHEMA NOT IN ('PUBLIC', 'INFORMATION_SCHEMA');
+                c.TABLE_SCHEMA = '{schema}';
         """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
@@ -75,13 +76,19 @@ class SnowflakeMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
-        sql = """
-            SHOW IMPORTED KEYS IN DATABASE;
+        database = self._get_database_name()
+        schema = self._get_schema_name()
+        sql = f"""
+            SHOW IMPORTED KEYS IN SCHEMA {database}.{schema};
         """
         with closing(self.connection.raw_sql(sql)) as cur:
             fields = [field[0] for field in cur.description]
             result = [dict(zip(fields, row)) for row in cur.fetchall()]
-            res = ibis.memtable(result).to_pandas().to_dict(orient="records")
+            res = (
+                ibis.memtable(result).to_pandas().to_dict(orient="records")
+                if len(result) > 0
+                else []
+            )
             constraints = []
             for row in res:
                 constraints.append(
@@ -107,6 +114,12 @@ class SnowflakeMetadata(Metadata):
 
     def get_version(self) -> str:
         return self.connection.sql("SELECT CURRENT_VERSION()").to_pandas().iloc[0, 0]
+
+    def _get_database_name(self):
+        return self.connection_info.database.get_secret_value()
+
+    def _get_schema_name(self):
+        return self.connection_info.sf_schema.get_secret_value()
 
     def _format_compact_table_name(self, schema: str, table: str):
         return f"{schema}.{table}"
