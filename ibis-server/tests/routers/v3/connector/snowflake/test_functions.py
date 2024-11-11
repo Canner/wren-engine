@@ -57,15 +57,15 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 427
+        assert len(result) == 340
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
-            "description": "Returns absolute value of the argument",
+            "description": "Returns absolute value",
             "function_type": "scalar",
             "param_names": None,
             "param_types": None,
-            "return_type": "double",
+            "return_type": "number",
         }
 
         config.set_remote_function_list_path(None)
