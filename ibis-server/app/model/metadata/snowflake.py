@@ -142,7 +142,7 @@ class SnowflakeMetadata(Metadata):
             "smallint": WrenEngineColumnType.SMALLINT,
             "tinyint": WrenEngineColumnType.TINYINT,
             "byteint": WrenEngineColumnType.TINYINT,
-            # Decimal
+            # Float
             "float4": WrenEngineColumnType.FLOAT4,
             "float": WrenEngineColumnType.FLOAT8,
             "float8": WrenEngineColumnType.FLOAT8,

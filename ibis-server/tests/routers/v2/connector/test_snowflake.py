@@ -267,6 +267,27 @@ with TestClient(app) as client:
             json={"connectionInfo": connection_info},
         )
         assert response.status_code == 200
+        tables = response.json()
+        assert len(tables) == 8
+        table = next(filter(lambda t: t["name"] == "TPCH_SF1.ORDERS", tables))
+        assert table["name"] == "TPCH_SF1.ORDERS"
+        assert table["primaryKey"] is not None
+        assert table["description"] == "Orders data as defined by TPC-H"
+        assert table["properties"] == {
+            "catalog": "SNOWFLAKE_SAMPLE_DATA",
+            "schema": "TPCH_SF1",
+            "table": "ORDERS",
+        }
+        assert len(table["columns"]) == 9
+        column = next(filter(lambda c: c["name"] == "O_COMMENT", table["columns"]))
+        assert column == {
+            "name": "O_COMMENT",
+            "nestedColumns": None,
+            "type": "TEXT",
+            "notNull": True,
+            "description": None,
+            "properties": None,
+        }
 
     def test_metadata_list_constraints():
         response = client.post(
