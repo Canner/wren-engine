@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::logical_plan::analyze::expand_view::ExpandWrenViewRule;
 use crate::logical_plan::analyze::model_anlayze::ModelAnalyzeRule;
 use crate::logical_plan::analyze::model_generation::ModelGenerationRule;
+use crate::logical_plan::optimize::simplify_timestamp::TimestampSimplify;
 use crate::logical_plan::utils::create_schema;
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
@@ -179,6 +180,7 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
+        Arc::new(TimestampSimplify::new()),
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),
