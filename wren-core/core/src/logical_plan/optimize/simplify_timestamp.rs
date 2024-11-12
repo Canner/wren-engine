@@ -140,9 +140,16 @@ impl TreeNodeRewriter for ExprRewriter<'_> {
 
     fn f_down(&mut self, expr: Expr) -> Result<Transformed<Self::Node>> {
         match &expr {
-            Expr::Cast(Cast { data_type, .. })
-            | Expr::TryCast(TryCast { data_type, .. })
-                if is_timestamp(data_type) =>
+            // we only simplify the cast expression for the literal value
+            Expr::Cast(Cast {
+                data_type,
+                expr: sub_expr,
+            })
+            | Expr::TryCast(TryCast {
+                data_type,
+                expr: sub_expr,
+            }) if is_timestamp(data_type)
+                && matches!(sub_expr.as_ref(), Expr::Literal(_)) =>
             {
                 let original_name = self.name_preserver.save(&expr);
                 let new_e = self
