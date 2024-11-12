@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from tests.routers.v3.connector.postgres.conftest import base_url
+from tests.routers.v3.connector.bigquery.conftest import base_url
 
 manifest = {
     "catalog": "wren",
@@ -14,7 +14,7 @@ manifest = {
         {
             "name": "orders",
             "tableReference": {
-                "schema": "public",
+                "schema": "tpch_tiny",
                 "table": "orders",
             },
             "columns": [
@@ -86,18 +86,18 @@ with TestClient(app) as client:
             "2024-01-01 23:59:59.000000",
             "2024-01-16 04:00:00.000000",  # utc-5
             "2024-07-16 03:00:00.000000",  # utc-4
-            "1_370",
-            370,
-            "1996-01-02",
-            1,
-            "O",
-            "172799.49",
+            "36485_1202",
+            1202,
+            "1992-06-06",
+            36485,
+            "F",
+            356711.63,
         ]
         assert result["dtypes"] == {
-            "o_orderkey": "int32",
-            "o_custkey": "int32",
+            "o_orderkey": "int64",
+            "o_custkey": "int64",
             "o_orderstatus": "object",
-            "o_totalprice": "object",
+            "o_totalprice": "float64",
             "o_orderdate": "object",
             "order_cust_key": "object",
             "timestamp": "object",
@@ -105,22 +105,6 @@ with TestClient(app) as client:
             "dst_utc_minus_5": "object",
             "dst_utc_minus_4": "object",
         }
-
-    def test_query_with_connection_url(manifest_str, connection_url):
-        response = client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": {"connectionUrl": connection_url},
-                "manifestStr": manifest_str,
-                "sql": "SELECT * FROM wren.public.orders LIMIT 1",
-            },
-        )
-        assert response.status_code == 200
-        result = response.json()
-        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-        assert len(result["data"]) == 1
-        assert result["data"][0][0] == "2024-01-01 23:59:59.000000"
-        assert result["dtypes"] is not None
 
     def test_query_with_limit(manifest_str, connection_info):
         response = client.post(
