@@ -57,7 +57,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == DATAFUSION_FUNCTION_COUNT + 80
+        assert len(result) == DATAFUSION_FUNCTION_COUNT + 79
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
