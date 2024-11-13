@@ -296,6 +296,9 @@ with TestClient(app) as client:
         )
         assert response.status_code == 200
 
+        result = response.json()
+        assert len(result) == 0
+
     def test_metadata_get_version():
         response = client.post(
             url=f"{base_url}/metadata/version",
