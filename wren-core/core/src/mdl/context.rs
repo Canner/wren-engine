@@ -176,7 +176,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Filters can't be pushed down past Limits, we should do PushDownFilter after PushDownLimit
         // TODO: Sort with pushdown-limit doesn't support to be unparse
         // Arc::new(PushDownLimit::new()),
-        Arc::new(PushDownFilter::new()),
+        // Disable PushDownFilter to avoid the casting for bigquery (datetime/timestamp) column be removed
+        // Arc::new(PushDownFilter::new()),
         Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
