@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.config import get_config
 from app.main import app
 from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
+from tests.conftest import DATAFUSION_FUNCTION_COUNT
 
 manifest = {
     "catalog": "my_catalog",
@@ -40,13 +41,13 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 269
+        assert len(result) == DATAFUSION_FUNCTION_COUNT
 
         config.set_remote_function_list_path(function_list_path)
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 302
+        assert len(result) == DATAFUSION_FUNCTION_COUNT + 30
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
@@ -61,7 +62,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 269
+        assert len(result) == DATAFUSION_FUNCTION_COUNT
 
     def test_scalar_function(manifest_str: str, connection_info):
         response = client.post(
