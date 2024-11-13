@@ -24,7 +24,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "type=sha" > tags.txt
-            echo "type=raw,value=nightly" > tags.txt
+            echo "type=raw,value=nightly" >> tags.txt
           fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "${{ github.event.inputs.docker_image_tag_name }}" ]; then
