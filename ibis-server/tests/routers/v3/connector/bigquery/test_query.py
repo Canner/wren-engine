@@ -211,3 +211,29 @@ with TestClient(app) as client:
         )
         assert response.status_code == 422
         assert response.text is not None
+
+    def test_timestamp_func(manifest_str, connection_info):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT timestamp_millis(1000000) as millis, \
+                    timestamp_micros(1000000) as micros, \
+                    timestamp_seconds(1000000) as seconds",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 3
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            "1970-01-01 00:16:40.000000 UTC",
+            "1970-01-01 00:00:01.000000 UTC",
+            "1970-01-12 13:46:40.000000 UTC",
+        ]
+        assert result["dtypes"] == {
+            "millis": "object",
+            "micros": "object",
+            "seconds": "object",
+        }

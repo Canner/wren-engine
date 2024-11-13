@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.config import get_config
 from app.main import app
-from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
-from tests.routers.v3.connector.bigquery.conftest import base_url
+from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
+from tests.conftest import DATAFUSION_FUNCTION_COUNT
 
 manifest = {
     "catalog": "my_catalog",
@@ -26,20 +26,10 @@ manifest = {
     ],
 }
 
-function_list_path = file_path("../resources/function_list")
-
 
 @pytest.fixture
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
-
-
-@pytest.fixture(autouse=True)
-def set_remote_function_list_path():
-    config = get_config()
-    config.set_remote_function_list_path(function_list_path)
-    yield
-    config.set_remote_function_list_path(None)
 
 
 with TestClient(app) as client:
@@ -57,7 +47,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == DATAFUSION_FUNCTION_COUNT + 30
+        assert len(result) == DATAFUSION_FUNCTION_COUNT + 33
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
