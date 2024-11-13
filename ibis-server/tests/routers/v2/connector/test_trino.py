@@ -72,7 +72,7 @@ def trino(request) -> TrinoContainer:
     db = TrinoContainer().start()
 
     # To avoid `TrinoQueryError(type=INTERNAL_ERROR, name=GENERIC_INTERNAL_ERROR, message="nodes is empty")`
-    time.sleep(10)
+    time.sleep(5)
 
     conn = connect(
         host=db.get_container_host_ip(),
