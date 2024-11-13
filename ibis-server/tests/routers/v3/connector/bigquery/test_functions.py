@@ -6,8 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.config import get_config
 from app.main import app
-from tests.conftest import file_path
-from tests.routers.v3.connector.bigquery.conftest import base_url
+from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
 
 manifest = {
     "catalog": "my_catalog",
@@ -26,20 +25,10 @@ manifest = {
     ],
 }
 
-function_list_path = file_path("../resources/function_list")
-
 
 @pytest.fixture
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
-
-
-@pytest.fixture(autouse=True)
-def set_remote_function_list_path():
-    config = get_config()
-    config.set_remote_function_list_path(function_list_path)
-    yield
-    config.set_remote_function_list_path(None)
 
 
 with TestClient(app) as client:
@@ -57,10 +46,10 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == 299
-        the_func = next(filter(lambda x: x["name"] == "abs", result))
+        assert len(result) == 368
+        the_func = next(filter(lambda x: x["name"] == "ABS", result))
         assert the_func == {
-            "name": "abs",
+            "name": "ABS",
             "description": "Returns the absolute value of a number.",
             "function_type": "scalar",
             "param_names": None,
