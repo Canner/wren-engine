@@ -19,7 +19,7 @@ ibis-framework = { version = "9.5.0", extras = [
   "snowflake",
   "trino",
 ] }
-google-auth = "2.35.0"
+google-auth = "2.36.0"
 httpx = "0.27.2"
 python-dotenv = "1.0.1"
 orjson = "3.10.11"
@@ -40,7 +40,7 @@ testcontainers = { version = "4.8.2", extras = [
 ] }
 sqlalchemy = "2.0.36"
 pre-commit = "4.0.1"
-ruff = "0.7.2"
+ruff = "0.7.3"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.6"

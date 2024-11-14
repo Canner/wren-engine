@@ -3,9 +3,13 @@ import pathlib
 
 import pytest
 
+from app.config import get_config
+from tests.conftest import file_path
+
 pytestmark = pytest.mark.bigquery
 
 base_url = "/v3/connector/bigquery"
+function_list_path = file_path("../resources/function_list")
 
 
 def pytest_collection_modifyitems(items):
@@ -22,3 +26,11 @@ def connection_info():
         "dataset_id": "tpch_tiny",
         "credentials": os.getenv("TEST_BIG_QUERY_CREDENTIALS_BASE64_JSON"),
     }
+
+
+@pytest.fixture(autouse=True)
+def set_remote_function_list_path():
+    config = get_config()
+    config.set_remote_function_list_path(function_list_path)
+    yield
+    config.set_remote_function_list_path(None)
