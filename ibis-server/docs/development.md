@@ -28,6 +28,7 @@ This installs the pre-commit hooks.
 To get the application running:
 1. Execute `just install` to install the dependencies
 2. Create a `.env` file and fill in the required environment variables (see [Environment Variables](#Environment-Variables))
+3. If you want to use `wren_core`, you need to install the core by `just install-core`. After you modify the core, you can update it by `just update-core`.
 
 To start the server:
 - Execute `just run` to start the server
