@@ -967,7 +967,7 @@ mod test {
                             .build(),
                     )
                     .column(
-                        ColumnBuilder::new("cast_timestamp", "timestamp")
+                        ColumnBuilder::new("cast_timestamptz", "timestamptz")
                             .expression(r#"cast("出道時間" as timestamp with time zone)"#)
                             .build(),
                     )
@@ -976,7 +976,7 @@ mod test {
             .build();
 
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamp as timestamp) > timestamp '2011-01-01 21:00:00'"#;
+        let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamptz as timestamp) > timestamp '2011-01-01 21:00:00'"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -985,8 +985,8 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT count(*) FROM (SELECT artist.cast_timestamp FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamp \
-                   FROM artist) AS artist) AS artist WHERE artist.cast_timestamp > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
+                   "SELECT count(*) FROM (SELECT artist.cast_timestamptz FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
+                   FROM artist) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
         Ok(())
     }
 
@@ -1071,6 +1071,48 @@ mod test {
                    (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
                    (SELECT timestamp_table.timestamp_col AS timestamp_col, timestamp_table.timestamptz_col AS timestamptz_col \
                    FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamptz_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the simplified literal will be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) \
+                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the string literal will be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamptz_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
+                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamp_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the simplified literal won't be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) FROM \
+                       (SELECT timestamp_table.timestamp_col FROM (SELECT timestamp_table.timestamp_col AS timestamp_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
         }
         Ok(())
     }

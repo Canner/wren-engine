@@ -17,19 +17,21 @@
  * under the License.
  */
 use datafusion::arrow::datatypes::{DataType, TimeUnit};
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRewriter};
+use datafusion::common::tree_node::{
+    Transformed, TransformedResult, TreeNode, TreeNodeRewriter,
+};
 use datafusion::common::ScalarValue::{
     TimestampMicrosecond, TimestampMillisecond, TimestampSecond,
 };
 use datafusion::common::{DFSchema, DFSchemaRef, Result, ScalarValue};
+use datafusion::config::ConfigOptions;
 use datafusion::execution::context::ExecutionProps;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::utils::merge_schema;
 use datafusion::logical_expr::{cast, Cast, LogicalPlan, TryCast};
-use datafusion::optimizer::optimizer::ApplyOrder;
 use datafusion::optimizer::simplify_expressions::ExprSimplifier;
-use datafusion::optimizer::{OptimizerConfig, OptimizerRule};
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::Expr;
 use datafusion::scalar::ScalarValue::TimestampNanosecond;
 use std::sync::Arc;
@@ -46,37 +48,18 @@ impl TimestampSimplify {
     }
 }
 
-impl OptimizerRule for TimestampSimplify {
+impl AnalyzerRule for TimestampSimplify {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        Self::analyze_internal(plan).data()
+    }
+
     fn name(&self) -> &str {
-        "simplify_cast_expressions"
-    }
-
-    fn apply_order(&self) -> Option<ApplyOrder> {
-        Some(ApplyOrder::BottomUp)
-    }
-
-    fn supports_rewrite(&self) -> bool {
-        true
-    }
-
-    /// if supports_owned returns true, the Optimizer calls
-    /// [`Self::rewrite`] instead of [`Self::try_optimize`]
-    fn rewrite(
-        &self,
-        plan: LogicalPlan,
-        config: &dyn OptimizerConfig,
-    ) -> Result<Transformed<LogicalPlan>> {
-        let mut execution_props = ExecutionProps::new();
-        execution_props.query_execution_start_time = config.query_execution_start_time();
-        Self::optimize_internal(plan, &execution_props)
+        "simplify_timestamp_expressions"
     }
 }
 
 impl TimestampSimplify {
-    fn optimize_internal(
-        plan: LogicalPlan,
-        execution_props: &ExecutionProps,
-    ) -> Result<Transformed<LogicalPlan>> {
+    fn analyze_internal(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let schema = if !plan.inputs().is_empty() {
             DFSchemaRef::new(merge_schema(&plan.inputs()))
         } else if let LogicalPlan::TableScan(scan) = &plan {
@@ -97,8 +80,8 @@ impl TimestampSimplify {
         } else {
             Arc::new(DFSchema::empty())
         };
-
-        let info = SimplifyContext::new(execution_props).with_schema(schema);
+        let execution_props = ExecutionProps::default();
+        let info = SimplifyContext::new(&execution_props).with_schema(schema);
 
         // Inputs have already been rewritten (due to bottom-up traversal handled by Optimizer)
         // Just need to rewrite our own expressions
