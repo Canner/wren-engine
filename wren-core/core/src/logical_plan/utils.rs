@@ -44,7 +44,7 @@ pub fn map_data_type(data_type: &str) -> DataType {
     }
     match data_type {
         // Wren Definition Types
-        "bool" => DataType::Boolean,
+        "bool" | "boolean"=> DataType::Boolean,
         "tinyint" => DataType::Int8,
         "int2" => DataType::Int16,
         "smallint" => DataType::Int16,
@@ -253,6 +253,7 @@ mod test {
     pub fn test_map_data_type() -> Result<()> {
         let test_cases = vec![
             ("bool", DataType::Boolean),
+            ("boolean", DataType::Boolean),
             ("tinyint", DataType::Int8),
             ("int2", DataType::Int16),
             ("smallint", DataType::Int16),
