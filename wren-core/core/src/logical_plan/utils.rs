@@ -66,8 +66,10 @@ pub fn map_data_type(data_type: &str) -> DataType {
         "float" => DataType::Float32,
         "float8" => DataType::Float64,
         "double" => DataType::Float64,
-        "timestamp" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
-        "timestamptz" => DataType::Timestamp(TimeUnit::Nanosecond, None), // don't care about the time zone
+        "timestamp" | "datetime" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
+        "timestamptz" | "timestamp_with_timezone" | "timestamp_with_time_zone" => {
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()))
+        }
         "date" => DataType::Date32,
         "interval" => DataType::Interval(IntervalUnit::DayTime),
         "json" => DataType::Utf8, // we don't have a JSON type, so we map it to Utf8
@@ -79,7 +81,6 @@ pub fn map_data_type(data_type: &str) -> DataType {
         // BigQuery Compatible Types
         "bignumeric" => DataType::Decimal128(38, 10), // set the default precision and scale
         "bytes" => DataType::Binary,
-        "datetime" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
         "float64" => DataType::Float64,
         "int64" => DataType::Int64,
         "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit

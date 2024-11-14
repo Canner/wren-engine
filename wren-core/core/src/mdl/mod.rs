@@ -426,17 +426,20 @@ impl ColumnReference {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
+    use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{
         ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
     };
+    use datafusion::assert_batches_eq;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::config::ConfigOptions;
@@ -987,6 +990,91 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_register_timestamptz() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("timestamp_table", timestamp_table())?;
+        let provider = ctx
+            .catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("timestamp_table")
+            .await?
+            .unwrap();
+        let mut registers = HashMap::new();
+        registers.insert(
+            "datafusion.public.timestamp_table".to_string(),
+            Arc::clone(&provider),
+        );
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("timestamp_table")
+                    .table_reference("datafusion.public.timestamp_table")
+                    .column(ColumnBuilder::new("timestamp_col", "timestamp").build())
+                    .column(ColumnBuilder::new("timestamptz_col", "timestamptz").build())
+                    .build(),
+            )
+            .build();
+
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
+        let ctx = create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), true).await?;
+        let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
+        let result = ctx.sql(sql).await?.collect().await?;
+        let expected = vec![
+            "+---------------------------------------------+-----------------------------------------------+",
+            "| arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |",
+            "+---------------------------------------------+-----------------------------------------------+",
+            "| Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some(\"UTC\"))            |",
+            "+---------------------------------------------+-----------------------------------------------+",
+        ];
+        assert_batches_eq!(&expected, &result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_coercion_timestamptz() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("timestamp_table", timestamp_table())?;
+        for timezone_type in [
+            "timestamptz",
+            "timestamp_with_timezone",
+            "timestamp_with_time_zone",
+        ] {
+            let manifest = ManifestBuilder::new()
+                .catalog("wren")
+                .schema("test")
+                .model(
+                    ModelBuilder::new("timestamp_table")
+                        .table_reference("datafusion.public.timestamp_table")
+                        .column(ColumnBuilder::new("timestamp_col", "timestamp").build())
+                        .column(
+                            ColumnBuilder::new("timestamptz_col", timezone_type).build(),
+                        )
+                        .build(),
+                )
+                .build();
+            let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+            let sql = r#"select timestamp_col = timestamptz_col from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            assert_eq!(actual,
+                       "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) = timestamp_table.timestamptz_col FROM \
+                   (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
+                   (SELECT timestamp_table.timestamp_col AS timestamp_col, timestamp_table.timestamptz_col AS timestamptz_col \
+                   FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+        }
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
@@ -1036,6 +1124,17 @@ mod test {
             ("組別", group),
             ("訂閱數", subscribe),
             ("出道時間", debut_time),
+        ])
+        .unwrap()
+    }
+
+    fn timestamp_table() -> RecordBatch {
+        let timestamp: ArrayRef = Arc::new(TimestampNanosecondArray::from(vec![1, 2, 3]));
+        let timestamptz: ArrayRef =
+            Arc::new(TimestampNanosecondArray::from(vec![1, 2, 3]).with_timezone("UTC"));
+        RecordBatch::try_from_iter(vec![
+            ("timestamp_col", timestamp),
+            ("timestamptz_col", timestamptz),
         ])
         .unwrap()
     }
