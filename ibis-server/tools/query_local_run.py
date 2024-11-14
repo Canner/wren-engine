@@ -42,7 +42,7 @@ print("# Manifest JSON Path:", manifest_json_path)
 print("# Function List Path:", function_list_path)
 print("# Connection Info Path:", connection_info_path)
 print("# Data Source:", data_source)
-print("# SQL Query:", sql)
+print("# SQL Query:\n", sql)
 print("#")
 
 # Read and encode the JSON data
@@ -60,11 +60,11 @@ print("### Starting the session context ###")
 print("#")
 session_context = SessionContext(encoded_str, function_list_path)
 planned_sql = session_context.transform_sql(sql)
-print("# Planned SQL:", planned_sql)
+print("# Planned SQL:\n", planned_sql)
 
 # Transpile the planned SQL
 dialect_sql = sqlglot.transpile(planned_sql, read="trino", write=data_source)[0]
-print("# Dialect SQL:", dialect_sql)
+print("# Dialect SQL:\n", dialect_sql)
 print("#")
 
 if data_source == "bigquery":

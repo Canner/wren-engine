@@ -12,6 +12,7 @@ import argparse
 import base64
 import json
 
+from loguru import logger
 from wren_core import SessionContext
 
 # Set up argument parsing
@@ -39,9 +40,10 @@ for model in mdl["models"]:
         sql = f"select \"{column['name']}\" from \"{model['name']}\""
         try:
             planned_sql = session_context.transform_sql(sql)
-        except Exception:
+        except Exception as e:
             error_cases.append((model, column))
-            print(f"Error transforming {model['name']} {column['name']}")
+            logger.info(f"Error transforming {model['name']} {column['name']}")
+            logger.debug(e)
 
 if len(error_cases) > 0:
     raise Exception(f"Error transforming {len(error_cases)} columns")
