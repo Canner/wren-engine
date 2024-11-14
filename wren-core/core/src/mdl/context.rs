@@ -36,7 +36,6 @@ use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
-use datafusion::optimizer::push_down_filter::PushDownFilter;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
 use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
 use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
@@ -176,7 +175,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Filters can't be pushed down past Limits, we should do PushDownFilter after PushDownLimit
         // TODO: Sort with pushdown-limit doesn't support to be unparse
         // Arc::new(PushDownLimit::new()),
-        Arc::new(PushDownFilter::new()),
+        // Disable PushDownFilter to avoid the casting for bigquery (datetime/timestamp) column be removed
+        // Arc::new(PushDownFilter::new()),
         Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),

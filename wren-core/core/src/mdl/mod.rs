@@ -948,6 +948,45 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_pushdown_filter() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("artist", artist())?;
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("artist")
+                    .table_reference("artist")
+                    .column(
+                        ColumnBuilder::new("出道時間", "timestamp")
+                            .hidden(true)
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("cast_timestamp", "timestamp")
+                            .expression(r#"cast("出道時間" as timestamp with time zone)"#)
+                            .build(),
+                    )
+                    .build(),
+            )
+            .build();
+
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamp as timestamp) > timestamp '2011-01-01 21:00:00'"#;
+        let actual = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(actual,
+                   "SELECT count(*) FROM (SELECT artist.cast_timestamp FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamp \
+                   FROM artist) AS artist) AS artist WHERE artist.cast_timestamp > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
