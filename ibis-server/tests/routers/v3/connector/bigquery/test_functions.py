@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.config import get_config
 from app.main import app
-from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
 from tests.conftest import DATAFUSION_FUNCTION_COUNT
+from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
 
 manifest = {
     "catalog": "my_catalog",
