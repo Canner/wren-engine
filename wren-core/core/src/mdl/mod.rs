@@ -426,17 +426,20 @@ impl ColumnReference {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
 
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
+    use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{
         ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
     };
+    use datafusion::assert_batches_eq;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
     use datafusion::config::ConfigOptions;
@@ -964,7 +967,7 @@ mod test {
                             .build(),
                     )
                     .column(
-                        ColumnBuilder::new("cast_timestamp", "timestamp")
+                        ColumnBuilder::new("cast_timestamptz", "timestamptz")
                             .expression(r#"cast("出道時間" as timestamp with time zone)"#)
                             .build(),
                     )
@@ -973,7 +976,7 @@ mod test {
             .build();
 
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamp as timestamp) > timestamp '2011-01-01 21:00:00'"#;
+        let sql = r#"select count(*) from wren.test.artist where cast(cast_timestamptz as timestamp) > timestamp '2011-01-01 21:00:00'"#;
         let actual = transform_sql_with_ctx(
             &SessionContext::new(),
             Arc::clone(&analyzed_mdl),
@@ -982,8 +985,135 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT count(*) FROM (SELECT artist.cast_timestamp FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamp \
-                   FROM artist) AS artist) AS artist WHERE artist.cast_timestamp > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
+                   "SELECT count(*) FROM (SELECT artist.cast_timestamptz FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
+                   FROM artist) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_register_timestamptz() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("timestamp_table", timestamp_table())?;
+        let provider = ctx
+            .catalog("datafusion")
+            .unwrap()
+            .schema("public")
+            .unwrap()
+            .table("timestamp_table")
+            .await?
+            .unwrap();
+        let mut registers = HashMap::new();
+        registers.insert(
+            "datafusion.public.timestamp_table".to_string(),
+            Arc::clone(&provider),
+        );
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("timestamp_table")
+                    .table_reference("datafusion.public.timestamp_table")
+                    .column(ColumnBuilder::new("timestamp_col", "timestamp").build())
+                    .column(ColumnBuilder::new("timestamptz_col", "timestamptz").build())
+                    .build(),
+            )
+            .build();
+
+        let analyzed_mdl =
+            Arc::new(AnalyzedWrenMDL::analyze_with_tables(manifest, registers)?);
+        let ctx = create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), true).await?;
+        let sql = r#"select arrow_typeof(timestamp_col), arrow_typeof(timestamptz_col) from wren.test.timestamp_table limit 1"#;
+        let result = ctx.sql(sql).await?.collect().await?;
+        let expected = vec![
+            "+---------------------------------------------+-----------------------------------------------+",
+            "| arrow_typeof(timestamp_table.timestamp_col) | arrow_typeof(timestamp_table.timestamptz_col) |",
+            "+---------------------------------------------+-----------------------------------------------+",
+            "| Timestamp(Nanosecond, None)                 | Timestamp(Nanosecond, Some(\"UTC\"))            |",
+            "+---------------------------------------------+-----------------------------------------------+",
+        ];
+        assert_batches_eq!(&expected, &result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_coercion_timestamptz() -> Result<()> {
+        let ctx = SessionContext::new();
+        ctx.register_batch("timestamp_table", timestamp_table())?;
+        for timezone_type in [
+            "timestamptz",
+            "timestamp_with_timezone",
+            "timestamp_with_time_zone",
+        ] {
+            let manifest = ManifestBuilder::new()
+                .catalog("wren")
+                .schema("test")
+                .model(
+                    ModelBuilder::new("timestamp_table")
+                        .table_reference("datafusion.public.timestamp_table")
+                        .column(ColumnBuilder::new("timestamp_col", "timestamp").build())
+                        .column(
+                            ColumnBuilder::new("timestamptz_col", timezone_type).build(),
+                        )
+                        .build(),
+                )
+                .build();
+            let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+            let sql = r#"select timestamp_col = timestamptz_col from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            assert_eq!(actual,
+                       "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) = timestamp_table.timestamptz_col FROM \
+                   (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
+                   (SELECT timestamp_table.timestamp_col AS timestamp_col, timestamp_table.timestamptz_col AS timestamptz_col \
+                   FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamptz_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the simplified literal will be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) \
+                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the string literal will be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamptz_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
+                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+
+            let sql = r#"select timestamp_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
+            let actual = transform_sql_with_ctx(
+                &SessionContext::new(),
+                Arc::clone(&analyzed_mdl),
+                &[],
+                sql,
+            )
+            .await?;
+            // assert the simplified literal won't be casted to the timestamp tz
+            assert_eq!(actual,
+                       "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) FROM \
+                       (SELECT timestamp_table.timestamp_col FROM (SELECT timestamp_table.timestamp_col AS timestamp_col \
+                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+        }
         Ok(())
     }
 
@@ -1036,6 +1166,17 @@ mod test {
             ("組別", group),
             ("訂閱數", subscribe),
             ("出道時間", debut_time),
+        ])
+        .unwrap()
+    }
+
+    fn timestamp_table() -> RecordBatch {
+        let timestamp: ArrayRef = Arc::new(TimestampNanosecondArray::from(vec![1, 2, 3]));
+        let timestamptz: ArrayRef =
+            Arc::new(TimestampNanosecondArray::from(vec![1, 2, 3]).with_timezone("UTC"));
+        RecordBatch::try_from_iter(vec![
+            ("timestamp_col", timestamp),
+            ("timestamptz_col", timestamptz),
         ])
         .unwrap()
     }

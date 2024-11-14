@@ -140,6 +140,9 @@ fn analyze_rule_for_unparsing(
         Arc::new(InlineTableScan::new()),
         // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
         Arc::new(ExpandWildcardRule::new()),
+        // TimestampSimplify should be placed before TypeCoercion because the simplified timestamp should
+        // be casted to the target type if needed
+        Arc::new(TimestampSimplify::new()),
         // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
         // Disable it to avoid generate the alias name, `count(*)` because BigQuery doesn't allow
@@ -180,7 +183,6 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
-        Arc::new(TimestampSimplify::new()),
         Arc::new(UnwrapCastInComparison::new()),
         Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),

@@ -42,17 +42,17 @@ manifest = {
                 {
                     "name": "timestamptz",
                     "expression": "cast('2024-01-01T23:59:59' as timestamp with time zone)",
-                    "type": "timestamp",
+                    "type": "timestamptz",
                 },
                 {
                     "name": "dst_utc_minus_5",
                     "expression": "cast('2024-01-15 23:00:00 America/New_York' as timestamp with time zone)",
-                    "type": "timestamp",
+                    "type": "timestamptz",
                 },
                 {
                     "name": "dst_utc_minus_4",
                     "expression": "cast('2024-07-15 23:00:00 America/New_York' as timestamp with time zone)",
-                    "type": "timestamp",
+                    "type": "timestamptz",
                 },
             ],
             "primaryKey": "o_orderkey",
@@ -83,9 +83,9 @@ with TestClient(app) as client:
         assert len(result["data"]) == 1
         assert result["data"][0] == [
             "2024-01-01 23:59:59.000000",
-            "2024-01-01 23:59:59.000000",
-            "2024-01-16 04:00:00.000000",  # utc-5
-            "2024-07-16 03:00:00.000000",  # utc-4
+            "2024-01-01 23:59:59.000000 UTC",
+            "2024-01-16 04:00:00.000000 UTC",  # utc-5
+            "2024-07-16 03:00:00.000000 UTC",  # utc-4
             "1_370",
             370,
             "1996-01-02",
