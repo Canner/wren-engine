@@ -21,7 +21,7 @@ half = { version = "2.4.1", default-features = true }
 log = { workspace = true }
 rust_decimal = { version = "1.27.0" }
 sqllogictest = "0.22.0"
-thiserror = "1.0.61"
+thiserror = "2.0.3"
 tokio = { workspace = true }
 wren-core = { path = "../core" }
 
