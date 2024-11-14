@@ -237,3 +237,22 @@ with TestClient(app) as client:
             "micros": "object",
             "seconds": "object",
         }
+
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT timestamp with time zone '2000-01-01 10:00:00' < current_datetime() as compare",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["data"][0] == [
+            True,
+        ]
+        assert result["dtypes"] == {
+            "compare": "bool",
+        }
