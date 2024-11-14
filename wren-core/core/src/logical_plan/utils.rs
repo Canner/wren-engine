@@ -275,7 +275,15 @@ mod test {
             ("timestamp", DataType::Timestamp(TimeUnit::Nanosecond, None)),
             (
                 "timestamptz",
-                DataType::Timestamp(TimeUnit::Nanosecond, None),
+                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
+            ),
+            (
+                "timestamp_with_timezone",
+                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
+            ),
+            (
+                "timestamp_with_time_zone",
+                DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
             ),
             ("date", DataType::Date32),
             ("interval", DataType::Interval(IntervalUnit::DayTime)),
