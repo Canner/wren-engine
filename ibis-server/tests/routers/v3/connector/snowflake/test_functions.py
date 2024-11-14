@@ -86,9 +86,9 @@ with TestClient(app) as client:
         assert response.status_code == 200
         result = response.json()
         assert result == {
-            "columns": ["col"],
+            "columns": ["COL"],
             "data": [[1]],
-            "dtypes": {"col": "int32"},
+            "dtypes": {"COL": "int64"},
         }
 
     def test_aggregate_function(manifest_str: str, connection_info):
@@ -103,7 +103,7 @@ with TestClient(app) as client:
         assert response.status_code == 200
         result = response.json()
         assert result == {
-            "columns": ["col"],
+            "columns": ["COL"],
             "data": [[1]],
-            "dtypes": {"col": "int64"},
+            "dtypes": {"COL": "int64"},
         }

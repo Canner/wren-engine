@@ -94,7 +94,7 @@ with TestClient(app) as client:
             36901,
             "O",
             "173665.47",
-            "1996-01-02 00:00:00.000000",
+            "1996-01-02",
             "1_36901",
             "2024-01-01 23:59:59.000000",
             "2024-01-01 23:59:59.000000 UTC",
@@ -261,14 +261,48 @@ with TestClient(app) as client:
         assert response.status_code == 422
         assert response.text == "Missing required parameter: `modelName`"
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_metadata_list_tables():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/tables",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        tables = response.json()
+        assert len(tables) == 8
+        table = next(filter(lambda t: t["name"] == "TPCH_SF1.ORDERS", tables))
+        assert table["name"] == "TPCH_SF1.ORDERS"
+        assert table["primaryKey"] is not None
+        assert table["description"] == "Orders data as defined by TPC-H"
+        assert table["properties"] == {
+            "catalog": "SNOWFLAKE_SAMPLE_DATA",
+            "schema": "TPCH_SF1",
+            "table": "ORDERS",
+        }
+        assert len(table["columns"]) == 9
+        column = next(filter(lambda c: c["name"] == "O_COMMENT", table["columns"]))
+        assert column == {
+            "name": "O_COMMENT",
+            "nestedColumns": None,
+            "type": "TEXT",
+            "notNull": True,
+            "description": None,
+            "properties": None,
+        }
 
-    @pytest.mark.skip(reason="Not implemented")
     def test_metadata_list_constraints():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/constraints",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.skip(reason="Not implemented")
+        result = response.json()
+        assert len(result) == 0
+
     def test_metadata_get_version():
-        pass
+        response = client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+        assert response.status_code == 200
+        assert response.text is not None
