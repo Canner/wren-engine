@@ -4,9 +4,9 @@ from app.model.metadata.dto import (
     Column,
     Constraint,
     ConstraintType,
+    RustWrenEngineColumnType,
     Table,
     TableProperties,
-    WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata
 
@@ -173,40 +173,40 @@ class MSSQLMetadata(Metadata):
         return f"{table_name}_{column_name}_{referenced_table_name}_{referenced_column_name}"
 
     def _transform_column_type(self, data_type):
-        # Define the mapping of MSSQL data types to WrenEngineColumnType
+        # Define the mapping of MSSQL data types to RustWrenEngineColumnType
         # ref: https://learn.microsoft.com/en-us/sql/t-sql/data-types/data-types-transact-sql?view=sql-server-ver15#exact-numerics
         switcher = {
             # String Types
-            "char": WrenEngineColumnType.CHAR,
-            "varchar": WrenEngineColumnType.VARCHAR,
-            "text": WrenEngineColumnType.TEXT,
-            "nchar": WrenEngineColumnType.CHAR,
-            "nvarchar": WrenEngineColumnType.VARCHAR,
-            "ntext": WrenEngineColumnType.TEXT,
+            "char": RustWrenEngineColumnType.CHAR,
+            "varchar": RustWrenEngineColumnType.VARCHAR,
+            "text": RustWrenEngineColumnType.TEXT,
+            "nchar": RustWrenEngineColumnType.CHAR,
+            "nvarchar": RustWrenEngineColumnType.VARCHAR,
+            "ntext": RustWrenEngineColumnType.TEXT,
             # Numeric Types
-            "bit": WrenEngineColumnType.TINYINT,
-            "tinyint": WrenEngineColumnType.TINYINT,
-            "smallint": WrenEngineColumnType.SMALLINT,
-            "int": WrenEngineColumnType.INTEGER,
-            "bigint": WrenEngineColumnType.BIGINT,
+            "bit": RustWrenEngineColumnType.TINYINT,
+            "tinyint": RustWrenEngineColumnType.TINYINT,
+            "smallint": RustWrenEngineColumnType.SMALLINT,
+            "int": RustWrenEngineColumnType.INTEGER,
+            "bigint": RustWrenEngineColumnType.BIGINT,
             # Boolean
-            "boolean": WrenEngineColumnType.BOOLEAN,
+            "boolean": RustWrenEngineColumnType.BOOL,
             # Decimal
-            "float": WrenEngineColumnType.FLOAT8,
-            "real": WrenEngineColumnType.FLOAT8,
-            "decimal": WrenEngineColumnType.DECIMAL,
-            "numeric": WrenEngineColumnType.NUMERIC,
-            "money": WrenEngineColumnType.DECIMAL,
-            "smallmoney": WrenEngineColumnType.DECIMAL,
+            "float": RustWrenEngineColumnType.FLOAT8,
+            "real": RustWrenEngineColumnType.FLOAT8,
+            "decimal": RustWrenEngineColumnType.DECIMAL,
+            "numeric": RustWrenEngineColumnType.NUMERIC,
+            "money": RustWrenEngineColumnType.DECIMAL,
+            "smallmoney": RustWrenEngineColumnType.DECIMAL,
             # Date and Time Types
-            "date": WrenEngineColumnType.DATE,
-            "datetime": WrenEngineColumnType.TIMESTAMP,
-            "datetime2": WrenEngineColumnType.TIMESTAMPTZ,
-            "smalldatetime": WrenEngineColumnType.TIMESTAMP,
-            "time": WrenEngineColumnType.INTERVAL,
-            "datetimeoffset": WrenEngineColumnType.TIMESTAMPTZ,
+            "date": RustWrenEngineColumnType.DATE,
+            "datetime": RustWrenEngineColumnType.TIMESTAMP,
+            "datetime2": RustWrenEngineColumnType.TIMESTAMP,
+            "smalldatetime": RustWrenEngineColumnType.TIMESTAMP,
+            "time": RustWrenEngineColumnType.INTERVAL,
+            "datetimeoffset": RustWrenEngineColumnType.TIMESTAMPTZ,
             # JSON Type (Note: MSSQL supports JSON natively as a string type)
-            "json": WrenEngineColumnType.JSON,
+            "json": RustWrenEngineColumnType.JSON,
         }
 
-        return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
+        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)

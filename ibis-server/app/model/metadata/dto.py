@@ -10,59 +10,46 @@ class MetadataDTO(BaseModel):
     connection_info: ConnectionInfo = Field(alias="connectionInfo")
 
 
-class WrenEngineColumnType(Enum):
-    # Boolean Types
-    BOOLEAN = "BOOLEAN"
-
-    # Numeric Types
+class RustWrenEngineColumnType(Enum):
+    BOOL = "BOOL"
     TINYINT = "TINYINT"
     INT2 = "INT2"
-    SMALLINT = "SMALLINT"  # alias for INT2
+    SMALLINT = "SMALLINT"
     INT4 = "INT4"
-    INTEGER = "INTEGER"  # alias for INT4
+    INT = "INT"
+    INTEGER = "INTEGER"
     INT8 = "INT8"
-    BIGINT = "BIGINT"  # alias for INT8
+    BIGINT = "BIGINT"
     NUMERIC = "NUMERIC"
     DECIMAL = "DECIMAL"
-
-    # Floating-Point Types
-    FLOAT4 = "FLOAT4"
-    REAL = "REAL"  # alias for FLOAT4
-    FLOAT8 = "FLOAT8"
-    DOUBLE = "DOUBLE"  # alias for FLOAT8
-
-    # Character Types
     VARCHAR = "VARCHAR"
     CHAR = "CHAR"
-    BPCHAR = "BPCHAR"  # BPCHAR is fixed-length blank padded string
-    TEXT = "TEXT"  # alias for VARCHAR
-    STRING = "STRING"  # alias for VARCHAR
-    NAME = "NAME"  # alias for VARCHAR
-
-    # Date/Time Types
+    BPCHAR = "BPCHAR"
+    TEXT = "TEXT"
+    STRING = "STRING"
+    NAME = "NAME"
+    FLOAT4 = "FLOAT4"
+    REAL = "REAL"
+    FLOAT = "FLOAT"
+    FLOAT8 = "FLOAT8"
+    DOUBLE = "DOUBLE"
     TIMESTAMP = "TIMESTAMP"
-    TIMESTAMPTZ = "TIMESTAMP WITH TIME ZONE"
+    TIMESTAMPTZ = "TIMESTAMPTZ"
     DATE = "DATE"
     INTERVAL = "INTERVAL"
-
-    # JSON Types
     JSON = "JSON"
-
-    # Object identifiers (OIDs) are used internally by PostgreSQL as primary keys for various system tables.
-    # https:#www.postgresql.org/docs/current/datatype-oid.html
     OID = "OID"
-
-    # Binary Data Types
     BYTEA = "BYTEA"
-
-    # UUID Type
     UUID = "UUID"
-
-    # Network Address Types
     INET = "INET"
-
-    # Unknown Type
     UNKNOWN = "UNKNOWN"
+    BIGNUMERIC = "BIGNUMERIC"
+    BYTES = "BYTES"
+    DATETIME = "DATETIME"
+    FLOAT64 = "FLOAT64"
+    INT64 = "INT64"
+    TIME = "TIME"
+    NULL = "NULL"
 
 
 class Column(BaseModel):

@@ -4,9 +4,9 @@ from app.model.metadata.dto import (
     Column,
     Constraint,
     ConstraintType,
+    RustWrenEngineColumnType,
     Table,
     TableProperties,
-    WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata
 
@@ -132,36 +132,36 @@ class MySQLMetadata(Metadata):
         # all possible types listed here: https://dev.mysql.com/doc/refman/8.4/en/data-types.html
         switcher = {
             # String Types (ignore Binary and Spatial Types for now)
-            "char": WrenEngineColumnType.CHAR,
-            "varchar": WrenEngineColumnType.VARCHAR,
-            "tinytext": WrenEngineColumnType.TEXT,
-            "text": WrenEngineColumnType.TEXT,
-            "mediumtext": WrenEngineColumnType.TEXT,
-            "longtext": WrenEngineColumnType.TEXT,
-            "enum": WrenEngineColumnType.VARCHAR,
-            "set": WrenEngineColumnType.VARCHAR,
+            "char": RustWrenEngineColumnType.CHAR,
+            "varchar": RustWrenEngineColumnType.VARCHAR,
+            "tinytext": RustWrenEngineColumnType.TEXT,
+            "text": RustWrenEngineColumnType.TEXT,
+            "mediumtext": RustWrenEngineColumnType.TEXT,
+            "longtext": RustWrenEngineColumnType.TEXT,
+            "enum": RustWrenEngineColumnType.VARCHAR,
+            "set": RustWrenEngineColumnType.VARCHAR,
             # Numeric Types(https://dev.mysql.com/doc/refman/8.4/en/numeric-types.html)
-            "bit": WrenEngineColumnType.TINYINT,
-            "tinyint": WrenEngineColumnType.TINYINT,
-            "smallint": WrenEngineColumnType.SMALLINT,
-            "mediumint": WrenEngineColumnType.INTEGER,
-            "int": WrenEngineColumnType.INTEGER,
-            "integer": WrenEngineColumnType.INTEGER,
-            "bigint": WrenEngineColumnType.BIGINT,
+            "bit": RustWrenEngineColumnType.TINYINT,
+            "tinyint": RustWrenEngineColumnType.TINYINT,
+            "smallint": RustWrenEngineColumnType.SMALLINT,
+            "mediumint": RustWrenEngineColumnType.INTEGER,
+            "int": RustWrenEngineColumnType.INTEGER,
+            "integer": RustWrenEngineColumnType.INTEGER,
+            "bigint": RustWrenEngineColumnType.BIGINT,
             # boolean
-            "bool": WrenEngineColumnType.BOOLEAN,
-            "boolean": WrenEngineColumnType.BOOLEAN,
+            "bool": RustWrenEngineColumnType.BOOL,
+            "boolean": RustWrenEngineColumnType.BOOL,
             # Decimal
-            "float": WrenEngineColumnType.FLOAT8,
-            "double": WrenEngineColumnType.DOUBLE,
-            "decimal": WrenEngineColumnType.DECIMAL,
-            "numeric": WrenEngineColumnType.NUMERIC,
+            "float": RustWrenEngineColumnType.FLOAT8,
+            "double": RustWrenEngineColumnType.DOUBLE,
+            "decimal": RustWrenEngineColumnType.DECIMAL,
+            "numeric": RustWrenEngineColumnType.NUMERIC,
             # Date and Time Types(https://dev.mysql.com/doc/refman/8.4/en/date-and-time-types.html)
-            "date": WrenEngineColumnType.DATE,
-            "datetime": WrenEngineColumnType.TIMESTAMP,
-            "timestamp": WrenEngineColumnType.TIMESTAMPTZ,
+            "date": RustWrenEngineColumnType.DATE,
+            "datetime": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
             # JSON Type
-            "json": WrenEngineColumnType.JSON,
+            "json": RustWrenEngineColumnType.JSON,
         }
 
-        return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
+        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)
