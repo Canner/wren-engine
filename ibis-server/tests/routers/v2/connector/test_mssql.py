@@ -239,6 +239,24 @@ with TestClient(app) as client:
         assert response.status_code == 422
         assert "Invalid object name 'X'" in response.text
 
+    @pytest.mark.skip(
+        reason="Ibis use non-nvarchar sql to get schema, it will get question mark. Wait https://github.com/ibis-project/ibis/pull/10490"
+    )
+    def test_query_non_ascii_column(manifest_str, mssql: SqlServerContainer):
+        connection_info = _to_connection_info(mssql)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT 1 AS "калона"',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result["columns"] == ["калона"]
+
     def test_validate_with_unknown_rule(manifest_str, mssql: SqlServerContainer):
         connection_info = _to_connection_info(mssql)
         response = client.post(
