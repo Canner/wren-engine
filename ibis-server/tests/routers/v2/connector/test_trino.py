@@ -385,7 +385,7 @@ with TestClient(app) as client:
         assert column == {
             "name": "comment",
             "nestedColumns": None,
-            "type": "UNKNOWN",
+            "type": "VARCHAR",
             "notNull": False,
             "description": "This is a comment",
             "properties": None,
