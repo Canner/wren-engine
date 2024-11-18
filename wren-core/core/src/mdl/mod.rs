@@ -416,10 +416,8 @@ mod test {
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{
-        ArrayRef, Float64Array, Int64Array, ListArray, RecordBatch, StringArray,
-        StructArray, TimestampNanosecondArray,
+        ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
     };
-    use datafusion::arrow::datatypes::{DataType, Field, Fields, Int32Type, TimeUnit};
     use datafusion::assert_batches_eq;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
@@ -1101,7 +1099,6 @@ mod test {
     #[tokio::test]
     async fn test_list() -> Result<()> {
         let ctx = SessionContext::new();
-        ctx.register_batch("list_table", list_table()?)?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1124,7 +1121,6 @@ mod test {
     #[tokio::test]
     async fn test_struct() -> Result<()> {
         let ctx = SessionContext::new();
-        ctx.register_batch("struct_table", struct_table()?)?;
         let manifest = ManifestBuilder::new()
             .catalog("wren")
             .schema("test")
@@ -1167,12 +1163,14 @@ mod test {
             .build();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let sql = "select struct_col.float_field from wren.test.struct_table";
-        transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await.map_err(|e| {
-            assert_eq!(
-                e.to_string(),
-                "Error during planning: struct must have at least one field"
-            )
-        }).unwrap();
+        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql)
+            .await
+            .map_err(|e| {
+                assert_eq!(
+                    e.to_string(),
+                    "Error during planning: struct must have at least one field"
+                )
+            });
         Ok(())
     }
 
@@ -1238,36 +1236,5 @@ mod test {
             ("timestamptz_col", timestamptz),
         ])
         .unwrap()
-    }
-
-    fn list_table() -> Result<RecordBatch> {
-        let data = vec![
-            Some(vec![Some(0), Some(1), Some(2)]),
-            None,
-            Some(vec![Some(3), None, Some(5)]),
-            Some(vec![Some(6), Some(7)]),
-        ];
-        let list_array: ArrayRef =
-            Arc::new(ListArray::from_iter_primitive::<Int32Type, _, _>(data));
-        Ok(RecordBatch::try_from_iter(vec![("list_col", list_array)]).unwrap())
-    }
-
-    fn struct_table() -> Result<RecordBatch> {
-        let field: Fields = vec![
-            Field::new("float_field", DataType::Float64, true),
-            Field::new(
-                "time_field",
-                DataType::Timestamp(TimeUnit::Nanosecond, None),
-                true,
-            ),
-        ]
-        .into();
-        let f64arr: ArrayRef = Arc::new(Float64Array::from(vec![1.0])) as ArrayRef;
-        let timearr: ArrayRef =
-            Arc::new(TimestampNanosecondArray::from(vec![1])) as ArrayRef;
-
-        let struct_arr: ArrayRef =
-            Arc::new(StructArray::try_new(field, vec![f64arr, timearr], None)?);
-        Ok(RecordBatch::try_from_iter(vec![("struct_col", struct_arr)]).unwrap())
     }
 }

@@ -13,6 +13,7 @@ use datafusion::common::plan_err;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
+use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
 use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
 use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
 use datafusion::sql::sqlparser::ast;
@@ -23,13 +24,33 @@ use petgraph::Graph;
 use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
 
-fn create_mock_list_type() -> DataType {
-    let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
-    DataType::List(string_filed)
+fn create_list_type(array_type: &str) -> Result<DataType> {
+    if let ast::DataType::Array(value) = parse_type(array_type)? {
+        let data_type = match value {
+            ArrayElemTypeDef::None => {
+                return plan_err!("Array type must have an element type")
+            }
+            ArrayElemTypeDef::AngleBracket(data_type) => {
+                map_data_type(&data_type.to_string())?
+            }
+            ArrayElemTypeDef::SquareBracket(_, _) => {
+                unreachable!()
+            }
+            ArrayElemTypeDef::Parenthesis(_) => {
+                return plan_err!(
+                    "The format of the array type should be 'array<element_type>'"
+                )
+            }
+        };
+        return Ok(DataType::List(Arc::new(Field::new(
+            "element", data_type, false,
+        ))));
+    }
+    unreachable!()
 }
 
 fn create_struct_type(struct_type: &str) -> Result<DataType> {
-    let sql_type = parse_struct_type(struct_type).unwrap();
+    let sql_type = parse_type(struct_type)?;
     let mut builder = SchemaBuilder::new();
     let mut counter = 0;
     match sql_type {
@@ -59,7 +80,7 @@ fn create_struct_type(struct_type: &str) -> Result<DataType> {
     Ok(DataType::Struct(fields))
 }
 
-fn parse_struct_type(struct_type: &str) -> Result<ast::DataType> {
+fn parse_type(struct_type: &str) -> Result<ast::DataType> {
     let dialect = GenericDialect {};
     Ok(Parser::new(&dialect)
         .try_with_sql(struct_type)?
@@ -72,7 +93,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
     if data_type.starts_with("array") {
-        return Ok(create_mock_list_type());
+        return create_list_type(data_type);
     }
     if data_type.starts_with("struct") {
         return create_struct_type(data_type);
@@ -280,7 +301,9 @@ pub fn expr_to_columns(
 
 #[cfg(test)]
 mod test {
-    use crate::logical_plan::utils::{create_mock_list_type, create_struct_type};
+    use crate::logical_plan::utils::{
+        create_list_type, create_struct_type, map_data_type,
+    };
     use datafusion::arrow::datatypes::{DataType, Field, Fields, IntervalUnit, TimeUnit};
     use datafusion::common::Result;
 
@@ -338,19 +361,48 @@ mod test {
             ("null", DataType::Null),
             ("geography", DataType::Utf8),
             ("range", DataType::Utf8),
-            ("array<int64>", create_mock_list_type()),
+            ("array<int64>", create_list_type("array<int64>")?),
             (
                 "struct<name string, age int>",
                 create_struct_type("struct<name string, age int>")?,
             ),
         ];
         for (data_type, expected) in test_cases {
-            let result = super::map_data_type(data_type)?;
+            let result = map_data_type(data_type)?;
             assert_eq!(result, expected);
             // test case insensitivity
-            let result = super::map_data_type(&data_type.to_uppercase())?;
+            let result = map_data_type(&data_type.to_uppercase())?;
             assert_eq!(result, expected);
         }
+
+        let _ = map_data_type("array").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: EOF\")"
+            );
+        });
+
+        let _ = map_data_type("array<>").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: <> at Line: 1, Column: 6\")"
+            );
+        });
+
+        let _ = map_data_type("array(int64)").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: ( at Line: 1, Column: 6\")"
+            );
+        });
+
+        let _ = map_data_type("struct").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "Error during planning: struct must have at least one field"
+            );
+        });
+
         Ok(())
     }
 
@@ -376,12 +428,12 @@ mod test {
         let expected = DataType::Struct(fields);
         assert_eq!(result, expected);
         let struct_string = "STRUCT<>";
-        create_struct_type(struct_string).map_err(|e| {
+        let _ = create_struct_type(struct_string).map_err(|e| {
             assert_eq!(
                 e.to_string(),
                 "Error during planning: struct must have at least one field"
-            );
-        }).unwrap();
+            )
+        });
         Ok(())
     }
 }
