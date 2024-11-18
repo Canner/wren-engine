@@ -122,7 +122,7 @@ class TrinoMetadata(Metadata):
             "bool": RustWrenEngineColumnType.BOOL,
             "boolean": RustWrenEngineColumnType.BOOL,
             # Decimal
-            "float": RustWrenEngineColumnType.FLOAT8,
+            "float": RustWrenEngineColumnType.FLOAT4,
             "double": RustWrenEngineColumnType.DOUBLE,
             "decimal": RustWrenEngineColumnType.DECIMAL,
             "numeric": RustWrenEngineColumnType.NUMERIC,
