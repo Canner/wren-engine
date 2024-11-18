@@ -3,9 +3,9 @@ from app.model.data_source import DataSource
 from app.model.metadata.dto import (
     Column,
     Constraint,
+    RustWrenEngineColumnType,
     Table,
     TableProperties,
-    WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata
 
@@ -80,29 +80,29 @@ class ClickHouseMetadata(Metadata):
         # lower case the data_type
         data_type = data_type.lower()
 
-        # Map ClickHouse types to WrenEngineColumnType
+        # Map ClickHouse types to RustWrenEngineColumnType
         switcher = {
-            "boolean": WrenEngineColumnType.BOOLEAN,
-            "int8": WrenEngineColumnType.TINYINT,
-            "uint8": WrenEngineColumnType.INT2,
-            "int16": WrenEngineColumnType.INT2,
-            "uint16": WrenEngineColumnType.INT2,
-            "int32": WrenEngineColumnType.INT4,
-            "uint32": WrenEngineColumnType.INT4,
-            "int64": WrenEngineColumnType.INT8,
-            "uint64": WrenEngineColumnType.INT8,
-            "float32": WrenEngineColumnType.FLOAT4,
-            "float64": WrenEngineColumnType.FLOAT8,
-            "decimal": WrenEngineColumnType.DECIMAL,
-            "date": WrenEngineColumnType.DATE,
-            "datetime": WrenEngineColumnType.TIMESTAMP,
-            "string": WrenEngineColumnType.VARCHAR,
-            "fixedstring": WrenEngineColumnType.CHAR,
-            "uuid": WrenEngineColumnType.UUID,
-            "enum8": WrenEngineColumnType.STRING,  # Enums can be mapped to strings
-            "enum16": WrenEngineColumnType.STRING,  # Enums can be mapped to strings
-            "ipv4": WrenEngineColumnType.INET,
-            "ipv6": WrenEngineColumnType.INET,
+            "boolean": RustWrenEngineColumnType.BOOL,
+            "int8": RustWrenEngineColumnType.TINYINT,
+            "uint8": RustWrenEngineColumnType.INT2,
+            "int16": RustWrenEngineColumnType.INT2,
+            "uint16": RustWrenEngineColumnType.INT2,
+            "int32": RustWrenEngineColumnType.INT4,
+            "uint32": RustWrenEngineColumnType.INT4,
+            "int64": RustWrenEngineColumnType.INT8,
+            "uint64": RustWrenEngineColumnType.INT8,
+            "float32": RustWrenEngineColumnType.FLOAT4,
+            "float64": RustWrenEngineColumnType.FLOAT8,
+            "decimal": RustWrenEngineColumnType.DECIMAL,
+            "date": RustWrenEngineColumnType.DATE,
+            "datetime": RustWrenEngineColumnType.TIMESTAMP,
+            "string": RustWrenEngineColumnType.VARCHAR,
+            "fixedstring": RustWrenEngineColumnType.CHAR,
+            "uuid": RustWrenEngineColumnType.UUID,
+            "enum8": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
+            "enum16": RustWrenEngineColumnType.STRING,  # Enums can be mapped to strings
+            "ipv4": RustWrenEngineColumnType.INET,
+            "ipv6": RustWrenEngineColumnType.INET,
         }
 
-        return switcher.get(data_type, WrenEngineColumnType.UNKNOWN)
+        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)

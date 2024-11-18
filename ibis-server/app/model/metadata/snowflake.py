@@ -8,9 +8,9 @@ from app.model.metadata.dto import (
     Column,
     Constraint,
     ConstraintType,
+    RustWrenEngineColumnType,
     Table,
     TableProperties,
-    WrenEngineColumnType,
 )
 from app.model.metadata.metadata import Metadata
 
@@ -133,36 +133,36 @@ class SnowflakeMetadata(Metadata):
         # all possible types listed here: https://docs.snowflake.com/en/sql-reference/intro-summary-data-types
         switcher = {
             # Numeric Types
-            "number": WrenEngineColumnType.NUMERIC,
-            "decimal": WrenEngineColumnType.NUMERIC,
-            "numeric": WrenEngineColumnType.NUMERIC,
-            "int": WrenEngineColumnType.INTEGER,
-            "integer": WrenEngineColumnType.INTEGER,
-            "bigint": WrenEngineColumnType.BIGINT,
-            "smallint": WrenEngineColumnType.SMALLINT,
-            "tinyint": WrenEngineColumnType.TINYINT,
-            "byteint": WrenEngineColumnType.TINYINT,
+            "number": RustWrenEngineColumnType.NUMERIC,
+            "decimal": RustWrenEngineColumnType.NUMERIC,
+            "numeric": RustWrenEngineColumnType.NUMERIC,
+            "int": RustWrenEngineColumnType.INTEGER,
+            "integer": RustWrenEngineColumnType.INTEGER,
+            "bigint": RustWrenEngineColumnType.BIGINT,
+            "smallint": RustWrenEngineColumnType.SMALLINT,
+            "tinyint": RustWrenEngineColumnType.TINYINT,
+            "byteint": RustWrenEngineColumnType.TINYINT,
             # Float
-            "float4": WrenEngineColumnType.FLOAT4,
-            "float": WrenEngineColumnType.FLOAT8,
-            "float8": WrenEngineColumnType.FLOAT8,
-            "double": WrenEngineColumnType.DOUBLE,
-            "double precision": WrenEngineColumnType.DOUBLE,
-            "real": WrenEngineColumnType.REAL,
+            "float4": RustWrenEngineColumnType.FLOAT4,
+            "float": RustWrenEngineColumnType.FLOAT8,
+            "float8": RustWrenEngineColumnType.FLOAT8,
+            "double": RustWrenEngineColumnType.DOUBLE,
+            "double precision": RustWrenEngineColumnType.DOUBLE,
+            "real": RustWrenEngineColumnType.REAL,
             # String Types
-            "varchar": WrenEngineColumnType.VARCHAR,
-            "char": WrenEngineColumnType.CHAR,
-            "character": WrenEngineColumnType.CHAR,
-            "string": WrenEngineColumnType.STRING,
-            "text": WrenEngineColumnType.TEXT,
+            "varchar": RustWrenEngineColumnType.VARCHAR,
+            "char": RustWrenEngineColumnType.CHAR,
+            "character": RustWrenEngineColumnType.CHAR,
+            "string": RustWrenEngineColumnType.STRING,
+            "text": RustWrenEngineColumnType.TEXT,
             # Boolean
-            "boolean": WrenEngineColumnType.BOOLEAN,
+            "boolean": RustWrenEngineColumnType.BOOL,
             # Date and Time Types
-            "date": WrenEngineColumnType.DATE,
-            "datetime": WrenEngineColumnType.TIMESTAMP,
-            "timestamp": WrenEngineColumnType.TIMESTAMP,
-            "timestamp_ntz": WrenEngineColumnType.TIMESTAMP,
-            "timestamp_tz": WrenEngineColumnType.TIMESTAMPTZ,
+            "date": RustWrenEngineColumnType.DATE,
+            "datetime": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp_ntz": RustWrenEngineColumnType.TIMESTAMP,
+            "timestamp_tz": RustWrenEngineColumnType.TIMESTAMPTZ,
         }
 
-        return switcher.get(data_type.lower(), WrenEngineColumnType.UNKNOWN)
+        return switcher.get(data_type.lower(), RustWrenEngineColumnType.UNKNOWN)

@@ -4,6 +4,7 @@ from app.model.metadata.dto import (
     Column,
     Constraint,
     ConstraintType,
+    RustWrenEngineColumnType,
     Table,
     TableProperties,
 )
@@ -17,6 +18,8 @@ class BigQueryMetadata(Metadata):
 
     def get_table_list(self) -> list[Table]:
         dataset_id = self.connection_info.dataset_id.get_secret_value()
+
+        # filter out columns with GEOGRAPHY & RANGE types
         sql = f"""
             SELECT 
                 c.table_catalog,
@@ -46,13 +49,10 @@ class BigQueryMetadata(Metadata):
                 AND cf.column_name = c.column_name
             LEFT JOIN {dataset_id}.INFORMATION_SCHEMA.TABLE_OPTIONS table_options
                 ON c.table_name = table_options.table_name
+            WHERE cf.data_type != 'GEOGRAPHY'
+                AND cf.data_type NOT LIKE 'RANGE%'
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
-
-        def get_data_type(data_type) -> str:
-            if "STRUCT" in data_type:
-                return "RECORD"
-            return data_type
 
         def get_column(row, nestedColumns=None) -> Column:
             return Column(
@@ -139,3 +139,30 @@ class BigQueryMetadata(Metadata):
 
     def get_version(self) -> str:
         return "Follow BigQuery release version"
+
+    def _transform_column_type(self, data_type):
+        # lower case the data_type
+        data_type = data_type.lower()
+
+        # if data_type start with "array" or "struct", by pass it
+        if data_type.startswith(("array", "struct")):
+            return data_type
+
+        # Map BigQuery types to RustWrenEngineColumnType
+        switcher = {
+            # GEOGRAPHY and RANGE columns were filtered out
+            "bytes": RustWrenEngineColumnType.BYTES,
+            "date": RustWrenEngineColumnType.DATE,
+            "datetime": RustWrenEngineColumnType.DATETIME,
+            "interval": RustWrenEngineColumnType.INTERVAL,
+            "json": RustWrenEngineColumnType.JSON,
+            "int64": RustWrenEngineColumnType.INT64,
+            "numeric": RustWrenEngineColumnType.NUMERIC,
+            "bignumeric": RustWrenEngineColumnType.BIGNUMERIC,
+            "float64": RustWrenEngineColumnType.FLOAT64,
+            "string": RustWrenEngineColumnType.STRING,
+            "time": RustWrenEngineColumnType.TIME,
+            "timestamp": RustWrenEngineColumnType.TIMESTAMPTZ,
+        }
+
+        return switcher.get(data_type, RustWrenEngineColumnType.UNKNOWN)
