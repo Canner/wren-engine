@@ -1174,6 +1174,20 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_common_expression_eliminate() -> Result<()> {
+        let ctx = SessionContext::new();
+        let sql =
+            "SELECT CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE) = \
+        CAST(TIMESTAMP '2021-01-01 00:00:00' as TIMESTAMP WITH TIME ZONE)";
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
+                .await?;
+        assert_eq!(result, "SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
+        CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
