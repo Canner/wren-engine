@@ -1,36 +1,36 @@
 use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
+use crate::mdl::dialect::WrenDialect;
 use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
 use crate::mdl::manifest::{Column, Manifest, Model, View};
+use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 use datafusion::execution::context::SessionState;
-use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::parser::DFParser;
 use datafusion::sql::sqlparser::ast::{Expr, Ident};
 use datafusion::sql::sqlparser::dialect::dialect_from_str;
-use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
 pub use dataset::Dataset;
 use log::{debug, info};
 use manifest::Relationship;
 use parking_lot::RwLock;
-use regex::Regex;
 use std::hash::Hash;
 use std::{collections::HashMap, sync::Arc};
 
 pub mod builder;
 pub mod context;
 pub(crate) mod dataset;
+mod dialect;
 pub mod function;
 pub mod lineage;
 pub mod manifest;
@@ -63,7 +63,7 @@ impl Default for AnalyzedWrenMDL {
 
 impl AnalyzedWrenMDL {
     pub fn analyze(manifest: Manifest) -> Result<Self> {
-        let wren_mdl = Arc::new(WrenMDL::infer_and_register_remote_table(manifest));
+        let wren_mdl = Arc::new(WrenMDL::infer_and_register_remote_table(manifest)?);
         let lineage = Arc::new(lineage::Lineage::new(&wren_mdl)?);
         Ok(AnalyzedWrenMDL { wren_mdl, lineage })
     }
@@ -171,7 +171,7 @@ impl WrenMDL {
 
     /// Create a WrenMDL from a manifest and register the table reference of the model as a remote table.
     /// All the column without expression will be considered a column
-    pub fn infer_and_register_remote_table(manifest: Manifest) -> Self {
+    pub fn infer_and_register_remote_table(manifest: Manifest) -> Result<Self> {
         let mut mdl = WrenMDL::new(manifest);
         let sources: Vec<_> = mdl
             .models()
@@ -181,7 +181,7 @@ impl WrenMDL {
                 let fields: Vec<_> = model
                     .columns
                     .iter()
-                    .filter_map(|column| Self::infer_source_column(column))
+                    .filter_map(|column| Self::infer_source_column(column).ok().flatten())
                     .collect();
                 let schema = Arc::new(datafusion::arrow::datatypes::Schema::new(fields));
                 let datasource = WrenDataSource::new_with_schema(schema);
@@ -191,7 +191,7 @@ impl WrenMDL {
         sources
             .into_iter()
             .for_each(|(name, ds_ref)| mdl.register_table(name, ds_ref));
-        mdl
+        Ok(mdl)
     }
 
     /// Infer the source column from the column expression.
@@ -202,23 +202,25 @@ impl WrenMDL {
     /// If the expression is a simple column reference, it's the source column name.
     /// If the expression is a complex expression, it can't be inferred.
     ///
-    fn infer_source_column(column: &Column) -> Option<Field> {
+    fn infer_source_column(column: &Column) -> Result<Option<Field>> {
         if column.is_calculated || column.relationship.is_some() {
-            return None;
+            return Ok(None);
         }
 
         if let Some(expression) = column.expression() {
-            let expr = WrenMDL::sql_to_expr(expression).ok()?;
+            let expr = WrenMDL::sql_to_expr(expression)?;
             // if the column is a simple column reference, we can infer the column name
-            Self::collect_one_column(&expr).map(|name| {
-                Field::new(
+            if let Some(name) = Self::collect_one_column(&expr) {
+                Ok(Some(Field::new(
                     name.value.clone(),
-                    map_data_type(&column.r#type),
+                    map_data_type(&column.r#type)?,
                     column.not_null,
-                )
-            })
+                )))
+            } else {
+                Ok(None)
+            }
         } else {
-            Some(column.to_field())
+            Ok(Some(column.to_field()?))
         }
     }
 
@@ -328,10 +330,11 @@ pub async fn transform_sql_with_ctx(
     sql: &str,
 ) -> Result<String> {
     info!("wren-core received SQL: {}", sql);
-    remote_functions.iter().for_each(|remote_function| {
+    remote_functions.iter().try_for_each(|remote_function| {
         debug!("Registering remote function: {:?}", remote_function);
-        register_remote_function(ctx, remote_function);
-    });
+        register_remote_function(ctx, remote_function)?;
+        Ok::<_, DataFusionError>(())
+    })?;
     let ctx = create_ctx_with_mdl(ctx, Arc::clone(&analyzed_mdl), false).await?;
     let plan = ctx.state().create_logical_plan(sql).await?;
     debug!("wren-core original plan:\n {plan}");
@@ -353,55 +356,31 @@ pub async fn transform_sql_with_ctx(
     }
 }
 
-fn register_remote_function(ctx: &SessionContext, remote_function: &RemoteFunction) {
+fn register_remote_function(
+    ctx: &SessionContext,
+    remote_function: &RemoteFunction,
+) -> Result<()> {
     match &remote_function.function_type {
         FunctionType::Scalar => {
             ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type),
+                map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Aggregate => {
             ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type),
+                map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Window => {
             ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type),
+                map_data_type(&remote_function.return_type)?,
             )))
         }
-    }
-}
-
-/// WrenDialect is a dialect for Wren engine. Handle the identifier quote style based on the
-/// original Datafusion Dialect implementation but with more strict rules.
-/// If the identifier isn't lowercase, it will be quoted.
-pub struct WrenDialect {}
-
-impl Dialect for WrenDialect {
-    fn identifier_quote_style(&self, identifier: &str) -> Option<char> {
-        let identifier_regex = Regex::new(r"^[a-zA-Z_][a-zA-Z0-9_]*$").unwrap();
-        if ALL_KEYWORDS.contains(&identifier.to_uppercase().as_str())
-            || !identifier_regex.is_match(identifier)
-            || non_lowercase(identifier)
-        {
-            Some('"')
-        } else {
-            None
-        }
-    }
-
-    fn interval_style(&self) -> IntervalStyle {
-        IntervalStyle::SQLStandard
-    }
-}
-
-fn non_lowercase(sql: &str) -> bool {
-    let lowercase = sql.to_lowercase();
-    lowercase != sql
+    };
+    Ok(())
 }
 
 /// Analyze the decision point. It's same as the /v1/analysis/sql API in wren engine
@@ -1114,6 +1093,84 @@ mod test {
                        (SELECT timestamp_table.timestamp_col FROM (SELECT timestamp_table.timestamp_col AS timestamp_col \
                        FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_list() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("list_table")
+                    .table_reference("list_table")
+                    .column(ColumnBuilder::new("list_col", "array<int>").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select list_col[1] from wren.test.list_table";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
+        (SELECT list_table.list_col AS list_col FROM list_table) AS list_table) AS list_table");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_struct() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("struct_table")
+                    .table_reference("struct_table")
+                    .column(
+                        ColumnBuilder::new(
+                            "struct_col",
+                            "struct<float_field float,time_field timestamp>",
+                        )
+                        .build(),
+                    )
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select struct_col.float_field from wren.test.struct_table";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT struct_table.struct_col.float_field FROM \
+        (SELECT struct_table.struct_col FROM (SELECT struct_table.struct_col AS struct_col \
+        FROM struct_table) AS struct_table) AS struct_table");
+
+        let sql =
+            "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT {float_field: 1.0, time_field: CAST('2021-01-01 00:00:00' AS TIMESTAMP)}");
+
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("struct_table")
+                    .table_reference("struct_table")
+                    .column(ColumnBuilder::new("struct_col", "struct<>").build())
+                    .build(),
+            )
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select struct_col.float_field from wren.test.struct_table";
+        let _ = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql)
+            .await
+            .map_err(|e| {
+                assert_eq!(
+                    e.to_string(),
+                    "Error during planning: struct must have at least one field"
+                )
+            });
         Ok(())
     }
 

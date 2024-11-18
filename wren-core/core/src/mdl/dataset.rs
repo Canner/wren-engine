@@ -58,9 +58,9 @@ impl Column {
     }
 
     /// Transform the column to a datafusion field
-    pub fn to_field(&self) -> Field {
-        let data_type = map_data_type(&self.r#type);
-        Field::new(&self.name, data_type, self.not_null)
+    pub fn to_field(&self) -> Result<Field> {
+        let data_type = map_data_type(&self.r#type)?;
+        Ok(Field::new(&self.name, data_type, self.not_null))
     }
 
     /// Transform the column to a datafusion field for a remote table
@@ -72,12 +72,12 @@ impl Column {
                 session_state.config_options().sql_parser.dialect.as_str(),
             )?;
             let columns = Self::collect_columns(expr);
-            Ok(columns
+            columns
                 .into_iter()
-                .map(|c| Field::new(c.value, map_data_type(&self.r#type), false))
-                .collect())
+                .map(|c| Ok(Field::new(c.value, map_data_type(&self.r#type)?, false)))
+                .collect::<Result<_>>()
         } else {
-            Ok(vec![self.to_field()])
+            Ok(vec![self.to_field()?])
         }
     }
 
@@ -123,7 +123,7 @@ impl Dataset {
                     .get_physical_columns()
                     .iter()
                     .map(|c| c.to_field())
-                    .collect();
+                    .collect::<Result<_>>()?;
                 let arrow_schema = datafusion::arrow::datatypes::Schema::new(fields);
                 DFSchema::try_from_qualified_schema(quoted(&model.name), &arrow_schema)
             }

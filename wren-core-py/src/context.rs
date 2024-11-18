@@ -106,10 +106,11 @@ impl PySessionContext {
             .block_on(create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), false))
             .map_err(CoreError::from)?;
 
-        remote_functions.iter().for_each(|remote_function| {
+        remote_functions.iter().try_for_each(|remote_function| {
             debug!("Registering remote function: {:?}", remote_function);
-            Self::register_remote_function(&ctx, remote_function);
-        });
+            Self::register_remote_function(&ctx, remote_function)?;
+            Ok::<(), CoreError>(())
+        })?;
 
         Ok(Self {
             ctx,
@@ -199,27 +200,31 @@ impl PySessionContext {
     fn register_remote_function(
         ctx: &wren_core::SessionContext,
         remote_function: &RemoteFunction,
-    ) {
+    ) -> PyResult<()> {
         match &remote_function.function_type {
             FunctionType::Scalar => {
                 ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                     &remote_function.name,
-                    map_data_type(&remote_function.return_type),
+                    map_data_type(&remote_function.return_type)
+                        .map_err(CoreError::from)?,
                 )))
             }
             FunctionType::Aggregate => {
                 ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                     &remote_function.name,
-                    map_data_type(&remote_function.return_type),
+                    map_data_type(&remote_function.return_type)
+                        .map_err(CoreError::from)?,
                 )))
             }
             FunctionType::Window => {
                 ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                     &remote_function.name,
-                    map_data_type(&remote_function.return_type),
+                    map_data_type(&remote_function.return_type)
+                        .map_err(CoreError::from)?,
                 )))
             }
         }
+        Ok(())
     }
 
     fn read_remote_function_list(path: Option<&str>) -> PyResult<Vec<PyRemoteFunction>> {

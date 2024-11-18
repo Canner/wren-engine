@@ -9,40 +9,100 @@ use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
 use datafusion::catalog_common::TableReference;
+use datafusion::common::plan_err;
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
+use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
+use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
 use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
+use datafusion::sql::sqlparser::ast;
+use datafusion::sql::sqlparser::parser::Parser;
 use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
 
-fn create_mock_list_type() -> DataType {
-    let string_filed = Arc::new(Field::new("string", DataType::Utf8, false));
-    DataType::List(string_filed)
+fn create_list_type(array_type: &str) -> Result<DataType> {
+    // Workaround for the array type without an element type
+    if array_type.len() == "array".len() {
+        return create_list_type("array<varchar>");
+    }
+    if let ast::DataType::Array(value) = parse_type(array_type)? {
+        let data_type = match value {
+            ArrayElemTypeDef::None => {
+                return plan_err!("Array type must have an element type")
+            }
+            ArrayElemTypeDef::AngleBracket(data_type) => {
+                map_data_type(&data_type.to_string())?
+            }
+            ArrayElemTypeDef::SquareBracket(_, _) => {
+                unreachable!()
+            }
+            ArrayElemTypeDef::Parenthesis(_) => {
+                return plan_err!(
+                    "The format of the array type should be 'array<element_type>'"
+                )
+            }
+        };
+        return Ok(DataType::List(Arc::new(Field::new(
+            "element", data_type, false,
+        ))));
+    }
+    unreachable!()
 }
 
-fn create_mock_struct_type() -> DataType {
+fn create_struct_type(struct_type: &str) -> Result<DataType> {
+    let sql_type = parse_type(struct_type)?;
     let mut builder = SchemaBuilder::new();
-    builder.push(Field::new("a", DataType::Boolean, false));
+    let mut counter = 0;
+    match sql_type {
+        ast::DataType::Struct(fields, ..) => {
+            if fields.is_empty() {
+                return plan_err!("struct must have at least one field");
+            }
+            for field in fields {
+                let data_type = map_data_type(field.field_type.to_string().as_str())?;
+                let field = Field::new(
+                    field
+                        .field_name
+                        .map(|f| f.to_string())
+                        .unwrap_or_else(|| format!("c{}", counter)),
+                    data_type,
+                    true,
+                );
+                counter += 1;
+                builder.push(field);
+            }
+        }
+        _ => {
+            unreachable!()
+        }
+    }
     let fields = builder.finish().fields;
-    DataType::Struct(fields)
+    Ok(DataType::Struct(fields))
 }
 
-pub fn map_data_type(data_type: &str) -> DataType {
+fn parse_type(struct_type: &str) -> Result<ast::DataType> {
+    let dialect = GenericDialect {};
+    Ok(Parser::new(&dialect)
+        .try_with_sql(struct_type)?
+        .parse_data_type()?)
+}
+
+pub fn map_data_type(data_type: &str) -> Result<DataType> {
     let lower = data_type.to_lowercase();
     let data_type = lower.as_str();
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
     if data_type.starts_with("array") {
-        return create_mock_list_type();
+        return create_list_type(data_type);
     }
     if data_type.starts_with("struct") {
-        return create_mock_struct_type();
+        return create_struct_type(data_type);
     }
-    match data_type {
+    let result = match data_type {
         // Wren Definition Types
         "bool" | "boolean" => DataType::Boolean,
         "tinyint" => DataType::Int8,
@@ -90,7 +150,8 @@ pub fn map_data_type(data_type: &str) -> DataType {
             debug!("map unknown type {} to Utf8", data_type);
             DataType::Utf8
         }
-    }
+    };
+    Ok(result)
 }
 
 pub fn create_table_source(model: &Model) -> Result<Arc<dyn TableSource>> {
@@ -102,7 +163,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type);
+            let data_type = map_data_type(&column.r#type)?;
             Ok(Field::new(&column.name, data_type, column.not_null))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -244,10 +305,11 @@ pub fn expr_to_columns(
 
 #[cfg(test)]
 mod test {
-    use datafusion::arrow::datatypes::{DataType, IntervalUnit, TimeUnit};
+    use crate::logical_plan::utils::{
+        create_list_type, create_struct_type, map_data_type,
+    };
+    use datafusion::arrow::datatypes::{DataType, Field, Fields, IntervalUnit, TimeUnit};
     use datafusion::common::Result;
-
-    use crate::logical_plan::utils::{create_mock_list_type, create_mock_struct_type};
 
     #[test]
     pub fn test_map_data_type() -> Result<()> {
@@ -303,16 +365,80 @@ mod test {
             ("null", DataType::Null),
             ("geography", DataType::Utf8),
             ("range", DataType::Utf8),
-            ("array<int64>", create_mock_list_type()),
-            ("struct<name string, age int>", create_mock_struct_type()),
+            ("array", create_list_type("array<varchar>")?),
+            ("array<int64>", create_list_type("array<int64>")?),
+            (
+                "struct<name string, age int>",
+                create_struct_type("struct<name string, age int>")?,
+            ),
         ];
         for (data_type, expected) in test_cases {
-            let result = super::map_data_type(data_type);
+            let result = map_data_type(data_type)?;
             assert_eq!(result, expected);
             // test case insensitivity
-            let result = super::map_data_type(&data_type.to_uppercase());
+            let result = map_data_type(&data_type.to_uppercase())?;
             assert_eq!(result, expected);
         }
+
+        let _ = map_data_type("array").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: EOF\")"
+            );
+        });
+
+        let _ = map_data_type("array<>").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: <> at Line: 1, Column: 6\")"
+            );
+        });
+
+        let _ = map_data_type("array(int64)").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "SQL error: ParserError(\"Expected: <, found: ( at Line: 1, Column: 6\")"
+            );
+        });
+
+        let _ = map_data_type("struct").map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "Error during planning: struct must have at least one field"
+            );
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_struct() -> Result<()> {
+        let struct_string = "STRUCT<name VARCHAR, age INT>";
+        let result = create_struct_type(struct_string)?;
+        let fields: Fields = vec![
+            Field::new("name", DataType::Utf8, true),
+            Field::new("age", DataType::Int32, true),
+        ]
+        .into();
+        let expected = DataType::Struct(fields);
+        assert_eq!(result, expected);
+
+        let struct_string = "STRUCT<VARCHAR, INT>";
+        let result = create_struct_type(struct_string)?;
+        let fields: Fields = vec![
+            Field::new("c0", DataType::Utf8, true),
+            Field::new("c1", DataType::Int32, true),
+        ]
+        .into();
+        let expected = DataType::Struct(fields);
+        assert_eq!(result, expected);
+        let struct_string = "STRUCT<>";
+        let _ = create_struct_type(struct_string).map_err(|e| {
+            assert_eq!(
+                e.to_string(),
+                "Error during planning: struct must have at least one field"
+            )
+        });
         Ok(())
     }
 }
