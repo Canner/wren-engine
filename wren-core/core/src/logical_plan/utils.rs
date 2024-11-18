@@ -25,6 +25,10 @@ use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
 
 fn create_list_type(array_type: &str) -> Result<DataType> {
+    // Workaround for the array type without an element type
+    if array_type.len() == "array".len() {
+        return create_list_type("array<varchar>");
+    }
     if let ast::DataType::Array(value) = parse_type(array_type)? {
         let data_type = match value {
             ArrayElemTypeDef::None => {
@@ -361,6 +365,7 @@ mod test {
             ("null", DataType::Null),
             ("geography", DataType::Utf8),
             ("range", DataType::Utf8),
+            ("array", create_list_type("array<varchar>")?),
             ("array<int64>", create_list_type("array<int64>")?),
             (
                 "struct<name string, age int>",
