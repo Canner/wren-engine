@@ -1,3 +1,4 @@
+import datetime
 import decimal
 
 import orjson
@@ -34,6 +35,8 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             return obj.hex()
         if isinstance(obj, pd.tseries.offsets.DateOffset):
             return _date_offset_to_str(obj)
+        if isinstance(obj, datetime.timedelta):
+            return str(obj)
         raise TypeError
 
     json_obj = orjson.loads(
