@@ -63,3 +63,13 @@ def test_get_available_functions():
     assert add_two["name"] == "add_two"
     assert add_two["function_type"] == "scalar"
     assert add_two["description"] == "Adds two numbers together."
+    assert add_two["return_type"] == "int"
+    assert add_two["param_names"] == "f1,f2"
+    assert add_two["param_types"] == "int,int"
+
+    max_if = next(filter(lambda x: x["name"] == "max_if", map(lambda x: x.to_dict(), functions)))
+    assert max_if["name"] == "max_if"
+    assert max_if["function_type"] == "window"
+    assert max_if["param_names"] is None
+    assert max_if["param_types"] is None
+

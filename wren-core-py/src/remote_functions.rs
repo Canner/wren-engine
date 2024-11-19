@@ -28,8 +28,10 @@ pub struct PyRemoteFunction {
     pub function_type: String,
     pub name: String,
     pub return_type: Option<String>,
-    pub param_names: Option<Vec<String>>,
-    pub param_types: Option<Vec<String>>,
+    /// It's a comma separated string of parameter names
+    pub param_names: Option<String>,
+    /// It's a comma separated string of parameter types
+    pub param_types: Option<String>,
     pub description: Option<String>,
 }
 
@@ -54,12 +56,26 @@ impl PyRemoteFunction {
 
 impl From<wren_core::mdl::function::RemoteFunction> for PyRemoteFunction {
     fn from(remote_function: wren_core::mdl::function::RemoteFunction) -> Self {
+        let param_names = remote_function.param_names.map(|names| {
+            names
+                .iter()
+                .map(|name| name.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        });
+        let param_types = remote_function.param_types.map(|types| {
+            types
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        });
         Self {
             function_type: remote_function.function_type.to_string(),
             name: remote_function.name,
             return_type: Some(remote_function.return_type),
-            param_names: remote_function.param_names,
-            param_types: remote_function.param_types,
+            param_names,
+            param_types,
             description: remote_function.description,
         }
     }
@@ -69,14 +85,26 @@ impl From<PyRemoteFunction> for wren_core::mdl::function::RemoteFunction {
     fn from(
         remote_function: PyRemoteFunction,
     ) -> wren_core::mdl::function::RemoteFunction {
+        let param_names = remote_function.param_names.map(|names| {
+            names
+                .split(",")
+                .map(|name| name.to_string())
+                .collect::<Vec<String>>()
+        });
+        let param_types = remote_function.param_types.map(|types| {
+            types
+                .split(",")
+                .map(|t| t.to_string())
+                .collect::<Vec<String>>()
+        });
         wren_core::mdl::function::RemoteFunction {
             function_type: FunctionType::from_str(&remote_function.function_type)
                 .unwrap(),
             name: remote_function.name,
             // TODO: Get the return type form DataFusion SessionState
             return_type: remote_function.return_type.unwrap_or("string".to_string()),
-            param_names: remote_function.param_names,
-            param_types: remote_function.param_types,
+            param_names,
+            param_types,
             description: remote_function.description,
         }
     }
