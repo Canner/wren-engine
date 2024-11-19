@@ -22,7 +22,6 @@ use datafusion::optimizer::analyzer::count_wildcard_rule::CountWildcardRule;
 use datafusion::optimizer::analyzer::expand_wildcard_rule::ExpandWildcardRule;
 use datafusion::optimizer::analyzer::inline_table_scan::InlineTableScan;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
-use datafusion::optimizer::common_subexpr_eliminate::CommonSubexprEliminate;
 use datafusion::optimizer::decorrelate_predicate_subquery::DecorrelatePredicateSubquery;
 use datafusion::optimizer::eliminate_cross_join::EliminateCrossJoin;
 use datafusion::optimizer::eliminate_duplicated_expr::EliminateDuplicatedExpr;
@@ -168,7 +167,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(EliminateDuplicatedExpr::new()),
         Arc::new(EliminateFilter::new()),
         Arc::new(EliminateCrossJoin::new()),
-        Arc::new(CommonSubexprEliminate::new()),
+        // Disable CommonSubexprEliminate to avoid generate invalid projection plan
+        // Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateLimit::new()),
         Arc::new(PropagateEmptyRelation::new()),
         // Must be after PropagateEmptyRelation
@@ -184,7 +184,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),
-        Arc::new(CommonSubexprEliminate::new()),
+        // Disable CommonSubexprEliminate to avoid generate invalid projection plan
+        // Arc::new(CommonSubexprEliminate::new()),
         Arc::new(EliminateGroupByConstant::new()),
         // TODO: This rule would generate a plan that is not supported by the current unparser
         // Arc::new(OptimizeProjections::new()),
