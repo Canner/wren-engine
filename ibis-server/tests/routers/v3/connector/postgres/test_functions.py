@@ -114,7 +114,7 @@ with TestClient(app) as client:
 
     def test_functions(manifest_str: str, connection_info):
         csv_parser = FunctionCsvParser(os.path.join(function_list_path, "postgres.csv"))
-        sql_generator = SqlTestGenerator()
+        sql_generator = SqlTestGenerator("postgres")
         for function in csv_parser.parse():
             sql = sql_generator.generate_sql(function)
             response = client.post(
