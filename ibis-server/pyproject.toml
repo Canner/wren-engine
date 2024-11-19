@@ -8,7 +8,7 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.115.4", extras = ["standard"] }
+fastapi = { version = "0.115.5", extras = ["standard"] }
 pydantic = "2.9.2"
 ibis-framework = { version = "9.5.0", extras = [
   "bigquery",
@@ -40,7 +40,7 @@ testcontainers = { version = "4.8.2", extras = [
 ] }
 sqlalchemy = "2.0.36"
 pre-commit = "4.0.1"
-ruff = "0.7.3"
+ruff = "0.7.4"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.6"
