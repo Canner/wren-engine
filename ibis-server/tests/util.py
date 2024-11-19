@@ -33,7 +33,7 @@ class FunctionCsvParser:
 
     @staticmethod
     def _split_param(param: str) -> list[str]:
-        return param.split("&") if param else []
+        return param.split(",") if param else []
 
 
 class SqlTestGenerator:
@@ -60,6 +60,8 @@ class SqlTestGenerator:
             args[0] = "'day'"
         if function.name in ("json_array_length", "jsonb_array_length"):
             args[0] = '\'[{"key": "value"}]\''
+        if function.name in ("json_extract_path", "jsonb_extract_path"):
+            args[1] = "'key'"
         if function.name == "to_number":
             args = ["'123'", "'999'"]
         formatted_args = ", ".join(args)
