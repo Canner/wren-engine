@@ -106,6 +106,9 @@ with TestClient(app) as client:
         csv_parser = FunctionCsvParser(os.path.join(function_list_path, "bigquery.csv"))
         sql_generator = SqlTestGenerator("bigquery")
         for function in csv_parser.parse():
+            # Skip window functions util https://github.com/Canner/wren-engine/issues/924 is resolved
+            if function.function_type == "window":
+                continue
             sql = sql_generator.generate_sql(function)
             response = client.post(
                 url=f"{base_url}/query",
