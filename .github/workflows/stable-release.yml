@@ -201,9 +201,10 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
+          TAGS=$(echo "${{ steps.meta.outputs.tags }}" | awk '{printf "--tag %s ", $0}')
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.IBIS_IMAGE }}@sha256:%s ' *) \
-            --tag ${{ steps.meta.outputs.tags }}
+            $TAGS
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ steps.meta.outputs.tags }}
