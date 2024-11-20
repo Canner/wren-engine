@@ -148,6 +148,23 @@ with TestClient(app) as client:
         assert result["data"][0][0] == 1
         assert result["dtypes"] is not None
 
+    def test_query_with_dot_all(manifest_str, postgres: PostgresContainer):
+        connection_info = _to_connection_info(postgres)
+        response = client.post(
+            url=f"{base_url}/query",
+            params={"limit": 1},
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": 'SELECT "o".* FROM "Orders" AS "o"',
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+        assert len(result["data"]) == 1
+        assert result["dtypes"] is not None
+
     def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
         manifest_str, postgres: PostgresContainer
     ):

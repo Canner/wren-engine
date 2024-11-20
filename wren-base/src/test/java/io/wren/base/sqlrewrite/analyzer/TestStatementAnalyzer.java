@@ -235,6 +235,29 @@ public class TestStatementAnalyzer
         assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "table_2"))).containsExactly("c1", "c2");
     }
 
+    @Test
+    public void testTargetDotAll()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("test")
+                .setSchema("test")
+                .setModels(ImmutableList.of(
+                        Model.model(
+                                "table_1",
+                                "SELECT * FROM foo",
+                                ImmutableList.of(
+                                        varcharColumn("c1"),
+                                        varcharColumn("c2")))))
+                .build();
+        List<String> testSqls = ImmutableList.of("SELECT table_1.* FROM table_1", "SELECT t.* FROM table_1 AS t");
+        for (String sql : testSqls) {
+            Statement statement = parseSql(sql);
+            Analysis analysis = new Analysis(statement);
+            analyze(analysis, statement, DEFAULT_SESSION_CONTEXT, fromManifest(manifest));
+            assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "table_1"))).containsExactly("c1", "c2");
+        }
+    }
+
     private static Column varcharColumn(String name)
     {
         return Column.column(name, "VARCHAR", null, false, null);

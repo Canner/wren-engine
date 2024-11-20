@@ -375,7 +375,18 @@ public final class StatementAnalyzer
         private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
             if (allColumns.getTarget().isPresent()) {
-                // TODO handle target.*
+                QualifiedName target = QualifiedName.of(((Identifier) allColumns.getTarget().get()).getValue());
+                List<Field> fields = scope.getRelationType().getFields().stream()
+                        .filter(field ->
+                                field.getRelationAlias().map(ra -> ra.equals(target)).orElse(false)
+                                        || field.getTableName().getSchemaTableName().getTableName().equals(target.getParts().getFirst()))
+                        .filter(f -> f.getSourceColumn().map(c -> !c.isCalculated()).orElse(true))
+                        .collect(toImmutableList());
+                analysis.addCollectedColumns(fields);
+                scope.getRelationType().getFields().stream()
+                        .filter(field -> field.getRelationAlias().map(ra -> ra.equals(target)).orElse(false))
+                        .map(field -> DereferenceExpression.from(QualifiedName.of(field.getTableName().getSchemaTableName().getTableName(), field.getColumnName())))
+                        .forEach(outputExpressions::add);
             }
             else {
                 List<Field> fields = scope.getRelationType()
