@@ -30,7 +30,7 @@ dev:
 
 # run the pytest tests for the given marker
 test MARKER:
-    poetry run pytest -m {{ MARKER }}
+    poetry run pytest -m '{{ MARKER }}'
 
 docker-build:
 # alias for `docker-build`
