@@ -64,7 +64,9 @@ class SqlTestGenerator:
         elif p_type == "bytea":
             return "'\\xc3a4'"
         elif p_type == "interval":
-            return "'1 day'"
+            return "INTERVAL 1 DAY"
+        elif p_type == "granularity":
+            return "DAY"
         else:
             return "NULL"
 
@@ -128,6 +130,11 @@ class BigQuerySqlGenerator(SqlGenerator):
             "json_value_array",
         ):
             args[1] = "'$'"
+        if function.name in ("format_timestamp", "format_date"):
+            args[0] = "'%c'"
+        if function.name == "parse_date":
+            args[0] = "'%F'"
+            args[1] = "'2000-12-30'"
         formatted_args = ", ".join(args)
         return f"SELECT {function.name}({formatted_args})"
 

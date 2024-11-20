@@ -109,6 +109,18 @@ with TestClient(app) as client:
             # Skip window functions util https://github.com/Canner/wren-engine/issues/924 is resolved
             if function.function_type == "window":
                 continue
+            # Skip functions with interval util https://github.com/Canner/wren-engine/issues/930 is resolved
+            if function.name in (
+                "date_add",
+                "date_sub",
+                "date_diff",
+                "date_trunc",
+                "timestamp_add",
+                "timestamp_sub",
+                "timestamp_diff",
+                "timestamp_trunc",
+            ):
+                continue
             sql = sql_generator.generate_sql(function)
             response = client.post(
                 url=f"{base_url}/query",
