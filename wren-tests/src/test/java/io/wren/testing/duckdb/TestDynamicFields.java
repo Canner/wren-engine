@@ -70,7 +70,7 @@ public class TestDynamicFields
         // select two dimensions and measure
         actual = query(manifest, "SELECT customer, date, totalprice FROM CustomerDailyRevenue WHERE customer = 'Customer#000000048' ORDER BY 1, 2");
         expected = query(manifest, "SELECT c.name as customer, o.orderdate as date, SUM(o.totalprice) as totalprice FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
-                        "WHERE c.name = 'Customer#000000048' GROUP BY 1, 2 ORDER BY 1, 2");
+                "WHERE c.name = 'Customer#000000048' GROUP BY 1, 2 ORDER BY 1, 2");
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -85,8 +85,7 @@ public class TestDynamicFields
                 column("custkey", "INTEGER"),
                 column("orderstatus", "VARCHAR"),
                 column("totalprice", "DECIMAL(15,2)"),
-                column("orderdate", "DATE")
-        );
+                column("orderdate", "DATE"));
 
         QueryResultDto case1 = query(manifest, "SELECT \"Orders\".* FROM \"Orders\" LIMIT 1");
         assertThat(case1.getColumns()).isEqualTo(expectedColumns);
