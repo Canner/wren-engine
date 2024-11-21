@@ -29,3 +29,11 @@ trino:
 bigquery:
 - changed-files:
   - any-glob-to-any-file: ['**/*bigquery*']
+
+ci:
+- changed-files:
+  - any-glob-to-any-file: ['.github/**']
+
+v1-engine-changed:
+- changed-files:
+  - any-glob-to-any-file: ['wren-base/**', 'wren-main/**', 'wren-server/**', 'wren-tests/**']
