@@ -77,6 +77,7 @@ public class TestDynamicFields
     @Test
     public void testTargetDotAllWillNotIncludeCalculatedField()
     {
+        // Show that there is a calculated field in Orders.
         QueryResultDto calculated = query(manifest, "SELECT nation_name FROM \"Orders\" LIMIT 1");
         assertThat(calculated.getColumns()).containsExactly(column("nation_name", "VARCHAR"));
 
