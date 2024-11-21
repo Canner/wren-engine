@@ -76,7 +76,7 @@ public class TestDecisionPointAnalyzer
                 Column.column("shippriority", WrenTypes.INTEGER, null, true),
                 Column.column("comment", WrenTypes.VARCHAR, null, true),
                 Column.column("customer", "customer", "CustomerOrders", false),
-                Column.caluclatedColumn("customer_name", WrenTypes.VARCHAR, "customer.name"));
+                Column.calculatedColumn("customer_name", WrenTypes.VARCHAR, "customer.name"));
         List<Column> lineitemColumns = List.of(
                 Column.column("orderkey", WrenTypes.INTEGER, null, true),
                 Column.column("partkey", WrenTypes.INTEGER, null, true),

@@ -30,7 +30,7 @@ import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_DIRECTORY;
 import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
-import static io.wren.base.dto.Column.caluclatedColumn;
+import static io.wren.base.dto.Column.calculatedColumn;
 import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Model.model;
 import static io.wren.base.dto.Relationship.relationship;
@@ -76,7 +76,7 @@ public class TestMDLResourceV2
                                 List.of(column("orderkey", "integer", null, false, "o_orderkey"),
                                         column("custkey", "integer", null, false, "o_custkey"),
                                         column("customer", "Customer", "CustomerOrders", false),
-                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                        calculatedColumn("customer_name", "varchar", "customer.name")),
                                 "orderkey")))
                 .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.ONE_TO_MANY, "Customer.custkey = Orders.custkey")))
                 .build();
@@ -206,7 +206,7 @@ public class TestMDLResourceV2
                                 List.of(column("orderkey", "integer", null, false, "o_orderkey"),
                                         column("custkey", "integer", null, false, "o_custkey"),
                                         column("customer", "Customer", "CustomerOrders", false),
-                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                        calculatedColumn("customer_name", "varchar", "customer.name")),
                                 "orderkey")))
                 .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.MANY_TO_MANY, "Customer.custkey = Orders.custkey")))
                 .build();

@@ -113,10 +113,10 @@ public abstract class AbstractTestModel
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("totalprice", WrenTypes.BIGINT, "sum(orders.totalprice)"),
-                Column.caluclatedColumn("buy_item_count", WrenTypes.BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
-                Column.caluclatedColumn("lineitem_totalprice", WrenTypes.BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"),
-                Column.caluclatedColumn("test_col", WrenTypes.BIGINT, "sum(orders.lineitem.discount * nationkey)"));
+                Column.calculatedColumn("totalprice", WrenTypes.BIGINT, "sum(orders.totalprice)"),
+                Column.calculatedColumn("buy_item_count", WrenTypes.BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
+                Column.calculatedColumn("lineitem_totalprice", WrenTypes.BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"),
+                Column.calculatedColumn("test_col", WrenTypes.BIGINT, "sum(orders.lineitem.discount * nationkey)"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, orders, lineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -156,8 +156,8 @@ public abstract class AbstractTestModel
         Model newLineitem = addColumnsToModel(
                 lineitem,
                 Column.column("orders", "Orders", "OrdersLineitem", true),
-                Column.caluclatedColumn("col_1", WrenTypes.BIGINT, "orders.totalprice + orders.totalprice"),
-                Column.caluclatedColumn("col_2", WrenTypes.BIGINT, "concat(orders.orderkey, '#', orders.customer.custkey)"));
+                Column.calculatedColumn("col_1", WrenTypes.BIGINT, "orders.totalprice + orders.totalprice"),
+                Column.calculatedColumn("col_2", WrenTypes.BIGINT, "concat(orders.orderkey, '#', orders.customer.custkey)"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("customer", "Customer", "OrdersCustomer", true));
@@ -221,11 +221,11 @@ public abstract class AbstractTestModel
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
+                Column.calculatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("customer", "Customer", "OrdersCustomer", true),
-                Column.caluclatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"));
+                Column.calculatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, newOrders))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -252,7 +252,7 @@ public abstract class AbstractTestModel
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("totalprice", WrenTypes.BIGINT, "sum(orders.totalprice)"));
+                Column.calculatedColumn("totalprice", WrenTypes.BIGINT, "sum(orders.totalprice)"));
         Model onCustomer = Model.onBaseObject(
                 "OnCustomer",
                 "Customer",
@@ -282,17 +282,17 @@ public abstract class AbstractTestModel
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
+                Column.calculatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("customer", "Customer", "OrdersCustomer", true),
                 Column.column("lineitem", "Lineitem", "OrdersLineitem", true),
-                Column.caluclatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
-                Column.caluclatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"));
+                Column.calculatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
+                Column.calculatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"));
         Model newLineitem = addColumnsToModel(
                 lineitem,
                 Column.column("orders", "Orders", "OrdersLineitem", true),
-                Column.caluclatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
+                Column.calculatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, newOrders, newLineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -309,17 +309,17 @@ public abstract class AbstractTestModel
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
+                Column.calculatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("customer", "Customer", "OrdersCustomer", true),
                 Column.column("lineitem", "Lineitem", "OrdersLineitem", true),
-                Column.caluclatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
-                Column.caluclatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"));
+                Column.calculatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
+                Column.calculatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"));
         Model newLineitem = addColumnsToModel(
                 lineitem,
                 Column.column("orders", "Orders", "OrdersLineitem", true),
-                Column.caluclatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
+                Column.calculatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, newOrders, newLineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))

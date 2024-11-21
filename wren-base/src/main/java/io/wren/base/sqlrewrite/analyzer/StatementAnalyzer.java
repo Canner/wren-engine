@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -374,21 +375,26 @@ public final class StatementAnalyzer
 
         private void analyzeSelectAllColumns(AllColumns allColumns, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
         {
+            List<Field> fields = scope.getRelationType().getFields();
+            Stream<Field> collectedColumns = fields.stream().filter(f -> f.getSourceColumn().map(c -> !c.isCalculated()).orElse(true));
+            Stream<Field> outputExpressionStream = fields.stream();
+
             if (allColumns.getTarget().isPresent()) {
-                // TODO handle target.*
+                QualifiedName target = QualifiedName.of(((Identifier) allColumns.getTarget().get()).getValue());
+                collectedColumns = collectedColumns
+                        .filter(field ->
+                                field.getRelationAlias().map(ra -> ra.equals(target)).orElse(false)
+                                        || field.getTableName().getSchemaTableName().getTableName().equals(target.getParts().getFirst()));
+                outputExpressionStream = outputExpressionStream
+                        .filter(field -> field.getRelationAlias().map(ra -> ra.equals(target)).orElse(false));
             }
-            else {
-                List<Field> fields = scope.getRelationType()
-                        .getFields()
-                        .stream()
-                        .filter(f -> f.getSourceColumn().map(c -> !c.isCalculated()).orElse(true))
-                        .collect(toImmutableList());
-                analysis.addCollectedColumns(fields);
-                scope.getRelationType().getFields().stream().map(field ->
-                                field.getRelationAlias().map(DereferenceExpression::from)
-                                        .orElse(DereferenceExpression.from(QualifiedName.of(field.getTableName().getSchemaTableName().getTableName(), field.getColumnName()))))
-                        .forEach(outputExpressions::add);
-            }
+
+            analysis.addCollectedColumns(collectedColumns.collect(toImmutableList()));
+            outputExpressionStream
+                    .map(field ->
+                            field.getRelationAlias().map(DereferenceExpression::from)
+                                    .orElse(DereferenceExpression.from(QualifiedName.of(field.getTableName().getSchemaTableName().getTableName(), field.getColumnName()))))
+                    .forEach(outputExpressions::add);
         }
 
         private void analyzeSelectSingleColumn(SingleColumn singleColumn, Scope scope, ImmutableList.Builder<Expression> outputExpressions)
