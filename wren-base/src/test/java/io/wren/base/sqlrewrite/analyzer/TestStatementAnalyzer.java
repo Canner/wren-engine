@@ -37,7 +37,10 @@ import java.util.function.Function;
 import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.WrenMDL.EMPTY;
 import static io.wren.base.WrenMDL.fromManifest;
+import static io.wren.base.dto.Column.caluclatedColumn;
+import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Column.relationshipColumn;
+import static io.wren.base.dto.Model.model;
 import static io.wren.base.dto.Relationship.relationship;
 import static io.wren.base.sqlrewrite.Utils.parseSql;
 import static io.wren.base.sqlrewrite.analyzer.StatementAnalyzer.analyze;
@@ -241,20 +244,27 @@ public class TestStatementAnalyzer
         Manifest manifest = Manifest.builder()
                 .setCatalog("test")
                 .setSchema("test")
-                .setModels(ImmutableList.of(
-                        Model.model(
-                                "table_1",
-                                "SELECT * FROM foo",
-                                ImmutableList.of(
-                                        varcharColumn("c1"),
-                                        varcharColumn("c2")))))
+                .setModels(List.of(
+                        model("Orders", "SELECT * FROM tpch.orders",
+                                List.of(column("orderkey", "integer", null, false, "o_orderkey"),
+                                        column("custkey", "integer", null, false, "o_custkey"),
+                                        column("customer", "Customer", "CustomerOrders", false),
+                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                "orderkey"),
+                        model("Customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey"),
+                                        column("name", "varchar", null, false, "c_name")))))
+                .setRelationships(List.of(relationship("CustomerOrders", List.of("Customer", "Orders"), JoinType.ONE_TO_MANY, "Customer.custkey = Orders.custkey")))
                 .build();
-        List<String> testSqls = ImmutableList.of("SELECT table_1.* FROM table_1", "SELECT t.* FROM table_1 AS t");
+        List<String> testSqls = ImmutableList.of(
+                "SELECT Orders.* FROM Orders",
+                "SELECT o.* FROM Orders AS o",
+                "SELECT o.* FROM Orders AS o JOIN Customer AS c ON o.custkey = c.custkey");
         for (String sql : testSqls) {
             Statement statement = parseSql(sql);
             Analysis analysis = new Analysis(statement);
             analyze(analysis, statement, DEFAULT_SESSION_CONTEXT, fromManifest(manifest));
-            assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "table_1"))).containsExactly("c1", "c2");
+            assertThat(analysis.getCollectedColumns().get(catalogSchemaTableName("test", "test", "Orders"))).containsExactly("custkey", "orderkey", "customer");
         }
     }
 
