@@ -1,0 +1,33 @@
+name: Auto Milestone Assign
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  assign-milestone:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Fetch latest milestone
+        id: fetch-milestone
+        run: |
+          LATEST_MILESTONE=$(gh api repos/${{ github.repository }}/milestones --jq '.[0].title')
+          if [ -z "$LATEST_MILESTONE" ] || [ "$LATEST_MILESTONE" == "null" ]; then
+            echo "No open milestone found."
+            exit 1
+          fi
+          echo "latest_milestone=$LATEST_MILESTONE" >> $GITHUB_ENV
+      - name: Assign milestone to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                milestone: ${{ env.latest_milestone }},
+            })
