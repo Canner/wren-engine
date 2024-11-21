@@ -14,7 +14,9 @@
 
 package io.wren.testing.duckdb;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import io.wren.base.Column;
 import io.wren.base.dto.Manifest;
 import io.wren.main.web.dto.QueryResultDto;
 import io.wren.testing.AbstractTestFramework;
@@ -23,8 +25,9 @@ import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.SQLException;
+import java.util.List;
 
+import static io.wren.base.Column.column;
 import static io.wren.base.config.WrenConfig.DataSourceType.DUCKDB;
 import static io.wren.base.config.WrenConfig.WREN_DATASOURCE_TYPE;
 import static io.wren.base.config.WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS;
@@ -56,7 +59,6 @@ public class TestDynamicFields
 
     @Test
     public void testDynamicMetric()
-            throws SQLException
     {
         // select one dimension and measure
         QueryResultDto actual = query(manifest, "SELECT customer, totalprice FROM CustomerDailyRevenue WHERE customer = 'Customer#000000048'");
@@ -70,5 +72,29 @@ public class TestDynamicFields
         expected = query(manifest, "SELECT c.name as customer, o.orderdate as date, SUM(o.totalprice) as totalprice FROM Orders o LEFT JOIN Customer c ON o.custkey = c.custkey\n" +
                         "WHERE c.name = 'Customer#000000048' GROUP BY 1, 2 ORDER BY 1, 2");
         assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testTargetDotAllWillNotIncludeCalculatedField()
+    {
+        QueryResultDto calculated = query(manifest, "SELECT nation_name FROM \"Orders\" LIMIT 1");
+        assertThat(calculated.getColumns()).containsExactly(column("nation_name", "VARCHAR"));
+
+        List<Column> expectedColumns = ImmutableList.of(
+                column("orderkey", "INTEGER"),
+                column("custkey", "INTEGER"),
+                column("orderstatus", "VARCHAR"),
+                column("totalprice", "DECIMAL(15,2)"),
+                column("orderdate", "DATE")
+        );
+
+        QueryResultDto case1 = query(manifest, "SELECT \"Orders\".* FROM \"Orders\" LIMIT 1");
+        assertThat(case1.getColumns()).isEqualTo(expectedColumns);
+
+        QueryResultDto case2 = query(manifest, "SELECT o.* FROM \"Orders\" AS o LIMIT 1");
+        assertThat(case2.getColumns()).isEqualTo(expectedColumns);
+
+        QueryResultDto case3 = query(manifest, "SELECT o.* FROM \"Orders\" AS o JOIN \"Customer\" AS c ON o.custkey = c.custkey LIMIT 1");
+        assertThat(case3.getColumns()).isEqualTo(expectedColumns);
     }
 }

@@ -67,6 +67,36 @@ manifest = {
             ],
             "primaryKey": "orderkey",
         },
+        {
+            "name": "Customer",
+            "refSql": "SELECT * FROM public.customer",
+            "columns": [
+                {
+                    "name": "custkey",
+                    "type": "integer",
+                    "expression": "c_custkey",
+                },
+                {
+                    "name": "orders",
+                    "type": "Orders",
+                    "relationship": "CustomerOrders",
+                },
+                {
+                    "name": "orders_key",
+                    "type": "varchar",
+                    "isCalculated": True,
+                    "expression": "orders.orderkey",
+                },
+            ],
+        },
+    ],
+    "relationships": [
+        {
+            "name": "CustomerOrders",
+            "models": ["Customer", "Orders"],
+            "joinType": "ONE_TO_MANY",
+            "condition": "Customer.custkey = Orders.custkey",
+        }
     ],
 }
 
@@ -82,6 +112,9 @@ def postgres(request) -> PostgresContainer:
     engine = sqlalchemy.create_engine(pg.get_connection_url())
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
+    )
+    pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
+        "customer", engine, index=False
     )
     with engine.begin() as conn:
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
@@ -150,20 +183,26 @@ with TestClient(app) as client:
 
     def test_query_with_dot_all(manifest_str, postgres: PostgresContainer):
         connection_info = _to_connection_info(postgres)
-        response = client.post(
-            url=f"{base_url}/query",
-            params={"limit": 1},
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": 'SELECT "o".* FROM "Orders" AS "o"',
-            },
-        )
-        assert response.status_code == 200
-        result = response.json()
-        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
-        assert len(result["data"]) == 1
-        assert result["dtypes"] is not None
+        test_sqls = [
+            'SELECT "Customer".* FROM "Customer"',
+            'SELECT c.* FROM "Customer" AS c',
+            'SELECT c.* FROM "Customer" AS c JOIN "Orders" AS o ON c.custkey = o.custkey',
+        ]
+        for sql in test_sqls:
+            response = client.post(
+                url=f"{base_url}/query",
+                params={"limit": 1},
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": manifest_str,
+                    "sql": sql,
+                },
+            )
+            assert response.status_code == 200
+            result = response.json()
+            assert len(result["columns"]) == 1  # Not include calculated column
+            assert len(result["data"]) == 1
+            assert result["dtypes"] is not None
 
     def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
         manifest_str, postgres: PostgresContainer
