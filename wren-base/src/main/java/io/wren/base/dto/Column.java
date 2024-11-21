@@ -51,7 +51,7 @@ public class Column
         return new Column(name, type, relationship, false, false, null, null);
     }
 
-    public static Column caluclatedColumn(String name, String type, String expression)
+    public static Column calculatedColumn(String name, String type, String expression)
     {
         return new Column(name, type, null, true, false, expression, null);
     }

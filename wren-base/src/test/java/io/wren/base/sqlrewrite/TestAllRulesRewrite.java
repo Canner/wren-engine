@@ -56,7 +56,7 @@ public class TestAllRulesRewrite
                                         Column.relationshipColumn("band", "Band", "AlbumBand"),
                                         Column.column("price", WrenTypes.INTEGER, null, true),
                                         Column.column("bandId", WrenTypes.INTEGER, null, true),
-                                        Column.caluclatedColumn("bandName", WrenTypes.VARCHAR, "band.name"),
+                                        Column.calculatedColumn("bandName", WrenTypes.VARCHAR, "band.name"),
                                         Column.column("status", "Inventory", null, true),
                                         Column.column("statusA", "InventoryA", null, true),
                                         Column.relationshipColumn("orders", "Order", "AlbumOrder")),

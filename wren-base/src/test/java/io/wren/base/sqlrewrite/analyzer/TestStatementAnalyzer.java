@@ -37,7 +37,7 @@ import java.util.function.Function;
 import static io.wren.base.CatalogSchemaTableName.catalogSchemaTableName;
 import static io.wren.base.WrenMDL.EMPTY;
 import static io.wren.base.WrenMDL.fromManifest;
-import static io.wren.base.dto.Column.caluclatedColumn;
+import static io.wren.base.dto.Column.calculatedColumn;
 import static io.wren.base.dto.Column.column;
 import static io.wren.base.dto.Column.relationshipColumn;
 import static io.wren.base.dto.Model.model;
@@ -249,7 +249,7 @@ public class TestStatementAnalyzer
                                 List.of(column("orderkey", "integer", null, false, "o_orderkey"),
                                         column("custkey", "integer", null, false, "o_custkey"),
                                         column("customer", "Customer", "CustomerOrders", false),
-                                        caluclatedColumn("customer_name", "varchar", "customer.name")),
+                                        calculatedColumn("customer_name", "varchar", "customer.name")),
                                 "orderkey"),
                         model("Customer", "SELECT * FROM tpch.customer",
                                 List.of(column("custkey", "integer", null, false, "c_custkey"),
