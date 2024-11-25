@@ -383,7 +383,7 @@ public abstract class AbstractTestModel
 
     private void buildFailedModel(String refSql, String baseObject, TableReference tableReference)
     {
-        new Model("failed", refSql, baseObject, tableReference, null, null, false, null, null);
+        new Model("failed", refSql, baseObject, tableReference, null, null, false, null);
     }
 
     private void assertQuery(WrenMDL mdl, @Language("SQL") String wrenSql, @Language("SQL") String duckDBSql)

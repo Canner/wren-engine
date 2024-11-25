@@ -16,7 +16,6 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Expression;
@@ -26,7 +25,6 @@ import io.trino.sql.tree.Identifier;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -46,7 +44,6 @@ public class Relationship
     // for debugging internally
     private final boolean isReverse;
     private final List<SortKey> manySideSortKeys;
-    private final Map<String, String> properties;
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition)
     {
@@ -55,7 +52,7 @@ public class Relationship
 
     public static Relationship relationship(String name, List<String> models, JoinType joinType, String condition, List<SortKey> manySideSortKeys)
     {
-        return new Relationship(name, models, joinType, condition, manySideSortKeys, ImmutableMap.of());
+        return new Relationship(name, models, joinType, condition, manySideSortKeys);
     }
 
     public static Relationship reverse(Relationship relationship)
@@ -66,8 +63,7 @@ public class Relationship
                 JoinType.reverse(relationship.joinType),
                 relationship.getCondition(),
                 true,
-                relationship.getManySideSortKeys(),
-                ImmutableMap.of());
+                relationship.getManySideSortKeys());
     }
 
     @JsonCreator
@@ -76,10 +72,9 @@ public class Relationship
             @JsonProperty("models") List<String> models,
             @JsonProperty("joinType") JoinType joinType,
             @JsonProperty("condition") String condition,
-            @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("manySideSortKeys") List<SortKey> manySideSortKeys)
     {
-        this(name, models, joinType, condition, false, manySideSortKeys, properties);
+        this(name, models, joinType, condition, false, manySideSortKeys);
     }
 
     public Relationship(
@@ -88,8 +83,7 @@ public class Relationship
             JoinType joinType,
             String condition,
             boolean isReverse,
-            List<SortKey> manySideSortKeys,
-            Map<String, String> properties)
+            List<SortKey> manySideSortKeys)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         checkArgument(models != null && models.size() >= 2, "relationship should contain at least 2 models");
@@ -99,7 +93,6 @@ public class Relationship
         this.qualifiedCondition = qualifiedCondition(condition);
         this.isReverse = isReverse;
         this.manySideSortKeys = manySideSortKeys == null ? List.of() : manySideSortKeys;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     private Expression qualifiedCondition(String condition)
@@ -170,12 +163,6 @@ public class Relationship
         return isReverse;
     }
 
-    @JsonProperty("properties")
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public boolean equals(Object obj)
     {
@@ -191,14 +178,13 @@ public class Relationship
                 joinType == that.joinType &&
                 Objects.equals(condition, that.condition) &&
                 isReverse == that.isReverse &&
-                Objects.equals(manySideSortKeys, that.manySideSortKeys) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(manySideSortKeys, that.manySideSortKeys);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, models, joinType, condition, isReverse, manySideSortKeys, properties);
+        return Objects.hash(name, models, joinType, condition, isReverse, manySideSortKeys);
     }
 
     @Override
@@ -211,7 +197,6 @@ public class Relationship
                 .add("condition", condition)
                 .add("isReverse", isReverse)
                 .add("manySideSortKeys", manySideSortKeys)
-                .add("properties", properties)
                 .toString();
     }
 

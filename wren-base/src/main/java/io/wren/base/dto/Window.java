@@ -16,10 +16,8 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import io.wren.base.WrenTypes;
 
-import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -36,11 +34,10 @@ public class Window
 
     private final String start;
     private final String end;
-    private final Map<String, String> properties;
 
     public static Window window(String name, String refColumn, TimeUnit timeUnit, String start, String end)
     {
-        return new Window(name, refColumn, timeUnit, start, end, null);
+        return new Window(name, refColumn, timeUnit, start, end);
     }
 
     @JsonCreator
@@ -49,15 +46,13 @@ public class Window
             @JsonProperty("refColumn") String refColumn,
             @JsonProperty("timeUnit") TimeUnit timeUnit,
             @JsonProperty("start") String start,
-            @JsonProperty("end") String end,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("end") String end)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.refColumn = requireNonNullEmpty(refColumn, "refColumn is null or empty");
         this.timeUnit = requireNonNull(timeUnit, "timeUnit is null or empty");
         this.start = requireNonNullEmpty(start, "start is null or empty");
         this.end = requireNonNullEmpty(end, "end is null or empty");
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -90,15 +85,9 @@ public class Window
         return end;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     public Column toColumn()
     {
-        return new Column(name, WrenTypes.TIMESTAMP, null, false, false, refColumn, properties);
+        return new Column(name, WrenTypes.TIMESTAMP, null, false, false, refColumn);
     }
 
     @Override
@@ -110,7 +99,6 @@ public class Window
                 .add("timeUnit", timeUnit)
                 .add("start", start)
                 .add("end", end)
-                .add("properties", properties)
                 .toString();
     }
 
@@ -129,13 +117,12 @@ public class Window
                 Objects.equals(refColumn, window.refColumn) &&
                 timeUnit == window.timeUnit &&
                 Objects.equals(start, window.start) &&
-                Objects.equals(end, window.end) &&
-                Objects.equals(properties, window.properties);
+                Objects.equals(end, window.end);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refColumn, timeUnit, start, end, properties);
+        return Objects.hash(name, refColumn, timeUnit, start, end);
     }
 }

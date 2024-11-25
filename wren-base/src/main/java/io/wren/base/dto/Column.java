@@ -16,9 +16,7 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,26 +32,25 @@ public class Column
     private final String relationship;
     private final String expression;
     private final boolean isCalculated;
-    private final Map<String, String> properties;
 
     public static Column column(String name, String type, String relationship, boolean notNull)
     {
-        return new Column(name, type, relationship, false, notNull, null, null);
+        return new Column(name, type, relationship, false, notNull, null);
     }
 
     public static Column column(String name, String type, String relationship, boolean notNull, String expression)
     {
-        return new Column(name, type, relationship, false, notNull, expression, null);
+        return new Column(name, type, relationship, false, notNull, expression);
     }
 
     public static Column relationshipColumn(String name, String type, String relationship)
     {
-        return new Column(name, type, relationship, false, false, null, null);
+        return new Column(name, type, relationship, false, false, null);
     }
 
     public static Column calculatedColumn(String name, String type, String expression)
     {
-        return new Column(name, type, null, true, false, expression, null);
+        return new Column(name, type, null, true, false, expression);
     }
 
     @JsonCreator
@@ -63,8 +60,7 @@ public class Column
             @JsonProperty("relationship") String relationship,
             @JsonProperty("isCalculated") boolean isCalculated,
             @JsonProperty("notNull") boolean notNull,
-            @JsonProperty("expression") String expression,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("expression") String expression)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.type = requireNonNullEmpty(type, "type is null or empty");
@@ -72,7 +68,6 @@ public class Column
         this.isCalculated = isCalculated;
         this.notNull = notNull;
         this.expression = expression == null || expression.isEmpty() ? null : expression;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -111,12 +106,6 @@ public class Column
         return isCalculated;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     public String getSqlExpression()
     {
         return getExpression().orElse(quote(name));
@@ -137,14 +126,13 @@ public class Column
                 Objects.equals(name, that.name) &&
                 Objects.equals(type, that.type) &&
                 Objects.equals(relationship, that.relationship) &&
-                Objects.equals(expression, that.expression) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(expression, that.expression);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, isCalculated, notNull, relationship, expression, properties);
+        return Objects.hash(name, type, isCalculated, notNull, relationship, expression);
     }
 
     @Override
@@ -157,7 +145,6 @@ public class Column
                 .add("isCalculated", isCalculated)
                 .add("relationship", relationship)
                 .add("expression", expression)
-                .add("properties", properties)
                 .toString();
     }
 

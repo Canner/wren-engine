@@ -9,7 +9,14 @@
         {
           "name": "orderkey",
           "expression": "o_orderkey",
-          "type": "int4"
+          "type": "int4",
+          "properties": {
+            "field": "test1",
+            "nested": {
+              "n1": "test1",
+              "n2": "test2"
+            }
+          }
         },
         {
           "name": "custkey",

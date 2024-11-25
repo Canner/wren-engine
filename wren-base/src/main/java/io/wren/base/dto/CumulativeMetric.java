@@ -16,10 +16,8 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
-import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
@@ -35,7 +33,7 @@ public class CumulativeMetric
             Measure measure,
             Window window)
     {
-        return new CumulativeMetric(name, baseObject, measure, window, false, null, ImmutableMap.of());
+        return new CumulativeMetric(name, baseObject, measure, window, false, null);
     }
 
     private final String name;
@@ -44,7 +42,6 @@ public class CumulativeMetric
     private final Window window;
     private final boolean cached;
     private final Duration refreshTime;
-    private final Map<String, String> properties;
 
     @JsonCreator
     public CumulativeMetric(
@@ -53,8 +50,7 @@ public class CumulativeMetric
             @JsonProperty("measure") Measure measure,
             @JsonProperty("window") Window window,
             @JsonProperty("cached") boolean cached,
-            @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("refreshTime") Duration refreshTime)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.baseObject = requireNonNullEmpty(baseObject, "baseObject is null or empty");
@@ -62,7 +58,6 @@ public class CumulativeMetric
         this.window = requireNonNull(window, "window is null");
         this.cached = cached;
         this.refreshTime = refreshTime;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -101,16 +96,10 @@ public class CumulativeMetric
         return refreshTime;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, baseObject, measure, window, cached, refreshTime, properties);
+        return Objects.hash(name, baseObject, measure, window, cached, refreshTime);
     }
 
     @Override
@@ -130,8 +119,7 @@ public class CumulativeMetric
                 Objects.equals(baseObject, that.baseObject) &&
                 Objects.equals(measure, that.measure) &&
                 Objects.equals(window, that.window) &&
-                Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(refreshTime, that.refreshTime);
     }
 
     @Override
@@ -144,7 +132,6 @@ public class CumulativeMetric
                 .add("window", window)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("properties", properties)
                 .toString();
     }
 }

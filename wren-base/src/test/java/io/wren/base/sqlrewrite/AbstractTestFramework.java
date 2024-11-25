@@ -60,8 +60,7 @@ public abstract class AbstractTestFramework
                         .build(),
                 model.getPrimaryKey(),
                 model.isCached(),
-                model.getRefreshTime(),
-                model.getProperties());
+                model.getRefreshTime());
     }
 
     @BeforeClass
