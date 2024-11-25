@@ -205,6 +205,3 @@ jobs:
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.IBIS_IMAGE }}@sha256:%s ' *) \
             $TAGS
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ steps.meta.outputs.tags }}
