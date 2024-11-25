@@ -98,8 +98,7 @@ public class WrenMDL
                     processed,
                     model.getPrimaryKey(),
                     model.isCached(),
-                    model.getRefreshTime(),
-                    model.getProperties());
+                    model.getRefreshTime());
         }).collect(toList());
 
         List<Metric> renderedMetrics = original.getMetrics().stream().map(metric ->
@@ -109,8 +108,7 @@ public class WrenMDL
                         metric.getMeasure().stream().map(column -> renderExpression(column, macroTags, original)).collect(toList()),
                         metric.getTimeGrain(),
                         metric.isCached(),
-                        metric.getRefreshTime(),
-                        metric.getProperties())
+                        metric.getRefreshTime())
         ).collect(toList());
 
         return Manifest.builder(original)
@@ -132,8 +130,7 @@ public class WrenMDL
                 original.getRelationship().orElse(null),
                 original.isCalculated(),
                 original.isNotNull(),
-                expression,
-                original.getProperties());
+                expression);
     }
 
     public String getCatalog()

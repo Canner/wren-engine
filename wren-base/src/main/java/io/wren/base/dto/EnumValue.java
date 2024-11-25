@@ -16,9 +16,7 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,22 +32,19 @@ public class EnumValue
 
     public static EnumValue enumValue(String name, String value)
     {
-        return new EnumValue(name, value, null);
+        return new EnumValue(name, value);
     }
 
     private final String name;
     private final String value;
-    private final Map<String, String> properties;
 
     @JsonCreator
     public EnumValue(
             @JsonProperty("name") String name,
-            @JsonProperty("value") String value,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("value") String value)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.value = value;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -64,12 +59,6 @@ public class EnumValue
         return Optional.ofNullable(value).orElse(name);
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public boolean equals(Object o)
     {
@@ -81,14 +70,13 @@ public class EnumValue
         }
         EnumValue enumValue = (EnumValue) o;
         return Objects.equals(name, enumValue.name) &&
-                Objects.equals(value, enumValue.value) &&
-                Objects.equals(properties, enumValue.properties);
+                Objects.equals(value, enumValue.value);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, value, properties);
+        return Objects.hash(name, value);
     }
 
     @Override
@@ -97,7 +85,6 @@ public class EnumValue
         return toStringHelper(this)
                 .add("name", name)
                 .add("value", value)
-                .add("properties", properties)
                 .toString();
     }
 }
