@@ -1,4 +1,5 @@
 import base64
+import os
 
 import orjson
 import pytest
@@ -8,6 +9,7 @@ from app.config import get_config
 from app.main import app
 from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.clickhouse.conftest import base_url
+from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
     "catalog": "my_catalog",
@@ -57,7 +59,7 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == DATAFUSION_FUNCTION_COUNT + 79
+        assert len(result) == DATAFUSION_FUNCTION_COUNT + 5
         the_func = next(filter(lambda x: x["name"] == "abs", result))
         assert the_func == {
             "name": "abs",
@@ -107,3 +109,19 @@ with TestClient(app) as client:
             "data": [[1]],
             "dtypes": {"col": "uint64"},
         }
+
+    def test_functions(manifest_str: str, connection_info):
+        csv_path = os.path.join(function_list_path, "clickhouse.csv")
+        csv_parser = FunctionCsvParser(csv_path)
+        sql_generator = SqlTestGenerator("clickhouse")
+        for function in csv_parser.parse():
+            sql = sql_generator.generate_sql(function)
+            response = client.post(
+                url=f"{base_url}/query",
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": manifest_str,
+                    "sql": sql,
+                },
+            )
+            assert response.status_code == 200
