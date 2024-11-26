@@ -1,8 +1,10 @@
 import base64
+import os
 
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from util import FunctionCsvParser, SqlTestGenerator
 
 from app.config import get_config
 from app.main import app
@@ -107,3 +109,18 @@ with TestClient(app) as client:
             "data": [[1]],
             "dtypes": {"col": "int64"},
         }
+
+    def test_functions(manifest_str: str, connection_info):
+        csv_parser = FunctionCsvParser(os.path.join(function_list_path, "mysql.csv"))
+        sql_generator = SqlTestGenerator("mysql")
+        for function in csv_parser.parse():
+            sql = sql_generator.generate_sql(function)
+            response = client.post(
+                url=f"{base_url}/query",
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": manifest_str,
+                    "sql": sql,
+                },
+            )
+            assert response.status_code == 200
