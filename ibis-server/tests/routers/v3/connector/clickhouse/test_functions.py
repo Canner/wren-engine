@@ -66,7 +66,7 @@ with TestClient(app) as client:
             "description": "Returns absolute value.",
             "function_type": "scalar",
             "param_names": None,
-            "param_types": None,
+            "param_types": "Numeric",
             "return_type": "Numeric",
         }
 
