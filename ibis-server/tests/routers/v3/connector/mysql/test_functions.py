@@ -4,12 +4,12 @@ import os
 import orjson
 import pytest
 from fastapi.testclient import TestClient
-from util import FunctionCsvParser, SqlTestGenerator
 
 from app.config import get_config
 from app.main import app
 from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.mysql.conftest import base_url
+from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
     "catalog": "my_catalog",
