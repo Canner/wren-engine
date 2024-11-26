@@ -60,13 +60,13 @@ with TestClient(app) as client:
         assert response.status_code == 200
         result = response.json()
         assert len(result) == DATAFUSION_FUNCTION_COUNT + 6
-        the_func = next(filter(lambda x: x["name"] == "abs", result))
+        the_func = next(filter(lambda x: x["name"] == "floor", result))
         assert the_func == {
-            "name": "abs",
-            "description": "Returns absolute value.",
+            "name": "floor",
+            "description": "Returns largest integer less than number.",
             "function_type": "scalar",
             "param_names": None,
-            "param_types": None,
+            "param_types": "decimal",
             "return_type": "Numeric",
         }
 
