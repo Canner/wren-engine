@@ -415,9 +415,7 @@ mod test {
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
-    use datafusion::arrow::array::{Array, ArrayData, ArrayRef, Float64Array, Int64Array, ListArray, RecordBatch, StringArray, StructArray, TimestampNanosecondArray};
-    use datafusion::arrow::buffer::Buffer;
-    use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
+    use datafusion::arrow::array::{ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray};
     use datafusion::assert_batches_eq;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;

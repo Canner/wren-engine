@@ -73,7 +73,7 @@ impl ByPassScalarUDF {
             signature: Signature::one_of(
                 vec![
                     TypeSignature::VariadicAny,
-                    TypeSignature::Uniform(0, vec![]),
+                    TypeSignature::NullAry,
                 ],
                 Volatility::Volatile,
             ),
@@ -120,7 +120,7 @@ impl ByPassAggregateUDF {
             signature: Signature::one_of(
                 vec![
                     TypeSignature::VariadicAny,
-                    TypeSignature::Uniform(0, vec![]),
+                    TypeSignature::NullAry,
                 ],
                 Volatility::Volatile,
             ),
@@ -167,7 +167,7 @@ impl ByPassWindowFunction {
             signature: Signature::one_of(
                 vec![
                     TypeSignature::VariadicAny,
-                    TypeSignature::Uniform(0, vec![]),
+                    TypeSignature::NullAry,
                 ],
                 Volatility::Volatile,
             ),
