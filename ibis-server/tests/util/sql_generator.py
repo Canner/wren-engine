@@ -26,6 +26,8 @@ class SqlTestGenerator:
             return BigQuerySqlGenerator()
         if self.dialect == "postgres":
             return PostgresSqlGenerator()
+        if self.dialect == "mysql":
+            return MySqlGenerator()
         raise NotImplementedError(f"Unsupported dialect: {self.dialect}")
 
     @staticmethod
@@ -150,3 +152,15 @@ class BigQuerySqlGenerator(SqlGenerator):
                 SELECT 5 AS id, 'A' AS category
             ) AS t
         """
+
+
+class MySqlGenerator(SqlGenerator):
+    def generate_aggregate_sql(self, function: Function) -> str:
+        sample_args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(sample_args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_scalar_sql(self, function: Function) -> str:
+        args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(args)
+        return f"SELECT {function.name}({formatted_args})"
