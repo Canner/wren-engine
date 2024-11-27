@@ -1,23 +1,15 @@
 function_type,name,return_type,param_names,param_types,description
-aggregate,array_agg,array,,any,Aggregates values into array
-aggregate,avg,double,,numeric,Returns average of values
-aggregate,count,bigint,,any,Counts number of rows
-aggregate,max,same as input,,any,Returns maximum value
-aggregate,min,same as input,,any,Returns minimum value
-scalar,abs,double,,double,Returns absolute value of the argument
 scalar,array_distinct,array,,array,Removes duplicate values from array
 scalar,array_sort,array,,array,Sorts array elements
 scalar,cardinality,bigint,,array or map,Returns size of array or map
 scalar,cbrt,double,,double,Returns cube root of the argument
 scalar,ceil,double,,double or decimal,Rounds up to nearest integer
-scalar,concat,varchar,,varchar,...,Concatenates given strings
 scalar,floor,double,,double or decimal,Rounds down to nearest integer
 scalar,from_base64,varbinary,,varchar,Converts base64 to binary
 scalar,from_unixtime,timestamp,,double,Converts unix timestamp to timestamp
 scalar,is_finite,boolean,,double or decimal,Tests if value is finite
 scalar,is_infinite,boolean,,double or decimal,Tests if value is infinite
 scalar,is_nan,boolean,,double or decimal,Tests if value is NaN
-scalar,lower,varchar,,varchar,Converts string to lowercase
 scalar,map_keys,array,,map,Returns array of map keys
 scalar,map_values,array,,map,Returns array of map values
 scalar,round,double,,double or decimal,integer,Rounds to nearest integer or decimal places

@@ -60,14 +60,14 @@ with TestClient(app) as client:
         assert response.status_code == 200
         result = response.json()
         assert len(result) == DATAFUSION_FUNCTION_COUNT + 9
-        the_func = next(filter(lambda x: x["name"] == "abs", result))
+        the_func = next(filter(lambda x: x["name"] == "array_distinct", result))
         assert the_func == {
-            "name": "abs",
-            "description": "Returns absolute value of the argument",
+            "name": "array_distinct",
+            "description": "Removes duplicate values from array",
             "function_type": "scalar",
             "param_names": None,
-            "param_types": "double",
-            "return_type": "double",
+            "param_types": "array",
+            "return_type": "array",
         }
 
         config.set_remote_function_list_path(None)
