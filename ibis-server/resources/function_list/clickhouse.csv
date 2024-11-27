@@ -1,8 +1,4 @@
 function_type,name,return_type,param_names,param_types,description
-aggregate,min,Same as input,,Any,"Returns the minimum value."
-aggregate,max,Same as input,,Any,"Returns the maximum value."
-aggregate,sum,Numeric,,Numeric,"Returns the sum of values."
-aggregate,avg,Float64,,Numeric,"Returns the average of values."
 aggregate,uniq,UInt64,,Any,"Approximate number of different values using HyperLogLog."
 scalar,abs,Numeric,,Numeric,"Returns absolute value."
 scalar,round,Same as input,,Float64, "Rounds number to specified decimal places."
