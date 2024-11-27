@@ -16,7 +16,9 @@ version = "0.1.0"
 async-trait = "0.1.80"
 # We require the following commits
 # https://github.com/apache/datafusion/pull/13241
-datafusion = { git = "https://github.com/apache/datafusion.git", rev = "7c6f891b4b5a007e29fb3890ed5315ef916ae1d3" }
+# https://github.com/goldmedal/datafusion/pull/1
+# https://github.com/goldmedal/sqlparser-rs/pull/1
+datafusion = { git = "https://github.com/goldmedal/datafusion.git", branch = "wren/support-array-struct" }
 env_logger = "0.11.3"
 log = { version = "0.4.14" }
 serde = { version = "1.0.201", features = ["derive", "rc"] }
@@ -24,3 +26,4 @@ serde_json = { version = "1.0.117" }
 serde_with = { version = "3.11.0" }
 tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
 wren-core = { path = "core" }
+hashbrown = "0.15.2"
