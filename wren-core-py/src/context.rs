@@ -67,6 +67,7 @@ impl PySessionContext {
     /// if `mdl_base64` is provided, the session context will be created with the given MDL. Otherwise, an empty MDL will be created.
     /// if `remote_functions_path` is provided, the session context will be created with the remote functions defined in the CSV file.
     #[new]
+    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None))]
     pub fn new(
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
