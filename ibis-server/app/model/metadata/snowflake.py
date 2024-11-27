@@ -1,7 +1,5 @@
 from contextlib import closing
 
-import ibis
-
 from app.model import SnowflakeConnectionInfo
 from app.model.data_source import DataSource
 from app.model.metadata.dto import (
@@ -83,12 +81,7 @@ class SnowflakeMetadata(Metadata):
         """
         with closing(self.connection.raw_sql(sql)) as cur:
             fields = [field[0] for field in cur.description]
-            result = [dict(zip(fields, row)) for row in cur.fetchall()]
-            res = (
-                ibis.memtable(result).to_pandas().to_dict(orient="records")
-                if len(result) > 0
-                else []
-            )
+            res = [dict(zip(fields, row)) for row in cur.fetchall()]
             constraints = []
             for row in res:
                 constraints.append(
