@@ -22,10 +22,6 @@ documentation:
 - changed-files:
   - any-glob-to-any-file: ['**/*.md']
 
-trino:
-- changed-files:
-  - any-glob-to-any-file: ['**/*trino*']
-
 bigquery:
 - changed-files:
   - any-glob-to-any-file: ['**/*bigquery*']
