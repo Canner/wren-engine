@@ -415,9 +415,9 @@ mod test {
     use crate::mdl::function::RemoteFunction;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
-    use datafusion::arrow::array::{
-        ArrayRef, Int64Array, RecordBatch, StringArray, TimestampNanosecondArray,
-    };
+    use datafusion::arrow::array::{Array, ArrayData, ArrayRef, Float64Array, Int64Array, ListArray, RecordBatch, StringArray, StructArray, TimestampNanosecondArray};
+    use datafusion::arrow::buffer::Buffer;
+    use datafusion::arrow::datatypes::{DataType, Field, Fields, TimeUnit};
     use datafusion::assert_batches_eq;
     use datafusion::common::not_impl_err;
     use datafusion::common::Result;
@@ -1134,6 +1134,12 @@ mod test {
                         )
                         .build(),
                     )
+                    .column(
+                        ColumnBuilder::new(
+                            "struct_array_col",
+                            "array<struct<float_field float,time_field timestamp>>",
+                        ).build(),
+                    )
                     .build(),
             )
             .build();
@@ -1143,6 +1149,13 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
         assert_eq!(actual, "SELECT struct_table.struct_col.float_field FROM \
         (SELECT struct_table.struct_col FROM (SELECT struct_table.struct_col AS struct_col \
+        FROM struct_table) AS struct_table) AS struct_table");
+
+
+        let sql  = "select struct_array_col[1].float_field from wren.test.struct_table";
+        let actual = transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
+        (SELECT struct_table.struct_array_col FROM (SELECT struct_table.struct_array_col AS struct_array_col \
         FROM struct_table) AS struct_table) AS struct_table");
 
         let sql =
