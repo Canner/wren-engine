@@ -47,6 +47,10 @@ class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
 
 
+class QueryDruidDTO(QueryDTO):
+    connection_info: DruidConnectionInfo = connection_info_field
+
+
 class QueryTrinoDTO(QueryDTO):
     connection_info: ConnectionUrl | TrinoConnectionInfo = connection_info_field
 
@@ -74,6 +78,12 @@ class ClickHouseConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr
+
+
+class DruidConnectionInfo(BaseModel):
+    host: SecretStr = Field(examples=["localhost"])
+    port: SecretStr = Field(examples=[8082])
+    path: str
 
 
 class MSSqlConnectionInfo(BaseModel):

@@ -51,6 +51,7 @@ markers = [
   "bigquery: mark a test as a bigquery test",
   "canner: mark a test as a canner test",
   "clickhouse: mark a test as a clickhouse test",
+  "druid: mark a test as a druid test",
   "mssql: mark a test as a mssql test",
   "mysql: mark a test as a mysql test",
   "postgres: mark a test as a postgres test",
