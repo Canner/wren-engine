@@ -229,7 +229,7 @@ impl Metric {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeGrain {
     pub name: String,
@@ -237,7 +237,7 @@ pub struct TimeGrain {
     pub date_parts: Vec<TimeUnit>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum TimeUnit {
     Year,
     Month,

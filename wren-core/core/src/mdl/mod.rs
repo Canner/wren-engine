@@ -6,7 +6,7 @@ use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use crate::mdl::manifest::{Column, Manifest, Model, View};
+use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
 use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
@@ -267,6 +267,18 @@ impl WrenMDL {
 
     pub fn models(&self) -> &[Arc<Model>] {
         &self.manifest.models
+    }
+
+    pub fn views(&self) -> &[Arc<View>] {
+        &self.manifest.views
+    }
+
+    pub fn relationships(&self) -> &[Arc<Relationship>] {
+        &self.manifest.relationships
+    }
+
+    pub fn metrics(&self) -> &[Arc<Metric>] {
+        &self.manifest.metrics
     }
 
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {

@@ -4,6 +4,7 @@ use remote_functions::PyRemoteFunction;
 
 pub mod context;
 mod errors;
+mod manifest;
 pub mod remote_functions;
 
 #[pymodule]
@@ -12,5 +13,6 @@ fn wren_core_wrapper(m: &Bound<'_, PyModule>) -> PyResult<()> {
     env_logger::init();
     m.add_class::<context::PySessionContext>()?;
     m.add_class::<PyRemoteFunction>()?;
+    m.add_class::<manifest::PyManifest>()?;
     Ok(())
 }

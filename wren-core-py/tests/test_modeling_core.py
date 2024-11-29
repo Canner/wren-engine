@@ -1,6 +1,7 @@
 import base64
 import json
 
+import pytest
 from wren_core import SessionContext
 
 manifest = {
@@ -16,8 +17,60 @@ manifest = {
             "columns": [
                 {"name": "c_custkey", "type": "integer"},
                 {"name": "c_name", "type": "varchar"},
+                {"name": "orders", "type": "orders", "relationship": "orders_customer"},
             ],
             "primaryKey": "c_custkey",
+        },
+        {
+            "name": "orders",
+            "tableReference": {
+                "schema": "main",
+                "table": "orders",
+            },
+            "columns": [
+                {"name": "o_orderkey", "type": "integer"},
+                {"name": "o_custkey", "type": "integer"},
+                {"name": "o_orderdate", "type": "date"},
+                {
+                    "name": "lineitems",
+                    "type": "Lineitem",
+                    "relationship": "orders_lineitem",
+                },
+            ],
+            "primaryKey": "o_orderkey",
+        },
+        {
+            "name": "lineitem",
+            "tableReference": {
+                "schema": "main",
+                "table": "lineitem",
+            },
+            "columns": [
+                {"name": "l_orderkey", "type": "integer"},
+                {"name": "l_quantity", "type": "decimal"},
+                {"name": "l_extendedprice", "type": "decimal"},
+            ],
+            "primaryKey": "l_orderkey",
+        },
+    ],
+    "relationships": [
+        {
+            "name": "orders_customer",
+            "models": ["orders", "customer"],
+            "joinType": "MANY_TO_ONE",
+            "condition": "orders.custkey = customer.custkey",
+        },
+        {
+            "name": "orders_lineitem",
+            "models": ["orders", "lineitem"],
+            "joinType": "ONE_TO_MANY",
+            "condition": "orders.orderkey = lineitem.orderkey",
+        },
+    ],
+    "views": [
+        {
+            "name": "customer_view",
+            "statement": "SELECT * FROM my_catalog.my_schema.customer",
         },
     ],
 }
@@ -82,3 +135,34 @@ def test_get_available_functions():
     assert max_if["function_type"] == "window"
     assert max_if["param_names"] is None
     assert max_if["param_types"] is None
+
+
+@pytest.mark.parametrize(
+    ("sql", "expected"),
+    [
+        ("SELECT * FROM my_catalog.my_schema.customer", ["customer"]),
+        (
+            "SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey",
+            ["customer", "orders"],
+        ),
+        ("SELECT * FROM my_catalog.my_schema.customer_view", ["customer_view"]),
+    ],
+)
+def test_resolve_used_table_names(sql, expected):
+    tables = SessionContext(manifest_str, None).resolve_used_table_names(sql)
+    assert tables == expected
+
+
+@pytest.mark.parametrize(
+    ("dataset", "expected_models"),
+    [
+        (["customer"], ["customer", "orders", "lineitem"]),
+        (["customer_view"], ["customer", "orders", "lineitem"]),
+        (["orders"], ["orders", "lineitem"]),
+        (["lineitem"], ["lineitem"]),
+    ],
+)
+def test_extract_manifest(dataset, expected_models):
+    extracted_manifest = SessionContext(manifest_str, None).extract_manifest(dataset)
+    assert len(extracted_manifest.models) == len(expected_models)
+    assert [m.name for m in extracted_manifest.models] == expected_models
