@@ -32,6 +32,8 @@ class SqlTestGenerator:
             return MSSqlGenerator()
         if self.dialect == "clickhouse":
             return ClickhouseSqlGenerator()
+        if self.dialect == "trino":
+            return TrinoSqlGenerator()
         raise NotImplementedError(f"Unsupported dialect: {self.dialect}")
 
     @staticmethod
@@ -196,6 +198,31 @@ class MSSqlGenerator(SqlGenerator):
 
 
 class ClickhouseSqlGenerator(SqlGenerator):
+    def generate_aggregate_sql(self, function: Function) -> str:
+        sample_args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(sample_args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_scalar_sql(self, function: Function) -> str:
+        args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_window_sql(self, function: Function) -> str:
+        return f"""
+            SELECT
+                {function.name}() OVER (ORDER BY id) AS {function.name.lower()} 
+            FROM (
+                SELECT 1 AS id, 'A' AS category UNION ALL
+                SELECT 2 AS id, 'B' AS category UNION ALL
+                SELECT 3 AS id, 'A' AS category UNION ALL
+                SELECT 4 AS id, 'B' AS category UNION ALL
+                SELECT 5 AS id, 'A' AS category
+            ) AS t
+        """
+
+
+class TrinoSqlGenerator(SqlGenerator):
     def generate_aggregate_sql(self, function: Function) -> str:
         sample_args = self.generate_sample_args(function.param_types)
         formatted_args = ", ".join(sample_args)
