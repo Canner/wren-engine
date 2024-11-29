@@ -43,6 +43,10 @@ class QueryPostgresDTO(QueryDTO):
     connection_info: ConnectionUrl | PostgresConnectionInfo = connection_info_field
 
 
+class QueryPySparkDTO(QueryDTO):
+    connection_info: ConnectionUrl | PySparkConnectionInfo = connection_info_field
+
+
 class QuerySnowflakeDTO(QueryDTO):
     connection_info: SnowflakeConnectionInfo = connection_info_field
 
@@ -109,6 +113,17 @@ class PostgresConnectionInfo(BaseModel):
     password: SecretStr
 
 
+class PySparkConnectionInfo(BaseModel):
+    app_name: SecretStr = Field(examples=["wrenai"])
+    master: SecretStr = Field(
+        default="local[*]",
+        description="Spark master URL (e.g., 'local[*]', 'spark://master:7077')",
+    )
+    configs: dict[str, str] | None = Field(
+        default=None, description="Additional Spark configurations"
+    )
+
+
 class SnowflakeConnectionInfo(BaseModel):
     user: SecretStr
     password: SecretStr
@@ -137,6 +152,7 @@ ConnectionInfo = (
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
     | PostgresConnectionInfo
+    | PySparkConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
 )
