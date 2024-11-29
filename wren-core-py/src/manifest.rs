@@ -1,13 +1,30 @@
-use pyo3::{pyclass, pymethods, PyResult};
+use crate::errors::CoreError;
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
+use pyo3::{pyclass, pyfunction, pymethods, PyResult};
 use serde::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::sync::Arc;
 use wren_core::mdl::manifest::{
-    Column, JoinType, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
+    Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
 
+#[pyfunction]
+pub fn to_json_base64(mdl: PyManifest) -> Result<String, CoreError> {
+    let mdl_json = serde_json::to_string(&mdl)?;
+    let mdl_base64 = BASE64_STANDARD.encode(mdl_json.as_bytes());
+    Ok(mdl_base64)
+}
+
+pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
+    let decoded_bytes = BASE64_STANDARD.decode(mdl_base64)?;
+    let mdl_json = String::from_utf8(decoded_bytes)?;
+    let manifest = serde_json::from_str::<Manifest>(&mdl_json)?;
+    Ok(manifest)
+}
+
 #[pyclass(name = "Manifest")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PyManifest {
     pub catalog: String,
     pub schema: String,

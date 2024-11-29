@@ -1,8 +1,14 @@
 import base64
 import json
+from contextlib import nullcontext as does_not_raise
 
 import pytest
-from wren_core import SessionContext
+from wren_core import (
+    SessionContext,
+    resolve_used_table_names,
+    extract_manifest,
+    to_json_base64,
+)
 
 manifest = {
     "catalog": "my_catalog",
@@ -149,7 +155,7 @@ def test_get_available_functions():
     ],
 )
 def test_resolve_used_table_names(sql, expected):
-    tables = SessionContext(manifest_str, None).resolve_used_table_names(sql)
+    tables = resolve_used_table_names(manifest_str, sql)
     assert tables == expected
 
 
@@ -163,6 +169,16 @@ def test_resolve_used_table_names(sql, expected):
     ],
 )
 def test_extract_manifest(dataset, expected_models):
-    extracted_manifest = SessionContext(manifest_str, None).extract_manifest(dataset)
+    extracted_manifest = extract_manifest(manifest_str, dataset)
     assert len(extracted_manifest.models) == len(expected_models)
     assert [m.name for m in extracted_manifest.models] == expected_models
+
+
+def test_to_json_base64():
+    extracted_manifest = extract_manifest(manifest_str, ["customer"])
+    base64_str = to_json_base64(extracted_manifest)
+    with does_not_raise():
+        json_str = base64.b64decode(base64_str)
+        decoded_manifest = json.loads(json_str)
+        assert decoded_manifest["catalog"] == "my_catalog"
+        assert len(decoded_manifest["models"]) == 3

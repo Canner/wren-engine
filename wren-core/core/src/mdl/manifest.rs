@@ -6,7 +6,7 @@ use serde_with::serde_as;
 use serde_with::NoneAsEmptyString;
 
 /// This is the main struct that holds all the information about the manifest
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Manifest {
     pub catalog: String,
     pub schema: String,
