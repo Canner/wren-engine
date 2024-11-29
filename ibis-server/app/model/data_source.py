@@ -7,6 +7,7 @@ from json import loads
 import ibis
 from google.oauth2 import service_account
 from ibis import BaseBackend
+from pyspark.sql import SparkSession
 
 from app.model import (
     BigQueryConnectionInfo,
@@ -16,6 +17,7 @@ from app.model import (
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
     PostgresConnectionInfo,
+    PySparkConnectionInfo,
     QueryBigQueryDTO,
     QueryCannerDTO,
     QueryClickHouseDTO,
@@ -23,6 +25,7 @@ from app.model import (
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
+    QueryPySparkDTO,
     QuerySnowflakeDTO,
     QueryTrinoDTO,
     SnowflakeConnectionInfo,
@@ -37,6 +40,7 @@ class DataSource(StrEnum):
     mssql = auto()
     mysql = auto()
     postgres = auto()
+    pyspark = auto()
     snowflake = auto()
     trino = auto()
 
@@ -60,6 +64,7 @@ class DataSourceExtension(Enum):
     mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
     postgres = QueryPostgresDTO
+    pyspark = QueryPySparkDTO
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
 
@@ -142,6 +147,20 @@ class DataSourceExtension(Enum):
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
         )
+
+    @staticmethod
+    def get_pyspark_connection(info: PySparkConnectionInfo) -> BaseBackend:
+        builder = SparkSession.builder.appName(info.app_name.get_secret_value()).master(
+            info.master.get_secret_value()
+        )
+
+        if info.configs:
+            for key, value in info.configs.items():
+                builder = builder.config(key, value)
+
+        # Create or get existing Spark session
+        spark_session = builder.getOrCreate()
+        return ibis.pyspark.connect(session=spark_session)
 
     @staticmethod
     def get_snowflake_connection(info: SnowflakeConnectionInfo) -> BaseBackend:
