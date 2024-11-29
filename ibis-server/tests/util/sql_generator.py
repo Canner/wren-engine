@@ -26,6 +26,12 @@ class SqlTestGenerator:
             return BigQuerySqlGenerator()
         if self.dialect == "postgres":
             return PostgresSqlGenerator()
+        if self.dialect == "mysql":
+            return MySqlGenerator()
+        if self.dialect == "mssql":
+            return MSSqlGenerator()
+        if self.dialect == "clickhouse":
+            return ClickhouseSqlGenerator()
         if self.dialect == "trino":
             return TrinoSqlGenerator()
         raise NotImplementedError(f"Unsupported dialect: {self.dialect}")
@@ -137,6 +143,68 @@ class BigQuerySqlGenerator(SqlGenerator):
         if function.name == "parse_date":
             args[0] = "'%F'"
             args[1] = "'2000-12-30'"
+        formatted_args = ", ".join(args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_window_sql(self, function: Function) -> str:
+        return f"""
+            SELECT
+                {function.name}() OVER (ORDER BY id) AS {function.name.lower()} 
+            FROM (
+                SELECT 1 AS id, 'A' AS category UNION ALL
+                SELECT 2 AS id, 'B' AS category UNION ALL
+                SELECT 3 AS id, 'A' AS category UNION ALL
+                SELECT 4 AS id, 'B' AS category UNION ALL
+                SELECT 5 AS id, 'A' AS category
+            ) AS t
+        """
+
+
+class MySqlGenerator(SqlGenerator):
+    def generate_aggregate_sql(self, function: Function) -> str:
+        sample_args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(sample_args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_scalar_sql(self, function: Function) -> str:
+        args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(args)
+        return f"SELECT {function.name}({formatted_args})"
+
+
+class MSSqlGenerator(SqlGenerator):
+    def generate_aggregate_sql(self, function: Function) -> str:
+        sample_args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(sample_args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_scalar_sql(self, function: Function) -> str:
+        args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_window_sql(self, function: Function) -> str:
+        return f"""
+            SELECT
+                {function.name}() OVER (ORDER BY id) AS {function.name.lower()} 
+            FROM (
+                SELECT 1 AS id, 'A' AS category UNION ALL
+                SELECT 2 AS id, 'B' AS category UNION ALL
+                SELECT 3 AS id, 'A' AS category UNION ALL
+                SELECT 4 AS id, 'B' AS category UNION ALL
+                SELECT 5 AS id, 'A' AS category
+            ) AS t
+        """
+
+
+class ClickhouseSqlGenerator(SqlGenerator):
+    def generate_aggregate_sql(self, function: Function) -> str:
+        sample_args = self.generate_sample_args(function.param_types)
+        formatted_args = ", ".join(sample_args)
+        return f"SELECT {function.name}({formatted_args})"
+
+    def generate_scalar_sql(self, function: Function) -> str:
+        args = self.generate_sample_args(function.param_types)
         formatted_args = ", ".join(args)
         return f"SELECT {function.name}({formatted_args})"
 
