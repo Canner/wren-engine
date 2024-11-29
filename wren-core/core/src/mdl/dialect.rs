@@ -142,18 +142,15 @@ impl WrenDialect {
             return internal_err!("get_fields must have exactly 2 argument");
         }
 
-        let mut exprs = match unparser.expr_to_sql(&args[0])? {
-            ast::Expr::CompoundIdentifier(exprs) => exprs,
-            ast::Expr::Identifier(ident) => vec![ident],
-            // If the first argument is not identifiers, unparse it as ScalarFunction
-            _ => return Ok(None),
-        };
-
+        let sql = unparser.expr_to_sql(&args[0])?;
         if let ast::Expr::Value(Value::SingleQuotedString(field_name)) =
             unparser.expr_to_sql(&args[1])?
         {
-            exprs.extend(vec![self.new_ident_quoted_if_needs(field_name)]);
-            return Ok(Some(ast::Expr::CompoundIdentifier(exprs)));
+            let key = self.new_ident_quoted_if_needs(field_name);
+            return Ok(Some(ast::Expr::CompositeAccess {
+                expr: Box::new(sql),
+                key,
+            }));
         }
 
         Ok(None)

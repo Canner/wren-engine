@@ -40,8 +40,8 @@ To start the server:
 - Run the container: `just docker-run`
 
 ### Run the testing
-- Prepare the Wren Engine server (see [Wren Engine Example](../../example/README.md))
-- Use the `.env` file to set the `WREN_ENGINE_ENDPOINT` environment variable to change the endpoint of the Wren Engine server.
+- Prepare the Java Engine server (see [Java Engine Example](../../example/README.md))
+- Use the `.env` file to set the `WREN_ENGINE_ENDPOINT` environment variable to change the endpoint of the Java Engine server.
   ```
   WREN_ENGINE_ENDPOINT=http://localhost:8080
   ```

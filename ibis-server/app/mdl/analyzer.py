@@ -17,7 +17,7 @@ def analyze(manifest_str: str, sql: str) -> list[dict]:
         )
         return r.raise_for_status().json()
     except httpx.ConnectError as e:
-        raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
+        raise ConnectionError(f"Can not connect to Java Engine: {e}") from e
     except httpx.HTTPStatusError as e:
         raise AnalyzeError(e.response.text)
 
@@ -32,7 +32,7 @@ def analyze_batch(manifest_str: str, sqls: list[str]) -> list[list[dict]]:
         )
         return r.raise_for_status().json()
     except httpx.ConnectError as e:
-        raise ConnectionError(f"Can not connect to Wren Engine: {e}") from e
+        raise ConnectionError(f"Can not connect to Java Engine: {e}") from e
     except httpx.HTTPStatusError as e:
         raise AnalyzeError(e.response.text)
 

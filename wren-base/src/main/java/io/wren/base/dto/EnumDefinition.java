@@ -16,10 +16,8 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,22 +29,19 @@ public class EnumDefinition
 {
     public static EnumDefinition enumDefinition(String name, List<EnumValue> values)
     {
-        return new EnumDefinition(name, values, ImmutableMap.of());
+        return new EnumDefinition(name, values);
     }
 
     private final String name;
     private final List<EnumValue> values;
-    private final Map<String, String> properties;
 
     @JsonCreator
     public EnumDefinition(
             @JsonProperty("name") String name,
-            @JsonProperty("values") List<EnumValue> values,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("values") List<EnumValue> values)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.values = requireNonNull(values);
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -59,12 +54,6 @@ public class EnumDefinition
     public String getName()
     {
         return name;
-    }
-
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
     }
 
     public Optional<EnumValue> valueOf(String enumValueName)
@@ -85,8 +74,7 @@ public class EnumDefinition
         }
         EnumDefinition that = (EnumDefinition) obj;
         return Objects.equals(name, that.name) &&
-                Objects.equals(values, that.values) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(values, that.values);
     }
 
     @Override
@@ -94,8 +82,7 @@ public class EnumDefinition
     {
         return Objects.hash(
                 name,
-                values,
-                properties);
+                values);
     }
 
     @Override
@@ -104,7 +91,6 @@ public class EnumDefinition
         return toStringHelper(this)
                 .add("name", name)
                 .add("values", values)
-                .add("properties", properties)
                 .toString();
     }
 }

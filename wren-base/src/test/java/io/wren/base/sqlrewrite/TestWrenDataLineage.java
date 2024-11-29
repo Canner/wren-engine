@@ -108,20 +108,20 @@ public class TestWrenDataLineage
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"),
-                Column.caluclatedColumn("discount_extended_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount + orders.extended_price)"),
-                Column.caluclatedColumn("lineitem_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
+                Column.calculatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"),
+                Column.calculatedColumn("discount_extended_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount + orders.extended_price)"),
+                Column.calculatedColumn("lineitem_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("customer", "Customer", "OrdersCustomer", true),
                 Column.column("lineitem", "Lineitem", "OrdersLineitem", true),
-                Column.caluclatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
-                Column.caluclatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"),
-                Column.caluclatedColumn("extended_price_2", WrenTypes.BIGINT, "sum(lineitem.extendedprice + totalprice)"));
+                Column.calculatedColumn("customer_name", WrenTypes.BIGINT, "customer.name"),
+                Column.calculatedColumn("extended_price", WrenTypes.BIGINT, "sum(lineitem.extendedprice)"),
+                Column.calculatedColumn("extended_price_2", WrenTypes.BIGINT, "sum(lineitem.extendedprice + totalprice)"));
         Model newLineitem = addColumnsToModel(
                 lineitem,
                 Column.column("orders", "Orders", "OrdersLineitem", true),
-                Column.caluclatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
+                Column.calculatedColumn("test_column", WrenTypes.BIGINT, "orders.customer.total_price + extendedprice"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, newOrders, newLineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -203,7 +203,7 @@ public class TestWrenDataLineage
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
+                Column.calculatedColumn("total_price", WrenTypes.BIGINT, "sum(orders.totalprice)"));
         Model onCustomer = Model.onBaseObject(
                 "OnCustomer",
                 "Customer",
@@ -215,7 +215,7 @@ public class TestWrenDataLineage
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("on_customer", "OnCustomer", "OrdersOnCustomer", true),
-                Column.caluclatedColumn("customer_name", WrenTypes.BIGINT, "on_customer.mom_name"));
+                Column.calculatedColumn("customer_name", WrenTypes.BIGINT, "on_customer.mom_name"));
         Relationship ordersOnCustomer = Relationship.relationship("OrdersOnCustomer", List.of("Orders", "OnCustomer"), JoinType.MANY_TO_ONE, "Orders.custkey = OnCustomer.mom_custkey");
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newOrders, newCustomer, onCustomer))
@@ -516,7 +516,7 @@ public class TestWrenDataLineage
         Model newCustomer = addColumnsToModel(
                 customer,
                 Column.column("orders", "Orders", "OrdersCustomer", true),
-                Column.caluclatedColumn("discount_extended_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount + orders.lineitem.extendedprice)"));
+                Column.calculatedColumn("discount_extended_price", WrenTypes.BIGINT, "sum(orders.lineitem.discount + orders.lineitem.extendedprice)"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, orders, lineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))

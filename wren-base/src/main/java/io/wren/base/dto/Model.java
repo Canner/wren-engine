@@ -16,11 +16,9 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -39,7 +37,6 @@ public class Model
     private final String primaryKey;
     private final boolean cached;
     private final Duration refreshTime;
-    private final Map<String, String> properties;
 
     public static Model model(String name, String refSql, List<Column> columns)
     {
@@ -48,22 +45,22 @@ public class Model
 
     public static Model model(String name, String refSql, List<Column> columns, boolean cached)
     {
-        return new Model(name, refSql, null, null, columns, null, cached, null, ImmutableMap.of());
+        return new Model(name, refSql, null, null, columns, null, cached, null);
     }
 
     public static Model model(String name, String refSql, List<Column> columns, String primaryKey)
     {
-        return new Model(name, refSql, null, null, columns, primaryKey, false, null, ImmutableMap.of());
+        return new Model(name, refSql, null, null, columns, primaryKey, false, null);
     }
 
     public static Model onBaseObject(String name, String baseObject, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, baseObject, null, columns, primaryKey, false, null, ImmutableMap.of());
+        return new Model(name, null, baseObject, null, columns, primaryKey, false, null);
     }
 
     public static Model onTableReference(String name, TableReference tableReference, List<Column> columns, String primaryKey)
     {
-        return new Model(name, null, null, tableReference, columns, primaryKey, false, null, ImmutableMap.of());
+        return new Model(name, null, null, tableReference, columns, primaryKey, false, null);
     }
 
     @JsonCreator
@@ -75,8 +72,7 @@ public class Model
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("primaryKey") String primaryKey,
             @JsonProperty("cached") boolean cached,
-            @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("refreshTime") Duration refreshTime)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         checkArgument(Stream.of(refSql, baseObject, tableReference).filter(Model::isNonNullOrNonEmpty).count() == 1,
@@ -88,7 +84,6 @@ public class Model
         this.primaryKey = primaryKey;
         this.cached = cached;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     private static boolean isNonNullOrNonEmpty(Object value)
@@ -154,12 +149,6 @@ public class Model
         return refreshTime;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public boolean equals(Object obj)
     {
@@ -177,14 +166,13 @@ public class Model
                 Objects.equals(tableReference, that.tableReference) &&
                 Objects.equals(columns, that.columns) &&
                 Objects.equals(primaryKey, that.primaryKey) &&
-                Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(refreshTime, that.refreshTime);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, refSql, baseObject, tableReference, columns, primaryKey, properties);
+        return Objects.hash(name, refSql, baseObject, tableReference, columns, primaryKey);
     }
 
     @Override
@@ -198,7 +186,6 @@ public class Model
                 .add("columns", columns)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("properties", properties)
                 .toString();
     }
 }

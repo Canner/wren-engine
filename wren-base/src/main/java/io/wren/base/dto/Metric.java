@@ -17,11 +17,9 @@ package io.wren.base.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.airlift.units.Duration;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -40,7 +38,6 @@ public class Metric
     private final List<TimeGrain> timeGrain;
     private final boolean cached;
     private final Duration refreshTime;
-    private final Map<String, String> properties;
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure)
     {
@@ -54,7 +51,7 @@ public class Metric
 
     public static Metric metric(String name, String baseObject, List<Column> dimension, List<Column> measure, List<TimeGrain> timeGrain, boolean cached)
     {
-        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null, ImmutableMap.of());
+        return new Metric(name, baseObject, dimension, measure, timeGrain, cached, null);
     }
 
     @JsonCreator
@@ -65,8 +62,7 @@ public class Metric
             @JsonProperty("measure") List<Column> measure,
             @JsonProperty("timeGrain") List<TimeGrain> timeGrain,
             @JsonProperty("cached") boolean cached,
-            @JsonProperty("refreshTime") Duration refreshTime,
-            @JsonProperty("properties") Map<String, String> properties)
+            @JsonProperty("refreshTime") Duration refreshTime)
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.baseObject = requireNonNullEmpty(baseObject, "baseObject is null or empty");
@@ -76,7 +72,6 @@ public class Metric
         checkArgument(!measure.isEmpty(), "the number of measures should be one at least");
         this.timeGrain = timeGrain == null ? ImmutableList.of() : timeGrain;
         this.refreshTime = refreshTime == null ? defaultRefreshTime : refreshTime;
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @Override
@@ -138,12 +133,6 @@ public class Metric
         return refreshTime;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public boolean equals(Object obj)
     {
@@ -160,8 +149,7 @@ public class Metric
                 Objects.equals(dimension, that.dimension) &&
                 Objects.equals(measure, that.measure) &&
                 Objects.equals(timeGrain, that.timeGrain) &&
-                Objects.equals(refreshTime, that.refreshTime) &&
-                Objects.equals(properties, that.properties);
+                Objects.equals(refreshTime, that.refreshTime);
     }
 
     @Override
@@ -174,8 +162,7 @@ public class Metric
                 measure,
                 timeGrain,
                 cached,
-                refreshTime,
-                properties);
+                refreshTime);
     }
 
     @Override
@@ -189,7 +176,6 @@ public class Metric
                 .add("timeGrain", timeGrain)
                 .add("cached", cached)
                 .add("refreshTime", refreshTime)
-                .add("properties", properties)
                 .toString();
     }
 }

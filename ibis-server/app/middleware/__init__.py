@@ -17,7 +17,7 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             if body:
                 json_obj = orjson.loads(body)
                 if "connectionInfo" in json_obj:
-                    json_obj["connectionInfo"] = "REMOVED_SENSITIVE_DATA"
+                    json_obj["connectionInfo"] = "REDACTED"
                 body = orjson.dumps(json_obj)
             logger.info("Request body: {body}", body=body.decode("utf-8"))
             try:

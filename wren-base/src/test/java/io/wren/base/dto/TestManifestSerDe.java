@@ -49,76 +49,69 @@ public class TestManifestSerDe
                                 null,
                                 null,
                                 List.of(
-                                        new Column("orderkey", "integer", null, false, true, null,
-                                                ImmutableMap.of("description", "the key of each order")),
-                                        new Column("custkey", "integer", null, false, true, null, null),
-                                        new Column("orderstatus", "string", null, false, true, null, null),
-                                        new Column("totalprice", "double", null, false, true, null, null),
-                                        new Column("orderdate", "date", null, false, true, null, null),
-                                        new Column("orderpriority", "string", null, false, true, null, null),
-                                        new Column("clerk", "string", null, false, true, null, null),
-                                        new Column("shippriority", "integer", null, false, true, null, null),
-                                        new Column("comment", "string", null, false, true, null, null),
-                                        new Column("customer", "CustomerModel", "OrdersCustomer", false, true, null, null)),
+                                        new Column("orderkey", "integer", null, false, true, null),
+                                        new Column("custkey", "integer", null, false, true, null),
+                                        new Column("orderstatus", "string", null, false, true, null),
+                                        new Column("totalprice", "double", null, false, true, null),
+                                        new Column("orderdate", "date", null, false, true, null),
+                                        new Column("orderpriority", "string", null, false, true, null),
+                                        new Column("clerk", "string", null, false, true, null),
+                                        new Column("shippriority", "integer", null, false, true, null),
+                                        new Column("comment", "string", null, false, true, null),
+                                        new Column("customer", "CustomerModel", "OrdersCustomer", false, true, null)),
                                 "orderkey",
                                 false,
-                                null,
-                                ImmutableMap.of("description", "tpch tiny orders table")),
+                                null),
                         new Model("LineitemModel",
                                 "select * from lineitem",
                                 null,
                                 null,
                                 List.of(
-                                        new Column("orderkey", "integer", null, false, true, null, null),
-                                        new Column("linenumber", "integer", null, false, true, null, null),
-                                        new Column("extendedprice", "integer", null, false, true, null, null)),
+                                        new Column("orderkey", "integer", null, false, true, null),
+                                        new Column("linenumber", "integer", null, false, true, null),
+                                        new Column("extendedprice", "integer", null, false, true, null)),
                                 null,
                                 false,
-                                null,
                                 null),
                         new Model("CustomerModel",
                                 null,
                                 null,
                                 new TableReference("test-catalog", "test-schema", "customer"),
                                 List.of(
-                                        new Column("custkey", "integer", null, false, true, null, null),
-                                        new Column("name", "string", null, false, true, null, null),
-                                        new Column("address", "string", null, false, true, null, null),
-                                        new Column("nationkey", "integer", null, false, true, null, null),
-                                        new Column("phone", "string", null, false, true, null, null),
-                                        new Column("acctbal", "double", null, false, true, null, null),
-                                        new Column("mktsegment", "string", null, false, true, null, null),
-                                        new Column("comment", "string", null, false, true, null, null),
-                                        new Column("orders", "OrdersModel", "OrdersCustomer", false, true, null, null),
+                                        new Column("custkey", "integer", null, false, true, null),
+                                        new Column("name", "string", null, false, true, null),
+                                        new Column("address", "string", null, false, true, null),
+                                        new Column("nationkey", "integer", null, false, true, null),
+                                        new Column("phone", "string", null, false, true, null),
+                                        new Column("acctbal", "double", null, false, true, null),
+                                        new Column("mktsegment", "string", null, false, true, null),
+                                        new Column("comment", "string", null, false, true, null),
+                                        new Column("orders", "OrdersModel", "OrdersCustomer", false, true, null),
                                         // calculated field
-                                        new Column("orders_totalprice", WrenTypes.VARCHAR, null, true, false, "SUM(orders.totalprice)", null)),
+                                        new Column("orders_totalprice", WrenTypes.VARCHAR, null, true, false, "SUM(orders.totalprice)")),
                                 "custkey",
                                 false,
-                                null,
                                 null)))
                 .setRelationships(List.of(
                         new Relationship("OrdersCustomer",
                                 List.of("OrdersModel", "CustomerModel"),
                                 JoinType.MANY_TO_ONE,
                                 "OrdersModel.custkey = CustomerModel.custkey",
-                                List.of(new Relationship.SortKey("orderkey", Relationship.SortKey.Ordering.ASC)),
-                                ImmutableMap.of("description", "the relationship between orders and customers"))))
+                                List.of(new Relationship.SortKey("orderkey", Relationship.SortKey.Ordering.ASC)))))
                 .setEnumDefinitions(List.of(
                         new EnumDefinition("OrderStatus", List.of(
-                                new EnumValue("PENDING", "pending", ImmutableMap.of("description", "pending")),
-                                new EnumValue("PROCESSING", "processing", null),
-                                new EnumValue("SHIPPED", "shipped", null),
-                                new EnumValue("COMPLETE", "complete", null)),
-                                ImmutableMap.of("description", "the status of an order"))))
+                                new EnumValue("PENDING", "pending"),
+                                new EnumValue("PROCESSING", "processing"),
+                                new EnumValue("SHIPPED", "shipped"),
+                                new EnumValue("COMPLETE", "complete")))))
                 .setMetrics(List.of(
                         new Metric("Revenue",
                                 "OrdersModel",
-                                List.of(new Column("orderkey", "string", null, false, true, null, null)),
-                                List.of(new Column("total", "integer", null, false, true, null, null)),
+                                List.of(new Column("orderkey", "string", null, false, true, null)),
+                                List.of(new Column("total", "integer", null, false, true, null)),
                                 List.of(new TimeGrain("orderdate", "orderdate", List.of(TimeUnit.DAY, TimeUnit.MONTH))),
                                 true,
-                                null,
-                                ImmutableMap.of("description", "the revenue of an order"))))
+                                null)))
                 .setViews(List.of(
                         new View("useMetric",
                                 "select * from Revenue",
@@ -126,20 +119,18 @@ public class TestManifestSerDe
                 .setCumulativeMetrics(List.of(
                         new CumulativeMetric("DailyRevenue",
                                 "Orders",
-                                new Measure("totalprice", WrenTypes.INTEGER, "sum", "totalprice", ImmutableMap.of("description", "totalprice")),
-                                new Window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31", ImmutableMap.of("description", "orderdate")),
+                                new Measure("totalprice", WrenTypes.INTEGER, "sum", "totalprice"),
+                                new Window("orderdate", "orderdate", TimeUnit.DAY, "1994-01-01", "1994-12-31"),
                                 false,
-                                null,
-                                ImmutableMap.of("description", "daily revenue")),
+                                null),
                         new CumulativeMetric("WeeklyRevenue",
                                 "Orders",
-                                new Measure("totalprice", WrenTypes.INTEGER, "sum", "totalprice", null),
-                                new Window("orderdate", "orderdate", TimeUnit.WEEK, "1994-01-01", "1994-12-31", null),
+                                new Measure("totalprice", WrenTypes.INTEGER, "sum", "totalprice"),
+                                new Window("orderdate", "orderdate", TimeUnit.WEEK, "1994-01-01", "1994-12-31"),
                                 false,
-                                null,
                                 null)))
-                .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31", ImmutableMap.of("description", "a date spine")))
-                .setMacros(List.of(new Macro("test", "(a: Expression) => a + 1", ImmutableMap.of("description", "a macro"))))
+                .setDateSpine(new DateSpine(TimeUnit.DAY, "1970-01-01", "2077-12-31"))
+                .setMacros(List.of(new Macro("test", "(a: Expression) => a + 1")))
                 .build();
     }
 

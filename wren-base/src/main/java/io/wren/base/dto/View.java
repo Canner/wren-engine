@@ -16,7 +16,6 @@ package io.wren.base.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +27,6 @@ public class View
 {
     private final String name;
     private final String statement;
-    private final Map<String, String> properties;
 
     public static View view(String name, String statement)
     {
@@ -43,7 +41,6 @@ public class View
     {
         this.name = requireNonNullEmpty(name, "name is null or empty");
         this.statement = requireNonNullEmpty(statement, "statement is null or empty");
-        this.properties = properties == null ? ImmutableMap.of() : properties;
     }
 
     @JsonProperty
@@ -58,12 +55,6 @@ public class View
         return statement;
     }
 
-    @JsonProperty
-    public Map<String, String> getProperties()
-    {
-        return properties;
-    }
-
     @Override
     public boolean equals(Object o)
     {
@@ -75,8 +66,7 @@ public class View
         }
         View view = (View) o;
         return Objects.equals(name, view.name) &&
-                Objects.equals(statement, view.statement) &&
-                Objects.equals(properties, view.properties);
+                Objects.equals(statement, view.statement);
     }
 
     @Override
@@ -84,8 +74,7 @@ public class View
     {
         return Objects.hash(
                 name,
-                statement,
-                properties);
+                statement);
     }
 
     @Override
@@ -94,7 +83,6 @@ public class View
         return toStringHelper(this)
                 .add("name", name)
                 .add("statement", statement)
-                .add("properties", properties)
                 .toString();
     }
 }
