@@ -5,11 +5,11 @@ install:
     poetry install --no-root
 
 build *args:
-    poetry run maturin build {{args}}
+    poetry run maturin build {{ args }}
 
 develop:
     poetry run maturin develop
 
 test: develop
-    cargo test
+    cargo test --no-default-features
     poetry run pytest

@@ -9,10 +9,7 @@ name = "wren_core_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.23.2", features = [
-  "extension-module",
-  "generate-import-lib",
-] }
+pyo3 = { version = "0.23.2", features = ["extension-module"] }
 wren-core = { path = "../wren-core/core" }
 base64 = "0.22.1"
 serde_json = "1.0.117"
@@ -25,3 +22,7 @@ tokio = "1.40.0"
 
 [build-dependencies]
 pyo3-build-config = "0.23.2"
+
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]

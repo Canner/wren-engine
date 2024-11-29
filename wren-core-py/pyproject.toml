@@ -20,6 +20,7 @@ module-name = "wren_core"
 include = [{ path = "Cargo.lock", format = "sdist" }]
 exclude = ["tests/**", "target/**"]
 locked = true
+features = ["pyo3/extension-module"]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
