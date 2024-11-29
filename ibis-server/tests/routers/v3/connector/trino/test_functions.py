@@ -1,4 +1,5 @@
 import base64
+import os
 
 import orjson
 import pytest
@@ -8,6 +9,7 @@ from app.config import get_config
 from app.main import app
 from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.trino.conftest import base_url
+from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
     "catalog": "my_catalog",
@@ -57,15 +59,15 @@ with TestClient(app) as client:
         response = client.get(url=f"{base_url}/functions")
         assert response.status_code == 200
         result = response.json()
-        assert len(result) == DATAFUSION_FUNCTION_COUNT + 30
-        the_func = next(filter(lambda x: x["name"] == "abs", result))
+        assert len(result) == DATAFUSION_FUNCTION_COUNT + 9
+        the_func = next(filter(lambda x: x["name"] == "array_distinct", result))
         assert the_func == {
-            "name": "abs",
-            "description": "Returns absolute value of the argument",
+            "name": "array_distinct",
+            "description": "Removes duplicate values from array",
             "function_type": "scalar",
             "param_names": None,
-            "param_types": None,
-            "return_type": "double",
+            "param_types": "array",
+            "return_type": "array",
         }
 
         config.set_remote_function_list_path(None)
@@ -107,3 +109,18 @@ with TestClient(app) as client:
             "data": [[1]],
             "dtypes": {"col": "int64"},
         }
+
+    def test_functions(manifest_str: str, connection_info):
+        csv_parser = FunctionCsvParser(os.path.join(function_list_path, "trino.csv"))
+        sql_generator = SqlTestGenerator("trino")
+        for function in csv_parser.parse():
+            sql = sql_generator.generate_sql(function)
+            response = client.post(
+                url=f"{base_url}/query",
+                json={
+                    "connectionInfo": connection_info,
+                    "manifestStr": manifest_str,
+                    "sql": sql,
+                },
+            )
+            assert response.status_code == 200
