@@ -7,9 +7,8 @@ from loguru import logger
 
 from app.config import get_config
 from app.mdl.core import (
-    extract_manifest,
+    get_extractor,
     get_session_context,
-    resolve_used_table_names,
     to_json_base64,
 )
 from app.model import InternalServerError, UnprocessableEntityError
@@ -64,8 +63,9 @@ class ExternalEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
-            tables = resolve_used_table_names(self.manifest_str, sql)
-            manifest = extract_manifest(self.manifest_str, tables)
+            extractor = get_extractor(self.manifest_str)
+            tables = extractor.resolve_used_table_names(sql)
+            manifest = extractor.extract_manifest(tables)
             manifest_str = to_json_base64(manifest)
             r = httpx.request(
                 method="GET",
@@ -92,8 +92,9 @@ class EmbeddedEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
-            tables = resolve_used_table_names(self.manifest_str, sql)
-            manifest = extract_manifest(self.manifest_str, tables)
+            extractor = get_extractor(self.manifest_str)
+            tables = extractor.resolve_used_table_names(sql)
+            manifest = extractor.extract_manifest(tables)
             session_context = get_session_context(
                 to_json_base64(manifest), self.function_path
             )

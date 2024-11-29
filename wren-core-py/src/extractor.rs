@@ -1,27 +1,48 @@
 use crate::errors::CoreError;
 use crate::manifest::{to_manifest, PyManifest};
-use pyo3::pyfunction;
+use pyo3::{pyclass, pymethods};
 use std::collections::HashSet;
 use std::sync::Arc;
-use wren_core::mdl::manifest::{Manifest, Model, Relationship, View};
+use wren_core::mdl::manifest::{Model, Relationship, View};
 use wren_core::mdl::WrenMDL;
 
-/// parse the given SQL and return the list of used table name.
-#[pyfunction]
-#[pyo3(name = "resolve_used_table_names", signature = (mdl_base64, sql), text_signature = "(mdl_base64: str, sql: str)")]
-pub fn py_resolve_used_table_names(
-    mdl_base64: &str,
-    sql: &str,
-) -> Result<Vec<String>, CoreError> {
-    let manifest = to_manifest(mdl_base64)?;
-    resolve_used_table_names(manifest, sql)
+#[pyclass]
+#[derive(Clone)]
+#[pyo3(name = "Extractor")]
+pub struct PyExtractor {
+    mdl: Arc<WrenMDL>,
+}
+
+#[pymethods]
+impl PyExtractor {
+    #[new]
+    pub fn new(mdl_base64: &str) -> Self {
+        let manifest = to_manifest(mdl_base64).unwrap();
+        let mdl = WrenMDL::new_ref(manifest);
+        Self { mdl }
+    }
+
+    /// parse the given SQL and return the list of used table name.
+    pub fn resolve_used_table_names(&self, sql: &str) -> Result<Vec<String>, CoreError> {
+        resolve_used_table_names(&self.mdl, sql)
+    }
+
+    /// Given a used dataset list, extract manifest by removing unused datasets.
+    /// If a model is related to another dataset, both datasets will be kept.
+    /// The relationship between of them will be kept as well.
+    /// A dataset could be model, view.
+    pub fn extract_manifest(
+        &self,
+        used_datasets: Vec<String>,
+    ) -> Result<PyManifest, CoreError> {
+        extract_manifest(&self.mdl, used_datasets)
+    }
 }
 
 fn resolve_used_table_names(
-    manifest: Manifest,
+    mdl: &Arc<WrenMDL>,
     sql: &str,
 ) -> Result<Vec<String>, CoreError> {
-    let mdl = WrenMDL::new_ref(manifest);
     let ctx_state = wren_core::SessionContext::new().state();
     ctx_state
         .sql_to_statement(sql, "generic")
@@ -43,18 +64,10 @@ fn resolve_used_table_names(
         })
 }
 
-/// Given a used dataset list, extract manifest by removing unused datasets.
-/// If a model is related to another dataset, both datasets will be kept.
-/// The relationship between of them will be kept as well.
-/// A dataset could be model, view.
-#[pyfunction]
-#[pyo3(signature = (mdl_base64, used_datasets), text_signature = "(mdl_base64: str, used_datasets: list[str])")]
 pub fn extract_manifest(
-    mdl_base64: &str,
+    mdl: &Arc<WrenMDL>,
     used_datasets: Vec<String>,
 ) -> Result<PyManifest, CoreError> {
-    let manifest = to_manifest(mdl_base64)?;
-    let mdl = WrenMDL::new_ref(manifest);
     let used_models = extract_models(&mdl, &used_datasets);
     let (used_views, models_of_views) = extract_views(&mdl, &used_datasets);
     let used_relationships = extract_relationships(&mdl, &used_datasets);
@@ -103,7 +116,7 @@ fn extract_views(
         .iter()
         .filter_map(|&dataset_name| {
             mdl.get_view(dataset_name).and_then(|view| {
-                resolve_used_table_names(mdl.manifest.clone(), view.statement.as_str())
+                resolve_used_table_names(mdl, view.statement.as_str())
                     .ok()
                     .map(|used_tables| extract_models(mdl, &used_tables))
             })
