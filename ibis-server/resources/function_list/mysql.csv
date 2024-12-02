@@ -23,7 +23,6 @@ scalar,format,varchar,,"decimal,int","Formats number to specified decimal places
 scalar,from_unixtime,datetime,,"int","Converts Unix timestamp to datetime"
 scalar,hex,varchar,,"decimal_or_string","Returns hexadecimal representation of a decimal or string value"
 scalar,unhex,varchar,,"varchar","Converts hexadecimal value to string"
-scalar,instr,int,,"varchar,varchar","Returns position of first occurrence of substring in string"
 scalar,lcase,varchar,,"varchar","Synonym for LOWER()"
 scalar,left,varchar,,"varchar,int","Returns the leftmost number of characters from string"
 scalar,right,varchar,,"varchar,int","Returns the rightmost number of characters from string"
