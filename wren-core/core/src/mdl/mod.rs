@@ -877,6 +877,30 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_mysql_style_interval() -> Result<()> {
+        let ctx = SessionContext::new();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
+        let sql = "select interval 1 day";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT INTERVAL 1 DAY");
+
+        let sql = "SELECT INTERVAL '1 YEAR 1 MONTH'";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT INTERVAL 13 MONTH");
+
+        let sql = "SELECT INTERVAL '1' YEAR + INTERVAL '2' MONTH + INTERVAL '3' DAY";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            actual,
+            "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_simplify_timestamp() -> Result<()> {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
