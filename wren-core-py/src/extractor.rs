@@ -68,9 +68,9 @@ pub fn extract_manifest(
     mdl: &Arc<WrenMDL>,
     used_datasets: Vec<String>,
 ) -> Result<PyManifest, CoreError> {
-    let used_models = extract_models(&mdl, &used_datasets);
-    let (used_views, models_of_views) = extract_views(&mdl, &used_datasets);
-    let used_relationships = extract_relationships(&mdl, &used_datasets);
+    let used_models = extract_models(mdl, &used_datasets);
+    let (used_views, models_of_views) = extract_views(mdl, &used_datasets);
+    let used_relationships = extract_relationships(mdl, &used_datasets);
     Ok(PyManifest {
         catalog: mdl.catalog().to_string(),
         schema: mdl.schema().to_string(),
