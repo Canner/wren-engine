@@ -24,7 +24,7 @@ pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
 }
 
 #[pyclass(name = "Manifest")]
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PyManifest {
     pub catalog: String,
     pub schema: String,
@@ -84,7 +84,7 @@ impl PyManifest {
 }
 
 #[pyclass(name = "Model")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyModel {
     #[pyo3(get)]
     pub name: String,
@@ -121,7 +121,7 @@ impl From<&Model> for PyModel {
             name: model.name.clone(),
             ref_sql: model.ref_sql.clone(),
             base_object: model.base_object.clone(),
-            table_reference: model.table_reference.clone(),
+            table_reference: Some(String::from(model.table_reference())),
             columns: model.columns.clone(),
             primary_key: model.primary_key.clone(),
             cached: model.cached,
@@ -131,7 +131,7 @@ impl From<&Model> for PyModel {
 }
 
 #[pyclass(name = "Column")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyColumn {
     #[pyo3(get)]
     pub name: String,
@@ -164,7 +164,7 @@ impl From<&Column> for PyColumn {
 }
 
 #[pyclass(name = "Relationship")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyRelationship {
     #[pyo3(get)]
     pub name: String,
@@ -195,7 +195,7 @@ impl From<&Relationship> for PyRelationship {
 }
 
 #[pyclass(name = "JoinType", eq)]
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum PyJoinType {
     #[serde(alias = "one_to_one")]
     OneToOne,
@@ -219,7 +219,7 @@ impl From<&JoinType> for PyJoinType {
 }
 
 #[pyclass(name = "Metric")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyMetric {
     #[pyo3(get)]
     pub name: String,
@@ -249,7 +249,7 @@ impl From<&Metric> for PyMetric {
 }
 
 #[pyclass(name = "TimeGrain")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyTimeGrain {
     pub name: String,
     pub ref_column: String,
@@ -257,7 +257,7 @@ pub struct PyTimeGrain {
 }
 
 #[pyclass(name = "TimeUnit", eq)]
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub enum PyTimeUnit {
     Year,
     Month,
@@ -268,7 +268,7 @@ pub enum PyTimeUnit {
 }
 
 #[pyclass(name = "View")]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PyView {
     #[pyo3(get)]
     pub name: String,
