@@ -122,7 +122,7 @@ mod table_reference {
             };
             table_ref.serialize(serializer)
         } else {
-            TableReference::default().serialize(serializer)
+            serializer.serialize_none()
         }
     }
 }
@@ -256,5 +256,37 @@ pub struct View {
 impl View {
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::mdl::manifest::table_reference;
+    use serde_json::Serializer;
+
+    #[test]
+    fn test_table_reference_serialize() {
+        [
+            (
+                Some("catalog.schema.table".to_string()),
+                r#"{"catalog":"catalog","schema":"schema","table":"table"}"#,
+            ),
+            (
+                Some("schema.table".to_string()),
+                r#"{"catalog":null,"schema":"schema","table":"table"}"#,
+            ),
+            (
+                Some("table".to_string()),
+                r#"{"catalog":null,"schema":null,"table":"table"}"#,
+            ),
+            (None, "null"),
+        ]
+        .iter()
+        .for_each(|(table_ref, expected)| {
+            let mut buf = Vec::new();
+            table_reference::serialize(table_ref, &mut Serializer::new(&mut buf))
+                .unwrap();
+            assert_eq!(String::from_utf8(buf).unwrap(), *expected);
+        });
     }
 }
