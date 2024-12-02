@@ -145,6 +145,9 @@ def test_get_available_functions():
 @pytest.mark.parametrize(
     ("sql", "expected"),
     [
+        ("SELECT * FROM customer", ["customer"]),
+        ("SELECT * FROM not_my_catalog.my_schema.customer", []),
+        ("SELECT * FROM my_catalog.not_my_schema.customer", []),
         ("SELECT * FROM my_catalog.my_schema.customer", ["customer"]),
         (
             "SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey",

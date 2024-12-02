@@ -56,8 +56,8 @@ fn resolve_used_table_names(
             tables
                 .iter()
                 .filter(|t| {
-                    t.catalog().unwrap_or_default() == mdl.catalog()
-                        && t.schema().unwrap_or_default() == mdl.schema()
+                    t.catalog().map_or(true, |catalog| catalog == mdl.catalog())
+                        && t.schema().map_or(true, |schema| schema == mdl.schema())
                 })
                 .map(|t| t.table().to_string())
                 .collect()
