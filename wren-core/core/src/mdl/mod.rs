@@ -1202,6 +1202,26 @@ mod test {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn test_disable_eliminate_nested_union() -> Result<()> {
+        let ctx = SessionContext::new();
+        let sql = r#"SELECT * FROM (SELECT 1 x, 'a' y UNION ALL
+    SELECT 1 x, 'b' y UNION ALL
+    SELECT 2 x, 'a' y UNION ALL
+    SELECT 2 x, 'c' y)"#;
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
+                .await?;
+        assert_eq!(
+            result,
+            "SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
+        UNION ALL SELECT 1 AS x, 'b' AS y \
+        UNION ALL SELECT 2 AS x, 'a' AS y \
+        UNION ALL SELECT 2 AS x, 'c' AS y)"
+        );
+        Ok(())
+    }
+
     /// Return a RecordBatch with made up data about customer
     fn customer() -> RecordBatch {
         let custkey: ArrayRef = Arc::new(Int64Array::from(vec![1, 2, 3]));
