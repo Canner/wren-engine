@@ -85,6 +85,22 @@ with TestClient(app) as client:
             "dtypes": {"col": "int64"},
         }
 
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT date_add(CAST('2024-01-01' AS DATE), 1) as col",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert result == {
+            "columns": ["col"],
+            "data": [["2024-01-02"]],
+            "dtypes": {"col": "object"},
+        }
+
     def test_aggregate_function(manifest_str: str, connection_info):
         response = client.post(
             url=f"{base_url}/query",
