@@ -143,8 +143,8 @@ def test_get_available_functions():
     [
         (
             None,
-            TypeError,
-            "argument 'mdl_base64': 'NoneType' object cannot be converted to 'PyString'",
+            Exception,
+            "Expected a valid base64 encoded string for the model definition, but got None.",
         ),
         ("xxx", Exception, "Base64 decode error: Invalid padding"),
         ("{}", Exception, "Base64 decode error: Invalid symbol 123, offset 0."),
