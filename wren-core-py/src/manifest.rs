@@ -284,3 +284,56 @@ impl From<&View> for PyView {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::manifest::{to_json_base64, to_manifest, PyManifest};
+    use rstest::rstest;
+    use std::sync::Arc;
+    use wren_core::mdl::manifest::Model;
+
+    #[rstest]
+    fn test_manifest_to_json_base64() {
+        let py_manifest = PyManifest {
+            catalog: "catalog".to_string(),
+            schema: "schema".to_string(),
+            models: vec![
+                Arc::from(Model {
+                    name: "model_1".to_string(),
+                    ref_sql: "SELECT * FROM table".to_string().into(),
+                    base_object: None,
+                    table_reference: None,
+                    columns: vec![],
+                    primary_key: None,
+                    cached: false,
+                    refresh_time: None,
+                }),
+                Arc::from(Model {
+                    name: "model_2".to_string(),
+                    ref_sql: None,
+                    base_object: None,
+                    table_reference: "catalog.schema.table".to_string().into(),
+                    columns: vec![],
+                    primary_key: None,
+                    cached: false,
+                    refresh_time: None,
+                }),
+            ],
+            relationships: vec![],
+            metrics: vec![],
+            views: vec![],
+        };
+        let base64_str = to_json_base64(py_manifest).unwrap();
+        let manifest = to_manifest(&base64_str).unwrap();
+        assert_eq!(manifest.catalog, "catalog");
+        assert_eq!(manifest.schema, "schema");
+        assert_eq!(manifest.models.len(), 2);
+        assert_eq!(manifest.models[0].name, "model_1");
+        assert_eq!(
+            manifest.models[0].ref_sql,
+            Some("SELECT * FROM table".to_string())
+        );
+        assert_eq!(manifest.models[1].name(), "model_2");
+        assert_eq!(manifest.models[1].table_reference(), "catalog.schema.table");
+    }
+}

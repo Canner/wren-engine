@@ -16,10 +16,14 @@ pub struct PyExtractor {
 #[pymethods]
 impl PyExtractor {
     #[new]
-    pub fn new(mdl_base64: &str) -> Result<Self, CoreError> {
-        let manifest = to_manifest(mdl_base64)?;
-        let mdl = WrenMDL::new_ref(manifest);
-        Ok(Self { mdl })
+    #[pyo3(signature = (mdl_base64=None))]
+    pub fn new(mdl_base64: Option<&str>) -> Result<Self, CoreError> {
+        mdl_base64
+            .ok_or_else(|| CoreError::new("Expected a valid base64 encoded string for the model definition, but got None."))
+            .and_then(to_manifest)
+            .map(|manifest| Self {
+                mdl: WrenMDL::new_ref(manifest),
+            })
     }
 
     /// parse the given SQL and return the list of used table name.
@@ -153,4 +157,155 @@ fn extract_relationships(
         .filter(|rel| rel.models.iter().any(|model| used_set.contains(model)))
         .cloned()
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::extractor::PyExtractor;
+    use base64::prelude::BASE64_STANDARD;
+    use base64::Engine;
+    use rstest::{fixture, rstest};
+    use std::iter::Iterator;
+
+    #[fixture]
+    pub fn mdl_base64() -> String {
+        let mdl_json = r#"
+        {
+            "catalog": "my_catalog",
+            "schema": "my_schema",
+            "models": [
+                {
+                    "name": "customer",
+                    "tableReference": {
+                        "schema": "main",
+                        "table": "customer"
+                    },
+                    "columns": [
+                        {"name": "c_custkey", "type": "integer"},
+                        {"name": "orders", "type": "orders", "relationship": "orders_customer"}
+                    ],
+                    "primaryKey": "c_custkey"
+                },
+                {
+                    "name": "orders",
+                    "tableReference": {
+                        "schema": "main",
+                        "table": "orders"
+                    },
+                    "columns": [
+                        {"name": "o_orderkey", "type": "integer"},
+                        {"name": "o_custkey", "type": "integer"},
+                        {
+                            "name": "lineitems",
+                            "type": "Lineitem",
+                            "relationship": "orders_lineitem"
+                        }
+                    ],
+                    "primaryKey": "o_orderkey"
+                },
+                {
+                    "name": "lineitem",
+                    "tableReference": {
+                        "schema": "main",
+                        "table": "lineitem"
+                    },
+                    "columns": [
+                        {"name": "l_orderkey", "type": "integer"}
+                    ],
+                    "primaryKey": "l_orderkey"
+                }
+            ],
+            "relationships": [
+                {
+                    "name": "orders_customer",
+                    "models": ["orders", "customer"],
+                    "joinType": "MANY_TO_ONE",
+                    "condition": "orders.custkey = customer.custkey"
+                },
+                {
+                    "name": "orders_lineitem",
+                    "models": ["orders", "lineitem"],
+                    "joinType": "ONE_TO_MANY",
+                    "condition": "orders.orderkey = lineitem.orderkey"
+                }
+            ],
+            "views": [
+                {
+                    "name": "customer_view",
+                    "statement": "SELECT * FROM my_catalog.my_schema.customer"
+                }
+            ]
+        }"#;
+        BASE64_STANDARD.encode(mdl_json.as_bytes())
+    }
+
+    #[fixture]
+    pub fn extractor(mdl_base64: String) -> PyExtractor {
+        PyExtractor::new(Option::from(mdl_base64.as_str())).unwrap()
+    }
+
+    #[rstest]
+    #[case(
+        None,
+        "Expected a valid base64 encoded string for the model definition, but got None."
+    )]
+    #[case(Some("xxx"), "Base64 decode error: Invalid padding")]
+    #[case(Some("{}"), "Base64 decode error: Invalid symbol 123, offset 0.")]
+    #[case(
+        Some(""),
+        "Serde JSON error: EOF while parsing a value at line 1 column 0"
+    )]
+    fn test_extractor_with_invalid_manifest(
+        #[case] value: Option<&str>,
+        #[case] error_message: &str,
+    ) {
+        let result = PyExtractor::new(value);
+
+        match result {
+            Err(err) => {
+                assert_eq!(err.to_string(), error_message);
+            }
+            Ok(_) => panic!("Expected an error but got Ok"),
+        }
+    }
+
+    #[rstest]
+    #[case("SELECT * FROM customer", vec!["customer"])]
+    #[case("SELECT * FROM not_my_catalog.my_schema.customer", vec![])]
+    #[case("SELECT * FROM my_catalog.not_my_schema.customer", vec![])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer", vec!["customer"])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey", vec!["customer", "orders"])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer_view", vec!["customer_view"])]
+    fn test_resolve_used_table_names(
+        extractor: PyExtractor,
+        #[case] sql: &str,
+        #[case] expected: Vec<&str>,
+    ) {
+        assert_eq!(extractor.resolve_used_table_names(sql).unwrap(), expected);
+    }
+
+    #[rstest]
+    #[case(vec!["customer"], vec!["customer", "orders", "lineitem"])]
+    #[case(vec!["customer_view"], vec!["customer", "orders", "lineitem"])]
+    #[case(vec!["orders"], vec!["orders", "lineitem"])]
+    #[case(vec!["lineitem"], vec!["lineitem"])]
+    fn test_extract_manifest(
+        extractor: PyExtractor,
+        #[case] dataset: Vec<&str>,
+        #[case] expected_models: Vec<&str>,
+    ) {
+        let dataset_strings: Vec<String> =
+            dataset.iter().map(|s| s.to_string()).collect();
+        let extracted_manifest = extractor.extract_manifest(dataset_strings).unwrap();
+
+        assert_eq!(extracted_manifest.models.len(), expected_models.len());
+        assert_eq!(
+            extracted_manifest
+                .models
+                .iter()
+                .map(|m| m.name.clone())
+                .collect::<Vec<_>>(),
+            expected_models
+        );
+    }
 }
