@@ -13,3 +13,11 @@ develop:
 test: develop
     cargo test --no-default-features
     poetry run pytest
+
+alias fmt := format
+
+format:
+    cargo fmt
+    poetry run ruff format .
+    poetry run ruff check --fix .
+    taplo fmt
