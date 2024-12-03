@@ -60,28 +60,21 @@ mod table_reference {
     where
         D: Deserializer<'de>,
     {
-        let TableReference {
-            catalog,
-            schema,
-            table,
-        } = TableReference::deserialize(deserializer)?;
-        let mut result = String::new();
-        if let Some(catalog) = catalog.filter(|c| !c.is_empty()) {
-            result.push_str(&catalog);
-            result.push('.');
-        }
-        if let Some(schema) = schema.filter(|s| !s.is_empty()) {
-            result.push_str(&schema);
-            result.push('.');
-        }
-        if let Some(table) = table.filter(|t| !t.is_empty()) {
-            result.push_str(&table);
-        }
-        if result.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(result))
-        }
+        Ok(Option::deserialize(deserializer)?
+            .map(
+                |TableReference {
+                     catalog,
+                     schema,
+                     table,
+                 }| {
+                    [catalog, schema, table]
+                        .into_iter()
+                        .filter_map(|s| s.filter(|x| !x.is_empty()))
+                        .collect::<Vec<_>>()
+                        .join(".")
+                },
+            )
+            .filter(|s| !s.is_empty()))
     }
 
     pub fn serialize<S>(
