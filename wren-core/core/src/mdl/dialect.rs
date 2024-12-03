@@ -45,7 +45,7 @@ impl Dialect for WrenDialect {
     }
 
     fn interval_style(&self) -> IntervalStyle {
-        IntervalStyle::SQLStandard
+        IntervalStyle::MySQL
     }
 
     fn scalar_function_to_sql_overrides(
