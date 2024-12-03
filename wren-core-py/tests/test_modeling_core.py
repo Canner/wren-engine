@@ -143,6 +143,29 @@ def test_get_available_functions():
 
 
 @pytest.mark.parametrize(
+    ("value", "expected_error", "error_message"),
+    [
+        (
+            None,
+            TypeError,
+            "argument 'mdl_base64': 'NoneType' object cannot be converted to 'PyString'",
+        ),
+        ("xxx", Exception, "Base64 decode error: Invalid padding"),
+        ("{}", Exception, "Base64 decode error: Invalid symbol 123, offset 0."),
+        (
+            "",
+            Exception,
+            "Serde JSON error: EOF while parsing a value at line 1 column 0",
+        ),
+    ],
+)
+def test_extractor_with_invalid_manifest(value, expected_error, error_message):
+    with pytest.raises(expected_error) as e:
+        Extractor(value)
+    assert str(e.value) == error_message
+
+
+@pytest.mark.parametrize(
     ("sql", "expected"),
     [
         ("SELECT * FROM customer", ["customer"]),

@@ -16,10 +16,10 @@ pub struct PyExtractor {
 #[pymethods]
 impl PyExtractor {
     #[new]
-    pub fn new(mdl_base64: &str) -> Self {
-        let manifest = to_manifest(mdl_base64).unwrap();
+    pub fn new(mdl_base64: &str) -> Result<Self, CoreError> {
+        let manifest = to_manifest(mdl_base64)?;
         let mdl = WrenMDL::new_ref(manifest);
-        Self { mdl }
+        Ok(Self { mdl })
     }
 
     /// parse the given SQL and return the list of used table name.
