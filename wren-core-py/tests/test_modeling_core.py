@@ -123,19 +123,19 @@ def test_read_function_list():
 def test_get_available_functions():
     session_context = SessionContext(manifest_str, "tests/functions.csv")
     functions = session_context.get_available_functions()
-    add_two = next(x.to_dict() for x in functions if x["name"] == "add_two")
-    assert add_two["name"] == "add_two"
-    assert add_two["function_type"] == "scalar"
-    assert add_two["description"] == "Adds two numbers together."
-    assert add_two["return_type"] == "int"
-    assert add_two["param_names"] == "f1,f2"
-    assert add_two["param_types"] == "int,int"
+    add_two = next(f for f in functions if f.name == "add_two")
+    assert add_two.name == "add_two"
+    assert add_two.function_type == "scalar"
+    assert add_two.description == "Adds two numbers together."
+    assert add_two.return_type == "int"
+    assert add_two.param_names == "f1,f2"
+    assert add_two.param_types == "int,int"
 
-    max_if = next(x.to_dict() for x in functions if x["name"] == "max_if")
-    assert max_if["name"] == "max_if"
-    assert max_if["function_type"] == "window"
-    assert max_if["param_names"] is None
-    assert max_if["param_types"] is None
+    max_if = next(f for f in functions if f.name == "max_if")
+    assert max_if.name == "max_if"
+    assert max_if.function_type == "window"
+    assert max_if.param_names is None
+    assert max_if.param_types is None
 
 
 @pytest.mark.parametrize(

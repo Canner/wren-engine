@@ -25,13 +25,19 @@ use wren_core::mdl::function::FunctionType;
 #[pyclass(name = "RemoteFunction")]
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PyRemoteFunction {
+    #[pyo3(get)]
     pub function_type: String,
+    #[pyo3(get)]
     pub name: String,
+    #[pyo3(get)]
     pub return_type: Option<String>,
     /// It's a comma separated string of parameter names
+    #[pyo3(get)]
     pub param_names: Option<String>,
     /// It's a comma separated string of parameter types
+    #[pyo3(get)]
     pub param_types: Option<String>,
+    #[pyo3(get)]
     pub description: Option<String>,
 }
 
