@@ -95,9 +95,8 @@ class EmbeddedEngineRewriter:
             extractor = get_extractor(self.manifest_str)
             tables = extractor.resolve_used_table_names(sql)
             manifest = extractor.extract_manifest(tables)
-            session_context = get_session_context(
-                to_json_base64(manifest), self.function_path
-            )
+            manifest_str = to_json_base64(manifest)
+            session_context = get_session_context(manifest_str, self.function_path)
             return session_context.transform_sql(sql)
         except Exception as e:
             raise RewriteError(str(e))
