@@ -4,7 +4,7 @@ from contextlib import nullcontext as does_not_raise
 
 import pytest
 from wren_core import (
-    Extractor,
+    ManifestExtractor,
     SessionContext,
     to_json_base64,
 )
@@ -157,7 +157,7 @@ def test_get_available_functions():
 )
 def test_extractor_with_invalid_manifest(value, expected_error, error_message):
     with pytest.raises(expected_error) as e:
-        Extractor(value)
+        ManifestExtractor(value)
     assert str(e.value) == error_message
 
 
@@ -176,7 +176,7 @@ def test_extractor_with_invalid_manifest(value, expected_error, error_message):
     ],
 )
 def test_resolve_used_table_names(sql, expected):
-    tables = Extractor(manifest_str).resolve_used_table_names(sql)
+    tables = ManifestExtractor(manifest_str).resolve_used_table_names(sql)
     assert tables == expected
 
 
@@ -189,14 +189,14 @@ def test_resolve_used_table_names(sql, expected):
         (["lineitem"], ["lineitem"]),
     ],
 )
-def test_extract_manifest(dataset, expected_models):
-    extracted_manifest = Extractor(manifest_str).extract_manifest(dataset)
+def test_extract_by(dataset, expected_models):
+    extracted_manifest = ManifestExtractor(manifest_str).extract_by(dataset)
     assert len(extracted_manifest.models) == len(expected_models)
     assert [m.name for m in extracted_manifest.models] == expected_models
 
 
 def test_to_json_base64():
-    extracted_manifest = Extractor(manifest_str).extract_manifest(["customer"])
+    extracted_manifest = ManifestExtractor(manifest_str).extract_by(["customer"])
     base64_str = to_json_base64(extracted_manifest)
     with does_not_raise():
         json_str = base64.b64decode(base64_str)

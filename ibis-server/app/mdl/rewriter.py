@@ -7,7 +7,7 @@ from loguru import logger
 
 from app.config import get_config
 from app.mdl.core import (
-    get_extractor,
+    get_manifest_extractor,
     get_session_context,
     to_json_base64,
 )
@@ -63,9 +63,9 @@ class ExternalEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
-            extractor = get_extractor(self.manifest_str)
+            extractor = get_manifest_extractor(self.manifest_str)
             tables = extractor.resolve_used_table_names(sql)
-            manifest = extractor.extract_manifest(tables)
+            manifest = extractor.extract_by(tables)
             manifest_str = to_json_base64(manifest)
             r = httpx.request(
                 method="GET",
@@ -92,9 +92,9 @@ class EmbeddedEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
-            extractor = get_extractor(self.manifest_str)
+            extractor = get_manifest_extractor(self.manifest_str)
             tables = extractor.resolve_used_table_names(sql)
-            manifest = extractor.extract_manifest(tables)
+            manifest = extractor.extract_by(tables)
             manifest_str = to_json_base64(manifest)
             session_context = get_session_context(manifest_str, self.function_path)
             return session_context.transform_sql(sql)

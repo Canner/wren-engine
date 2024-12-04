@@ -8,13 +8,13 @@ use wren_core::mdl::WrenMDL;
 
 #[pyclass]
 #[derive(Clone)]
-#[pyo3(name = "Extractor")]
-pub struct PyExtractor {
+#[pyo3(name = "ManifestExtractor")]
+pub struct PyManifestExtractor {
     mdl: Arc<WrenMDL>,
 }
 
 #[pymethods]
-impl PyExtractor {
+impl PyManifestExtractor {
     #[new]
     #[pyo3(signature = (mdl_base64=None))]
     pub fn new(mdl_base64: Option<&str>) -> Result<Self, CoreError> {
@@ -35,7 +35,7 @@ impl PyExtractor {
     /// If a model is related to another dataset, both datasets will be kept.
     /// The relationship between of them will be kept as well.
     /// A dataset could be model, view.
-    pub fn extract_manifest(
+    pub fn extract_by(
         &self,
         used_datasets: Vec<String>,
     ) -> Result<PyManifest, CoreError> {
@@ -161,7 +161,7 @@ fn extract_relationships(
 
 #[cfg(test)]
 mod tests {
-    use crate::extractor::PyExtractor;
+    use crate::extractor::PyManifestExtractor;
     use base64::prelude::BASE64_STANDARD;
     use base64::Engine;
     use rstest::{fixture, rstest};
@@ -240,8 +240,8 @@ mod tests {
     }
 
     #[fixture]
-    pub fn extractor(mdl_base64: String) -> PyExtractor {
-        PyExtractor::new(Option::from(mdl_base64.as_str())).unwrap()
+    pub fn extractor(mdl_base64: String) -> PyManifestExtractor {
+        PyManifestExtractor::new(Option::from(mdl_base64.as_str())).unwrap()
     }
 
     #[rstest]
@@ -259,9 +259,7 @@ mod tests {
         #[case] value: Option<&str>,
         #[case] error_message: &str,
     ) {
-        let result = PyExtractor::new(value);
-
-        match result {
+        match PyManifestExtractor::new(value) {
             Err(err) => {
                 assert_eq!(err.to_string(), error_message);
             }
@@ -277,7 +275,7 @@ mod tests {
     #[case("SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey", vec!["customer", "orders"])]
     #[case("SELECT * FROM my_catalog.my_schema.customer_view", vec!["customer_view"])]
     fn test_resolve_used_table_names(
-        extractor: PyExtractor,
+        extractor: PyManifestExtractor,
         #[case] sql: &str,
         #[case] expected: Vec<&str>,
     ) {
@@ -285,25 +283,22 @@ mod tests {
     }
 
     #[rstest]
-    #[case(vec!["customer"], vec!["customer", "orders", "lineitem"])]
-    #[case(vec!["customer_view"], vec!["customer", "orders", "lineitem"])]
-    #[case(vec!["orders"], vec!["orders", "lineitem"])]
-    #[case(vec!["lineitem"], vec!["lineitem"])]
+    #[case(&["customer"], &["customer", "orders", "lineitem"])]
+    #[case(&["customer_view"], &["customer", "orders", "lineitem"])]
+    #[case(&["orders"], &["orders", "lineitem"])]
+    #[case(&["lineitem"], &["lineitem"])]
     fn test_extract_manifest(
-        extractor: PyExtractor,
-        #[case] dataset: Vec<&str>,
-        #[case] expected_models: Vec<&str>,
+        extractor: PyManifestExtractor,
+        #[case] dataset: &[&str],
+        #[case] expected_models: &[&str],
     ) {
-        let dataset_strings: Vec<String> =
-            dataset.iter().map(|s| s.to_string()).collect();
-        let extracted_manifest = extractor.extract_manifest(dataset_strings).unwrap();
-
-        assert_eq!(extracted_manifest.models.len(), expected_models.len());
         assert_eq!(
-            extracted_manifest
+            extractor
+                .extract_by(dataset.iter().map(|s| s.to_string()).collect())
+                .unwrap()
                 .models
                 .iter()
-                .map(|m| m.name.clone())
+                .map(|m| m.name.as_str())
                 .collect::<Vec<_>>(),
             expected_models
         );
