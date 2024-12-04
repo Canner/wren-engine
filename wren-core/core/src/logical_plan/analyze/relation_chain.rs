@@ -3,22 +3,28 @@ use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, OrdExpr, PartialModelPlanNode,
 };
 use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
-use crate::logical_plan::utils::create_schema;
-use crate::mdl;
+use crate::logical_plan::utils::{create_schema, rebase_column};
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::utils::{qualify_name_from_column_name, quoted};
 use crate::mdl::Dataset;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
+use crate::{mdl, DataFusionError};
+use datafusion::common::alias::AliasGenerator;
 use datafusion::common::TableReference;
-use datafusion::common::{internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef};
+use datafusion::common::{
+    internal_err, not_impl_err, plan_err, DFSchema, DFSchemaRef, Result,
+};
 use datafusion::logical_expr::{
-    col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, UserDefinedLogicalNodeCore,
+    col, Expr, Extension, LogicalPlan, LogicalPlanBuilder, SubqueryAlias,
+    UserDefinedLogicalNodeCore,
 };
 use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
+
+const ALIAS: &str = "__relation_";
 
 /// RelationChain is a chain of models that are connected by the relationship.
 /// The chain is used to generate the join plan for the model.
@@ -36,7 +42,7 @@ impl RelationChain {
         required_fields: Vec<Expr>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
-    ) -> datafusion::common::Result<Self> {
+    ) -> Result<Self> {
         match dataset {
             Dataset::Model(source_model) => {
                 Ok(Start(LogicalPlan::Extension(Extension {
@@ -63,7 +69,7 @@ impl RelationChain {
         model_required_fields: &HashMap<TableReference, BTreeSet<OrdExpr>>,
         analyzed_wren_mdl: Arc<AnalyzedWrenMDL>,
         session_state_ref: SessionStateRef,
-    ) -> datafusion::common::Result<Self> {
+    ) -> Result<Self> {
         let mut relation_chain = source;
 
         for next in iter {
@@ -129,18 +135,52 @@ impl RelationChain {
     pub(crate) fn plan(
         &mut self,
         rule: ModelGenerationRule,
-    ) -> datafusion::common::Result<Option<LogicalPlan>> {
+        alias_generator: &AliasGenerator,
+    ) -> Result<(Option<LogicalPlan>, Option<String>)> {
         match self {
             RelationChain::Chain(plan, _, condition, ref mut next) => {
                 let left = rule.generate_model_internal(plan.clone())?.data;
+                let left_alias = if let LogicalPlan::SubqueryAlias(SubqueryAlias {
+                    alias,
+                    ..
+                }) = &left
+                {
+                    alias.table()
+                } else {
+                    return internal_err!(
+                        "model plan should be wrapped in a subquery alias"
+                    );
+                };
+
+                let (Some(right), right_alias) = next.plan(rule, alias_generator)? else {
+                    return plan_err!("Nil relation chain");
+                };
+
                 let join_keys: Vec<Expr> = mdl::utils::collect_identifiers(condition)?
                     .iter()
                     .map(|c| col(qualify_name_from_column_name(c)))
                     .collect();
+
+                // The right key should be rebased if the right table has a generated alias
+                let join_keys = join_keys
+                    .into_iter()
+                    .map(|expr| match expr {
+                        Expr::Column(c) => {
+                            if c.relation
+                                .clone()
+                                .map(|r| r.table() != left_alias)
+                                .unwrap_or(false)
+                            {
+                                if let Some(right_alias) = &right_alias {
+                                    return rebase_column(&Expr::Column(c), right_alias);
+                                }
+                            }
+                            Ok::<_, DataFusionError>(Expr::Column(c))
+                        }
+                        _ => Ok::<_, DataFusionError>(expr),
+                    })
+                    .collect::<Result<Vec<_>>>()?;
                 let join_condition = join_keys[0].clone().eq(join_keys[1].clone());
-                let Some(right) = next.plan(rule)? else {
-                    return plan_err!("Nil relation chain");
-                };
                 let mut required_exprs = BTreeSet::new();
                 // collect the output calculated fields
                 match plan {
@@ -242,19 +282,25 @@ impl RelationChain {
                     .iter()
                     .map(|expr| expr.expr.clone())
                     .collect();
-
-                Ok(Some(
-                    LogicalPlanBuilder::from(left)
-                        .join_on(
-                            right,
-                            datafusion::logical_expr::JoinType::Right,
-                            vec![join_condition],
-                        )?
-                        .project(required_field)?
-                        .build()?,
+                let alias = alias_generator.next(ALIAS);
+                Ok((
+                    Some(
+                        LogicalPlanBuilder::from(left)
+                            .join_on(
+                                right,
+                                datafusion::logical_expr::JoinType::Right,
+                                vec![join_condition],
+                            )?
+                            .project(required_field)?
+                            .alias(&alias)?
+                            .build()?,
+                    ),
+                    Some(alias),
                 ))
             }
-            Start(plan) => Ok(Some(rule.generate_model_internal(plan.clone())?.data)),
+            Start(plan) => {
+                Ok((Some(rule.generate_model_internal(plan.clone())?.data), None))
+            }
         }
     }
 }

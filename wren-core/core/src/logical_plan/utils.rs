@@ -1,21 +1,23 @@
 use crate::mdl::lineage::DatasetLink;
+use crate::mdl::manifest::Column;
 use crate::mdl::utils::quoted;
-use crate::mdl::{
-    manifest::{Column, Model},
-    WrenMDL,
-};
+use crate::mdl::{manifest::Model, WrenMDL};
 use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
 use datafusion::catalog_common::TableReference;
 use datafusion::common::plan_err;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{
+    Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
+};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
 use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
-use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
+use datafusion::logical_expr::{
+    builder::LogicalTableSource, Expr, TableSource,
+};
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::sqlparser::parser::Parser;
 use log::debug;
@@ -301,6 +303,25 @@ pub fn expr_to_columns(
         Ok(TreeNodeRecursion::Continue)
     })
     .map(|_| ())
+}
+
+/// Rebase the column reference to the new base reference
+///
+/// e.g. `a.b` with base_reference `c` will be transformed to `c.b`
+pub fn rebase_column(expr: &Expr, base_reference: &str) -> Result<Expr> {
+    expr.clone()
+        .transform_down(|expr| {
+            if let Expr::Column(datafusion::common::Column { name, .. }) = expr {
+                let rewritten = Expr::Column(datafusion::common::Column::new(
+                    Some(base_reference),
+                    name,
+                ));
+                Ok(Transformed::yes(rewritten))
+            } else {
+                Ok(Transformed::no(expr))
+            }
+        })
+        .data()
 }
 
 #[cfg(test)]
