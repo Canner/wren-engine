@@ -15,9 +15,7 @@ use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
 use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
-use datafusion::logical_expr::{
-    builder::LogicalTableSource, Expr, TableSource,
-};
+use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::sqlparser::parser::Parser;
 use log::debug;

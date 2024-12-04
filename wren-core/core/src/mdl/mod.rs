@@ -532,7 +532,8 @@ mod test {
             Arc::clone(&analyzed_mdl),
             &[],
             sql,
-        ).await?;
+        )
+        .await?;
         let expected = "SELECT profile.totalcost FROM (SELECT totalcost.totalcost FROM \
         (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost \
         FROM (SELECT __relation__1.c_custkey, __relation__1.p_custkey, orders.o_custkey, orders.o_totalprice \
@@ -541,6 +542,25 @@ mod test {
         RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
         ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS profile";
         assert_eq!(result, expected);
+
+        let sql = "select totalcost from profile where p_sex = 'M'";
+        let result = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(result, "SELECT profile.totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost \
+        FROM (SELECT profile.p_custkey, profile.p_sex, totalcost.p_custkey, totalcost.totalcost FROM \
+        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
+        (SELECT __relation__1.c_custkey, __relation__1.p_custkey, orders.o_custkey, orders.o_totalprice FROM \
+        (SELECT orders.o_custkey AS o_custkey, orders.o_totalprice AS o_totalprice FROM orders) AS orders RIGHT JOIN \
+        (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM customer) AS customer \
+        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost \
+        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey, profile.p_sex AS p_sex FROM profile) AS profile \
+        ON totalcost.p_custkey = profile.p_custkey) AS __relation__1) AS profile WHERE profile.p_sex = 'M'");
         Ok(())
     }
 
