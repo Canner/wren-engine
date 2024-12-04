@@ -14,7 +14,9 @@ use datafusion::sql::TableReference;
 use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
 };
-use crate::logical_plan::utils::{create_remote_table_source, rebase_column};
+use crate::logical_plan::utils::{
+    create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
+};
 use crate::mdl::manifest::Model;
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
@@ -60,7 +62,7 @@ impl ModelGenerationRule {
                     } else {
                         model_plan.required_exprs.clone()
                     };
-
+                    let projections = eliminate_ambiguous_columns(projections);
                     let result = match source_plan {
                         Some(plan) => {
                             if model_plan.required_exprs.is_empty() {
@@ -196,6 +198,7 @@ impl ModelGenerationRule {
                         .iter()
                         .map(|f| col(datafusion::common::Column::from((None, f))))
                         .collect();
+                    let projection = eliminate_ambiguous_columns(projection);
                     let alias = LogicalPlanBuilder::from(source_plan)
                         .project(projection)?
                         .alias(quoted(&partial_model.model_node.plan_name))?

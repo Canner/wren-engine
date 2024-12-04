@@ -3,7 +3,9 @@ use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, OrdExpr, PartialModelPlanNode,
 };
 use crate::logical_plan::analyze::relation_chain::RelationChain::Start;
-use crate::logical_plan::utils::{create_schema, rebase_column};
+use crate::logical_plan::utils::{
+    create_schema, eliminate_ambiguous_columns, rebase_column,
+};
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::JoinType;
 use crate::mdl::utils::{qualify_name_from_column_name, quoted};
@@ -282,6 +284,7 @@ impl RelationChain {
                     .iter()
                     .map(|expr| expr.expr.clone())
                     .collect();
+                let required_field = eliminate_ambiguous_columns(required_field);
                 let alias = alias_generator.next(ALIAS);
                 Ok((
                     Some(

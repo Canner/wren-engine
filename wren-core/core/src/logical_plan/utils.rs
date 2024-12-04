@@ -21,7 +21,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::{collections::HashMap, sync::Arc};
 
 fn create_list_type(array_type: &str) -> Result<DataType> {
@@ -320,6 +320,23 @@ pub fn rebase_column(expr: &Expr, base_reference: &str) -> Result<Expr> {
             }
         })
         .data()
+}
+
+/// Eliminate the ambiguous columns in the expressions. If there are columns with the same name,
+/// only the first one will be kept.
+pub fn eliminate_ambiguous_columns(expr: Vec<Expr>) -> Vec<Expr> {
+    let mut columns = BTreeMap::new();
+    for e in expr {
+        match e {
+            Expr::Column(c) => {
+                columns.insert(c.name.clone(), Expr::Column(c));
+            }
+            _ => {
+                columns.insert(e.clone().schema_name().to_string(), e);
+            }
+        }
+    }
+    columns.into_values().collect()
 }
 
 #[cfg(test)]
