@@ -247,6 +247,7 @@ mod tests {
     #[case("SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey", &["customer", "orders"])]
     #[case("SELECT * FROM my_catalog.my_schema.customer_view", &["customer_view"])]
     #[case("WITH t1 as (select * from customer) select * from t1", &["customer"])]
+    #[case("WITH customer as (select * from customer) select * from customer", &["customer"])]
     fn test_resolve_used_table_names(
         extractor: PyManifestExtractor,
         #[case] sql: &str,
