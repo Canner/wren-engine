@@ -1,16 +1,16 @@
 use crate::mdl::lineage::DatasetLink;
+use crate::mdl::manifest::Column;
 use crate::mdl::utils::quoted;
-use crate::mdl::{
-    manifest::{Column, Model},
-    WrenMDL,
-};
+use crate::mdl::{manifest::Model, WrenMDL};
 use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
 use datafusion::catalog_common::TableReference;
 use datafusion::common::plan_err;
-use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{
+    Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
+};
 use datafusion::datasource::DefaultTableSource;
 use datafusion::error::Result;
 use datafusion::logical_expr::sqlparser::ast::ArrayElemTypeDef;
@@ -21,7 +21,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::{collections::HashMap, sync::Arc};
 
 fn create_list_type(array_type: &str) -> Result<DataType> {
@@ -301,6 +301,42 @@ pub fn expr_to_columns(
         Ok(TreeNodeRecursion::Continue)
     })
     .map(|_| ())
+}
+
+/// Rebase the column reference to the new base reference
+///
+/// e.g. `a.b` with base_reference `c` will be transformed to `c.b`
+pub fn rebase_column(expr: &Expr, base_reference: &str) -> Result<Expr> {
+    expr.clone()
+        .transform_down(|expr| {
+            if let Expr::Column(datafusion::common::Column { name, .. }) = expr {
+                let rewritten = Expr::Column(datafusion::common::Column::new(
+                    Some(base_reference),
+                    name,
+                ));
+                Ok(Transformed::yes(rewritten))
+            } else {
+                Ok(Transformed::no(expr))
+            }
+        })
+        .data()
+}
+
+/// Eliminate the ambiguous columns in the expressions. If there are columns with the same name,
+/// only the first one will be kept.
+pub fn eliminate_ambiguous_columns(expr: Vec<Expr>) -> Vec<Expr> {
+    let mut columns = BTreeMap::new();
+    for e in expr {
+        match e {
+            Expr::Column(c) => {
+                columns.insert(c.name.clone(), Expr::Column(c));
+            }
+            _ => {
+                columns.insert(e.clone().schema_name().to_string(), e);
+            }
+        }
+    }
+    columns.into_values().collect()
 }
 
 #[cfg(test)]

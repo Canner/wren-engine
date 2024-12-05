@@ -26,7 +26,13 @@ manifest = {
                 },
                 {
                     "name": "o_totalprice",
+                    "type": "text",
+                    "isHidden": True,
+                },
+                {
+                    "name": "o_totalprice_double",
                     "type": "double",
+                    "expression": "cast(o_totalprice as double)",
                 },
                 {"name": "o_orderdate", "type": "date"},
                 {
@@ -57,6 +63,33 @@ manifest = {
             ],
             "primaryKey": "o_orderkey",
         },
+        {
+            "name": "customer",
+            "tableReference": {
+                "schema": "public",
+                "table": "customer",
+            },
+            "columns": [
+                {"name": "c_custkey", "type": "integer"},
+                {"name": "c_name", "type": "varchar"},
+                {"name": "orders", "type": "orders", "relationship": "orders_customer"},
+                {
+                    "name": "sum_totalprice",
+                    "type": "double",
+                    "isCalculated": True,
+                    "expression": "sum(orders.o_totalprice_double)",
+                },
+            ],
+            "primaryKey": "c_custkey",
+        },
+    ],
+    "relationships": [
+        {
+            "name": "orders_customer",
+            "models": ["orders", "customer"],
+            "joinType": "many_to_one",
+            "condition": "orders.o_custkey = customer.c_custkey",
+        }
     ],
 }
 
@@ -79,25 +112,25 @@ with TestClient(app) as client:
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+        assert len(result["columns"]) == 10
         assert len(result["data"]) == 1
         assert result["data"][0] == [
             "2024-01-01 23:59:59.000000",
             "2024-01-01 23:59:59.000000 UTC",
             "2024-01-16 04:00:00.000000 UTC",  # utc-5
             "2024-07-16 03:00:00.000000 UTC",  # utc-4
+            172799.49,
             "1_370",
             370,
             "1996-01-02",
             1,
             "O",
-            "172799.49",
         ]
         assert result["dtypes"] == {
             "o_orderkey": "int32",
             "o_custkey": "int32",
             "o_orderstatus": "object",
-            "o_totalprice": "object",
+            "o_totalprice_double": "float64",
             "o_orderdate": "object",
             "order_cust_key": "object",
             "timestamp": "object",
@@ -117,7 +150,7 @@ with TestClient(app) as client:
         )
         assert response.status_code == 200
         result = response.json()
-        assert len(result["columns"]) == len(manifest["models"][0]["columns"])
+        assert len(result["columns"]) == 10
         assert len(result["data"]) == 1
         assert result["data"][0][0] == "2024-01-01 23:59:59.000000"
         assert result["dtypes"] is not None
@@ -227,3 +260,60 @@ with TestClient(app) as client:
         )
         assert response.status_code == 422
         assert response.text is not None
+
+    def test_query_to_many_calculation(manifest_str, connection_info):
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT sum_totalprice FROM wren.public.customer limit 1",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["dtypes"] == {"sum_totalprice": "float64"}
+
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT sum_totalprice FROM wren.public.customer where c_name = 'Customer#000000001' limit 1",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 1
+        assert len(result["data"]) == 1
+        assert result["dtypes"] == {"sum_totalprice": "float64"}
+
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT c_name, sum_totalprice FROM wren.public.customer limit 1",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 2
+        assert len(result["data"]) == 1
+        assert result["dtypes"] == {"c_name": "object", "sum_totalprice": "float64"}
+
+        response = client.post(
+            url=f"{base_url}/query",
+            json={
+                "connectionInfo": connection_info,
+                "manifestStr": manifest_str,
+                "sql": "SELECT c_custkey, sum_totalprice FROM wren.public.customer limit 1",
+            },
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["columns"]) == 2
+        assert len(result["data"]) == 1
+        assert result["dtypes"] == {"c_custkey": "int32", "sum_totalprice": "float64"}

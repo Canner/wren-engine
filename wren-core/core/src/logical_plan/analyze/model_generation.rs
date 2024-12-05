@@ -1,18 +1,22 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use datafusion::common::alias::AliasGenerator;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult};
 use datafusion::common::{plan_err, Result};
 use datafusion::logical_expr::{col, ident, Extension, UserDefinedLogicalNodeCore};
 use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder};
 use datafusion::optimizer::analyzer::AnalyzerRule;
+use datafusion::physical_plan::internal_err;
 use datafusion::sql::TableReference;
 
 use crate::logical_plan::analyze::plan::{
     CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
 };
-use crate::logical_plan::utils::create_remote_table_source;
+use crate::logical_plan::utils::{
+    create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
+};
 use crate::mdl::manifest::Model;
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
@@ -35,24 +39,37 @@ impl ModelGenerationRule {
         &self,
         plan: LogicalPlan,
     ) -> Result<Transformed<LogicalPlan>> {
+        let alias_generator = AliasGenerator::default();
         match plan {
             LogicalPlan::Extension(extension) => {
                 if let Some(model_plan) =
                     extension.node.as_any().downcast_ref::<ModelPlanNode>()
                 {
-                    let source_plan = model_plan.relation_chain.clone().plan(
+                    let (source_plan, alias) = model_plan.relation_chain.clone().plan(
                         ModelGenerationRule::new(
                             Arc::clone(&self.analyzed_wren_mdl),
                             Arc::clone(&self.session_state),
                         ),
+                        &alias_generator,
                     )?;
+
+                    let projections = if let Some(alias) = alias {
+                        model_plan
+                            .required_exprs
+                            .iter()
+                            .map(|expr| rebase_column(expr, &alias).unwrap())
+                            .collect()
+                    } else {
+                        model_plan.required_exprs.clone()
+                    };
+                    let projections = eliminate_ambiguous_columns(projections);
                     let result = match source_plan {
                         Some(plan) => {
                             if model_plan.required_exprs.is_empty() {
                                 plan
                             } else {
                                 LogicalPlanBuilder::from(plan)
-                                    .project(model_plan.required_exprs.clone())?
+                                    .project(projections)?
                                     .build()?
                             }
                         }
@@ -119,23 +136,35 @@ impl ModelGenerationRule {
                     .as_any()
                     .downcast_ref::<CalculationPlanNode>(
                 ) {
-                    let source_plan = calculation_plan.relation_chain.clone().plan(
-                        ModelGenerationRule::new(
-                            Arc::clone(&self.analyzed_wren_mdl),
-                            Arc::clone(&self.session_state),
-                        ),
-                    )?;
+                    let (source_plan, plan_alias) =
+                        calculation_plan.relation_chain.clone().plan(
+                            ModelGenerationRule::new(
+                                Arc::clone(&self.analyzed_wren_mdl),
+                                Arc::clone(&self.session_state),
+                            ),
+                            &alias_generator,
+                        )?;
+
+                    let plan_alias = if let Some(alias) = plan_alias {
+                        alias
+                    } else {
+                        return internal_err!("calculation plan should have an alias");
+                    };
 
                     if let Expr::Alias(alias) = calculation_plan.measures[0].clone() {
                         let measure: Expr = *alias.expr.clone();
+                        let rebased_measure = rebase_column(&measure, &plan_alias)?;
                         let name = alias.name.clone();
-                        let ident = ident(measure.to_string()).alias(name);
-                        let project = vec![calculation_plan.dimensions[0].clone(), ident];
+                        let ident =
+                            ident(rebased_measure.to_string()).alias(name.clone());
+                        let rebased_dimension =
+                            rebase_column(&calculation_plan.dimensions[0], &plan_alias)?;
+                        let project = vec![rebased_dimension.clone(), ident];
                         let result = match source_plan {
                             Some(plan) => LogicalPlanBuilder::from(plan)
                                 .aggregate(
-                                    calculation_plan.dimensions.clone(),
-                                    vec![measure],
+                                    vec![rebased_dimension],
+                                    vec![rebased_measure],
                                 )?
                                 .project(project)?
                                 .build()?,
@@ -169,6 +198,7 @@ impl ModelGenerationRule {
                         .iter()
                         .map(|f| col(datafusion::common::Column::from((None, f))))
                         .collect();
+                    let projection = eliminate_ambiguous_columns(projection);
                     let alias = LogicalPlanBuilder::from(source_plan)
                         .project(projection)?
                         .alias(quoted(&partial_model.model_node.plan_name))?

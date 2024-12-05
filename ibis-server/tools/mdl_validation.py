@@ -35,7 +35,7 @@ error_cases = []
 for model in mdl["models"]:
     for column in model["columns"]:
         # ignore hidden columns
-        if column.get("isHidden"):
+        if column.get("isHidden") or column.get("relationship") is not None:
             continue
         sql = f"select \"{column['name']}\" from \"{model['name']}\""
         try:
