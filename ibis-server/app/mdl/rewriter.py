@@ -32,6 +32,7 @@ class Rewriter:
     ):
         self.manifest_str = manifest_str
         self.data_source = data_source
+        self.experiment = experiment
         if experiment:
             config = get_config()
             function_path = config.get_remote_function_list_path(data_source)
@@ -48,7 +49,11 @@ class Rewriter:
 
     def _transpile(self, planned_sql: str) -> str:
         write = self._get_write_dialect(self.data_source)
-        return sqlglot.transpile(planned_sql, read="trino", write=write)[0]
+        if self.experiment:
+            read = None
+        else:
+            read = "trino"
+        return sqlglot.transpile(planned_sql, read=read, write=write)[0]
 
     @classmethod
     def _get_write_dialect(cls, data_source: DataSource) -> str:

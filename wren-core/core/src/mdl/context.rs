@@ -29,7 +29,6 @@ use datafusion::optimizer::eliminate_filter::EliminateFilter;
 use datafusion::optimizer::eliminate_group_by_constant::EliminateGroupByConstant;
 use datafusion::optimizer::eliminate_join::EliminateJoin;
 use datafusion::optimizer::eliminate_limit::EliminateLimit;
-use datafusion::optimizer::eliminate_nested_union::EliminateNestedUnion;
 use datafusion::optimizer::eliminate_one_union::EliminateOneUnion;
 use datafusion::optimizer::eliminate_outer_join::EliminateOuterJoin;
 use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
@@ -153,7 +152,9 @@ fn analyze_rule_for_unparsing(
 /// Optimizer rules for unparse
 fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     vec![
-        Arc::new(EliminateNestedUnion::new()),
+        // Disable EliminateNestedUnion because unparser only support unparsing an union with two inputs
+        // see https://github.com/apache/datafusion/issues/13621 for details
+        // Arc::new(EliminateNestedUnion::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),

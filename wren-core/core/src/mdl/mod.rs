@@ -889,6 +889,30 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_mysql_style_interval() -> Result<()> {
+        let ctx = SessionContext::new();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
+        let sql = "select interval 1 day";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT INTERVAL 1 DAY");
+
+        let sql = "SELECT INTERVAL '1 YEAR 1 MONTH'";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT INTERVAL 13 MONTH");
+
+        let sql = "SELECT INTERVAL '1' YEAR + INTERVAL '2' MONTH + INTERVAL '3' DAY";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            actual,
+            "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_simplify_timestamp() -> Result<()> {
         let ctx = SessionContext::new();
         let analyzed_mdl = Arc::new(AnalyzedWrenMDL::default());
@@ -1146,6 +1170,13 @@ mod test {
                         )
                         .build(),
                     )
+                    .column(
+                        ColumnBuilder::new(
+                            "struct_array_col",
+                            "array<struct<float_field float,time_field timestamp>>",
+                        )
+                        .build(),
+                    )
                     .build(),
             )
             .build();
@@ -1155,6 +1186,13 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
         assert_eq!(actual, "SELECT struct_table.struct_col.float_field FROM \
         (SELECT struct_table.struct_col FROM (SELECT struct_table.struct_col AS struct_col \
+        FROM struct_table) AS struct_table) AS struct_table");
+
+        let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
+        (SELECT struct_table.struct_array_col FROM (SELECT struct_table.struct_array_col AS struct_array_col \
         FROM struct_table) AS struct_table) AS struct_table");
 
         let sql =
@@ -1197,6 +1235,26 @@ mod test {
                 .await?;
         assert_eq!(result, "SELECT CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) = \
         CAST(CAST('2021-01-01 00:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE)");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_disable_eliminate_nested_union() -> Result<()> {
+        let ctx = SessionContext::new();
+        let sql = r#"SELECT * FROM (SELECT 1 x, 'a' y UNION ALL
+    SELECT 1 x, 'b' y UNION ALL
+    SELECT 2 x, 'a' y UNION ALL
+    SELECT 2 x, 'c' y)"#;
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::new(AnalyzedWrenMDL::default()), &[], sql)
+                .await?;
+        assert_eq!(
+            result,
+            "SELECT x, y FROM (SELECT 1 AS x, 'a' AS y \
+        UNION ALL SELECT 1 AS x, 'b' AS y \
+        UNION ALL SELECT 2 AS x, 'a' AS y \
+        UNION ALL SELECT 2 AS x, 'c' AS y)"
+        );
         Ok(())
     }
 
