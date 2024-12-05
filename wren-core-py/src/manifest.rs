@@ -9,6 +9,7 @@ use wren_core::mdl::manifest::{
     Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
 
+/// Convert a manifest to a JSON string and then encode it as base64.
 #[pyfunction]
 pub fn to_json_base64(mdl: PyManifest) -> Result<String, CoreError> {
     let mdl_json = serde_json::to_string(&mdl)?;
@@ -16,6 +17,7 @@ pub fn to_json_base64(mdl: PyManifest) -> Result<String, CoreError> {
     Ok(mdl_base64)
 }
 
+/// Convert a base64 encoded JSON string to a manifest object.
 pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
     let decoded_bytes = BASE64_STANDARD.decode(mdl_base64)?;
     let mdl_json = String::from_utf8(decoded_bytes)?;
