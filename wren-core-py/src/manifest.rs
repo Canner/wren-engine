@@ -85,6 +85,19 @@ impl PyManifest {
     }
 }
 
+impl From<&Manifest> for PyManifest {
+    fn from(manifest: &Manifest) -> Self {
+        Self {
+            catalog: manifest.catalog.clone(),
+            schema: manifest.schema.clone(),
+            models: manifest.models.clone(),
+            relationships: manifest.relationships.clone(),
+            metrics: manifest.metrics.clone(),
+            views: manifest.views.clone(),
+        }
+    }
+}
+
 #[pyclass(name = "Model")]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PyModel {

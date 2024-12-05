@@ -39,14 +39,11 @@ impl PyManifestExtractor {
         &self,
         used_datasets: Vec<String>,
     ) -> Result<PyManifest, CoreError> {
-        extract_manifest(&self.mdl, used_datasets)
+        extract_manifest(&self.mdl, &used_datasets)
     }
 }
 
-fn resolve_used_table_names(
-    mdl: &Arc<WrenMDL>,
-    sql: &str,
-) -> Result<Vec<String>, CoreError> {
+fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, CoreError> {
     let ctx_state = wren_core::SessionContext::new().state();
     ctx_state
         .sql_to_statement(sql, "generic")
@@ -68,24 +65,25 @@ fn resolve_used_table_names(
         })
 }
 
-pub fn extract_manifest(
-    mdl: &Arc<WrenMDL>,
-    used_datasets: Vec<String>,
+fn extract_manifest(
+    mdl: &WrenMDL,
+    used_datasets: &[String],
 ) -> Result<PyManifest, CoreError> {
-    let used_models = extract_models(mdl, &used_datasets);
-    let (used_views, models_of_views) = extract_views(mdl, &used_datasets);
-    let used_relationships = extract_relationships(mdl, &used_datasets);
+    let extracted_models = extract_models(mdl, used_datasets);
+    let (used_views, models_of_views) = extract_views(mdl, used_datasets);
+    let used_models = [extracted_models, models_of_views].concat();
+    let used_relationships = extract_relationships(mdl, &used_models);
     Ok(PyManifest {
         catalog: mdl.catalog().to_string(),
         schema: mdl.schema().to_string(),
-        models: [used_models, models_of_views].concat(),
+        models: used_models,
         relationships: used_relationships,
         metrics: mdl.metrics().to_vec(),
         views: used_views,
     })
 }
 
-fn extract_models(mdl: &Arc<WrenMDL>, used_datasets: &[String]) -> Vec<Arc<Model>> {
+fn extract_models(mdl: &WrenMDL, used_datasets: &[String]) -> Vec<Arc<Model>> {
     let mut used_set: HashSet<String> = used_datasets.iter().cloned().collect();
     let mut stack: Vec<String> = used_datasets.to_vec();
     while let Some(dataset_name) = stack.pop() {
@@ -111,7 +109,7 @@ fn extract_models(mdl: &Arc<WrenMDL>, used_datasets: &[String]) -> Vec<Arc<Model
 }
 
 fn extract_views(
-    mdl: &Arc<WrenMDL>,
+    mdl: &WrenMDL,
     used_datasets: &[String],
 ) -> (Vec<Arc<View>>, Vec<Arc<Model>>) {
     let used_set: HashSet<&str> = used_datasets.iter().map(String::as_str).collect();
@@ -138,23 +136,13 @@ fn extract_views(
 }
 
 fn extract_relationships(
-    mdl: &Arc<WrenMDL>,
-    used_datasets: &[String],
+    mdl: &WrenMDL,
+    used_models: &[Arc<Model>],
 ) -> Vec<Arc<Relationship>> {
-    let mut used_set: HashSet<String> = used_datasets.iter().cloned().collect();
-    let mut stack: Vec<String> = used_datasets.to_vec();
-    while let Some(dataset_name) = stack.pop() {
-        if let Some(relationship) = mdl.get_relationship(&dataset_name) {
-            for model in &relationship.models {
-                if used_set.insert(model.clone()) {
-                    stack.push(model.clone());
-                }
-            }
-        }
-    }
+    let model_names: Vec<_> = used_models.iter().map(|m| m.name.as_str()).collect();
     mdl.relationships()
         .iter()
-        .filter(|rel| rel.models.iter().any(|model| used_set.contains(model)))
+        .filter(|rel| rel.models.iter().any(|m| model_names.contains(&m.as_str())))
         .cloned()
         .collect()
 }
@@ -162,81 +150,65 @@ fn extract_relationships(
 #[cfg(test)]
 mod tests {
     use crate::extractor::PyManifestExtractor;
-    use base64::prelude::BASE64_STANDARD;
-    use base64::Engine;
+    use crate::manifest::{to_json_base64, PyManifest};
     use rstest::{fixture, rstest};
     use std::iter::Iterator;
+    use wren_core::mdl::builder::{
+        ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
+    };
+    use wren_core::mdl::manifest::JoinType;
 
     #[fixture]
     pub fn mdl_base64() -> String {
-        let mdl_json = r#"
-        {
-            "catalog": "my_catalog",
-            "schema": "my_schema",
-            "models": [
-                {
-                    "name": "customer",
-                    "tableReference": {
-                        "schema": "main",
-                        "table": "customer"
-                    },
-                    "columns": [
-                        {"name": "c_custkey", "type": "integer"},
-                        {"name": "orders", "type": "orders", "relationship": "orders_customer"}
-                    ],
-                    "primaryKey": "c_custkey"
-                },
-                {
-                    "name": "orders",
-                    "tableReference": {
-                        "schema": "main",
-                        "table": "orders"
-                    },
-                    "columns": [
-                        {"name": "o_orderkey", "type": "integer"},
-                        {"name": "o_custkey", "type": "integer"},
-                        {
-                            "name": "lineitems",
-                            "type": "Lineitem",
-                            "relationship": "orders_lineitem"
-                        }
-                    ],
-                    "primaryKey": "o_orderkey"
-                },
-                {
-                    "name": "lineitem",
-                    "tableReference": {
-                        "schema": "main",
-                        "table": "lineitem"
-                    },
-                    "columns": [
-                        {"name": "l_orderkey", "type": "integer"}
-                    ],
-                    "primaryKey": "l_orderkey"
-                }
-            ],
-            "relationships": [
-                {
-                    "name": "orders_customer",
-                    "models": ["orders", "customer"],
-                    "joinType": "MANY_TO_ONE",
-                    "condition": "orders.custkey = customer.custkey"
-                },
-                {
-                    "name": "orders_lineitem",
-                    "models": ["orders", "lineitem"],
-                    "joinType": "ONE_TO_MANY",
-                    "condition": "orders.orderkey = lineitem.orderkey"
-                }
-            ],
-            "views": [
-                {
-                    "name": "customer_view",
-                    "statement": "SELECT * FROM my_catalog.my_schema.customer"
-                }
-            ]
-        }"#;
-        BASE64_STANDARD.encode(mdl_json.as_bytes())
+        let customer = ModelBuilder::new("customer")
+            .table_reference("main.customer")
+            .column(ColumnBuilder::new("c_custkey", "integer").build())
+            .column(
+                ColumnBuilder::new("orders", "orders")
+                    .relationship("customer_orders")
+                    .build(),
+            )
+            .build();
+        let orders = ModelBuilder::new("orders")
+            .table_reference("main.orders")
+            .column(ColumnBuilder::new("o_orderkey", "integer").build())
+            .column(ColumnBuilder::new("o_custkey", "integer").build())
+            .column(
+                ColumnBuilder::new("lineitems", "Lineitem")
+                    .relationship("orders_lineitem")
+                    .build(),
+            )
+            .build();
+        let lineitem = ModelBuilder::new("lineitem")
+            .table_reference("main.lineitem")
+            .column(ColumnBuilder::new("l_orderkey", "integer").build())
+            .build();
+        let c_o_relationship = RelationshipBuilder::new("customer_orders")
+            .model("customer")
+            .model("orders")
+            .join_type(JoinType::OneToMany)
+            .condition("customer.custkey = orders.custkey")
+            .build();
+        let o_l_relationship = RelationshipBuilder::new("orders_lineitem")
+            .model("orders")
+            .model("lineitem")
+            .join_type(JoinType::OneToMany)
+            .condition("orders.orderkey = lineitem.orderkey")
+            .build();
+        let c_view = ViewBuilder::new("customer_view")
+            .statement("SELECT * FROM my_catalog.my_schema.customer")
+            .build();
+        let manifest = ManifestBuilder::new()
+            .catalog("my_catalog")
+            .schema("my_schema")
+            .model(customer)
+            .model(orders)
+            .model(lineitem)
+            .relationship(c_o_relationship)
+            .relationship(o_l_relationship)
+            .view(c_view)
+            .build();
+        to_json_base64(PyManifest::from(&manifest)).unwrap()
     }
 
     #[fixture]
@@ -268,16 +240,17 @@ mod tests {
     }
 
     #[rstest]
-    #[case("SELECT * FROM customer", vec!["customer"])]
-    #[case("SELECT * FROM not_my_catalog.my_schema.customer", vec![])]
-    #[case("SELECT * FROM my_catalog.not_my_schema.customer", vec![])]
-    #[case("SELECT * FROM my_catalog.my_schema.customer", vec!["customer"])]
-    #[case("SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey", vec!["customer", "orders"])]
-    #[case("SELECT * FROM my_catalog.my_schema.customer_view", vec!["customer_view"])]
+    #[case("SELECT * FROM customer", &["customer"])]
+    #[case("SELECT * FROM not_my_catalog.my_schema.customer", &[])]
+    #[case("SELECT * FROM my_catalog.not_my_schema.customer", &[])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer", &["customer"])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer JOIN my_catalog.my_schema.orders ON customer.custkey = orders.custkey", &["customer", "orders"])]
+    #[case("SELECT * FROM my_catalog.my_schema.customer_view", &["customer_view"])]
+    #[case("WITH t1 as (select * from customer) select * from t1", &["customer"])]
     fn test_resolve_used_table_names(
         extractor: PyManifestExtractor,
         #[case] sql: &str,
-        #[case] expected: Vec<&str>,
+        #[case] expected: &[&str],
     ) {
         assert_eq!(extractor.resolve_used_table_names(sql).unwrap(), expected);
     }
@@ -287,7 +260,7 @@ mod tests {
     #[case(&["customer_view"], &["customer", "orders", "lineitem"])]
     #[case(&["orders"], &["orders", "lineitem"])]
     #[case(&["lineitem"], &["lineitem"])]
-    fn test_extract_manifest(
+    fn test_extract_manifest_for_models(
         extractor: PyManifestExtractor,
         #[case] dataset: &[&str],
         #[case] expected_models: &[&str],
@@ -301,6 +274,50 @@ mod tests {
                 .map(|m| m.name.as_str())
                 .collect::<Vec<_>>(),
             expected_models
+        );
+    }
+
+    #[rstest]
+    #[case(&["customer"], &["customer_orders", "orders_lineitem"])]
+    #[case(&["customer_view"], &["customer_orders", "orders_lineitem"])]
+    #[case(&["orders"], &["customer_orders", "orders_lineitem"])]
+    #[case(&["lineitem"], &["orders_lineitem"])]
+    fn test_extract_manifest_for_relationships(
+        extractor: PyManifestExtractor,
+        #[case] dataset: &[&str],
+        #[case] expected_relationships: &[&str],
+    ) {
+        assert_eq!(
+            extractor
+                .extract_by(dataset.iter().map(|s| s.to_string()).collect())
+                .unwrap()
+                .relationships
+                .iter()
+                .map(|r| r.name.as_str())
+                .collect::<Vec<_>>(),
+            expected_relationships
+        );
+    }
+
+    #[rstest]
+    #[case(&["customer_view"], &["customer_view"])]
+    #[case(&["customer"], &[])]
+    #[case(&["orders"], &[])]
+    #[case(&["lineitem"], &[])]
+    fn test_extract_manifest_for_view(
+        extractor: PyManifestExtractor,
+        #[case] dataset: &[&str],
+        #[case] expected_views: &[&str],
+    ) {
+        assert_eq!(
+            extractor
+                .extract_by(dataset.iter().map(|s| s.to_string()).collect())
+                .unwrap()
+                .views
+                .iter()
+                .map(|v| v.name.as_str())
+                .collect::<Vec<_>>(),
+            expected_views
         );
     }
 }
