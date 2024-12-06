@@ -170,12 +170,35 @@ public class TestWrenWithDuckDBTableFunction
         assertThat(testDefault.getData().get(0)[0]).isEqualTo("2");
 
         setDuckDBInitSQL("create table nested_table as select * from (values ([1,2,3])) t(a1)");
+
+        previewDto = new PreviewDto(manifest, "select * from nested_table n, unnest(n.a1)", null);
+        testDefault = preview(previewDto);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("INTEGER[]");
+        assertThat(testDefault.getData().get(0).length).isEqualTo(2);
+        assertThat(testDefault.getData().size()).isEqualTo(3);
+
+        previewDto = new PreviewDto(manifest, "select * from nested_table n, unnest(n.a1) u(a1)", null);
+        testDefault = preview(previewDto);
+        assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("INTEGER[]");
+        assertThat(testDefault.getData().get(0).length).isEqualTo(2);
+        assertThat(testDefault.getData().size()).isEqualTo(3);
+
         previewDto = new PreviewDto(manifest, "select u.a1 from nested_table n, unnest(n.a1) u(a1)", null);
         testDefault = preview(previewDto);
         assertThat(testDefault.getColumns().get(0).getType()).isEqualTo("INTEGER");
         assertThat(testDefault.getData().get(0)[0]).isEqualTo(1);
         assertThat(testDefault.getData().get(1)[0]).isEqualTo(2);
         assertThat(testDefault.getData().get(2)[0]).isEqualTo(3);
+
+        previewDto = new PreviewDto(manifest, "select * from nested_table n cross join lateral (select n.a1[1])", null);
+        testDefault = preview(previewDto);
+        assertThat(testDefault.getData().get(0).length).isEqualTo(2);
+        assertThat(testDefault.getData().size()).isEqualTo(1);
+
+        previewDto = new PreviewDto(manifest, "select * from nested_table n cross join lateral (select n.a1[1]) l(a1)", null);
+        testDefault = preview(previewDto);
+        assertThat(testDefault.getData().get(0).length).isEqualTo(2);
+        assertThat(testDefault.getData().size()).isEqualTo(1);
 
         previewDto = new PreviewDto(manifest, "select l.a1 from nested_table n cross join lateral (select n.a1[1]) l(a1)", null);
         testDefault = preview(previewDto);
