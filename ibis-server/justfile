@@ -2,20 +2,20 @@ default:
     @just --list --unsorted
 
 build-core *args:
-    cd ../wren-core-py && just install && just build {{args}}
+    cd ../wren-core-py && just install && just build {{ args }}
 
 core-wheel-path := "../wren-core-py/target/wheels/wren_core_py-*.whl"
 
 install-core *args:
-    just build-core {{args}}
+    just build-core {{ args }}
     # Using pip install to avoid adding wheel to pyproject.toml
-    poetry run pip install {{core-wheel-path}}
+    poetry run pip install {{ core-wheel-path }}
 
 update-core: build-core
-    poetry run pip install --force-reinstall {{core-wheel-path}}
+    poetry run pip install --force-reinstall {{ core-wheel-path }}
 
 install *args:
-    poetry install {{args}}
+    poetry install {{ args }}
 
 pre-commit-install:
     poetry run pre-commit install
@@ -23,35 +23,41 @@ pre-commit-install:
 port := "8000"
 
 run:
-    poetry run fastapi run --port {{port}}
+    poetry run fastapi run --port {{ port }}
 
 dev:
-    poetry run fastapi dev --port {{port}}
+    poetry run fastapi dev --port {{ port }}
 
 # run the pytest tests for the given marker
 test MARKER:
     poetry run pytest -m '{{ MARKER }}'
 
+image-name := "ghcr.io/canner/wren-engine-ibis:latest"
+
 docker-build:
-# alias for `docker-build`
-dbuild:
-    docker buildx build -t wren-engine-ibis -f Dockerfile \
+    docker buildx build -t {{ image-name }} -f Dockerfile \
         --build-context wren-core-py=../wren-core-py \
         --build-context wren-core=../wren-core \
         .
 
 docker-run:
-# alias for `docker-run`
-drun:
-    docker run -it --rm -p 8000:8000 --env-file .env wren-engine-ibis
+    docker run -it --rm -p 8000:8000 --env-file .env {{ image-name }}
+
+compose-up:
+    docker compose -f ../docker/compose.yaml up
+
+compose-down:
+    docker compose -f ../docker/compose.yaml down
 
 lint:
     poetry run ruff format -q . --check
     poetry run ruff check .
 
 format:
-# alias for `format`
-fmt:
     poetry run ruff format .
     poetry run ruff check --fix .
     taplo fmt
+
+alias dbuild := docker-build
+alias drun := docker-run
+alias fmt := format
