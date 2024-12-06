@@ -29,6 +29,7 @@ import io.trino.sql.tree.Join;
 import io.trino.sql.tree.JoinCriteria;
 import io.trino.sql.tree.JoinOn;
 import io.trino.sql.tree.JoinUsing;
+import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.LongLiteral;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
@@ -37,6 +38,7 @@ import io.trino.sql.tree.PathRelation;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
+import io.trino.sql.tree.Relation;
 import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SetOperation;
 import io.trino.sql.tree.SingleColumn;
@@ -253,7 +255,7 @@ public final class StatementAnalyzer
                                 .or(() -> Optional.ofNullable(QueryUtil.getQualifiedName(singleColumn.getExpression())).map(QualifiedName::getSuffix))
                                 .orElse(singleColumn.getExpression().toString());
                         if (scope.isPresent()) {
-                            Optional<Field> fieldOptional = scope.get().getRelationType().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
+                            Optional<Field> fieldOptional = scope.get().resolveAnyField(QueryUtil.getQualifiedName(singleColumn.getExpression()));
                             if (fieldOptional.isPresent()) {
                                 Field f = fieldOptional.get();
                                 fields.add(Field.builder()
@@ -456,6 +458,7 @@ public final class StatementAnalyzer
         @Override
         protected Scope visitUnnest(Unnest node, Optional<Scope> scope)
         {
+            scope.ifPresent(s -> node.getExpressions().forEach(e -> analyzeExpression(e, s)));
             // TODO: output scope here isn't right
             return Scope.builder().parent(scope).build();
         }
@@ -530,7 +533,13 @@ public final class StatementAnalyzer
         protected Scope visitJoin(Join node, Optional<Scope> scope)
         {
             Scope leftScope = process(node.getLeft(), scope);
-            Scope rightScope = process(node.getRight(), scope);
+            Scope rightScope;
+            if (isUnnestOrLateral(node.getRight())) {
+                rightScope = process(node.getRight(), Optional.of(leftScope));
+            }
+            else {
+                rightScope = process(node.getRight(), scope);
+            }
             RelationType relationType = leftScope.getRelationType().joinWith(rightScope.getRelationType());
             Scope outputScope = createAndAssignScope(node, scope, relationType);
 
@@ -554,6 +563,22 @@ public final class StatementAnalyzer
 
             // TODO: output scope here isn't right
             return createAndAssignScope(node, scope, relationType);
+        }
+
+        protected boolean isUnnestOrLateral(Relation relation)
+        {
+            return switch (relation) {
+                case Unnest ignored -> true;
+                case Lateral ignored -> true;
+                case AliasedRelation aliasedRelation -> isUnnestOrLateral(aliasedRelation.getRelation());
+                default -> false;
+            };
+        }
+
+        @Override
+        protected Scope visitLateral(Lateral node, Optional<Scope> scope)
+        {
+            return process(node.getQuery(), scope);
         }
 
         @Override

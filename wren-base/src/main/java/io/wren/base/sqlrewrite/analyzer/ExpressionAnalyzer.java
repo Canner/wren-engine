@@ -80,7 +80,7 @@ public class ExpressionAnalyzer
         {
             QualifiedName qualifiedName = getQualifiedName(node);
             if (qualifiedName != null) {
-                scope.getRelationType().resolveAnyField(qualifiedName)
+                scope.resolveAnyField(qualifiedName)
                         .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             }
             else {
@@ -95,7 +95,7 @@ public class ExpressionAnalyzer
         protected Void visitIdentifier(Identifier node, Void context)
         {
             QualifiedName qualifiedName = QualifiedName.of(ImmutableList.of(node));
-            scope.getRelationType().resolveAnyField(qualifiedName)
+            scope.resolveAnyField(qualifiedName)
                     .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             return null;
         }
@@ -104,7 +104,7 @@ public class ExpressionAnalyzer
         protected Void visitSubscriptExpression(SubscriptExpression node, Void context)
         {
             QualifiedName qualifiedName = getQualifiedName(node.getBase());
-            scope.getRelationType().resolveAnyField(qualifiedName)
+            scope.resolveAnyField(qualifiedName)
                     .ifPresent(field -> referenceFields.put(NodeRef.of(node), field));
             return null;
         }

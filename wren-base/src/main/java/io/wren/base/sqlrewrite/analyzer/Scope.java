@@ -14,9 +14,13 @@
 
 package io.wren.base.sqlrewrite.analyzer;
 
+import com.google.common.collect.ImmutableList;
+import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.WithQuery;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -76,6 +80,29 @@ public class Scope
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * get the columns matching the specified name in the current scope and all parent scopes
+     */
+    public List<Field> resolveFields(QualifiedName name)
+    {
+        List<Field> fields = new ArrayList<>(relationType.resolveFields(name));
+        parent.ifPresent(scope -> fields.addAll(scope.resolveFields(name)));
+        return ImmutableList.copyOf(fields);
+    }
+
+    /**
+     * get the columns matching the specified name in the current scope and all parent scopes
+     */
+    public Optional<Field> resolveAnyField(QualifiedName name)
+    {
+        return relationType.resolveAnyField(name).or(() -> {
+            if (parent.isPresent()) {
+                return parent.get().resolveAnyField(name);
+            }
+            return Optional.empty();
+        });
     }
 
     public static Builder builder()
