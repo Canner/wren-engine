@@ -16,9 +16,8 @@
 // under the License.
 
 use crate::errors::CoreError;
+use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
 use log::debug;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
 use std::collections::hash_map::Entry;
@@ -31,7 +30,6 @@ use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use wren_core::mdl::manifest::Manifest;
 use wren_core::{mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, WindowUDF};
 
 /// The Python wrapper for the Wren Core session context.
@@ -67,6 +65,7 @@ impl PySessionContext {
     /// if `mdl_base64` is provided, the session context will be created with the given MDL. Otherwise, an empty MDL will be created.
     /// if `remote_functions_path` is provided, the session context will be created with the remote functions defined in the CSV file.
     #[new]
+    #[pyo3(signature = (mdl_base64=None, remote_functions_path=None))]
     pub fn new(
         mdl_base64: Option<&str>,
         remote_functions_path: Option<&str>,
@@ -88,12 +87,7 @@ impl PySessionContext {
             });
         };
 
-        let mdl_json_bytes = BASE64_STANDARD
-            .decode(mdl_base64)
-            .map_err(CoreError::from)?;
-        let mdl_json = String::from_utf8(mdl_json_bytes).map_err(CoreError::from)?;
-        let manifest =
-            serde_json::from_str::<Manifest>(&mdl_json).map_err(CoreError::from)?;
+        let manifest = to_manifest(mdl_base64)?;
 
         let Ok(analyzed_mdl) = AnalyzedWrenMDL::analyze(manifest) else {
             return Err(CoreError::new("Failed to analyze manifest").into());
