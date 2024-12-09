@@ -25,6 +25,7 @@ import io.wren.main.web.ConfigResource;
 import io.wren.main.web.DuckDBResource;
 import io.wren.main.web.MDLResource;
 import io.wren.main.web.MDLResourceV2;
+import io.wren.main.web.SystemResource;
 import io.wren.main.web.WrenExceptionMapper;
 
 import static io.airlift.jaxrs.JaxrsBinder.jaxrsBinder;
@@ -41,6 +42,7 @@ public class WebModule
         jaxrsBinder(binder).bind(AnalysisResourceV2.class);
         jaxrsBinder(binder).bind(ConfigResource.class);
         jaxrsBinder(binder).bind(DuckDBResource.class);
+        jaxrsBinder(binder).bind(SystemResource.class);
         jaxrsBinder(binder).bindInstance(new WrenExceptionMapper());
         binder.bind(PreviewService.class).in(Scopes.SINGLETON);
         binder.bind(ValidationService.class).in(Scopes.SINGLETON);

@@ -28,6 +28,7 @@
 
 package io.wren.main;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.inject.Inject;
 import io.airlift.log.Logger;
@@ -39,6 +40,7 @@ import io.wren.base.WrenMDL;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
+import io.wren.base.dto.Manifest;
 import io.wren.base.sql.SqlConverter;
 import io.wren.base.sqlrewrite.WrenPlanner;
 import io.wren.main.metadata.Metadata;
@@ -49,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static io.wren.base.dto.Model.model;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -60,6 +63,8 @@ public class PreviewService
     private final SqlConverter sqlConverter;
     private final ConfigManager configManager;
     private final ExecutorService connectionPool;
+
+    private boolean isWarmed;
 
     @Inject
     public PreviewService(
@@ -130,5 +135,27 @@ public class PreviewService
             String converted = sqlConverter.convert(planned, sessionContext);
             return metadata.describeQuery(converted, List.of());
         }, connectionPool);
+    }
+
+    public boolean isWarmed()
+    {
+        return isWarmed;
+    }
+
+    public void warmUp()
+    {
+        WrenMDL mdl = WrenMDL.fromManifest(
+                Manifest.builder()
+                        .setCatalog("default")
+                        .setSchema("default")
+                        .setModels(ImmutableList.of(
+                                model("orders", "SELECT * FROM tpch.tiny.orders", ImmutableList.of())))
+                        .build());
+        dryPlan(mdl, "SELECT * FROM orders", true)
+                .thenRun(() -> {
+                    isWarmed = true;
+                    LOG.info("Warm up done");
+                })
+                .join();
     }
 }
