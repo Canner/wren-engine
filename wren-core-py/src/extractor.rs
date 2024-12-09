@@ -1,7 +1,8 @@
 use crate::errors::CoreError;
 use crate::manifest::{to_manifest, PyManifest};
 use pyo3::{pyclass, pymethods};
-use std::collections::HashSet;
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use wren_core::mdl::manifest::{Model, Relationship, View};
 use wren_core::mdl::WrenMDL;
@@ -84,7 +85,8 @@ fn extract_manifest(
 }
 
 fn extract_models(mdl: &WrenMDL, used_datasets: &[String]) -> Vec<Arc<Model>> {
-    let mut used_set: HashSet<String> = used_datasets.iter().cloned().collect();
+    let mut used_set: HashMap<String, usize> =
+        used_datasets.iter().map(|s| (s.clone(), 0)).collect();
     let mut stack: Vec<String> = used_datasets.to_vec();
     while let Some(dataset_name) = stack.pop() {
         if let Some(model) = mdl.get_model(&dataset_name) {
@@ -97,13 +99,18 @@ fn extract_models(mdl: &WrenMDL, used_datasets: &[String]) -> Vec<Arc<Model>> {
                         .and_then(|rel_name| mdl.get_relationship(rel_name))
                 })
                 .flat_map(|rel| rel.models.clone())
-                .filter(|related| used_set.insert(related.clone()))
-                .for_each(|related| stack.push(related));
+                .for_each(|related| {
+                    if let Entry::Vacant(vacant) = used_set.entry(related) {
+                        let key = vacant.key().clone();
+                        vacant.insert(0);
+                        stack.push(key);
+                    }
+                });
         }
     }
     mdl.models()
         .iter()
-        .filter(|model| used_set.contains(model.name()))
+        .filter(|model| used_set.contains_key(model.name()))
         .cloned()
         .collect()
 }
