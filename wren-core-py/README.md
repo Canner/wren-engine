@@ -15,7 +15,7 @@ Here is a dependency package for Python. It is a wrapper for the Rust package [w
 
 - Execute `just install` to create Python venv and install dependencies.
 - **Important**: Before testing Python, you need to build the Rust package by running `just develop`.
-- Use `just test-r` to test Rust only, and `just test-py` to test Python only.
+- Use `just test-rs` to test Rust only, and `just test-py` to test Python only.
 - Use `just test` to test Rust and Python.
 - Execute `just build` to build the Python package. You can find the wheel in the `target/wheels/` directory.
 

@@ -10,13 +10,13 @@ build *args:
 develop:
     poetry run maturin develop
 
-test-r:
+test-rs:
     cargo test --no-default-features
 
 test-py:
     poetry run pytest
 
-test: test-r test-py
+test: test-rs test-py
 
 alias fmt := format
 
