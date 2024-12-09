@@ -120,8 +120,7 @@ fn extract_views(
     used_datasets: &[String],
 ) -> (Vec<Arc<View>>, Vec<Arc<Model>>) {
     let used_set: HashSet<&str> = used_datasets.iter().map(String::as_str).collect();
-    let stack: Vec<&str> = used_datasets.iter().map(String::as_str).collect();
-    let models = stack
+    let models = used_set
         .iter()
         .filter_map(|&dataset_name| {
             mdl.get_view(dataset_name).and_then(|view| {
