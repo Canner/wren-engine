@@ -260,7 +260,7 @@ public class RelationAnalyzer
         @Override
         protected Void visitIdentifier(Identifier node, Void context)
         {
-            scope.getRelationType().resolveFields(QualifiedName.of(node.getValue()))
+            scope.resolveFields(QualifiedName.of(node.getValue()))
                     .stream().filter(field -> field.getSourceDatasetName().isPresent())
                     .forEach(field -> exprSources.add(new ExprSource(node.getValue(), field.getSourceDatasetName().get(), field.getSourceColumn().map(Column::getName).orElse(null), node.getLocation().orElse(null))));
             return null;
@@ -270,7 +270,7 @@ public class RelationAnalyzer
         protected Void visitDereferenceExpression(DereferenceExpression node, Void context)
         {
             Optional.ofNullable(getQualifiedName(node)).ifPresent(qualifiedName ->
-                    scope.getRelationType().resolveFields(qualifiedName)
+                    scope.resolveFields(qualifiedName)
                             .stream().filter(field -> field.getSourceDatasetName().isPresent())
                             .forEach(field -> exprSources.add(new ExprSource(qualifiedName.toString(), field.getSourceDatasetName().get(), field.getSourceColumn().map(Column::getName).orElse(null), node.getLocation().orElse(null)))));
             return null;
