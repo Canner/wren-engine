@@ -6,7 +6,11 @@ import sqlglot
 from loguru import logger
 
 from app.config import get_config
-from app.mdl.context import get_session_context
+from app.mdl.core import (
+    get_manifest_extractor,
+    get_session_context,
+    to_json_base64,
+)
 from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
 
@@ -64,6 +68,10 @@ class ExternalEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
+            extractor = get_manifest_extractor(self.manifest_str)
+            tables = extractor.resolve_used_table_names(sql)
+            manifest = extractor.extract_by(tables)
+            manifest_str = to_json_base64(manifest)
             r = httpx.request(
                 method="GET",
                 url=f"{wren_engine_endpoint}/v2/mdl/dry-plan",
@@ -71,7 +79,7 @@ class ExternalEngineRewriter:
                     "Content-Type": "application/json",
                     "Accept": "application/json",
                 },
-                content=orjson.dumps({"manifestStr": self.manifest_str, "sql": sql}),
+                content=orjson.dumps({"manifestStr": manifest_str, "sql": sql}),
             )
             return r.raise_for_status().text.replace("\n", " ")
         except httpx.ConnectError as e:
@@ -89,7 +97,11 @@ class EmbeddedEngineRewriter:
 
     def rewrite(self, sql: str) -> str:
         try:
-            session_context = get_session_context(self.manifest_str, self.function_path)
+            extractor = get_manifest_extractor(self.manifest_str)
+            tables = extractor.resolve_used_table_names(sql)
+            manifest = extractor.extract_by(tables)
+            manifest_str = to_json_base64(manifest)
+            session_context = get_session_context(manifest_str, self.function_path)
             return session_context.transform_sql(sql)
         except Exception as e:
             raise RewriteError(str(e))

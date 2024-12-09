@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_config
 from app.dependencies import verify_query_dto
+from app.mdl.core import get_session_context
 from app.mdl.rewriter import Rewriter
 from app.model import (
     DryPlanDTO,
@@ -60,10 +61,8 @@ def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Respo
 
 @router.get("/{data_source}/functions")
 def functions(data_source: DataSource) -> Response:
-    from wren_core import SessionContext
-
     file_path = get_config().get_remote_function_list_path(data_source)
-    session_context = SessionContext(None, file_path)
+    session_context = get_session_context(None, file_path)
     func_list = [f.to_dict() for f in session_context.get_available_functions()]
 
     return JSONResponse(func_list)

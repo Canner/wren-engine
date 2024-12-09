@@ -6,7 +6,7 @@ use serde_with::serde_as;
 use serde_with::NoneAsEmptyString;
 
 /// This is the main struct that holds all the information about the manifest
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Manifest {
     pub catalog: String,
     pub schema: String,
@@ -60,28 +60,21 @@ mod table_reference {
     where
         D: Deserializer<'de>,
     {
-        let TableReference {
-            catalog,
-            schema,
-            table,
-        } = TableReference::deserialize(deserializer)?;
-        let mut result = String::new();
-        if let Some(catalog) = catalog.filter(|c| !c.is_empty()) {
-            result.push_str(&catalog);
-            result.push('.');
-        }
-        if let Some(schema) = schema.filter(|s| !s.is_empty()) {
-            result.push_str(&schema);
-            result.push('.');
-        }
-        if let Some(table) = table.filter(|t| !t.is_empty()) {
-            result.push_str(&table);
-        }
-        if result.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(result))
-        }
+        Ok(Option::deserialize(deserializer)?
+            .map(
+                |TableReference {
+                     catalog,
+                     schema,
+                     table,
+                 }| {
+                    [catalog, schema, table]
+                        .into_iter()
+                        .filter_map(|s| s.filter(|x| !x.is_empty()))
+                        .collect::<Vec<_>>()
+                        .join(".")
+                },
+            )
+            .filter(|s| !s.is_empty()))
     }
 
     pub fn serialize<S>(
@@ -122,7 +115,7 @@ mod table_reference {
             };
             table_ref.serialize(serializer)
         } else {
-            TableReference::default().serialize(serializer)
+            serializer.serialize_none()
         }
     }
 }
@@ -229,7 +222,7 @@ impl Metric {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeGrain {
     pub name: String,
@@ -237,7 +230,7 @@ pub struct TimeGrain {
     pub date_parts: Vec<TimeUnit>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum TimeUnit {
     Year,
     Month,
@@ -256,5 +249,37 @@ pub struct View {
 impl View {
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::mdl::manifest::table_reference;
+    use serde_json::Serializer;
+
+    #[test]
+    fn test_table_reference_serialize() {
+        [
+            (
+                Some("catalog.schema.table".to_string()),
+                r#"{"catalog":"catalog","schema":"schema","table":"table"}"#,
+            ),
+            (
+                Some("schema.table".to_string()),
+                r#"{"catalog":null,"schema":"schema","table":"table"}"#,
+            ),
+            (
+                Some("table".to_string()),
+                r#"{"catalog":null,"schema":null,"table":"table"}"#,
+            ),
+            (None, "null"),
+        ]
+        .iter()
+        .for_each(|(table_ref, expected)| {
+            let mut buf = Vec::new();
+            table_reference::serialize(table_ref, &mut Serializer::new(&mut buf))
+                .unwrap();
+            assert_eq!(String::from_utf8(buf).unwrap(), *expected);
+        });
     }
 }

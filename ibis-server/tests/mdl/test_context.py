@@ -2,7 +2,7 @@ import base64
 
 import orjson
 
-from app.mdl.context import get_session_context
+from app.mdl.core import get_session_context
 from tests.conftest import file_path
 
 

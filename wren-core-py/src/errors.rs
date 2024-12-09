@@ -4,7 +4,7 @@ use pyo3::PyErr;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 #[error("{message}")]
 pub struct CoreError {
     message: String,
