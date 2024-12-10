@@ -11,21 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package io.wren.main;
 
 import com.google.common.collect.ImmutableList;
@@ -40,7 +25,9 @@ import io.wren.base.WrenMDL;
 import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.config.ConfigManager;
 import io.wren.base.config.WrenConfig;
+import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
+import io.wren.base.dto.Model;
 import io.wren.base.sql.SqlConverter;
 import io.wren.base.sqlrewrite.WrenPlanner;
 import io.wren.main.metadata.Metadata;
@@ -51,7 +38,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static io.wren.base.dto.Column.calculatedColumn;
+import static io.wren.base.dto.Column.column;
+import static io.wren.base.dto.Column.relationshipColumn;
 import static io.wren.base.dto.Model.model;
+import static io.wren.base.dto.Relationship.relationship;
+import static io.wren.base.dto.TableReference.tableReference;
+import static io.wren.base.dto.View.view;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -149,9 +142,26 @@ public class PreviewService
                         .setCatalog("default")
                         .setSchema("default")
                         .setModels(ImmutableList.of(
-                                model("orders", "SELECT * FROM tpch.tiny.orders", ImmutableList.of())))
+                                model("Orders", "SELECT * FROM tpch.tiny.orders",
+                                        ImmutableList.of(
+                                                column("orderkey", "decimal", null, false),
+                                                column("custkey", "decimal", null, false),
+                                                relationshipColumn("customer", "Customer", "OrdersCustomer"),
+                                                calculatedColumn("double_key", "decimal", "orderkey * 2"),
+                                                calculatedColumn("customer_key", "decimal", "customer.custkey"))),
+                                Model.onTableReference("Customer",
+                                        tableReference("tpch", "tiny", "customer"),
+                                        ImmutableList.of(
+                                                column("custkey", "decimal", null, false)),
+                                        null)))
+                        .setRelationships(ImmutableList.of(
+                                relationship("OrdersCustomer",
+                                        ImmutableList.of("Orders", "Customer"),
+                                        JoinType.MANY_TO_ONE,
+                                        "Orders.custkey = Customer.custkey")))
+                        .setViews(ImmutableList.of(view("customer_view", "SELECT * FROM Customer")))
                         .build());
-        dryPlan(mdl, "SELECT * FROM orders", true)
+        dryPlan(mdl, "SELECT orderkey, double_key, customer_key FROM Orders", true)
                 .thenRun(() -> {
                     isWarmed = true;
                     LOG.info("Warm up done");
