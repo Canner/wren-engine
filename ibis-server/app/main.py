@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -7,13 +9,22 @@ from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
+from app.mdl.http import try_connect
 from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
 
 get_config().init_logger()
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(try_connect())
+    yield
+    task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(v2.router)
 app.include_router(v3.router)
 app.add_middleware(RequestLogMiddleware)
