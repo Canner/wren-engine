@@ -42,7 +42,7 @@ class Validator:
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
 
-    def _validate_relationship_is_valid(
+    async def _validate_relationship_is_valid(
         self, parameters: dict[str, str], manifest_str: str
     ):
         relationship_name = parameters.get("relationshipName")
@@ -136,7 +136,7 @@ class Validator:
             right_column,
         )
         try:
-            rewritten_sql = self.rewriter.rewrite(sql)
+            rewritten_sql = await self.rewriter.rewrite(sql)
             result = self.connector.query(rewritten_sql, limit=1)
             if not result.get("result").get(0):
                 raise ValidationError(

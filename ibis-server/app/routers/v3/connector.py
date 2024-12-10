@@ -50,12 +50,14 @@ async def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> 
 
 
 @router.post("/{data_source}/validate/{rule_name}")
-def validate(data_source: DataSource, rule_name: str, dto: ValidateDTO) -> Response:
+async def validate(
+    data_source: DataSource, rule_name: str, dto: ValidateDTO
+) -> Response:
     validator = Validator(
         Connector(data_source, dto.connection_info),
         Rewriter(dto.manifest_str, data_source=data_source, experiment=True),
     )
-    validator.validate(rule_name, dto.parameters, dto.manifest_str)
+    await validator.validate(rule_name, dto.parameters, dto.manifest_str)
     return Response(status_code=204)
 
 

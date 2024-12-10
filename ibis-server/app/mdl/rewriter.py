@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 
 import httpx
@@ -94,14 +95,14 @@ class EmbeddedEngineRewriter:
         self.manifest_str = manifest_str
         self.function_path = function_path
 
-    def rewrite(self, sql: str) -> str:
+    async def rewrite(self, sql: str) -> str:
         try:
             extractor = get_manifest_extractor(self.manifest_str)
             tables = extractor.resolve_used_table_names(sql)
             manifest = extractor.extract_by(tables)
             manifest_str = to_json_base64(manifest)
             session_context = get_session_context(manifest_str, self.function_path)
-            return session_context.transform_sql(sql)
+            return await asyncio.to_thread(session_context.transform_sql, sql)
         except Exception as e:
             raise RewriteError(str(e))
 
