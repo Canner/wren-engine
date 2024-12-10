@@ -34,13 +34,5 @@ async def try_connect():
             wait_time -= 1
 
 
-try:
-    asyncio.get_running_loop().create_task(try_connect())
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    loop.create_task(try_connect())  # noqa: RUF006
-    asyncio.set_event_loop(loop)
-
-
 def get_http_client():
     return client
