@@ -15,12 +15,14 @@
 package io.wren.server;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.airlift.event.client.EventModule;
 import io.airlift.http.server.HttpServerModule;
 import io.airlift.jaxrs.JaxrsModule;
 import io.airlift.json.JsonModule;
 import io.airlift.node.NodeModule;
+import io.wren.main.PreviewService;
 import io.wren.main.WrenModule;
 import io.wren.main.server.Server;
 import io.wren.server.module.DuckDBConnectorModule;
@@ -48,5 +50,16 @@ public class WrenServer
                 new DuckDBConnectorModule(),
                 new WrenModule(),
                 new WebModule());
+    }
+
+    @Override
+    protected void configure(Injector injector)
+    {
+        warmUp(injector);
+    }
+
+    private void warmUp(Injector injector)
+    {
+        injector.getInstance(PreviewService.class).warmUp();
     }
 }
