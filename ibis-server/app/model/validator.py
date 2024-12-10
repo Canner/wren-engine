@@ -15,17 +15,19 @@ class Validator:
         self.connector = connector
         self.rewriter = rewriter
 
-    def validate(self, rule: str, parameters: dict[str, str], manifest_str: str):
+    async def validate(self, rule: str, parameters: dict[str, str], manifest_str: str):
         if rule not in rules:
             raise RuleNotFoundError(rule)
         try:
-            getattr(self, f"_validate_{rule}")(parameters, manifest_str)
+            await getattr(self, f"_validate_{rule}")(parameters, manifest_str)
         except ValidationError as e:
             raise e
         except Exception as e:
             raise ValidationError(f"Unknown exception: {type(e)}, message: {e!s}")
 
-    def _validate_column_is_valid(self, parameters: dict[str, str], manifest_str: str):
+    async def _validate_column_is_valid(
+        self, parameters: dict[str, str], manifest_str: str
+    ):
         model_name = parameters.get("modelName")
         column_name = parameters.get("columnName")
         if model_name is None:
@@ -35,7 +37,7 @@ class Validator:
 
         try:
             sql = f'SELECT "{column_name}" FROM "{model_name}" LIMIT 1'
-            rewritten_sql = self.rewriter.rewrite(sql)
+            rewritten_sql = await self.rewriter.rewrite(sql)
             self.connector.dry_run(rewritten_sql)
         except Exception as e:
             raise ValidationError(f"Exception: {type(e)}, message: {e!s}")
