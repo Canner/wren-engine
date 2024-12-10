@@ -8,8 +8,8 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.115.5", extras = ["standard"] }
-pydantic = "2.10.2"
+fastapi = { version = "0.115.6", extras = ["standard"] }
+pydantic = "2.10.3"
 ibis-framework = { version = "9.5.0", extras = [
   "bigquery",
   "clickhouse",
@@ -20,12 +20,12 @@ ibis-framework = { version = "9.5.0", extras = [
   "trino",
 ] }
 google-auth = "2.36.0"
-httpx = "0.28.0"
+httpx = "0.28.1"
 python-dotenv = "1.0.1"
 orjson = "3.10.12"
 pandas = "2.2.3"
 sqlglot = ">=23.4,<25.21"
-loguru = "0.7.2"
+loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
 
@@ -40,7 +40,7 @@ testcontainers = { version = "4.8.2", extras = [
 ] }
 sqlalchemy = "2.0.36"
 pre-commit = "4.0.1"
-ruff = "0.8.1"
+ruff = "0.8.2"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.9"
