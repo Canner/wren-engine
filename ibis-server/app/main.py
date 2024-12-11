@@ -19,9 +19,9 @@ get_config().init_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(try_connect())
+    asyncio.create_task(try_connect())  # noqa: RUF006
+
     yield
-    task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

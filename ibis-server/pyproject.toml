@@ -28,6 +28,7 @@ sqlglot = ">=23.4,<25.21"
 loguru = "0.7.2"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
+anyio = "4.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.4"
