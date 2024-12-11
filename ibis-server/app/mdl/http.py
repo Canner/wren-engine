@@ -34,5 +34,5 @@ async def try_connect():
             wait_time -= 1
 
 
-def get_http_client():
+def get_http_client() -> httpx.AsyncClient:
     return client
