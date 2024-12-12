@@ -1,5 +1,9 @@
 FROM python:3.11-buster AS builder
-ARG RUST_PROFILE
+
+ARG ENV
+ENV ENV=$ENV
+
+
 # libpq-dev is required for psycopg2
 RUN apt-get update && apt-get -y install libpq-dev
 
@@ -30,7 +34,6 @@ COPY --from=wren-core . /wren-core
 WORKDIR /app
 COPY . .
 RUN just install --without dev
-RUN just install-core $RUST_PROFILE
 
 
 FROM python:3.11-slim-buster AS runtime
