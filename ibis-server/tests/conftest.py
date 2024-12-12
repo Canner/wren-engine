@@ -13,7 +13,7 @@ def file_path(path: str) -> str:
 DATAFUSION_FUNCTION_COUNT = 270
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 async def client() -> AsyncClient:
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test"
