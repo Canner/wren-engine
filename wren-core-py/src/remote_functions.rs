@@ -38,7 +38,7 @@ pub struct PyRemoteFunction {
 #[pymethods]
 impl PyRemoteFunction {
     pub fn to_dict(&self, py: Python) -> PyObject {
-        let dict = PyDict::new_bound(py);
+        let dict = PyDict::new(py);
         dict.set_item("function_type", self.function_type.clone())
             .unwrap();
         dict.set_item("name", self.name.clone()).unwrap();
