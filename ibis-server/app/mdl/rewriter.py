@@ -1,9 +1,9 @@
-import asyncio
 import importlib
 
 import httpx
 import orjson
 import sqlglot
+from anyio import to_thread
 from loguru import logger
 
 from app.config import get_config
@@ -102,7 +102,7 @@ class EmbeddedEngineRewriter:
             manifest = extractor.extract_by(tables)
             manifest_str = to_json_base64(manifest)
             session_context = get_session_context(manifest_str, self.function_path)
-            return await asyncio.to_thread(session_context.transform_sql, sql)
+            return await to_thread.run_sync(session_context.transform_sql, sql)
         except Exception as e:
             raise RewriteError(str(e))
 
