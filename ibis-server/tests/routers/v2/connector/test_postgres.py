@@ -106,7 +106,7 @@ def manifest_str():
 
 @pytest.fixture(scope="module")
 def postgres(request) -> PostgresContainer:
-    pg = PostgresContainer("postgres:16.4-alpine").start()
+    pg = PostgresContainer("postgres:16-alpine").start()
     engine = sqlalchemy.create_engine(pg.get_connection_url())
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
