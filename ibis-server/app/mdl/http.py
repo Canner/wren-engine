@@ -1,5 +1,4 @@
-import asyncio
-
+import anyio
 import httpcore
 import httpx
 
@@ -17,9 +16,8 @@ client = httpx.AsyncClient(
 )
 
 
-async def try_connect():
-    wait_time = 30
-    while wait_time > 0:
+async def warmup_http_client(timeout=30):
+    for _ in range(timeout):
         try:
             response = await client.get("/v2/health")
             if response.status_code == 200:
@@ -30,8 +28,7 @@ async def try_connect():
             httpx.TimeoutException,
             httpcore.ReadTimeout,
         ):
-            await asyncio.sleep(1)
-            wait_time -= 1
+            await anyio.sleep(1)
 
 
 def get_http_client() -> httpx.AsyncClient:

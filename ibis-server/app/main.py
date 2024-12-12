@@ -9,7 +9,7 @@ from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.mdl.http import get_http_client, try_connect
+from app.mdl.http import get_http_client, warmup_http_client
 from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
@@ -19,7 +19,7 @@ get_config().init_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(try_connect())  # noqa: RUF006
+    asyncio.create_task(warmup_http_client())  # noqa: RUF006
 
     yield
 
