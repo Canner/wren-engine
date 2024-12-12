@@ -26,6 +26,9 @@ def postgres(request) -> PostgresContainer:
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
         "orders", engine, index=False
     )
+    pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
+        "customer", engine, index=False
+    )
     request.addfinalizer(pg.stop)
     return pg
 

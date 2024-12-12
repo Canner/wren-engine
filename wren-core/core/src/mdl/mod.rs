@@ -6,7 +6,7 @@ use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use crate::mdl::manifest::{Column, Manifest, Model, View};
+use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
 use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
@@ -269,6 +269,18 @@ impl WrenMDL {
         &self.manifest.models
     }
 
+    pub fn views(&self) -> &[Arc<View>] {
+        &self.manifest.views
+    }
+
+    pub fn relationships(&self) -> &[Arc<Relationship>] {
+        &self.manifest.relationships
+    }
+
+    pub fn metrics(&self) -> &[Arc<Metric>] {
+        &self.manifest.metrics
+    }
+
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {
         self.manifest
             .models
@@ -515,6 +527,56 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_plan_calculation_without_unnamed_subquery() -> Result<()> {
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path())?;
+        let mdl = match serde_json::from_str::<Manifest>(&mdl_json) {
+            Ok(mdl) => mdl,
+            Err(e) => return not_impl_err!("Failed to parse mdl json: {}", e),
+        };
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(mdl)?);
+        let sql = "select totalcost from profile";
+        let result = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        let expected = "SELECT profile.totalcost FROM (SELECT totalcost.totalcost FROM \
+        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost \
+        FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey \
+        FROM (SELECT orders.o_custkey AS o_custkey, orders.o_totalprice AS o_totalprice FROM orders) AS orders \
+        RIGHT JOIN (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM customer) AS customer \
+        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS profile";
+        assert_eq!(result, expected);
+
+        let sql = "select totalcost from profile where p_sex = 'M'";
+        let result = transform_sql_with_ctx(
+            &SessionContext::new(),
+            Arc::clone(&analyzed_mdl),
+            &[],
+            sql,
+        )
+        .await?;
+        assert_eq!(result, "SELECT profile.totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost \
+        FROM (SELECT totalcost.p_custkey, profile.p_sex, totalcost.totalcost FROM \
+        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
+        (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
+        (SELECT orders.o_custkey AS o_custkey, orders.o_totalprice AS o_totalprice FROM orders) AS orders RIGHT JOIN \
+        (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM customer) AS customer \
+        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN \
+        (SELECT profile.p_custkey AS p_custkey, profile.p_sex AS p_sex FROM profile) AS profile \
+        ON totalcost.p_custkey = profile.p_custkey) AS __relation__1) AS profile WHERE profile.p_sex = 'M'");
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_uppercase_catalog_schema() -> Result<()> {
         let ctx = SessionContext::new();
         ctx.register_batch("customer", customer())?;
@@ -558,7 +620,6 @@ mod test {
             .into_deserialize::<RemoteFunction>()
             .filter_map(Result::ok)
             .collect::<Vec<_>>();
-        dbg!(&functions);
         let manifest = ManifestBuilder::new()
             .catalog("CTest")
             .schema("STest")

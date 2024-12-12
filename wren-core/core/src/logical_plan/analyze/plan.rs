@@ -254,6 +254,31 @@ impl ModelPlanNodeBuilder {
         let Some(source) = self.directed_graph.node_weight(start) else {
             return internal_err!("Dataset not found");
         };
+
+        // insert the primary key to the required fields for join with the calculation
+        let keys = self
+            .model_required_fields
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        for model in keys {
+            let Some(pk_column) = self
+                .analyzed_wren_mdl
+                .wren_mdl()
+                .get_model(model.table())
+                .and_then(|m| m.primary_key().and_then(|pk| m.get_column(pk)))
+            else {
+                debug!("Primary key not found for model {}", model);
+                continue;
+            };
+            self.model_required_fields
+                .entry(model.clone())
+                .or_default()
+                .insert(OrdExpr::new(Expr::Column(Column::from_qualified_name(
+                    format!("{}.{}", quoted(model.table()), quoted(pk_column.name()),),
+                ))));
+        }
+
         let mut source_required_fields: Vec<Expr> = self
             .model_required_fields
             .get(&model_ref)

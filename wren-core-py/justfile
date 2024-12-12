@@ -5,11 +5,23 @@ install:
     poetry install --no-root
 
 build *args:
-    poetry run maturin build {{args}}
+    poetry run maturin build {{ args }}
 
 develop:
     poetry run maturin develop
 
-test: develop
-    cargo test
+test-rs:
+    cargo test --no-default-features
+
+test-py:
     poetry run pytest
+
+test: test-rs test-py
+
+alias fmt := format
+
+format:
+    cargo fmt
+    poetry run ruff format .
+    poetry run ruff check --fix .
+    taplo fmt

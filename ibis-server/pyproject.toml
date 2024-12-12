@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wren-engine"
-version = "0.12.3"
+version = "0.12.4"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
@@ -9,7 +9,7 @@ packages = [{ include = "app" }]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 fastapi = { version = "0.115.5", extras = ["standard"] }
-pydantic = "2.10.1"
+pydantic = "2.10.2"
 ibis-framework = { version = "9.5.0", extras = [
   "bigquery",
   "clickhouse",
@@ -20,7 +20,7 @@ ibis-framework = { version = "9.5.0", extras = [
   "trino",
 ] }
 google-auth = "2.36.0"
-httpx = "0.27.2"
+httpx = "0.28.0"
 python-dotenv = "1.0.1"
 orjson = "3.10.12"
 pandas = "2.2.3"
@@ -30,7 +30,7 @@ asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.3"
+pytest = "8.3.4"
 testcontainers = { version = "4.8.2", extras = [
   "clickhouse",
   "mssql",
@@ -40,10 +40,10 @@ testcontainers = { version = "4.8.2", extras = [
 ] }
 sqlalchemy = "2.0.36"
 pre-commit = "4.0.1"
-ruff = "0.8.0"
+ruff = "0.8.1"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.7"
+clickhouse-connect = "0.8.9"
 
 [tool.pytest.ini_options]
 addopts = ["--strict-markers"]
