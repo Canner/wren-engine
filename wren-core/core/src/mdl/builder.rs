@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use crate::mdl::manifest::{
-    Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
+    Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeGrain,
+    TimeUnit, View,
 };
 use std::sync::Arc;
 
@@ -26,6 +27,7 @@ impl ManifestBuilder {
                 relationships: vec![],
                 metrics: vec![],
                 views: vec![],
+                data_source: None,
             },
         }
     }
@@ -57,6 +59,11 @@ impl ManifestBuilder {
 
     pub fn view(mut self, view: Arc<View>) -> Self {
         self.manifest.views.push(view);
+        self
+    }
+
+    pub fn data_source(mut self, data_source: DataSource) -> Self {
+        self.manifest.data_source = Some(data_source);
         self
     }
 
@@ -328,7 +335,7 @@ mod test {
         TimeGrainBuilder, ViewBuilder,
     };
     use crate::mdl::manifest::{
-        Column, JoinType, Metric, Model, Relationship, TimeUnit, View,
+        Column, DataSource, JoinType, Metric, Model, Relationship, TimeUnit, View,
     };
     use std::sync::Arc;
 
@@ -546,6 +553,7 @@ mod test {
             .relationship(relationship)
             .metric(metric)
             .view(view)
+            .data_source(DataSource::Datafusion)
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
