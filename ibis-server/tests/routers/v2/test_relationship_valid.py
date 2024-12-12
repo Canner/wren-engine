@@ -62,6 +62,13 @@ def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
 
+@pytest.fixture(scope="module")
+def postgres(request) -> PostgresContainer:
+    pg = PostgresContainer("postgres:16-alpine").start()
+    request.addfinalizer(pg.stop)
+    return pg
+
+
 async def test_validation_relationship(
     client, manifest_str, postgres: PostgresContainer
 ):
