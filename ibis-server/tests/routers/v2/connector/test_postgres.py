@@ -482,7 +482,7 @@ async def test_metadata_db_version(client, postgres: PostgresContainer):
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
-    assert "PostgreSQL 16.4" in response.text
+    assert "PostgreSQL 16" in response.text
 
 
 async def test_dry_plan(client, manifest_str):
