@@ -18,6 +18,50 @@ pub struct Manifest {
     pub metrics: Vec<Arc<Metric>>,
     #[serde(default)]
     pub views: Vec<Arc<View>>,
+    #[serde(default)]
+    pub data_source: Option<DataSource>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DataSource {
+    #[serde(alias = "bigquery")]
+    BigQuery,
+    #[serde(alias = "clickhouse")]
+    Clickhouse,
+    #[serde(alias = "canner")]
+    Canner,
+    #[serde(alias = "trino")]
+    Trino,
+    #[serde(alias = "mssql")]
+    MSSQL,
+    #[serde(alias = "mysql")]
+    MySQL,
+    #[serde(alias = "postgres")]
+    Postgres,
+    #[serde(alias = "snowflake")]
+    Snowflake,
+    #[serde(alias = "datafusion")]
+    Datafusion,
+    #[serde(alias = "duckdb")]
+    DuckDB,
+}
+
+impl Display for DataSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataSource::BigQuery => write!(f, "BIGQUERY"),
+            DataSource::Clickhouse => write!(f, "CLICKHOUSE"),
+            DataSource::Canner => write!(f, "CANNER"),
+            DataSource::Trino => write!(f, "TRINO"),
+            DataSource::MSSQL => write!(f, "MSSQL"),
+            DataSource::MySQL => write!(f, "MYSQL"),
+            DataSource::Postgres => write!(f, "POSTGRES"),
+            DataSource::Snowflake => write!(f, "SNOWFLAKE"),
+            DataSource::Datafusion => write!(f, "DATAFUSION"),
+            DataSource::DuckDB => write!(f, "DUCKDB"),
+        }
+    }
 }
 
 #[serde_as]

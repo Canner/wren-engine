@@ -138,5 +138,6 @@
       "name": "customer_view",
       "statement": "select * from test.test.customer"
     }
-  ]
+  ],
+  "dataSource": "datafusion"
 }
