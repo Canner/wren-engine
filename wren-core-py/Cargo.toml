@@ -9,7 +9,7 @@ name = "wren_core_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21.2", features = [
+pyo3 = { version = "0.23.3", features = [
   "extension-module",
   "generate-import-lib",
 ] }
@@ -24,4 +24,4 @@ log = "0.4.22"
 tokio = "1.40.0"
 
 [build-dependencies]
-pyo3-build-config = "0.21.2"
+pyo3-build-config = "0.23.3"
