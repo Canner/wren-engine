@@ -4,10 +4,8 @@ import clickhouse_connect
 import orjson
 import pandas as pd
 import pytest
-from httpx import ASGITransport, AsyncClient
 from testcontainers.clickhouse import ClickHouseContainer
 
-from app.main import app
 from app.model.validator import rules
 from tests.conftest import file_path
 
@@ -107,7 +105,7 @@ manifest = {
 }
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
 
@@ -163,15 +161,6 @@ def clickhouse(request) -> ClickHouseContainer:
     return ch
 
 
-@pytest.fixture(scope="module")
-async def client():
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
-    ) as client:
-        yield client
-
-
-@pytest.mark.anyio
 async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -212,7 +201,6 @@ async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
     }
 
 
-@pytest.mark.anyio
 async def test_query_with_connection_url(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -233,7 +221,6 @@ async def test_query_with_connection_url(
     assert result["dtypes"] is not None
 
 
-@pytest.mark.anyio
 async def test_query_with_limit(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -263,7 +250,6 @@ async def test_query_with_limit(client, manifest_str, clickhouse: ClickHouseCont
     assert len(result["data"]) == 1
 
 
-@pytest.mark.anyio
 async def test_query_join(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -284,7 +270,6 @@ async def test_query_join(client, manifest_str, clickhouse: ClickHouseContainer)
     }
 
 
-@pytest.mark.anyio
 async def test_query_to_one_relationship(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -307,7 +292,6 @@ async def test_query_to_one_relationship(
     }
 
 
-@pytest.mark.anyio
 async def test_query_to_many_relationship(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -330,7 +314,6 @@ async def test_query_to_many_relationship(
     }
 
 
-@pytest.mark.anyio
 async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     # ClickHouse does not support alias join
@@ -345,7 +328,6 @@ async def test_query_alias_join(client, manifest_str, clickhouse: ClickHouseCont
         )
 
 
-@pytest.mark.anyio
 async def test_query_without_manifest(client, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -363,7 +345,6 @@ async def test_query_without_manifest(client, clickhouse: ClickHouseContainer):
     assert result["detail"][0]["msg"] == "Field required"
 
 
-@pytest.mark.anyio
 async def test_query_without_sql(client, manifest_str, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -378,7 +359,6 @@ async def test_query_without_sql(client, manifest_str, clickhouse: ClickHouseCon
     assert result["detail"][0]["msg"] == "Field required"
 
 
-@pytest.mark.anyio
 async def test_query_without_connection_info(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
@@ -395,7 +375,6 @@ async def test_query_without_connection_info(client, manifest_str):
     assert result["detail"][0]["msg"] == "Field required"
 
 
-@pytest.mark.anyio
 async def test_query_with_dry_run(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -412,7 +391,6 @@ async def test_query_with_dry_run(
     assert response.status_code == 204
 
 
-@pytest.mark.anyio
 async def test_query_with_dry_run_and_invalid_sql(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -430,7 +408,6 @@ async def test_query_with_dry_run_and_invalid_sql(
     assert response.text is not None
 
 
-@pytest.mark.anyio
 async def test_validate_with_unknown_rule(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -449,7 +426,6 @@ async def test_validate_with_unknown_rule(
     )
 
 
-@pytest.mark.anyio
 async def test_validate_rule_column_is_valid(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -465,7 +441,6 @@ async def test_validate_rule_column_is_valid(
     assert response.status_code == 204
 
 
-@pytest.mark.anyio
 async def test_validate_rule_column_is_valid_with_invalid_parameters(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -491,7 +466,6 @@ async def test_validate_rule_column_is_valid_with_invalid_parameters(
     assert response.status_code == 422
 
 
-@pytest.mark.anyio
 async def test_validate_rule_column_is_valid_without_parameters(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -508,7 +482,6 @@ async def test_validate_rule_column_is_valid_without_parameters(
     assert result["detail"][0]["msg"] == "Field required"
 
 
-@pytest.mark.anyio
 async def test_validate_rule_column_is_valid_without_one_parameter(
     client, manifest_str, clickhouse: ClickHouseContainer
 ):
@@ -536,7 +509,6 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
     assert response.text == "Missing required parameter: `modelName`"
 
 
-@pytest.mark.anyio
 async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -567,7 +539,6 @@ async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
     }
 
 
-@pytest.mark.anyio
 async def test_metadata_list_constraints(client, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(
@@ -582,7 +553,6 @@ async def test_metadata_list_constraints(client, clickhouse: ClickHouseContainer
     assert len(result) == 0
 
 
-@pytest.mark.anyio
 async def test_metadata_db_version(client, clickhouse: ClickHouseContainer):
     connection_info = _to_connection_info(clickhouse)
     response = await client.post(

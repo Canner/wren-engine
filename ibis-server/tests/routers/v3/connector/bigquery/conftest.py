@@ -9,6 +9,7 @@ from tests.conftest import file_path
 pytestmark = pytest.mark.bigquery
 
 base_url = "/v3/connector/bigquery"
+
 function_list_path = file_path("../resources/function_list")
 
 
