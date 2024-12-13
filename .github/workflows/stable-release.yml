@@ -155,7 +155,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           context: ./ibis-server
           build-args: |
-            RUST_PROFILE=--release
+            ENV=prod
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core

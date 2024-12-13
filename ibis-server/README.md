@@ -71,7 +71,7 @@ vim .env
 ```
 Install the dependencies
 ```bash
-just install && just install-core
+just install
 ```
 Run the server
 ```bash

@@ -4,8 +4,11 @@ default:
 install:
     poetry install --no-root
 
-build *args:
-    poetry run maturin build {{ args }}
+env := env("ENV", "dev")
+release_flag := if env == "prod" { "--release" } else { "" }
+
+build:
+    poetry run maturin build {{ release_flag }}
 
 develop:
     poetry run maturin develop
