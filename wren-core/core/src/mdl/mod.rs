@@ -478,6 +478,7 @@ mod test {
                 "select o_orderkey, count(*) from test.test.orders where orders.o_totalprice > 10 group by 1",
                 "select totalcost from test.test.profile",
                 "select totalcost from profile",
+                "select sum(c_custkey) over (order by c_name) from test.test.customer limit 1",
         // TODO: support calculated without relationship
         //     "select orderkey_plus_custkey from orders",
         ];

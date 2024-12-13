@@ -223,6 +223,24 @@ impl ModelAnalyzeRule {
                 scope_mut.add_visited_table(subquery_alias.alias.clone());
                 Ok(Transformed::no(plan))
             }
+            LogicalPlan::Window(window) => {
+                let mut scope_mut = scope.borrow_mut();
+                window
+                    .window_expr
+                    .iter()
+                    .fold(HashSet::new(), |mut set, expr| {
+                        Expr::add_column_refs(expr, &mut set);
+                        set
+                    })
+                    .into_iter()
+                    .try_for_each(|col| {
+                        self.collect_required_column(
+                            Expr::Column(col.to_owned()),
+                            &mut scope_mut,
+                        )
+                    })?;
+                Ok(Transformed::no(plan))
+            }
             _ => Ok(Transformed::no(plan)),
         }
     }
