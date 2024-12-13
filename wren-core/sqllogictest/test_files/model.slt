@@ -31,6 +31,9 @@ select * from wrenai.public."Customers";
 statement ok
 select count(*) from wrenai.public."Order_items";
 
+statement ok
+select sum("Price") over (order by "Product_id") from wrenai.public."Order_items" limit 1;
+
 # check the count of order_items won't be increased by the relationship calculation
 query B
 select cnt1 = cnt2 from (select count(*) as cnt1 from (select "Customer_state" from wrenai.public."Order_items")), (select count(*) as cnt2 from datafusion.public.order_items) limit 1;
