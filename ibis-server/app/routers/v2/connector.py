@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import JSONResponse
 
 from app.dependencies import verify_query_dto
+from app.mdl.java_engine import get_java_engine_connector
 from app.mdl.rewriter import Rewriter
 from app.model import (
     DryPlanDTO,
@@ -18,6 +19,7 @@ from app.model.validator import Validator
 from app.util import to_json
 
 router = APIRouter(prefix="/connector")
+java_engine_connector = get_java_engine_connector()
 
 
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
@@ -27,9 +29,11 @@ async def query(
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
 ) -> Response:
-    rewritten_sql = await Rewriter(dto.manifest_str, data_source=data_source).rewrite(
-        dto.sql
-    )
+    rewritten_sql = await Rewriter(
+        dto.manifest_str,
+        data_source=data_source,
+        java_engine_connector=java_engine_connector,
+    ).rewrite(dto.sql)
     connector = Connector(data_source, dto.connection_info)
     if dry_run:
         connector.dry_run(rewritten_sql)
@@ -43,7 +47,11 @@ async def validate(
 ) -> Response:
     validator = Validator(
         Connector(data_source, dto.connection_info),
-        Rewriter(dto.manifest_str, data_source=data_source),
+        Rewriter(
+            dto.manifest_str,
+            data_source=data_source,
+            java_engine_connector=java_engine_connector,
+        ),
     )
     await validator.validate(rule_name, dto.parameters, dto.manifest_str)
     return Response(status_code=204)
@@ -70,9 +78,15 @@ def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
 
 @router.post("/dry-plan")
 async def dry_plan(dto: DryPlanDTO) -> str:
-    return await Rewriter(dto.manifest_str).rewrite(dto.sql)
+    return await Rewriter(
+        dto.manifest_str, java_engine_connector=java_engine_connector
+    ).rewrite(dto.sql)
 
 
 @router.post("/{data_source}/dry-plan")
 async def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
-    return await Rewriter(dto.manifest_str, data_source=data_source).rewrite(dto.sql)
+    return await Rewriter(
+        dto.manifest_str,
+        data_source=data_source,
+        java_engine_connector=java_engine_connector,
+    ).rewrite(dto.sql)
