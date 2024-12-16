@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 
 from app.dependencies import verify_query_dto
 from app.mdl.rewriter import Rewriter
@@ -34,7 +34,7 @@ async def query(
     if dry_run:
         connector.dry_run(rewritten_sql)
         return Response(status_code=204)
-    return JSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
+    return ORJSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
 
 
 @router.post("/{data_source}/validate/{rule_name}")
