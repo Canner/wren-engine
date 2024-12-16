@@ -1,7 +1,7 @@
-import asyncio
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
+from anyio import create_task_group
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -19,7 +19,8 @@ get_config().init_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(warmup_http_client())  # noqa: RUF006
+    async with create_task_group() as tg:
+        await tg.start(warmup_http_client)
 
     yield
 
