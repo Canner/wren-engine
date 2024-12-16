@@ -1,7 +1,6 @@
 import importlib
 
 import httpx
-import orjson
 import sqlglot
 from anyio import to_thread
 from loguru import logger
@@ -12,11 +11,9 @@ from app.mdl.core import (
     get_session_context,
     to_json_base64,
 )
-from app.mdl.http import get_http_client
+from app.mdl.java_engine import JavaEngineConnector
 from app.model import InternalServerError, UnprocessableEntityError
 from app.model.data_source import DataSource
-
-wren_engine_endpoint = get_config().wren_engine_endpoint
 
 # To register custom dialects from ibis library for sqlglot
 importlib.import_module("ibis.backends.sql.dialects")
@@ -24,14 +21,13 @@ importlib.import_module("ibis.backends.sql.dialects")
 # Register custom dialects
 importlib.import_module("app.custom_sqlglot.dialects")
 
-client = get_http_client()
-
 
 class Rewriter:
     def __init__(
         self,
         manifest_str: str,
         data_source: DataSource = None,
+        java_engine_connector=None,
         experiment=False,
     ):
         self.manifest_str = manifest_str
@@ -42,7 +38,7 @@ class Rewriter:
             function_path = config.get_remote_function_list_path(data_source)
             self._rewriter = EmbeddedEngineRewriter(manifest_str, function_path)
         else:
-            self._rewriter = ExternalEngineRewriter(manifest_str)
+            self._rewriter = ExternalEngineRewriter(manifest_str, java_engine_connector)
 
     async def rewrite(self, sql: str) -> str:
         planned_sql = await self._rewriter.rewrite(sql)
@@ -67,8 +63,9 @@ class Rewriter:
 
 
 class ExternalEngineRewriter:
-    def __init__(self, manifest_str: str):
+    def __init__(self, manifest_str: str, java_engine_connector: JavaEngineConnector):
         self.manifest_str = manifest_str
+        self.java_engine_connector = java_engine_connector
 
     async def rewrite(self, sql: str) -> str:
         try:
@@ -76,12 +73,7 @@ class ExternalEngineRewriter:
             tables = extractor.resolve_used_table_names(sql)
             manifest = extractor.extract_by(tables)
             manifest_str = to_json_base64(manifest)
-            r = await client.request(
-                method="GET",
-                url=f"{wren_engine_endpoint}/v2/mdl/dry-plan",
-                content=orjson.dumps({"manifestStr": manifest_str, "sql": sql}),
-            )
-            return r.raise_for_status().text.replace("\n", " ")
+            return await self.java_engine_connector.dry_plan(manifest_str, sql)
         except httpx.ConnectError as e:
             raise WrenEngineError(f"Can not connect to Java Engine: {e}")
         except httpx.TimeoutException as e:

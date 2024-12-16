@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
@@ -15,7 +16,8 @@ DATAFUSION_FUNCTION_COUNT = 270
 
 @pytest.fixture(scope="session")
 async def client() -> AsyncClient:
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test"
-    ) as client:
-        yield client
+    async with LifespanManager(app) as manager:
+        async with AsyncClient(
+            transport=ASGITransport(manager.app), base_url="http://test"
+        ) as client:
+            yield client
