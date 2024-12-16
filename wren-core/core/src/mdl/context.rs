@@ -36,7 +36,6 @@ use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
 use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
-use datafusion::optimizer::single_distinct_to_groupby::SingleDistinctToGroupBy;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::{AnalyzerRule, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
@@ -181,7 +180,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         // Arc::new(PushDownLimit::new()),
         // Disable PushDownFilter to avoid the casting for bigquery (datetime/timestamp) column be removed
         // Arc::new(PushDownFilter::new()),
-        Arc::new(SingleDistinctToGroupBy::new()),
+        // Disable SingleDistinctToGroupBy to avoid generate invalid aggregation plan
+        // Arc::new(SingleDistinctToGroupBy::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),
         Arc::new(UnwrapCastInComparison::new()),
