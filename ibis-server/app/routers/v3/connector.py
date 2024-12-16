@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 
 from app.config import get_config
 from app.dependencies import verify_query_dto
@@ -34,7 +34,7 @@ async def query(
     if dry_run:
         connector.dry_run(rewritten_sql)
         return Response(status_code=204)
-    return JSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
+    return ORJSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
 
 
 @router.post("/dry-plan")
@@ -66,5 +66,4 @@ def functions(data_source: DataSource) -> Response:
     file_path = get_config().get_remote_function_list_path(data_source)
     session_context = get_session_context(None, file_path)
     func_list = [f.to_dict() for f in session_context.get_available_functions()]
-
-    return JSONResponse(func_list)
+    return ORJSONResponse(func_list)
