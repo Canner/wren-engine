@@ -1,10 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import ORJSONResponse
 
 from app.dependencies import verify_query_dto
-from app.mdl.java_engine import get_java_engine_connector
+from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.model import (
     DryPlanDTO,
@@ -19,7 +19,10 @@ from app.model.validator import Validator
 from app.util import to_json
 
 router = APIRouter(prefix="/connector")
-java_engine_connector = get_java_engine_connector()
+
+
+def get_java_engine_connector(request: Request) -> JavaEngineConnector:
+    return request.state.java_engine_connector
 
 
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
@@ -28,6 +31,7 @@ async def query(
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
+    java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> Response:
     rewritten_sql = await Rewriter(
         dto.manifest_str,
@@ -43,7 +47,10 @@ async def query(
 
 @router.post("/{data_source}/validate/{rule_name}")
 async def validate(
-    data_source: DataSource, rule_name: str, dto: ValidateDTO
+    data_source: DataSource,
+    rule_name: str,
+    dto: ValidateDTO,
+    java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> Response:
     validator = Validator(
         Connector(data_source, dto.connection_info),
@@ -77,14 +84,21 @@ def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
 
 
 @router.post("/dry-plan")
-async def dry_plan(dto: DryPlanDTO) -> str:
+async def dry_plan(
+    dto: DryPlanDTO,
+    java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
+) -> str:
     return await Rewriter(
         dto.manifest_str, java_engine_connector=java_engine_connector
     ).rewrite(dto.sql)
 
 
 @router.post("/{data_source}/dry-plan")
-async def dry_plan_for_data_source(data_source: DataSource, dto: DryPlanDTO) -> str:
+async def dry_plan_for_data_source(
+    data_source: DataSource,
+    dto: DryPlanDTO,
+    java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
+) -> str:
     return await Rewriter(
         dto.manifest_str,
         data_source=data_source,

@@ -19,9 +19,6 @@ class Singleton(type):
 
 class JavaEngineConnector(metaclass=Singleton):
     def __init__(self):
-        self.client = None
-
-    def start(self):
         self.client = httpx.AsyncClient(
             base_url=wren_engine_endpoint,
             headers={
@@ -38,7 +35,7 @@ class JavaEngineConnector(metaclass=Singleton):
         )
         return r.raise_for_status().text.replace("\n", " ")
 
-    async def warmup(self, timeout=30):
+    async def _warmup(self, timeout=30):
         for _ in range(timeout):
             try:
                 response = await self.client.get("/v2/health")
@@ -54,6 +51,13 @@ class JavaEngineConnector(metaclass=Singleton):
 
     async def close(self):
         await self.client.aclose()
+
+    async def __aenter__(self):
+        await self._warmup()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
 
 def get_java_engine_connector() -> JavaEngineConnector:
