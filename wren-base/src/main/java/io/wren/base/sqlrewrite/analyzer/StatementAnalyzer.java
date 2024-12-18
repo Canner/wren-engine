@@ -70,10 +70,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.sql.QueryUtil.getQualifiedName;
 import static io.trino.sql.parser.AstBuilder.DUCKDB_TABLE_FUNCTIONS;
-import static io.wren.base.metadata.StandardErrorCode.TYPE_MISMATCH;
 import static io.wren.base.sqlrewrite.Utils.toCatalogSchemaTableName;
 import static java.lang.String.format;
-import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
@@ -508,23 +506,7 @@ public final class StatementAnalyzer
             checkState(node.getRelations().size() >= 2);
             List<RelationType> relationTypes = node.getRelations().stream()
                     .map(relation -> process(relation, scope).getRelationType()).collect(toImmutableList());
-            String setOperationName = node.getClass().getSimpleName().toUpperCase(ENGLISH);
             List<Field> outputFields = relationTypes.get(0).getFields();
-            for (RelationType relationType : relationTypes) {
-                int outputFieldSize = outputFields.size();
-                int descFieldSize = relationType.getFields().size();
-                if (outputFieldSize != descFieldSize) {
-                    throw SemanticExceptions.semanticException(
-                            TYPE_MISMATCH,
-                            node,
-                            "%s query has different number of fields: %d, %d",
-                            setOperationName,
-                            outputFieldSize,
-                            descFieldSize);
-                }
-
-                // TODO: check type compatibility
-            }
 
             return createAndAssignScope(node, scope, new RelationType(outputFields));
         }

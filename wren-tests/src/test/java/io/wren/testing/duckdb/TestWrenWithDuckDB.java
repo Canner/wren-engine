@@ -251,4 +251,11 @@ public class TestWrenWithDuckDB
                         column("totalprice", "DECIMAL(15,2)"),
                         column("orderdate", "DATE")));
     }
+
+    @Test
+    public void testUnionDifferentModel()
+    {
+        QueryResultDto queryResultDto = query(manifest, "select custkey from Orders union select custkey from Customer limit 100");
+        assertThat(queryResultDto.getColumns().size()).isEqualTo(1);
+    }
 }
