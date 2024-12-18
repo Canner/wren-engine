@@ -65,11 +65,21 @@ jobs:
             ./mvnw release:prepare -B -DreleaseVersion=${version_number}
           fi
           git push
-          git push origin $version_number
           echo "version_number=$version_number" >> $GITHUB_OUTPUT
     outputs:
       next_version: ${{ steps.next_version.outputs.value }}
       maven_version: ${{ steps.maven_prepare_release.outputs.version_number }}
+  gh-releasse:
+    needs: prepare-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-version.outputs.next_version }}
+          generate_release_notes: true
+          make_latest: "true"
   stable-release-wren-engine:
     needs: prepare-version
     runs-on: ubuntu-latest
