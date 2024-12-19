@@ -21,7 +21,7 @@ class Transpiler:
         for scope in root.traverse():
             for alias, (node, source) in scope.selected_sources.items():
                 if isinstance(source, exp.Table):
-                    model = self.find_model(source)
+                    model = self._find_model(source)
                     if model is None:
                         raise TranspileError(f"Model not found: {source}")
                     source.replace(
@@ -35,7 +35,7 @@ class Transpiler:
         return ast.sql(dialect=write)
 
     @staticmethod
-    def _build_model_dict(models):
+    def _build_model_dict(models) -> dict:
         models_dict = defaultdict(lambda: defaultdict(dict))
         for model in models:
             if table_ref := model.get("tableReference", None):
@@ -45,7 +45,7 @@ class Transpiler:
                 models_dict[catalog][schema][table] = model
         return dict(models_dict)
 
-    def find_model(self, source: exp.Table):
+    def _find_model(self, source: exp.Table) -> dict | None:
         catalog = source.catalog or ""
         schema = source.db or ""
         name = source.name
