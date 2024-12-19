@@ -6,8 +6,8 @@ from fastapi.responses import ORJSONResponse
 from app.config import get_config
 from app.dependencies import verify_query_dto
 from app.mdl.core import get_session_context
+from app.mdl.replacer import TableReplacer
 from app.mdl.rewriter import Rewriter
-from app.mdl.transpilation import Transpiler
 from app.model import (
     DryPlanDTO,
     QueryDTO,
@@ -71,9 +71,9 @@ def functions(data_source: DataSource) -> Response:
     return ORJSONResponse(func_list)
 
 
-@router.post("/{data_source}/transpile")
-async def transpile(
+@router.post("/{data_source}/replace-table")
+async def replace_table(
     data_source: DataSource,
     dto: TranspileDTO,
 ) -> str:
-    return Transpiler(data_source, dto.manifest_str).transpile(dto.sql)
+    return TableReplacer(data_source, dto.manifest_str).replace(dto.sql)

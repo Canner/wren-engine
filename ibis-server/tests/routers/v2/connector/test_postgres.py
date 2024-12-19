@@ -500,10 +500,10 @@ async def test_dry_plan(client, manifest_str):
     assert response.text is not None
 
 
-async def test_transpile(client, manifest_str, postgres: PostgresContainer):
+async def test_replace_table(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/transpile",
+        url=f"{base_url}/replace-table",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -517,10 +517,12 @@ async def test_transpile(client, manifest_str, postgres: PostgresContainer):
     )
 
 
-async def test_transpile_with_cte(client, manifest_str, postgres: PostgresContainer):
+async def test_replace_table_with_cte(
+    client, manifest_str, postgres: PostgresContainer
+):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/transpile",
+        url=f"{base_url}/replace-table",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -539,12 +541,12 @@ async def test_transpile_with_cte(client, manifest_str, postgres: PostgresContai
     )
 
 
-async def test_transpile_with_subquery(
+async def test_replace_table_with_subquery(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/transpile",
+        url=f"{base_url}/replace-table",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -562,12 +564,12 @@ async def test_transpile_with_subquery(
     )
 
 
-async def test_transpile_out_of_scope(
+async def test_replace_table_out_of_scope(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/transpile",
+        url=f"{base_url}/replace-table",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
