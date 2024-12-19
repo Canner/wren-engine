@@ -10,8 +10,8 @@ def anyio_backend():
 
 async def test_root(client):
     response = await client.get("/")
-    assert response.status_code == 200
-    assert response.url == client.base_url.join("/docs")
+    assert response.status_code == 307
+    assert response.next_request.url == client.base_url.join("/docs")
 
 
 async def test_health(client):
