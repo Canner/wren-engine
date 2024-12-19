@@ -163,6 +163,11 @@ class DryPlanDTO(BaseModel):
     sql: str
 
 
+class TranspileDTO(BaseModel):
+    manifest_str: str = manifest_str_field
+    sql: str
+
+
 class ConfigModel(BaseModel):
     diagnose: bool
 

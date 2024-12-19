@@ -7,9 +7,11 @@ from app.config import get_config
 from app.dependencies import verify_query_dto
 from app.mdl.core import get_session_context
 from app.mdl.rewriter import Rewriter
+from app.mdl.transpilation import Transpiler
 from app.model import (
     DryPlanDTO,
     QueryDTO,
+    TranspileDTO,
     ValidateDTO,
 )
 from app.model.connector import Connector
@@ -67,3 +69,11 @@ def functions(data_source: DataSource) -> Response:
     session_context = get_session_context(None, file_path)
     func_list = [f.to_dict() for f in session_context.get_available_functions()]
     return ORJSONResponse(func_list)
+
+
+@router.post("/{data_source}/transpile")
+async def transpile(
+    data_source: DataSource,
+    dto: TranspileDTO,
+) -> str:
+    return Transpiler(data_source, dto.manifest_str).transpile(dto.sql)

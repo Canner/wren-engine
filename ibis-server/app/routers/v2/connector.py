@@ -6,9 +6,11 @@ from fastapi.responses import ORJSONResponse
 from app.dependencies import verify_query_dto
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
+from app.mdl.transpilation import Transpiler
 from app.model import (
     DryPlanDTO,
     QueryDTO,
+    TranspileDTO,
     ValidateDTO,
 )
 from app.model.connector import Connector
@@ -104,3 +106,11 @@ async def dry_plan_for_data_source(
         data_source=data_source,
         java_engine_connector=java_engine_connector,
     ).rewrite(dto.sql)
+
+
+@router.post("/{data_source}/transpile")
+async def transpile(
+    data_source: DataSource,
+    dto: TranspileDTO,
+) -> str:
+    return Transpiler(data_source, dto.manifest_str).transpile(dto.sql, write="trino")

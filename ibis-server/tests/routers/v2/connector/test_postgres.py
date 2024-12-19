@@ -22,7 +22,10 @@ manifest = {
     "models": [
         {
             "name": "Orders",
-            "refSql": "select * from public.orders",
+            "tableReference": {
+                "schema": "tpch_tiny",
+                "table": "orders",
+            },
             "columns": [
                 {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
                 {"name": "custkey", "expression": "o_custkey", "type": "integer"},
@@ -495,6 +498,84 @@ async def test_dry_plan(client, manifest_str):
     )
     assert response.status_code == 200
     assert response.text is not None
+
+
+async def test_transpile(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/transpile",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "tpch_tiny"."orders"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
+    )
+
+
+async def test_transpile_with_cte(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/transpile",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+                WITH orders_cte AS (
+                    SELECT * FROM "tpch_tiny"."orders"
+                )
+                SELECT * FROM orders_cte;
+            """,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"WITH orders_cte AS (SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\") SELECT * FROM orders_cte"'
+    )
+
+
+async def test_transpile_with_subquery(
+    client, manifest_str, postgres: PostgresContainer
+):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/transpile",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+                SELECT * FROM (
+                    SELECT * FROM "tpch_tiny"."orders"
+                ) AS orders_subquery;
+            """,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM (SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\") AS orders_subquery"'
+    )
+
+
+async def test_transpile_out_of_scope(
+    client, manifest_str, postgres: PostgresContainer
+):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/transpile",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Nation" LIMIT 1',
+        },
+    )
+    assert response.status_code == 422
+    assert response.text == 'Model not found: "Nation"'
 
 
 def _to_connection_info(pg: PostgresContainer):
