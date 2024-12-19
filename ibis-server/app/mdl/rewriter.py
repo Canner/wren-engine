@@ -27,33 +27,38 @@ class Rewriter:
         self,
         manifest_str: str,
         data_source: DataSource = None,
-        java_engine_connector=None,
+        java_engine_connector: JavaEngineConnector = None,
         experiment=False,
     ):
         self.manifest_str = manifest_str
         self.data_source = data_source
         self.experiment = experiment
+        self.manifest_extractor = get_manifest_extractor(self.manifest_str)
         if experiment:
-            config = get_config()
-            function_path = config.get_remote_function_list_path(data_source)
-            self._rewriter = EmbeddedEngineRewriter(manifest_str, function_path)
+            function_path = get_config().get_remote_function_list_path(data_source)
+            self._rewriter = EmbeddedEngineRewriter(function_path)
         else:
-            self._rewriter = ExternalEngineRewriter(manifest_str, java_engine_connector)
+            self._rewriter = ExternalEngineRewriter(java_engine_connector)
 
     async def rewrite(self, sql: str) -> str:
-        planned_sql = await self._rewriter.rewrite(sql)
+        tables = self.manifest_extractor.resolve_used_table_names(sql)
+        manifest = self.manifest_extractor.extract_by(tables)
+        manifest_str = to_json_base64(manifest)
+        logger.debug("Extracted manifest: {}", manifest_str)
+        planned_sql = await self._rewriter.rewrite(manifest_str, sql)
         logger.debug("Planned SQL: {}", planned_sql)
         dialect_sql = self._transpile(planned_sql) if self.data_source else planned_sql
         logger.debug("Dialect SQL: {}", dialect_sql)
         return dialect_sql
 
     def _transpile(self, planned_sql: str) -> str:
+        read = self._get_read_dialect(self.experiment)
         write = self._get_write_dialect(self.data_source)
-        if self.experiment:
-            read = None
-        else:
-            read = "trino"
         return sqlglot.transpile(planned_sql, read=read, write=write)[0]
+
+    @classmethod
+    def _get_read_dialect(cls, experiment) -> str | None:
+        return None if experiment else "trino"
 
     @classmethod
     def _get_write_dialect(cls, data_source: DataSource) -> str:
@@ -63,16 +68,11 @@ class Rewriter:
 
 
 class ExternalEngineRewriter:
-    def __init__(self, manifest_str: str, java_engine_connector: JavaEngineConnector):
-        self.manifest_str = manifest_str
+    def __init__(self, java_engine_connector: JavaEngineConnector):
         self.java_engine_connector = java_engine_connector
 
-    async def rewrite(self, sql: str) -> str:
+    async def rewrite(self, manifest_str: str, sql: str) -> str:
         try:
-            extractor = get_manifest_extractor(self.manifest_str)
-            tables = extractor.resolve_used_table_names(sql)
-            manifest = extractor.extract_by(tables)
-            manifest_str = to_json_base64(manifest)
             return await self.java_engine_connector.dry_plan(manifest_str, sql)
         except httpx.ConnectError as e:
             raise WrenEngineError(f"Can not connect to Java Engine: {e}")
@@ -83,16 +83,11 @@ class ExternalEngineRewriter:
 
 
 class EmbeddedEngineRewriter:
-    def __init__(self, manifest_str: str, function_path: str):
-        self.manifest_str = manifest_str
+    def __init__(self, function_path: str):
         self.function_path = function_path
 
-    async def rewrite(self, sql: str) -> str:
+    async def rewrite(self, manifest_str: str, sql: str) -> str:
         try:
-            extractor = get_manifest_extractor(self.manifest_str)
-            tables = extractor.resolve_used_table_names(sql)
-            manifest = extractor.extract_by(tables)
-            manifest_str = to_json_base64(manifest)
             session_context = get_session_context(manifest_str, self.function_path)
             return await to_thread.run_sync(session_context.transform_sql, sql)
         except Exception as e:
