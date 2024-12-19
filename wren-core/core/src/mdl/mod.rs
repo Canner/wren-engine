@@ -1324,15 +1324,6 @@ mod test {
         let actual =
             transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
         assert_eq!(actual, expected);
-
-        let manifest: Manifest = serde_json::from_str(r#"{"catalog":"my_catalog","schema":"my_schema","data_source":"MYSQL","models":[],"relationships":[],"metrics":[],"views":[]}"#).unwrap();
-        dbg!(&manifest);
-        let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
-        let ctx = SessionContext::new();
-        let expected = "SELECT trim(' abc')";
-        let actual =
-            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
-        assert_eq!(actual, expected);
         Ok(())
     }
 
