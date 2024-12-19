@@ -4,17 +4,9 @@ import httpx
 from orjson import orjson
 
 from app.config import get_config
+from app.pattern import Singleton
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
-
-
-class Singleton(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super().__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 class JavaEngineConnector(metaclass=Singleton):
@@ -58,7 +50,3 @@ class JavaEngineConnector(metaclass=Singleton):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
-
-
-def get_java_engine_connector() -> JavaEngineConnector:
-    return JavaEngineConnector()
