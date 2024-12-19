@@ -16,6 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+use crate::mdl::dialect::inner_dialect::{get_inner_dialect, InnerDialect};
+use crate::mdl::manifest::DataSource;
 use datafusion::common::{internal_err, plan_err, Result, ScalarValue};
 use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
@@ -29,7 +31,9 @@ use regex::Regex;
 /// WrenDialect is a dialect for Wren engine. Handle the identifier quote style based on the
 /// original Datafusion Dialect implementation but with more strict rules.
 /// If the identifier isn't lowercase, it will be quoted.
-pub struct WrenDialect {}
+pub struct WrenDialect {
+    inner_dialect: Box<dyn InnerDialect>,
+}
 
 impl Dialect for WrenDialect {
     fn identifier_quote_style(&self, identifier: &str) -> Option<char> {
@@ -54,6 +58,13 @@ impl Dialect for WrenDialect {
         func_name: &str,
         args: &[Expr],
     ) -> Result<Option<ast::Expr>> {
+        if let Some(function) = self
+            .inner_dialect
+            .scalar_function_to_sql_overrides(unparser, func_name, args)?
+        {
+            return Ok(Some(function));
+        }
+
         match func_name {
             "make_array" => {
                 let sql = self.make_array_to_sql(args, unparser)?;
@@ -73,7 +84,19 @@ impl Dialect for WrenDialect {
     }
 }
 
+impl Default for WrenDialect {
+    fn default() -> Self {
+        WrenDialect::new(&DataSource::default())
+    }
+}
+
 impl WrenDialect {
+    pub fn new(data_source: &DataSource) -> Self {
+        Self {
+            inner_dialect: get_inner_dialect(data_source),
+        }
+    }
+
     fn make_array_to_sql(&self, args: &[Expr], unparser: &Unparser) -> Result<ast::Expr> {
         let args = args
             .iter()

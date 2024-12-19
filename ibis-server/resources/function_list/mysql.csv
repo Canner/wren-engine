@@ -30,6 +30,7 @@ scalar,lpad,varchar,,"varchar,int,varchar","Left-pads string with specified char
 scalar,rpad,varchar,,"varchar,int,varchar","Right-pads string with specified characters to certain length"
 scalar,ltrim,varchar,,"varchar","Removes leading spaces from string"
 scalar,rtrim,varchar,,"varchar","Removes trailing spaces from string"
+scalar,trim,varchar,,"varchar","Removes leading and trailing spaces from string"
 scalar,power,decimal,,"decimal,decimal","Returns the value of number raised to specified power"
 scalar,quote,varchar,,"varchar","Escapes string and adds single quotes"
 scalar,repeat,varchar,,"varchar,int","Repeats a string specified number of times"

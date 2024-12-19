@@ -81,6 +81,7 @@ fn extract_manifest(
         relationships: used_relationships,
         metrics: mdl.metrics().to_vec(),
         views: used_views,
+        data_source: *mdl.data_source(),
     })
 }
 
@@ -162,7 +163,7 @@ mod tests {
     use wren_core::mdl::builder::{
         ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
     };
-    use wren_core::mdl::manifest::JoinType;
+    use wren_core::mdl::manifest::{DataSource, JoinType};
 
     #[fixture]
     pub fn mdl_base64() -> String {
@@ -213,6 +214,7 @@ mod tests {
             .relationship(c_o_relationship)
             .relationship(o_l_relationship)
             .view(c_view)
+            .data_source(DataSource::BigQuery)
             .build();
         to_json_base64(PyManifest::from(&manifest)).unwrap()
     }
