@@ -1,4 +1,4 @@
-import asyncio
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
@@ -9,7 +9,7 @@ from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.mdl.http import get_http_client, warmup_http_client
+from app.mdl.java_engine import JavaEngineConnector, get_java_engine_connector
 from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
@@ -18,12 +18,9 @@ get_config().init_logger()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    asyncio.create_task(warmup_http_client())  # noqa: RUF006
-
-    yield
-
-    await get_http_client().aclose()
+async def lifespan(app: FastAPI) -> AsyncIterator[dict[str, JavaEngineConnector]]:
+    async with get_java_engine_connector() as java_engine_connector:
+        yield {"java_engine_connector": java_engine_connector}
 
 
 app = FastAPI(lifespan=lifespan)
