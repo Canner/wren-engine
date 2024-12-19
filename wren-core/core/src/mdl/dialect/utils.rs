@@ -50,7 +50,7 @@ pub(crate) fn scalar_function_to_sql_internal(
     func_name: &str,
     args: &[Expr],
 ) -> Result<Option<ast::Expr>> {
-    let args = function_args_to_sql(&unparser, args)?;
+    let args = function_args_to_sql(unparser, args)?;
     Ok(Some(ast::Expr::Function(Function {
         name: ObjectName(vec![Ident {
             value: func_name.to_string(),

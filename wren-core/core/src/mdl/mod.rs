@@ -359,9 +359,7 @@ pub async fn transform_sql_with_ctx(
 
     let data_source = analyzed_mdl.wren_mdl().data_source().unwrap_or_default();
     let wren_dialect = WrenDialect::new(&data_source);
-    let unparser =
-        Unparser::new(&wren_dialect)
-            .with_pretty(true);
+    let unparser = Unparser::new(&wren_dialect).with_pretty(true);
     // show the planned sql
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
@@ -433,6 +431,7 @@ mod test {
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
     use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::function::RemoteFunction;
+    use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{
@@ -444,7 +443,6 @@ mod test {
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
-    use crate::mdl::manifest::DataSource::MySQL;
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -1323,7 +1321,8 @@ mod test {
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let ctx = SessionContext::new();
         let expected = "SELECT trim(' abc')";
-        let actual = transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
         assert_eq!(actual, expected);
 
         let manifest: Manifest = serde_json::from_str(r#"{"catalog":"my_catalog","schema":"my_schema","data_source":"MYSQL","models":[],"relationships":[],"metrics":[],"views":[]}"#).unwrap();
@@ -1331,7 +1330,8 @@ mod test {
         let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
         let ctx = SessionContext::new();
         let expected = "SELECT trim(' abc')";
-        let actual = transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
         assert_eq!(actual, expected);
         Ok(())
     }

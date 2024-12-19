@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::sync::Arc;
 use wren_core::mdl::manifest::{
-    Column, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
+    Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeGrain,
+    TimeUnit, View,
 };
 
 /// Convert a manifest to a JSON string and then encode it as base64.
@@ -27,9 +28,11 @@ pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
 
 #[pyclass(name = "Manifest")]
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PyManifest {
     pub catalog: String,
     pub schema: String,
+    pub data_source: Option<DataSource>,
     pub models: Vec<Arc<Model>>,
     pub relationships: Vec<Arc<Relationship>>,
     pub metrics: Vec<Arc<Metric>>,
@@ -83,6 +86,11 @@ impl PyManifest {
             .map(|v| PyView::from(v.as_ref()))
             .collect())
     }
+
+    #[getter]
+    fn data_source(&self) -> PyResult<Option<PyDataSource>> {
+        Ok(self.data_source.map(PyDataSource::from))
+    }
 }
 
 impl From<&Manifest> for PyManifest {
@@ -94,6 +102,7 @@ impl From<&Manifest> for PyManifest {
             relationships: manifest.relationships.clone(),
             metrics: manifest.metrics.clone(),
             views: manifest.views.clone(),
+            data_source: manifest.data_source,
         }
     }
 }
@@ -300,14 +309,57 @@ impl From<&View> for PyView {
     }
 }
 
+#[pyclass(name = "DataSource", eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PyDataSource {
+    #[serde(alias = "bigquery")]
+    BigQuery,
+    #[serde(alias = "clickhouse")]
+    Clickhouse,
+    #[serde(alias = "canner")]
+    Canner,
+    #[serde(alias = "trino")]
+    Trino,
+    #[serde(alias = "mssql")]
+    MsSQL,
+    #[serde(alias = "mysql")]
+    MySQL,
+    #[serde(alias = "postgres")]
+    Postgres,
+    #[serde(alias = "snowflake")]
+    Snowflake,
+    #[serde(alias = "datafusion")]
+    Datafusion,
+    #[serde(alias = "duckdb")]
+    DuckDB,
+}
+
+impl From<DataSource> for PyDataSource {
+    fn from(data_source: DataSource) -> Self {
+        match data_source {
+            DataSource::BigQuery => PyDataSource::BigQuery,
+            DataSource::Clickhouse => PyDataSource::Clickhouse,
+            DataSource::Canner => PyDataSource::Canner,
+            DataSource::Trino => PyDataSource::Trino,
+            DataSource::MSSQL => PyDataSource::MsSQL,
+            DataSource::MySQL => PyDataSource::MySQL,
+            DataSource::Postgres => PyDataSource::Postgres,
+            DataSource::Snowflake => PyDataSource::Snowflake,
+            DataSource::Datafusion => PyDataSource::Datafusion,
+            DataSource::DuckDB => PyDataSource::DuckDB,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::manifest::{to_json_base64, to_manifest, PyManifest};
-    use rstest::rstest;
     use std::sync::Arc;
+    use wren_core::mdl::manifest::DataSource::BigQuery;
     use wren_core::mdl::manifest::Model;
 
-    #[rstest]
+    #[test]
     fn test_manifest_to_json_base64() {
         let py_manifest = PyManifest {
             catalog: "catalog".to_string(),
@@ -337,6 +389,7 @@ mod tests {
             relationships: vec![],
             metrics: vec![],
             views: vec![],
+            data_source: Some(BigQuery),
         };
         let base64_str = to_json_base64(py_manifest).unwrap();
         let manifest = to_manifest(&base64_str).unwrap();
@@ -350,5 +403,6 @@ mod tests {
         );
         assert_eq!(manifest.models[1].name(), "model_2");
         assert_eq!(manifest.models[1].table_reference(), "catalog.schema.table");
+        assert_eq!(manifest.data_source, Some(BigQuery));
     }
 }

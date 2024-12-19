@@ -36,7 +36,7 @@ pub trait InnerDialect: Send + Sync {
 }
 
 pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
-   match data_source {
+    match data_source {
         DataSource::MySQL => Box::new(MySQLDialect {}),
         _ => Box::new(GenericDialect {}),
     }
