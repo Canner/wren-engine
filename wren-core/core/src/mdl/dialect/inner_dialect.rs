@@ -24,7 +24,10 @@ use datafusion::logical_expr::Expr;
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::unparser::Unparser;
 
+/// [InnerDialect] is a trait that defines the methods that for dialect-specific SQL generation.
 pub trait InnerDialect: Send + Sync {
+    /// This method is used to override the SQL generation for scalar functions.
+    /// If the function is not rewritten, it should return `None`.
     fn scalar_function_to_sql_overrides(
         &self,
         _unparser: &Unparser,
@@ -35,6 +38,7 @@ pub trait InnerDialect: Send + Sync {
     }
 }
 
+/// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
 pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
     match data_source {
         DataSource::MySQL => Box::new(MySQLDialect {}),
@@ -42,10 +46,13 @@ pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
     }
 }
 
+/// [GenericDialect] is a dialect that doesn't have any specific SQL generation rules.
+/// It follows the default DataFusion SQL generation.
 pub struct GenericDialect {}
 
 impl InnerDialect for GenericDialect {}
 
+/// [MySQLDialect] is a dialect that overrides the SQL generation for MySQL dialect.
 pub struct MySQLDialect {}
 
 impl InnerDialect for MySQLDialect {
