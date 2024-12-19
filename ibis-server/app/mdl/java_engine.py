@@ -4,12 +4,11 @@ import httpx
 from orjson import orjson
 
 from app.config import get_config
-from app.pattern import Singleton
 
 wren_engine_endpoint = get_config().wren_engine_endpoint
 
 
-class JavaEngineConnector(metaclass=Singleton):
+class JavaEngineConnector:
     def __init__(self):
         self.client = httpx.AsyncClient(
             base_url=wren_engine_endpoint,
