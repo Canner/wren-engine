@@ -69,6 +69,15 @@ jobs:
     outputs:
       next_version: ${{ steps.next_version.outputs.value }}
       maven_version: ${{ steps.maven_prepare_release.outputs.version_number }}
+  push-tag:
+    needs: prepare-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push tag
+        run: |
+          git tag -a ${{ needs.prepare-version.outputs.next_version }} -m "Release ${{ needs.prepare-version.outputs.next_version }}"
+          git push origin ${{ needs.prepare-version.outputs.next_version }}
   gh-releasse:
     needs: prepare-version
     runs-on: ubuntu-latest
