@@ -10,6 +10,7 @@ from tests.routers.v3.connector.mysql.conftest import base_url
 from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
+    "dataSource": "mysql",
     "catalog": "my_catalog",
     "schema": "my_schema",
     "models": [
