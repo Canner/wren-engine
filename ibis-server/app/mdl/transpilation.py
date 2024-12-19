@@ -36,24 +36,20 @@ class Transpiler:
 
     @staticmethod
     def _build_model_dict(models):
-        models_dict = defaultdict(lambda: defaultdict(list))
+        models_dict = defaultdict(lambda: defaultdict(dict))
         for model in models:
             if table_ref := model.get("tableReference", None):
                 catalog = table_ref.get("catalog", "")
                 schema = table_ref.get("schema", "")
-                models_dict[catalog][schema].append(model)
+                table = table_ref.get("table", "")
+                models_dict[catalog][schema][table] = model
         return dict(models_dict)
 
     def find_model(self, source: exp.Table):
         catalog = source.catalog or ""
         schema = source.db or ""
         name = source.name
-        if catalog not in self.model_dict or schema not in self.model_dict[catalog]:
-            return None
-        for model in self.model_dict[catalog][schema]:
-            if model["tableReference"]["table"] == name:
-                return model
-        return None
+        return self.model_dict.get(catalog, {}).get(schema, {}).get(name, None)
 
 
 def quote(s: str) -> str:
