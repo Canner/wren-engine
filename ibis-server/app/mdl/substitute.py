@@ -1,5 +1,4 @@
 import base64
-from collections import defaultdict
 
 from orjson import orjson
 from sqlglot import exp, parse_one
@@ -36,14 +35,11 @@ class ModelSubstitute:
 
     @staticmethod
     def _build_model_dict(models) -> dict:
-        models_dict = defaultdict(lambda: defaultdict(dict))
-        for model in models:
-            if table_ref := model.get("tableReference", None):
-                catalog = table_ref.get("catalog", "")
-                schema = table_ref.get("schema", "")
-                table = table_ref.get("table", "")
-                models_dict[f"{catalog}.{schema}.{table}"] = model
-        return dict(models_dict)
+        def key(model):
+            table_ref = model["tableReference"]
+            return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+
+        return {key(model): model for model in models if "tableReference" in model}
 
     def _find_model(self, source: exp.Table) -> dict | None:
         catalog = source.catalog or ""
