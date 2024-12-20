@@ -18,6 +18,8 @@ from app.routers import v2, v3
 get_config().init_logger()
 
 
+# Define the state of the application
+# Use state to store the singleton instance
 class State(TypedDict):
     java_engine_connector: JavaEngineConnector
 
