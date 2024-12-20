@@ -22,7 +22,7 @@ class ModelSubstitute:
                 if isinstance(source, exp.Table):
                     model = self._find_model(source)
                     if model is None:
-                        raise TranspileError(f"Model not found: {source}")
+                        raise SubstituteError(f"Model not found: {source}")
                     source.replace(
                         exp.Table(
                             catalog=quote(self.manifest["catalog"]),
@@ -52,6 +52,6 @@ def quote(s: str) -> str:
     return f'"{s}"'
 
 
-class TranspileError(UnprocessableEntityError):
+class SubstituteError(UnprocessableEntityError):
     def __init__(self, message: str):
         super().__init__(message)
