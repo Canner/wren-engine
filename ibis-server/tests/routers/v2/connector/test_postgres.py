@@ -23,7 +23,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
-                "schema": "tpch_tiny",
+                "schema": "public",
                 "table": "orders",
             },
             "columns": [
