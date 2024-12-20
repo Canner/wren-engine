@@ -2,7 +2,8 @@ import base64
 
 import orjson
 import pytest
-from routers.v3.connector.postgres.conftest import base_url
+
+from tests.routers.v3.connector.postgres.conftest import base_url
 
 manifest = {
     "catalog": "my_catalog",
