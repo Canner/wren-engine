@@ -42,14 +42,14 @@ class ModelSubstitute:
                 catalog = table_ref.get("catalog", "")
                 schema = table_ref.get("schema", "")
                 table = table_ref.get("table", "")
-                models_dict[catalog][schema][table] = model
+                models_dict[f"{catalog}.{schema}.{table}"] = model
         return dict(models_dict)
 
     def _find_model(self, source: exp.Table) -> dict | None:
         catalog = source.catalog or ""
         schema = source.db or ""
-        name = source.name
-        return self.model_dict.get(catalog, {}).get(schema, {}).get(name, None)
+        table = source.name
+        return self.model_dict.get(f"{catalog}.{schema}.{table}", None)
 
 
 def quote(s: str) -> str:
