@@ -77,9 +77,11 @@ async def model_substitute(
     dto: TranspileDTO,
 ) -> str:
     sql = ModelSubstitute(data_source, dto.manifest_str).substitute(dto.sql)
-    await Rewriter(
-        dto.manifest_str,
-        data_source=data_source,
-        experiment=True,
-    ).rewrite(sql)
+    Connector(data_source, dto.connection_info).dry_run(
+        await Rewriter(
+            dto.manifest_str,
+            data_source=data_source,
+            experiment=True,
+        ).rewrite(sql)
+    )
     return sql
