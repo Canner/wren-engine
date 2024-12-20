@@ -11,7 +11,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
-                "schema": "tpch_tiny",
+                "schema": "public",
                 "table": "orders",
             },
         },
@@ -30,7 +30,7 @@ async def test_replace_table(client, manifest_str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "tpch_tiny"."orders"',
+            "sql": 'SELECT * FROM "public"."orders"',
         },
     )
     assert response.status_code == 200
@@ -48,7 +48,7 @@ async def test_replace_table_with_cte(client, manifest_str, connection_info):
             "manifestStr": manifest_str,
             "sql": """
                 WITH orders_cte AS (
-                    SELECT * FROM "tpch_tiny"."orders"
+                    SELECT * FROM "public"."orders"
                 )
                 SELECT * FROM orders_cte;
             """,
@@ -69,7 +69,7 @@ async def test_replace_table_with_subquery(client, manifest_str, connection_info
             "manifestStr": manifest_str,
             "sql": """
                 SELECT * FROM (
-                    SELECT * FROM "tpch_tiny"."orders"
+                    SELECT * FROM "public"."orders"
                 ) AS orders_subquery;
             """,
         },
