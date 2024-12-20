@@ -33,17 +33,19 @@ class Rewriter:
         self.manifest_str = manifest_str
         self.data_source = data_source
         self.experiment = experiment
-        self.manifest_extractor = get_manifest_extractor(self.manifest_str)
         if experiment:
             function_path = get_config().get_remote_function_list_path(data_source)
             self._rewriter = EmbeddedEngineRewriter(function_path)
         else:
             self._rewriter = ExternalEngineRewriter(java_engine_connector)
 
+    def _transpile(self, planned_sql: str) -> str:
+        read = self._get_read_dialect(self.experiment)
+        write = self._get_write_dialect(self.data_source)
+        return sqlglot.transpile(planned_sql, read=read, write=write)[0]
+
     async def rewrite(self, sql: str) -> str:
-        tables = self.manifest_extractor.resolve_used_table_names(sql)
-        manifest = self.manifest_extractor.extract_by(tables)
-        manifest_str = to_json_base64(manifest)
+        manifest_str = self._extract_manifest(self.manifest_str, sql)
         logger.debug("Extracted manifest: {}", manifest_str)
         planned_sql = await self._rewriter.rewrite(manifest_str, sql)
         logger.debug("Planned SQL: {}", planned_sql)
@@ -51,10 +53,15 @@ class Rewriter:
         logger.debug("Dialect SQL: {}", dialect_sql)
         return dialect_sql
 
-    def _transpile(self, planned_sql: str) -> str:
-        read = self._get_read_dialect(self.experiment)
-        write = self._get_write_dialect(self.data_source)
-        return sqlglot.transpile(planned_sql, read=read, write=write)[0]
+    @staticmethod
+    def _extract_manifest(manifest_str: str, sql: str) -> str:
+        try:
+            extractor = get_manifest_extractor(manifest_str)
+            tables = extractor.resolve_used_table_names(sql)
+            manifest = extractor.extract_by(tables)
+            return to_json_base64(manifest)
+        except Exception as e:
+            raise RewriteError(str(e))
 
     @classmethod
     def _get_read_dialect(cls, experiment) -> str | None:
