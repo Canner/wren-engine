@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import TypedDict
 from uuid import uuid4
 
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -9,7 +10,7 @@ from loguru import logger
 from starlette.responses import PlainTextResponse
 
 from app.config import get_config
-from app.mdl.java_engine import JavaEngineConnector, get_java_engine_connector
+from app.mdl.java_engine import JavaEngineConnector
 from app.middleware import ProcessTimeMiddleware, RequestLogMiddleware
 from app.model import ConfigModel, CustomHttpError
 from app.routers import v2, v3
@@ -17,9 +18,15 @@ from app.routers import v2, v3
 get_config().init_logger()
 
 
+# Define the state of the application
+# Use state to store the singleton instance
+class State(TypedDict):
+    java_engine_connector: JavaEngineConnector
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[dict[str, JavaEngineConnector]]:
-    async with get_java_engine_connector() as java_engine_connector:
+async def lifespan(app: FastAPI) -> AsyncIterator[State]:
+    async with JavaEngineConnector() as java_engine_connector:
         yield {"java_engine_connector": java_engine_connector}
 
 
