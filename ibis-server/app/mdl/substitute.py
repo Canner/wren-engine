@@ -9,13 +9,13 @@ from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
 
 
-class TableReplacer:
+class ModelSubstitute:
     def __init__(self, data_source: DataSource, manifest_str: str):
         self.data_source = data_source
         self.manifest = orjson.loads(base64.b64decode(manifest_str).decode("utf-8"))
         self.model_dict = self._build_model_dict(self.manifest["models"])
 
-    def replace(self, sql: str, write: str | None = None) -> str:
+    def substitute(self, sql: str, write: str | None = None) -> str:
         ast = parse_one(sql, dialect=self.data_source.value)
         root = build_scope(ast)
         for scope in root.traverse():

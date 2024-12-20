@@ -500,10 +500,10 @@ async def test_dry_plan(client, manifest_str):
     assert response.text is not None
 
 
-async def test_replace_table(client, manifest_str, postgres: PostgresContainer):
+async def test_model_substitute(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/replace-table",
+        url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -517,12 +517,12 @@ async def test_replace_table(client, manifest_str, postgres: PostgresContainer):
     )
 
 
-async def test_replace_table_with_cte(
+async def test_model_substitute_with_cte(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/replace-table",
+        url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -541,12 +541,12 @@ async def test_replace_table_with_cte(
     )
 
 
-async def test_replace_table_with_subquery(
+async def test_model_substitute_with_subquery(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/replace-table",
+        url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -564,12 +564,12 @@ async def test_replace_table_with_subquery(
     )
 
 
-async def test_replace_table_out_of_scope(
+async def test_model_substitute_out_of_scope(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
-        url=f"{base_url}/replace-table",
+        url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
@@ -578,6 +578,22 @@ async def test_replace_table_out_of_scope(
     )
     assert response.status_code == 422
     assert response.text == 'Model not found: "Nation"'
+
+
+async def test_model_substitute_non_existent_column(
+    client, manifest_str, postgres: PostgresContainer
+):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT x FROM "public"."orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 422
+    assert 'column "x" does not exist' in response.text
 
 
 def _to_connection_info(pg: PostgresContainer):
