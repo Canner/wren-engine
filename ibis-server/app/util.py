@@ -1,9 +1,14 @@
+import base64
 import datetime
 import decimal
 
 import orjson
 import pandas as pd
 from pandas.core.dtypes.common import is_datetime64_any_dtype
+
+
+def base64_to_dict(base64_str: str) -> dict:
+    return orjson.loads(base64.b64decode(base64_str).decode("utf-8"))
 
 
 def to_json(df: pd.DataFrame) -> dict:

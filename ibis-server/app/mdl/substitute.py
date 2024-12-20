@@ -1,17 +1,15 @@
-import base64
-
-from orjson import orjson
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.scope import build_scope
 
 from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
+from app.util import base64_to_dict
 
 
 class ModelSubstitute:
     def __init__(self, data_source: DataSource, manifest_str: str):
         self.data_source = data_source
-        self.manifest = orjson.loads(base64.b64decode(manifest_str).decode("utf-8"))
+        self.manifest = base64_to_dict(manifest_str)
         self.model_dict = self._build_model_dict(self.manifest["models"])
 
     def substitute(self, sql: str, write: str | None = None) -> str:
