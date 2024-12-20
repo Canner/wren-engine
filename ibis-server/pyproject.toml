@@ -24,7 +24,9 @@ httpx = "0.28.1"
 python-dotenv = "1.0.1"
 orjson = "3.10.12"
 pandas = "2.2.3"
-sqlglot = { extras = ["rs"], version = "26.0.0" }
+sqlglot = { extras = [
+  "rs",
+], version = ">=23.4,<25.21" } # the version should follow the ibis-framework
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
