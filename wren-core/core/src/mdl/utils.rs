@@ -1,7 +1,4 @@
-use std::collections::{BTreeSet, VecDeque};
-use std::ops::ControlFlow;
-use std::sync::Arc;
-
+use datafusion::arrow::datatypes::Field;
 use datafusion::common::{plan_err, Column, DFSchema};
 use datafusion::error::Result;
 use datafusion::execution::session_state::SessionState;
@@ -12,8 +9,11 @@ use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use petgraph::algo::is_cyclic_directed;
 use petgraph::{EdgeType, Graph};
+use std::collections::{BTreeSet, VecDeque};
+use std::ops::ControlFlow;
+use std::sync::Arc;
 
-use crate::logical_plan::utils::from_qualified_name;
+use crate::logical_plan::utils::{from_qualified_name, map_data_type};
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset, SessionStateRef};
 
@@ -208,6 +208,46 @@ pub fn quoted_ident(s: &str) -> Ident {
 #[inline]
 pub fn quoted(s: &str) -> String {
     format!("\"{}\"", s)
+}
+
+/// Transform the column to a datafusion field
+pub fn to_field(column: &wren_core_base::mdl::Column) -> Result<Field> {
+    let data_type = map_data_type(&column.r#type)?;
+    Ok(Field::new(&column.name, data_type, column.not_null))
+}
+
+/// Transform the column to a datafusion field for a remote table
+pub fn to_remote_field(
+    column: &wren_core_base::mdl::Column,
+    session_state: SessionStateRef,
+) -> Result<Vec<Field>> {
+    if column.expression().is_some() {
+        let session_state = session_state.read();
+        let expr = session_state.sql_to_expr(
+            column.expression().unwrap(),
+            session_state.config_options().sql_parser.dialect.as_str(),
+        )?;
+        let columns = collect_columns(expr);
+        columns
+            .into_iter()
+            .map(|c| Ok(Field::new(c.value, map_data_type(&column.r#type)?, false)))
+            .collect::<Result<_>>()
+    } else {
+        Ok(vec![to_field(column)?])
+    }
+}
+
+fn collect_columns(expr: datafusion::logical_expr::sqlparser::ast::Expr) -> Vec<Ident> {
+    let mut visited = vec![];
+    visit_expressions(&expr, |e| {
+        if let CompoundIdentifier(ids) = e {
+            ids.iter().cloned().for_each(|id| visited.push(id));
+        } else if let Identifier(id) = e {
+            visited.push(id.clone());
+        }
+        ControlFlow::<()>::Continue(())
+    });
+    visited
 }
 
 #[cfg(test)]

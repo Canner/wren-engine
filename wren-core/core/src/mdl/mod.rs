@@ -7,6 +7,7 @@ use crate::mdl::function::{
     RemoteFunction,
 };
 use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
+use crate::mdl::utils::to_field;
 use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
@@ -26,14 +27,19 @@ use manifest::Relationship;
 use parking_lot::RwLock;
 use std::hash::Hash;
 use std::{collections::HashMap, sync::Arc};
+use wren_core_base::mdl::DataSource;
 
-pub mod builder;
+pub mod builder {
+    pub use wren_core_base::mdl::builder::*;
+}
 pub mod context;
 pub(crate) mod dataset;
 mod dialect;
 pub mod function;
 pub mod lineage;
-pub mod manifest;
+pub mod manifest {
+    pub use wren_core_base::mdl::manifest::*;
+}
 pub mod utils;
 
 pub type SessionStateRef = Arc<RwLock<SessionState>>;
@@ -220,7 +226,7 @@ impl WrenMDL {
                 Ok(None)
             }
         } else {
-            Ok(Some(column.to_field()?))
+            Ok(Some(to_field(column)?))
         }
     }
 
@@ -279,6 +285,10 @@ impl WrenMDL {
 
     pub fn metrics(&self) -> &[Arc<Metric>] {
         &self.manifest.metrics
+    }
+
+    pub fn data_source(&self) -> Option<DataSource> {
+        self.manifest.data_source
     }
 
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {
