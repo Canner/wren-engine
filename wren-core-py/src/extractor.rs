@@ -1,11 +1,12 @@
 use crate::errors::CoreError;
-use crate::manifest::{to_manifest, PyManifest};
+use crate::manifest::to_manifest;
 use pyo3::{pyclass, pymethods};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use wren_core::mdl::manifest::{Model, Relationship, View};
 use wren_core::mdl::WrenMDL;
+use wren_core_base::mdl::Manifest;
 
 #[pyclass]
 #[derive(Clone)]
@@ -36,10 +37,7 @@ impl PyManifestExtractor {
     /// If a model is related to another dataset, both datasets will be kept.
     /// The relationship between of them will be kept as well.
     /// A dataset could be model, view.
-    pub fn extract_by(
-        &self,
-        used_datasets: Vec<String>,
-    ) -> Result<PyManifest, CoreError> {
+    pub fn extract_by(&self, used_datasets: Vec<String>) -> Result<Manifest, CoreError> {
         extract_manifest(&self.mdl, &used_datasets)
     }
 }
@@ -69,18 +67,19 @@ fn resolve_used_table_names(mdl: &WrenMDL, sql: &str) -> Result<Vec<String>, Cor
 fn extract_manifest(
     mdl: &WrenMDL,
     used_datasets: &[String],
-) -> Result<PyManifest, CoreError> {
+) -> Result<Manifest, CoreError> {
     let extracted_models = extract_models(mdl, used_datasets);
     let (used_views, models_of_views) = extract_views(mdl, used_datasets);
     let used_models = [extracted_models, models_of_views].concat();
     let used_relationships = extract_relationships(mdl, &used_models);
-    Ok(PyManifest {
+    Ok(Manifest {
         catalog: mdl.catalog().to_string(),
         schema: mdl.schema().to_string(),
         models: used_models,
         relationships: used_relationships,
         metrics: mdl.metrics().to_vec(),
         views: used_views,
+        data_source: mdl.data_source(),
     })
 }
 
@@ -156,13 +155,14 @@ fn extract_relationships(
 #[cfg(test)]
 mod tests {
     use crate::extractor::PyManifestExtractor;
-    use crate::manifest::{to_json_base64, PyManifest};
+    use crate::manifest::to_json_base64;
     use rstest::{fixture, rstest};
     use std::iter::Iterator;
-    use wren_core::mdl::builder::{
+    use wren_core::mdl::manifest::JoinType;
+    use wren_core_base::mdl::builder::{
         ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
     };
-    use wren_core::mdl::manifest::JoinType;
+    use wren_core_base::mdl::Manifest;
 
     #[fixture]
     pub fn mdl_base64() -> String {
@@ -214,7 +214,7 @@ mod tests {
             .relationship(o_l_relationship)
             .view(c_view)
             .build();
-        to_json_base64(PyManifest::from(&manifest)).unwrap()
+        to_json_base64(manifest).unwrap()
     }
 
     #[fixture]
