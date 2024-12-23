@@ -7,6 +7,7 @@ use serde_with::NoneAsEmptyString;
 
 /// This is the main struct that holds all the information about the manifest
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub catalog: String,
     pub schema: String,
@@ -18,12 +19,11 @@ pub struct Manifest {
     pub metrics: Vec<Arc<Metric>>,
     #[serde(default)]
     pub views: Vec<Arc<View>>,
-    #[serde(default)]
     pub data_source: Option<DataSource>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum DataSource {
     #[serde(alias = "bigquery")]
     BigQuery,
@@ -42,6 +42,7 @@ pub enum DataSource {
     #[serde(alias = "snowflake")]
     Snowflake,
     #[serde(alias = "datafusion")]
+    #[default]
     Datafusion,
     #[serde(alias = "duckdb")]
     DuckDB,

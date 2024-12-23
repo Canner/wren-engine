@@ -6,7 +6,7 @@ use crate::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use crate::mdl::manifest::{Column, Manifest, Metric, Model, View};
+use crate::mdl::manifest::{Column, DataSource, Manifest, Metric, Model, View};
 use crate::DataFusionError;
 use datafusion::arrow::datatypes::Field;
 use datafusion::common::internal_datafusion_err;
@@ -281,6 +281,10 @@ impl WrenMDL {
         &self.manifest.metrics
     }
 
+    pub fn data_source(&self) -> &Option<DataSource> {
+        &self.manifest.data_source
+    }
+
     pub fn get_model(&self, name: &str) -> Option<Arc<Model>> {
         self.manifest
             .models
@@ -353,7 +357,9 @@ pub async fn transform_sql_with_ctx(
     let analyzed = ctx.state().optimize(&plan)?;
     debug!("wren-core final planned:\n {analyzed}");
 
-    let unparser = Unparser::new(&WrenDialect {}).with_pretty(true);
+    let data_source = analyzed_mdl.wren_mdl().data_source().unwrap_or_default();
+    let wren_dialect = WrenDialect::new(&data_source);
+    let unparser = Unparser::new(&wren_dialect).with_pretty(true);
     // show the planned sql
     match unparser.plan_to_sql(&analyzed) {
         Ok(sql) => {
@@ -425,6 +431,7 @@ mod test {
     use crate::mdl::builder::{ColumnBuilder, ManifestBuilder, ModelBuilder};
     use crate::mdl::context::create_ctx_with_mdl;
     use crate::mdl::function::RemoteFunction;
+    use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::Manifest;
     use crate::mdl::{self, transform_sql_with_ctx, AnalyzedWrenMDL};
     use datafusion::arrow::array::{
@@ -1305,6 +1312,18 @@ mod test {
         UNION ALL SELECT 2 AS x, 'a' AS y \
         UNION ALL SELECT 2 AS x, 'c' AS y)"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_dialect_specific_function_rewrite() -> Result<()> {
+        let manifest = ManifestBuilder::default().data_source(MySQL).build();
+        let mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let ctx = SessionContext::new();
+        let expected = "SELECT trim(' abc')";
+        let actual =
+            transform_sql_with_ctx(&ctx, Arc::clone(&mdl), &[], expected).await?;
+        assert_eq!(actual, expected);
         Ok(())
     }
 
