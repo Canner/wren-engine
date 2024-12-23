@@ -44,16 +44,3 @@ async def test_dry_plan(client, manifest_str):
     )
     assert response.status_code == 200
     assert response.text is not None
-
-
-@pytest.mark.skip(reason="Datafusion does not implement filter yet")
-async def test_keyword_filter(client, manifest_str):
-    response = await client.post(
-        url=f"{base_url}/dry-plan",
-        json={
-            "manifestStr": manifest_str,
-            "sql": "SELECT count(*) FILTER(WHERE o_orderkey != NULL) FROM wren.public.orders",
-        },
-    )
-    assert response.status_code == 200
-    assert response.text is not None

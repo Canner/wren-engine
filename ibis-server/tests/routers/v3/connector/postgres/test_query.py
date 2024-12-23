@@ -324,3 +324,17 @@ async def test_query_to_many_calculation(client, manifest_str, connection_info):
     assert len(result["columns"]) == 2
     assert len(result["data"]) == 1
     assert result["dtypes"] == {"c_custkey": "int32", "sum_totalprice": "float64"}
+
+
+@pytest.mark.skip(reason="Datafusion does not implement filter yet")
+async def test_query_with_keyword_filter(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT count(*) FILTER(WHERE o_orderkey != NULL) FROM wren.public.orders",
+        },
+    )
+    assert response.status_code == 200
+    assert response.text is not None
