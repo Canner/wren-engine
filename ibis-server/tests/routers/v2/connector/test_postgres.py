@@ -275,7 +275,10 @@ async def test_query_with_invalid_manifest_str(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Base64 decode error: Invalid padding"
+    assert (
+        "com.fasterxml.jackson.core.JsonParseException: Unexpected character"
+        in response.text
+    )
 
 
 async def test_query_without_manifest(client, postgres: PostgresContainer):
