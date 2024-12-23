@@ -139,5 +139,5 @@
       "statement": "select * from test.test.customer"
     }
   ],
-  "dataSource": "datafusion"
+  "dataSource": "mysql"
 }

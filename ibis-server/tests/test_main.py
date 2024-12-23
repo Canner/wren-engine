@@ -1,24 +1,27 @@
-from fastapi.testclient import TestClient
+import pytest
 
-from app.main import app
-
-client = TestClient(app)
+pytestmark = pytest.mark.anyio
 
 
-def test_root():
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.url == client.base_url.join("/docs")
+@pytest.fixture(scope="session")
+def anyio_backend():
+    return "asyncio"
 
 
-def test_health():
-    response = client.get("/health")
+async def test_root(client):
+    response = await client.get("/")
+    assert response.status_code == 307
+    assert response.next_request.url == client.base_url.join("/docs")
+
+
+async def test_health(client):
+    response = await client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_config():
-    response = client.get("/config")
+async def test_config(client):
+    response = await client.get("/config")
     assert response.status_code == 200
     assert response.json() == {
         "wren_engine_endpoint": "http://localhost:8080",
@@ -27,16 +30,16 @@ def test_config():
     }
 
 
-def test_update_diagnose():
-    response = client.patch("/config", json={"diagnose": True})
+async def test_update_diagnose(client):
+    response = await client.patch("/config", json={"diagnose": True})
     assert response.status_code == 200
     assert response.json()["diagnose"] is True
-    response = client.get("/config")
+    response = await client.get("/config")
     assert response.status_code == 200
     assert response.json()["diagnose"] is True
-    response = client.patch("/config", json={"diagnose": False})
+    response = await client.patch("/config", json={"diagnose": False})
     assert response.status_code == 200
     assert response.json()["diagnose"] is False
-    response = client.get("/config")
+    response = await client.get("/config")
     assert response.status_code == 200
     assert response.json()["diagnose"] is False

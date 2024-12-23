@@ -162,7 +162,7 @@ mod tests {
     use wren_core_base::mdl::builder::{
         ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
     };
-    use wren_core_base::mdl::Manifest;
+    use wren_core::mdl::manifest::{DataSource, JoinType};
 
     #[fixture]
     pub fn mdl_base64() -> String {
@@ -213,6 +213,7 @@ mod tests {
             .relationship(c_o_relationship)
             .relationship(o_l_relationship)
             .view(c_view)
+            .data_source(DataSource::BigQuery)
             .build();
         to_json_base64(manifest).unwrap()
     }

@@ -26,11 +26,11 @@ pub fn to_manifest(mdl_base64: &str) -> Result<Manifest, CoreError> {
 #[cfg(test)]
 mod tests {
     use crate::manifest::{to_json_base64, to_manifest, Manifest};
-    use rstest::rstest;
     use std::sync::Arc;
+    use wren_core::mdl::manifest::DataSource::BigQuery;
     use wren_core::mdl::manifest::Model;
 
-    #[rstest]
+    #[test]
     fn test_manifest_to_json_base64() {
         let py_manifest = Manifest {
             catalog: "catalog".to_string(),
@@ -60,7 +60,7 @@ mod tests {
             relationships: vec![],
             metrics: vec![],
             views: vec![],
-            data_source: None,
+            data_source: Some(BigQuery),
         };
         let base64_str = to_json_base64(py_manifest).unwrap();
         let manifest = to_manifest(&base64_str).unwrap();
@@ -74,5 +74,6 @@ mod tests {
         );
         assert_eq!(manifest.models[1].name(), "model_2");
         assert_eq!(manifest.models[1].table_reference(), "catalog.schema.table");
+        assert_eq!(manifest.data_source, Some(BigQuery));
     }
 }

@@ -349,12 +349,16 @@ impl ViewBuilder {
 #[cfg(test)]
 mod test {
     use crate::mdl::builder::{
-        ColumnBuilder, MetricBuilder, ModelBuilder, RelationshipBuilder, TimeGrainBuilder,
-        ViewBuilder,
+        ColumnBuilder, ManifestBuilder, MetricBuilder, ModelBuilder, RelationshipBuilder,
+        TimeGrainBuilder, ViewBuilder,
     };
+    use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::{
-        Column, DataSource, JoinType, Metric, Model, Relationship, TimeUnit, View,
+        Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeUnit,
+        View,
     };
+    use std::fs;
+    use std::path::PathBuf;
     use std::sync::Arc;
 
     #[test]
@@ -577,5 +581,113 @@ mod test {
         let json_str = serde_json::to_string(&expected).unwrap();
         let actual: crate::mdl::manifest::Manifest = serde_json::from_str(&json_str).unwrap();
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn test_json_serde() {
+        let test_data: PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+                .iter()
+                .collect();
+        let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
+        let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
+
+        let expected = ManifestBuilder::new()
+            .catalog("test")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "integer").build())
+                    .column(ColumnBuilder::new("c_name", "varchar").build())
+                    .column(
+                        ColumnBuilder::new("custkey_plus", "integer")
+                            .expression("c_custkey + 1")
+                            .calculated(true)
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("orders", "orders")
+                            .relationship("CustomerOrders")
+                            .build(),
+                    )
+                    .primary_key("c_custkey")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("profile")
+                    .table_reference("profile")
+                    .column(ColumnBuilder::new("p_custkey", "integer").build())
+                    .column(ColumnBuilder::new("p_phone", "varchar").build())
+                    .column(ColumnBuilder::new("p_sex", "varchar").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("CustomerProfile")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("totalcost", "integer")
+                            .expression("sum(customer.orders.o_totalprice)")
+                            .calculated(true)
+                            .build(),
+                    )
+                    .primary_key("p_custkey")
+                    .build(),
+            )
+            .model(
+                ModelBuilder::new("orders")
+                    .table_reference("orders")
+                    .column(ColumnBuilder::new("o_orderkey", "integer").build())
+                    .column(ColumnBuilder::new("o_custkey", "integer").build())
+                    .column(ColumnBuilder::new("o_totalprice", "integer").build())
+                    .column(
+                        ColumnBuilder::new("customer", "customer")
+                            .relationship("CustomerOrders")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("customer_name", "varchar")
+                            .expression("customer.c_name")
+                            .calculated(true)
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("orderkey_plus_custkey", "integer")
+                            .expression("o_orderkey + o_custkey")
+                            .calculated(true)
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("hash_orderkey", "varchar")
+                            .expression("md5(o_orderkey)")
+                            .calculated(true)
+                            .build(),
+                    )
+                    .primary_key("o_orderkey")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("CustomerOrders")
+                    .model("customer")
+                    .model("orders")
+                    .join_type(JoinType::OneToMany)
+                    .condition("customer.c_custkey = orders.o_custkey")
+                    .build(),
+            )
+            .relationship(
+                RelationshipBuilder::new("CustomerProfile")
+                    .model("customer")
+                    .model("profile")
+                    .join_type(JoinType::OneToOne)
+                    .condition("customer.c_custkey = profile.p_custkey")
+                    .build(),
+            )
+            .view(
+                ViewBuilder::new("customer_view")
+                    .statement("select * from test.test.customer")
+                    .build(),
+            )
+            .data_source(MySQL);
+        assert_eq!(mdl, expected.build());
     }
 }
