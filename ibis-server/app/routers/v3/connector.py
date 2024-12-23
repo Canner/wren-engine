@@ -7,9 +7,11 @@ from app.config import get_config
 from app.dependencies import verify_query_dto
 from app.mdl.core import get_session_context
 from app.mdl.rewriter import Rewriter
+from app.mdl.substitute import ModelSubstitute
 from app.model import (
     DryPlanDTO,
     QueryDTO,
+    TranspileDTO,
     ValidateDTO,
 )
 from app.model.connector import Connector
@@ -67,3 +69,19 @@ def functions(data_source: DataSource) -> Response:
     session_context = get_session_context(None, file_path)
     func_list = [f.to_dict() for f in session_context.get_available_functions()]
     return ORJSONResponse(func_list)
+
+
+@router.post("/{data_source}/model-substitute")
+async def model_substitute(
+    data_source: DataSource,
+    dto: TranspileDTO,
+) -> str:
+    sql = ModelSubstitute(data_source, dto.manifest_str).substitute(dto.sql)
+    Connector(data_source, dto.connection_info).dry_run(
+        await Rewriter(
+            dto.manifest_str,
+            data_source=data_source,
+            experiment=True,
+        ).rewrite(sql)
+    )
+    return sql

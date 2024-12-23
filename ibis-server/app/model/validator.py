@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import base64
-import json
-
 from app.mdl.rewriter import Rewriter
 from app.model import NotFoundError, UnprocessableEntityError
 from app.model.connector import Connector
+from app.util import base64_to_dict
 
 rules = ["column_is_valid", "relationship_is_valid"]
 
@@ -48,8 +46,8 @@ class Validator:
         relationship_name = parameters.get("relationshipName")
         if relationship_name is None:
             raise MissingRequiredParameterError("relationship")
-        decoded_manifest = base64.b64decode(manifest_str).decode("utf-8")
-        manifest = json.loads(decoded_manifest)
+
+        manifest = base64_to_dict(manifest_str)
 
         relationship = list(
             filter(lambda r: r["name"] == relationship_name, manifest["relationships"])

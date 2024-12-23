@@ -6,9 +6,11 @@ from fastapi.responses import ORJSONResponse
 from app.dependencies import verify_query_dto
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
+from app.mdl.substitute import ModelSubstitute
 from app.model import (
     DryPlanDTO,
     QueryDTO,
+    TranspileDTO,
     ValidateDTO,
 )
 from app.model.connector import Connector
@@ -104,3 +106,22 @@ async def dry_plan_for_data_source(
         data_source=data_source,
         java_engine_connector=java_engine_connector,
     ).rewrite(dto.sql)
+
+
+@router.post("/{data_source}/model-substitute")
+async def model_substitute(
+    data_source: DataSource,
+    dto: TranspileDTO,
+    java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
+) -> str:
+    sql = ModelSubstitute(data_source, dto.manifest_str).substitute(
+        dto.sql, write="trino"
+    )
+    Connector(data_source, dto.connection_info).dry_run(
+        await Rewriter(
+            dto.manifest_str,
+            data_source=data_source,
+            java_engine_connector=java_engine_connector,
+        ).rewrite(sql)
+    )
+    return sql
