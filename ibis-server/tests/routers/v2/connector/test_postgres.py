@@ -275,7 +275,10 @@ async def test_query_with_invalid_manifest_str(
         },
     )
     assert response.status_code == 422
-    assert response.text == "Base64 decode error: Invalid padding"
+    assert (
+        "com.fasterxml.jackson.core.JsonParseException: Unexpected character"
+        in response.text
+    )
 
 
 async def test_query_without_manifest(client, postgres: PostgresContainer):
@@ -354,6 +357,19 @@ async def test_query_with_dry_run_and_invalid_sql(
     )
     assert response.status_code == 422
     assert response.text is not None
+
+
+async def test_query_with_keyword_filter(client, manifest_str, postgres):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT count(*) FILTER(WHERE orderkey IS NOT NULL) FROM "Orders"',
+        },
+    )
+    assert response.status_code == 200
 
 
 async def test_validate_with_unknown_rule(
