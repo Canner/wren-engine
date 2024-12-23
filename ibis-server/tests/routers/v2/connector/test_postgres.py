@@ -617,7 +617,7 @@ async def test_keyword_filter(client, manifest_str):
         url=f"{base_url}/dry-plan",
         json={
             "manifestStr": manifest_str,
-            "sql": 'SELECT count(*) FILTER(WHERE orders.o_orderkey != NULL) FROM "Orders"',
+            "sql": 'SELECT count(*) FILTER(WHERE o_orderkey != NULL) FROM "Orders"',
         },
     )
     assert response.status_code == 200
@@ -634,7 +634,7 @@ async def test_query_with_keyword_filter(client, manifest_str, postgres):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT count(*) FILTER(WHERE orders.o_orderkey != NULL) FROM "Orders"',
+            "sql": 'SELECT count(*) FILTER(WHERE o_orderkey != NULL) FROM "Orders"',
         },
     )
     assert response.status_code == 200
