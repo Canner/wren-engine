@@ -354,8 +354,7 @@ mod test {
     };
     use crate::mdl::manifest::DataSource::MySQL;
     use crate::mdl::manifest::{
-        Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeUnit,
-        View,
+        Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeUnit, View,
     };
     use std::fs;
     use std::path::PathBuf;
@@ -585,10 +584,9 @@ mod test {
 
     #[test]
     fn test_json_serde() {
-        let test_data: PathBuf =
-            [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
-                .iter()
-                .collect();
+        let test_data: PathBuf = [env!("CARGO_MANIFEST_DIR"), "tests", "data", "mdl.json"]
+            .iter()
+            .collect();
         let mdl_json = fs::read_to_string(test_data.as_path()).unwrap();
         let mdl = serde_json::from_str::<Manifest>(&mdl_json).unwrap();
 

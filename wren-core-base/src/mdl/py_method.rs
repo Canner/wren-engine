@@ -20,6 +20,7 @@
 #[cfg(feature = "python-binding")]
 mod manifest_python_impl {
     use crate::mdl::manifest::{Manifest, Model};
+    use crate::mdl::DataSource;
     use pyo3::{pymethods, PyResult};
     use std::sync::Arc;
 
@@ -42,6 +43,11 @@ mod manifest_python_impl {
                 .iter()
                 .map(|m| Arc::unwrap_or_clone(Arc::clone(m)))
                 .collect())
+        }
+
+        #[getter]
+        fn data_source(&self) -> PyResult<Option<DataSource>> {
+            Ok(self.data_source)
         }
     }
 

@@ -2,8 +2,6 @@ use crate::errors::CoreError;
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
 use pyo3::pyfunction;
-use serde::{Deserialize, Serialize};
-use std::iter::Iterator;
 
 pub use wren_core_base::mdl::*;
 

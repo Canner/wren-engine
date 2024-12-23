@@ -158,11 +158,10 @@ mod tests {
     use crate::manifest::to_json_base64;
     use rstest::{fixture, rstest};
     use std::iter::Iterator;
-    use wren_core::mdl::manifest::JoinType;
+    use wren_core::mdl::manifest::{DataSource, JoinType};
     use wren_core_base::mdl::builder::{
         ColumnBuilder, ManifestBuilder, ModelBuilder, RelationshipBuilder, ViewBuilder,
     };
-    use wren_core::mdl::manifest::{DataSource, JoinType};
 
     #[fixture]
     pub fn mdl_base64() -> String {
