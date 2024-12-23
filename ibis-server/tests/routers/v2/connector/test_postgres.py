@@ -612,6 +612,34 @@ async def test_model_substitute_non_existent_column(
     assert 'column "x" does not exist' in response.text
 
 
+async def test_keyword_filter(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/dry-plan",
+        json={
+            "manifestStr": manifest_str,
+            "sql": 'SELECT count(*) FILTER(WHERE orders.o_orderkey != NULL) FROM "Orders"',
+        },
+    )
+    assert response.status_code == 200
+    assert response.text is not None
+
+
+@pytest.mark.skip(
+    reason="ibis get schema via creating temporary view, the syntax is not supported with filter"
+)
+async def test_query_with_keyword_filter(client, manifest_str, postgres):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT count(*) FILTER(WHERE orders.o_orderkey != NULL) FROM "Orders"',
+        },
+    )
+    assert response.status_code == 200
+
+
 def _to_connection_info(pg: PostgresContainer):
     return {
         "host": pg.get_container_host_ip(),

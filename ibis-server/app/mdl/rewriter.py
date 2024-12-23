@@ -45,7 +45,9 @@ class Rewriter:
         return sqlglot.transpile(planned_sql, read=read, write=write)[0]
 
     async def rewrite(self, sql: str) -> str:
-        manifest_str = self._extract_manifest(self.manifest_str, sql)
+        manifest_str = (
+            self._extract_manifest(self.manifest_str, sql) or self.manifest_str
+        )
         logger.debug("Extracted manifest: {}", manifest_str)
         planned_sql = await self._rewriter.rewrite(manifest_str, sql)
         logger.debug("Planned SQL: {}", planned_sql)
@@ -53,15 +55,14 @@ class Rewriter:
         logger.debug("Dialect SQL: {}", dialect_sql)
         return dialect_sql
 
-    @staticmethod
-    def _extract_manifest(manifest_str: str, sql: str) -> str:
+    def _extract_manifest(self, manifest_str: str, sql: str) -> str:
         try:
             extractor = get_manifest_extractor(manifest_str)
             tables = extractor.resolve_used_table_names(sql)
             manifest = extractor.extract_by(tables)
             return to_json_base64(manifest)
         except Exception as e:
-            raise RewriteError(str(e))
+            self._rewriter.handle_extract_exception(e)
 
     @classmethod
     def _get_read_dialect(cls, experiment) -> str | None:
@@ -88,6 +89,10 @@ class ExternalEngineRewriter:
         except httpx.HTTPStatusError as e:
             raise RewriteError(e.response.text)
 
+    @staticmethod
+    def handle_extract_exception(e: Exception):
+        logger.error("Error when extracting manifest: {}", e)
+
 
 class EmbeddedEngineRewriter:
     def __init__(self, function_path: str):
@@ -99,6 +104,10 @@ class EmbeddedEngineRewriter:
             return await to_thread.run_sync(session_context.transform_sql, sql)
         except Exception as e:
             raise RewriteError(str(e))
+
+    @staticmethod
+    def handle_extract_exception(e: Exception):
+        raise RewriteError(str(e))
 
 
 class RewriteError(UnprocessableEntityError):
