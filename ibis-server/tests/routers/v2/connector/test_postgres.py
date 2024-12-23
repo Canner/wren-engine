@@ -259,6 +259,22 @@ async def test_query_with_limit(client, manifest_str, postgres: PostgresContaine
     assert len(result["data"]) == 1
 
 
+async def test_query_with_invalid_manifest_str(
+    client, manifest_str, postgres: PostgresContainer
+):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": "xxx",
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 422
+    assert response.text == "Base64 decode error: Invalid padding"
+
+
 async def test_query_without_manifest(client, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
