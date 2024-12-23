@@ -70,7 +70,7 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
 
     let expanded = quote! {
         #python_binding
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+        #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
         #[serde(rename_all = "UPPERCASE")]
         pub enum DataSource {
             #[serde(alias = "bigquery")]
@@ -89,6 +89,7 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
             Postgres,
             #[serde(alias = "snowflake")]
             Snowflake,
+            #[default]
             #[serde(alias = "datafusion")]
             Datafusion,
             #[serde(alias = "duckdb")]
