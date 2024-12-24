@@ -123,7 +123,7 @@ jobs:
           build-contexts: |
             wren-core-py=./wren-core-py
             wren-core=./wren-core
-            wren-core=./wren-core-base
+            wren-core-base=./wren-core-base
           outputs: type=image,name=${{ env.IBIS_IMAGE }},push-by-digest=true,name-canonical=true,push=true
       - name: Export digest
         run: |
