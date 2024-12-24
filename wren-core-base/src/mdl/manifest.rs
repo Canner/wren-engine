@@ -1,52 +1,75 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 use std::fmt::Display;
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
-use serde_with::NoneAsEmptyString;
-
-/// This is the main struct that holds all the information about the manifest
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Manifest {
-    pub catalog: String,
-    pub schema: String,
-    #[serde(default)]
-    pub models: Vec<Arc<Model>>,
-    #[serde(default)]
-    pub relationships: Vec<Arc<Relationship>>,
-    #[serde(default)]
-    pub metrics: Vec<Arc<Metric>>,
-    #[serde(default)]
-    pub views: Vec<Arc<View>>,
-    pub data_source: Option<DataSource>,
+#[cfg(not(feature = "python-binding"))]
+mod manifest_impl {
+    use crate::mdl::manifest::bool_from_int;
+    use crate::mdl::manifest::table_reference;
+    use manifest_macro::{
+        column, data_source, join_type, manifest, metric, model, relationship, time_grain,
+        time_unit, view,
+    };
+    use serde::{Deserialize, Serialize};
+    use serde_with::serde_as;
+    use serde_with::NoneAsEmptyString;
+    use std::sync::Arc;
+    manifest!(false);
+    data_source!(false);
+    model!(false);
+    column!(false);
+    relationship!(false);
+    metric!(false);
+    view!(false);
+    join_type!(false);
+    time_grain!(false);
+    time_unit!(false);
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum DataSource {
-    #[serde(alias = "bigquery")]
-    BigQuery,
-    #[serde(alias = "clickhouse")]
-    Clickhouse,
-    #[serde(alias = "canner")]
-    Canner,
-    #[serde(alias = "trino")]
-    Trino,
-    #[serde(alias = "mssql")]
-    MSSQL,
-    #[serde(alias = "mysql")]
-    MySQL,
-    #[serde(alias = "postgres")]
-    Postgres,
-    #[serde(alias = "snowflake")]
-    Snowflake,
-    #[serde(alias = "datafusion")]
-    #[default]
-    Datafusion,
-    #[serde(alias = "duckdb")]
-    DuckDB,
+#[cfg(feature = "python-binding")]
+mod manifest_impl {
+    use crate::mdl::manifest::bool_from_int;
+    use crate::mdl::manifest::table_reference;
+    use manifest_macro::{
+        column, data_source, join_type, manifest, metric, model, relationship, time_grain,
+        time_unit, view,
+    };
+    use pyo3::pyclass;
+    use serde::{Deserialize, Serialize};
+    use serde_with::serde_as;
+    use serde_with::NoneAsEmptyString;
+    use std::sync::Arc;
+
+    data_source!(true);
+    model!(true);
+    column!(true);
+    relationship!(true);
+    metric!(true);
+    view!(true);
+    join_type!(true);
+    time_grain!(true);
+    time_unit!(true);
+    manifest!(true);
 }
+
+pub use crate::mdl::manifest::manifest_impl::*;
 
 impl Display for DataSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -62,32 +85,6 @@ impl Display for DataSource {
             DataSource::Datafusion => write!(f, "DATAFUSION"),
             DataSource::DuckDB => write!(f, "DUCKDB"),
         }
-    }
-}
-
-#[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all = "camelCase")]
-pub struct Model {
-    pub name: String,
-    #[serde(default)]
-    pub ref_sql: Option<String>,
-    #[serde(default)]
-    pub base_object: Option<String>,
-    #[serde(default, with = "table_reference")]
-    pub table_reference: Option<String>,
-    pub columns: Vec<Arc<Column>>,
-    #[serde(default)]
-    pub primary_key: Option<String>,
-    #[serde(default, with = "bool_from_int")]
-    pub cached: bool,
-    #[serde(default)]
-    pub refresh_time: Option<String>,
-}
-
-impl Model {
-    pub fn table_reference(&self) -> &str {
-        self.table_reference.as_deref().unwrap_or("")
     }
 }
 
@@ -122,16 +119,12 @@ mod table_reference {
             .filter(|s| !s.is_empty()))
     }
 
-    pub fn serialize<S>(
-        table_ref: &Option<String>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(table_ref: &Option<String>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         if let Some(table_ref) = table_ref {
-            let parts: Vec<&str> =
-                table_ref.split('.').filter(|p| !p.is_empty()).collect();
+            let parts: Vec<&str> = table_ref.split('.').filter(|p| !p.is_empty()).collect();
             if parts.len() > 3 {
                 return Err(serde::ser::Error::custom(format!(
                     "Invalid table reference: {table_ref}"
@@ -190,47 +183,6 @@ mod bool_from_int {
     }
 }
 
-#[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all = "camelCase")]
-pub struct Column {
-    pub name: String,
-    pub r#type: String,
-    #[serde(default)]
-    pub relationship: Option<String>,
-    #[serde(default, with = "bool_from_int")]
-    pub is_calculated: bool,
-    #[serde(default, with = "bool_from_int")]
-    pub not_null: bool,
-    #[serde_as(as = "NoneAsEmptyString")]
-    #[serde(default)]
-    pub expression: Option<String>,
-    #[serde(default, with = "bool_from_int")]
-    pub is_hidden: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct Relationship {
-    pub name: String,
-    pub models: Vec<String>,
-    pub join_type: JoinType,
-    pub condition: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum JoinType {
-    #[serde(alias = "one_to_one")]
-    OneToOne,
-    #[serde(alias = "one_to_many")]
-    OneToMany,
-    #[serde(alias = "many_to_one")]
-    ManyToOne,
-    #[serde(alias = "many_to_many")]
-    ManyToMany,
-}
-
 impl JoinType {
     pub fn is_to_one(&self) -> bool {
         matches!(self, JoinType::OneToOne | JoinType::ManyToOne)
@@ -248,47 +200,61 @@ impl Display for JoinType {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all = "camelCase")]
-pub struct Metric {
-    pub name: String,
-    pub base_object: String,
-    pub dimension: Vec<Arc<Column>>,
-    pub measure: Vec<Arc<Column>>,
-    pub time_grain: Vec<TimeGrain>,
-    #[serde(default, with = "bool_from_int")]
-    pub cached: bool,
-    pub refresh_time: Option<String>,
+impl Model {
+    /// Physical columns are columns that can be selected from the model.
+    /// All physical columns are visible columns, but not all visible columns are physical columns
+    /// e.g. columns that are not a relationship column
+    pub fn get_physical_columns(&self) -> Vec<Arc<Column>> {
+        self.get_visible_columns()
+            .filter(|c| c.relationship.is_none())
+            .map(|c| Arc::clone(&c))
+            .collect()
+    }
+
+    /// Return the name of the model
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Return the iterator of all visible columns
+    pub fn get_visible_columns(&self) -> impl Iterator<Item = Arc<Column>> + '_ {
+        self.columns.iter().filter(|f| !f.is_hidden).map(Arc::clone)
+    }
+
+    /// Get the specified visible column by name
+    pub fn get_column(&self, column_name: &str) -> Option<Arc<Column>> {
+        self.get_visible_columns()
+            .find(|c| c.name == column_name)
+            .map(|c| Arc::clone(&c))
+    }
+
+    /// Return the primary key of the model
+    pub fn primary_key(&self) -> Option<&str> {
+        self.primary_key.as_deref()
+    }
+
+    /// Return the table reference of the model
+    pub fn table_reference(&self) -> &str {
+        self.table_reference.as_deref().unwrap_or("")
+    }
+}
+
+impl Column {
+    /// Return the name of the column
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Return the expression of the column
+    pub fn expression(&self) -> Option<&str> {
+        self.expression.as_deref()
+    }
 }
 
 impl Metric {
     pub fn name(&self) -> &str {
         &self.name
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct TimeGrain {
-    pub name: String,
-    pub ref_column: String,
-    pub date_parts: Vec<TimeUnit>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-pub enum TimeUnit {
-    Year,
-    Month,
-    Day,
-    Hour,
-    Minute,
-    Second,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
-pub struct View {
-    pub name: String,
-    pub statement: String,
 }
 
 impl View {
@@ -322,8 +288,7 @@ mod tests {
         .iter()
         .for_each(|(table_ref, expected)| {
             let mut buf = Vec::new();
-            table_reference::serialize(table_ref, &mut Serializer::new(&mut buf))
-                .unwrap();
+            table_reference::serialize(table_ref, &mut Serializer::new(&mut buf)).unwrap();
             assert_eq!(String::from_utf8(buf).unwrap(), *expected);
         });
     }

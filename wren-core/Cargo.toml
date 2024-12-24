@@ -27,3 +27,4 @@ serde_json = { version = "1.0.117" }
 serde_with = { version = "3.11.0" }
 tokio = { version = "1.4.0", features = ["rt", "rt-multi-thread", "macros"] }
 wren-core = { path = "core" }
+wren-core-base = { path = "../wren-core-base" }

@@ -1,0 +1,19 @@
+[package]
+name = "wren-core-base"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+python-binding = ["dep:pyo3"]
+default = []
+
+[dependencies]
+pyo3 = { version = "0.23.3", features = ["extension-module"], optional = true }
+serde = { version = "1.0.201", features = ["derive", "rc"] }
+wren-manifest-macro = { path = "manifest-macro" }
+serde_json = { version = "1.0.117" }
+serde_with = { version = "3.11.0" }
+
+[lib]
+name = "wren_core_base"
+path = "src/lib.rs"
