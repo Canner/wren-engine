@@ -30,6 +30,7 @@ RUN pip install poetry==1.8.3
 
 COPY --from=wren-core-py . /wren-core-py
 COPY --from=wren-core . /wren-core
+COPY --from=wren-core-base . /wren-core-base
 
 WORKDIR /app
 COPY . .

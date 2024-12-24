@@ -36,6 +36,7 @@ docker-build:
     docker buildx build -t {{ image-name }} -f Dockerfile \
         --build-context wren-core-py=../wren-core-py \
         --build-context wren-core=../wren-core \
+        --build-context wren-core-base=../wren-core-base \
         .
 
 docker-run:
