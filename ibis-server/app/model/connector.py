@@ -5,7 +5,6 @@ from json import loads
 from typing import Any
 
 import ibis
-import ibis.backends.bigquery
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 import ibis.formats
@@ -117,6 +116,9 @@ class BigQueryConnector(SimpleConnector):
         try:
             return super().query(sql, limit)
         except ValueError as e:
+            # Import here to avoid override the custom datatypes
+            import ibis.backends.bigquery
+
             # Try to match the error message from the google cloud bigquery library matching Arrow type error.
             # If the error message matches, requries to get the schema from the result and generate a empty pandas dataframe with the mapped schema
             #
