@@ -198,6 +198,21 @@ async def test_query_values(client, manifest_str):
     assert response.status_code == 204
 
 
+async def test_query_empty_json(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "connectionInfo": connection_info,
+            "sql": "select json_object('a', 1, 'b', 2) limit 0",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 0
+    assert result["dtypes"] == {"f0_": "object"}
+
+
 async def test_interval(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
