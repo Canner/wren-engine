@@ -10,7 +10,7 @@
 
     <groupId>io.wren</groupId>
     <artifactId>wren-root</artifactId>
-    <version>0.12.8-SNAPSHOT</version>
+    <version>0.13.0</version>
     <packaging>pom</packaging>
 
     <name>WrenEngine</name>
@@ -35,7 +35,7 @@
     </modules>
 
     <scm>
-        <tag>HEAD</tag>
+        <tag>0.13.0</tag>
     </scm>
 
     <distributionManagement>
