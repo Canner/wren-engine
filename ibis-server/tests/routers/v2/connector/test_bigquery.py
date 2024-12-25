@@ -199,6 +199,7 @@ async def test_query_values(client, manifest_str):
 
 
 async def test_query_empty_json(client, manifest_str):
+    # Test the empty result with json column
     response = await client.post(
         url=f"{base_url}/query",
         json={
@@ -211,6 +212,22 @@ async def test_query_empty_json(client, manifest_str):
     result = response.json()
     assert len(result["data"]) == 0
     assert result["dtypes"] == {"f0_": "object"}
+
+    # Test only the json column is null
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "connectionInfo": connection_info,
+            "sql": "select cast(null as JSON), 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] is None
+    assert result["data"][0][1] == 1
+    assert result["dtypes"] == {"f0_": "object", "f1_": "int64"}
 
 
 async def test_interval(client, manifest_str):
