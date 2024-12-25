@@ -198,6 +198,38 @@ async def test_query_values(client, manifest_str):
     assert response.status_code == 204
 
 
+async def test_query_empty_json(client, manifest_str):
+    """Test the empty result with json column."""
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "connectionInfo": connection_info,
+            "sql": "select json_object('a', 1, 'b', 2) limit 0",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 0
+    assert result["dtypes"] == {"f0_": "object"}
+
+    """Test only the json column is null."""
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "connectionInfo": connection_info,
+            "sql": "select cast(null as JSON), 1",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+    assert result["data"][0][0] is None
+    assert result["data"][0][1] == 1
+    assert result["dtypes"] == {"f0_": "object", "f1_": "int64"}
+
+
 async def test_interval(client, manifest_str):
     response = await client.post(
         url=f"{base_url}/query",
@@ -225,6 +257,36 @@ async def test_avg_interval(client, manifest_str):
     assert response.status_code == 200
     result = response.json()
     assert result["data"][0] == ["10484 days 32054400000 microseconds"]
+    assert result["dtypes"] == {"col": "object"}
+
+
+async def test_custom_datatypes_no_overrides(client, manifest_str):
+    # Trigger import the official BigQueryType
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "connectionInfo": connection_info,
+            "sql": "select json_object('a', 1, 'b', 2) limit 0",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 0
+    assert result["dtypes"] == {"f0_": "object"}
+
+    # Should use back the custom BigQueryType
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT INTERVAL '1' YEAR + INTERVAL '100' MONTH + INTERVAL '100' DAY + INTERVAL '1' HOUR AS col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0] == ["112 months 100 days 3600000000 microseconds"]
     assert result["dtypes"] == {"col": "object"}
 
 

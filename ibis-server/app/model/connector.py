@@ -1,12 +1,17 @@
+import base64
 import importlib
 from functools import cache
+from json import loads
 from typing import Any
 
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
+import ibis.formats
 import pandas as pd
 import sqlglot.expressions as sge
+from google.cloud import bigquery
+from google.oauth2 import service_account
 from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
@@ -23,6 +28,8 @@ class Connector:
             self._connector = MSSqlConnector(connection_info)
         elif data_source == DataSource.canner:
             self._connector = CannerConnector(connection_info)
+        elif data_source == DataSource.bigquery:
+            self._connector = BigQueryConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -98,6 +105,43 @@ class CannerConnector:
     @staticmethod
     def _to_ibis_type(type_name: str) -> dt.DataType:
         return postgres_compiler.type_mapper.from_string(type_name)
+
+
+class BigQueryConnector(SimpleConnector):
+    def __init__(self, connection_info: ConnectionInfo):
+        super().__init__(DataSource.bigquery, connection_info)
+        self.connection_info = connection_info
+
+    def query(self, sql: str, limit: int) -> pd.DataFrame:
+        try:
+            return super().query(sql, limit)
+        except ValueError as e:
+            # Import here to avoid override the custom datatypes
+            import ibis.backends.bigquery
+
+            # Try to match the error message from the google cloud bigquery library matching Arrow type error.
+            # If the error message matches, requries to get the schema from the result and generate a empty pandas dataframe with the mapped schema
+            #
+            # It's a workaround for the issue that the ibis library does not support empty result for some special types (e.g. JSON or Interval)
+            # see details:
+            # - https://github.com/Canner/wren-engine/issues/909
+            # - https://github.com/ibis-project/ibis/issues/10612
+            if "Must pass schema" in str(e):
+                credits_json = loads(
+                    base64.b64decode(
+                        self.connection_info.credentials.get_secret_value()
+                    ).decode("utf-8")
+                )
+                credentials = service_account.Credentials.from_service_account_info(
+                    credits_json
+                )
+                client = bigquery.Client(credentials=credentials)
+                ibis_schema_mapper = ibis.backends.bigquery.BigQuerySchema()
+                bq_fields = client.query(sql).result()
+                ibis_fields = ibis_schema_mapper.to_ibis(bq_fields.schema)
+                return pd.DataFrame(columns=ibis_fields.names)
+            else:
+                raise e
 
 
 @cache
