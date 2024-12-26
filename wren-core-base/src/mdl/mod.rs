@@ -18,6 +18,7 @@
  */
 
 pub mod builder;
+pub mod cls;
 pub mod manifest;
 mod py_method;
 

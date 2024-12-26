@@ -24,12 +24,15 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, data_source, join_type, manifest, metric, model, relationship, time_grain,
-        time_unit, view,
+        column, column_level_operator, column_level_security, data_source, join_type, manifest,
+        metric, model, normalized_expr, normalized_expr_type, relationship, row_level_operator,
+        row_level_security, time_grain, time_unit, view,
     };
     use serde::{Deserialize, Serialize};
     use serde_with::serde_as;
+    use serde_with::DeserializeFromStr;
     use serde_with::NoneAsEmptyString;
+    use serde_with::SerializeDisplay;
     use std::sync::Arc;
     manifest!(false);
     data_source!(false);
@@ -41,6 +44,12 @@ mod manifest_impl {
     join_type!(false);
     time_grain!(false);
     time_unit!(false);
+    row_level_security!(false);
+    row_level_operator!(false);
+    column_level_security!(false);
+    normalized_expr!(false);
+    normalized_expr_type!(false);
+    column_level_operator!(false);
 }
 
 #[cfg(feature = "python-binding")]
@@ -48,13 +57,16 @@ mod manifest_impl {
     use crate::mdl::manifest::bool_from_int;
     use crate::mdl::manifest::table_reference;
     use manifest_macro::{
-        column, data_source, join_type, manifest, metric, model, relationship, time_grain,
-        time_unit, view,
+        column, column_level_operator, column_level_security, data_source, join_type, manifest,
+        metric, model, normalized_expr, normalized_expr_type, relationship, row_level_operator,
+        row_level_security, time_grain, time_unit, view,
     };
     use pyo3::pyclass;
     use serde::{Deserialize, Serialize};
     use serde_with::serde_as;
+    use serde_with::DeserializeFromStr;
     use serde_with::NoneAsEmptyString;
+    use serde_with::SerializeDisplay;
     use std::sync::Arc;
 
     data_source!(true);
@@ -67,6 +79,12 @@ mod manifest_impl {
     time_grain!(true);
     time_unit!(true);
     manifest!(true);
+    row_level_security!(true);
+    row_level_operator!(true);
+    column_level_security!(true);
+    normalized_expr!(true);
+    normalized_expr_type!(true);
+    column_level_operator!(true);
 }
 
 pub use crate::mdl::manifest::manifest_impl::*;
