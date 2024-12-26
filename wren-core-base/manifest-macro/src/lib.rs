@@ -169,6 +169,8 @@ pub fn column(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStrea
             pub expression: Option<String>,
             #[serde(default, with = "bool_from_int")]
             pub is_hidden: bool,
+            pub rls: Option<RowLevelSecurity>,
+            pub cls: Option<ColumnLevelSecurity>,
         }
     };
     proc_macro::TokenStream::from(expanded)
@@ -338,6 +340,149 @@ pub fn view(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream 
         pub struct View {
             pub name: String,
             pub statement: String,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn row_level_security(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        pub struct RowLevelSecurity {
+            pub name: String,
+            pub operator: RowLevelOperator,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn row_level_operator(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass(eq, eq_int)]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+        pub enum RowLevelOperator {
+            Equals,
+            NotEquals,
+            GreaterThan,
+            LessThan,
+            GreaterThanOrEquals,
+            LessThanOrEquals,
+            IN,
+            NotIn,
+            LIKE,
+            NotLike,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn column_level_security(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
+        pub struct ColumnLevelSecurity {
+            pub name: String,
+            pub operator: ColumnLevelOperator,
+            pub threshold: NormalizedExpr,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn column_level_operator(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass(eq, eq_int)]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+        pub enum ColumnLevelOperator {
+            Equals,
+            NotEquals,
+            GreaterThan,
+            LessThan,
+            GreaterThanOrEquals,
+            LessThanOrEquals,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn normalized_expr(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(SerializeDisplay, DeserializeFromStr, Debug, PartialEq, Eq, Hash)]
+        pub struct NormalizedExpr {
+            pub value: String,
+            #[serde_with(alias = "type")]
+            pub data_type: NormalizedExprType,
+        }
+    };
+    proc_macro::TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn normalized_expr_type(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(python_binding as LitBool);
+    let python_binding = if input.value {
+        quote! {
+            #[pyclass(eq, eq_int)]
+        }
+    } else {
+        quote! {}
+    };
+    let expanded = quote! {
+        #python_binding
+        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+        pub enum NormalizedExprType {
+            Numeric,
+            String,
         }
     };
     proc_macro::TokenStream::from(expanded)

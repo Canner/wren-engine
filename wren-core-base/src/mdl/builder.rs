@@ -22,6 +22,9 @@
 use crate::mdl::manifest::{
     Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeGrain, TimeUnit, View,
 };
+use crate::mdl::{
+    ColumnLevelOperator, ColumnLevelSecurity, NormalizedExpr, RowLevelOperator, RowLevelSecurity,
+};
 use std::sync::Arc;
 
 /// A builder for creating a Manifest
@@ -165,6 +168,8 @@ impl ColumnBuilder {
                 is_hidden: false,
                 not_null: false,
                 expression: None,
+                rls: None,
+                cls: None,
             },
         }
     }
@@ -202,6 +207,27 @@ impl ColumnBuilder {
         self
     }
 
+    pub fn row_level_security(mut self, name: &str, operator: RowLevelOperator) -> Self {
+        self.column.rls = Some(RowLevelSecurity {
+            name: name.to_string(),
+            operator,
+        });
+        self
+    }
+
+    pub fn column_level_security(
+        mut self,
+        name: &str,
+        operator: ColumnLevelOperator,
+        threshold: &str,
+    ) -> Self {
+        self.column.cls = Some(ColumnLevelSecurity {
+            name: name.to_string(),
+            operator,
+            threshold: NormalizedExpr::new(threshold),
+        });
+        self
+    }
     pub fn build(self) -> Arc<Column> {
         Arc::new(self.column)
     }
@@ -356,6 +382,7 @@ mod test {
     use crate::mdl::manifest::{
         Column, DataSource, JoinType, Manifest, Metric, Model, Relationship, TimeUnit, View,
     };
+    use crate::mdl::{ColumnLevelOperator, RowLevelOperator};
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -368,6 +395,8 @@ mod test {
             .not_null(true)
             .hidden(true)
             .expression("test")
+            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
+            .column_level_security("SESSION_LEVEL", ColumnLevelOperator::Equals, "'NORMAL'")
             .build();
 
         let json_str = serde_json::to_string(&expected).unwrap();
@@ -659,6 +688,22 @@ mod test {
                         ColumnBuilder::new("hash_orderkey", "varchar")
                             .expression("md5(o_orderkey)")
                             .calculated(true)
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("rls_orderkey", "integer")
+                            .row_level_security("SESSION_STATUS", RowLevelOperator::Equals)
+                            .expression("o_orderkey")
+                            .build(),
+                    )
+                    .column(
+                        ColumnBuilder::new("cls_orderkey", "integer")
+                            .column_level_security(
+                                "SESSION_LEVEL",
+                                ColumnLevelOperator::Equals,
+                                "'NORMAL'",
+                            )
+                            .expression("o_orderkey")
                             .build(),
                     )
                     .primary_key("o_orderkey")
