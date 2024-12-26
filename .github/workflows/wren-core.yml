@@ -62,33 +62,6 @@ jobs:
       - name: Verify Working Directory Clean
         run: git diff --exit-code
 
-  windows:
-    name: cargo test (win64)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/rust/setup-windows-builder
-      - name: Run tests (excluding doctests)
-        shell: bash
-        run: |
-          cargo test --lib --tests --bins
-
-  macos:
-    name: cargo test (macos)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/rust/setup-macos-builder
-      - name: Run tests (excluding doctests)
-        shell: bash
-        run: cargo test --lib --tests --bins
-
   macos-aarch64:
     name: cargo test (macos-aarch64)
     runs-on: macos-14

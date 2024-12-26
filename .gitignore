@@ -19,4 +19,5 @@ wren-server/etc
 __pycache__/
 venv/
 **/.env*
+**/.venv/
 **/*.so
