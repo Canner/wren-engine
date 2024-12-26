@@ -35,9 +35,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ./wren-core/target/
+            ./wren-core-base/target/
           # this key equals the ones on `linux-build-lib` for re-use
-          key: cargo-cache-benchmark-${{ hashFiles('wren-core/Cargo.toml') }}
+          key: cargo-cache-benchmark-${{ hashFiles('wren-core-base/Cargo.toml') }}
 
       - name: Check datafusion-common without default features
         run: cargo check --all-targets
