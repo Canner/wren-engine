@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>205</version>
+        <version>207</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -156,7 +156,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.29.1</version>
+                <version>4.29.2</version>
             </dependency>
 
             <dependency>
@@ -276,7 +276,7 @@
             <dependency>
                 <groupId>io.opentelemetry.semconv</groupId>
                 <artifactId>opentelemetry-semconv</artifactId>
-                <version>1.28.0-alpha</version>
+                <version>1.29.0-alpha</version>
             </dependency>
 
             <dependency>
