@@ -17,7 +17,7 @@ use datafusion::execution::context::SessionState;
 use datafusion::logical_expr::{AggregateUDF, ScalarUDF, WindowUDF};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::parser::DFParser;
-use datafusion::sql::sqlparser::ast::{Expr, Ident};
+use datafusion::sql::sqlparser::ast::{Expr, ExprWithAlias, Ident};
 use datafusion::sql::sqlparser::dialect::dialect_from_str;
 use datafusion::sql::unparser::Unparser;
 use datafusion::sql::TableReference;
@@ -214,11 +214,11 @@ impl WrenMDL {
         }
 
         if let Some(expression) = column.expression() {
-            let expr = WrenMDL::sql_to_expr(expression)?;
+            let ExprWithAlias { expr, alias} = WrenMDL::sql_to_expr(expression)?;
             // if the column is a simple column reference, we can infer the column name
             if let Some(name) = Self::collect_one_column(&expr) {
                 Ok(Some(Field::new(
-                    name.value.clone(),
+                    alias.map(|a| a.value).unwrap_or_else(|| name.value.clone()),
                     map_data_type(&column.r#type)?,
                     column.not_null,
                 )))
@@ -230,7 +230,7 @@ impl WrenMDL {
         }
     }
 
-    fn sql_to_expr(sql: &str) -> Result<Expr> {
+    fn sql_to_expr(sql: &str) -> Result<ExprWithAlias> {
         let dialect = dialect_from_str("generic").ok_or_else(|| {
             internal_datafusion_err!("Failed to create dialect from generic")
         })?;

@@ -23,7 +23,8 @@ use datafusion::logical_expr::sqlparser::ast::{Ident, Subscript};
 use datafusion::logical_expr::sqlparser::keywords::ALL_KEYWORDS;
 use datafusion::logical_expr::Expr;
 use datafusion::sql::sqlparser::ast;
-use datafusion::sql::sqlparser::ast::{Array, Value};
+use datafusion::sql::sqlparser::ast::{AccessExpr, Array, Value};
+use datafusion::sql::sqlparser::tokenizer::Span;
 use datafusion::sql::unparser::dialect::{Dialect, IntervalStyle};
 use datafusion::sql::unparser::Unparser;
 use regex::Regex;
@@ -118,9 +119,11 @@ impl WrenDialect {
         }
         let array = unparser.expr_to_sql(&args[0])?;
         let index = unparser.expr_to_sql(&args[1])?;
-        Ok(ast::Expr::Subscript {
-            expr: Box::new(array),
-            subscript: Box::new(Subscript::Index { index }),
+        Ok(ast::Expr::CompoundFieldAccess {
+            root: Box::new(array),
+            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
+                index,
+            })],
         })
     }
 
@@ -184,6 +187,7 @@ impl WrenDialect {
         Ident {
             value: ident,
             quote_style,
+            span: Span::empty(),
         }
     }
 }
