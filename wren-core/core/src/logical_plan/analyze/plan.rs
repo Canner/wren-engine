@@ -293,7 +293,7 @@ impl ModelPlanNodeBuilder {
                         0,
                         Expr::Wildcard {
                             qualifier: None,
-                            options: WildcardOptions::default(),
+                            options: Box::new(WildcardOptions::default()),
                         },
                     );
                 }

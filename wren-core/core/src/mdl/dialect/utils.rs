@@ -20,6 +20,7 @@ use datafusion::common::Result;
 use datafusion::logical_expr::Expr;
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::sqlparser::ast::{Function, Ident, ObjectName};
+use datafusion::sql::sqlparser::tokenizer::Span;
 use datafusion::sql::unparser::Unparser;
 
 pub(crate) fn function_args_to_sql(
@@ -55,6 +56,7 @@ pub(crate) fn scalar_function_to_sql_internal(
         name: ObjectName(vec![Ident {
             value: func_name.to_string(),
             quote_style: None,
+            span: Span::empty(),
         }]),
         args: ast::FunctionArguments::List(ast::FunctionArgumentList {
             duplicate_treatment: None,
@@ -66,5 +68,6 @@ pub(crate) fn scalar_function_to_sql_internal(
         over: None,
         within_group: vec![],
         parameters: ast::FunctionArguments::None,
+        uses_odbc_syntax: false,
     })))
 }

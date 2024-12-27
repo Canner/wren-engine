@@ -14,11 +14,8 @@ version = "0.1.0"
 
 [workspace.dependencies]
 async-trait = "0.1.80"
-# We require the following commits
-# https://github.com/apache/datafusion/pull/13241
-# https://github.com/goldmedal/datafusion/pull/1
-# https://github.com/goldmedal/sqlparser-rs/pull/1
-datafusion = { git = "https://github.com/goldmedal/datafusion.git", branch = "wren/support-array-struct" }
+# We require the latest sqlparser-rs to support the latest SQL syntax
+datafusion = { git = "https://github.com/goldmedal/datafusion.git", branch = "wren/foward-to-compund-access" }
 env_logger = "0.11.3"
 hashbrown = "0.15.2"
 log = { version = "0.4.14" }

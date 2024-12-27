@@ -360,10 +360,9 @@ version = "0.4.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df895a515f70646414f4b45c0b79082783b80552b373a68283012928df56f522"
 dependencies = [
- "bzip2",
+ "bzip2 0.4.4",
  "flate2",
  "futures-core",
- "futures-io",
  "memchr",
  "pin-project-lite",
  "tokio",
@@ -418,6 +417,19 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
+name = "bigdecimal"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f31f3af01c5c65a07985c804d3366560e6fa7883d640a122819b14ec327482c"
+dependencies = [
+ "autocfg",
+ "libm",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
 
 [[package]]
 name = "bitflags"
@@ -512,6 +524,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bzip2"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bafdbf26611df8c14810e268ddceda071c297570a5fb360ceddf617fe417ef58"
+dependencies = [
+ "bzip2-sys",
+ "libc",
+]
+
+[[package]]
 name = "bzip2-sys"
 version = "0.1.11+1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -524,9 +546,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.5"
+version = "1.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c31a0499c1dc64f458ad13872de75c0eb7e3fdb0e67964610c914b034fc5956e"
+checksum = "8d6dbb628b8f8555f86d0323c2eb39e3ec81901f4b83e091db8a6a76d316a333"
 dependencies = [
  "jobserver",
  "libc",
@@ -734,10 +756,9 @@ dependencies = [
 
 [[package]]
 name = "datafusion"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
- "ahash",
  "arrow",
  "arrow-array",
  "arrow-ipc",
@@ -745,7 +766,7 @@ dependencies = [
  "async-compression",
  "async-trait",
  "bytes",
- "bzip2",
+ "bzip2 0.5.0",
  "chrono",
  "dashmap",
  "datafusion-catalog",
@@ -756,6 +777,7 @@ dependencies = [
  "datafusion-functions",
  "datafusion-functions-aggregate",
  "datafusion-functions-nested",
+ "datafusion-functions-table",
  "datafusion-functions-window",
  "datafusion-optimizer",
  "datafusion-physical-expr",
@@ -766,18 +788,13 @@ dependencies = [
  "flate2",
  "futures",
  "glob",
- "half",
- "hashbrown 0.14.5",
- "indexmap 2.7.0",
  "itertools",
  "log",
- "num_cpus",
  "object_store",
  "parking_lot",
  "parquet",
- "paste",
- "pin-project-lite",
  "rand",
+ "regex",
  "sqlparser",
  "tempfile",
  "tokio",
@@ -790,8 +807,8 @@ dependencies = [
 
 [[package]]
 name = "datafusion-catalog"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow-schema",
  "async-trait",
@@ -804,20 +821,19 @@ dependencies = [
 
 [[package]]
 name = "datafusion-common"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
  "arrow-array",
  "arrow-buffer",
  "arrow-schema",
- "chrono",
  "half",
  "hashbrown 0.14.5",
  "indexmap 2.7.0",
  "libc",
- "num_cpus",
+ "log",
  "object_store",
  "parquet",
  "paste",
@@ -829,8 +845,8 @@ dependencies = [
 
 [[package]]
 name = "datafusion-common-runtime"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "log",
  "tokio",
@@ -838,21 +854,19 @@ dependencies = [
 
 [[package]]
 name = "datafusion-doc"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 
 [[package]]
 name = "datafusion-execution"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
- "chrono",
  "dashmap",
  "datafusion-common",
  "datafusion-expr",
  "futures",
- "hashbrown 0.14.5",
  "log",
  "object_store",
  "parking_lot",
@@ -863,13 +877,10 @@ dependencies = [
 
 [[package]]
 name = "datafusion-expr"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
- "ahash",
  "arrow",
- "arrow-array",
- "arrow-buffer",
  "chrono",
  "datafusion-common",
  "datafusion-doc",
@@ -882,25 +893,22 @@ dependencies = [
  "recursive",
  "serde_json",
  "sqlparser",
- "strum",
- "strum_macros",
 ]
 
 [[package]]
 name = "datafusion-expr-common"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
  "datafusion-common",
  "itertools",
- "paste",
 ]
 
 [[package]]
 name = "datafusion-functions"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
  "arrow-buffer",
@@ -912,6 +920,7 @@ dependencies = [
  "datafusion-doc",
  "datafusion-execution",
  "datafusion-expr",
+ "datafusion-expr-common",
  "datafusion-macros",
  "hashbrown 0.14.5",
  "hex",
@@ -927,41 +936,41 @@ dependencies = [
 
 [[package]]
 name = "datafusion-functions-aggregate"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
  "arrow-schema",
  "datafusion-common",
+ "datafusion-doc",
  "datafusion-execution",
  "datafusion-expr",
  "datafusion-functions-aggregate-common",
+ "datafusion-macros",
  "datafusion-physical-expr",
  "datafusion-physical-expr-common",
  "half",
- "indexmap 2.7.0",
  "log",
  "paste",
 ]
 
 [[package]]
 name = "datafusion-functions-aggregate-common"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
  "datafusion-common",
  "datafusion-expr-common",
  "datafusion-physical-expr-common",
- "rand",
 ]
 
 [[package]]
 name = "datafusion-functions-nested"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
  "arrow-array",
@@ -977,17 +986,33 @@ dependencies = [
  "itertools",
  "log",
  "paste",
- "rand",
+]
+
+[[package]]
+name = "datafusion-functions-table"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
+dependencies = [
+ "arrow",
+ "async-trait",
+ "datafusion-catalog",
+ "datafusion-common",
+ "datafusion-expr",
+ "datafusion-physical-plan",
+ "parking_lot",
+ "paste",
 ]
 
 [[package]]
 name = "datafusion-functions-window"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "datafusion-common",
+ "datafusion-doc",
  "datafusion-expr",
  "datafusion-functions-window-common",
+ "datafusion-macros",
  "datafusion-physical-expr",
  "datafusion-physical-expr-common",
  "log",
@@ -996,8 +1021,8 @@ dependencies = [
 
 [[package]]
 name = "datafusion-functions-window-common"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "datafusion-common",
  "datafusion-physical-expr-common",
@@ -1005,31 +1030,26 @@ dependencies = [
 
 [[package]]
 name = "datafusion-macros"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
- "datafusion-doc",
- "proc-macro2",
  "quote",
  "syn",
 ]
 
 [[package]]
 name = "datafusion-optimizer"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
- "async-trait",
  "chrono",
  "datafusion-common",
  "datafusion-expr",
  "datafusion-physical-expr",
- "hashbrown 0.14.5",
  "indexmap 2.7.0",
  "itertools",
  "log",
- "paste",
  "recursive",
  "regex",
  "regex-syntax",
@@ -1037,17 +1057,14 @@ dependencies = [
 
 [[package]]
 name = "datafusion-physical-expr"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
  "arrow-array",
  "arrow-buffer",
- "arrow-ord",
  "arrow-schema",
- "arrow-string",
- "chrono",
  "datafusion-common",
  "datafusion-expr",
  "datafusion-expr-common",
@@ -1064,8 +1081,8 @@ dependencies = [
 
 [[package]]
 name = "datafusion-physical-expr-common"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
@@ -1073,20 +1090,17 @@ dependencies = [
  "datafusion-expr-common",
  "hashbrown 0.14.5",
  "itertools",
- "rand",
 ]
 
 [[package]]
 name = "datafusion-physical-optimizer"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
- "arrow-schema",
  "datafusion-common",
  "datafusion-execution",
  "datafusion-expr-common",
- "datafusion-optimizer",
  "datafusion-physical-expr",
  "datafusion-physical-plan",
  "itertools",
@@ -1096,8 +1110,8 @@ dependencies = [
 
 [[package]]
 name = "datafusion-physical-plan"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "ahash",
  "arrow",
@@ -1111,7 +1125,6 @@ dependencies = [
  "datafusion-common-runtime",
  "datafusion-execution",
  "datafusion-expr",
- "datafusion-functions-aggregate-common",
  "datafusion-functions-window-common",
  "datafusion-physical-expr",
  "datafusion-physical-expr-common",
@@ -1121,21 +1134,20 @@ dependencies = [
  "indexmap 2.7.0",
  "itertools",
  "log",
- "once_cell",
  "parking_lot",
  "pin-project-lite",
- "rand",
  "tokio",
 ]
 
 [[package]]
 name = "datafusion-sql"
-version = "43.0.0"
-source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Fsupport-array-struct#1862366b3543b7522e0601a7e29a7bd97adc599c"
+version = "44.0.0"
+source = "git+https://github.com/goldmedal/datafusion.git?branch=wren%2Ffoward-to-compund-access#8bb87352a0f7574e12a3e5e4ed017d370a5956d7"
 dependencies = [
  "arrow",
  "arrow-array",
  "arrow-schema",
+ "bigdecimal",
  "datafusion-common",
  "datafusion-expr",
  "indexmap 2.7.0",
@@ -1143,7 +1155,6 @@ dependencies = [
  "recursive",
  "regex",
  "sqlparser",
- "strum",
 ]
 
 [[package]]
@@ -1237,9 +1248,9 @@ checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
 
 [[package]]
 name = "flatbuffers"
-version = "24.3.25"
+version = "24.12.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8add37afff2d4ffa83bc748a70b4b1370984f6980768554182424ef71447c35f"
+checksum = "4f1baf0dbf96932ec9a3038d57900329c015b0bfb7b63d904f3bc27e2b02a096"
 dependencies = [
  "bitflags 1.3.2",
  "rustc_version",
@@ -1436,12 +1447,6 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
-
-[[package]]
-name = "hermit-abi"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hex"
@@ -1942,16 +1947,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num_cpus"
-version = "1.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
-dependencies = [
- "hermit-abi",
- "libc",
-]
-
-[[package]]
 name = "object"
 version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1962,9 +1957,9 @@ dependencies = [
 
 [[package]]
 name = "object_store"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6eb4c22c6154a1e759d7099f9ffad7cc5ef8245f9efbab4a41b92623079c82f3"
+checksum = "3cfccb68961a56facde1163f9319e0d15743352344e7808a11795fb99698dcaf"
 dependencies = [
  "async-trait",
  "bytes",
@@ -2265,9 +2260,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.37"
+version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
+checksum = "0e4dccaaaf89514f546c693ddc140f729f958c247918a13380cccc6078391acc"
 dependencies = [
  "proc-macro2",
 ]
@@ -2426,9 +2421,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
+checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 
 [[package]]
 name = "ryu"
@@ -2497,9 +2492,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "3.11.0"
+version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e28bdad6db2b8340e449f7108f020b3b092e8583a9e3fb82713e1d4e71fe817"
+checksum = "d6b6f7f2fcb69f747921f79f3926bd1e203fce4fef62c268dd3abfb6d86029aa"
 dependencies = [
  "base64",
  "chrono",
@@ -2515,9 +2510,9 @@ dependencies = [
 
 [[package]]
 name = "serde_with_macros"
-version = "3.11.0"
+version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d846214a9854ef724f3da161b426242d8de7c1fc7de2f89bb1efcb154dca79d"
+checksum = "8d00caa5193a3c8362ac2b73be6b9e768aa5a4b2f721d8f4b339600c3cb51f8e"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2592,17 +2587,18 @@ checksum = "1b6b67fb9a61334225b5b790716f609cd58395f895b3fe8b328786812a40bc3b"
 
 [[package]]
 name = "sqlparser"
-version = "0.52.0"
-source = "git+https://github.com/goldmedal/sqlparser-rs.git?branch=wren%2F0.12.3-array-struct#bb1833fe81508ac84be0b757d0b52394f3c97a6f"
+version = "0.53.0"
+source = "git+https://github.com/apache/datafusion-sqlparser-rs.git?rev=e9c3305008b4e0a28fb42a2fe6b18b3bd2a8291b#e9c3305008b4e0a28fb42a2fe6b18b3bd2a8291b"
 dependencies = [
  "log",
+ "recursive",
  "sqlparser_derive",
 ]
 
 [[package]]
 name = "sqlparser_derive"
-version = "0.2.2"
-source = "git+https://github.com/goldmedal/sqlparser-rs.git?branch=wren%2F0.12.3-array-struct#bb1833fe81508ac84be0b757d0b52394f3c97a6f"
+version = "0.3.0"
+source = "git+https://github.com/apache/datafusion-sqlparser-rs.git?rev=e9c3305008b4e0a28fb42a2fe6b18b3bd2a8291b#e9c3305008b4e0a28fb42a2fe6b18b3bd2a8291b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2645,9 +2641,6 @@ name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
-dependencies = [
- "strum_macros",
-]
 
 [[package]]
 name = "strum_macros"
@@ -2670,9 +2663,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "syn"
-version = "2.0.91"
+version = "2.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d53cbcb5a243bd33b7858b1d7f4aca2153490815872d86d955d6ea29f743c035"
+checksum = "70ae51629bf965c5c098cc9e87908a3df5301051a9e087d6f9bef5c9771ed126"
 dependencies = [
  "proc-macro2",
  "quote",
