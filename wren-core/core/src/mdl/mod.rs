@@ -214,7 +214,7 @@ impl WrenMDL {
         }
 
         if let Some(expression) = column.expression() {
-            let ExprWithAlias { expr, alias} = WrenMDL::sql_to_expr(expression)?;
+            let ExprWithAlias { expr, alias } = WrenMDL::sql_to_expr(expression)?;
             // if the column is a simple column reference, we can infer the column name
             if let Some(name) = Self::collect_one_column(&expr) {
                 Ok(Some(Field::new(

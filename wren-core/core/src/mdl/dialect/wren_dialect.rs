@@ -121,9 +121,7 @@ impl WrenDialect {
         let index = unparser.expr_to_sql(&args[1])?;
         Ok(ast::Expr::CompoundFieldAccess {
             root: Box::new(array),
-            access_chain: vec![AccessExpr::Subscript(Subscript::Index {
-                index,
-            })],
+            access_chain: vec![AccessExpr::Subscript(Subscript::Index { index })],
         })
     }
 
