@@ -95,6 +95,9 @@ class MySqlConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr
+    kwargs: dict[str, str] | None = Field(
+        description="Additional keyword arguments to pass to PyMySQL", default=None
+    )
 
 
 class ConnectionUrl(BaseModel):

@@ -131,6 +131,7 @@ class DataSourceExtension(Enum):
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
+            **info.kwargs if info.kwargs else dict(),
         )
 
     @staticmethod
