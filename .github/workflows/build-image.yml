@@ -78,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./docker
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             WREN_VERSION=${{ steps.prepare.outputs.WREN_VERSION }}
@@ -91,8 +91,6 @@ jobs:
         arch:
           - runner: ubuntu-latest
             platform: linux/amd64
-          - runner: linux_arm64_runner
-            platform: linux/arm64
     runs-on: ${{ matrix.arch.runner }}
     steps:
       - name: Prepare platform
