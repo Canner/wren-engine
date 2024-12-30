@@ -22,7 +22,7 @@ ibis-framework = { version = "9.5.0", extras = [
 google-auth = "2.37.0"
 httpx = "0.28.1"
 python-dotenv = "1.0.1"
-orjson = "3.10.12"
+orjson = "3.10.13"
 pandas = "2.2.3"
 sqlglot = { extras = [
   "rs",
