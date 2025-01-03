@@ -256,37 +256,33 @@ SELECT
     assert response.status_code == 200
     result = response.json()
 
-    assert result["data"] == [
-        [
-            "1.23E-7",
-            "1.23E+4",
-            "-0.00456",
-            "7.89",
-            "0",
-            "123.456",
-            "-123.456",
-            "0.0000123",
-            "123",
-            "0",
-            0,
-            "0",
-            -1,
-            9999999999,
-            "1.7976931348623157E+308",
-            "2.2250738585072014E-308",
-            "-1.7976931348623157E+308",
-            "12304.56",
-            "-123.450123",
-            "0.000123",
-            "1.0036585365853659",
-            "nan",
-            "inf",
-            "-inf",
-            None,
-            "123.456001",
-            "12300.00000",
-        ]
-    ]
+    assert result["data"][0] == "1.23E-7"
+    assert result["data"][1] == "1.23E+4"
+    assert result["data"][2] == "-0.00456"
+    assert result["data"][3] == "7.89"
+    assert result["data"][4] == "0"
+    assert result["data"][5] == "123.456"
+    assert result["data"][6] == "-123.456"
+    assert result["data"][7] == "0.0000123"
+    assert result["data"][8] == "123"
+    assert result["data"][9] == "0"
+    assert result["data"][10] == 0
+    assert result["data"][11] == "0"
+    assert result["data"][12] == -1
+    assert result["data"][13] == 9999999999
+    assert result["data"][14] == "1.7976931348623157E+308"
+    assert result["data"][15] == "2.2250738585072014E-308"
+    assert result["data"][16] == "-1.7976931348623157E+308"
+    assert result["data"][17] == "12304.56"
+    assert result["data"][18] == "-123.450123"
+    assert result["data"][19] == "0.000123"
+    assert result["data"][20] == "1.0036585365853659"
+    assert result["data"][21] == "nan"
+    assert result["data"][22] == "inf"
+    assert result["data"][23] == "-inf"
+    assert result["data"][24] is None
+    assert result["data"][25] == "123.456001"
+    assert result["data"][26] == "12300.00000"
 
 
 async def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
