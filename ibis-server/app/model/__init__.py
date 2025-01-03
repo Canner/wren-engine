@@ -99,6 +99,8 @@ class MySqlConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr
+    ssl_mode: SecretStr = Field(alias="sslMode")
+    ssl_ca: SecretStr | None = Field(alias="sslCA", default=None)
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyMySQL", default=None
     )
