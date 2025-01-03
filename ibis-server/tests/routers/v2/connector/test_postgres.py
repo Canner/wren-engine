@@ -208,6 +208,87 @@ async def test_query_with_dot_all(client, manifest_str, postgres: PostgresContai
         assert result["dtypes"] is not None
 
 
+async def test_format_floating(client, manifest_str, postgres):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+SELECT
+    0.0123e-5 AS case_scientific_original,
+    1.23e+4 AS case_scientific_positive,
+    -4.56e-3 AS case_scientific_negative,
+    7.89e0 AS case_scientific_zero_exponent,
+    0e0 AS case_scientific_zero,
+
+    123.456 AS case_decimal_positive,
+    -123.456 AS case_decimal_negative,
+    0.0000123 AS case_decimal_small,
+    123.0000 AS case_decimal_trailing_zeros,
+    0.0 AS case_decimal_zero,
+
+    0 AS case_integer_zero,
+    0e-9 AS case_integer_zero_scientific,
+    -1 AS case_integer_negative,
+    9999999999 AS case_integer_large,
+
+    1.7976931348623157E+308 AS case_float_max,
+    2.2250738585072014E-308 AS case_float_min,
+    -1.7976931348623157E+308 AS case_float_min_negative,
+
+    1.23e4 + 4.56 AS case_mixed_addition,
+    -1.23e-4 - 123.45 AS case_mixed_subtraction,
+    0.0123e-5 * 1000 AS case_mixed_multiplication,
+    123.45 / 1.23e2 AS case_mixed_division,
+
+    CAST('NaN' AS FLOAT) AS case_special_nan,
+    CAST('Infinity' AS FLOAT) AS case_special_infinity,
+    CAST('-Infinity' AS FLOAT) AS case_special_negative_infinity,
+    NULL AS case_special_null,
+
+    CAST(123.456 AS FLOAT) AS case_cast_float,
+    CAST(1.23e4 AS DECIMAL(10,5)) AS case_cast_decimal
+            """,
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+
+    assert result["data"] == [
+        [
+            "1.23E-7",
+            "1.23E+4",
+            "-0.00456",
+            "7.89",
+            "0",
+            "123.456",
+            "-123.456",
+            "0.0000123",
+            "123",
+            "0",
+            0,
+            "0",
+            -1,
+            9999999999,
+            "1.7976931348623157E+308",
+            "2.2250738585072014E-308",
+            "-1.7976931348623157E+308",
+            "12304.56",
+            "-123.450123",
+            "0.000123",
+            "1.0036585365853659",
+            "nan",
+            "inf",
+            "-inf",
+            None,
+            "123.456001282",
+            "12300.00000",
+        ]
+    ]
+
+
 async def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
     client, manifest_str, postgres: PostgresContainer
 ):
