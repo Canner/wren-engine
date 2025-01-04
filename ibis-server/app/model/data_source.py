@@ -190,9 +190,11 @@ class DataSourceExtension(Enum):
 
     @staticmethod
     def _create_ssl_context(info: ConnectionInfo) -> Optional[ssl.SSLContext]:
-        ssl_mode = info.ssl_mode.get_secret_value()
+        ssl_mode = (
+            info.ssl_mode.get_secret_value() if hasattr(info, "ssl_mode") else None
+        )
 
-        if ssl_mode == SSLMode.DISABLE:
+        if not ssl_mode or ssl_mode == SSLMode.DISABLE:
             return None
 
         ctx = ssl.create_default_context()
