@@ -51,6 +51,10 @@ class QueryTrinoDTO(QueryDTO):
     connection_info: ConnectionUrl | TrinoConnectionInfo = connection_info_field
 
 
+class QueryLocalFileDTO(QueryDTO):
+    connection_info: LocalFileConnectionInfo = connection_info_field
+
+
 class BigQueryConnectionInfo(BaseModel):
     project_id: SecretStr
     dataset_id: SecretStr
@@ -133,6 +137,13 @@ class TrinoConnectionInfo(BaseModel):
     password: SecretStr | None = None
 
 
+class LocalFileConnectionInfo(BaseModel):
+    url: SecretStr
+    format: str = Field(
+        description="File format", default="csv", examples=["csv", "parquet", "json"]
+    )
+
+
 ConnectionInfo = (
     BigQueryConnectionInfo
     | CannerConnectionInfo
@@ -142,6 +153,7 @@ ConnectionInfo = (
     | PostgresConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
+    | LocalFileConnectionInfo
 )
 
 

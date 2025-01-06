@@ -30,6 +30,8 @@ class Connector:
             self._connector = CannerConnector(connection_info)
         elif data_source == DataSource.bigquery:
             self._connector = BigQueryConnector(connection_info)
+        elif data_source == DataSource.local_file:
+            self._connector = DuckDBConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
 
@@ -143,6 +145,16 @@ class BigQueryConnector(SimpleConnector):
             else:
                 raise e
 
+class DuckDBConnector:
+    def __init__(self, _connection_info: ConnectionInfo):
+        import duckdb
+        self.connection = duckdb.connect()
+
+    def query(self, sql: str, limit: int) -> pd.DataFrame:
+        return self.connection.execute(sql).fetch_df().head(limit)
+
+    def dry_run(self, sql: str) -> None:
+        self.connection.execute(sql)
 
 @cache
 def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:
