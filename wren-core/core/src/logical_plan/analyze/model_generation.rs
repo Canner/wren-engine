@@ -1,6 +1,16 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use crate::logical_plan::analyze::plan::{
+    CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
+};
+use crate::logical_plan::utils::{
+    create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
+};
+use crate::mdl::manifest::Model;
+use crate::mdl::utils::quoted;
+use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
+use crate::DataFusionError;
 use datafusion::common::alias::AliasGenerator;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult};
@@ -11,15 +21,7 @@ use datafusion::optimizer::analyzer::AnalyzerRule;
 use datafusion::physical_plan::internal_err;
 use datafusion::sql::TableReference;
 
-use crate::logical_plan::analyze::plan::{
-    CalculationPlanNode, ModelPlanNode, ModelSourceNode, PartialModelPlanNode,
-};
-use crate::logical_plan::utils::{
-    create_remote_table_source, eliminate_ambiguous_columns, rebase_column,
-};
-use crate::mdl::manifest::Model;
-use crate::mdl::utils::quoted;
-use crate::mdl::{AnalyzedWrenMDL, SessionStateRef};
+pub const SOURCE_ALIAS: &str = "__source";
 
 /// [ModelGenerationRule] is responsible for generating the model plan node.
 pub struct ModelGenerationRule {
@@ -89,6 +91,11 @@ impl ModelGenerationRule {
                             .get_model(&model_plan.model_name)
                             .expect("Model not found"),
                     );
+                    let mut required_exprs = model_plan.required_exprs.clone();
+                    required_exprs.iter_mut().try_for_each(|expr| {
+                        *expr = rebase_column(expr, SOURCE_ALIAS)?;
+                        Ok::<(), DataFusionError>(())
+                    })?;
                     // support table reference
                     let table_scan = match &model_plan.original_table_scan {
                         Some(LogicalPlan::TableScan(original_scan)) => {
@@ -101,9 +108,10 @@ impl ModelGenerationRule {
                                 )?,
                                 None,
                                 original_scan.filters.clone(),
-                            ).expect("Failed to create table scan")
-                                .project(model_plan.required_exprs.clone())?
-                                .build()
+                            )?
+                                .alias(SOURCE_ALIAS)?
+                            .project(required_exprs)?
+                            .build()
                         }
                         Some(_) => Err(datafusion::error::DataFusionError::Internal(
                             "ModelPlanNode should have a TableScan as original_table_scan"
@@ -117,8 +125,9 @@ impl ModelGenerationRule {
                                     &self.analyzed_wren_mdl.wren_mdl(),
                                     Arc::clone(&self.session_state))?,
                                 None,
-                            ).expect("Failed to create table scan")
-                                .project(model_plan.required_exprs.clone())?
+                            )?
+                                .alias(SOURCE_ALIAS)?
+                                .project(required_exprs)?
                                 .build()
                         },
                     }?;
