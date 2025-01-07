@@ -77,6 +77,7 @@ def custom_http_error_handler(request, exc: CustomHttpError):
         logger.opt(exception=exc).error("Request failed")
     return PlainTextResponse(str(exc), status_code=exc.status_code)
 
+
 @app.exception_handler(NotImplementedError)
 def not_implemented_error_handler(request, exc: NotImplementedError):
     return PlainTextResponse(str(exc), status_code=501)

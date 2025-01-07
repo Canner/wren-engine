@@ -231,6 +231,7 @@ async def test_metadata_db_version(client, connection_info):
     assert response.status_code == 200
     assert "Local File System" in response.text
 
+
 async def test_unsupported_format(client):
     response = await client.post(
         url=f"{base_url}/metadata/tables",

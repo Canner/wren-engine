@@ -74,7 +74,9 @@ class DataSourceExtension(Enum):
             if hasattr(info, "connection_url"):
                 return ibis.connect(info.connection_url.get_secret_value())
             if self.name == "local_file":
-                raise NotImplementedError("Local file connection is not implemented to get ibis backend")
+                raise NotImplementedError(
+                    "Local file connection is not implemented to get ibis backend"
+                )
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")

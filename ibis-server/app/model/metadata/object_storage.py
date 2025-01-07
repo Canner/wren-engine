@@ -1,6 +1,7 @@
+import os
+
 import duckdb
 import opendal
-import os
 
 from app.model import LocalFileConnectionInfo
 from app.model.metadata.dto import (
@@ -28,7 +29,7 @@ class ObjectStorageMetadata(Metadata):
                     table_name = os.path.basename(os.path.normpath(file.path))
                 else:
                     # if the file is a file, use the file name as the table name
-                    table_name = table_name = os.path.splitext(os.path.basename(file.path))[0]
+                    table_name = os.path.splitext(os.path.basename(file.path))[0]
                 unique_tables[table_name] = Table(
                     name=table_name,
                     description=None,
