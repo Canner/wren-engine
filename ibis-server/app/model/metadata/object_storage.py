@@ -1,5 +1,6 @@
 import duckdb
 import opendal
+import os
 
 from app.model import LocalFileConnectionInfo
 from app.model.metadata.dto import (
@@ -24,10 +25,10 @@ class ObjectStorageMetadata(Metadata):
                 stat = op.stat(file.path)
                 if stat.mode.is_dir():
                     # if the file is a directory, use the directory name as the table name
-                    table_name = file.path.split("/")[0]
+                    table_name = os.path.basename(os.path.normpath(file.path))
                 else:
                     # if the file is a file, use the file name as the table name
-                    table_name = file.path.split(".")[0]
+                    table_name = table_name = os.path.splitext(os.path.basename(file.path))[0]
                 unique_tables[table_name] = Table(
                     name=table_name,
                     description=None,
@@ -56,7 +57,7 @@ class ObjectStorageMetadata(Metadata):
         return []
 
     def get_version(self):
-        pass
+        raise NotImplementedError("Subclasses must implement `get_version` method")
 
     def _read_df(self, conn, path):
         if self.connection_info.format == "parquet":

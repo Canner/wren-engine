@@ -10,8 +10,11 @@ base_url = "/v3/connector/local_file"
 def pytest_collection_modifyitems(items):
     current_file_dir = pathlib.Path(__file__).resolve().parent
     for item in items:
-        if pathlib.Path(item.fspath).is_relative_to(current_file_dir):
+        try:
+            pathlib.Path(item.fspath).relative_to(current_file_dir)
             item.add_marker(pytestmark)
+        except ValueError:
+            pass
 
 
 @pytest.fixture(scope="module")
