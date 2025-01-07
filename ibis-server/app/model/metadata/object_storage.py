@@ -38,6 +38,7 @@ class ObjectStorageMetadata(Metadata):
                         table=table_name,
                         schema=None,
                         catalog=None,
+                        path=f"{self.connection_info.url.get_secret_value()}/{file.path}",
                     ),
                     primaryKey=None,
                 )

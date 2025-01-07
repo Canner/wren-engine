@@ -199,6 +199,7 @@ async def test_metadata_list_tables(client, connection_info):
         "catalog": None,
         "schema": None,
         "table": "orders",
+        "path": "tests/resource/tpch/data/orders.parquet",
     }
     assert len(result["columns"]) == 9
     assert result["columns"][8] == {
