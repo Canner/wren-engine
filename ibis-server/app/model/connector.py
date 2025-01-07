@@ -145,9 +145,11 @@ class BigQueryConnector(SimpleConnector):
             else:
                 raise e
 
+
 class DuckDBConnector:
     def __init__(self, _connection_info: ConnectionInfo):
         import duckdb
+
         self.connection = duckdb.connect()
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
@@ -155,6 +157,7 @@ class DuckDBConnector:
 
     def dry_run(self, sql: str) -> None:
         self.connection.execute(sql)
+
 
 @cache
 def _get_pg_type_names(connection: BaseBackend) -> dict[int, str]:

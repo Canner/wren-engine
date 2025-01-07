@@ -1,0 +1,130 @@
+import duckdb
+import opendal
+
+from app.model import LocalFileConnectionInfo
+from app.model.metadata.dto import (
+    Column,
+    RustWrenEngineColumnType,
+    Table,
+    TableProperties,
+)
+from app.model.metadata.metadata import Metadata
+
+
+class ObjectStorageMetadata(Metadata):
+    def __init__(self, connection_info):
+        super().__init__(connection_info)
+
+    def get_table_list(self) -> list[Table]:
+        op = opendal.Operator("fs", root=self.connection_info.url.get_secret_value())
+        conn = self._get_connection()
+        unique_tables = {}
+        for file in op.list("/"):
+            if file.path != "/":
+                stat = op.stat(file.path)
+                if stat.mode.is_dir():
+                    # if the file is a directory, use the directory name as the table name
+                    table_name = file.path.split("/")[0]
+                else:
+                    # if the file is a file, use the file name as the table name
+                    table_name = file.path.split(".")[0]
+                unique_tables[table_name] = Table(
+                    name=table_name,
+                    description=None,
+                    columns=[],
+                    properties=TableProperties(
+                        table=table_name,
+                        schema=None,
+                        catalog=None,
+                    ),
+                    primaryKey=None,
+                )
+                df = self._read_df(conn, file.path)
+                for col in df.columns:
+                    duckdb_type = df[col].dtypes[0]
+                    unique_tables[table_name].columns.append(
+                        Column(
+                            name=col,
+                            type=self._to_column_type(duckdb_type.__str__()),
+                            notNull=False,
+                        )
+                    )
+
+        return list(unique_tables.values())
+
+    def get_constraints(self):
+        return []
+
+    def get_version(self):
+        pass
+
+    def _read_df(self, conn, path):
+        if self.connection_info.format == "parquet":
+            return conn.read_parquet(
+                f"{self.connection_info.url.get_secret_value()}/{path}"
+            )
+        elif self.connection_info.format == "csv":
+            return conn.read_csv(
+                f"{self.connection_info.url.get_secret_value()}/{path}"
+            )
+        elif self.connection_info.format == "json":
+            return conn.read_json(
+                f"{self.connection_info.url.get_secret_value()}/{path}"
+            )
+        else:
+            raise NotImplementedError(
+                f"Unsupported format: {self.connection_info.format}"
+            )
+
+    def _to_column_type(self, col_type: str) -> RustWrenEngineColumnType:
+        if col_type.startswith("DECIMAL"):
+            return RustWrenEngineColumnType.DECIMAL
+
+        # TODO: support struct
+        if col_type.startswith("STRUCT"):
+            return RustWrenEngineColumnType.UNKNOWN
+
+        # TODO: support array
+        if col_type.endswith("[]"):
+            return RustWrenEngineColumnType.UNKNOWN
+
+        # refer to https://duckdb.org/docs/sql/data_types/overview#general-purpose-data-types
+        switcher = {
+            "BIGINT": RustWrenEngineColumnType.INT64,
+            "BIT": RustWrenEngineColumnType.INT2,
+            "BLOB": RustWrenEngineColumnType.BYTES,
+            "BOOLEAN": RustWrenEngineColumnType.BOOL,
+            "DATE": RustWrenEngineColumnType.DATE,
+            "DOUBLE": RustWrenEngineColumnType.FLOAT64,
+            "FLOAT": RustWrenEngineColumnType.FLOAT,
+            "INTEGER": RustWrenEngineColumnType.INT,
+            # TODO: Wren engine does not support HUGEINT. Map to INT64 for now.
+            "HUGEINT": RustWrenEngineColumnType.INT64,
+            "INTERVAL": RustWrenEngineColumnType.INTERVAL,
+            "JSON": RustWrenEngineColumnType.JSON,
+            "SMALLINT": RustWrenEngineColumnType.INT2,
+            "TIME": RustWrenEngineColumnType.TIME,
+            "TIMESTAMP": RustWrenEngineColumnType.TIMESTAMP,
+            "TIMESTAMP WITH TIME ZONE": RustWrenEngineColumnType.TIMESTAMPTZ,
+            "TINYINT": RustWrenEngineColumnType.INT2,
+            "UBIGINT": RustWrenEngineColumnType.INT64,
+            # TODO: Wren engine does not support UHUGEINT. Map to INT64 for now.
+            "UHUGEINT": RustWrenEngineColumnType.INT64,
+            "UINTEGER": RustWrenEngineColumnType.INT,
+            "USMALLINT": RustWrenEngineColumnType.INT2,
+            "UTINYINT": RustWrenEngineColumnType.INT2,
+            "UUID": RustWrenEngineColumnType.UUID,
+            "VARCHAR": RustWrenEngineColumnType.STRING,
+        }
+        return switcher.get(col_type, RustWrenEngineColumnType.UNKNOWN)
+
+    def _get_connection(self):
+        return duckdb.connect()
+
+
+class LocalFileMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info: LocalFileConnectionInfo):
+        super().__init__(connection_info)
+
+    def get_version(self):
+        return "Local File System"
