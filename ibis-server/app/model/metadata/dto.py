@@ -66,6 +66,9 @@ class TableProperties(BaseModel):
     schema_: str | None = Field(alias="schema", default=None)
     catalog: str | None
     table: str | None  # only table name without schema or catalog
+    path: str | None = Field(
+        alias="path", default=None
+    )  # the full path of the table for file-based table
 
 
 class Table(BaseModel):

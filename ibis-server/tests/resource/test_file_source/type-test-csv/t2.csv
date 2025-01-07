@@ -1,0 +1,2 @@
+c_bigint,c_bit,c_blob,c_boolean,c_date,c_double,c_float,c_integer,c_hugeint,c_interval,c_json,c_smallint,c_time,c_timestamp,c_timestamptz,c_tinyint,c_ubigint,c_uhugeint,c_uinteger,c_usmallint,c_utinyint,c_uuid,c_varchar
+100,00000000000000000000000000000001,hello,true,2020-01-01,1.1,1.1,1,1,1 day,"{""a"": 1}",1,12:00:00,2020-01-01 12:00:00,2020-01-01 12:00:00+08,1,1,1,1,1,1,123e4567-e89b-12d3-a456-426614174000,hello

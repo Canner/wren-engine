@@ -20,6 +20,7 @@ from app.model import (
     QueryCannerDTO,
     QueryClickHouseDTO,
     QueryDTO,
+    QueryLocalFileDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
@@ -39,6 +40,7 @@ class DataSource(StrEnum):
     postgres = auto()
     snowflake = auto()
     trino = auto()
+    local_file = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -62,6 +64,7 @@ class DataSourceExtension(Enum):
     postgres = QueryPostgresDTO
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
+    local_file = QueryLocalFileDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
@@ -70,6 +73,10 @@ class DataSourceExtension(Enum):
         try:
             if hasattr(info, "connection_url"):
                 return ibis.connect(info.connection_url.get_secret_value())
+            if self.name == "local_file":
+                raise NotImplementedError(
+                    "Local file connection is not implemented to get ibis backend"
+                )
             return getattr(self, f"get_{self.name}_connection")(info)
         except KeyError:
             raise NotImplementedError(f"Unsupported data source: {self}")

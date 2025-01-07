@@ -561,11 +561,11 @@ mod test {
         )
         .await?;
         let expected = "SELECT profile.totalcost FROM (SELECT totalcost.totalcost FROM \
-        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost \
-        FROM (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey \
-        FROM (SELECT orders.o_custkey AS o_custkey, orders.o_totalprice AS o_totalprice FROM orders) AS orders \
-        RIGHT JOIN (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM customer) AS customer \
-        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
+        (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
+        (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders RIGHT JOIN \
+        (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
+        (SELECT __source.p_custkey AS p_custkey FROM profile AS __source) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
         ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS profile";
         assert_eq!(result, expected);
 
@@ -577,16 +577,17 @@ mod test {
             sql,
         )
         .await?;
-        assert_eq!(result, "SELECT profile.totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost \
-        FROM (SELECT totalcost.p_custkey, profile.p_sex, totalcost.totalcost FROM \
-        (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
-        (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
-        (SELECT orders.o_custkey AS o_custkey, orders.o_totalprice AS o_totalprice FROM orders) AS orders RIGHT JOIN \
-        (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM customer) AS customer \
-        RIGHT JOIN (SELECT profile.p_custkey AS p_custkey FROM profile) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
-        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN \
-        (SELECT profile.p_custkey AS p_custkey, profile.p_sex AS p_sex FROM profile) AS profile \
-        ON totalcost.p_custkey = profile.p_custkey) AS __relation__1) AS profile WHERE profile.p_sex = 'M'");
+        assert_eq!(result,
+          "SELECT profile.totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
+          (SELECT totalcost.p_custkey, profile.p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, \
+          sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, \
+          orders.o_totalprice, __relation__1.p_custkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice \
+          FROM orders AS __source) AS orders RIGHT JOIN (SELECT customer.c_custkey, profile.p_custkey FROM \
+          (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
+          (SELECT __source.p_custkey AS p_custkey FROM profile AS __source) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+          ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN \
+          (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM profile AS __source) AS profile \
+          ON totalcost.p_custkey = profile.p_custkey) AS __relation__1) AS profile WHERE profile.p_sex = 'M'");
         Ok(())
     }
 
@@ -616,8 +617,8 @@ mod test {
         .await?;
         assert_eq!(actual,
             "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
-            (SELECT customer.\"Custkey\" AS \"Custkey\", \
-            customer.\"Name\" AS \"Name\" FROM datafusion.public.customer) AS \"Customer\"");
+            (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM \
+            datafusion.public.customer AS __source) AS \"Customer\"");
         Ok(())
     }
 
@@ -653,9 +654,8 @@ mod test {
             r#"select add_two("Custkey") from "Customer""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM \
-        (SELECT \"Customer\".\"Custkey\" FROM (SELECT customer.\"Custkey\" AS \"Custkey\" \
-        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\"");
+        assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
+        FROM (SELECT __source.\"Custkey\" AS \"Custkey\" FROM datafusion.public.customer AS __source) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
             &ctx,
@@ -664,10 +664,9 @@ mod test {
             r#"select median("Custkey") from "CTest"."STest"."Customer" group by "Name""#,
         )
         .await?;
-        assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM \
-        (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
-        (SELECT customer.\"Custkey\" AS \"Custkey\", customer.\"Name\" AS \"Name\" \
-        FROM datafusion.public.customer) AS \"Customer\") AS \"Customer\" GROUP BY \"Customer\".\"Name\"");
+        assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
+        FROM (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.public.customer AS __source) AS \"Customer\") AS \"Customer\" \
+        GROUP BY \"Customer\".\"Name\"");
 
         // TODO: support window functions analysis
         // let actual = transform_sql_with_ctx(
@@ -725,10 +724,10 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe_plus, artist.subscribe FROM \
-                   (SELECT artist.\"名字\" AS \"名字\", artist.\"名字\" || artist.\"名字\" AS name_append, \
-                   artist.\"組別\" AS \"group\", CAST(artist.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, artist.\"訂閱數\" AS subscribe FROM artist) \
-                   AS artist");
+                   "SELECT artist.\"名字\", artist.name_append, artist.\"group\", artist.subscribe_plus, artist.subscribe \
+                   FROM (SELECT __source.\"名字\" AS \"名字\", __source.\"名字\" || __source.\"名字\" AS name_append, __source.\"組別\" AS \"group\", \
+                   CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus, __source.\"訂閱數\" AS subscribe FROM artist AS __source) AS artist"
+);
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select group from wren.test.artist"#;
@@ -740,7 +739,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT artist.\"組別\" AS \"group\" FROM artist) AS artist) AS artist");
+                   "SELECT artist.\"group\" FROM (SELECT artist.\"group\" FROM (SELECT __source.\"組別\" AS \"group\" FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await?;
 
         let sql = r#"select subscribe_plus from wren.test.artist"#;
@@ -752,7 +751,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(artist.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist) AS artist) AS artist");
+                   "SELECT artist.subscribe_plus FROM (SELECT artist.subscribe_plus FROM (SELECT CAST(__source.\"訂閱數\" AS BIGINT) + 1 AS subscribe_plus FROM artist AS __source) AS artist) AS artist");
         ctx.sql(&actual).await?.show().await
     }
 
@@ -844,7 +843,7 @@ mod test {
         .await?;
         assert_eq!(actual,
                    "SELECT artist.\"串接名字\" FROM (SELECT artist.\"串接名字\" FROM \
-                   (SELECT artist.\"名字\" || artist.\"名字\" AS \"串接名字\" FROM artist) AS artist) AS artist");
+                   (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist) AS artist");
 
         let sql = r#"select * from wren.test.artist"#;
         let actual = transform_sql_with_ctx(
@@ -855,7 +854,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT artist.\"串接名字\" FROM (SELECT artist.\"名字\" || artist.\"名字\" AS \"串接名字\" FROM artist) AS artist");
+                   "SELECT artist.\"串接名字\" FROM (SELECT __source.\"名字\" || __source.\"名字\" AS \"串接名字\" FROM artist AS __source) AS artist");
 
         let sql = r#"select "名字" from wren.test.artist"#;
         let _ = transform_sql_with_ctx(
@@ -914,7 +913,7 @@ mod test {
         .await?;
         assert_eq!(actual,
                    "SELECT CAST(current_date() AS TIMESTAMP) > artist.\"出道時間\" FROM \
-                   (SELECT artist.\"出道時間\" FROM (SELECT artist.\"出道時間\" AS \"出道時間\" FROM artist) AS artist) AS artist");
+                   (SELECT artist.\"出道時間\" FROM (SELECT __source.\"出道時間\" AS \"出道時間\" FROM artist AS __source) AS artist) AS artist");
         Ok(())
     }
 
@@ -1063,8 +1062,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT count(*) FROM (SELECT artist.cast_timestamptz FROM (SELECT CAST(artist.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
-                   FROM artist) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
+                   "SELECT count(*) FROM (SELECT artist.cast_timestamptz FROM \
+                   (SELECT CAST(__source.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
+                   FROM artist AS __source) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
         Ok(())
     }
 
@@ -1145,10 +1145,10 @@ mod test {
             )
             .await?;
             assert_eq!(actual,
-                       "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) = timestamp_table.timestamptz_col FROM \
-                   (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
-                   (SELECT timestamp_table.timestamp_col AS timestamp_col, timestamp_table.timestamptz_col AS timestamptz_col \
-                   FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+                       "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) = timestamp_table.timestamptz_col \
+                       FROM (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
+                       (SELECT __source.timestamp_col AS timestamp_col, __source.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
 
             let sql = r#"select timestamptz_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1160,9 +1160,8 @@ mod test {
             .await?;
             // assert the simplified literal will be casted to the timestamp tz
             assert_eq!(actual,
-                       "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) \
-                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
-                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+);
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1175,8 +1174,8 @@ mod test {
             // assert the string literal will be casted to the timestamp tz
             assert_eq!(actual,
                        "SELECT timestamp_table.timestamptz_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
-                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT timestamp_table.timestamptz_col AS timestamptz_col \
-                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+                       FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col \
+                       FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
 
             let sql = r#"select timestamp_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1188,9 +1187,9 @@ mod test {
             .await?;
             // assert the simplified literal won't be casted to the timestamp tz
             assert_eq!(actual,
-                       "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) FROM \
-                       (SELECT timestamp_table.timestamp_col FROM (SELECT timestamp_table.timestamp_col AS timestamp_col \
-                       FROM datafusion.public.timestamp_table) AS timestamp_table) AS timestamp_table");
+                "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) \
+                FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col \
+                FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }
         Ok(())
     }
@@ -1213,7 +1212,7 @@ mod test {
         let actual =
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
         assert_eq!(actual, "SELECT list_table.list_col[1] FROM (SELECT list_table.list_col FROM \
-        (SELECT list_table.list_col AS list_col FROM list_table) AS list_table) AS list_table");
+        (SELECT __source.list_col AS list_col FROM list_table AS __source) AS list_table) AS list_table");
         Ok(())
     }
 
@@ -1247,16 +1246,19 @@ mod test {
         let sql = "select struct_col.float_field from wren.test.struct_table";
         let actual =
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT struct_table.struct_col.float_field FROM \
-        (SELECT struct_table.struct_col FROM (SELECT struct_table.struct_col AS struct_col \
-        FROM struct_table) AS struct_table) AS struct_table");
+        assert_eq!(
+            actual,
+            "SELECT struct_table.struct_col.float_field FROM \
+        (SELECT struct_table.struct_col FROM (SELECT __source.struct_col AS struct_col \
+        FROM struct_table AS __source) AS struct_table) AS struct_table"
+        );
 
         let sql = "select struct_array_col[1].float_field from wren.test.struct_table";
         let actual =
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
         assert_eq!(actual, "SELECT struct_table.struct_array_col[1].float_field FROM \
-        (SELECT struct_table.struct_array_col FROM (SELECT struct_table.struct_array_col AS struct_array_col \
-        FROM struct_table) AS struct_table) AS struct_table");
+        (SELECT struct_table.struct_array_col FROM (SELECT __source.struct_array_col AS struct_array_col \
+        FROM struct_table AS __source) AS struct_table) AS struct_table");
 
         let sql =
             "select {float_field: 1.0, time_field: timestamp '2021-01-01 00:00:00'}";
@@ -1353,9 +1355,10 @@ mod test {
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
         assert_eq!(
             result,
-            "SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM (SELECT customer.c_custkey, customer.c_name \
-            FROM (SELECT customer.c_custkey AS c_custkey, customer.c_name AS c_name \
-            FROM customer) AS customer) AS customer GROUP BY customer.c_custkey"
+            "SELECT customer.c_custkey, count(DISTINCT customer.c_name) FROM \
+            (SELECT customer.c_custkey, customer.c_name FROM \
+            (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
+            GROUP BY customer.c_custkey"
         );
         Ok(())
     }

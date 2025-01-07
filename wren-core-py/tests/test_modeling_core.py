@@ -90,7 +90,7 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT customer.c_custkey AS c_custkey, customer.c_name AS c_name FROM main.customer) AS customer"
+        == "SELECT customer.c_custkey, customer.c_name FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM main.customer AS __source) AS customer"
     )
 
     session_context = SessionContext(manifest_str, "tests/functions.csv")
@@ -98,7 +98,7 @@ def test_session_context():
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
 
@@ -113,7 +113,7 @@ def test_read_function_list():
     )
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT customer.c_custkey AS c_custkey FROM main.customer) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
     session_context = SessionContext(manifest_str, None)
