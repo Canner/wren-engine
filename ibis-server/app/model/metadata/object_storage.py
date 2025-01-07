@@ -2,6 +2,7 @@ import os
 
 import duckdb
 import opendal
+from loguru import logger
 
 from app.model import LocalFileConnectionInfo
 from app.model.metadata.dto import (
@@ -27,9 +28,33 @@ class ObjectStorageMetadata(Metadata):
                 if stat.mode.is_dir():
                     # if the file is a directory, use the directory name as the table name
                     table_name = os.path.basename(os.path.normpath(file.path))
+                    full_path = f"{self.connection_info.url.get_secret_value()}/{table_name}/*.{self.connection_info.format}"
                 else:
                     # if the file is a file, use the file name as the table name
                     table_name = os.path.splitext(os.path.basename(file.path))[0]
+                    full_path = (
+                        f"{self.connection_info.url.get_secret_value()}/{file.path}"
+                    )
+
+                # read the file with the target format if unreadable, skip the file
+                df = self._read_df(conn, full_path)
+                if df is None:
+                    continue
+                columns = []
+                try:
+                    for col in df.columns:
+                        duckdb_type = df[col].dtypes[0]
+                        columns.append(
+                            Column(
+                                name=col,
+                                type=self._to_column_type(duckdb_type.__str__()),
+                                notNull=False,
+                            )
+                        )
+                except Exception as e:
+                    logger.debug(f"Failed to read column types: {e}")
+                    continue
+
                 unique_tables[table_name] = Table(
                     name=table_name,
                     description=None,
@@ -38,20 +63,11 @@ class ObjectStorageMetadata(Metadata):
                         table=table_name,
                         schema=None,
                         catalog=None,
-                        path=f"{self.connection_info.url.get_secret_value()}/{file.path}",
+                        path=full_path,
                     ),
                     primaryKey=None,
                 )
-                df = self._read_df(conn, file.path)
-                for col in df.columns:
-                    duckdb_type = df[col].dtypes[0]
-                    unique_tables[table_name].columns.append(
-                        Column(
-                            name=col,
-                            type=self._to_column_type(duckdb_type.__str__()),
-                            notNull=False,
-                        )
-                    )
+                unique_tables[table_name].columns = columns
 
         return list(unique_tables.values())
 
@@ -63,17 +79,24 @@ class ObjectStorageMetadata(Metadata):
 
     def _read_df(self, conn, path):
         if self.connection_info.format == "parquet":
-            return conn.read_parquet(
-                f"{self.connection_info.url.get_secret_value()}/{path}"
-            )
+            try:
+                return conn.read_parquet(path)
+            except Exception as e:
+                logger.debug(f"Failed to read parquet file: {e}")
+                return None
         elif self.connection_info.format == "csv":
-            return conn.read_csv(
-                f"{self.connection_info.url.get_secret_value()}/{path}"
-            )
+            try:
+                logger.debug(f"Reading csv file: {path}")
+                return conn.read_csv(path)
+            except Exception as e:
+                logger.debug(f"Failed to read csv file: {e}")
+                return None
         elif self.connection_info.format == "json":
-            return conn.read_json(
-                f"{self.connection_info.url.get_secret_value()}/{path}"
-            )
+            try:
+                return conn.read_json(path)
+            except Exception as e:
+                logger.debug(f"Failed to read json file: {e}")
+                return None
         else:
             raise NotImplementedError(
                 f"Unsupported format: {self.connection_info.format}"
@@ -98,7 +121,7 @@ class ObjectStorageMetadata(Metadata):
             "BLOB": RustWrenEngineColumnType.BYTES,
             "BOOLEAN": RustWrenEngineColumnType.BOOL,
             "DATE": RustWrenEngineColumnType.DATE,
-            "DOUBLE": RustWrenEngineColumnType.FLOAT64,
+            "DOUBLE": RustWrenEngineColumnType.DOUBLE,
             "FLOAT": RustWrenEngineColumnType.FLOAT,
             "INTEGER": RustWrenEngineColumnType.INT,
             # TODO: Wren engine does not support HUGEINT. Map to INT64 for now.

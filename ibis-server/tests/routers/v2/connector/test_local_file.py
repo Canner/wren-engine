@@ -245,3 +245,204 @@ async def test_unsupported_format(client):
     )
     assert response.status_code == 501
     assert response.text == "Unsupported format: unsupported"
+
+
+async def test_list_parquet_files(client):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "tests/resource/test_file_source",
+                "format": "parquet",
+            },
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result) == 2
+    table_names = [table["name"] for table in result]
+    assert "type-test-parquet" in table_names
+    assert "type-test" in table_names
+    columns = result[0]["columns"]
+    assert len(columns) == 23
+    assert columns[0]["name"] == "c_bigint"
+    assert columns[0]["type"] == "INT64"
+    assert columns[1]["name"] == "c_bit"
+    assert columns[1]["type"] == "STRING"
+    assert columns[2]["name"] == "c_blob"
+    assert columns[2]["type"] == "BYTES"
+    assert columns[3]["name"] == "c_boolean"
+    assert columns[3]["type"] == "BOOL"
+    assert columns[4]["name"] == "c_date"
+    assert columns[4]["type"] == "DATE"
+    assert columns[5]["name"] == "c_double"
+    assert columns[5]["type"] == "DOUBLE"
+    assert columns[6]["name"] == "c_float"
+    assert columns[6]["type"] == "FLOAT"
+    assert columns[7]["name"] == "c_integer"
+    assert columns[7]["type"] == "INT"
+    assert columns[8]["name"] == "c_hugeint"
+    assert columns[8]["type"] == "DOUBLE"
+    assert columns[9]["name"] == "c_interval"
+    assert columns[9]["type"] == "INTERVAL"
+    assert columns[10]["name"] == "c_json"
+    assert columns[10]["type"] == "JSON"
+    assert columns[11]["name"] == "c_smallint"
+    assert columns[11]["type"] == "INT2"
+    assert columns[12]["name"] == "c_time"
+    assert columns[12]["type"] == "TIME"
+    assert columns[13]["name"] == "c_timestamp"
+    assert columns[13]["type"] == "TIMESTAMP"
+    assert columns[14]["name"] == "c_timestamptz"
+    assert columns[14]["type"] == "TIMESTAMPTZ"
+    assert columns[15]["name"] == "c_tinyint"
+    assert columns[15]["type"] == "INT2"
+    assert columns[16]["name"] == "c_ubigint"
+    assert columns[16]["type"] == "INT64"
+    assert columns[17]["name"] == "c_uhugeint"
+    assert columns[17]["type"] == "DOUBLE"
+    assert columns[18]["name"] == "c_uinteger"
+    assert columns[18]["type"] == "INT"
+    assert columns[19]["name"] == "c_usmallint"
+    assert columns[19]["type"] == "INT2"
+    assert columns[20]["name"] == "c_utinyint"
+    assert columns[20]["type"] == "INT2"
+    assert columns[21]["name"] == "c_uuid"
+    assert columns[21]["type"] == "UUID"
+    assert columns[22]["name"] == "c_varchar"
+    assert columns[22]["type"] == "STRING"
+
+
+async def test_list_csv_files(client):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "tests/resource/test_file_source",
+                "format": "csv",
+            },
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result) == 3
+    table_names = [table["name"] for table in result]
+    assert "type-test-csv" in table_names
+    assert "type-test" in table_names
+    # `invalid` will be considered as a one column csv file
+    assert "invalid" in table_names
+    columns = result[0]["columns"]
+    assert columns[0]["name"] == "c_bigint"
+    assert columns[0]["type"] == "INT64"
+    assert columns[1]["name"] == "c_bit"
+    assert columns[1]["type"] == "STRING"
+    assert columns[2]["name"] == "c_blob"
+    assert columns[2]["type"] == "STRING"
+    assert columns[3]["name"] == "c_boolean"
+    assert columns[3]["type"] == "BOOL"
+    assert columns[4]["name"] == "c_date"
+    assert columns[4]["type"] == "DATE"
+    assert columns[5]["name"] == "c_double"
+    assert columns[5]["type"] == "DOUBLE"
+    assert columns[6]["name"] == "c_float"
+    assert columns[6]["type"] == "DOUBLE"
+    assert columns[7]["name"] == "c_integer"
+    assert columns[7]["type"] == "INT64"
+    assert columns[8]["name"] == "c_hugeint"
+    assert columns[8]["type"] == "INT64"
+    assert columns[9]["name"] == "c_interval"
+    assert columns[9]["type"] == "STRING"
+    assert columns[10]["name"] == "c_json"
+    assert columns[10]["type"] == "STRING"
+    assert columns[11]["name"] == "c_smallint"
+    assert columns[11]["type"] == "INT64"
+    assert columns[12]["name"] == "c_time"
+    assert columns[12]["type"] == "TIME"
+    assert columns[13]["name"] == "c_timestamp"
+    assert columns[13]["type"] == "TIMESTAMP"
+    assert columns[14]["name"] == "c_timestamptz"
+    assert columns[14]["type"] == "TIMESTAMP"
+    assert columns[15]["name"] == "c_tinyint"
+    assert columns[15]["type"] == "INT64"
+    assert columns[16]["name"] == "c_ubigint"
+    assert columns[16]["type"] == "INT64"
+    assert columns[17]["name"] == "c_uhugeint"
+    assert columns[17]["type"] == "INT64"
+    assert columns[18]["name"] == "c_uinteger"
+    assert columns[18]["type"] == "INT64"
+    assert columns[19]["name"] == "c_usmallint"
+    assert columns[19]["type"] == "INT64"
+    assert columns[20]["name"] == "c_utinyint"
+    assert columns[20]["type"] == "INT64"
+    assert columns[21]["name"] == "c_uuid"
+    assert columns[21]["type"] == "STRING"
+    assert columns[22]["name"] == "c_varchar"
+    assert columns[22]["type"] == "STRING"
+
+
+async def test_list_json_files(client):
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "tests/resource/test_file_source",
+                "format": "json",
+            },
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result) == 2
+    table_names = [table["name"] for table in result]
+    assert "type-test-json" in table_names
+    assert "type-test" in table_names
+
+    columns = result[0]["columns"]
+    assert columns[0]["name"] == "c_bigint"
+    assert columns[0]["type"] == "INT64"
+    # `c_bit` is a string in json which value is `00000000000000000000000000000001`
+    # It's considered as a UUID by DuckDB json reader.
+    assert columns[1]["name"] == "c_bit"
+    assert columns[1]["type"] == "UUID"
+    assert columns[2]["name"] == "c_blob"
+    assert columns[2]["type"] == "STRING"
+    assert columns[3]["name"] == "c_boolean"
+    assert columns[3]["type"] == "BOOL"
+    assert columns[4]["name"] == "c_date"
+    assert columns[4]["type"] == "DATE"
+    assert columns[5]["name"] == "c_double"
+    assert columns[5]["type"] == "DOUBLE"
+    assert columns[6]["name"] == "c_float"
+    assert columns[6]["type"] == "DOUBLE"
+    assert columns[7]["name"] == "c_integer"
+    assert columns[7]["type"] == "INT64"
+    assert columns[8]["name"] == "c_hugeint"
+    assert columns[8]["type"] == "DOUBLE"
+    assert columns[9]["name"] == "c_interval"
+    assert columns[9]["type"] == "STRING"
+    assert columns[10]["name"] == "c_json"
+    assert columns[10]["type"] == "UNKNOWN"
+    assert columns[11]["name"] == "c_smallint"
+    assert columns[11]["type"] == "INT64"
+    assert columns[12]["name"] == "c_time"
+    assert columns[12]["type"] == "TIME"
+    assert columns[13]["name"] == "c_timestamp"
+    assert columns[13]["type"] == "TIMESTAMP"
+    assert columns[14]["name"] == "c_timestamptz"
+    assert columns[14]["type"] == "STRING"
+    assert columns[15]["name"] == "c_tinyint"
+    assert columns[15]["type"] == "INT64"
+    assert columns[16]["name"] == "c_ubigint"
+    assert columns[16]["type"] == "INT64"
+    assert columns[17]["name"] == "c_uhugeint"
+    assert columns[17]["type"] == "DOUBLE"
+    assert columns[18]["name"] == "c_uinteger"
+    assert columns[18]["type"] == "INT64"
+    assert columns[19]["name"] == "c_usmallint"
+    assert columns[19]["type"] == "INT64"
+    assert columns[20]["name"] == "c_utinyint"
+    assert columns[20]["type"] == "INT64"
+    assert columns[21]["name"] == "c_uuid"
+    assert columns[21]["type"] == "UUID"
+    assert columns[22]["name"] == "c_varchar"
+    assert columns[22]["type"] == "STRING"
