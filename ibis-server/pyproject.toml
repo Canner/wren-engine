@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wren-engine"
-version = "0.13.0"
+version = "0.13.1"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
@@ -22,7 +22,7 @@ ibis-framework = { version = "9.5.0", extras = [
 google-auth = "2.37.0"
 httpx = "0.28.1"
 python-dotenv = "1.0.1"
-orjson = "3.10.12"
+orjson = "3.10.13"
 pandas = "2.2.3"
 sqlglot = { extras = [
   "rs",
@@ -30,7 +30,7 @@ sqlglot = { extras = [
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
-anyio = "4.7.0"
+anyio = "4.8.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.4"
@@ -43,7 +43,7 @@ testcontainers = { version = "4.9.0", extras = [
 ] }
 sqlalchemy = "2.0.36"
 pre-commit = "4.0.1"
-ruff = "0.8.4"
+ruff = "0.8.6"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.11"
