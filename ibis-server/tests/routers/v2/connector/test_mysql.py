@@ -362,6 +362,7 @@ async def test_metadata_list_tables(client, mysql: MySqlContainer):
         "catalog": "",
         "schema": "test",
         "table": "orders",
+        "path": None,
     }
     assert len(result["columns"]) == 9
     o_comment_column = next(

@@ -287,6 +287,7 @@ async def test_metadata_list_tables(client):
         "catalog": "SNOWFLAKE_SAMPLE_DATA",
         "schema": "TPCH_SF1",
         "table": "ORDERS",
+        "path": None,
     }
     assert len(table["columns"]) == 9
     column = next(filter(lambda c: c["name"] == "O_COMMENT", table["columns"]))

@@ -391,6 +391,7 @@ async def test_metadata_list_tables(client, trino: TrinoContainer):
         "catalog": "memory",
         "schema": "default",
         "table": "orders",
+        "path": None,
     }
     assert len(table["columns"]) == 9
     column = next(filter(lambda c: c["name"] == "comment", table["columns"]))

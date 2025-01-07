@@ -380,6 +380,7 @@ async def test_metadata_list_tables(client, mssql: SqlServerContainer):
         "catalog": "tempdb",
         "schema": "dbo",
         "table": "orders",
+        "path": None,
     }
     assert len(result["columns"]) == 9
     assert result["columns"][8] == {
