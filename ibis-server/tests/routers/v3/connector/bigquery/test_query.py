@@ -87,7 +87,7 @@ async def test_query(client, manifest_str, connection_info):
         "1992-06-06",
         36485,
         "F",
-        356711.63,
+        "356711.63",
     ]
     assert result["dtypes"] == {
         "o_orderkey": "int64",
