@@ -382,11 +382,23 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
 
 
 async def test_metadata_list_tables(client):
+    def _assert_nested_column(column):
+        if column["nestedColumns"] is not None:
+            for nested_column in column["nestedColumns"]:
+                assert ".".join(nested_column["name"].split(".")[:-1]) == column["name"]
+                _assert_nested_column(nested_column)
+
     response = await client.post(
         url=f"{base_url}/metadata/tables",
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+    res = response.json()
+
+    # assert nest_column is correct
+    for table in res:
+        for column in table["columns"]:
+            _assert_nested_column(column)
 
 
 async def test_metadata_list_constraints(client):

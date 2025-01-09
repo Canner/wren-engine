@@ -51,10 +51,11 @@ class BigQueryMetadata(Metadata):
                 ON c.table_name = table_options.table_name
             WHERE cf.data_type != 'GEOGRAPHY'
                 AND cf.data_type NOT LIKE 'RANGE%'
+            ORDER BY cf.field_path ASC
             """
         response = self.connection.sql(sql).to_pandas().to_dict(orient="records")
 
-        def get_column(row, nestedColumns=None) -> Column:
+        def get_column(row) -> Column:
             return Column(
                 # field_path supports both column & nested column
                 name=row["field_path"],
@@ -62,48 +63,80 @@ class BigQueryMetadata(Metadata):
                 notNull=row["is_nullable"].lower() == "no",
                 description=row["column_description"],
                 properties={},
-                nestedColumns=nestedColumns,
+                nestedColumns=[] if has_nested_columns(row) else None,
             )
 
+        def get_table(row) -> Table:
+            return Table(
+                name=table_name,
+                description=row["table_description"],
+                columns=[],
+                properties=TableProperties(
+                    schema=row["table_schema"],
+                    catalog=row["table_catalog"],
+                    table=row["table_name"],
+                ),
+                primaryKey="",
+            )
+
+        def is_root_column(row) -> bool:
+            return "." not in row["field_path"]
+
+        def has_nested_columns(row) -> bool:
+            return "STRUCT" in row["data_type"]
+
+        # eg:
+        # if I would like to find the parent_column of "messages.data.elements.aspectRatio"
+        # the output should be the column -> {name: "messages.data.elements", ...}
+        def find_parent_column(column_metadata, root_column) -> Column:
+            parent_column_names = column_metadata["field_path"].split(".")[1:-1]
+            if len(parent_column_names) == 0:
+                return root_column
+            col_ref = root_column
+            cur_column_name = root_column.name
+            for partial_column_name in parent_column_names:
+                cur_column_name = cur_column_name + "." + partial_column_name
+                col_ref = next(
+                    filter(
+                        lambda column: column.name == cur_column_name,
+                        col_ref.nestedColumns,
+                    ),
+                    None,
+                )
+                if not col_ref:
+                    return None
+            return col_ref
+
         unique_tables = {}
-        current_struct = None
-        for index, row in enumerate(response):
+
+        for column_metadata in response:
             # generate unique table name
-            table_name = row["table_name"]
+            table_name = column_metadata["table_name"]
             # init table if not exists
             if table_name not in unique_tables:
-                unique_tables[table_name] = Table(
-                    name=table_name,
-                    description=row["table_description"],
-                    columns=[],
-                    properties=TableProperties(
-                        schema=row["table_schema"],
-                        catalog=row["table_catalog"],
-                        table=row["table_name"],
-                    ),
-                    primaryKey="",
-                )
-            # table exists, and add column to the table
-            if "STRUCT" in row["data_type"]:
-                if current_struct:
-                    current_struct.nestedColumns.append(get_column(row, []))
-                    current_struct = current_struct.nestedColumns[-1]
-                else:
-                    unique_tables[table_name].columns.append(get_column(row, []))
-                    current_struct = unique_tables[table_name].columns[-1]
-            elif current_struct:
-                # add nested column to current_struct
-                current_struct.nestedColumns.append(get_column(row))
+                unique_tables[table_name] = get_table(column_metadata)
+
+            current_table = unique_tables[table_name]
+            # if column is normal column, add to table
+            if is_root_column(column_metadata):
+                current_table.columns.append(get_column(column_metadata))
+            # if column is nested column, find the parent nested column, and append to the nestedColumns of the parent column
             else:
-                # add table column
-                unique_tables[table_name].columns.append(get_column(row))
-            # reset current_struct if next column name different
-            is_not_last_item = index + 1 < len(response)
-            if (
-                is_not_last_item
-                and response[index + 1].get("column_name") != row["column_name"]
-            ):
-                current_struct = None
+                root_column_name = column_metadata["field_path"].split(".")[0]
+                root_column = next(
+                    filter(
+                        lambda column: column.name == root_column_name,
+                        current_table.columns,
+                    ),
+                    None,
+                )
+                if not root_column:
+                    continue
+                parent_nested_column = find_parent_column(column_metadata, root_column)
+                if parent_nested_column:
+                    parent_nested_column.nestedColumns.append(
+                        get_column(column_metadata)
+                    )
 
         return list(unique_tables.values())
 
