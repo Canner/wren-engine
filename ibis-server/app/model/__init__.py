@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from enum import Enum
 
 from pydantic import BaseModel, Field, SecretStr
 from starlette.status import (
@@ -209,3 +210,9 @@ class UnprocessableEntityError(CustomHttpError):
 
 class NotFoundError(CustomHttpError):
     status_code = HTTP_404_NOT_FOUND
+
+
+class SSLMode(str, Enum):
+    DISABLED = "disabled"
+    ENABLED = "enabled"
+    VERIFY_CA = "verify_ca"

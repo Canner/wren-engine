@@ -7,6 +7,7 @@ import sqlalchemy
 from sqlalchemy import text
 from testcontainers.mysql import MySqlContainer
 
+from app.model import SSLMode
 from app.model.validator import rules
 from tests.conftest import file_path
 
@@ -107,6 +108,13 @@ def mysql(request) -> MySqlContainer:
                 "ALTER TABLE orders ADD FOREIGN KEY (o_custkey) REFERENCES customer(c_custkey);"
             )
         )
+    request.addfinalizer(mysql.stop)
+    return mysql
+
+
+@pytest.fixture(scope="module")
+def mysql_ssl_off(request) -> MySqlContainer:
+    mysql = MySqlContainer(image="mysql:8.0.40").with_command("--ssl=0").start()
     request.addfinalizer(mysql.stop)
     return mysql
 
@@ -397,6 +405,38 @@ async def test_metadata_list_constraints(client, mysql: MySqlContainer):
 
 async def test_metadata_db_version(client, mysql: MySqlContainer):
     connection_info = _to_connection_info(mysql)
+    response = await client.post(
+        url=f"{base_url}/metadata/version",
+        json={"connectionInfo": connection_info},
+    )
+    assert response.status_code == 200
+    assert response.text == '"8.0.40"'
+
+
+@pytest.mark.parametrize(
+    "ssl_mode, expected_error",
+    [
+        (SSLMode.ENABLED, "Bad handshake"),
+        (SSLMode.VERIFY_CA, "cafile, capath and cadata cannot be all omitted"),
+    ],
+)
+async def test_connection_invalid_ssl_mode(
+    client, mysql_ssl_off: MySqlContainer, ssl_mode, expected_error
+):
+    connection_info = _to_connection_info(mysql_ssl_off)
+    connection_info["sslMode"] = ssl_mode
+
+    with pytest.raises(Exception) as excinfo:
+        await client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": connection_info},
+        )
+    assert expected_error in str(excinfo.value)
+
+
+async def test_connection_valid_ssl_mode(client, mysql_ssl_off: MySqlContainer):
+    connection_info = _to_connection_info(mysql_ssl_off)
+    connection_info["sslMode"] = SSLMode.DISABLED
     response = await client.post(
         url=f"{base_url}/metadata/version",
         json={"connectionInfo": connection_info},

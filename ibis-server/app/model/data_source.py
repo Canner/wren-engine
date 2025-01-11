@@ -29,14 +29,9 @@ from app.model import (
     QuerySnowflakeDTO,
     QueryTrinoDTO,
     SnowflakeConnectionInfo,
+    SSLMode,
     TrinoConnectionInfo,
 )
-
-
-class SSLMode(str, Enum):
-    DISABLE = "Disable"
-    REQUIRE = "Require"
-    VERIFY_CA = "Verify CA"
 
 
 class DataSource(StrEnum):
@@ -194,13 +189,13 @@ class DataSourceExtension(Enum):
             info.ssl_mode.get_secret_value() if hasattr(info, "ssl_mode") else None
         )
 
-        if not ssl_mode or ssl_mode == SSLMode.DISABLE:
+        if not ssl_mode or ssl_mode == SSLMode.DISABLED:
             return None
 
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
 
-        if ssl_mode == SSLMode.REQUIRE:
+        if ssl_mode == SSLMode.ENABLED:
             ctx.verify_mode = ssl.CERT_NONE
         elif ssl_mode == SSLMode.VERIFY_CA:
             ctx.verify_mode = ssl.CERT_REQUIRED
