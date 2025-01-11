@@ -4,6 +4,7 @@ import orjson
 import pandas as pd
 import pytest
 import sqlalchemy
+from pymysql import OperationalError
 from sqlalchemy import text
 from testcontainers.mysql import MySqlContainer
 
@@ -414,19 +415,23 @@ async def test_metadata_db_version(client, mysql: MySqlContainer):
 
 
 @pytest.mark.parametrize(
-    "ssl_mode, expected_error",
+    "ssl_mode, expected_exception, expected_error",
     [
-        (SSLMode.ENABLED, "Bad handshake"),
-        (SSLMode.VERIFY_CA, "cafile, capath and cadata cannot be all omitted"),
+        (SSLMode.ENABLED, OperationalError, "Bad handshake"),
+        (
+            SSLMode.VERIFY_CA,
+            ValueError,
+            "SSL CA must be provided when SSL mode is VERIFY CA",
+        ),
     ],
 )
 async def test_connection_invalid_ssl_mode(
-    client, mysql_ssl_off: MySqlContainer, ssl_mode, expected_error
+    client, mysql_ssl_off: MySqlContainer, ssl_mode, expected_exception, expected_error
 ):
     connection_info = _to_connection_info(mysql_ssl_off)
     connection_info["sslMode"] = ssl_mode
 
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(expected_exception) as excinfo:
         await client.post(
             url=f"{base_url}/metadata/version",
             json={"connectionInfo": connection_info},

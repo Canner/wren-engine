@@ -189,6 +189,9 @@ class DataSourceExtension(Enum):
             info.ssl_mode.get_secret_value() if hasattr(info, "ssl_mode") else None
         )
 
+        if ssl_mode == SSLMode.VERIFY_CA and not info.ssl_ca:
+            raise ValueError("SSL CA must be provided when SSL mode is VERIFY CA")
+
         if not ssl_mode or ssl_mode == SSLMode.DISABLED:
             return None
 
