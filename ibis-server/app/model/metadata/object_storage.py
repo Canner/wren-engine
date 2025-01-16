@@ -4,7 +4,7 @@ import duckdb
 import opendal
 from loguru import logger
 
-from app.model import LocalFileConnectionInfo
+from app.model import LocalFileConnectionInfo, S3FileConnectionInfo
 from app.model.metadata.dto import (
     Column,
     RustWrenEngineColumnType,
@@ -12,6 +12,7 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+from app.model.utils import init_duckdb_s3
 
 
 class ObjectStorageMetadata(Metadata):
@@ -19,7 +20,7 @@ class ObjectStorageMetadata(Metadata):
         super().__init__(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        op = opendal.Operator("fs", root=self.connection_info.url.get_secret_value())
+        op = self._get_dal_operator()
         conn = self._get_connection()
         unique_tables = {}
         for file in op.list("/"):
@@ -36,6 +37,8 @@ class ObjectStorageMetadata(Metadata):
                         f"{self.connection_info.url.get_secret_value()}/{file.path}"
                     )
 
+                # add required prefix for object storage
+                full_path = self._get_full_path(full_path)
                 # read the file with the target format if unreadable, skip the file
                 df = self._read_df(conn, full_path)
                 if df is None:
@@ -147,6 +150,12 @@ class ObjectStorageMetadata(Metadata):
     def _get_connection(self):
         return duckdb.connect()
 
+    def _get_dal_operator(self):
+        return opendal.Operator("fs", root=self.connection_info.url.get_secret_value())
+
+    def _get_full_path(self, path):
+        return path
+
 
 class LocalFileMetadata(ObjectStorageMetadata):
     def __init__(self, connection_info: LocalFileConnectionInfo):
@@ -154,3 +163,34 @@ class LocalFileMetadata(ObjectStorageMetadata):
 
     def get_version(self):
         return "Local File System"
+
+
+class S3FileMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info):
+        super().__init__(connection_info)
+
+    def get_version(self):
+        return "S3"
+
+    def _get_connection(self):
+        conn = duckdb.connect()
+        init_duckdb_s3(conn, self.connection_info)
+        logger.debug("Initialized duckdb s3")
+        return conn
+
+    def _get_dal_operator(self):
+        info: S3FileConnectionInfo = self.connection_info
+        return opendal.Operator(
+            "s3",
+            root=info.url.get_secret_value(),
+            bucket=info.bucket.get_secret_value(),
+            region=info.region.get_secret_value(),
+            secret_access_key=info.secret_key.get_secret_value(),
+            access_key_id=info.access_key.get_secret_value(),
+        )
+
+    def _get_full_path(self, path):
+        if path.startswith("/"):
+            path = path[1:]
+
+        return f"s3://{self.connection_info.bucket.get_secret_value()}/{path}"

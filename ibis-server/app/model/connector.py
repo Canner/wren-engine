@@ -15,8 +15,14 @@ from google.oauth2 import service_account
 from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
-from app.model import ConnectionInfo, UnknownIbisError, UnprocessableEntityError
+from app.model import (
+    ConnectionInfo,
+    S3FileConnectionInfo,
+    UnknownIbisError,
+    UnprocessableEntityError,
+)
 from app.model.data_source import DataSource
+from app.model.utils import init_duckdb_s3
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -31,6 +37,8 @@ class Connector:
         elif data_source == DataSource.bigquery:
             self._connector = BigQueryConnector(connection_info)
         elif data_source == DataSource.local_file:
+            self._connector = DuckDBConnector(connection_info)
+        elif data_source == DataSource.s3_file:
             self._connector = DuckDBConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
@@ -147,10 +155,12 @@ class BigQueryConnector(SimpleConnector):
 
 
 class DuckDBConnector:
-    def __init__(self, _connection_info: ConnectionInfo):
+    def __init__(self, connection_info: ConnectionInfo):
         import duckdb
 
         self.connection = duckdb.connect()
+        if isinstance(connection_info, S3FileConnectionInfo):
+            init_duckdb_s3(connection_info)
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         return self.connection.execute(sql).fetch_df().head(limit)
