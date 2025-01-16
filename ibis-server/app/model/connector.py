@@ -160,7 +160,7 @@ class DuckDBConnector:
 
         self.connection = duckdb.connect()
         if isinstance(connection_info, S3FileConnectionInfo):
-            init_duckdb_s3(connection_info)
+            init_duckdb_s3(self.connection, connection_info)
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         return self.connection.execute(sql).fetch_df().head(limit)

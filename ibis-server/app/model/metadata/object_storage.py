@@ -166,7 +166,7 @@ class LocalFileMetadata(ObjectStorageMetadata):
 
 
 class S3FileMetadata(ObjectStorageMetadata):
-    def __init__(self, connection_info):
+    def __init__(self, connection_info: S3FileConnectionInfo):
         super().__init__(connection_info)
 
     def get_version(self):
