@@ -191,6 +191,40 @@ async def test_dry_run(client, manifest_str, connection_info):
     assert response.text is not None
 
 
+async def test_query_with_invalid_connection_info(client, manifest_str):
+    response = await client.post(
+        f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            "connectionInfo": {
+                "url": "/tpch/data",
+                "format": "parquet",
+                "bucket": bucket,
+                "region": region,
+                "access_key": "invalid",
+                "secret_key": "invalid",
+            },
+        },
+    )
+    assert response.status_code == 422
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "/tpch/data",
+                "format": "parquet",
+                "bucket": bucket,
+                "region": region,
+                "access_key": "invalid",
+                "secret_key": "invalid",
+            },
+        },
+    )
+    assert response.status_code == 422
+
+
 async def test_metadata_list_tables(client, connection_info):
     response = await client.post(
         url=f"{base_url}/metadata/tables",

@@ -1,4 +1,4 @@
-from duckdb import DuckDBPyConnection
+from duckdb import DuckDBPyConnection, HTTPException
 
 from app.model import S3FileConnectionInfo
 
@@ -14,6 +14,9 @@ def init_duckdb_s3(
         REGION '{connection_info.region.get_secret_value()}'
     )
     """
-    result = connection.execute(create_secret).fetchone()
-    if result is None or not result[0]:
-        raise Exception("Failed to create secret")
+    try:
+        result = connection.execute(create_secret).fetchone()
+        if result is None or not result[0]:
+            raise Exception("Failed to create secret")
+    except HTTPException as e:
+        raise Exception("Failed to create secret", e)
