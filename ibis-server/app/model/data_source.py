@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import ssl
 from enum import Enum, StrEnum, auto
 from json import loads
+from typing import Optional
 
 import ibis
 from google.oauth2 import service_account
@@ -27,6 +29,7 @@ from app.model import (
     QuerySnowflakeDTO,
     QueryTrinoDTO,
     SnowflakeConnectionInfo,
+    SSLMode,
     TrinoConnectionInfo,
 )
 
@@ -130,15 +133,19 @@ class DataSourceExtension(Enum):
             **info.kwargs if info.kwargs else dict(),
         )
 
-    @staticmethod
-    def get_mysql_connection(info: MySqlConnectionInfo) -> BaseBackend:
+    @classmethod
+    def get_mysql_connection(cls, info: MySqlConnectionInfo) -> BaseBackend:
+        ssl_context = cls._create_ssl_context(info)
+        kwargs = {"ssl": ssl_context} if ssl_context else {}
+        if info.kwargs:
+            kwargs.update(info.kwargs)
         return ibis.mysql.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
             password=info.password.get_secret_value(),
-            **info.kwargs if info.kwargs else dict(),
+            **kwargs,
         )
 
     @staticmethod
@@ -175,3 +182,30 @@ class DataSourceExtension(Enum):
     @staticmethod
     def _escape_special_characters_for_odbc(value: str) -> str:
         return "{" + value.replace("}", "}}") + "}"
+
+    @staticmethod
+    def _create_ssl_context(info: ConnectionInfo) -> Optional[ssl.SSLContext]:
+        ssl_mode = (
+            info.ssl_mode.get_secret_value() if hasattr(info, "ssl_mode") else None
+        )
+
+        if ssl_mode == SSLMode.VERIFY_CA and not info.ssl_ca:
+            raise ValueError("SSL CA must be provided when SSL mode is VERIFY CA")
+
+        if not ssl_mode or ssl_mode == SSLMode.DISABLED:
+            return None
+
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+
+        if ssl_mode == SSLMode.ENABLED:
+            ctx.verify_mode = ssl.CERT_NONE
+        elif ssl_mode == SSLMode.VERIFY_CA:
+            ctx.verify_mode = ssl.CERT_REQUIRED
+            ctx.load_verify_locations(
+                cadata=base64.b64decode(info.ssl_ca.get_secret_value()).decode("utf-8")
+                if info.ssl_ca
+                else None
+            )
+
+        return ctx

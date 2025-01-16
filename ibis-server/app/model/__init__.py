@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from enum import Enum
 
 from pydantic import BaseModel, Field, SecretStr
 from starlette.status import (
@@ -99,6 +100,8 @@ class MySqlConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr
+    ssl_mode: SecretStr | None = Field(alias="sslMode", default=None)
+    ssl_ca: SecretStr | None = Field(alias="sslCA", default=None)
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyMySQL", default=None
     )
@@ -207,3 +210,9 @@ class UnprocessableEntityError(CustomHttpError):
 
 class NotFoundError(CustomHttpError):
     status_code = HTTP_404_NOT_FOUND
+
+
+class SSLMode(str, Enum):
+    DISABLED = "disabled"
+    ENABLED = "enabled"
+    VERIFY_CA = "verify_ca"
