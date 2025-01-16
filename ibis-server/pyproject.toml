@@ -64,6 +64,7 @@ markers = [
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
   "local_file: mark a test as a local file test",
+  "s3_file: mark a test as a s3 file test",
   "beta: mark a test as a test for beta versions of the engine",
 ]
 

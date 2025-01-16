@@ -56,6 +56,10 @@ class QueryLocalFileDTO(QueryDTO):
     connection_info: LocalFileConnectionInfo = connection_info_field
 
 
+class QueryS3FileDTO(QueryDTO):
+    connection_info: S3FileConnectionInfo = connection_info_field
+
+
 class BigQueryConnectionInfo(BaseModel):
     project_id: SecretStr
     dataset_id: SecretStr
@@ -147,6 +151,17 @@ class LocalFileConnectionInfo(BaseModel):
     )
 
 
+class S3FileConnectionInfo(BaseModel):
+    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    format: str = Field(
+        description="File format", default="csv", examples=["csv", "parquet", "json"]
+    )
+    bucket: SecretStr
+    region: SecretStr
+    access_key: SecretStr
+    secret_key: SecretStr
+
+
 ConnectionInfo = (
     BigQueryConnectionInfo
     | CannerConnectionInfo
@@ -157,6 +172,7 @@ ConnectionInfo = (
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
+    | S3FileConnectionInfo
 )
 
 

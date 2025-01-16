@@ -26,6 +26,7 @@ from app.model import (
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
+    QueryS3FileDTO,
     QuerySnowflakeDTO,
     QueryTrinoDTO,
     SnowflakeConnectionInfo,
@@ -44,6 +45,7 @@ class DataSource(StrEnum):
     snowflake = auto()
     trino = auto()
     local_file = auto()
+    s3_file = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -68,6 +70,7 @@ class DataSourceExtension(Enum):
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
     local_file = QueryLocalFileDTO
+    s3_file = QueryS3FileDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto
