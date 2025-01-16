@@ -10,6 +10,7 @@ import ibis.expr.schema as sch
 import ibis.formats
 import pandas as pd
 import sqlglot.expressions as sge
+from duckdb import HTTPException
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
@@ -163,10 +164,16 @@ class DuckDBConnector:
             init_duckdb_s3(self.connection, connection_info)
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
-        return self.connection.execute(sql).fetch_df().head(limit)
+        try:
+            return self.connection.execute(sql).fetch_df().head(limit)
+        except HTTPException as e:
+            raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
 
     def dry_run(self, sql: str) -> None:
-        self.connection.execute(sql)
+        try:
+            self.connection.execute(sql)
+        except HTTPException as e:
+            raise QueryDryRunError(f"Failed to execute query: {e!s}")
 
 
 @cache
