@@ -4,7 +4,11 @@ import duckdb
 import opendal
 from loguru import logger
 
-from app.model import LocalFileConnectionInfo
+from app.model import (
+    LocalFileConnectionInfo,
+    S3FileConnectionInfo,
+    UnprocessableEntityError,
+)
 from app.model.metadata.dto import (
     Column,
     RustWrenEngineColumnType,
@@ -12,6 +16,7 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
+from app.model.utils import init_duckdb_s3
 
 
 class ObjectStorageMetadata(Metadata):
@@ -19,55 +24,60 @@ class ObjectStorageMetadata(Metadata):
         super().__init__(connection_info)
 
     def get_table_list(self) -> list[Table]:
-        op = opendal.Operator("fs", root=self.connection_info.url.get_secret_value())
+        op = self._get_dal_operator()
         conn = self._get_connection()
         unique_tables = {}
-        for file in op.list("/"):
-            if file.path != "/":
-                stat = op.stat(file.path)
-                if stat.mode.is_dir():
-                    # if the file is a directory, use the directory name as the table name
-                    table_name = os.path.basename(os.path.normpath(file.path))
-                    full_path = f"{self.connection_info.url.get_secret_value()}/{table_name}/*.{self.connection_info.format}"
-                else:
-                    # if the file is a file, use the file name as the table name
-                    table_name = os.path.splitext(os.path.basename(file.path))[0]
-                    full_path = (
-                        f"{self.connection_info.url.get_secret_value()}/{file.path}"
-                    )
-
-                # read the file with the target format if unreadable, skip the file
-                df = self._read_df(conn, full_path)
-                if df is None:
-                    continue
-                columns = []
-                try:
-                    for col in df.columns:
-                        duckdb_type = df[col].dtypes[0]
-                        columns.append(
-                            Column(
-                                name=col,
-                                type=self._to_column_type(duckdb_type.__str__()),
-                                notNull=False,
-                            )
+        try:
+            for file in op.list("/"):
+                if file.path != "/":
+                    stat = op.stat(file.path)
+                    if stat.mode.is_dir():
+                        # if the file is a directory, use the directory name as the table name
+                        table_name = os.path.basename(os.path.normpath(file.path))
+                        full_path = f"{self.connection_info.url.get_secret_value()}/{table_name}/*.{self.connection_info.format}"
+                    else:
+                        # if the file is a file, use the file name as the table name
+                        table_name = os.path.splitext(os.path.basename(file.path))[0]
+                        full_path = (
+                            f"{self.connection_info.url.get_secret_value()}/{file.path}"
                         )
-                except Exception as e:
-                    logger.debug(f"Failed to read column types: {e}")
-                    continue
 
-                unique_tables[table_name] = Table(
-                    name=table_name,
-                    description=None,
-                    columns=[],
-                    properties=TableProperties(
-                        table=table_name,
-                        schema=None,
-                        catalog=None,
-                        path=full_path,
-                    ),
-                    primaryKey=None,
-                )
-                unique_tables[table_name].columns = columns
+                    # add required prefix for object storage
+                    full_path = self._get_full_path(full_path)
+                    # read the file with the target format if unreadable, skip the file
+                    df = self._read_df(conn, full_path)
+                    if df is None:
+                        continue
+                    columns = []
+                    try:
+                        for col in df.columns:
+                            duckdb_type = df[col].dtypes[0]
+                            columns.append(
+                                Column(
+                                    name=col,
+                                    type=self._to_column_type(duckdb_type.__str__()),
+                                    notNull=False,
+                                )
+                            )
+                    except Exception as e:
+                        logger.debug(f"Failed to read column types: {e}")
+                        continue
+
+                    unique_tables[table_name] = Table(
+                        name=table_name,
+                        description=None,
+                        columns=[],
+                        properties=TableProperties(
+                            table=table_name,
+                            schema=None,
+                            catalog=None,
+                            path=full_path,
+                        ),
+                        primaryKey=None,
+                    )
+                    unique_tables[table_name].columns = columns
+        except Exception as e:
+            raise UnprocessableEntityError(f"Failed to list files: {e!s}")
 
         return list(unique_tables.values())
 
@@ -147,6 +157,12 @@ class ObjectStorageMetadata(Metadata):
     def _get_connection(self):
         return duckdb.connect()
 
+    def _get_dal_operator(self):
+        return opendal.Operator("fs", root=self.connection_info.url.get_secret_value())
+
+    def _get_full_path(self, path):
+        return path
+
 
 class LocalFileMetadata(ObjectStorageMetadata):
     def __init__(self, connection_info: LocalFileConnectionInfo):
@@ -154,3 +170,34 @@ class LocalFileMetadata(ObjectStorageMetadata):
 
     def get_version(self):
         return "Local File System"
+
+
+class S3FileMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info: S3FileConnectionInfo):
+        super().__init__(connection_info)
+
+    def get_version(self):
+        return "S3"
+
+    def _get_connection(self):
+        conn = duckdb.connect()
+        init_duckdb_s3(conn, self.connection_info)
+        logger.debug("Initialized duckdb s3")
+        return conn
+
+    def _get_dal_operator(self):
+        info: S3FileConnectionInfo = self.connection_info
+        return opendal.Operator(
+            "s3",
+            root=info.url.get_secret_value(),
+            bucket=info.bucket.get_secret_value(),
+            region=info.region.get_secret_value(),
+            secret_access_key=info.secret_key.get_secret_value(),
+            access_key_id=info.access_key.get_secret_value(),
+        )
+
+    def _get_full_path(self, path):
+        if path.startswith("/"):
+            path = path[1:]
+
+        return f"s3://{self.connection_info.bucket.get_secret_value()}/{path}"

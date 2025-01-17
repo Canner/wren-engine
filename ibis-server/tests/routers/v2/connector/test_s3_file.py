@@ -1,12 +1,17 @@
 import base64
+import os
 
 import orjson
 import pytest
 
-pytestmark = pytest.mark.local_file
+pytestmark = pytest.mark.s3_file
 
+access_key = os.getenv("AWS_ACCESS_KEY_ID")
+secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+region = os.getenv("AWS_REGION")
+bucket = os.getenv("AWS_S3_BUCKET")
 
-base_url = "/v2/connector/local_file"
+base_url = "/v2/connector/s3_file"
 manifest = {
     "catalog": "my_calalog",
     "schema": "my_schema",
@@ -14,7 +19,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
-                "table": "tests/resource/tpch/data/orders.parquet",
+                "table": f"s3://{bucket}/tpch/data/orders.parquet",
             },
             "columns": [
                 {"name": "orderkey", "expression": "o_orderkey", "type": "integer"},
@@ -41,7 +46,7 @@ manifest = {
         {
             "name": "Customer",
             "tableReference": {
-                "table": "tests/resource/tpch/data/customer.parquet",
+                "table": f"s3://{bucket}/tpch/data/customer.parquet",
             },
             "columns": [
                 {
@@ -83,8 +88,12 @@ def manifest_str():
 @pytest.fixture(scope="module")
 def connection_info() -> dict[str, str]:
     return {
-        "url": "tests/resource/tpch/data",
+        "url": "/tpch/data",
         "format": "parquet",
+        "bucket": bucket,
+        "region": region,
+        "access_key": access_key,
+        "secret_key": secret_key,
     }
 
 
@@ -182,6 +191,40 @@ async def test_dry_run(client, manifest_str, connection_info):
     assert response.text is not None
 
 
+async def test_query_with_invalid_connection_info(client, manifest_str):
+    response = await client.post(
+        f"{base_url}/query",
+        json={
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+            "connectionInfo": {
+                "url": "/tpch/data",
+                "format": "parquet",
+                "bucket": bucket,
+                "region": region,
+                "access_key": "invalid",
+                "secret_key": "invalid",
+            },
+        },
+    )
+    assert response.status_code == 422
+
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={
+            "connectionInfo": {
+                "url": "/tpch/data",
+                "format": "parquet",
+                "bucket": bucket,
+                "region": region,
+                "access_key": "invalid",
+                "secret_key": "invalid",
+            },
+        },
+    )
+    assert response.status_code == 422
+
+
 async def test_metadata_list_tables(client, connection_info):
     response = await client.post(
         url=f"{base_url}/metadata/tables",
@@ -199,7 +242,7 @@ async def test_metadata_list_tables(client, connection_info):
         "catalog": None,
         "schema": None,
         "table": "orders",
-        "path": "tests/resource/tpch/data/orders.parquet",
+        "path": f"s3://{bucket}/tpch/data/orders.parquet",
     }
     assert len(result["columns"]) == 9
     assert result["columns"][8] == {
@@ -230,7 +273,7 @@ async def test_metadata_db_version(client, connection_info):
         },
     )
     assert response.status_code == 200
-    assert "Local File System" in response.text
+    assert "S3" in response.text
 
 
 async def test_unsupported_format(client):
@@ -238,8 +281,12 @@ async def test_unsupported_format(client):
         url=f"{base_url}/metadata/tables",
         json={
             "connectionInfo": {
-                "url": "tests/resource/tpch/data",
+                "url": "/tpch/data",
                 "format": "unsupported",
+                "bucket": bucket,
+                "region": region,
+                "access_key": access_key,
+                "secret_key": secret_key,
             },
         },
     )
@@ -252,8 +299,12 @@ async def test_list_parquet_files(client):
         url=f"{base_url}/metadata/tables",
         json={
             "connectionInfo": {
-                "url": "tests/resource/test_file_source",
+                "url": "/test_file_source",
                 "format": "parquet",
+                "bucket": bucket,
+                "region": region,
+                "access_key": access_key,
+                "secret_key": secret_key,
             },
         },
     )
@@ -318,8 +369,12 @@ async def test_list_csv_files(client):
         url=f"{base_url}/metadata/tables",
         json={
             "connectionInfo": {
-                "url": "tests/resource/test_file_source",
+                "url": "/test_file_source",
                 "format": "csv",
+                "bucket": bucket,
+                "region": region,
+                "access_key": access_key,
+                "secret_key": secret_key,
             },
         },
     )
@@ -385,8 +440,12 @@ async def test_list_json_files(client):
         url=f"{base_url}/metadata/tables",
         json={
             "connectionInfo": {
-                "url": "tests/resource/test_file_source",
+                "url": "/test_file_source",
                 "format": "json",
+                "bucket": bucket,
+                "region": region,
+                "access_key": access_key,
+                "secret_key": secret_key,
             },
         },
     )
