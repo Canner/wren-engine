@@ -290,8 +290,8 @@ async def test_unsupported_format(client):
             },
         },
     )
-    assert response.status_code == 501
-    assert response.text == "Unsupported format: unsupported"
+    assert response.status_code == 422
+    assert response.text == "Failed to list files: Unsupported format: unsupported"
 
 
 async def test_list_parquet_files(client):
