@@ -22,7 +22,7 @@ ibis-framework = { version = "9.5.0", extras = [
 google-auth = "2.37.0"
 httpx = "0.28.1"
 python-dotenv = "1.0.1"
-orjson = "3.10.14"
+orjson = "3.10.15"
 pandas = "2.2.3"
 sqlglot = { extras = [
   "rs",
@@ -45,10 +45,10 @@ testcontainers = { version = "4.9.0", extras = [
 ] }
 sqlalchemy = "2.0.37"
 pre-commit = "4.0.1"
-ruff = "0.9.1"
+ruff = "0.9.2"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.13"
+clickhouse-connect = "0.8.14"
 asgi-lifespan = "2.1.0"
 
 [tool.pytest.ini_options]
