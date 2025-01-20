@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>207</version>
+        <version>212</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -156,7 +156,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.29.2</version>
+                <version>4.29.3</version>
             </dependency>
 
             <dependency>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.15.11</version>
+                <version>1.16.1</version>
             </dependency>
 
             <dependency>
@@ -349,7 +349,7 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.48.3</version>
+                <version>3.48.4</version>
             </dependency>
 
             <dependency>
@@ -373,7 +373,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.4</version>
+                <version>42.7.5</version>
             </dependency>
 
             <dependency>
