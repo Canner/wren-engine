@@ -8,8 +8,8 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.115.6", extras = ["standard"] }
-pydantic = "2.10.5"
+fastapi = { version = "0.115.7", extras = ["standard"] }
+pydantic = "2.10.6"
 ibis-framework = { version = "9.5.0", extras = [
   "bigquery",
   "clickhouse",
@@ -19,10 +19,10 @@ ibis-framework = { version = "9.5.0", extras = [
   "snowflake",
   "trino",
 ] }
-google-auth = "2.37.0"
+google-auth = "2.38.0"
 httpx = "0.28.1"
 python-dotenv = "1.0.1"
-orjson = "3.10.14"
+orjson = "3.10.15"
 pandas = "2.2.3"
 sqlglot = { extras = [
   "rs",
@@ -36,7 +36,7 @@ opendal = ">=0.45"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.4"
-testcontainers = { version = "4.9.0", extras = [
+testcontainers = { version = "4.9.1", extras = [
   "clickhouse",
   "mssql",
   "mysql",
@@ -44,11 +44,11 @@ testcontainers = { version = "4.9.0", extras = [
   "trino",
 ] }
 sqlalchemy = "2.0.37"
-pre-commit = "4.0.1"
-ruff = "0.9.1"
+pre-commit = "4.1.0"
+ruff = "0.9.3"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
-clickhouse-connect = "0.8.13"
+clickhouse-connect = "0.8.15"
 asgi-lifespan = "2.1.0"
 
 [tool.pytest.ini_options]
