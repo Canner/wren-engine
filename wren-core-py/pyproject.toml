@@ -1,6 +1,7 @@
 [project]
 name = "wren-core-py"
 classifiers = ["Programming Language :: Python :: 3.11"]
+version = "0.1.0"
 
 [tool.poetry]
 name = "wren-core-py"
