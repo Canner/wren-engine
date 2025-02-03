@@ -18,6 +18,7 @@ import io.airlift.configuration.Config;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.File;
+import java.nio.file.Paths;
 
 @Deprecated
 public class PostgresWireProtocolConfig
@@ -31,7 +32,7 @@ public class PostgresWireProtocolConfig
     private String port = "7432";
     private boolean sslEnable;
     private int nettyThreadCount;
-    private File authFile = new File("etc/accounts");
+    private File authFile = Paths.get("etc/accounts").toFile();
     private boolean pgWireProtocolEnabled;
 
     @NotNull

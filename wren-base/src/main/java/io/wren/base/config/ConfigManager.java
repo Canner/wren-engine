@@ -24,10 +24,10 @@ import io.wren.base.client.duckdb.DuckDBConfig;
 import io.wren.base.client.duckdb.DuckDBConnectorConfig;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -154,7 +154,7 @@ public class ConfigManager
     {
         WrenConfig result = new WrenConfig();
         Optional.ofNullable(configs.get(WrenConfig.WREN_DIRECTORY))
-                .ifPresent(directory -> result.setWrenMDLDirectory(new File(directory)));
+                .ifPresent(directory -> result.setWrenMDLDirectory(Paths.get(directory).toFile()));
         result.setDataSourceType(WrenConfig.DataSourceType.valueOf(configs.get(WrenConfig.WREN_DATASOURCE_TYPE).toUpperCase(Locale.ROOT)));
         result.setEnableDynamicFields(Boolean.parseBoolean(configs.get(WrenConfig.WREN_ENABLE_DYNAMIC_FIELDS)));
         return result;
@@ -239,7 +239,7 @@ public class ConfigManager
         try {
             archiveConfigs();
             setConfigs.putAll(updated);
-            setConfigs.store(new FileWriter(configFile), "sync with file");
+            setConfigs.store(Files.newBufferedWriter(Paths.get(configFile)), "sync with file");
             LOG.info("Syncing config file: " + configFile);
         }
         catch (IOException e) {
@@ -250,14 +250,14 @@ public class ConfigManager
     private void archiveConfigs()
             throws IOException
     {
-        Path home = new File(configFile).getParentFile().toPath();
+        Path home = Paths.get(configFile).toFile().getParentFile().toPath();
         File archived = home.resolve(ARCHIVED).toFile();
         if (!archived.exists()) {
             if (!archived.mkdir()) {
                 throw new IOException("Cannot create archive folder");
             }
         }
-        File archivedFile = new File(configFile);
+        File archivedFile = Paths.get(configFile).toFile();
         Files.copy(archivedFile.toPath(),
                 archived.toPath().resolve(archivedFile.getName() + "." + LocalDateTime.now().format(DateTimeFormatter.ofPattern("uuuuMMddHHmmssnnnn"))));
         LOG.info("Archiving config file: " + archived);
