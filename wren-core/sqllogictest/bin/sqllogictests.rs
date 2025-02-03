@@ -58,6 +58,14 @@ pub async fn main() -> Result<()> {
     run_tests().await
 }
 
+// Trailing whitespace from lines in SLT will typically be removed, but do not fail if it is not
+// If particular test wants to cover trailing whitespace on a value,
+// it should project additional non-whitespace column on the right.
+#[allow(clippy::ptr_arg)]
+fn value_normalizer(s: &String) -> String {
+    s.trim_end().to_string()
+}
+
 /// Sets up an empty directory at test_files/scratch/<name>
 /// creating it if needed and clearing any file contents if it exists
 /// This allows tests for inserting to external tables or copy to
@@ -182,6 +190,7 @@ async fn run_complete_file(test_file: TestFile) -> Result<()> {
             path,
             col_separator,
             default_validator,
+            value_normalizer,
             strict_column_validator,
         )
         .await
