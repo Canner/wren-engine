@@ -118,7 +118,7 @@ class DataSourceExtension(Enum):
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
-            password=info.password.get_secret_value(),
+            password=(info.password and info.password.get_secret_value()),
         )
 
     @classmethod
@@ -128,8 +128,11 @@ class DataSourceExtension(Enum):
             port=info.port.get_secret_value(),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
-            password=cls._escape_special_characters_for_odbc(
-                info.password.get_secret_value()
+            password=(
+                info.password
+                and cls._escape_special_characters_for_odbc(
+                    info.password.get_secret_value()
+                )
             ),
             driver=info.driver,
             TDS_Version=info.tds_version,
@@ -147,7 +150,7 @@ class DataSourceExtension(Enum):
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
-            password=info.password.get_secret_value(),
+            password=(info.password and info.password.get_secret_value()),
             **kwargs,
         )
 
@@ -158,7 +161,7 @@ class DataSourceExtension(Enum):
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
-            password=info.password.get_secret_value(),
+            password=(info.password and info.password.get_secret_value()),
         )
 
     @staticmethod
@@ -189,7 +192,9 @@ class DataSourceExtension(Enum):
     @staticmethod
     def _create_ssl_context(info: ConnectionInfo) -> Optional[ssl.SSLContext]:
         ssl_mode = (
-            info.ssl_mode.get_secret_value() if hasattr(info, "ssl_mode") else None
+            info.ssl_mode.get_secret_value()
+            if hasattr(info, "ssl_mode") and info.ssl_mode
+            else None
         )
 
         if ssl_mode == SSLMode.VERIFY_CA and not info.ssl_ca:

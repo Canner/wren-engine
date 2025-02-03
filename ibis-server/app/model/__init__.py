@@ -82,7 +82,7 @@ class ClickHouseConnectionInfo(BaseModel):
     port: SecretStr
     database: SecretStr
     user: SecretStr
-    password: SecretStr
+    password: SecretStr | None = None
 
 
 class MSSqlConnectionInfo(BaseModel):
@@ -90,7 +90,7 @@ class MSSqlConnectionInfo(BaseModel):
     port: SecretStr
     database: SecretStr
     user: SecretStr
-    password: SecretStr
+    password: SecretStr | None = None
     driver: str = Field(default="ODBC Driver 18 for SQL Server")
     tds_version: str = Field(default="8.0", alias="TDS_Version")
     kwargs: dict[str, str] | None = Field(
@@ -103,7 +103,7 @@ class MySqlConnectionInfo(BaseModel):
     port: SecretStr
     database: SecretStr
     user: SecretStr
-    password: SecretStr
+    password: SecretStr | None = None
     ssl_mode: SecretStr | None = Field(alias="sslMode", default=None)
     ssl_ca: SecretStr | None = Field(alias="sslCA", default=None)
     kwargs: dict[str, str] | None = Field(
@@ -120,7 +120,7 @@ class PostgresConnectionInfo(BaseModel):
     port: SecretStr = Field(examples=[5432])
     database: SecretStr
     user: SecretStr
-    password: SecretStr
+    password: SecretStr | None = None
 
 
 class SnowflakeConnectionInfo(BaseModel):
