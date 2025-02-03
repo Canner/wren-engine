@@ -6,6 +6,7 @@ from loguru import logger
 
 from app.model import (
     LocalFileConnectionInfo,
+    MinioFileConnectionInfo,
     S3FileConnectionInfo,
     UnprocessableEntityError,
 )
@@ -16,7 +17,7 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
-from app.model.utils import init_duckdb_s3
+from app.model.utils import init_duckdb_minio, init_duckdb_s3
 
 
 class ObjectStorageMetadata(Metadata):
@@ -192,6 +193,44 @@ class S3FileMetadata(ObjectStorageMetadata):
             root=info.url.get_secret_value(),
             bucket=info.bucket.get_secret_value(),
             region=info.region.get_secret_value(),
+            secret_access_key=info.secret_key.get_secret_value(),
+            access_key_id=info.access_key.get_secret_value(),
+        )
+
+    def _get_full_path(self, path):
+        if path.startswith("/"):
+            path = path[1:]
+
+        return f"s3://{self.connection_info.bucket.get_secret_value()}/{path}"
+
+
+class MinioFileMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info: MinioFileConnectionInfo):
+        super().__init__(connection_info)
+
+    def get_version(self):
+        return "Minio"
+
+    def _get_connection(self):
+        conn = duckdb.connect()
+        init_duckdb_minio(conn, self.connection_info)
+        logger.debug("Initialized duckdb minio")
+        return conn
+
+    def _get_dal_operator(self):
+        info: MinioFileConnectionInfo = self.connection_info
+
+        if info.ssl_enabled:
+            endpoint = f"https://{info.endpoint.get_secret_value()}"
+        else:
+            endpoint = f"http://{info.endpoint.get_secret_value()}"
+
+        return opendal.Operator(
+            "s3",
+            root=info.url.get_secret_value(),
+            bucket=info.bucket.get_secret_value(),
+            region="ap-northeast-1",
+            endpoint=endpoint,
             secret_access_key=info.secret_key.get_secret_value(),
             access_key_id=info.access_key.get_secret_value(),
         )

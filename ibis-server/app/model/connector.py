@@ -10,7 +10,7 @@ import ibis.expr.schema as sch
 import ibis.formats
 import pandas as pd
 import sqlglot.expressions as sge
-from duckdb import HTTPException
+from duckdb import HTTPException, IOException
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
@@ -18,12 +18,13 @@ from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
 from app.model import (
     ConnectionInfo,
+    MinioFileConnectionInfo,
     S3FileConnectionInfo,
     UnknownIbisError,
     UnprocessableEntityError,
 )
 from app.model.data_source import DataSource
-from app.model.utils import init_duckdb_s3
+from app.model.utils import init_duckdb_minio, init_duckdb_s3
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -37,9 +38,11 @@ class Connector:
             self._connector = CannerConnector(connection_info)
         elif data_source == DataSource.bigquery:
             self._connector = BigQueryConnector(connection_info)
-        elif data_source == DataSource.local_file:
-            self._connector = DuckDBConnector(connection_info)
-        elif data_source == DataSource.s3_file:
+        elif data_source in {
+            DataSource.local_file,
+            DataSource.s3_file,
+            DataSource.minio_file,
+        }:
             self._connector = DuckDBConnector(connection_info)
         else:
             self._connector = SimpleConnector(data_source, connection_info)
@@ -162,16 +165,22 @@ class DuckDBConnector:
         self.connection = duckdb.connect()
         if isinstance(connection_info, S3FileConnectionInfo):
             init_duckdb_s3(self.connection, connection_info)
+        if isinstance(connection_info, MinioFileConnectionInfo):
+            init_duckdb_minio(self.connection, connection_info)
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         try:
             return self.connection.execute(sql).fetch_df().head(limit)
+        except IOException as e:
+            raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
         except HTTPException as e:
             raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
 
     def dry_run(self, sql: str) -> None:
         try:
             self.connection.execute(sql)
+        except IOException as e:
+            raise QueryDryRunError(f"Failed to execute query: {e!s}")
         except HTTPException as e:
             raise QueryDryRunError(f"Failed to execute query: {e!s}")
 
