@@ -23,6 +23,7 @@ from app.model import (
     QueryClickHouseDTO,
     QueryDTO,
     QueryLocalFileDTO,
+    QueryMinioFileDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
     QueryPostgresDTO,
@@ -46,6 +47,7 @@ class DataSource(StrEnum):
     trino = auto()
     local_file = auto()
     s3_file = auto()
+    minio_file = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -71,6 +73,7 @@ class DataSourceExtension(Enum):
     trino = QueryTrinoDTO
     local_file = QueryLocalFileDTO
     s3_file = QueryS3FileDTO
+    minio_file = QueryMinioFileDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto

@@ -72,7 +72,11 @@ class Rewriter:
     def _get_write_dialect(cls, data_source: DataSource) -> str:
         if data_source == DataSource.canner:
             return "trino"
-        elif data_source in {DataSource.local_file, DataSource.s3_file}:
+        elif data_source in {
+            DataSource.local_file,
+            DataSource.s3_file,
+            DataSource.minio_file,
+        }:
             return "duckdb"
         return data_source.name
 

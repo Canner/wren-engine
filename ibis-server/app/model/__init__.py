@@ -60,6 +60,10 @@ class QueryS3FileDTO(QueryDTO):
     connection_info: S3FileConnectionInfo = connection_info_field
 
 
+class QueryMinioFileDTO(QueryDTO):
+    connection_info: MinioFileConnectionInfo = connection_info_field
+
+
 class BigQueryConnectionInfo(BaseModel):
     project_id: SecretStr
     dataset_id: SecretStr
@@ -162,6 +166,20 @@ class S3FileConnectionInfo(BaseModel):
     secret_key: SecretStr
 
 
+class MinioFileConnectionInfo(BaseModel):
+    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    format: str = Field(
+        description="File format", default="csv", examples=["csv", "parquet", "json"]
+    )
+    ssl_enabled: bool = Field(
+        description="use the ssl connection or not", default=False
+    )
+    endpoint: SecretStr
+    bucket: SecretStr
+    access_key: SecretStr
+    secret_key: SecretStr
+
+
 ConnectionInfo = (
     BigQueryConnectionInfo
     | CannerConnectionInfo
@@ -173,6 +191,7 @@ ConnectionInfo = (
     | TrinoConnectionInfo
     | LocalFileConnectionInfo
     | S3FileConnectionInfo
+    | MinioFileConnectionInfo
 )
 
 
