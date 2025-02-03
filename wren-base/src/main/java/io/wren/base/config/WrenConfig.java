@@ -18,6 +18,7 @@ import io.airlift.configuration.Config;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.File;
+import java.nio.file.Paths;
 
 public class WrenConfig
 {
@@ -36,7 +37,7 @@ public class WrenConfig
         SNOWFLAKE
     }
 
-    private File wrenMDLDirectory = new File("etc/mdl");
+    private File wrenMDLDirectory = Paths.get("etc/mdl").toFile();
     private DataSourceType dataSourceType = DataSourceType.DUCKDB;
     private boolean enableDynamicFields = true;
 
