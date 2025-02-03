@@ -85,7 +85,7 @@ def manifest_str():
 
 @pytest.fixture(scope="module")
 def mysql(request) -> MySqlContainer:
-    mysql = MySqlContainer("mysql:8.0.40").start()
+    mysql = MySqlContainer(image="mysql:8.0.40", dialect="pymysql").start()
     connection_url = mysql.get_connection_url()
     engine = sqlalchemy.create_engine(connection_url)
     pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
