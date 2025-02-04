@@ -16,8 +16,8 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
             body = await request.body()
             if body:
                 json_obj = orjson.loads(body)
-                # if "connectionInfo" in json_obj:
-                #     json_obj["connectionInfo"] = "REDACTED"
+                if "connectionInfo" in json_obj:
+                    json_obj["connectionInfo"] = "REDACTED"
                 body = orjson.dumps(json_obj)
             logger.info("Request body: {body}", body=body.decode("utf-8"))
             try:
