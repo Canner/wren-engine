@@ -171,7 +171,7 @@ class S3FileConnectionInfo(BaseModel):
 
 
 class MinioFileConnectionInfo(BaseModel):
-    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    url: SecretStr = Field(description="the root path of the minio bucket", default="/")
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
@@ -185,7 +185,7 @@ class MinioFileConnectionInfo(BaseModel):
 
 
 class GcsFileConnectionInfo(BaseModel):
-    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    url: SecretStr = Field(description="the root path of the gcs bucket", default="/")
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
