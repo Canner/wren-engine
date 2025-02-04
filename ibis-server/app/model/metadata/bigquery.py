@@ -48,7 +48,7 @@ class BigQueryMetadata(Metadata):
                 ON cf.table_name = c.table_name 
                 AND cf.column_name = c.column_name
             LEFT JOIN {dataset_id}.INFORMATION_SCHEMA.TABLE_OPTIONS table_options
-                ON c.table_name = table_options.table_name
+                ON c.table_name = table_options.table_name AND table_options.OPTION_NAME = 'description'
             WHERE cf.data_type != 'GEOGRAPHY'
                 AND cf.data_type NOT LIKE 'RANGE%'
             ORDER BY cf.field_path ASC
