@@ -64,6 +64,10 @@ class QueryMinioFileDTO(QueryDTO):
     connection_info: MinioFileConnectionInfo = connection_info_field
 
 
+class QueryGcsFileDTO(QueryDTO):
+    connection_info: GcsFileConnectionInfo = connection_info_field
+
+
 class BigQueryConnectionInfo(BaseModel):
     project_id: SecretStr
     dataset_id: SecretStr
@@ -180,6 +184,17 @@ class MinioFileConnectionInfo(BaseModel):
     secret_key: SecretStr
 
 
+class GcsFileConnectionInfo(BaseModel):
+    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    format: str = Field(
+        description="File format", default="csv", examples=["csv", "parquet", "json"]
+    )
+    bucket: SecretStr
+    key_id: SecretStr
+    secret_key: SecretStr
+    credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
+
+
 ConnectionInfo = (
     BigQueryConnectionInfo
     | CannerConnectionInfo
@@ -192,6 +207,7 @@ ConnectionInfo = (
     | LocalFileConnectionInfo
     | S3FileConnectionInfo
     | MinioFileConnectionInfo
+    | GcsFileConnectionInfo
 )
 
 

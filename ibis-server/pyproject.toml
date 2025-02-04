@@ -67,6 +67,7 @@ markers = [
   "local_file: mark a test as a local file test",
   "s3_file: mark a test as a s3 file test",
   "minio_file: mark a test as a minio file test",
+  "gcs_file: mark a test as a gcs file test",
   "beta: mark a test as a test for beta versions of the engine",
 ]
 

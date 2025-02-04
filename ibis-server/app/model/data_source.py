@@ -22,6 +22,7 @@ from app.model import (
     QueryCannerDTO,
     QueryClickHouseDTO,
     QueryDTO,
+    QueryGcsFileDTO,
     QueryLocalFileDTO,
     QueryMinioFileDTO,
     QueryMSSqlDTO,
@@ -48,6 +49,7 @@ class DataSource(StrEnum):
     local_file = auto()
     s3_file = auto()
     minio_file = auto()
+    gcs_file = auto()
 
     def get_connection(self, info: ConnectionInfo) -> BaseBackend:
         try:
@@ -74,6 +76,7 @@ class DataSourceExtension(Enum):
     local_file = QueryLocalFileDTO
     s3_file = QueryS3FileDTO
     minio_file = QueryMinioFileDTO
+    gcs_file = QueryGcsFileDTO
 
     def __init__(self, dto: QueryDTO):
         self.dto = dto

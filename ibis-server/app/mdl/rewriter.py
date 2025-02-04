@@ -76,6 +76,7 @@ class Rewriter:
             DataSource.local_file,
             DataSource.s3_file,
             DataSource.minio_file,
+            DataSource.gcs_file,
         }:
             return "duckdb"
         return data_source.name

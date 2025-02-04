@@ -18,13 +18,14 @@ from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
 
 from app.model import (
     ConnectionInfo,
+    GcsFileConnectionInfo,
     MinioFileConnectionInfo,
     S3FileConnectionInfo,
     UnknownIbisError,
     UnprocessableEntityError,
 )
 from app.model.data_source import DataSource
-from app.model.utils import init_duckdb_minio, init_duckdb_s3
+from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
@@ -42,6 +43,7 @@ class Connector:
             DataSource.local_file,
             DataSource.s3_file,
             DataSource.minio_file,
+            DataSource.gcs_file,
         }:
             self._connector = DuckDBConnector(connection_info)
         else:
@@ -167,6 +169,8 @@ class DuckDBConnector:
             init_duckdb_s3(self.connection, connection_info)
         if isinstance(connection_info, MinioFileConnectionInfo):
             init_duckdb_minio(self.connection, connection_info)
+        if isinstance(connection_info, GcsFileConnectionInfo):
+            init_duckdb_gcs(self.connection, connection_info)
 
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         try:
