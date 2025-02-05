@@ -5,6 +5,7 @@ import opendal
 from loguru import logger
 
 from app.model import (
+    GcsFileConnectionInfo,
     LocalFileConnectionInfo,
     MinioFileConnectionInfo,
     S3FileConnectionInfo,
@@ -17,7 +18,7 @@ from app.model.metadata.dto import (
     TableProperties,
 )
 from app.model.metadata.metadata import Metadata
-from app.model.utils import init_duckdb_minio, init_duckdb_s3
+from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 
 
 class ObjectStorageMetadata(Metadata):
@@ -240,3 +241,33 @@ class MinioFileMetadata(ObjectStorageMetadata):
             path = path[1:]
 
         return f"s3://{self.connection_info.bucket.get_secret_value()}/{path}"
+
+
+class GcsFileMetadata(ObjectStorageMetadata):
+    def __init__(self, connection_info: GcsFileConnectionInfo):
+        super().__init__(connection_info)
+
+    def get_version(self):
+        return "GCS"
+
+    def _get_connection(self):
+        conn = duckdb.connect()
+        init_duckdb_gcs(conn, self.connection_info)
+        logger.debug("Initialized duckdb minio")
+        return conn
+
+    def _get_dal_operator(self):
+        info: GcsFileConnectionInfo = self.connection_info
+
+        return opendal.Operator(
+            "gcs",
+            root=info.url.get_secret_value(),
+            bucket=info.bucket.get_secret_value(),
+            credential=info.credentials.get_secret_value(),
+        )
+
+    def _get_full_path(self, path):
+        if path.startswith("/"):
+            path = path[1:]
+
+        return f"gs://{self.connection_info.bucket.get_secret_value()}/{path}"

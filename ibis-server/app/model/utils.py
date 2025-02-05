@@ -1,6 +1,10 @@
 from duckdb import DuckDBPyConnection, HTTPException
 
-from app.model import MinioFileConnectionInfo, S3FileConnectionInfo
+from app.model import (
+    GcsFileConnectionInfo,
+    MinioFileConnectionInfo,
+    S3FileConnectionInfo,
+)
 
 
 def init_duckdb_s3(
@@ -42,5 +46,23 @@ def init_duckdb_minio(
         )
         connection.execute("SET s3_url_style='path'")
         connection.execute("SET s3_use_ssl=?", [connection_info.ssl_enabled])
+    except HTTPException as e:
+        raise Exception("Failed to create secret", e)
+
+
+def init_duckdb_gcs(
+    connection: DuckDBPyConnection, connection_info: GcsFileConnectionInfo
+):
+    create_secret = f"""
+    CREATE SECRET wren_gcs (
+        TYPE GCS,
+        KEY_ID '{connection_info.key_id.get_secret_value()}',
+        SECRET '{connection_info.secret_key.get_secret_value()}'
+    )
+    """
+    try:
+        result = connection.execute(create_secret).fetchone()
+        if result is None or not result[0]:
+            raise Exception("Failed to create secret")
     except HTTPException as e:
         raise Exception("Failed to create secret", e)
