@@ -101,6 +101,12 @@ class DataSourceExtension(Enum):
         credentials = service_account.Credentials.from_service_account_info(
             credits_json
         )
+        credentials = credentials.with_scopes(
+            [
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/cloud-platform",
+            ]
+        )
         return ibis.bigquery.connect(
             project_id=info.project_id.get_secret_value(),
             dataset_id=info.dataset_id.get_secret_value(),

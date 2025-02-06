@@ -151,6 +151,12 @@ class BigQueryConnector(SimpleConnector):
                 credentials = service_account.Credentials.from_service_account_info(
                     credits_json
                 )
+                credentials = credentials.with_scopes(
+                    [
+                        "https://www.googleapis.com/auth/drive",
+                        "https://www.googleapis.com/auth/cloud-platform",
+                    ]
+                )
                 client = bigquery.Client(credentials=credentials)
                 ibis_schema_mapper = ibis.backends.bigquery.BigQuerySchema()
                 bq_fields = client.query(sql).result()
