@@ -519,18 +519,20 @@ async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[0]
-    assert result["name"] == "test.orders"
-    assert result["primaryKey"] is not None
-    assert result["description"] == "This is a table comment"
-    assert result["properties"] == {
+    results = response.json()
+    orders = next((x for x in results if x["name"] == "test.orders"), None)
+    assert orders is not None
+    assert orders["name"] == "test.orders"
+    assert orders["primaryKey"] is not None
+    assert orders["description"] == "This is a table comment"
+    assert orders["properties"] == {
         "catalog": None,
         "schema": "test",
         "table": "orders",
         "path": None,
     }
-    assert len(result["columns"]) == 9
-    assert result["columns"][8] == {
+    assert len(orders["columns"]) == 9
+    assert orders["columns"][8] == {
         "name": "o_comment",
         "nestedColumns": None,
         "type": "VARCHAR",
