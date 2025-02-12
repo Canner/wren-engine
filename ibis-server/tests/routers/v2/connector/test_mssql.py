@@ -1,4 +1,5 @@
 import base64
+import urllib
 
 import orjson
 import pandas as pd
@@ -427,6 +428,15 @@ async def test_password_with_special_characters(client):
         assert response.status_code == 200
         assert "Microsoft SQL Server 2019" in response.text
 
+        connection_url = _to_connection_url(mssql)
+        response = await client.post(
+            url=f"{base_url}/metadata/version",
+            json={"connectionInfo": {"connectionUrl": connection_url}},
+        )
+
+        assert response.status_code == 200
+        assert "Microsoft SQL Server 2019" in response.text
+
 
 def _to_connection_info(mssql: SqlServerContainer):
     return {
@@ -441,4 +451,4 @@ def _to_connection_info(mssql: SqlServerContainer):
 
 def _to_connection_url(mssql: SqlServerContainer):
     info = _to_connection_info(mssql)
-    return f"mssql://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
+    return f"mssql://{info['user']}:{urllib.parse.quote_plus(info['password'])}@{info['host']}:{info['port']}/{info['database']}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=YES"
