@@ -92,3 +92,23 @@ If you encounter this error, you can add the `TrustServerCertificate` parameter 
   }
 }
 ```
+
+### No driver for MySQL Server
+
+If you want run tests related to MySQL Server or connect to MySQL through Wren Engine, you need to install the MySQL client libraries (e.g. `libmysqlclient`) by yourself.
+- For linux, you can install `libmysqlclient-dev`. By the way, there are some different names for different linux versions. You should take care about it.
+- For Mac, you can install `mysql-connector-c`
+- For Windows, you can dowanload [the libraries](https://dev.mysql.com/downloads/c-api)
+
+
+### Connect MySQL without SSL
+
+By default, SSL mode is enabled and uses `caching_sha2_password` authentication, which only supports SSL connections. If you need to disable SSL, you must set SSLMode to DISABLED in your connection configuration to use `mysql_native_password` instead.
+
+```json
+{
+  "connectionInfo": {
+    "ssl_mode": "DISABLED"
+  }
+}
+```

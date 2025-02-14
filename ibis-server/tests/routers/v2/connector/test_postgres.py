@@ -3,7 +3,7 @@ from urllib.parse import quote_plus, urlparse
 
 import orjson
 import pandas as pd
-import psycopg2
+import psycopg
 import pytest
 import sqlalchemy
 from sqlalchemy import text
@@ -143,7 +143,7 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02",
+        "1996-01-02 00:00:00.000000",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -296,8 +296,8 @@ async def test_dry_run_with_connection_url_and_password_with_bracket_should_not_
     ).geturl()
 
     with pytest.raises(
-        psycopg2.OperationalError,
-        match='FATAL:  password authentication failed for user "test"',
+        psycopg.OperationalError,
+        match=r'.*FATAL:  password authentication failed for user "test".*',
     ):
         await client.post(
             url=f"{base_url}/query",

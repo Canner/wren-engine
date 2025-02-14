@@ -10,7 +10,7 @@ packages = [{ include = "app" }]
 python = ">=3.11,<3.12"
 fastapi = { version = "0.115.8", extras = ["standard"] }
 pydantic = "2.10.6"
-ibis-framework = { version = "9.5.0", extras = [
+ibis-framework = { version = "10.0.0", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
@@ -26,13 +26,14 @@ orjson = "3.10.15"
 pandas = "2.2.3"
 sqlglot = { extras = [
   "rs",
-], version = ">=23.4,<25.21" } # the version should follow the ibis-framework
+], version = ">=23.4,<26.5" } # the version should follow the ibis-framework
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
 anyio = "4.8.0"
 duckdb = "1.1.3"
 opendal = ">=0.45"
+mysqlclient = { version = ">=2.2.4,<3", optional = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.4"

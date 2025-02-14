@@ -49,6 +49,9 @@ RUN apt-get update \
 # Install msodbcsql 18 driver for mssql
 RUN ACCEPT_EULA=Y apt-get -y install unixodbc-dev msodbcsql18
 
+# Install libmysqlclient-dev for mysql
+RUN apt-get install -y default-libmysqlclient-dev
+
 # libpq-dev is required for psycopg2
 RUN apt-get -y install libpq-dev \
     && rm -rf /var/lib/apt/lists/*

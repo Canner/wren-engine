@@ -180,7 +180,7 @@ async def test_query(client, manifest_str, clickhouse: ClickHouseContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02",
+        "1996-01-02 00:00:00.000000",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
@@ -519,18 +519,20 @@ async def test_metadata_list_tables(client, clickhouse: ClickHouseContainer):
     )
     assert response.status_code == 200
 
-    result = response.json()[1]
-    assert result["name"] == "test.orders"
-    assert result["primaryKey"] is not None
-    assert result["description"] == "This is a table comment"
-    assert result["properties"] == {
+    results = response.json()
+    orders = next((x for x in results if x["name"] == "test.orders"), None)
+    assert orders is not None
+    assert orders["name"] == "test.orders"
+    assert orders["primaryKey"] is not None
+    assert orders["description"] == "This is a table comment"
+    assert orders["properties"] == {
         "catalog": None,
         "schema": "test",
         "table": "orders",
         "path": None,
     }
-    assert len(result["columns"]) == 9
-    assert result["columns"][8] == {
+    assert len(orders["columns"]) == 9
+    assert orders["columns"][8] == {
         "name": "o_comment",
         "nestedColumns": None,
         "type": "VARCHAR",
