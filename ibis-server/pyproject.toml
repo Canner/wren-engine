@@ -31,7 +31,7 @@ loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.0" }
 anyio = "4.8.0"
-duckdb = "1.1.3"
+duckdb = "1.2.0"
 opendal = ">=0.45"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
 
@@ -45,9 +45,9 @@ testcontainers = { version = "4.9.1", extras = [
   "trino",
   "minio",
 ] }
-sqlalchemy = "2.0.37"
+sqlalchemy = "2.0.38"
 pre-commit = "4.1.0"
-ruff = "0.9.4"
+ruff = "0.9.6"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.15"
