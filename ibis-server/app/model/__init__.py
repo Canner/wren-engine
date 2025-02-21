@@ -213,6 +213,7 @@ ConnectionInfo = (
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
+    | OracleConnectionInfo
     | PostgresConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo

@@ -12,6 +12,9 @@ from tests.conftest import file_path
 pytestmark = pytest.mark.oracle
 
 base_url = "/v2/connector/oracle"
+oracle_password = "Oracle123"
+oracle_user = "SYSTEM"
+oracle_database = "FREEPDB1"
 
 manifest = {
     "catalog": "my_catalog",
@@ -44,7 +47,7 @@ manifest = {
                 },
                 {
                     "name": "timestamp",
-                    "expression": "CAST('2024-01-01 23:59:59' AS TIMESTAMP)",
+                    "expression": "TO_TIMESTAMP('2024-01-01 23:59:59', 'YYYY-MM-DD HH24:MI:SS')",
                     "type": "timestamp",
                 },
                 {
@@ -72,18 +75,9 @@ def manifest_str():
 @pytest.fixture(scope="module")
 def oracle(request) -> OracleDbContainer:
     oracle = OracleDbContainer(
-        "gvenzl/oracle-free:23.6-slim-faststart", oracle_password="Oracle123"
-    )
-
-    oracle.start()
-
-    host = oracle.get_container_host_ip()
-    port = oracle.get_exposed_port(1521)
-    connection_url = (
-        f"oracle+oracledb://SYSTEM:Oracle123@{host}:{port}/?service_name=FREEPDB1"
-    )
-    engine = sqlalchemy.create_engine(connection_url, echo=True)
-
+        "gvenzl/oracle-free:23.6-slim-faststart", oracle_password=f"{oracle_password}"
+    ).start()
+    engine = sqlalchemy.create_engine(oracle.get_connection_url())
     with engine.begin() as conn:
         pd.read_parquet(file_path("resource/tpch/data/orders.parquet")).to_sql(
             "orders", engine, index=False
@@ -95,8 +89,20 @@ def oracle(request) -> OracleDbContainer:
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
         conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
 
-    request.addfinalizer(oracle.stop)
     return oracle
+
+
+async def test_query(client, manifest_str, oracle: OracleDbContainer):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
+        },
+    )
+    assert response.status_code == 200
 
 
 async def test_query_with_connection_url(
@@ -108,7 +114,7 @@ async def test_query_with_connection_url(
         json={
             "connectionInfo": {"connectionUrl": connection_url},
             "manifestStr": manifest_str,
-            "sql": "SELECT * FROM SYSTEM.ORDERS LIMIT 1",
+            "sql": 'SELECT * FROM "Orders" LIMIT 1',
         },
     )
     assert response.status_code == 200
@@ -120,15 +126,17 @@ async def test_query_with_connection_url(
 
 
 def _to_connection_info(oracle: OracleDbContainer):
+    # We can't use oracle.user, oracle.password, oracle.dbname here
+    # since these values are None at this point
     return {
         "host": oracle.get_container_host_ip(),
         "port": oracle.get_exposed_port(oracle.port),
-        "user": "SYSTEM",
-        "password": "Oracle123",
-        "service": "FREEPDB1",
+        "user": f"{oracle_user}",
+        "password": f"{oracle_password}",
+        "database": f"{oracle_database}",
     }
 
 
 def _to_connection_url(oracle: OracleDbContainer):
     info = _to_connection_info(oracle)
-    return f"oracle://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['service']}"
+    return f"oracle://{info['user']}:{info['password']}@{info['host']}:{info['port']}/{info['database']}"
