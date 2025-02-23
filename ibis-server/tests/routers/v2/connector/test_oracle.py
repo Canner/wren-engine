@@ -335,7 +335,18 @@ async def test_validate_rule_column_is_valid_without_one_parameter(
     assert response.text == "Missing required parameter: `modelName`"
 
 
-# test_metadata_list_tables
+async def test_metadata_list_tables(client, oracle: OracleDbContainer):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/metadata/tables",
+        json={"connectionInfo": connection_info},
+    )
+    assert response.status_code == 200
+    # result = next(filter(lambda x: x["name"] == "system.orders", response.json()))
+    # assert result["name"] == "system.orders"
+    # assert result["primaryKey"] is not None
+    # assert result["description"] == "This is a table comment"
+
 
 # test_metadata_list_constraints
 
