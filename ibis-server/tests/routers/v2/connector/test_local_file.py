@@ -331,7 +331,7 @@ async def test_list_csv_files(client):
     assert "type-test" in table_names
     # `invalid` will be considered as a one column csv file
     assert "invalid" in table_names
-    columns = result[0]["columns"]
+    columns = next(filter(lambda x: x["name"] == "type-test-csv", result))["columns"]
     assert columns[0]["name"] == "c_bigint"
     assert columns[0]["type"] == "INT64"
     assert columns[1]["name"] == "c_bit"
