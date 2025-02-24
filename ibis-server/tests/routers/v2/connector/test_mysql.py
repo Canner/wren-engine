@@ -2,9 +2,10 @@ import base64
 
 import orjson
 import pandas as pd
+import pymysql
 import pytest
 import sqlalchemy
-from pymysql import OperationalError
+from MySQLdb import OperationalError
 from sqlalchemy import text
 from testcontainers.mysql import MySqlContainer
 
@@ -116,6 +117,26 @@ def mysql(request) -> MySqlContainer:
 @pytest.fixture(scope="module")
 def mysql_ssl_off(request) -> MySqlContainer:
     mysql = MySqlContainer(image="mysql:8.0.40").with_command("--ssl=0").start()
+    # We disable SSL for this container to test SSLMode.ENABLED.
+    # However, Mysql use caching_sha2_password as default authentication plugin which requires the connection to use SSL.
+    # MysqlDB used by ibis supports caching_sha2_password only with SSL. So, we need to change the authentication plugin to mysql_native_password.
+    # Before changing the authentication plugin, we need to connect to the database using caching_sha2_password. That's why we use pymysql to connect to the database.
+    # pymsql supports caching_sha2_password without SSL.
+    conn = pymysql.connect(
+        host="127.0.0.1",
+        user="root",
+        passwd="test",
+        port=int(mysql.get_exposed_port(mysql.port)),
+    )
+
+    cur = conn.cursor()
+    cur.execute(
+        "ALTER USER 'test'@'%' IDENTIFIED WITH mysql_native_password BY 'test';"
+    )
+    cur.execute("FLUSH PRIVILEGES;")
+    conn.commit()
+    conn.close()
+
     request.addfinalizer(mysql.stop)
     return mysql
 
@@ -139,7 +160,7 @@ async def test_query(client, manifest_str, mysql: MySqlContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02",
+        "1996-01-02 00:00:00.000000",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000",
@@ -417,7 +438,11 @@ async def test_metadata_db_version(client, mysql: MySqlContainer):
 @pytest.mark.parametrize(
     "ssl_mode, expected_exception, expected_error",
     [
-        (SSLMode.ENABLED, OperationalError, "Bad handshake"),
+        (
+            SSLMode.ENABLED,
+            OperationalError,
+            "SSL connection error: SSL is required but the server doesn't support it",
+        ),
         (
             SSLMode.VERIFY_CA,
             ValueError,

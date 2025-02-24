@@ -118,7 +118,7 @@ async def test_query(client, manifest_str, connection_info):
         "172799.49",
         "1_370",
         370,
-        "1996-01-02",
+        "1996-01-02 00:00:00.000000",
         1,
         "O",
     ]

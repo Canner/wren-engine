@@ -116,7 +116,11 @@ class MySqlConnectionInfo(BaseModel):
     database: SecretStr
     user: SecretStr
     password: SecretStr | None = None
-    ssl_mode: SecretStr | None = Field(alias="sslMode", default=None)
+    ssl_mode: SecretStr | None = Field(
+        alias="sslMode",
+        default="ENABLED",
+        description="Use ssl connection or not. The default value is `ENABLED` because MySQL uses `caching_sha2_password` by default and the driver MySQLdb support caching_sha2_password with ssl only.",
+    )
     ssl_ca: SecretStr | None = Field(alias="sslCA", default=None)
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyMySQL", default=None

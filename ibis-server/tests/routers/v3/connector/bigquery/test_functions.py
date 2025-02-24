@@ -94,7 +94,7 @@ async def test_scalar_function(client, manifest_str: str, connection_info):
     result = response.json()
     assert result == {
         "columns": ["col"],
-        "data": [["2024-01-02"]],
+        "data": [["2024-01-02 00:00:00.000000"]],
         "dtypes": {"col": "object"},
     }
 

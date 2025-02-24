@@ -144,12 +144,7 @@ class DataSourceExtension(Enum):
             port=info.port.get_secret_value(),
             database=info.database.get_secret_value(),
             user=info.user.get_secret_value(),
-            password=(
-                info.password
-                and cls._escape_special_characters_for_odbc(
-                    info.password.get_secret_value()
-                )
-            ),
+            password=info.password.get_secret_value(),
             driver=info.driver,
             TDS_Version=info.tds_version,
             **info.kwargs if info.kwargs else dict(),
@@ -210,10 +205,6 @@ class DataSourceExtension(Enum):
             user=(info.user and info.user.get_secret_value()),
             password=(info.password and info.password.get_secret_value()),
         )
-
-    @staticmethod
-    def _escape_special_characters_for_odbc(value: str) -> str:
-        return "{" + value.replace("}", "}}") + "}"
 
     @staticmethod
     def _create_ssl_context(info: ConnectionInfo) -> Optional[ssl.SSLContext]:
