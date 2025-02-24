@@ -342,10 +342,29 @@ async def test_metadata_list_tables(client, oracle: OracleDbContainer):
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
-    # result = next(filter(lambda x: x["name"] == "system.orders", response.json()))
-    # assert result["name"] == "system.orders"
-    # assert result["primaryKey"] is not None
-    # assert result["description"] == "This is a table comment"
+
+    result = response.json()
+    # Use case-insensitive filtering since Oracle returns "SYSTEM.ORDERS"
+    result = next(filter(lambda x: x["name"].lower() == "system.orders", result))
+
+    assert result["name"].lower() == "system.orders"
+    assert result["primaryKey"] is not None
+    assert result["description"] == "This is a table comment"
+    assert result["properties"] == {
+        "catalog": "",
+        "schema": "SYSTEM",
+        "table": "ORDERS",
+        "path": None,
+    }
+    assert len(result["columns"]) == 9
+    assert result["columns"][8] == {
+        "name": "O_COMMENT",
+        "nestedColumns": None,
+        "type": "TEXT",
+        "notNull": False,
+        "description": "This is a comment",
+        "properties": None,
+    }
 
 
 # test_metadata_list_constraints
