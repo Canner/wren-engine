@@ -40,7 +40,11 @@ manifest = {
                     "expression": "O_TOTALPRICE",
                     "type": "number",
                 },
-                {"name": "orderdate", "expression": "O_ORDERDATE", "type": "date"},
+                {
+                    "name": "orderdate",
+                    "expression": "TRUNC(O_ORDERDATE)",
+                    "type": "date",
+                },
                 {
                     "name": "order_cust_key",
                     "expression": "O_ORDERKEY || '_' || O_CUSTKEY",
@@ -117,7 +121,7 @@ async def test_query(client, manifest_str, oracle: OracleDbContainer):
         370,
         "O",
         "172799.49",
-        "1996-01-02",
+        "1996-01-02 00:00:00.000000",
         "1_370",
         "2024-01-01 23:59:59.000000",
         "2024-01-01 23:59:59.000000 UTC",
