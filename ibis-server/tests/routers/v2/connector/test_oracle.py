@@ -367,9 +367,23 @@ async def test_metadata_list_tables(client, oracle: OracleDbContainer):
     }
 
 
-# test_metadata_list_constraints
+async def test_metadata_list_constraints(client, oracle: OracleDbContainer):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/metadata/constraints",
+        json={"connectionInfo": connection_info},
+    )
+    assert response.status_code == 200
 
-# test_metadata_db_version
+
+async def test_metadata_db_version(client, oracle: OracleDbContainer):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/metadata/version",
+        json={"connectionInfo": connection_info},
+    )
+    assert response.status_code == 200
+    assert "23.0" in response.text
 
 
 def _to_connection_info(oracle: OracleDbContainer):

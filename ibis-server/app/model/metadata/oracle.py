@@ -105,6 +105,17 @@ class OracleMetadata(Metadata):
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
+        schema = ibis.schema(
+            {
+                "table_schema": "string",
+                "table_name": "string",
+                "column_name": "string",
+                "referenced_table_schema": "string",
+                "referenced_table_name": "string",
+                "referenced_column_name": "string",
+            }
+        )
+
         sql = """
             SELECT 
                 a.owner as table_schema,
@@ -134,8 +145,12 @@ class OracleMetadata(Metadata):
                 a.table_name,
                 a.column_name
         """
-        # For this query, we rely on the SQL aliases as defined (lowercase)
-        res = self.connection.sql(sql).to_pandas().to_dict(orient="records")
+        res = (
+            self.connection.sql(sql, schema=schema)
+            .to_pandas()
+            .to_dict(orient="records")
+        )
+
         constraints = []
         for row in res:
             constraints.append(
@@ -160,8 +175,11 @@ class OracleMetadata(Metadata):
         return constraints
 
     def get_version(self) -> str:
+        schema = ibis.schema({"VERSION": "string"})
         return (
-            self.connection.sql("SELECT version FROM v$instance").to_pandas().iloc[0, 0]
+            self.connection.sql("SELECT version FROM v$instance", schema=schema)
+            .to_pandas()
+            .iloc[0, 0]
         )
 
     def _format_compact_table_name(self, schema: str, table: str):
