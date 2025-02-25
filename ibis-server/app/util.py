@@ -29,9 +29,18 @@ def _to_datetime_and_format(series: pd.Series) -> pd.Series:
 
 
 def _to_json_obj(df: pd.DataFrame) -> dict:
-    data = df.map(lambda x: f"{x:.9g}" if isinstance(x, float) else x).to_dict(
-        orient="split", index=False
-    )
+    def format_value(x):
+        if isinstance(x, float):
+            return f"{x:.9g}"
+        elif isinstance(x, decimal.Decimal):
+            if x == 0:
+                return "0"
+            else:
+                return x
+        else:
+            return x
+
+    data = df.map(format_value).to_dict(orient="split", index=False)
 
     def default(obj):
         if pd.isna(obj):

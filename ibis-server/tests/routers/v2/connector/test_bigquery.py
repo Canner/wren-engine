@@ -198,6 +198,20 @@ async def test_query_values(client, manifest_str):
     assert response.status_code == 204
 
 
+async def test_scientific_notation(client, manifest_str):
+    response = await client.post(
+        url=f"{base_url}/query",
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT cast(0 as numeric) as col",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["data"][0] == ["0"]
+
+
 async def test_query_empty_json(client, manifest_str):
     """Test the empty result with json column."""
     response = await client.post(
