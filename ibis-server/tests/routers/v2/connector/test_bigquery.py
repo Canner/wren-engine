@@ -209,7 +209,7 @@ async def test_scientific_notation(client, manifest_str):
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["data"][0] == ["0.000"]
+    assert result["data"][0] == ["0"]
 
 
 async def test_query_empty_json(client, manifest_str):
