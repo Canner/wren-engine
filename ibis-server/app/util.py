@@ -33,7 +33,7 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
         if isinstance(x, float):
             return f"{x:.9g}"
         elif isinstance(x, decimal.Decimal):
-            if x.to_integral_value() == 0:
+            if x == 0:
                 return "0"
             else:
                 return x
