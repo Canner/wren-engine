@@ -31,10 +31,12 @@ def _to_datetime_and_format(series: pd.Series) -> pd.Series:
 def _to_json_obj(df: pd.DataFrame) -> dict:
     def format_value(x):
         if isinstance(x, float):
-            # Special case for zero to avoid scientific notation
-            if x == 0:
-                return "0"
             return f"{x:.9g}"
+        elif isinstance(x, decimal.Decimal):
+            if x.to_integral_value() == 0:
+                return "0"
+            else:
+                return x
         else:
             return x
 
