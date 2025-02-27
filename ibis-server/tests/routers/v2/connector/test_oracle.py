@@ -33,7 +33,7 @@ manifest = {
                 {
                     "name": "orderstatus",
                     "expression": "O_ORDERSTATUS",
-                    "type": "varchar2",
+                    "type": "varchar",
                 },
                 {
                     "name": "totalprice",
@@ -48,7 +48,7 @@ manifest = {
                 {
                     "name": "order_cust_key",
                     "expression": "O_ORDERKEY || '_' || O_CUSTKEY",
-                    "type": "varchar2",
+                    "type": "varchar",
                 },
                 {
                     "name": "timestamp",
@@ -95,6 +95,14 @@ def oracle(request) -> OracleDbContainer:
         pd.read_parquet(file_path("resource/tpch/data/customer.parquet")).to_sql(
             "customer", engine, index=False
         )
+
+        # Create a table with a large CLOB column
+        large_text = "x" * (1024 * 1024 * 2)  # 2MB
+        conn.execute(text("CREATE TABLE test_lob (id NUMBER, content CLOB)"))
+        conn.execute(
+            text("INSERT INTO test_lob VALUES (1, :content)"), {"content": large_text}
+        )
+
         # Add table and column comments
         conn.execute(text("COMMENT ON TABLE orders IS 'This is a table comment'"))
         conn.execute(text("COMMENT ON COLUMN orders.o_comment IS 'This is a comment'"))
@@ -348,10 +356,9 @@ async def test_metadata_list_tables(client, oracle: OracleDbContainer):
     assert response.status_code == 200
 
     result = response.json()
-    # Use case-insensitive filtering since Oracle returns "SYSTEM.ORDERS"
-    result = next(filter(lambda x: x["name"].lower() == "system.orders", result))
+    result = next(filter(lambda x: x["name"] == "SYSTEM.ORDERS", result))
+    assert result is not None
 
-    assert result["name"].lower() == "system.orders"
     assert result["primaryKey"] is not None
     assert result["description"] == "This is a table comment"
     assert result["properties"] == {
@@ -378,6 +385,9 @@ async def test_metadata_list_constraints(client, oracle: OracleDbContainer):
         json={"connectionInfo": connection_info},
     )
     assert response.status_code == 200
+    result = response.json()
+    # oracale has a lot of constraints on the system tables
+    assert len(result) > 0
 
 
 async def test_metadata_db_version(client, oracle: OracleDbContainer):

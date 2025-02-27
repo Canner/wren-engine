@@ -13,9 +13,6 @@ def base64_to_dict(base64_str: str) -> dict:
 
 def to_json(df: pd.DataFrame) -> dict:
     for column in df.columns:
-        if df[column].dtype == object:
-            # Convert Oracle LOB objects to string
-            df[column] = df[column].apply(lambda x: str(x) if hasattr(x, "read") else x)
         if is_datetime64_any_dtype(df[column].dtype):
             df[column] = _to_datetime_and_format(df[column])
     return _to_json_obj(df)

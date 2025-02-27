@@ -50,7 +50,9 @@ class OracleMetadata(Metadata):
             ORDER BY
                 t.table_name, c.column_id;
         """
-        # Provide the schema explicitly with uppercase column names.
+        #  Provide the pre-build schema explicitly with uppercase column names
+        #  To avoid potential ibis get schema error:
+        #  Solve oracledb DatabaseError: ORA-00942: table or view not found
         schema = ibis.schema(
             {
                 "TABLE_CATALOG": "string",
@@ -98,32 +100,29 @@ class OracleMetadata(Metadata):
                     properties=None,
                 )
             )
-            # If the row indicates a primary key, set it.
-            if row.get("IS_PK", "NO") == "YES":
-                unique_tables[schema_table].primaryKey = row["COLUMN_NAME"]
 
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
         schema = ibis.schema(
             {
-                "table_schema": "string",
-                "table_name": "string",
-                "column_name": "string",
-                "referenced_table_schema": "string",
-                "referenced_table_name": "string",
-                "referenced_column_name": "string",
+                "TABLE_SCHEMA": "string",
+                "TABLE_NAME": "string",
+                "COLUMN_NAME": "string",
+                "REFERENCED_TABLE_SCHEMA": "string",
+                "REFERENCED_TABLE_NAME": "string",
+                "REFERENCED_COLUMN_NAME": "string",
             }
         )
 
         sql = """
             SELECT 
-                a.owner as table_schema,
-                a.table_name as table_name,
-                a.column_name as column_name,
-                a_pk.owner as referenced_table_schema,
-                a_pk.table_name as referenced_table_name,
-                a_pk.column_name as referenced_column_name
+                a.owner AS TABLE_SCHEMA,
+                a.table_name AS TABLE_NAME,
+                a.column_name AS COLUMN_NAME,
+                a_pk.owner AS REFERENCED_TABLE_SCHEMA,
+                a_pk.table_name AS REFERENCED_TABLE_NAME,
+                a_pk.column_name AS REFERENCED_COLUMN_NAME
             FROM 
                 dba_cons_columns a
             JOIN 
@@ -156,19 +155,19 @@ class OracleMetadata(Metadata):
             constraints.append(
                 Constraint(
                     constraintName=self._format_constraint_name(
-                        row["table_name"],
-                        row["column_name"],
-                        row["referenced_table_name"],
-                        row["referenced_column_name"],
+                        row["TABLE_NAME"],
+                        row["COLUMN_NAME"],
+                        row["REFERENCED_TABLE_NAME"],
+                        row["REFERENCED_COLUMN_NAME"],
                     ),
                     constraintTable=self._format_compact_table_name(
-                        row["table_schema"], row["table_name"]
+                        row["TABLE_SCHEMA"], row["TABLE_NAME"]
                     ),
-                    constraintColumn=row["column_name"],
+                    constraintColumn=row["COLUMN_NAME"],
                     constraintedTable=self._format_compact_table_name(
-                        row["referenced_table_schema"], row["referenced_table_name"]
+                        row["REFERENCED_TABLE_SCHEMA"], row["REFERENCED_TABLE_NAME"]
                     ),
-                    constraintedColumn=row["referenced_column_name"],
+                    constraintedColumn=row["REFERENCED_COLUMN_NAME"],
                     constraintType=ConstraintType.FOREIGN_KEY,
                 )
             )
