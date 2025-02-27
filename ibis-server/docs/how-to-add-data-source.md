@@ -32,6 +32,15 @@ class PostgresConnectionInfo(BaseModel):
 We use the base model of [Pydantic](https://docs.pydantic.dev/latest/api/base_model/) to support our class definitions.
 Pydantic provides a convenient field type called [Secret Types](https://docs.pydantic.dev/2.0/usage/types/secrets/) that can protect the sensitive information.
 
+Add your xxxConnectionInfo to ConnectionInfo
+```python
+ConnectionInfo = (
+    ...
+    | PostgresConnectionInfo
+    ...
+)
+```
+
 Return to the `DataSourceExtension` enum class to implement the `get_{data_source}_connection` function.
 This function should be specific to your new data source. For example, if you've added a PostgreSQL data source, you might implement a `get_postgres_connection` function.
 ```python

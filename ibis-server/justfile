@@ -30,6 +30,9 @@ dev:
 test MARKER:
     poetry run pytest -m '{{ MARKER }}'
 
+test-verbose MARKER:
+    poetry run pytest -s -v -m '{{ MARKER }}'
+
 image-name := "ghcr.io/canner/wren-engine-ibis:latest"
 
 docker-build:

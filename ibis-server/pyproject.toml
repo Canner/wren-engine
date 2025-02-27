@@ -15,6 +15,7 @@ ibis-framework = { version = "10.1.0", extras = [
   "clickhouse",
   "mssql",
   "mysql",
+  "oracle",
   "postgres",
   "snowflake",
   "trino",
@@ -33,6 +34,7 @@ gql = { extras = ["aiohttp"], version = "3.5.1" }
 anyio = "4.8.0"
 duckdb = "1.2.0"
 opendal = ">=0.45"
+oracledb = "2.5.1"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
 
 [tool.poetry.group.dev.dependencies]
@@ -62,6 +64,7 @@ markers = [
   "functions: mark a test as a functions test",
   "mssql: mark a test as a mssql test",
   "mysql: mark a test as a mysql test",
+  "oracle: mark a test  as a oracle test",
   "postgres: mark a test as a postgres test",
   "snowflake: mark a test as a snowflake test",
   "trino: mark a test as a trino test",
