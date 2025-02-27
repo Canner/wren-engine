@@ -18,7 +18,7 @@
     <parent>
         <groupId>io.wren</groupId>
         <artifactId>wren-root</artifactId>
-        <version>0.14.3-SNAPSHOT</version>
+        <version>0.14.4-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -145,6 +145,12 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
 
