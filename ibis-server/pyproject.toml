@@ -8,9 +8,9 @@ packages = [{ include = "app" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-fastapi = { version = "0.115.8", extras = ["standard"] }
+fastapi = { version = "0.115.11", extras = ["standard"] }
 pydantic = "2.10.6"
-ibis-framework = { version = "10.1.0", extras = [
+ibis-framework = { version = "10.2.0", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
@@ -38,7 +38,7 @@ oracledb = "2.5.1"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
 
 [tool.poetry.group.dev.dependencies]
-pytest = "8.3.4"
+pytest = "8.3.5"
 testcontainers = { version = "4.9.1", extras = [
   "clickhouse",
   "mssql",
@@ -49,7 +49,7 @@ testcontainers = { version = "4.9.1", extras = [
 ] }
 sqlalchemy = "2.0.38"
 pre-commit = "4.1.0"
-ruff = "0.9.7"
+ruff = "0.9.9"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.15"
