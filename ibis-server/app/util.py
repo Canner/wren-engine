@@ -53,6 +53,9 @@ def _to_json_obj(df: pd.DataFrame) -> dict:
             return _date_offset_to_str(obj)
         if isinstance(obj, datetime.timedelta):
             return str(obj)
+        # Add handling for any remaining LOB objects
+        if hasattr(obj, "read"):  # Check if object is LOB-like
+            return str(obj)
         raise TypeError
 
     json_obj = orjson.loads(

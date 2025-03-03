@@ -17,6 +17,7 @@ from app.model import (
     ConnectionInfo,
     MSSqlConnectionInfo,
     MySqlConnectionInfo,
+    OracleConnectionInfo,
     PostgresConnectionInfo,
     QueryBigQueryDTO,
     QueryCannerDTO,
@@ -27,6 +28,7 @@ from app.model import (
     QueryMinioFileDTO,
     QueryMSSqlDTO,
     QueryMySqlDTO,
+    QueryOracleDTO,
     QueryPostgresDTO,
     QueryS3FileDTO,
     QuerySnowflakeDTO,
@@ -43,6 +45,7 @@ class DataSource(StrEnum):
     clickhouse = auto()
     mssql = auto()
     mysql = auto()
+    oracle = auto()
     postgres = auto()
     snowflake = auto()
     trino = auto()
@@ -70,6 +73,7 @@ class DataSourceExtension(Enum):
     clickhouse = QueryClickHouseDTO
     mssql = QueryMSSqlDTO
     mysql = QueryMySqlDTO
+    oracle = QueryOracleDTO
     postgres = QueryPostgresDTO
     snowflake = QuerySnowflakeDTO
     trino = QueryTrinoDTO
@@ -164,6 +168,16 @@ class DataSourceExtension(Enum):
     @staticmethod
     def get_postgres_connection(info: PostgresConnectionInfo) -> BaseBackend:
         return ibis.postgres.connect(
+            host=info.host.get_secret_value(),
+            port=int(info.port.get_secret_value()),
+            database=info.database.get_secret_value(),
+            user=info.user.get_secret_value(),
+            password=(info.password and info.password.get_secret_value()),
+        )
+
+    @staticmethod
+    def get_oracle_connection(info: OracleConnectionInfo) -> BaseBackend:
+        return ibis.oracle.connect(
             host=info.host.get_secret_value(),
             port=int(info.port.get_secret_value()),
             database=info.database.get_secret_value(),

@@ -11,6 +11,7 @@ from app.model.metadata.object_storage import (
     MinioFileMetadata,
     S3FileMetadata,
 )
+from app.model.metadata.oracle import OracleMetadata
 from app.model.metadata.postgres import PostgresMetadata
 from app.model.metadata.snowflake import SnowflakeMetadata
 from app.model.metadata.trino import TrinoMetadata
@@ -21,6 +22,7 @@ mapping = {
     DataSource.clickhouse: ClickHouseMetadata,
     DataSource.mssql: MSSQLMetadata,
     DataSource.mysql: MySQLMetadata,
+    DataSource.oracle: OracleMetadata,
     DataSource.postgres: PostgresMetadata,
     DataSource.trino: TrinoMetadata,
     DataSource.snowflake: SnowflakeMetadata,

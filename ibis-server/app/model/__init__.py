@@ -40,6 +40,10 @@ class QueryMySqlDTO(QueryDTO):
     connection_info: ConnectionUrl | MySqlConnectionInfo = connection_info_field
 
 
+class QueryOracleDTO(QueryDTO):
+    connection_info: ConnectionUrl | OracleConnectionInfo = connection_info_field
+
+
 class QueryPostgresDTO(QueryDTO):
     connection_info: ConnectionUrl | PostgresConnectionInfo = connection_info_field
 
@@ -135,6 +139,14 @@ class PostgresConnectionInfo(BaseModel):
     password: SecretStr | None = None
 
 
+class OracleConnectionInfo(BaseModel):
+    host: SecretStr = Field(examples=["localhost"])
+    port: SecretStr = Field(examples=[1521])
+    database: SecretStr
+    user: SecretStr
+    password: SecretStr | None = None
+
+
 class SnowflakeConnectionInfo(BaseModel):
     user: SecretStr
     password: SecretStr
@@ -205,6 +217,7 @@ ConnectionInfo = (
     | ConnectionUrl
     | MSSqlConnectionInfo
     | MySqlConnectionInfo
+    | OracleConnectionInfo
     | PostgresConnectionInfo
     | SnowflakeConnectionInfo
     | TrinoConnectionInfo
