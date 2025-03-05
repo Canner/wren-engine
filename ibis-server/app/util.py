@@ -99,7 +99,3 @@ def build_context(headers: Header) -> Context:
     if headers is None:
         return None
     return extract(headers)
-
-
-def get_header(headers: Headers) -> Headers:
-    return headers
