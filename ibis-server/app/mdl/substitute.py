@@ -1,9 +1,12 @@
+from opentelemetry import trace
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.scope import build_scope
 
 from app.model import UnprocessableEntityError
 from app.model.data_source import DataSource
 from app.util import base64_to_dict
+
+tracer = trace.get_tracer(__name__)
 
 
 class ModelSubstitute:
@@ -12,6 +15,7 @@ class ModelSubstitute:
         self.manifest = base64_to_dict(manifest_str)
         self.model_dict = self._build_model_dict(self.manifest["models"])
 
+    @tracer.start_as_current_span("substitute", kind=trace.SpanKind.INTERNAL)
     def substitute(self, sql: str, write: str | None = None) -> str:
         ast = parse_one(sql, dialect=self.data_source.value)
         root = build_scope(ast)
