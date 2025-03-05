@@ -78,5 +78,13 @@ Run the server
 just run
 ```
 
+### Enable Tracing
+We uses OpenTelemetry as its tracing framework. Refer to OpenTelemetry zero-code instrumentation to install the required dependencies.
+Then, use the following just command to start the Ibis server, which exports tracing logs to the console:
+```
+just run-trace-console
+```
+OpenTelemetry zero-code instrumentation is highly configurable. You can set the necessary exporters to send traces to your tracing services.
+
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.

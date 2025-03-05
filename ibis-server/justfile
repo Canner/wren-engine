@@ -23,6 +23,9 @@ port := "8000"
 run:
     poetry run fastapi run --port {{ port }}
 
+run-trace-console:
+    opentelemetry-instrument --traces_exporter console --metrics_exporter none fastapi run --port {{ port }}
+
 dev:
     poetry run fastapi dev --port {{ port }}
 
