@@ -9,7 +9,6 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.propagate import extract
 from pandas.core.dtypes.common import is_datetime64_any_dtype
-from starlette.datastructures import Headers
 
 tracer = trace.get_tracer(__name__)
 
