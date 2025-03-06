@@ -86,5 +86,7 @@ just run-trace-console
 ```
 OpenTelemetry zero-code instrumentation is highly configurable. You can set the necessary exporters to send traces to your tracing services.
 
+[Metrics we are tracing right now](./Metrics.md)
+
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
