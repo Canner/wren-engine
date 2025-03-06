@@ -4,13 +4,21 @@ import decimal
 
 import orjson
 import pandas as pd
+from fastapi import Header
+from opentelemetry import trace
+from opentelemetry.context import Context
+from opentelemetry.propagate import extract
 from pandas.core.dtypes.common import is_datetime64_any_dtype
 
+tracer = trace.get_tracer(__name__)
 
+
+@tracer.start_as_current_span("base64_to_dict", kind=trace.SpanKind.INTERNAL)
 def base64_to_dict(base64_str: str) -> dict:
     return orjson.loads(base64.b64decode(base64_str).decode("utf-8"))
 
 
+@tracer.start_as_current_span("to_json", kind=trace.SpanKind.INTERNAL)
 def to_json(df: pd.DataFrame) -> dict:
     for column in df.columns:
         if is_datetime64_any_dtype(df[column].dtype):
@@ -84,3 +92,9 @@ def _date_offset_to_str(offset: pd.tseries.offsets.DateOffset) -> str:
             parts.append(f"{value} {unit if value > 1 else unit.rstrip('s')}")
 
     return " ".join(parts)
+
+
+def build_context(headers: Header) -> Context:
+    if headers is None:
+        return None
+    return extract(headers)

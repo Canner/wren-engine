@@ -15,6 +15,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 from ibis import BaseBackend
 from ibis.backends.sql.compilers.postgres import compiler as postgres_compiler
+from opentelemetry import trace
 
 from app.model import (
     ConnectionInfo,
@@ -30,8 +31,11 @@ from app.model.utils import init_duckdb_gcs, init_duckdb_minio, init_duckdb_s3
 # Override datatypes of ibis
 importlib.import_module("app.custom_ibis.backends.sql.datatypes")
 
+tracer = trace.get_tracer(__name__)
+
 
 class Connector:
+    @tracer.start_as_current_span("connector_init", kind=trace.SpanKind.INTERNAL)
     def __init__(self, data_source: DataSource, connection_info: ConnectionInfo):
         if data_source == DataSource.mssql:
             self._connector = MSSqlConnector(connection_info)
@@ -64,9 +68,11 @@ class SimpleConnector:
         self.data_source = data_source
         self.connection = self.data_source.get_connection(connection_info)
 
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         return self.connection.sql(sql).limit(limit).to_pandas()
 
+    @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> None:
         self.connection.sql(sql)
 
@@ -85,6 +91,9 @@ class MSSqlConnector(SimpleConnector):
                 raise QueryDryRunError(f"The sql dry run failed. {error_message}.")
             raise UnknownIbisError(e)
 
+    @tracer.start_as_current_span(
+        "describe_sql_for_error_message", kind=trace.SpanKind.CLIENT
+    )
     def _describe_sql_for_error_message(self, sql: str) -> str:
         tsql = sge.convert(sql).sql("mssql")
         describe_sql = f"SELECT error_message FROM sys.dm_exec_describe_first_result_set({tsql}, NULL, 0)"
@@ -99,15 +108,18 @@ class CannerConnector:
     def __init__(self, connection_info: ConnectionInfo):
         self.connection = DataSource.canner.get_connection(connection_info)
 
+    @tracer.start_as_current_span("connector_query", kind=trace.SpanKind.CLIENT)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         # Canner enterprise does not support `CREATE TEMPORARY VIEW` for getting schema
         schema = self._get_schema(sql)
         return self.connection.sql(sql, schema=schema).limit(limit).to_pandas()
 
+    @tracer.start_as_current_span("connector_dry_run", kind=trace.SpanKind.CLIENT)
     def dry_run(self, sql: str) -> Any:
         # Canner enterprise does not support dry-run, so we have to query with limit zero
         return self.connection.raw_sql(f"SELECT * FROM ({sql}) LIMIT 0")
 
+    @tracer.start_as_current_span("get_schema", kind=trace.SpanKind.CLIENT)
     def _get_schema(self, sql: str) -> sch.Schema:
         cur = self.dry_run(sql)
         type_names = _get_pg_type_names(self.connection)
@@ -143,25 +155,28 @@ class BigQueryConnector(SimpleConnector):
             # - https://github.com/Canner/wren-engine/issues/909
             # - https://github.com/ibis-project/ibis/issues/10612
             if "Must pass schema" in str(e):
-                credits_json = loads(
-                    base64.b64decode(
-                        self.connection_info.credentials.get_secret_value()
-                    ).decode("utf-8")
-                )
-                credentials = service_account.Credentials.from_service_account_info(
-                    credits_json
-                )
-                credentials = credentials.with_scopes(
-                    [
-                        "https://www.googleapis.com/auth/drive",
-                        "https://www.googleapis.com/auth/cloud-platform",
-                    ]
-                )
-                client = bigquery.Client(credentials=credentials)
-                ibis_schema_mapper = ibis.backends.bigquery.BigQuerySchema()
-                bq_fields = client.query(sql).result()
-                ibis_fields = ibis_schema_mapper.to_ibis(bq_fields.schema)
-                return pd.DataFrame(columns=ibis_fields.names)
+                with tracer.start_as_current_span(
+                    "get_schema", kind=trace.SpanKind.CLIENT
+                ):
+                    credits_json = loads(
+                        base64.b64decode(
+                            self.connection_info.credentials.get_secret_value()
+                        ).decode("utf-8")
+                    )
+                    credentials = service_account.Credentials.from_service_account_info(
+                        credits_json
+                    )
+                    credentials = credentials.with_scopes(
+                        [
+                            "https://www.googleapis.com/auth/drive",
+                            "https://www.googleapis.com/auth/cloud-platform",
+                        ]
+                    )
+                    client = bigquery.Client(credentials=credentials)
+                    ibis_schema_mapper = ibis.backends.bigquery.BigQuerySchema()
+                    bq_fields = client.query(sql).result()
+                    ibis_fields = ibis_schema_mapper.to_ibis(bq_fields.schema)
+                    return pd.DataFrame(columns=ibis_fields.names)
             else:
                 raise e
 
@@ -178,6 +193,7 @@ class DuckDBConnector:
         if isinstance(connection_info, GcsFileConnectionInfo):
             init_duckdb_gcs(self.connection, connection_info)
 
+    @tracer.start_as_current_span("duckdb_query", kind=trace.SpanKind.INTERNAL)
     def query(self, sql: str, limit: int) -> pd.DataFrame:
         try:
             return self.connection.execute(sql).fetch_df().head(limit)
@@ -186,6 +202,7 @@ class DuckDBConnector:
         except HTTPException as e:
             raise UnprocessableEntityError(f"Failed to execute query: {e!s}")
 
+    @tracer.start_as_current_span("duckdb_dry_run", kind=trace.SpanKind.INTERNAL)
     def dry_run(self, sql: str) -> None:
         try:
             self.connection.execute(sql)

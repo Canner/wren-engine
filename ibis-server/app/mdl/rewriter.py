@@ -4,6 +4,7 @@ import httpx
 import sqlglot
 from anyio import to_thread
 from loguru import logger
+from opentelemetry import trace
 
 from app.config import get_config
 from app.mdl.core import (
@@ -20,6 +21,8 @@ importlib.import_module("ibis.backends.sql.dialects")
 
 # Register custom dialects
 importlib.import_module("app.custom_sqlglot.dialects")
+
+tracer = trace.get_tracer(__name__)
 
 
 class Rewriter:
@@ -39,11 +42,13 @@ class Rewriter:
         else:
             self._rewriter = ExternalEngineRewriter(java_engine_connector)
 
+    @tracer.start_as_current_span("transpile", kind=trace.SpanKind.INTERNAL)
     def _transpile(self, planned_sql: str) -> str:
         read = self._get_read_dialect(self.experiment)
         write = self._get_write_dialect(self.data_source)
         return sqlglot.transpile(planned_sql, read=read, write=write)[0]
 
+    @tracer.start_as_current_span("rewrite", kind=trace.SpanKind.INTERNAL)
     async def rewrite(self, sql: str) -> str:
         manifest_str = (
             self._extract_manifest(self.manifest_str, sql) or self.manifest_str
@@ -55,6 +60,7 @@ class Rewriter:
         logger.debug("Dialect SQL: {}", dialect_sql)
         return dialect_sql
 
+    @tracer.start_as_current_span("extract_manifest", kind=trace.SpanKind.INTERNAL)
     def _extract_manifest(self, manifest_str: str, sql: str) -> str:
         try:
             extractor = get_manifest_extractor(manifest_str)
@@ -86,6 +92,7 @@ class ExternalEngineRewriter:
     def __init__(self, java_engine_connector: JavaEngineConnector):
         self.java_engine_connector = java_engine_connector
 
+    @tracer.start_as_current_span("external_rewrite", kind=trace.SpanKind.CLIENT)
     async def rewrite(self, manifest_str: str, sql: str) -> str:
         try:
             return await self.java_engine_connector.dry_plan(manifest_str, sql)
@@ -105,6 +112,7 @@ class EmbeddedEngineRewriter:
     def __init__(self, function_path: str):
         self.function_path = function_path
 
+    @tracer.start_as_current_span("embedded_rewrite", kind=trace.SpanKind.INTERNAL)
     async def rewrite(self, manifest_str: str, sql: str) -> str:
         try:
             session_context = get_session_context(manifest_str, self.function_path)
