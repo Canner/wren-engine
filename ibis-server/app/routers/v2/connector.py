@@ -19,7 +19,7 @@ from app.model.data_source import DataSource
 from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
-from app.util import build_context, to_json
+from app.util import build_context, pushdown_limit, to_json
 
 router = APIRouter(prefix="/connector")
 tracer = trace.get_tracer(__name__)
@@ -44,11 +44,12 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
+        sql = pushdown_limit(dto.sql, limit)
         rewritten_sql = await Rewriter(
             dto.manifest_str,
             data_source=data_source,
             java_engine_connector=java_engine_connector,
-        ).rewrite(dto.sql)
+        ).rewrite(sql)
         connector = Connector(data_source, dto.connection_info)
         if dry_run:
             connector.dry_run(rewritten_sql)

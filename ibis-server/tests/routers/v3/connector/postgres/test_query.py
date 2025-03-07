@@ -338,3 +338,18 @@ async def test_query_with_keyword_filter(client, manifest_str, connection_info):
     )
     assert response.status_code == 200
     assert response.text is not None
+
+
+async def test_limit_pushdown(client, manifest_str, connection_info):
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"limit": 10},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM orders LIMIT 100",
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 10

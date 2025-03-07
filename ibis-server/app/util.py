@@ -8,6 +8,7 @@ from fastapi import Header
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.propagate import extract
+import wren_core
 from pandas.core.dtypes.common import is_datetime64_any_dtype
 
 tracer = trace.get_tracer(__name__)
@@ -98,3 +99,7 @@ def build_context(headers: Header) -> Context:
     if headers is None:
         return None
     return extract(headers)
+
+def pushdown_limit(sql: str, limit: int | None) -> str:
+    ctx = wren_core.SessionContext()
+    return ctx.pushdown_limit(sql, limit)
