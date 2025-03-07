@@ -100,6 +100,7 @@ def build_context(headers: Header) -> Context:
         return None
     return extract(headers)
 
+@tracer.start_as_current_span("pushdown_limit", kind=trace.SpanKind.INTERNAL)
 def pushdown_limit(sql: str, limit: int | None) -> str:
     ctx = wren_core.SessionContext()
     return ctx.pushdown_limit(sql, limit)
