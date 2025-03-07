@@ -4,11 +4,11 @@ import decimal
 
 import orjson
 import pandas as pd
+import wren_core
 from fastapi import Header
 from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.propagate import extract
-import wren_core
 from pandas.core.dtypes.common import is_datetime64_any_dtype
 
 tracer = trace.get_tracer(__name__)
@@ -99,6 +99,7 @@ def build_context(headers: Header) -> Context:
     if headers is None:
         return None
     return extract(headers)
+
 
 @tracer.start_as_current_span("pushdown_limit", kind=trace.SpanKind.INTERNAL)
 def pushdown_limit(sql: str, limit: int | None) -> str:
