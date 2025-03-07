@@ -19,6 +19,7 @@ from app.model.data_source import DataSource
 from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
+from app.query_cache import QueryCacheManager
 from app.util import build_context, to_json
 
 router = APIRouter(prefix="/connector")
@@ -29,6 +30,10 @@ def get_java_engine_connector(request: Request) -> JavaEngineConnector:
     return request.state.java_engine_connector
 
 
+def get_query_cache_manager(request: Request) -> QueryCacheManager:
+    return request.state.query_cache_manager
+
+
 @router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
 async def query(
     data_source: DataSource,
@@ -36,6 +41,7 @@ async def query(
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
+    query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
     headers: Annotated[str | None, Header()] = None,
 ) -> Response:
     span_name = (
@@ -44,16 +50,30 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
-        rewritten_sql = await Rewriter(
-            dto.manifest_str,
-            data_source=data_source,
-            java_engine_connector=java_engine_connector,
-        ).rewrite(dto.sql)
-        connector = Connector(data_source, dto.connection_info)
-        if dry_run:
-            connector.dry_run(rewritten_sql)
-            return Response(status_code=204)
-        return ORJSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
+        cached_result = query_cache_manager.get(
+            str(data_source), dto.sql, dto.connection_info
+        )
+        # Cache Hit !
+        if cached_result is not None:
+            return ORJSONResponse(to_json(cached_result))
+        # Cache Miss
+        else:
+            rewritten_sql = await Rewriter(
+                dto.manifest_str,
+                data_source=data_source,
+                java_engine_connector=java_engine_connector,
+            ).rewrite(dto.sql)
+            connector = Connector(data_source, dto.connection_info)
+
+            if dry_run:
+                connector.dry_run(rewritten_sql)
+                return Response(status_code=204)
+            else:
+                result = connector.query(rewritten_sql, limit=limit)
+                query_cache_manager.set(
+                    data_source, dto.sql, result, dto.connection_info
+                )
+                return ORJSONResponse(to_json(result))
 
 
 @router.post("/{data_source}/validate/{rule_name}")
