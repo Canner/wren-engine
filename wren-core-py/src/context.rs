@@ -23,7 +23,10 @@ use pyo3::{pyclass, pymethods, PyErr, PyResult};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::ops::ControlFlow;
 use std::sync::Arc;
+use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
+use wren_core::dialect::GenericDialect;
 use wren_core::logical_plan::utils::map_data_type;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
@@ -31,7 +34,6 @@ use wren_core::mdl::function::{
     RemoteFunction,
 };
 use wren_core::{mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, WindowUDF};
-
 /// The Python wrapper for the Wren Core session context.
 #[pyclass(name = "SessionContext")]
 #[derive(Clone)]
@@ -187,6 +189,43 @@ impl PySessionContext {
                 }
             });
         Ok(builder.values().cloned().collect())
+    }
+
+    /// Push down the limit to the given SQL.
+    /// If the limit is None, the SQL will be returned as is.
+    /// If the limit is greater than the pushdown limit, the limit will be replaced with the pushdown limit.
+    /// Otherwise, the limit will be kept as is.
+    #[pyo3(signature = (sql, limit=None))]
+    pub fn pushdown_limit(&self, sql: &str, limit: Option<usize>) -> PyResult<String> {
+        if limit.is_none() {
+            return Ok(sql.to_string());
+        }
+        let pushdown = limit.unwrap();
+        let mut statements =
+            wren_core::parser::Parser::parse_sql(&GenericDialect {}, sql)
+                .map_err(CoreError::from)?;
+        if statements.len() != 1 {
+            return Err(CoreError::new("Only one statement is allowed").into());
+        }
+        visit_statements_mut(&mut statements, |stmt| {
+            if let Statement::Query(q) = stmt {
+                if let Some(limit) = &q.limit {
+                    if let Expr::Value(Value::Number(n, is)) = limit {
+                        if n.parse::<usize>().unwrap() > pushdown {
+                            q.limit = Some(Expr::Value(Value::Number(
+                                pushdown.to_string(),
+                                is.clone(),
+                            )));
+                        }
+                    }
+                } else {
+                    q.limit =
+                        Some(Expr::Value(Value::Number(pushdown.to_string(), false)));
+                }
+            }
+            ControlFlow::<()>::Continue(())
+        });
+        Ok(statements[0].to_string())
     }
 }
 

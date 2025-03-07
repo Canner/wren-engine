@@ -1,3 +1,4 @@
+use std::num::ParseIntError;
 use base64::DecodeError;
 use pyo3::exceptions::PyException;
 use pyo3::PyErr;
@@ -51,6 +52,18 @@ impl From<serde_json::Error> for CoreError {
 impl From<wren_core::DataFusionError> for CoreError {
     fn from(err: wren_core::DataFusionError) -> Self {
         CoreError::new(&format!("DataFusion error: {}", err))
+    }
+}
+
+impl From<wren_core::parser::ParserError> for CoreError {
+    fn from(err: wren_core::parser::ParserError) -> Self {
+        CoreError::new(&format!("Parser error: {}", err))
+    }
+}
+
+impl From<ParseIntError> for CoreError {
+    fn from(err: ParseIntError) -> Self {
+        CoreError::new(&format!("ParseIntError: {}", err))
     }
 }
 

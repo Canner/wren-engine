@@ -205,3 +205,36 @@ def test_to_json_base64():
         decoded_manifest = json.loads(json_str)
         assert decoded_manifest["catalog"] == "my_catalog"
         assert len(decoded_manifest["models"]) == 3
+
+
+def test_limit_pushdown():
+    session_context = SessionContext()
+    sql = "SELECT * FROM my_catalog.my_schema.customer"
+    assert (
+        session_context.pushdown_limit(sql, 10)
+        == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10"
+    )
+
+    sql = "SELECT * FROM my_catalog.my_schema.customer LIMIT 100"
+    assert (
+        session_context.pushdown_limit(sql, 10)
+        == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10"
+    )
+
+    sql = "SELECT * FROM my_catalog.my_schema.customer LIMIT 10"
+    assert (
+        session_context.pushdown_limit(sql, 100)
+        == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10"
+    )
+
+    sql = "SELECT * FROM my_catalog.my_schema.customer LIMIT 10 OFFSET 5"
+    assert (
+        session_context.pushdown_limit(sql, 100)
+        == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10 OFFSET 5"
+    )
+
+    sql = "SELECT * FROM my_catalog.my_schema.customer LIMIT 100 OFFSET 5"
+    assert (
+        session_context.pushdown_limit(sql, 10)
+        == "SELECT * FROM my_catalog.my_schema.customer LIMIT 10 OFFSET 5"
+    )
