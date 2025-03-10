@@ -2,9 +2,8 @@ use crate::logical_plan::analyze::plan::ModelPlanNode;
 use crate::logical_plan::utils::{belong_to_mdl, expr_to_columns};
 use crate::mdl::utils::quoted;
 use crate::mdl::{AnalyzedWrenMDL, Dataset, SessionStateRef};
-use datafusion::catalog_common::TableReference;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{internal_err, plan_err, Column, DFSchemaRef, Result};
+use datafusion::common::{internal_err, plan_err, Column, DFSchemaRef, Result, Spans};
 use datafusion::config::ConfigOptions;
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::Alias;
@@ -14,6 +13,7 @@ use datafusion::logical_expr::{
     Window,
 };
 use datafusion::optimizer::AnalyzerRule;
+use datafusion::sql::TableReference;
 use std::cell::{RefCell, RefMut};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
@@ -255,6 +255,7 @@ impl ModelAnalyzeRule {
             Expr::Column(Column {
                 relation: Some(relation),
                 name,
+                ..
             }) => {
                 // only collect the required column if the relation belongs to the mdl
                 if belong_to_mdl(
@@ -661,7 +662,7 @@ impl ModelAnalyzeRule {
         schema: DFSchemaRef,
     ) -> Result<Transformed<Expr>> {
         match expr {
-            Expr::Column(Column { relation, name }) => {
+            Expr::Column(Column { relation, name, .. }) => {
                 if let Some(relation) = relation {
                     Ok(self.rewrite_column_qualifier(relation, name, alias_model))
                 } else {
@@ -725,6 +726,7 @@ impl ModelAnalyzeRule {
             Transformed::no(Expr::Column(Column {
                 relation: Some(relation),
                 name,
+                spans: Spans::new(),
             }))
         }
     }
