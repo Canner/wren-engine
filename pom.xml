@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>223</version>
+        <version>230</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -67,7 +67,7 @@
         <dep.airlift.version>269</dep.airlift.version>
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
-        <dep.testcontainers.version>1.20.5</dep.testcontainers.version>
+        <dep.testcontainers.version>1.20.6</dep.testcontainers.version>
         <dep.errorprone.version>2.36.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
@@ -108,13 +108,13 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>2.18.2</version>
+                <version>2.18.3</version>
             </dependency>
 
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>2.18.2</version>
+                <version>2.18.3</version>
             </dependency>
 
             <dependency>
@@ -126,7 +126,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-yaml</artifactId>
-                <version>2.18.2</version>
+                <version>2.18.3</version>
             </dependency>
 
             <dependency>
@@ -156,7 +156,7 @@
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.29.3</version>
+                <version>4.30.0</version>
             </dependency>
 
             <dependency>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.17.1</version>
+                <version>1.17.2</version>
             </dependency>
 
             <dependency>
@@ -349,13 +349,13 @@
             <dependency>
                 <groupId>org.checkerframework</groupId>
                 <artifactId>checker-qual</artifactId>
-                <version>3.49.0</version>
+                <version>3.49.1</version>
             </dependency>
 
             <dependency>
                 <groupId>org.duckdb</groupId>
                 <artifactId>duckdb_jdbc</artifactId>
-                <version>1.2.0</version>
+                <version>1.2.1</version>
             </dependency>
 
             <dependency>
