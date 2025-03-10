@@ -34,6 +34,7 @@ import io.wren.base.dto.Metric;
 import io.wren.base.dto.Model;
 import io.wren.base.dto.Relationable;
 import io.wren.base.sqlrewrite.analyzer.Analysis;
+import io.wren.base.sqlrewrite.analyzer.Scope;
 import io.wren.base.sqlrewrite.analyzer.StatementAnalyzer;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.graph.GraphCycleProhibitedException;
@@ -98,12 +99,15 @@ public class WrenSqlRewrite
 
             // Some node be applied `count(*)` which won't be collected but its source is required.
             analysis.getRequiredSourceNodes().forEach(node -> {
-                String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString)
-                        .orElseThrow(() -> new IllegalArgumentException(format("source node name not found: %s", node)));
-                if (!tableRequiredFields.containsKey(tableName)) {
-                    Relationable relationable = wrenMDL.getRelationable(tableName)
-                            .orElseThrow(() -> new IllegalArgumentException(format("dataset not found: %s", tableName)));
-                    tableRequiredFields.put(tableName, relationable.getColumns().stream().filter(column -> !column.isCalculated()).map(Column::getName).collect(toImmutableSet()));
+                Scope scope = analysis.getScope(node);
+                if (tryGetTableName(node).flatMap(name -> scope.getNamedQuery(name.toString())).isEmpty()) {
+                    String tableName = analysis.getSourceNodeNames(node).map(QualifiedName::toString)
+                            .orElseThrow(() -> new IllegalArgumentException(format("source node name not found: %s", node)));
+                    if (!tableRequiredFields.containsKey(tableName)) {
+                        Relationable relationable = wrenMDL.getRelationable(tableName)
+                                .orElseThrow(() -> new IllegalArgumentException(format("dataset not found: %s", tableName)));
+                        tableRequiredFields.put(tableName, relationable.getColumns().stream().filter(column -> !column.isCalculated()).map(Column::getName).collect(toImmutableSet()));
+                    }
                 }
             });
 
@@ -140,6 +144,14 @@ public class WrenSqlRewrite
                     .build();
             return apply(root, sessionContext, analysis, analyzedMDL, allDescriptors);
         }
+    }
+
+    private Optional<QualifiedName> tryGetTableName(Node node)
+    {
+        if (node instanceof Table) {
+            return Optional.of(((Table) node).getName());
+        }
+        return Optional.empty();
     }
 
     private void addDescriptor(String name, Set<String> requiredFields, WrenMDL wrenMDL, ImmutableList.Builder<QueryDescriptor> descriptorsBuilder)
