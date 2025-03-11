@@ -29,6 +29,8 @@ pub(crate) fn function_args_to_sql(
 ) -> Result<Vec<ast::FunctionArg>> {
     args.iter()
         .map(|e| {
+            // TODO: remove deprecated wildcard
+            #[allow(deprecated)]
             if matches!(
                 e,
                 Expr::Wildcard {
