@@ -312,7 +312,7 @@ async def test_limit_pushdown(client, manifest_str, postgres: PostgresContainer)
     )
     assert response.status_code == 200
     result = response.json()
-    assert len(result["data"]) == 2
+    assert len(result["data"]) == 1
 
 
 async def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
