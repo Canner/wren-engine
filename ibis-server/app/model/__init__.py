@@ -18,6 +18,7 @@ class QueryDTO(BaseModel):
     sql: str
     manifest_str: str = manifest_str_field
     connection_info: ConnectionInfo = connection_info_field
+    enable_cache: bool = False
 
 
 class QueryBigQueryDTO(QueryDTO):
