@@ -40,7 +40,6 @@ async def query(
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
-    enable_cache: bool = False,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
     headers: Annotated[str | None, Header()] = None,
@@ -52,13 +51,20 @@ async def query(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
         cached_result = None
+        cache_hit = False
+        enable_cache = dto.enable_cache
+
         if enable_cache:
             cached_result = query_cache_manager.get(
                 str(data_source), dto.sql, dto.connection_info
             )
+            cache_hit = cached_result is not None
+
         # Cache Hit !
         if cached_result is not None:
-            return ORJSONResponse(to_json(cached_result))
+            response = ORJSONResponse(to_json(cached_result))
+            response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+            return response
         # Cache Miss
         else:
             rewritten_sql = await Rewriter(
@@ -71,7 +77,9 @@ async def query(
 
             if dry_run:
                 connector.dry_run(rewritten_sql)
-                return Response(status_code=204)
+                dry_response = Response(status_code=204)
+                dry_response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+                return dry_response
             else:
                 # missing cache and not dry run
                 # so we need to query the datasource and cache the result
@@ -80,7 +88,9 @@ async def query(
                     query_cache_manager.set(
                         data_source, dto.sql, result, dto.connection_info
                     )
-                return ORJSONResponse(to_json(result))
+                response = ORJSONResponse(to_json(result))
+                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+                return response
 
 
 @router.post("/{data_source}/validate/{rule_name}")
