@@ -40,6 +40,7 @@ async def query(
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     limit: int | None = None,
+    enable_cache: bool = False,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
     headers: Annotated[str | None, Header()] = None,
@@ -50,9 +51,11 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
-        cached_result = query_cache_manager.get(
-            str(data_source), dto.sql, dto.connection_info
-        )
+        cached_result = None
+        if enable_cache:
+            cached_result = query_cache_manager.get(
+                str(data_source), dto.sql, dto.connection_info
+            )
         # Cache Hit !
         if cached_result is not None:
             return ORJSONResponse(to_json(cached_result))
@@ -63,16 +66,20 @@ async def query(
                 data_source=data_source,
                 java_engine_connector=java_engine_connector,
             ).rewrite(dto.sql)
+
             connector = Connector(data_source, dto.connection_info)
 
             if dry_run:
                 connector.dry_run(rewritten_sql)
                 return Response(status_code=204)
             else:
+                # missing cache and not dry run
+                # so we need to query the datasource and cache the result
                 result = connector.query(rewritten_sql, limit=limit)
-                query_cache_manager.set(
-                    data_source, dto.sql, result, dto.connection_info
-                )
+                if enable_cache:
+                    query_cache_manager.set(
+                        data_source, dto.sql, result, dto.connection_info
+                    )
                 return ORJSONResponse(to_json(result))
 
 

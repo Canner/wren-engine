@@ -34,6 +34,7 @@ class QueryCacheManager:
             # Create cache directory if it doesn't exist
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
             cache = ibis.memtable(result)
+            logger.info(f"\nWriting query cache to {cache_path}\n")
             cache.to_parquet(cache_path)
         except Exception as e:
             logger.debug(f"Failed to write query cache: {e}")
