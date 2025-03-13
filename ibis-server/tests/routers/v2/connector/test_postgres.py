@@ -285,6 +285,36 @@ SELECT
     assert result["data"][0][26] == "12300.00000"
 
 
+async def test_limit_pushdown(client, manifest_str, postgres: PostgresContainer):
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"limit": 10},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 100',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 10
+
+    connection_info = _to_connection_info(postgres)
+    response = await client.post(
+        url=f"{base_url}/query",
+        params={"limit": 10},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT count(*) FILTER (where orderkey > 10) FROM "Orders" LIMIT 100',
+        },
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result["data"]) == 1
+
+
 async def test_dry_run_with_connection_url_and_password_with_bracket_should_not_raise_value_error(
     client, manifest_str, postgres: PostgresContainer
 ):

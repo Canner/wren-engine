@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import ORJSONResponse
+from loguru import logger
 from opentelemetry import trace
 
 from app.config import get_config
@@ -18,7 +19,7 @@ from app.model import (
 from app.model.connector import Connector
 from app.model.data_source import DataSource
 from app.model.validator import Validator
-from app.util import build_context, to_json
+from app.util import build_context, pushdown_limit, to_json
 
 router = APIRouter(prefix="/connector")
 tracer = trace.get_tracer(__name__)
@@ -38,9 +39,15 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
+        try:
+            sql = pushdown_limit(dto.sql, limit)
+        except Exception:
+            logger.warning("Failed to pushdown limit. Using original SQL")
+            sql = dto.sql
+
         rewritten_sql = await Rewriter(
             dto.manifest_str, data_source=data_source, experiment=True
-        ).rewrite(dto.sql)
+        ).rewrite(sql)
         connector = Connector(data_source, dto.connection_info)
         if dry_run:
             connector.dry_run(rewritten_sql)

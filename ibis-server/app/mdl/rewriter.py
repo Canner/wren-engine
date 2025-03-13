@@ -105,7 +105,7 @@ class ExternalEngineRewriter:
 
     @staticmethod
     def handle_extract_exception(e: Exception):
-        logger.error("Error when extracting manifest: {}", e)
+        logger.warning("Error when extracting manifest: {}", e)
 
 
 class EmbeddedEngineRewriter:
