@@ -38,6 +38,7 @@ oracledb = "3.0.0"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
 opentelemetry-api = ">=1.30.0"
 opentelemetry-sdk = ">=1.30.0"
+jinja2 = ">=3.1.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.3.5"
