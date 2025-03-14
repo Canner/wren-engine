@@ -154,6 +154,10 @@ class DataSourceExtension(Enum):
     def get_mysql_connection(cls, info: MySqlConnectionInfo) -> BaseBackend:
         ssl_context = cls._create_ssl_context(info)
         kwargs = {"ssl": ssl_context} if ssl_context else {}
+
+        # utf8mb4 is the actual charset used by MySQL for utf8
+        kwargs.setdefault("charset", "utf8mb4")
+
         if info.kwargs:
             kwargs.update(info.kwargs)
         return ibis.mysql.connect(
