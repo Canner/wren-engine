@@ -1,0 +1,92 @@
+# Wren MCP Server
+
+The **Wren MCP Server** is a **Model Context Protocol (MCP) server** that provides tools for interacting with **Wren Engine** to facilitate AI agent integration.
+
+## Requirements
+
+Before setting up the Wren MCP Server, ensure you have the following dependency installed:
+
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/#installing-uv)** - A fast and efficient Python package manager.
+
+## Environment Variables
+
+The server requires the following environment variables to be set:
+
+| Variable | Description |
+|----------|------------|
+| `WREN_URL` | The URL of the **Wren Ibis server**. |
+| `CONNECTION_INFO_FILE` | The path to the **required connection info file**. |
+| `MDL_PATH` | The path to the **MDL file**. |
+
+### `.env` File Support
+
+Wren MCP Server supports an `.env` file for easier environment configuration. You can define all the required environment variables in this file.
+
+---
+
+## Installation & Usage
+
+### 1. Start Wren Engine and Ibis Server
+
+- If you **already have a running Wren Engine**, ensure that `WREN_URL` is correctly set to point to your server.
+- If you **don't have a running engine**, you can start one using Docker:
+
+  ```sh
+  cd docker
+  docker compose up
+  ```
+
+### 2. Set Environment Variables
+
+Make sure all required environment variables are properly configured, either in your system or within a `.env` file.
+
+### 3. Configure the MCP Server
+
+Create a configuration file with the following structure:
+
+```json
+{
+    "mcpServers": {
+        "wren": {
+            "command": "uv",
+            "args": [
+                "--directory",
+                "/ABSOLUTE/PATH/TO/PARENT/FOLDER/wren-engine/mcp-server",
+                "run",
+                "app/wren.py"
+            ],
+            "autoApprove": [],
+            "disabled": false
+        }
+    }
+}
+```
+
+#### Notes:
+- You **may need to provide the full path** to the `uv` executable in the `"command"` field. You can find it using:
+  - **MacOS/Linux**: `which uv`
+  - **Windows**: `where uv`
+- Ensure that the **absolute path** to the MCP server directory is used in the configuration.
+- For more details, refer to the [MCP Server Guide](https://modelcontextprotocol.io/quickstart/server#test-with-commands).
+
+### 4. Choose an AI Agent That Supports MCP Server
+
+The following AI agents are compatible with Wren MCP Server and deploy the MCP config:
+
+- **[Claude Desktop](https://modelcontextprotocol.io/quickstart/user)**  
+- **[Cline](https://docs.cline.bot/mcp-servers/mcp-quickstart)**  
+
+### 5. Check the Wren Engine is Connected
+
+You can ask the AI agent to perform a health check for Wren Engine.
+
+### 6. Start the Conversation
+
+Now, you can start asking questions through your AI agent and interact with Wren Engine.
+
+---
+
+## Additional Resources
+
+- **Wren Engine Documentation**: [Wren AI](https://getwren.ai/)  
+- **MCP Protocol Guide**: [Model Context Protocol](https://modelcontextprotocol.io/)  
