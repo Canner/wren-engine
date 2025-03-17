@@ -10,7 +10,7 @@ packages = [{ include = "app" }]
 python = ">=3.11,<3.12"
 fastapi = { version = "0.115.11", extras = ["standard"] }
 pydantic = "2.10.6"
-ibis-framework = { version = "10.2.0", extras = [
+ibis-framework = { version = "10.3.1", extras = [
   "bigquery",
   "clickhouse",
   "mssql",
@@ -31,8 +31,8 @@ sqlglot = { extras = [
 loguru = "0.7.3"
 asgi-correlation-id = "4.3.4"
 gql = { extras = ["aiohttp"], version = "3.5.2" }
-anyio = "4.8.0"
-duckdb = "1.2.0"
+anyio = "4.9.0"
+duckdb = "1.2.1"
 opendal = ">=0.45"
 oracledb = "3.0.0"
 mysqlclient = { version = ">=2.2.4,<3", optional = true }
@@ -50,9 +50,9 @@ testcontainers = { version = "4.9.2", extras = [
   "trino",
   "minio",
 ] }
-sqlalchemy = "2.0.38"
+sqlalchemy = "2.0.39"
 pre-commit = "4.1.0"
-ruff = "0.9.10"
+ruff = "0.11.0"
 trino = ">=0.321,<1"
 psycopg2 = ">=2.8.4,<3"
 clickhouse-connect = "0.8.15"
