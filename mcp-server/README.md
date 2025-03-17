@@ -26,7 +26,22 @@ Wren MCP Server supports an `.env` file for easier environment configuration. Yo
 
 ## Installation & Usage
 
-### 1. Start Wren Engine and Ibis Server
+### 1. Set the Python Envrionment
+
+Use the `uv` command to create a virtual envrionment and activate it:
+```
+> uv venv
+Using CPython 3.11.11
+Creating virtual environment at: .venv
+Activate with: source .venv/bin/activate
+> source .venv/bin/activate   
+> uv run app/wren.py
+Loaded MDL etc/mdl.json
+Loaded connection info etc/pg_conneciton.json
+```
+You would see that the MDL and connection info are loaded. Then, you can use `Ctrl + C` terminate the process.
+
+### 2. Start Wren Engine and Ibis Server
 
 - If you **already have a running Wren Engine**, ensure that `WREN_URL` is correctly set to point to your server.
 - If you **don't have a running engine**, you can start one using Docker:
@@ -36,11 +51,11 @@ Wren MCP Server supports an `.env` file for easier environment configuration. Yo
   docker compose up
   ```
 
-### 2. Set Environment Variables
+### 3. Set Environment Variables
 
 Make sure all required environment variables are properly configured, either in your system or within a `.env` file.
 
-### 3. Configure the MCP Server
+### 4. Configure the MCP Server
 
 Create a configuration file with the following structure:
 
@@ -69,18 +84,18 @@ Create a configuration file with the following structure:
 - Ensure that the **absolute path** to the MCP server directory is used in the configuration.
 - For more details, refer to the [MCP Server Guide](https://modelcontextprotocol.io/quickstart/server#test-with-commands).
 
-### 4. Choose an AI Agent That Supports MCP Server
+### 5. Choose an AI Agent That Supports MCP Server
 
 The following AI agents are compatible with Wren MCP Server and deploy the MCP config:
 
 - **[Claude Desktop](https://modelcontextprotocol.io/quickstart/user)**  
 - **[Cline](https://docs.cline.bot/mcp-servers/mcp-quickstart)**  
 
-### 5. Check the Wren Engine is Connected
+### 6. Check the Wren Engine is Connected
 
 You can ask the AI agent to perform a health check for Wren Engine.
 
-### 6. Start the Conversation
+### 7. Start the Conversation
 
 Now, you can start asking questions through your AI agent and interact with Wren Engine.
 
