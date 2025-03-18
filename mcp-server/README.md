@@ -18,6 +18,23 @@ The server requires the following environment variables to be set:
 | `CONNECTION_INFO_FILE` | The path to the **required connection info file**. |
 | `MDL_PATH` | The path to the **MDL file**. |
 
+### Connection Info
+
+The following JSON is a connection info of a Postgres. You can find the requried fields for each data source in the [source code](https://github.com/Canner/wren-engine/blob/4ac283ee0754b12a8c3b0a6f13b32c935fcb7b0d/ibis-server/app/model/__init__.py#L75).
+```json
+{
+    "host": "localhost",
+    "port": "5432",
+    "user": "test",
+    "password": "test",
+    "database": "test"
+}
+```
+
+### The `dataSource` field is requried.
+
+In the MDL, the `dataSource` field is required to indicate which data source should be connected. 
+
 ### `.env` File Support
 
 Wren MCP Server supports an `.env` file for easier environment configuration. You can define all the required environment variables in this file.
