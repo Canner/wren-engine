@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Canner/WrenAI/tree/main/wren-mdl/mdl.schema.json",
+  "title": "WrenMDL Manifest Schema",
+  "description": "A schema for WrenMDL manifest file",
+  "$defs": {
+    "column": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "the name of the column",
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "description": "the type of the column",
+          "type": "string",
+          "minLength": 1
+        },
+        "isCalculated": {
+          "description": "whether the column is calculated or not. If the column expression used relationship, this field is required",
+          "type": "boolean"
+        },
+        "expression": {
+          "description": "the expression of the column. If the column is calculated, this field is required",
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["name", "type"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "catalog": {
+      "description": "the catalog name of WrenMDL",
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "description": "the schema name of WrenMDL",
+      "type": "string",
+      "minLength": 1
+    },
+    "models": {
+      "description": "the list of models",
+      "type": "array",
+      "unevaluatedItems": false,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "the name of the model",
+            "type": "string",
+            "minLength": 1
+          },
+          "tableReference": {
+            "description": "the table reference of the model",
+            "type": "object",
+            "properties": {
+              "catalog": {
+                "type": "string"
+              },
+              "schema": {
+                "type": "string"
+              },
+              "table": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["table"]
+          },
+          "columns": {
+            "description": "the list of columns",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/column"
+            }
+          }
+        },
+        "required": ["name"],
+        "oneOf": [
+          { "required": ["tableReference"] }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "relationships": {
+    "description": "the list of relationships",
+    "type": "array",
+    "unevaluatedItems": false,
+    "items": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "the name of the relationship",
+          "type": "string",
+          "minLength": 1
+        },
+        "models": {
+          "description": "the list of models",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "joinType": {
+          "description": "the join type of the relationship",
+          "type": "string",
+          "enum": ["ONE_TO_ONE", "ONE_TO_MANY", "MANY_TO_ONE", "MANY_TO_MANY"]
+        },
+        "condition": {
+          "description": "the condition of the relationship",
+          "type": "string",
+          "minLength": 1
+        },
+        "properties": {
+          "description": "the customize properties of the relationship",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["name", "models", "joinType", "condition"]
+    }
+  },
+  "views": {
+    "description": "the list of views",
+    "type": "array",
+    "unevaluatedItems": false,
+    "items": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "the name of the view",
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "description": "the sql statement of the view",
+          "type": "string",
+          "minLength": 1
+        },
+        "properties": {
+          "description": "the customize properties of the view",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["name", "statement"]
+    }
+  },
+  "required": ["catalog", "schema"],
+  "additionalProperties": false
+}
