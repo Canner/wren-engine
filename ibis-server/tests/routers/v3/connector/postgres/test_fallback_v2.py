@@ -81,6 +81,7 @@ async def test_dry_plan_for_data_source(client, manifest_str):
     assert response.status_code == 200
     assert response.text is not None
 
+
 async def test_validate(client, manifest_str, connection_info):
     response = await client.post(
         url=f"{base_url}/validate/column_is_valid",
