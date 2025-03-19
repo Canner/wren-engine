@@ -53,6 +53,7 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
+    # 438 is the number of functions in `resources/function_list/duckdb.csv` file excluded the default functions in DataFusion.
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 438
     the_func = next(filter(lambda x: x["name"] == "array_length", result))
     assert the_func == {
