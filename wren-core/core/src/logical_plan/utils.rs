@@ -6,6 +6,7 @@ use crate::mdl::{Dataset, SessionStateRef};
 use datafusion::arrow::datatypes::{
     DataType, Field, IntervalUnit, Schema, SchemaBuilder, SchemaRef, TimeUnit,
 };
+use datafusion::catalog_common::TableReference;
 use datafusion::common::plan_err;
 use datafusion::common::tree_node::{
     Transformed, TransformedResult, TreeNode, TreeNodeRecursion,
@@ -17,7 +18,6 @@ use datafusion::logical_expr::sqlparser::dialect::GenericDialect;
 use datafusion::logical_expr::{builder::LogicalTableSource, Expr, TableSource};
 use datafusion::sql::sqlparser::ast;
 use datafusion::sql::sqlparser::parser::Parser;
-use datafusion::sql::TableReference;
 use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
@@ -256,8 +256,6 @@ pub fn expr_to_columns(
     accum: &mut HashSet<datafusion::common::Column>,
 ) -> Result<()> {
     expr.apply(|expr| {
-        // TODO: remove deprecated wildcard
-        #[allow(deprecated)]
         match expr {
             Expr::Column(qc) => {
                 accum.insert(qc.clone());

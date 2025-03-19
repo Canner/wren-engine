@@ -291,8 +291,6 @@ impl ModelPlanNodeBuilder {
                 if required_fields.is_empty() {
                     source_required_fields.insert(
                         0,
-                        // TODO: remove deprecated wildcard
-                        #[allow(deprecated)]
                         Expr::Wildcard {
                             qualifier: None,
                             options: Box::new(WildcardOptions::default()),
@@ -742,8 +740,6 @@ impl ModelSourceNode {
         let mut required_exprs_buffer = BTreeSet::new();
         let mut fields_buffer = BTreeSet::new();
         for expr in required_exprs.iter() {
-            // TODO: remove deprecated wildcard
-            #[allow(deprecated)]
             if let Expr::Wildcard { qualifier, .. } = expr {
                 let model = if let Some(model) = qualifier {
                     let Some(model) =

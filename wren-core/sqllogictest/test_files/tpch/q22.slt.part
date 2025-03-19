@@ -16,7 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-query ?IR
+# TODO:
+#External error: query failed: DataFusion error: ModelAnalyzeRule
+#caused by
+#Schema error: No field named customer.c_phone.
+
+query TIR
 select
     cntrycode,
     count(*) as numcust,

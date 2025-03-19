@@ -321,7 +321,7 @@ fn get_dataset_link_revers_if_need(
 
 #[cfg(test)]
 mod test {
-    use datafusion::common::{Column, Spans};
+    use datafusion::common::Column;
     use datafusion::error::Result;
     use datafusion::sql::TableReference;
     use std::collections::HashSet;
@@ -409,8 +409,7 @@ mod test {
         assert_eq!(a1_concat_b1.len(), 2);
         assert!(a1_concat_b1.contains(&Column {
             relation: Some(TableReference::full("wrenai", "public", "a")),
-            name: "b.b1".to_string(),
-            spans: Spans::new(),
+            name: "b.b1".to_string()
         }));
 
         let a1_concat_c1 = lineage
@@ -420,8 +419,7 @@ mod test {
         assert_eq!(a1_concat_c1.len(), 2);
         assert!(a1_concat_c1.contains(&Column {
             relation: Some(TableReference::full("wrenai", "public", "a")),
-            name: "b.c.c1".to_string(),
-            spans: Spans::new(),
+            name: "b.c.c1".to_string()
         }));
         Ok(())
     }
