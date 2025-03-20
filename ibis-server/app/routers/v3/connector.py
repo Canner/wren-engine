@@ -57,7 +57,7 @@ async def query(
                 return Response(status_code=204)
             return ORJSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "Failed to execute v3 query, fallback to v2: {}\n" + MIGRATION_MESSAGE,
                 str(e),
             )
@@ -78,7 +78,7 @@ async def dry_plan(
         try:
             return await Rewriter(dto.manifest_str, experiment=True).rewrite(dto.sql)
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "Failed to execute v3 dry-plan, fallback to v2: {}\n"
                 + MIGRATION_MESSAGE,
                 str(e),
@@ -102,7 +102,7 @@ async def dry_plan_for_data_source(
                 dto.manifest_str, data_source=data_source, experiment=True
             ).rewrite(dto.sql)
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "Failed to execute v3 dry-plan, fallback to v2: {}\n"
                 + MIGRATION_MESSAGE,
                 str(e),
@@ -132,7 +132,7 @@ async def validate(
             await validator.validate(rule_name, dto.parameters, dto.manifest_str)
             return Response(status_code=204)
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "Failed to execute v3 validate, fallback to v2: {}\n"
                 + MIGRATION_MESSAGE,
                 str(e),
@@ -179,7 +179,7 @@ async def model_substitute(
             )
             return sql
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
             )
             return await v2.connector.model_substitute(
