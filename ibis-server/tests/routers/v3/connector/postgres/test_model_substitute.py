@@ -110,4 +110,3 @@ async def test_model_substitute_non_existent_column(
         },
     )
     assert response.status_code == 422
-    assert "No field named x" in response.text

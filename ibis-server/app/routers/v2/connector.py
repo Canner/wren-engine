@@ -30,7 +30,9 @@ def get_java_engine_connector(request: Request) -> JavaEngineConnector:
     return request.state.java_engine_connector
 
 
-@router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
+@router.post(
+    "/{data_source}/query", dependencies=[Depends(verify_query_dto)], deprecated=True
+)
 async def query(
     data_source: DataSource,
     dto: QueryDTO,
@@ -63,7 +65,7 @@ async def query(
         return ORJSONResponse(to_json(connector.query(rewritten_sql, limit=limit)))
 
 
-@router.post("/{data_source}/validate/{rule_name}")
+@router.post("/{data_source}/validate/{rule_name}", deprecated=True)
 async def validate(
     data_source: DataSource,
     rule_name: str,
@@ -87,7 +89,9 @@ async def validate(
         return Response(status_code=204)
 
 
-@router.post("/{data_source}/metadata/tables", response_model=list[Table])
+@router.post(
+    "/{data_source}/metadata/tables", response_model=list[Table], deprecated=True
+)
 def get_table_list(
     data_source: DataSource,
     dto: MetadataDTO,
@@ -102,7 +106,11 @@ def get_table_list(
         ).get_table_list()
 
 
-@router.post("/{data_source}/metadata/constraints", response_model=list[Constraint])
+@router.post(
+    "/{data_source}/metadata/constraints",
+    response_model=list[Constraint],
+    deprecated=True,
+)
 def get_constraints(
     data_source: DataSource,
     dto: MetadataDTO,
@@ -117,12 +125,12 @@ def get_constraints(
         ).get_constraints()
 
 
-@router.post("/{data_source}/metadata/version")
+@router.post("/{data_source}/metadata/version", deprecated=True)
 def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
     return MetadataFactory.get_metadata(data_source, dto.connection_info).get_version()
 
 
-@router.post("/dry-plan")
+@router.post("/dry-plan", deprecated=True)
 async def dry_plan(
     dto: DryPlanDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
@@ -136,7 +144,7 @@ async def dry_plan(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/dry-plan")
+@router.post("/{data_source}/dry-plan", deprecated=True)
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
@@ -154,7 +162,7 @@ async def dry_plan_for_data_source(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/model-substitute")
+@router.post("/{data_source}/model-substitute", deprecated=True)
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
