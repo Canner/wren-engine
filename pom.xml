@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>230</version>
+        <version>241</version>
     </parent>
 
     <groupId>io.wren</groupId>
@@ -68,7 +68,7 @@
         <dep.packaging.version>${dep.airlift.version}</dep.packaging.version>
         <dep.drift.version>1.22</dep.drift.version>
         <dep.testcontainers.version>1.20.6</dep.testcontainers.version>
-        <dep.errorprone.version>2.36.0</dep.errorprone.version>
+        <dep.errorprone.version>2.37.0</dep.errorprone.version>
         <dep.plugin.failsafe.version>${dep.plugin.surefire.version}</dep.plugin.failsafe.version>
         <netty.version>4.1.45.Final</netty.version>
 
@@ -150,13 +150,13 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>failureaccess</artifactId>
-                <version>1.0.2</version>
+                <version>1.0.3</version>
             </dependency>
 
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>4.30.0</version>
+                <version>4.30.1</version>
             </dependency>
 
             <dependency>
@@ -174,7 +174,7 @@
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
-                <version>6.2.1</version>
+                <version>6.3.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
@@ -318,7 +318,7 @@
             <dependency>
                 <groupId>net.bytebuddy</groupId>
                 <artifactId>byte-buddy</artifactId>
-                <version>1.17.2</version>
+                <version>1.17.4</version>
             </dependency>
 
             <dependency>
@@ -391,7 +391,7 @@
             <dependency>
                 <groupId>org.threeten</groupId>
                 <artifactId>threetenbp</artifactId>
-                <version>1.7.0</version>
+                <version>1.7.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
