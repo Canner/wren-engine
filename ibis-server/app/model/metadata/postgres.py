@@ -26,6 +26,7 @@ class PostgresMetadata(Metadata):
                 c.data_type,
                 c.is_nullable,
                 c.ordinal_position,
+                tc.constraint_type,
                 obj_description(cls.oid) AS table_comment,
                 col_description(cls.oid, a.attnum) AS column_comment
             FROM
@@ -44,6 +45,12 @@ class PostgresMetadata(Metadata):
                 pg_attribute a
                 ON a.attrelid = cls.oid
                 AND a.attname = c.column_name
+            LEFT JOIN information_schema.key_column_usage kcu
+                ON c.table_name = kcu.table_name
+                AND c.column_name = kcu.column_name
+                AND c.table_schema = kcu.table_schema
+            LEFT JOIN information_schema.table_constraints tc
+                ON kcu.constraint_name = tc.constraint_name
             WHERE
                 t.table_type IN ('BASE TABLE', 'VIEW')
                 AND t.table_schema NOT IN ('information_schema', 'pg_catalog');
@@ -67,7 +74,7 @@ class PostgresMetadata(Metadata):
                         catalog=row["table_catalog"],
                         table=row["table_name"],
                     ),
-                    primaryKey="",
+                    primaryKey=[],
                 )
 
             # table exists, and add column to the table
@@ -80,6 +87,10 @@ class PostgresMetadata(Metadata):
                     properties=None,
                 )
             )
+            
+            if row["constraint_type"] == 'PRIMARY KEY':
+                unique_tables[schema_table].primaryKey.append(row["column_name"])
+
         return list(unique_tables.values())
 
     def get_constraints(self) -> list[Constraint]:
