@@ -33,9 +33,23 @@ Useful links
 
 ## 🎯 Our Mission
 
-The Wren engine aims to be compatible with composable data systems. It follows two important traits: Embeddable and interoperability. With these two designs in mind, you can reuse the semantic context across your AI agents through our APIs and connect freely with your on-premise and cloud data sources, which nicely fit into your existing data stack.
+Wren Engine is on a mission to power the future of AI agents through the Model Context Protocol (MCP) — a new open standard that connects LLMs with tools, databases, and enterprise systems.
 
-<img src="./misc/wrenai_vision.png">
+As part of the MCP ecosystem, Wren Engine provides a **semantic layer** that enables AI agents to access business data with accuracy, context, and governance. Instead of relying on fragile prompt engineering, Wren Engine embeds deep knowledge of metrics, relationships, and business logic — enabling trusted, explainable, and secure AI-driven workflows.
+
+We believe the future of enterprise AI lies in **context-aware, composable systems**. That’s why Wren Engine is designed to be:
+
+- 🔌 **Embeddable** into any MCP client or workflow
+- 🔄 **Interoperable** with modern data stacks (PostgreSQL, MySQL, Snowflake, etc.)
+- 🧠 **Semantic-first**, enabling AI to “understand” your data model and business logic
+- 🔐 **Governance-ready**, respecting roles, access controls, and definitions
+
+With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
+
+
+
+<img src="./misc/mcp_wren_engine.webp">
+
 
 🤩 [About our Vision - The new wave of Composable Data Systems and the Interface to LLM agents](https://getwren.ai/post/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents)
 
