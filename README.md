@@ -23,7 +23,7 @@
   </a>
 </p>
 
-> Wren Engine is the semantic engine for LLMs, the backbone of the [Wren AI](https://github.com/Canner/WrenAI) project.
+> Wren Engine is the Semantic Engine for MCP Clients and AI Agents. The backbone of the [Wren AI](https://github.com/Canner/WrenAI) project.
 
 <img src="./misc/wren_engine_flow.png">
 
@@ -31,15 +31,32 @@ Useful links
 - [Wren AI Website](https://getwren.ai)
 - [Wren Engine Documentation](https://docs.getwren.ai/oss/engine/get_started/what_is)
 
+
+## 😫 Challenge Today
+
+At the enterprise level, the stakes - and the complexity - are much higher. Businesses run on structured data stored in cloud warehouses, relational databases, and secure filesystems. From BI dashboards to CRM updates and compliance workflows, AI must not only execute commands but also **understand and retrieve the right data, with precision and in context**.
+
+While many community and official MCP servers already support connections to major databases like PostgreSQL, MySQL, SQL Server, and more, there's a problem: **raw access to data isn't enough**.
+
+Enterprises need:
+- Accurate semantic understanding of their data models
+- Trusted calculations and aggregations in reporting
+- Clarity on business terms, like "active customer," "net revenue," or "churn rate"
+- User-based permissions and access control
+
+Natural language alone isn't enough to drive complex workflows across enterprise data systems. You need a layer that interprets intent, maps it to the correct data, applies calculations accurately, and ensures security.
+
 ## 🎯 Our Mission
 
-Wren Engine is on a mission to power the future of AI agents through the Model Context Protocol (MCP) — a new open standard that connects LLMs with tools, databases, and enterprise systems.
+Wren Engine is on a mission to power the future of MCP clients and AI agents through the Model Context Protocol (MCP) — a new open standard that connects LLMs with tools, databases, and enterprise systems.
 
-As part of the MCP ecosystem, Wren Engine provides a **semantic layer** that enables AI agents to access business data with accuracy, context, and governance. Instead of relying on fragile prompt engineering, Wren Engine embeds deep knowledge of metrics, relationships, and business logic — enabling trusted, explainable, and secure AI-driven workflows.
+As part of the MCP ecosystem, Wren Engine provides a **semantic engine** powered the next generation semantic layer that enables AI agents to access business data with accuracy, context, and governance. 
+
+By building the semantic layer directly into MCP clients, such as Claude, Cline, Cursor, etc. Wren Engine empowers AI Agents with precise business context and ensures accurate data interactions across diverse enterprise environments.
 
 We believe the future of enterprise AI lies in **context-aware, composable systems**. That’s why Wren Engine is designed to be:
 
-- 🔌 **Embeddable** into any MCP client or workflow
+- 🔌 **Embeddable** into any MCP client or AI agentic workflow
 - 🔄 **Interoperable** with modern data stacks (PostgreSQL, MySQL, Snowflake, etc.)
 - 🧠 **Semantic-first**, enabling AI to “understand” your data model and business logic
 - 🔐 **Governance-ready**, respecting roles, access controls, and definitions
@@ -47,11 +64,11 @@ We believe the future of enterprise AI lies in **context-aware, composable syste
 With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
 
 
-
 <img src="./misc/mcp_wren_engine.webp">
 
+Check our fill article
 
-🤩 [About our Vision - The new wave of Composable Data Systems and the Interface to LLM agents](https://getwren.ai/post/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents)
+🤩 [Our Mission - Fueling the Next Wave of AI Agents: Building the Foundation for Future MCP Clients and Enterprise Data Access](getwren.ai/post/fueling-the-next-wave-of-ai-agents-building-the-foundation-for-future-mcp-clients-and-enterprise-data-access)
 
 ## 🚀 Get Started with MCP 
 [MCP Server README](mcp-server/README.md)
