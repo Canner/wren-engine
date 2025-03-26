@@ -53,6 +53,10 @@ With Wren Engine, you can scale AI adoption across teams — not just with bette
 
 🤩 [About our Vision - The new wave of Composable Data Systems and the Interface to LLM agents](https://getwren.ai/post/the-new-wave-of-composable-data-systems-and-the-interface-to-llm-agents)
 
+## 🚀 Get Started with MCP 
+[MCP Server README](mcp-server/README.md)
+
+
 ## 🤔 Concepts
 
 - [Introducing Wren Engine](https://docs.getwren.ai/oss/engine/get_started/what_is)
@@ -68,20 +72,3 @@ Wren Engine is currently in the beta version. The project team is actively worki
 - Welcome to our [Discord server](https://discord.gg/5DvshJqG8Z) to give us feedback!
 - If there is any issues, please visit [Github Issues](https://github.com/Canner/wren-engine/issues).
 
-## 🚀 Get Started
-
-Check out our latest documentation to get a [Quick start](https://docs.getwren.ai/oss/engine/get_started/quickstart).
-
-## 🙌 How to build?
-
-### Normal Build
-
-```bash
-mvn clean install -DskipTests
-```
-
-### Build an executable jar
-
-```bash
-mvn clean package -DskipTests -P exec-jar
-```
