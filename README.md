@@ -26,13 +26,6 @@
 > Wren Engine is the Semantic Engine for MCP Clients and AI Agents. 
 > [Wren AI](https://github.com/Canner/WrenAI) GenBI AI Agent is based on Wren Engine.
 
-<img src="./misc/wren_engine_flow.png">
-
-Useful links
-- [Wren AI Website](https://getwren.ai)
-- [Wren Engine Documentation](https://docs.getwren.ai/oss/engine/get_started/what_is)
-
-
 ## 😫 Challenge Today
 
 At the enterprise level, the stakes - and the complexity - are much higher. Businesses run on structured data stored in cloud warehouses, relational databases, and secure filesystems. From BI dashboards to CRM updates and compliance workflows, AI must not only execute commands but also **understand and retrieve the right data, with precision and in context**.
@@ -64,7 +57,6 @@ We believe the future of enterprise AI lies in **context-aware, composable syste
 
 With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
 
-
 <img src="./misc/mcp_wren_engine.webp">
 
 Check our full article
@@ -77,6 +69,7 @@ Check our full article
 
 ## 🤔 Concepts
 
+- [Quick start with Wren Engine](https://docs.getwren.ai/oss/engine/get_started/quickstart)
 - [What is semantics?](https://docs.getwren.ai/oss/engine/concept/what_is_semantics)
 - [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
 - [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/oss/engine/concept/benefits_llm)
