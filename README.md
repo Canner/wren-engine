@@ -77,7 +77,6 @@ Check our full article
 
 ## 🤔 Concepts
 
-- [Introducing Wren Engine](https://docs.getwren.ai/oss/engine/get_started/what_is)
 - [What is semantics?](https://docs.getwren.ai/oss/engine/concept/what_is_semantics)
 - [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
 - [Benefits of Wren Engine with LLMs](https://docs.getwren.ai/oss/engine/concept/benefits_llm)
