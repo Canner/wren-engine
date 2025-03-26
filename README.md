@@ -67,7 +67,7 @@ With Wren Engine, you can scale AI adoption across teams — not just with bette
 
 <img src="./misc/mcp_wren_engine.webp">
 
-Check our fill article
+Check our full article
 
 🤩 [Our Mission - Fueling the Next Wave of AI Agents: Building the Foundation for Future MCP Clients and Enterprise Data Access](https://getwren.ai/post/fueling-the-next-wave-of-ai-agents-building-the-foundation-for-future-mcp-clients-and-enterprise-data-access)
 
