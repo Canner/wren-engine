@@ -100,7 +100,7 @@ class OracleMetadata(Metadata):
                     properties=None,
                 )
             )
-            
+
             # TODO: manage primary key
 
         return list(unique_tables.values())

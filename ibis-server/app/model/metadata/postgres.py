@@ -87,8 +87,8 @@ class PostgresMetadata(Metadata):
                     properties=None,
                 )
             )
-            
-            if row["constraint_type"] == 'PRIMARY KEY':
+
+            if row["constraint_type"] == "PRIMARY KEY":
                 unique_tables[schema_table].primaryKey.append(row["column_name"])
 
         return list(unique_tables.values())
