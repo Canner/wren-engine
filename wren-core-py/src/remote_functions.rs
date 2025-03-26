@@ -19,11 +19,12 @@ use pyo3::prelude::PyDictMethods;
 use pyo3::types::PyDict;
 use pyo3::{pyclass, pymethods, PyObject, Python};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use std::str::FromStr;
 use wren_core::mdl::function::FunctionType;
 
 #[pyclass(name = "RemoteFunction")]
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct PyRemoteFunction {
     #[pyo3(get)]
     pub function_type: String,
@@ -113,5 +114,20 @@ impl From<PyRemoteFunction> for wren_core::mdl::function::RemoteFunction {
             param_types,
             description: remote_function.description,
         }
+    }
+}
+
+impl Display for PyRemoteFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RemoteFunction {{ function_type: {}, name: {}, return_type: {:?}, param_names: {:?}, param_types: {:?}, description: {:?} }}",
+            self.function_type,
+            self.name,
+            self.return_type,
+            self.param_names,
+            self.param_types,
+            self.description
+        )
     }
 }
