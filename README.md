@@ -23,7 +23,8 @@
   </a>
 </p>
 
-> Wren Engine is the Semantic Engine for MCP Clients and AI Agents. The backbone of the [Wren AI](https://github.com/Canner/WrenAI) project.
+> Wren Engine is the Semantic Engine for MCP Clients and AI Agents. 
+> [Wren AI](https://github.com/Canner/WrenAI) GenBI AI Agent is based on Wren Engine.
 
 <img src="./misc/wren_engine_flow.png">
 
