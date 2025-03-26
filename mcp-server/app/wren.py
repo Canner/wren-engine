@@ -41,7 +41,7 @@ async def make_query_request(sql: str, dry_run: bool = False):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"http://{WREN_URL}/v2/connector/{data_source}/query?dry_run={dry_run}",
+                f"http://{WREN_URL}/v3/connector/{data_source}/query?dry_run={dry_run}",
                 headers=headers,
                 json={
                     "sql": sql,
