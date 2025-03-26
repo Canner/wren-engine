@@ -5,8 +5,7 @@ use datafusion::logical_expr::function::{
     AccumulatorArgs, PartitionEvaluatorArgs, WindowUDFFieldArgs,
 };
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDFImpl, ColumnarValue, PartitionEvaluator, ScalarUDFImpl,
-    Signature, TypeSignature, Volatility, WindowUDFImpl,
+    Accumulator, AggregateUDFImpl, ColumnarValue, DocSection, Documentation, DocumentationBuilder, PartitionEvaluator, ScalarUDFImpl, Signature, TypeSignature, Volatility, WindowUDFImpl
 };
 use serde::{Deserialize, Serialize};
 use std::any::Any;
@@ -46,7 +45,7 @@ impl FromStr for FunctionType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.to_lowercase().as_str() {
             "scalar" => Ok(FunctionType::Scalar),
             "aggregate" => Ok(FunctionType::Aggregate),
             "window" => Ok(FunctionType::Window),
@@ -63,10 +62,12 @@ pub struct ByPassScalarUDF {
     name: String,
     return_type: DataType,
     signature: Signature,
+    doc: Documentation,
 }
 
 impl ByPassScalarUDF {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
+        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
         Self {
             name: name.to_string(),
             return_type,
@@ -74,6 +75,7 @@ impl ByPassScalarUDF {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
+            doc,
         }
     }
 }
@@ -98,6 +100,10 @@ impl ScalarUDFImpl for ByPassScalarUDF {
     fn invoke(&self, _args: &[ColumnarValue]) -> Result<ColumnarValue> {
         internal_err!("This function should not be called")
     }
+
+    fn documentation(&self) -> Option<&Documentation> {
+        Some(&self.doc)
+    }
 }
 
 /// An aggregate UDF that will be bypassed when planning logical plan.
@@ -107,10 +113,12 @@ pub struct ByPassAggregateUDF {
     name: String,
     return_type: DataType,
     signature: Signature,
+    doc: Documentation,
 }
 
 impl ByPassAggregateUDF {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
+        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
         Self {
             name: name.to_string(),
             return_type,
@@ -118,6 +126,7 @@ impl ByPassAggregateUDF {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
+            doc,
         }
     }
 }
@@ -142,6 +151,10 @@ impl AggregateUDFImpl for ByPassAggregateUDF {
     fn accumulator(&self, _acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
         internal_err!("This function should not be called")
     }
+
+    fn documentation(&self) -> Option<&Documentation> {
+        Some(&self.doc)
+    }
 }
 
 /// A window UDF that will be bypassed when planning logical plan.
@@ -151,10 +164,12 @@ pub struct ByPassWindowFunction {
     name: String,
     return_type: DataType,
     signature: Signature,
+    doc: Documentation,
 }
 
 impl ByPassWindowFunction {
-    pub fn new(name: &str, return_type: DataType) -> Self {
+    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
+        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
         Self {
             name: name.to_string(),
             return_type,
@@ -162,6 +177,7 @@ impl ByPassWindowFunction {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
+            doc,
         }
     }
 }
@@ -193,6 +209,10 @@ impl WindowUDFImpl for ByPassWindowFunction {
             false,
         ))
     }
+
+    fn documentation(&self) -> Option<&Documentation> {
+        Some(&self.doc)
+    }
 }
 
 #[cfg(test)]
@@ -207,7 +227,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_scalar_udf() -> Result<()> {
-        let udf = ByPassScalarUDF::new("date_diff", DataType::Int64);
+        let udf = ByPassScalarUDF::new("date_diff", DataType::Int64, None);
         let ctx = SessionContext::new();
         ctx.register_udf(ScalarUDF::new_from_impl(udf));
 
@@ -221,6 +241,7 @@ mod test {
         ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
             "today",
             DataType::Utf8,
+            None,
         )));
         let plan_2 = ctx.sql("SELECT today()").await?.into_unoptimized_plan();
         assert_eq!(format!("{plan_2}"), "Projection: today()\n  EmptyRelation");
@@ -230,7 +251,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_agg_udf() -> Result<()> {
-        let udf = ByPassAggregateUDF::new("count_self", DataType::Int64);
+        let udf = ByPassAggregateUDF::new("count_self", DataType::Int64, None);
         let ctx = SessionContext::new();
         ctx.register_udaf(AggregateUDF::new_from_impl(udf));
 
@@ -245,6 +266,7 @@ mod test {
         ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
             "total_count",
             DataType::Int64,
+            None,
         )));
         let plan_2 = ctx
             .sql("SELECT total_count() AS total_count FROM (VALUES (1), (2), (3)) AS val(x)")
@@ -263,7 +285,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_window_udf() -> Result<()> {
-        let udf = ByPassWindowFunction::new("custom_window", DataType::Int64);
+        let udf = ByPassWindowFunction::new("custom_window", DataType::Int64, None);
         let ctx = SessionContext::new();
         ctx.register_udwf(WindowUDF::new_from_impl(udf));
 
@@ -279,6 +301,7 @@ mod test {
         ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
             "cume_dist",
             DataType::Int64,
+            None,
         )));
         let plan_2 = ctx
             .sql("SELECT cume_dist() OVER ()")

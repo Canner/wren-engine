@@ -389,18 +389,21 @@ fn register_remote_function(
             ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                 &remote_function.name,
                 map_data_type(&remote_function.return_type)?,
+                remote_function.description.clone(),
             )))
         }
         FunctionType::Aggregate => {
             ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                 &remote_function.name,
                 map_data_type(&remote_function.return_type)?,
+                remote_function.description.clone(),
             )))
         }
         FunctionType::Window => {
             ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                 &remote_function.name,
                 map_data_type(&remote_function.return_type)?,
+                remote_function.description.clone(),
             )))
         }
     };
