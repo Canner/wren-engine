@@ -14,6 +14,8 @@ use std::any::Any;
 use std::fmt::Display;
 use std::str::FromStr;
 
+use crate::logical_plan::utils::map_data_type;
+
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct RemoteFunction {
     pub function_type: FunctionType,
@@ -43,7 +45,7 @@ impl RemoteFunction {
     fn transform_param_type(param_types: &[String]) -> Option<Vec<DataType>> {
         let types = param_types
             .iter()
-            .map(|t| DataType::from_str(t.as_str()).ok())
+            .map(|t| map_data_type(t.as_str()).ok())
             .collect::<Vec<_>>();
         if types.iter().any(|x| x.is_none()) {
             return None;
@@ -111,7 +113,7 @@ impl ByPassScalarUDF {
 
 impl From<RemoteFunction> for ByPassScalarUDF {
     fn from(func: RemoteFunction) -> Self {
-        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let return_type = map_data_type(func.return_type.as_str()).unwrap();
         let mut builder = DocumentationBuilder::new_with_details(
             DocSection::default(),
             func.description.clone().unwrap_or("".to_string()),
@@ -185,7 +187,7 @@ impl ByPassAggregateUDF {
 
 impl From<RemoteFunction> for ByPassAggregateUDF {
     fn from(func: RemoteFunction) -> Self {
-        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let return_type = map_data_type(func.return_type.as_str()).unwrap();
         let mut builder = DocumentationBuilder::new_with_details(
             DocSection::default(),
             func.description.clone().unwrap_or("".to_string()),
@@ -260,7 +262,7 @@ impl ByPassWindowFunction {
 
 impl From<RemoteFunction> for ByPassWindowFunction {
     fn from(func: RemoteFunction) -> Self {
-        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let return_type = map_data_type(func.return_type.as_str()).unwrap();
         let mut builder = DocumentationBuilder::new_with_details(
             DocSection::default(),
             func.description.clone().unwrap_or("".to_string()),

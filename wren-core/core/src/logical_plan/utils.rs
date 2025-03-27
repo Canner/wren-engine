@@ -22,6 +22,7 @@ use log::debug;
 use petgraph::dot::{Config, Dot};
 use petgraph::Graph;
 use std::collections::{BTreeMap, HashSet};
+use std::str::FromStr;
 use std::{collections::HashMap, sync::Arc};
 
 fn create_list_type(array_type: &str) -> Result<DataType> {
@@ -35,7 +36,7 @@ fn create_list_type(array_type: &str) -> Result<DataType> {
                 return plan_err!("Array type must have an element type")
             }
             ArrayElemTypeDef::AngleBracket(data_type) => {
-                map_data_type(&data_type.to_string())?
+                try_map_data_type(&data_type.to_string())?
             }
             ArrayElemTypeDef::SquareBracket(_, _) => {
                 unreachable!()
@@ -63,7 +64,7 @@ fn create_struct_type(struct_type: &str) -> Result<DataType> {
                 return plan_err!("struct must have at least one field");
             }
             for field in fields {
-                let data_type = map_data_type(field.field_type.to_string().as_str())?;
+                let data_type = try_map_data_type(field.field_type.to_string().as_str())?;
                 let field = Field::new(
                     field
                         .field_name
@@ -91,9 +92,19 @@ fn parse_type(struct_type: &str) -> Result<ast::DataType> {
         .parse_data_type()?)
 }
 
+/// Map the data type from the string to the Arrow data type
+/// If the data type is not supported, it will return Utf8
+pub fn try_map_data_type(data_type: &str) -> Result<DataType> {
+    Ok(map_data_type(data_type).ok().unwrap_or_else(|| {
+        debug!("can't parse data type {}, return Utf8", data_type);
+        DataType::Utf8
+    }))
+}
+
 pub fn map_data_type(data_type: &str) -> Result<DataType> {
     let lower = data_type.to_lowercase();
     let data_type = lower.as_str();
+    // TODO: try parse nested type by arrow
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
     if data_type.starts_with("array") {
@@ -146,9 +157,8 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit
         "null" => DataType::Null,
         _ => {
-            // default to string
-            debug!("map unknown type {} to Utf8", data_type);
-            DataType::Utf8
+            debug!("try parse by arrow {}", data_type);
+            DataType::from_str(data_type)?
         }
     };
     Ok(result)
@@ -163,7 +173,7 @@ pub fn create_schema(columns: Vec<Arc<Column>>) -> Result<SchemaRef> {
     let fields: Vec<Field> = columns
         .iter()
         .map(|column| {
-            let data_type = map_data_type(&column.r#type)?;
+            let data_type = try_map_data_type(&column.r#type)?;
             Ok(Field::new(&column.name, data_type, column.not_null))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -344,7 +354,7 @@ pub fn eliminate_ambiguous_columns(expr: Vec<Expr>) -> Vec<Expr> {
 #[cfg(test)]
 mod test {
     use crate::logical_plan::utils::{
-        create_list_type, create_struct_type, map_data_type,
+        create_list_type, create_struct_type, try_map_data_type,
     };
     use datafusion::arrow::datatypes::{DataType, Field, Fields, IntervalUnit, TimeUnit};
     use datafusion::common::Result;
@@ -411,35 +421,35 @@ mod test {
             ),
         ];
         for (data_type, expected) in test_cases {
-            let result = map_data_type(data_type)?;
+            let result = try_map_data_type(data_type)?;
             assert_eq!(result, expected);
             // test case insensitivity
-            let result = map_data_type(&data_type.to_uppercase())?;
+            let result = try_map_data_type(&data_type.to_uppercase())?;
             assert_eq!(result, expected);
         }
 
-        let _ = map_data_type("array").map_err(|e| {
+        let _ = try_map_data_type("array").map_err(|e| {
             assert_eq!(
                 e.to_string(),
                 "SQL error: ParserError(\"Expected: <, found: EOF\")"
             );
         });
 
-        let _ = map_data_type("array<>").map_err(|e| {
+        let _ = try_map_data_type("array<>").map_err(|e| {
             assert_eq!(
                 e.to_string(),
                 "SQL error: ParserError(\"Expected: <, found: <> at Line: 1, Column: 6\")"
             );
         });
 
-        let _ = map_data_type("array(int64)").map_err(|e| {
+        let _ = try_map_data_type("array(int64)").map_err(|e| {
             assert_eq!(
                 e.to_string(),
                 "SQL error: ParserError(\"Expected: <, found: ( at Line: 1, Column: 6\")"
             );
         });
 
-        let _ = map_data_type("struct").map_err(|e| {
+        let _ = try_map_data_type("struct").map_err(|e| {
             assert_eq!(
                 e.to_string(),
                 "Error during planning: struct must have at least one field"
