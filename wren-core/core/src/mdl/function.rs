@@ -5,7 +5,9 @@ use datafusion::logical_expr::function::{
     AccumulatorArgs, PartitionEvaluatorArgs, WindowUDFFieldArgs,
 };
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDFImpl, ColumnarValue, DocSection, Documentation, DocumentationBuilder, PartitionEvaluator, ScalarUDFImpl, Signature, TypeSignature, Volatility, WindowUDFImpl
+    Accumulator, AggregateUDFImpl, ColumnarValue, DocSection, Documentation,
+    DocumentationBuilder, PartitionEvaluator, ScalarUDFImpl, Signature, TypeSignature,
+    Volatility, WindowUDFImpl,
 };
 use serde::{Deserialize, Serialize};
 use std::any::Any;
@@ -22,7 +24,35 @@ pub struct RemoteFunction {
     pub description: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+impl RemoteFunction {
+    pub fn get_signature(&self) -> Signature {
+        let mut signatures = vec![];
+        if let Some(param_types) = &self.param_types {
+            if let Some(types) = Self::transform_param_type(param_types.as_slice()) {
+                signatures.push(TypeSignature::Exact(types));
+            }
+        }
+        // If the function has no siganture, we will add two default signatures: nullary and variadic any
+        if signatures.is_empty() {
+            signatures.push(TypeSignature::Nullary);
+            signatures.push(TypeSignature::VariadicAny);
+        }
+        Signature::one_of(signatures, Volatility::Volatile)
+    }
+
+    fn transform_param_type(param_types: &[String]) -> Option<Vec<DataType>> {
+        let types = param_types
+            .iter()
+            .map(|t| DataType::from_str(t.as_str()).ok())
+            .collect::<Vec<_>>();
+        if types.iter().any(|x| x.is_none()) {
+            return None;
+        }
+        Some(types.into_iter().map(|x| x.unwrap().clone()).collect())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum FunctionType {
     Scalar,
@@ -62,20 +92,43 @@ pub struct ByPassScalarUDF {
     name: String,
     return_type: DataType,
     signature: Signature,
-    doc: Documentation,
+    doc: Option<Documentation>,
 }
 
 impl ByPassScalarUDF {
-    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
-        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
+    pub fn new(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type,
             signature: Signature::one_of(
-                vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
+                vec![TypeSignature::Nullary, TypeSignature::VariadicAny],
                 Volatility::Volatile,
             ),
-            doc,
+            doc: None,
+        }
+    }
+}
+
+impl From<RemoteFunction> for ByPassScalarUDF {
+    fn from(func: RemoteFunction) -> Self {
+        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let mut builder = DocumentationBuilder::new_with_details(
+            DocSection::default(),
+            func.description.clone().unwrap_or("".to_string()),
+            "",
+        );
+        let signature = func.get_signature();
+        if let Some(param_names) = func.param_names.as_ref() {
+            for (i, name) in param_names.iter().enumerate() {
+                builder = builder
+                    .with_argument(name, func.param_types.as_ref().unwrap()[i].as_str());
+            }
+        }
+        ByPassScalarUDF {
+            name: func.name,
+            return_type,
+            signature,
+            doc: Some(builder.build()),
         }
     }
 }
@@ -102,7 +155,7 @@ impl ScalarUDFImpl for ByPassScalarUDF {
     }
 
     fn documentation(&self) -> Option<&Documentation> {
-        Some(&self.doc)
+        self.doc.as_ref()
     }
 }
 
@@ -113,12 +166,11 @@ pub struct ByPassAggregateUDF {
     name: String,
     return_type: DataType,
     signature: Signature,
-    doc: Documentation,
+    doc: Option<Documentation>,
 }
 
 impl ByPassAggregateUDF {
-    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
-        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
+    pub fn new(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type,
@@ -126,7 +178,32 @@ impl ByPassAggregateUDF {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
-            doc,
+            doc: None,
+        }
+    }
+}
+
+impl From<RemoteFunction> for ByPassAggregateUDF {
+    fn from(func: RemoteFunction) -> Self {
+        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let mut builder = DocumentationBuilder::new_with_details(
+            DocSection::default(),
+            func.description.clone().unwrap_or("".to_string()),
+            "",
+        );
+        let signature = func.get_signature();
+        if let Some(param_names) = func.param_names.as_ref() {
+            for (i, name) in param_names.iter().enumerate() {
+                builder = builder
+                    .with_argument(name, func.param_types.as_ref().unwrap()[i].as_str());
+            }
+        }
+
+        ByPassAggregateUDF {
+            name: func.name,
+            return_type,
+            signature,
+            doc: Some(builder.build()),
         }
     }
 }
@@ -153,7 +230,7 @@ impl AggregateUDFImpl for ByPassAggregateUDF {
     }
 
     fn documentation(&self) -> Option<&Documentation> {
-        Some(&self.doc)
+        self.doc.as_ref()
     }
 }
 
@@ -164,12 +241,11 @@ pub struct ByPassWindowFunction {
     name: String,
     return_type: DataType,
     signature: Signature,
-    doc: Documentation,
+    doc: Option<Documentation>,
 }
 
 impl ByPassWindowFunction {
-    pub fn new(name: &str, return_type: DataType, description: Option<String>) -> Self {
-        let doc=  DocumentationBuilder::new_with_details(DocSection::default(), description.unwrap_or("".to_string()), "").build();
+    pub fn new(name: &str, return_type: DataType) -> Self {
         Self {
             name: name.to_string(),
             return_type,
@@ -177,7 +253,32 @@ impl ByPassWindowFunction {
                 vec![TypeSignature::VariadicAny, TypeSignature::Nullary],
                 Volatility::Volatile,
             ),
-            doc,
+            doc: None,
+        }
+    }
+}
+
+impl From<RemoteFunction> for ByPassWindowFunction {
+    fn from(func: RemoteFunction) -> Self {
+        let return_type = DataType::from_str(func.return_type.as_str()).unwrap();
+        let mut builder = DocumentationBuilder::new_with_details(
+            DocSection::default(),
+            func.description.clone().unwrap_or("".to_string()),
+            "",
+        );
+        let signature = func.get_signature();
+        if let Some(param_names) = func.param_names.as_ref() {
+            for (i, name) in param_names.iter().enumerate() {
+                builder = builder
+                    .with_argument(name, func.param_types.as_ref().unwrap()[i].as_str());
+            }
+        }
+
+        ByPassWindowFunction {
+            name: func.name,
+            return_type,
+            signature,
+            doc: Some(builder.build()),
         }
     }
 }
@@ -211,7 +312,7 @@ impl WindowUDFImpl for ByPassWindowFunction {
     }
 
     fn documentation(&self) -> Option<&Documentation> {
-        Some(&self.doc)
+        self.doc.as_ref()
     }
 }
 
@@ -227,7 +328,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_scalar_udf() -> Result<()> {
-        let udf = ByPassScalarUDF::new("date_diff", DataType::Int64, None);
+        let udf = ByPassScalarUDF::new("date_diff", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udf(ScalarUDF::new_from_impl(udf));
 
@@ -241,7 +342,6 @@ mod test {
         ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
             "today",
             DataType::Utf8,
-            None,
         )));
         let plan_2 = ctx.sql("SELECT today()").await?.into_unoptimized_plan();
         assert_eq!(format!("{plan_2}"), "Projection: today()\n  EmptyRelation");
@@ -251,7 +351,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_agg_udf() -> Result<()> {
-        let udf = ByPassAggregateUDF::new("count_self", DataType::Int64, None);
+        let udf = ByPassAggregateUDF::new("count_self", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udaf(AggregateUDF::new_from_impl(udf));
 
@@ -266,7 +366,6 @@ mod test {
         ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
             "total_count",
             DataType::Int64,
-            None,
         )));
         let plan_2 = ctx
             .sql("SELECT total_count() AS total_count FROM (VALUES (1), (2), (3)) AS val(x)")
@@ -285,7 +384,7 @@ mod test {
 
     #[tokio::test]
     async fn test_by_pass_window_udf() -> Result<()> {
-        let udf = ByPassWindowFunction::new("custom_window", DataType::Int64, None);
+        let udf = ByPassWindowFunction::new("custom_window", DataType::Int64);
         let ctx = SessionContext::new();
         ctx.register_udwf(WindowUDF::new_from_impl(udf));
 
@@ -301,7 +400,6 @@ mod test {
         ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
             "cume_dist",
             DataType::Int64,
-            None,
         )));
         let plan_2 = ctx
             .sql("SELECT cume_dist() OVER ()")

@@ -29,7 +29,6 @@ use tokio::runtime::Runtime;
 use wren_core::array::{AsArray, GenericListArray};
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
 use wren_core::dialect::GenericDialect;
-use wren_core::logical_plan::utils::map_data_type;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
@@ -97,14 +96,16 @@ impl PySessionContext {
             })
             .map_err(CoreError::from)?;
 
-        remote_functions.into_iter().try_for_each(|remote_function| {
-            debug!("Registering remote function: {:?}", remote_function);
-            // TODO: check not only the name but also the return type and the parameter types
-            if !registered_functions.contains(&remote_function.name) {
-                Self::register_remote_function(&ctx, remote_function)?;
-            }
-            Ok::<(), CoreError>(())
-        })?;
+        remote_functions
+            .into_iter()
+            .try_for_each(|remote_function| {
+                debug!("Registering remote function: {:?}", remote_function);
+                // TODO: check not only the name but also the return type and the parameter types
+                if !registered_functions.contains(&remote_function.name) {
+                    Self::register_remote_function(&ctx, remote_function)?;
+                }
+                Ok::<(), CoreError>(())
+            })?;
 
         let Some(mdl_base64) = mdl_base64 else {
             return Ok(Self {
@@ -180,7 +181,7 @@ impl PySessionContext {
                         if n.parse::<usize>().unwrap() > pushdown {
                             q.limit = Some(Expr::Value(Value::Number(
                                 pushdown.to_string(),
-                                is.clone(),
+                                *is,
                             )));
                         }
                     }
@@ -202,28 +203,16 @@ impl PySessionContext {
     ) -> PyResult<()> {
         match &remote_function.function_type {
             FunctionType::Scalar => {
-                ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                        remote_function.description,
-                )))
+                let func: ByPassScalarUDF = remote_function.into();
+                ctx.register_udf(ScalarUDF::new_from_impl(func))
             }
             FunctionType::Aggregate => {
-                ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                        remote_function.description,
-                )))
+                let func: ByPassAggregateUDF = remote_function.into();
+                ctx.register_udaf(AggregateUDF::new_from_impl(func))
             }
             FunctionType::Window => {
-                ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                        remote_function.description,
-                )))
+                let func: ByPassWindowFunction = remote_function.into();
+                ctx.register_udwf(WindowUDF::new_from_impl(func))
             }
         }
         Ok(())
@@ -303,7 +292,7 @@ impl PySessionContext {
                     name,
                     param_names: Some(param_names),
                     param_types: Some(param_types),
-                    return_type: return_type,
+                    return_type,
                     description: Some(description),
                     function_type: FunctionType::from_str(&function_type).unwrap(),
                 });
@@ -315,17 +304,16 @@ impl PySessionContext {
     fn to_string_vec(array: &GenericListArray<i32>) -> Vec<String> {
         array
             .iter()
-            .find_map(|list| match list {
-                Some(list) => Some(
+            .find_map(|list| {
+                list.map(|list| {
                     list.as_string::<i32>()
                         .iter()
                         .map(|s| match s {
                             Some(s) => s.to_string(),
                             None => "".to_string(),
                         })
-                        .collect::<Vec<String>>(),
-                ),
-                None => None,
+                        .collect::<Vec<String>>()
+                })
             })
             .into_iter()
             .flatten()
