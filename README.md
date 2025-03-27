@@ -66,6 +66,10 @@ Check our full article
 ## 🚀 Get Started with MCP 
 [MCP Server README](mcp-server/README.md)
 
+https://github.com/user-attachments/assets/dab9b50f-70d7-4eb3-8fc8-2ab55dc7d2ec
+
+
+
 
 ## 🤔 Concepts
 
