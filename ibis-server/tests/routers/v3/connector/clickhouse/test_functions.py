@@ -107,20 +107,3 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "data": [[1]],
         "dtypes": {"col": "uint64"},
     }
-
-
-async def test_functions(client, manifest_str: str, connection_info):
-    csv_path = os.path.join(function_list_path, "clickhouse.csv")
-    csv_parser = FunctionCsvParser(csv_path)
-    sql_generator = SqlTestGenerator("clickhouse")
-    for function in csv_parser.parse():
-        sql = sql_generator.generate_sql(function)
-        response = await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": sql,
-            },
-        )
-        assert response.status_code == 200

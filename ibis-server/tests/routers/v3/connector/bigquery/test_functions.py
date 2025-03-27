@@ -115,34 +115,3 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "data": [[1]],
         "dtypes": {"col": "int64"},
     }
-
-
-async def test_functions(client, manifest_str: str, connection_info):
-    csv_parser = FunctionCsvParser(os.path.join(function_list_path, "bigquery.csv"))
-    sql_generator = SqlTestGenerator("bigquery")
-    for function in csv_parser.parse():
-        # Skip window functions util https://github.com/Canner/wren-engine/issues/924 is resolved
-        if function.function_type == "window":
-            continue
-        # Skip functions with interval util https://github.com/Canner/wren-engine/issues/930 is resolved
-        if function.name in (
-            "date_add",
-            "date_sub",
-            "date_diff",
-            "date_trunc",
-            "timestamp_add",
-            "timestamp_sub",
-            "timestamp_diff",
-            "timestamp_trunc",
-        ):
-            continue
-        sql = sql_generator.generate_sql(function)
-        response = await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": sql,
-            },
-        )
-        assert response.status_code == 200

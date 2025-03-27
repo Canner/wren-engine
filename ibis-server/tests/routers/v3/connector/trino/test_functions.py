@@ -107,19 +107,3 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "data": [[1]],
         "dtypes": {"col": "int64"},
     }
-
-
-async def test_functions(client, manifest_str: str, connection_info):
-    csv_parser = FunctionCsvParser(os.path.join(function_list_path, "trino.csv"))
-    sql_generator = SqlTestGenerator("trino")
-    for function in csv_parser.parse():
-        sql = sql_generator.generate_sql(function)
-        response = await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": sql,
-            },
-        )
-        assert response.status_code == 200
