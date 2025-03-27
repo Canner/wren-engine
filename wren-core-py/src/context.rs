@@ -20,13 +20,14 @@ use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
+use wren_core::datatypes::GenericStringType;
 use std::hash::Hash;
 use std::ops::ControlFlow;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
-use wren_core::array::{AsArray, GenericListArray};
+use wren_core::array::{AsArray, GenericByteArray};
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
 use wren_core::dialect::GenericDialect;
 use wren_core::mdl::context::create_ctx_with_mdl;
@@ -282,8 +283,8 @@ impl PySessionContext {
 
             for row in 0..batch.num_rows() {
                 let name = name_array.value(row).to_string();
-                let param_names = Self::to_string_vec(param_names_array);
-                let param_types = Self::to_string_vec(param_types_array);
+                let param_names = Self::to_string_vec(param_names_array.value(row).as_string::<i32>());
+                let param_types = Self::to_string_vec(param_types_array.value(row).as_string::<i32>());
                 let return_type = return_type_array.value(row).to_string();
                 let description = description_array.value(row).to_string();
                 let function_type = function_type_array.value(row).to_string();
@@ -301,22 +302,13 @@ impl PySessionContext {
         Ok(functions)
     }
 
-    fn to_string_vec(array: &GenericListArray<i32>) -> Vec<String> {
+    fn to_string_vec(array: &GenericByteArray<GenericStringType<i32>>) -> Vec<String> {
         array
-            .iter()
-            .find_map(|list| {
-                list.map(|list| {
-                    list.as_string::<i32>()
-                        .iter()
-                        .map(|s| match s {
-                            Some(s) => s.to_string(),
-                            None => "".to_string(),
-                        })
-                        .collect::<Vec<String>>()
-                })
-            })
-            .into_iter()
-            .flatten()
-            .collect::<Vec<String>>()
+        .iter()
+        .map(|s| match s {
+            Some(s) => s.to_string(),
+            None => "".to_string(),
+        })
+        .collect::<Vec<String>>()
     }
 }

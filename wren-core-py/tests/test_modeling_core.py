@@ -94,11 +94,11 @@ def test_session_context():
     )
 
     session_context = SessionContext(manifest_str, "tests/functions.csv")
-    sql = "SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer"
+    sql = "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
     rewritten_sql = session_context.transform_sql(sql)
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
 
@@ -109,11 +109,11 @@ def test_read_function_list():
     assert len(functions) == 25943
 
     rewritten_sql = session_context.transform_sql(
-        "SELECT add_two(c_custkey) FROM my_catalog.my_schema.customer"
+        "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
     )
     assert (
         rewritten_sql
-        == "SELECT add_two(customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
+        == "SELECT add_two(customer.c_custkey, customer.c_custkey) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM main.customer AS __source) AS customer) AS customer"
     )
 
     session_context = SessionContext(manifest_str, None)
@@ -128,15 +128,15 @@ def test_get_available_functions():
     assert add_two.name == "add_two"
     assert add_two.function_type == "scalar"
     assert add_two.description == "Adds two numbers together."
-    assert add_two.return_type == "int"
+    assert add_two.return_type == "Int32"
     assert add_two.param_names == "f1,f2"
-    assert add_two.param_types == "int,int"
+    assert add_two.param_types == "Int32,Int32"
 
     max_if = next(f for f in functions if f.name == "max_if")
     assert max_if.name == "max_if"
     assert max_if.function_type == "window"
-    assert max_if.param_names is None
-    assert max_if.param_types is None
+    assert max_if.param_names is ""
+    assert max_if.param_types is ""
 
 
 @pytest.mark.parametrize(
