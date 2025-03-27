@@ -94,6 +94,14 @@ pub fn data_source(python_binding: proc_macro::TokenStream) -> proc_macro::Token
             Datafusion,
             #[serde(alias = "duckdb")]
             DuckDB,
+            #[serde(alias = "local_file")]
+            LocalFile,
+            #[serde(alias = "s3_file")]
+            S3File,
+            #[serde(alias = "gcs_file")]
+            GcsFile,
+            #[serde(alias = "minio_file")]
+            MinioFile,
         }
     };
     proc_macro::TokenStream::from(expanded)
