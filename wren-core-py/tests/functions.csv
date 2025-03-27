@@ -1,3 +1,5 @@
 function_type,name,return_type,param_names,param_types,description
 scalar,add_two,int,"f1,f2","int,int","Adds two numbers together."
 window,max_if,int,,,"If the condition is true, returns the maximum value in the window."
+scalar,json_extract,jsonb,"input,pattern","jsonb,text","Extracts a value from a JSON object."
+scalar,add_custom,int,,"int,int","Adds two numbers together."

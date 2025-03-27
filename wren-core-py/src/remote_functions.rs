@@ -66,14 +66,28 @@ impl From<wren_core::mdl::function::RemoteFunction> for PyRemoteFunction {
         let param_names = remote_function.param_names.map(|names| {
             names
                 .iter()
-                .map(|name| name.to_string())
+                .filter_map(|name| {
+                    if name.is_empty() {
+                        None
+                    }
+                    else {
+                        Some(name.to_string())
+                    }
+                })
                 .collect::<Vec<String>>()
                 .join(",")
         });
         let param_types = remote_function.param_types.map(|types| {
             types
                 .iter()
-                .map(|t| t.to_string())
+                .filter_map(|t| {
+                    if t.is_empty() {
+                        None
+                    }
+                    else {
+                        Some(t.to_string())
+                    }
+                })
                 .collect::<Vec<String>>()
                 .join(",")
         });
@@ -95,13 +109,27 @@ impl From<PyRemoteFunction> for wren_core::mdl::function::RemoteFunction {
         let param_names = remote_function.param_names.map(|names| {
             names
                 .split(",")
-                .map(|name| name.to_string())
+                .filter_map(|name| {
+                    if name.is_empty() {
+                        None
+                    }
+                    else {
+                        Some(name.to_string())
+                    }
+                })
                 .collect::<Vec<String>>()
         });
         let param_types = remote_function.param_types.map(|types| {
             types
                 .split(",")
-                .map(|t| t.to_string())
+                .filter_map(|t| {
+                    if t.is_empty() {
+                        None
+                    }
+                    else {
+                        Some(t.to_string())
+                    }
+                })
                 .collect::<Vec<String>>()
         });
         wren_core::mdl::function::RemoteFunction {

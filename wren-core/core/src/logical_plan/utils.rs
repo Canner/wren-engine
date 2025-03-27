@@ -144,6 +144,8 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "date" => DataType::Date32,
         "interval" => DataType::Interval(IntervalUnit::DayTime),
         "json" => DataType::Utf8, // we don't have a JSON type, so we map it to Utf8
+        "xml" => DataType::Utf8, // we don't have a XML type, so we map it to Utf8
+        "jsonb" => DataType::Binary, // we don't have a JSONB type, so we map it to Binary
         "oid" => DataType::Int32,
         "bytea" => DataType::Binary,
         "uuid" => DataType::Utf8, // we don't have a UUID type, so we map it to Utf8
