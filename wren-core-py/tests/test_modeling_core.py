@@ -135,8 +135,8 @@ def test_get_available_functions():
     max_if = next(f for f in functions if f.name == "max_if")
     assert max_if.name == "max_if"
     assert max_if.function_type == "window"
-    assert max_if.param_names is ""
-    assert max_if.param_types is ""
+    assert max_if.param_names == ""
+    assert max_if.param_types == ""
 
 
 @pytest.mark.parametrize(
