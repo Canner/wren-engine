@@ -66,7 +66,10 @@ Check our full article
 ## 🚀 Get Started with MCP 
 [MCP Server README](mcp-server/README.md)
 
-https://github.com/Canner/wren-engine/raw/main/misc/local-mcp-demo.mp4
+[Check out the comprehensive MCP guide](https://docs.getwren.ai/oss/engine/get_started/quickstart)
+
+<img src="./misc/list_table.gif" alt="List table" width="600" />   
+
 
 ## 🤔 Concepts
 
