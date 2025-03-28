@@ -56,14 +56,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 9
-    the_func = next(filter(lambda x: x["name"] == "array_distinct", result))
+    the_func = next(filter(lambda x: x["name"] == "to_base64", result))
     assert the_func == {
-        "name": "array_distinct",
-        "description": "Removes duplicate values from array",
+        "name": "to_base64",
+        "description": "Converts binary to base64",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": "array",
-        "return_type": "array",
+        "param_types": "Binary",
+        "return_type": "Utf8",
     }
 
     config.set_remote_function_list_path(None)

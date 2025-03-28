@@ -158,6 +158,8 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "int64" => DataType::Int64,
         "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit
         "null" => DataType::Null,
+        // Trino Compatible Types
+        "varbinary" => DataType::Binary,
         _ => {
             debug!("try parse by arrow {}", lower_data_type);
             // the from_str is case sensitive, so we need to use the original string
