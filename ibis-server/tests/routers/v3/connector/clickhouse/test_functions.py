@@ -1,5 +1,4 @@
 import base64
-import os
 
 import orjson
 import pytest
@@ -7,7 +6,6 @@ import pytest
 from app.config import get_config
 from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.clickhouse.conftest import base_url
-from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
     "catalog": "my_catalog",

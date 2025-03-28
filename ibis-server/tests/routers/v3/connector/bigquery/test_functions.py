@@ -1,5 +1,4 @@
 import base64
-import os
 
 import orjson
 import pytest
@@ -7,7 +6,6 @@ import pytest
 from app.config import get_config
 from tests.conftest import DATAFUSION_FUNCTION_COUNT
 from tests.routers.v3.connector.bigquery.conftest import base_url, function_list_path
-from tests.util import FunctionCsvParser, SqlTestGenerator
 
 pytestmark = pytest.mark.functions
 
@@ -48,7 +46,13 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 34
-    the_func = next(filter(lambda x: x["name"] == "string_agg" and x['param_types'] == "LargeUtf8,LargeUtf8", result))
+    the_func = next(
+        filter(
+            lambda x: x["name"] == "string_agg"
+            and x["param_types"] == "LargeUtf8,LargeUtf8",
+            result,
+        )
+    )
     assert the_func == {
         "name": "string_agg",
         "description": "Concatenates the values of string expressions and places separator values between them.",
