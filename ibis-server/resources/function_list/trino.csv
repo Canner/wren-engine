@@ -1,22 +1,10 @@
 function_type,name,return_type,param_names,param_types,description
-scalar,array_distinct,array,,array,Removes duplicate values from array
-scalar,array_sort,array,,array,Sorts array elements
-scalar,cardinality,bigint,,array or map,Returns size of array or map
-scalar,cbrt,double,,double,Returns cube root of the argument
-scalar,ceil,double,,double or decimal,Rounds up to nearest integer
-scalar,floor,double,,double or decimal,Rounds down to nearest integer
 scalar,from_base64,varbinary,,varchar,Converts base64 to binary
-scalar,from_unixtime,timestamp,,double,Converts unix timestamp to timestamp
 scalar,is_finite,boolean,,double or decimal,Tests if value is finite
 scalar,is_infinite,boolean,,double or decimal,Tests if value is infinite
 scalar,is_nan,boolean,,double or decimal,Tests if value is NaN
-scalar,map_keys,array,,map,Returns array of map keys
-scalar,map_values,array,,map,Returns array of map values
-scalar,round,double,,double or decimal,integer,Rounds to nearest integer or decimal places
 scalar,to_base64,varchar,,varbinary,Converts binary to base64
-scalar,to_unixtime,double,,timestamp,Converts timestamp to unix timestamp
-scalar,try,same as input,,any,Returns null if evaluation fails
-scalar,upper,varchar,,varchar,Converts string to uppercase
+scalar,try,same_as_input,,any,Returns null if evaluation fails
 scalar,url_decode,varchar,,varchar,Decodes URL encoded string
 scalar,url_encode,varchar,,varchar,URL encodes string
 scalar,word_stem,varchar,,varchar,Returns word stem (English only)

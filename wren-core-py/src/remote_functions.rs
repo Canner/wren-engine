@@ -19,11 +19,12 @@ use pyo3::prelude::PyDictMethods;
 use pyo3::types::PyDict;
 use pyo3::{pyclass, pymethods, PyObject, Python};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use std::str::FromStr;
 use wren_core::mdl::function::FunctionType;
 
 #[pyclass(name = "RemoteFunction")]
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct PyRemoteFunction {
     #[pyo3(get)]
     pub function_type: String,
@@ -62,24 +63,35 @@ impl PyRemoteFunction {
 
 impl From<wren_core::mdl::function::RemoteFunction> for PyRemoteFunction {
     fn from(remote_function: wren_core::mdl::function::RemoteFunction) -> Self {
-        let param_names = remote_function.param_names.map(|names| {
-            names
-                .iter()
-                .map(|name| name.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        });
-        let param_types = remote_function.param_types.map(|types| {
-            types
-                .iter()
-                .map(|t| t.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
-        });
+        let param_names = remote_function
+            .param_names
+            .map(|names| {
+                names
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<String>>()
+                    .join(",")
+            })
+            .and_then(|types| if types.is_empty() { None } else { Some(types) });
+        let param_types = remote_function
+            .param_types
+            .map(|types| {
+                types
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<String>>()
+                    .join(",")
+            })
+            .and_then(|types| if types.is_empty() { None } else { Some(types) });
+        let return_type = if remote_function.return_type.is_empty() {
+            None
+        } else {
+            Some(remote_function.return_type)
+        };
         Self {
             function_type: remote_function.function_type.to_string(),
             name: remote_function.name,
-            return_type: Some(remote_function.return_type),
+            return_type,
             param_names,
             param_types,
             description: remote_function.description,
@@ -94,24 +106,50 @@ impl From<PyRemoteFunction> for wren_core::mdl::function::RemoteFunction {
         let param_names = remote_function.param_names.map(|names| {
             names
                 .split(",")
-                .map(|name| name.to_string())
-                .collect::<Vec<String>>()
+                .map(|name| {
+                    if name.is_empty() {
+                        None
+                    } else {
+                        Some(name.to_string())
+                    }
+                })
+                .collect::<Vec<Option<String>>>()
         });
         let param_types = remote_function.param_types.map(|types| {
             types
                 .split(",")
-                .map(|t| t.to_string())
-                .collect::<Vec<String>>()
+                .map(|t| {
+                    if t.is_empty() {
+                        None
+                    } else {
+                        Some(t.to_string())
+                    }
+                })
+                .collect::<Vec<Option<String>>>()
         });
         wren_core::mdl::function::RemoteFunction {
             function_type: FunctionType::from_str(&remote_function.function_type)
                 .unwrap(),
             name: remote_function.name,
-            // TODO: Get the return type form DataFusion SessionState
             return_type: remote_function.return_type.unwrap_or("string".to_string()),
             param_names,
             param_types,
             description: remote_function.description,
         }
+    }
+}
+
+impl Display for PyRemoteFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RemoteFunction {{ function_type: {}, name: {}, return_type: {:?}, param_names: {:?}, param_types: {:?}, description: {:?} }}",
+            self.function_type,
+            self.name,
+            self.return_type,
+            self.param_names,
+            self.param_types,
+            self.description
+        )
     }
 }

@@ -13,7 +13,7 @@ use std::collections::{BTreeSet, VecDeque};
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use crate::logical_plan::utils::{from_qualified_name, map_data_type};
+use crate::logical_plan::utils::{from_qualified_name, try_map_data_type};
 use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, ColumnReference, Dataset, SessionStateRef};
 
@@ -212,7 +212,7 @@ pub fn quoted(s: &str) -> String {
 
 /// Transform the column to a datafusion field
 pub fn to_field(column: &wren_core_base::mdl::Column) -> Result<Field> {
-    let data_type = map_data_type(&column.r#type)?;
+    let data_type = try_map_data_type(&column.r#type)?;
     Ok(Field::new(&column.name, data_type, column.not_null))
 }
 
@@ -230,7 +230,13 @@ pub fn to_remote_field(
         let columns = collect_columns(expr);
         columns
             .into_iter()
-            .map(|c| Ok(Field::new(c.value, map_data_type(&column.r#type)?, false)))
+            .map(|c| {
+                Ok(Field::new(
+                    c.value,
+                    try_map_data_type(&column.r#type)?,
+                    false,
+                ))
+            })
             .collect::<Result<_>>()
     } else {
         Ok(vec![to_field(column)?])
