@@ -103,17 +103,17 @@ pub fn try_map_data_type(data_type: &str) -> Result<DataType> {
 
 pub fn map_data_type(data_type: &str) -> Result<DataType> {
     let lower = data_type.to_lowercase();
-    let data_type = lower.as_str();
+    let lower_data_type = lower.as_str();
     // TODO: try parse nested type by arrow
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
-    if data_type.starts_with("array") {
-        return create_list_type(data_type);
+    if lower_data_type.starts_with("array") {
+        return create_list_type(lower_data_type);
     }
-    if data_type.starts_with("struct") {
-        return create_struct_type(data_type);
+    if lower_data_type.starts_with("struct") {
+        return create_struct_type(lower_data_type);
     }
-    let result = match data_type {
+    let result = match lower_data_type {
         // Wren Definition Types
         "bool" | "boolean" => DataType::Boolean,
         "tinyint" => DataType::Int8,
@@ -159,7 +159,8 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit
         "null" => DataType::Null,
         _ => {
-            debug!("try parse by arrow {}", data_type);
+            debug!("try parse by arrow {}", lower_data_type);
+            // the from_str is case sensitive, so we need to use the original string
             DataType::from_str(data_type)?
         }
     };

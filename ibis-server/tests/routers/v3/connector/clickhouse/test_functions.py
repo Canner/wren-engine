@@ -56,14 +56,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 5
-    the_func = next(filter(lambda x: x["name"] == "abs", result))
+    the_func = next(filter(lambda x: x["name"] == "uniq", result))
     assert the_func == {
-        "name": "abs",
-        "description": "Returns absolute value.",
-        "function_type": "scalar",
+        "name": "uniq",
+        "description": "Approximate number of different values using HyperLogLog.",
+        "function_type": "aggregate",
         "param_names": None,
-        "param_types": "Numeric",
-        "return_type": "Numeric",
+        "param_types": None,
+        "return_type": None,
     }
 
     config.set_remote_function_list_path(None)
