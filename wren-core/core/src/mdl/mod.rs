@@ -449,6 +449,7 @@ mod test {
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
+    use wren_core_base::mdl::DataSource;
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -973,6 +974,25 @@ mod test {
             actual,
             "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unnest_as_table_factor() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new().build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::BigQuery)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
 
