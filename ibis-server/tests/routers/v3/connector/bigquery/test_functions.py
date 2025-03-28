@@ -48,14 +48,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 34
-    the_func = next(filter(lambda x: x["name"] == "string_agg", result))
+    the_func = next(filter(lambda x: x["name"] == "string_agg" and x['param_types'] == "LargeUtf8,LargeUtf8", result))
     assert the_func == {
         "name": "string_agg",
-        "description": "Aggregates string values with a delimiter.",
+        "description": "Concatenates the values of string expressions and places separator values between them.",
         "function_type": "aggregate",
-        "param_names": None,
-        "param_types": "text,text",
-        "return_type": "text",
+        "param_names": "expression,delimiter",
+        "param_types": "LargeUtf8,LargeUtf8",
+        "return_type": "LargeUtf8",
     }
 
     config.set_remote_function_list_path(None)
