@@ -45,7 +45,7 @@ impl RemoteFunction {
     fn transform_param_type(param_types: &[Option<String>]) -> Option<Vec<DataType>> {
         let types = param_types
             .iter()
-            .map(|t| t.clone().map(|x| map_data_type(x.as_str()).ok()).flatten())
+            .map(|t| t.clone().and_then(|x| map_data_type(x.as_str()).ok()))
             .collect::<Vec<_>>();
         if types.iter().any(|x| x.is_none()) {
             return None;
