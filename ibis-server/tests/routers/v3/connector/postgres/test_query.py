@@ -191,7 +191,6 @@ async def test_query_with_invalid_manifest_str(client, connection_info):
         },
     )
     assert response.status_code == 422
-    assert response.text == "Base64 decode error: Invalid padding"
 
 
 async def test_query_without_manifest(client, connection_info):

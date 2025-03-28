@@ -61,6 +61,8 @@ class Config:
     def get_remote_function_list_path(self, data_source: str) -> str:
         if not self.remote_function_list_path:
             return None
+        if data_source in {"local_file", "s3_file", "minio_file", "gcs_file"}:
+            data_source = "duckdb"
         base_path = os.path.normpath(self.remote_function_list_path)
         path = os.path.normpath(os.path.join(base_path, f"{data_source}.csv"))
         if not path.startswith(base_path):

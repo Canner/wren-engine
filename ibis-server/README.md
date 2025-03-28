@@ -90,3 +90,28 @@ OpenTelemetry zero-code instrumentation is highly configurable. You can set the 
 
 ## Contributing
 Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more information.
+
+### Report the Migration Issue
+Wren engine is migrating to v3 API (powered by Rust and DataFusion). However, there are some SQL issues currently.
+If you find the migration message in your log, we hope you can provide the message and related information to the Wren AI Team.
+Just raise an issue on GitHub or contact us in the Discord channel.
+
+The message would look like the following log:
+```
+2025-03-19 22:49:08.788 | [62781772-7120-4482-b7ca-4be65c8fda96] | INFO     | __init__.dispatch:14 - POST /v3/connector/postgres/query
+2025-03-19 22:49:08.788 | [62781772-7120-4482-b7ca-4be65c8fda96] | INFO     | __init__.dispatch:15 - Request params: {}
+2025-03-19 22:49:08.789 | [62781772-7120-4482-b7ca-4be65c8fda96] | INFO     | __init__.dispatch:22 - Request body: {"connectionInfo":"REDACTED","manifestStr":"eyJjYXRhbG9nIjoid3JlbiIsInNjaGVtYSI6InB1YmxpYyIsIm1vZGVscyI6W3sibmFtZSI6Im9yZGVycyIsInRhYmxlUmVmZXJlbmNlIjp7InNjaGVtYSI6InB1YmxpYyIsIm5hbWUiOiJvcmRlcnMifSwiY29sdW1ucyI6W3sibmFtZSI6Im9yZGVya2V5IiwidHlwZSI6InZhcmNoYXIiLCJleHByZXNzaW9uIjoiY2FzdChvX29yZGVya2V5IGFzIHZhcmNoYXIpIn1dfV19","sql":"SELECT orderkey FROM orders LIMIT 1"}
+2025-03-19 22:49:08.804 | [62781772-7120-4482-b7ca-4be65c8fda96] | WARN    | connector.query:61 - Failed to execute v3 query, fallback to v2: DataFusion error: ModelAnalyzeRule
+caused by
+Schema error: No field named o_orderkey.
+Wren engine is migrating to Rust version now. Wren AI team are appreciate if you can provide the error messages and related logs for us.
+```
+
+#### Steps to Report an Issue
+1. **Identify the Issue**: Look for the migration message in your log files.
+2. **Gather Information**: Collect the error message and any related logs.
+3. **Report the Issue**:
+   - **GitHub**: Open an issue on our [GitHub repository](https://github.com/Canner/wren-engine/issues) and include the collected information.
+   - **Discord**: Join our [Discord channel](https://discord.gg/5DvshJqG8Z) and share the details with us.
+
+Providing detailed information helps us to diagnose and fix the issues more efficiently. Thank you for your cooperation!
