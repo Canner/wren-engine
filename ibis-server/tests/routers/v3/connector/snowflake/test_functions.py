@@ -43,11 +43,11 @@ def set_remote_function_list_path():
 async def test_function_list(client):
     config = get_config()
 
-    # config.set_remote_function_list_path(None)
-    # response = await client.get(url=f"{base_url}/functions")
-    # assert response.status_code == 200
-    # result = response.json()
-    # assert len(result) == DATAFUSION_FUNCTION_COUNT
+    config.set_remote_function_list_path(None)
+    response = await client.get(url=f"{base_url}/functions")
+    assert response.status_code == 200
+    result = response.json()
+    assert len(result) == DATAFUSION_FUNCTION_COUNT
 
     config.set_remote_function_list_path(function_list_path)
     response = await client.get(url=f"{base_url}/functions")
