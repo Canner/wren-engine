@@ -50,12 +50,7 @@ impl RemoteFunction {
         if types.iter().any(|x| x.is_none()) {
             return None;
         }
-        Some(
-            types
-                .into_iter()
-                .flatten()
-                .collect(),
-        )
+        Some(types.into_iter().flatten().collect())
     }
 }
 
