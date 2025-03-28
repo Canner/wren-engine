@@ -1,5 +1,5 @@
 function_type,name,return_type,param_names,param_types,description
-scalar,if,any,,"boolean,any,any","Returns one value if a condition is TRUE, or another value if a condition is FALSE"
+scalar,if,bool,,"boolean,any,any","Returns one value if a condition is TRUE, or another value if a condition is FALSE"
 scalar,ceiling,int,,"decimal","Returns the smallest integer value greater than or equal to a number"
 scalar,datediff,int,,"date,date","Returns the number of days between two dates"
 scalar,timestampdiff,int,,"varchar,datetime,datetime","Returns the difference between two datetime expressions"

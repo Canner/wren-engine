@@ -57,14 +57,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 25
-    the_func = next(filter(lambda x: x["name"] == "abs", result))
+    the_func = next(filter(lambda x: x["name"] == "lcase", result))
     assert the_func == {
-        "name": "abs",
-        "description": "Returns the absolute value of a number",
+        "name": "lcase",
+        "description": "Synonym for LOWER()",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": "int",
-        "return_type": "int",
+        "param_types": "Utf8",
+        "return_type": "Utf8",
     }
 
     config.set_remote_function_list_path(None)
