@@ -56,14 +56,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 6
-    the_func = next(filter(lambda x: x["name"] == "floor", result))
+    the_func = next(filter(lambda x: x["name"] == "sysdatetime", result))
     assert the_func == {
-        "name": "floor",
-        "description": "Returns largest integer less than number.",
+        "name": "sysdatetime",
+        "description": "Returns date and time of SQL Server.",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": "decimal",
-        "return_type": "Numeric",
+        "param_types": None,
+        "return_type": None,
     }
 
     config.set_remote_function_list_path(None)
