@@ -78,18 +78,6 @@ impl InnerDialect for MySQLDialect {
 pub struct BigQueryDialect {}
 
 impl InnerDialect for BigQueryDialect {
-    fn scalar_function_to_sql_overrides(
-        &self,
-        unparser: &Unparser,
-        function_name: &str,
-        args: &[Expr],
-    ) -> Result<Option<ast::Expr>> {
-        match function_name {
-            "btrim" => scalar_function_to_sql_internal(unparser, "trim", args),
-            _ => Ok(None),
-        }
-    }
-
     fn unnest_as_table_factor(&self) -> bool {
         true
     }
