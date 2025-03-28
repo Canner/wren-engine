@@ -154,6 +154,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         // BigQuery Compatible Types
         "bignumeric" => DataType::Decimal128(38, 10), // set the default precision and scale
         "bytes" => DataType::Binary,
+        "binary" => DataType::Binary,
         "float64" => DataType::Float64,
         "int64" => DataType::Int64,
         "time" => DataType::Time32(TimeUnit::Nanosecond), // chose the smallest time unit
