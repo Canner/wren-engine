@@ -230,7 +230,13 @@ pub fn to_remote_field(
         let columns = collect_columns(expr);
         columns
             .into_iter()
-            .map(|c| Ok(Field::new(c.value, try_map_data_type(&column.r#type)?, false)))
+            .map(|c| {
+                Ok(Field::new(
+                    c.value,
+                    try_map_data_type(&column.r#type)?,
+                    false,
+                ))
+            })
             .collect::<Result<_>>()
     } else {
         Ok(vec![to_field(column)?])

@@ -304,13 +304,12 @@ impl PySessionContext {
         Ok(functions)
     }
 
-    fn to_string_vec(array: &GenericByteArray<GenericStringType<i32>>) -> Vec<String> {
+    fn to_string_vec(
+        array: &GenericByteArray<GenericStringType<i32>>,
+    ) -> Vec<Option<String>> {
         array
             .iter()
-            .map(|s| match s {
-                Some(s) => s.to_string(),
-                None => "".to_string(),
-            })
-            .collect::<Vec<String>>()
+            .map(|s| s.map(|s| s.to_string()))
+            .collect::<Vec<Option<String>>>()
     }
 }

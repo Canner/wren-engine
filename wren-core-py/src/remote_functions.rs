@@ -63,38 +63,35 @@ impl PyRemoteFunction {
 
 impl From<wren_core::mdl::function::RemoteFunction> for PyRemoteFunction {
     fn from(remote_function: wren_core::mdl::function::RemoteFunction) -> Self {
-        let param_names = remote_function.param_names.map(|names| {
-            names
-                .iter()
-                .filter_map(|name| {
-                    if name.is_empty() {
-                        None
-                    }
-                    else {
-                        Some(name.to_string())
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(",")
-        });
-        let param_types = remote_function.param_types.map(|types| {
-            types
-                .iter()
-                .filter_map(|t| {
-                    if t.is_empty() {
-                        None
-                    }
-                    else {
-                        Some(t.to_string())
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(",")
-        });
+        let param_names = remote_function
+            .param_names
+            .map(|names| {
+                names
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<String>>()
+                    .join(",")
+            })
+            .and_then(|types| if types.is_empty() { None } else { Some(types) });
+        let param_types = remote_function
+            .param_types
+            .map(|types| {
+                types
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<String>>()
+                    .join(",")
+            })
+            .and_then(|types| if types.is_empty() { None } else { Some(types) });
+        let return_type = if remote_function.return_type.is_empty() {
+            None
+        } else {
+            Some(remote_function.return_type)
+        };
         Self {
             function_type: remote_function.function_type.to_string(),
             name: remote_function.name,
-            return_type: Some(remote_function.return_type),
+            return_type,
             param_names,
             param_types,
             description: remote_function.description,
@@ -109,34 +106,31 @@ impl From<PyRemoteFunction> for wren_core::mdl::function::RemoteFunction {
         let param_names = remote_function.param_names.map(|names| {
             names
                 .split(",")
-                .filter_map(|name| {
+                .map(|name| {
                     if name.is_empty() {
                         None
-                    }
-                    else {
+                    } else {
                         Some(name.to_string())
                     }
                 })
-                .collect::<Vec<String>>()
+                .collect::<Vec<Option<String>>>()
         });
         let param_types = remote_function.param_types.map(|types| {
             types
                 .split(",")
-                .filter_map(|t| {
+                .map(|t| {
                     if t.is_empty() {
                         None
-                    }
-                    else {
+                    } else {
                         Some(t.to_string())
                     }
                 })
-                .collect::<Vec<String>>()
+                .collect::<Vec<Option<String>>>()
         });
         wren_core::mdl::function::RemoteFunction {
             function_type: FunctionType::from_str(&remote_function.function_type)
                 .unwrap(),
             name: remote_function.name,
-            // TODO: Get the return type form DataFusion SessionState
             return_type: remote_function.return_type.unwrap_or("string".to_string()),
             param_names,
             param_types,

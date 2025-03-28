@@ -106,7 +106,7 @@ def test_read_function_list():
     path = "tests/functions.csv"
     session_context = SessionContext(manifest_str, path)
     functions = session_context.get_available_functions()
-    assert len(functions) == 25945
+    assert len(functions) == 25947
 
     rewritten_sql = session_context.transform_sql(
         "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
@@ -135,16 +135,33 @@ def test_get_available_functions():
     max_if = next(f for f in functions if f.name == "max_if")
     assert max_if.name == "max_if"
     assert max_if.function_type == "window"
-    assert max_if.param_names == ""
-    assert max_if.param_types == ""
+    assert max_if.param_names == None
+    assert max_if.param_types == None
 
-    add_two = next(f for f in functions if f.name == "add_custom")
-    assert add_two.name == "add_custom"
-    assert add_two.function_type == "scalar"
-    assert add_two.description == "Adds two numbers together."
-    assert add_two.return_type == "Int32"
-    assert add_two.param_names == ""
-    assert add_two.param_types == "Int32,Int32"
+    func = next(f for f in functions if f.name == "add_custom")
+    assert func.name == "add_custom"
+    assert func.function_type == "scalar"
+    assert func.description == "Adds two numbers together."
+    assert func.return_type == "Int32"
+    assert func.param_names == None
+    assert func.param_types == "Int32,Int32"
+
+    func = next(f for f in functions if f.name == "test_same_as_input_array")
+    assert func.name == "test_same_as_input_array"
+    assert func.function_type == "scalar"
+    assert func.description == "Returns the greatest value from the first array."
+    assert func.return_type == None
+    assert func.param_names == None
+    assert func.param_types == None
+
+
+    func = next(f for f in functions if f.name == "test_return_type")
+    assert func.name == "test_return_type"
+    assert func.function_type == "scalar"
+    assert func.description == "Returns the same type as the input."
+    assert func.return_type == None
+    assert func.param_names == None
+    assert func.param_types == None
 
 
 
