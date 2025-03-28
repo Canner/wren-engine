@@ -1307,7 +1307,7 @@ mod test {
             .map_err(|e| {
                 assert_eq!(
                     e.to_string(),
-                    "Error during planning: struct must have at least one field"
+                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())
