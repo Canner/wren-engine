@@ -42,6 +42,7 @@ async def query(
     data_source: DataSource,
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
+    cache_enable: Annotated[bool, Query(alias="cacheEnable")] = False,
     limit: int | None = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
@@ -79,7 +80,7 @@ async def query(
         # Check if the query is cached
         cached_result = None
         cache_hit = False
-        enable_cache = dto.enable_cache
+        enable_cache = cache_enable
 
         if enable_cache:
             cached_result = query_cache_manager.get(
