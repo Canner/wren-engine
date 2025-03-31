@@ -11,14 +11,13 @@ use crate::mdl::manifest::Model;
 use crate::mdl::{AnalyzedWrenMDL, SessionStateRef, WrenMDL};
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::catalog::Session;
-use datafusion::catalog_common::memory::{MemoryCatalogProvider, MemorySchemaProvider};
+use datafusion::catalog::memory::MemoryCatalogProvider;
+use datafusion::catalog::{MemorySchemaProvider, Session};
 use datafusion::catalog_common::CatalogProvider;
 use datafusion::common::Result;
 use datafusion::datasource::{TableProvider, TableType, ViewTable};
 use datafusion::execution::session_state::SessionStateBuilder;
 use datafusion::logical_expr::Expr;
-use datafusion::optimizer::analyzer::count_wildcard_rule::CountWildcardRule;
 use datafusion::optimizer::analyzer::expand_wildcard_rule::ExpandWildcardRule;
 use datafusion::optimizer::analyzer::inline_table_scan::InlineTableScan;
 use datafusion::optimizer::analyzer::type_coercion::TypeCoercion;
@@ -35,7 +34,6 @@ use datafusion::optimizer::extract_equijoin_predicate::ExtractEquijoinPredicate;
 use datafusion::optimizer::filter_null_join_keys::FilterNullJoinKeys;
 use datafusion::optimizer::propagate_empty_relation::PropagateEmptyRelation;
 use datafusion::optimizer::replace_distinct_aggregate::ReplaceDistinctWithAggregate;
-use datafusion::optimizer::scalar_subquery_to_join::ScalarSubqueryToJoin;
 use datafusion::optimizer::unwrap_cast_in_comparison::UnwrapCastInComparison;
 use datafusion::optimizer::{AnalyzerRule, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
@@ -111,7 +109,6 @@ fn analyze_rule_for_local_runtime(
         Arc::new(ExpandWildcardRule::new()),
         // [Expr::Wildcard] should be expanded before [TypeCoercion]
         Arc::new(TypeCoercion::new()),
-        Arc::new(CountWildcardRule::new()),
     ]
 }
 
@@ -160,7 +157,8 @@ fn optimize_rule_for_unparsing() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
         Arc::new(ReplaceDistinctWithAggregate::new()),
         Arc::new(EliminateJoin::new()),
         Arc::new(DecorrelatePredicateSubquery::new()),
-        Arc::new(ScalarSubqueryToJoin::new()),
+        // Disable ScalarSubqueryToJoin to avoid generate invalid sql (join without condition)
+        // Arc::new(ScalarSubqueryToJoin::new()),
         Arc::new(ExtractEquijoinPredicate::new()),
         // Disable SimplifyExpressions to avoid apply some function locally
         // Arc::new(SimplifyExpressions::new()),

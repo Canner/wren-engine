@@ -36,12 +36,18 @@ pub trait InnerDialect: Send + Sync {
     ) -> Result<Option<ast::Expr>> {
         Ok(None)
     }
+
+    /// A wrapper for [datafusion::sql::unparser::dialect::Dialect::unnest_as_table_factor].
+    fn unnest_as_table_factor(&self) -> bool {
+        false
+    }
 }
 
 /// [get_inner_dialect] returns the suitable InnerDialect for the given data source.
 pub fn get_inner_dialect(data_source: &DataSource) -> Box<dyn InnerDialect> {
     match data_source {
         DataSource::MySQL => Box::new(MySQLDialect {}),
+        DataSource::BigQuery => Box::new(BigQueryDialect {}),
         _ => Box::new(GenericDialect {}),
     }
 }
@@ -66,5 +72,13 @@ impl InnerDialect for MySQLDialect {
             "btrim" => scalar_function_to_sql_internal(unparser, "trim", args),
             _ => Ok(None),
         }
+    }
+}
+
+pub struct BigQueryDialect {}
+
+impl InnerDialect for BigQueryDialect {
+    fn unnest_as_table_factor(&self) -> bool {
+        true
     }
 }

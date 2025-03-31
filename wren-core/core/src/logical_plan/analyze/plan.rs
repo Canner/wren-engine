@@ -20,7 +20,7 @@ use petgraph::Graph;
 
 use crate::logical_plan::analyze::RelationChain;
 use crate::logical_plan::analyze::RelationChain::Start;
-use crate::logical_plan::utils::{from_qualified_name, map_data_type};
+use crate::logical_plan::utils::{from_qualified_name, try_map_data_type};
 use crate::mdl;
 use crate::mdl::lineage::DatasetLink;
 use crate::mdl::manifest::{JoinType, Model};
@@ -227,7 +227,7 @@ impl ModelPlanNodeBuilder {
                 Some(TableReference::bare(quoted(model.name()))),
                 Arc::new(Field::new(
                     column.name(),
-                    map_data_type(&column.r#type)?,
+                    try_map_data_type(&column.r#type)?,
                     column.not_null,
                 )),
             ));
@@ -291,6 +291,8 @@ impl ModelPlanNodeBuilder {
                 if required_fields.is_empty() {
                     source_required_fields.insert(
                         0,
+                        // TODO: remove deprecated wildcard
+                        #[allow(deprecated)]
                         Expr::Wildcard {
                             qualifier: None,
                             options: Box::new(WildcardOptions::default()),
@@ -740,6 +742,8 @@ impl ModelSourceNode {
         let mut required_exprs_buffer = BTreeSet::new();
         let mut fields_buffer = BTreeSet::new();
         for expr in required_exprs.iter() {
+            // TODO: remove deprecated wildcard
+            #[allow(deprecated)]
             if let Expr::Wildcard { qualifier, .. } = expr {
                 let model = if let Some(model) = qualifier {
                     let Some(model) =
@@ -760,7 +764,7 @@ impl ModelSourceNode {
                         Some(TableReference::bare(quoted(model.name()))),
                         Arc::new(Field::new(
                             column.name(),
-                            map_data_type(&column.r#type)?,
+                            try_map_data_type(&column.r#type)?,
                             column.not_null,
                         )),
                     ));
@@ -800,7 +804,7 @@ impl ModelSourceNode {
                     Some(TableReference::bare(quoted(model.name()))),
                     Arc::new(Field::new(
                         column.name(),
-                        map_data_type(&column.r#type)?,
+                        try_map_data_type(&column.r#type)?,
                         column.not_null,
                     )),
                 ));
@@ -894,12 +898,12 @@ impl CalculationPlanNode {
         let output_field = vec![
             Arc::new(Field::new(
                 calculation.column.name(),
-                map_data_type(&calculation.column.r#type)?,
+                try_map_data_type(&calculation.column.r#type)?,
                 calculation.column.not_null,
             )),
             Arc::new(Field::new(
                 pk_column.name(),
-                map_data_type(&pk_column.r#type)?,
+                try_map_data_type(&pk_column.r#type)?,
                 pk_column.not_null,
             )),
         ]

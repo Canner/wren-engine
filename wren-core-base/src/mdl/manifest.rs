@@ -102,6 +102,10 @@ impl Display for DataSource {
             DataSource::Snowflake => write!(f, "SNOWFLAKE"),
             DataSource::Datafusion => write!(f, "DATAFUSION"),
             DataSource::DuckDB => write!(f, "DUCKDB"),
+            DataSource::LocalFile => write!(f, "LOCAL_FILE"),
+            DataSource::S3File => write!(f, "S3_FILE"),
+            DataSource::GcsFile => write!(f, "GCS_FILE"),
+            DataSource::MinioFile => write!(f, "MINIO_FILE"),
         }
     }
 }

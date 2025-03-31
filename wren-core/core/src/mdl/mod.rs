@@ -1,4 +1,4 @@
-use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
+use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
 use crate::mdl::dialect::WrenDialect;
@@ -219,7 +219,7 @@ impl WrenMDL {
             if let Some(name) = Self::collect_one_column(&expr) {
                 Ok(Some(Field::new(
                     alias.map(|a| a.value).unwrap_or_else(|| name.value.clone()),
-                    map_data_type(&column.r#type)?,
+                    try_map_data_type(&column.r#type)?,
                     column.not_null,
                 )))
             } else {
@@ -388,19 +388,19 @@ fn register_remote_function(
         FunctionType::Scalar => {
             ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Aggregate => {
             ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Window => {
             ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
     };
@@ -449,6 +449,7 @@ mod test {
     use datafusion::config::ConfigOptions;
     use datafusion::prelude::{SessionConfig, SessionContext};
     use datafusion::sql::unparser::plan_to_sql;
+    use wren_core_base::mdl::DataSource;
 
     #[test]
     fn test_sync_transform() -> Result<()> {
@@ -560,13 +561,13 @@ mod test {
             sql,
         )
         .await?;
-        let expected = "SELECT profile.totalcost FROM (SELECT totalcost.totalcost FROM \
+        let expected = "SELECT \"profile\".totalcost FROM (SELECT totalcost.totalcost FROM \
         (SELECT __relation__2.p_custkey AS p_custkey, sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM \
         (SELECT __relation__1.c_custkey, orders.o_custkey, orders.o_totalprice, __relation__1.p_custkey FROM \
         (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice FROM orders AS __source) AS orders RIGHT JOIN \
-        (SELECT customer.c_custkey, profile.p_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
-        (SELECT __source.p_custkey AS p_custkey FROM profile AS __source) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
-        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS profile";
+        (SELECT customer.c_custkey, \"profile\".p_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
+        (SELECT __source.p_custkey AS p_custkey FROM \"profile\" AS __source) AS \"profile\" ON customer.c_custkey = \"profile\".p_custkey) AS __relation__1 \
+        ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost) AS \"profile\"";
         assert_eq!(result, expected);
 
         let sql = "select totalcost from profile where p_sex = 'M'";
@@ -578,16 +579,16 @@ mod test {
         )
         .await?;
         assert_eq!(result,
-          "SELECT profile.totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
-          (SELECT totalcost.p_custkey, profile.p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, \
+          "SELECT \"profile\".totalcost FROM (SELECT __relation__1.p_sex, __relation__1.totalcost FROM \
+          (SELECT totalcost.p_custkey, \"profile\".p_sex, totalcost.totalcost FROM (SELECT __relation__2.p_custkey AS p_custkey, \
           sum(CAST(__relation__2.o_totalprice AS BIGINT)) AS totalcost FROM (SELECT __relation__1.c_custkey, orders.o_custkey, \
           orders.o_totalprice, __relation__1.p_custkey FROM (SELECT __source.o_custkey AS o_custkey, __source.o_totalprice AS o_totalprice \
-          FROM orders AS __source) AS orders RIGHT JOIN (SELECT customer.c_custkey, profile.p_custkey FROM \
+          FROM orders AS __source) AS orders RIGHT JOIN (SELECT customer.c_custkey, \"profile\".p_custkey FROM \
           (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer RIGHT JOIN \
-          (SELECT __source.p_custkey AS p_custkey FROM profile AS __source) AS profile ON customer.c_custkey = profile.p_custkey) AS __relation__1 \
+          (SELECT __source.p_custkey AS p_custkey FROM \"profile\" AS __source) AS \"profile\" ON customer.c_custkey = \"profile\".p_custkey) AS __relation__1 \
           ON orders.o_custkey = __relation__1.c_custkey) AS __relation__2 GROUP BY __relation__2.p_custkey) AS totalcost RIGHT JOIN \
-          (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM profile AS __source) AS profile \
-          ON totalcost.p_custkey = profile.p_custkey) AS __relation__1) AS profile WHERE profile.p_sex = 'M'");
+          (SELECT __source.p_custkey AS p_custkey, __source.p_sex AS p_sex FROM \"profile\" AS __source) AS \"profile\" \
+          ON totalcost.p_custkey = \"profile\".p_custkey) AS __relation__1) AS \"profile\" WHERE \"profile\".p_sex = 'M'");
         Ok(())
     }
 
@@ -618,7 +619,7 @@ mod test {
         assert_eq!(actual,
             "SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" FROM \
             (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM \
-            datafusion.public.customer AS __source) AS \"Customer\"");
+            datafusion.\"public\".customer AS __source) AS \"Customer\"");
         Ok(())
     }
 
@@ -655,7 +656,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual, "SELECT add_two(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\" \
-        FROM (SELECT __source.\"Custkey\" AS \"Custkey\" FROM datafusion.public.customer AS __source) AS \"Customer\") AS \"Customer\"");
+        FROM (SELECT __source.\"Custkey\" AS \"Custkey\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\"");
 
         let actual = transform_sql_with_ctx(
             &ctx,
@@ -665,7 +666,7 @@ mod test {
         )
         .await?;
         assert_eq!(actual, "SELECT median(\"Customer\".\"Custkey\") FROM (SELECT \"Customer\".\"Custkey\", \"Customer\".\"Name\" \
-        FROM (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.public.customer AS __source) AS \"Customer\") AS \"Customer\" \
+        FROM (SELECT __source.\"Custkey\" AS \"Custkey\", __source.\"Name\" AS \"Name\" FROM datafusion.\"public\".customer AS __source) AS \"Customer\") AS \"Customer\" \
         GROUP BY \"Customer\".\"Name\"");
 
         // TODO: support window functions analysis
@@ -925,7 +926,9 @@ mod test {
         let sql = "select count(*) from (select 1)";
         let actual =
             transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
-        assert_eq!(actual, "SELECT count(*) FROM (SELECT 1)");
+        // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
+        //      We should remove the invalid characters for the alias.
+        assert_eq!(actual, "SELECT count(1) AS \"count(*)\" FROM (SELECT 1)");
         Ok(())
     }
 
@@ -971,6 +974,25 @@ mod test {
             actual,
             "SELECT INTERVAL 12 MONTH + INTERVAL 2 MONTH + INTERVAL 3 DAY"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unnest_as_table_factor() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new().build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM (SELECT UNNEST([1, 2, 3]) AS \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\")");
+
+        let manifest = ManifestBuilder::new()
+            .data_source(DataSource::BigQuery)
+            .build();
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let sql = "select * from unnest([1, 2, 3])";
+        let actual = transform_sql_with_ctx(&ctx, analyzed_mdl, &[], sql).await?;
+        assert_eq!(actual, "SELECT \"UNNEST(make_array(Int64(1),Int64(2),Int64(3)))\" FROM UNNEST([1, 2, 3])");
         Ok(())
     }
 
@@ -1062,7 +1084,9 @@ mod test {
         )
         .await?;
         assert_eq!(actual,
-                   "SELECT count(*) FROM (SELECT artist.cast_timestamptz FROM \
+                   // TODO: BigQuery doesn't support the alias include invalid characters (e.g. `*`, `()`).
+                   //      We should remove the invalid characters for the alias.
+                   "SELECT count(1) AS \"count(*)\" FROM (SELECT artist.cast_timestamptz FROM \
                    (SELECT CAST(__source.\"出道時間\" AS TIMESTAMP WITH TIME ZONE) AS cast_timestamptz \
                    FROM artist AS __source) AS artist) AS artist WHERE CAST(artist.cast_timestamptz AS TIMESTAMP) > CAST('2011-01-01 21:00:00' AS TIMESTAMP)");
         Ok(())
@@ -1148,7 +1172,7 @@ mod test {
                        "SELECT CAST(timestamp_table.timestamp_col AS TIMESTAMP WITH TIME ZONE) = timestamp_table.timestamptz_col \
                        FROM (SELECT timestamp_table.timestamp_col, timestamp_table.timestamptz_col FROM \
                        (SELECT __source.timestamp_col AS timestamp_col, __source.timestamptz_col AS timestamptz_col \
-                       FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
+                       FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
 
             let sql = r#"select timestamptz_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1160,7 +1184,7 @@ mod test {
             .await?;
             // assert the simplified literal will be casted to the timestamp tz
             assert_eq!(actual,
-              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
+              "SELECT timestamp_table.timestamptz_col > CAST(CAST('2011-01-01 18:00:00' AS TIMESTAMP) AS TIMESTAMP WITH TIME ZONE) FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table"
 );
 
             let sql = r#"select timestamptz_col > '2011-01-01 18:00:00' from wren.test.timestamp_table"#;
@@ -1175,7 +1199,7 @@ mod test {
             assert_eq!(actual,
                        "SELECT timestamp_table.timestamptz_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP WITH TIME ZONE) \
                        FROM (SELECT timestamp_table.timestamptz_col FROM (SELECT __source.timestamptz_col AS timestamptz_col \
-                       FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
+                       FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
 
             let sql = r#"select timestamp_col > cast('2011-01-01 18:00:00' as TIMESTAMP WITH TIME ZONE) from wren.test.timestamp_table"#;
             let actual = transform_sql_with_ctx(
@@ -1189,7 +1213,7 @@ mod test {
             assert_eq!(actual,
                 "SELECT timestamp_table.timestamp_col > CAST('2011-01-01 18:00:00' AS TIMESTAMP) \
                 FROM (SELECT timestamp_table.timestamp_col FROM (SELECT __source.timestamp_col AS timestamp_col \
-                FROM datafusion.public.timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
+                FROM datafusion.\"public\".timestamp_table AS __source) AS timestamp_table) AS timestamp_table");
         }
         Ok(())
     }
@@ -1283,7 +1307,7 @@ mod test {
             .map_err(|e| {
                 assert_eq!(
                     e.to_string(),
-                    "Error during planning: struct must have at least one field"
+                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())
@@ -1359,6 +1383,33 @@ mod test {
             (SELECT customer.c_custkey, customer.c_name FROM \
             (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
             GROUP BY customer.c_custkey"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_disable_scalar_subquery() -> Result<()> {
+        let ctx = SessionContext::new();
+        let manifest = ManifestBuilder::new()
+            .catalog("wren")
+            .schema("test")
+            .model(
+                ModelBuilder::new("customer")
+                    .table_reference("customer")
+                    .column(ColumnBuilder::new("c_custkey", "int").build())
+                    .column(ColumnBuilder::new("c_name", "string").build())
+                    .build(),
+            )
+            .build();
+        let sql = r#"SELECT c_custkey, (SELECT c_name FROM customer WHERE c_custkey = 1) FROM customer"#;
+        let analyzed_mdl = Arc::new(AnalyzedWrenMDL::analyze(manifest)?);
+        let result =
+            transform_sql_with_ctx(&ctx, Arc::clone(&analyzed_mdl), &[], sql).await?;
+        assert_eq!(
+            result,
+            "SELECT customer.c_custkey, (SELECT customer.c_name FROM (SELECT customer.c_custkey, customer.c_name \
+            FROM (SELECT __source.c_custkey AS c_custkey, __source.c_name AS c_name FROM customer AS __source) AS customer) AS customer \
+            WHERE customer.c_custkey = 1) FROM (SELECT customer.c_custkey FROM (SELECT __source.c_custkey AS c_custkey FROM customer AS __source) AS customer) AS customer"
         );
         Ok(())
     }

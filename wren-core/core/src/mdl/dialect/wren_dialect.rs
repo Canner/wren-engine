@@ -83,6 +83,10 @@ impl Dialect for WrenDialect {
             _ => Ok(None),
         }
     }
+
+    fn unnest_as_table_factor(&self) -> bool {
+        self.inner_dialect.unnest_as_table_factor()
+    }
 }
 
 impl Default for WrenDialect {

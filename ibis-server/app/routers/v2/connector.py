@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import ORJSONResponse
+from loguru import logger
 from opentelemetry import trace
 
 from app.dependencies import verify_query_dto
@@ -20,7 +21,7 @@ from app.model.metadata.dto import Constraint, MetadataDTO, Table
 from app.model.metadata.factory import MetadataFactory
 from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
-from app.util import build_context, to_json
+from app.util import build_context, pushdown_limit, to_json
 
 router = APIRouter(prefix="/connector")
 tracer = trace.get_tracer(__name__)
@@ -34,7 +35,9 @@ def get_query_cache_manager(request: Request) -> QueryCacheManager:
     return request.state.query_cache_manager
 
 
-@router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
+@router.post(
+    "/{data_source}/query", dependencies=[Depends(verify_query_dto)], deprecated=True
+)
 async def query(
     data_source: DataSource,
     dto: QueryDTO,
@@ -50,6 +53,30 @@ async def query(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
+        try:
+            sql = pushdown_limit(dto.sql, limit)
+        except Exception as e:
+            logger.warning("Failed to pushdown limit. Using original SQL: {}", e)
+            sql = dto.sql
+
+        rewritten_sql = await Rewriter(
+            dto.manifest_str,
+            data_source=data_source,
+            java_engine_connector=java_engine_connector,
+        ).rewrite(sql)
+        connector = Connector(data_source, dto.connection_info)
+
+        # First check if the query is a dry run
+        # If it is dry run.
+        # We don't need to check query cache
+        if dry_run:
+            connector.dry_run(rewritten_sql)
+            dry_response = Response(status_code=204)
+            dry_response.headers["X-Cache-Hit"] = "true"
+            return dry_response
+
+        # Not a dry run
+        # Check if the query is cached
         cached_result = None
         cache_hit = False
         enable_cache = dto.enable_cache
@@ -60,40 +87,23 @@ async def query(
             )
             cache_hit = cached_result is not None
 
-        # Cache Hit !
-        if cached_result is not None:
+        if cache_hit:
             response = ORJSONResponse(to_json(cached_result))
             response.headers["X-Cache-Hit"] = str(cache_hit).lower()
             return response
-        # Cache Miss
         else:
-            rewritten_sql = await Rewriter(
-                dto.manifest_str,
-                data_source=data_source,
-                java_engine_connector=java_engine_connector,
-            ).rewrite(dto.sql)
+            result = connector.query(rewritten_sql, limit=limit)
+            if enable_cache:
+                query_cache_manager.set(
+                    data_source, dto.sql, result, dto.connection_info
+                )
 
-            connector = Connector(data_source, dto.connection_info)
-
-            if dry_run:
-                connector.dry_run(rewritten_sql)
-                dry_response = Response(status_code=204)
-                dry_response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-                return dry_response
-            else:
-                # missing cache and not dry run
-                # so we need to query the datasource and cache the result
-                result = connector.query(rewritten_sql, limit=limit)
-                if enable_cache:
-                    query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
-                    )
-                response = ORJSONResponse(to_json(result))
-                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-                return response
+            response = ORJSONResponse(to_json(result))
+            response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+            return response
 
 
-@router.post("/{data_source}/validate/{rule_name}")
+@router.post("/{data_source}/validate/{rule_name}", deprecated=True)
 async def validate(
     data_source: DataSource,
     rule_name: str,
@@ -117,7 +127,9 @@ async def validate(
         return Response(status_code=204)
 
 
-@router.post("/{data_source}/metadata/tables", response_model=list[Table])
+@router.post(
+    "/{data_source}/metadata/tables", response_model=list[Table], deprecated=True
+)
 def get_table_list(
     data_source: DataSource,
     dto: MetadataDTO,
@@ -132,7 +144,11 @@ def get_table_list(
         ).get_table_list()
 
 
-@router.post("/{data_source}/metadata/constraints", response_model=list[Constraint])
+@router.post(
+    "/{data_source}/metadata/constraints",
+    response_model=list[Constraint],
+    deprecated=True,
+)
 def get_constraints(
     data_source: DataSource,
     dto: MetadataDTO,
@@ -147,12 +163,12 @@ def get_constraints(
         ).get_constraints()
 
 
-@router.post("/{data_source}/metadata/version")
+@router.post("/{data_source}/metadata/version", deprecated=True)
 def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
     return MetadataFactory.get_metadata(data_source, dto.connection_info).get_version()
 
 
-@router.post("/dry-plan")
+@router.post("/dry-plan", deprecated=True)
 async def dry_plan(
     dto: DryPlanDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
@@ -166,7 +182,7 @@ async def dry_plan(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/dry-plan")
+@router.post("/{data_source}/dry-plan", deprecated=True)
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
@@ -184,7 +200,7 @@ async def dry_plan_for_data_source(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/model-substitute")
+@router.post("/{data_source}/model-substitute", deprecated=True)
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
