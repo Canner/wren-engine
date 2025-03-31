@@ -4,12 +4,16 @@ from typing import Any, Optional
 
 import ibis
 from loguru import logger
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
 
 
 class QueryCacheManager:
     def __init__(self):
         pass
 
+    @tracer.start_as_current_span("get_cache", kind=trace.SpanKind.INTERNAL)
     def get(self, data_source: str, sql: str, info) -> Optional[Any]:
         cache_key = self._generate_cache_key(data_source, sql, info)
         cache_path = self._get_cache_path(cache_key)
@@ -26,6 +30,7 @@ class QueryCacheManager:
 
         return None
 
+    @tracer.start_as_current_span("set_cache", kind=trace.SpanKind.INTERNAL)
     def set(self, data_source: str, sql: str, result: Any, info) -> None:
         cache_key = self._generate_cache_key(data_source, sql, info)
         cache_path = self._get_cache_path(cache_key)
