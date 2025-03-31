@@ -1,4 +1,6 @@
 import base64
+import os
+import shutil
 from urllib.parse import quote_plus, urlparse
 
 import orjson
@@ -10,6 +12,7 @@ from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 
 from app.model.validator import rules
+from app.query_cache import QueryCacheManager
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.postgres
@@ -124,6 +127,15 @@ def postgres(request) -> PostgresContainer:
     return pg
 
 
+@pytest.fixture(scope="function")
+def cache_dir():
+    temp_dir = "/tmp/wren-engine-test"
+    os.makedirs(temp_dir, exist_ok=True)
+    yield temp_dir
+    # Clean up after the test
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 async def test_query(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
@@ -162,6 +174,51 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
         "test_null_time": "datetime64[ns]",
         "bytea_column": "object",
     }
+
+
+async def test_query_with_cache(
+    client, manifest_str, postgres: PostgresContainer, cache_dir, monkeypatch
+):
+    # Override the cache path to use our test directory
+    monkeypatch.setattr(
+        QueryCacheManager,
+        "_get_cache_path",
+        lambda self, key: f"{cache_dir}/{key}.cache",
+    )
+
+    connection_info = _to_connection_info(postgres)
+
+    # First request - should miss cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+
+    assert response1.status_code == 200
+    assert response1.headers["X-Cache-Hit"] == "false"
+    result1 = response1.json()
+
+    # Second request with same SQL - should hit cache
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "Orders" LIMIT 10',
+        },
+    )
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Hit"] == "true"
+    result2 = response2.json()
+
+    # Verify results are identical
+    assert result1["data"] == result2["data"]
+    assert result1["columns"] == result2["columns"]
+    assert result1["dtypes"] == result2["dtypes"]
 
 
 async def test_query_with_connection_url(
