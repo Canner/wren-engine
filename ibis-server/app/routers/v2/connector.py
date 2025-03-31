@@ -48,12 +48,15 @@ async def query(
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
     headers: Annotated[str | None, Header()] = None,
 ) -> Response:
-    span_name = (
-        f"v2_query_{data_source}_dry_run" if dry_run else f"v2_query_{data_source}"
-    )
+    span_name = f"v2_query_{data_source}"
+    if dry_run:
+        span_name += "_dry_run"
+    if cache_enable:
+        span_name += "_cache_enable"
+
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
-    ):
+    ) as span:
         try:
             sql = pushdown_limit(dto.sql, limit)
         except Exception as e:
@@ -89,6 +92,7 @@ async def query(
             cache_hit = cached_result is not None
 
         if cache_hit:
+            span.add_event("cache hit")
             response = ORJSONResponse(to_json(cached_result))
             response.headers["X-Cache-Hit"] = str(cache_hit).lower()
             return response
