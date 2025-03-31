@@ -1,4 +1,4 @@
-use crate::logical_plan::utils::{from_qualified_name_str, map_data_type};
+use crate::logical_plan::utils::{from_qualified_name_str, try_map_data_type};
 use crate::mdl::builder::ManifestBuilder;
 use crate::mdl::context::{create_ctx_with_mdl, WrenDataSource};
 use crate::mdl::dialect::WrenDialect;
@@ -219,7 +219,7 @@ impl WrenMDL {
             if let Some(name) = Self::collect_one_column(&expr) {
                 Ok(Some(Field::new(
                     alias.map(|a| a.value).unwrap_or_else(|| name.value.clone()),
-                    map_data_type(&column.r#type)?,
+                    try_map_data_type(&column.r#type)?,
                     column.not_null,
                 )))
             } else {
@@ -388,19 +388,19 @@ fn register_remote_function(
         FunctionType::Scalar => {
             ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Aggregate => {
             ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
         FunctionType::Window => {
             ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
                 &remote_function.name,
-                map_data_type(&remote_function.return_type)?,
+                try_map_data_type(&remote_function.return_type)?,
             )))
         }
     };
@@ -1307,7 +1307,7 @@ mod test {
             .map_err(|e| {
                 assert_eq!(
                     e.to_string(),
-                    "Error during planning: struct must have at least one field"
+                    "Execution error: The expression to get an indexed field is only valid for `Struct`, `Map` or `Null` types, got Utf8"
                 )
             });
         Ok(())

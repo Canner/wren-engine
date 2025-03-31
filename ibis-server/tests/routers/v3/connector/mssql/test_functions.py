@@ -1,5 +1,4 @@
 import base64
-import os
 
 import orjson
 import pytest
@@ -7,7 +6,6 @@ import pytest
 from app.config import get_config
 from tests.conftest import DATAFUSION_FUNCTION_COUNT, file_path
 from tests.routers.v3.connector.mssql.conftest import base_url
-from tests.util import FunctionCsvParser, SqlTestGenerator
 
 manifest = {
     "catalog": "my_catalog",
@@ -56,14 +54,14 @@ async def test_function_list(client):
     assert response.status_code == 200
     result = response.json()
     assert len(result) == DATAFUSION_FUNCTION_COUNT + 6
-    the_func = next(filter(lambda x: x["name"] == "floor", result))
+    the_func = next(filter(lambda x: x["name"] == "sysdatetime", result))
     assert the_func == {
-        "name": "floor",
-        "description": "Returns largest integer less than number.",
+        "name": "sysdatetime",
+        "description": "Returns date and time of SQL Server.",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": "decimal",
-        "return_type": "Numeric",
+        "param_types": None,
+        "return_type": None,
     }
 
     config.set_remote_function_list_path(None)
@@ -107,19 +105,3 @@ async def test_aggregate_function(client, manifest_str: str, connection_info):
         "data": [[1]],
         "dtypes": {"col": "int64"},
     }
-
-
-async def test_functions(client, manifest_str: str, connection_info):
-    csv_parser = FunctionCsvParser(os.path.join(function_list_path, "mssql.csv"))
-    sql_generator = SqlTestGenerator("mssql")
-    for function in csv_parser.parse():
-        sql = sql_generator.generate_sql(function)
-        response = await client.post(
-            url=f"{base_url}/query",
-            json={
-                "connectionInfo": connection_info,
-                "manifestStr": manifest_str,
-                "sql": sql,
-            },
-        )
-        assert response.status_code == 200

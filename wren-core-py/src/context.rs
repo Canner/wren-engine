@@ -20,33 +20,37 @@ use crate::manifest::to_manifest;
 use crate::remote_functions::PyRemoteFunction;
 use log::debug;
 use pyo3::{pyclass, pymethods, PyErr, PyResult};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::hash::Hash;
 use std::ops::ControlFlow;
+use std::str::FromStr;
 use std::sync::Arc;
+use std::vec;
+use tokio::runtime::Runtime;
+use wren_core::array::{AsArray, GenericByteArray};
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
+use wren_core::datatypes::GenericStringType;
 use wren_core::dialect::GenericDialect;
-use wren_core::logical_plan::utils::map_data_type;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
     ByPassAggregateUDF, ByPassScalarUDF, ByPassWindowFunction, FunctionType,
     RemoteFunction,
 };
-use wren_core::{mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, WindowUDF};
+use wren_core::{
+    mdl, AggregateUDF, AnalyzedWrenMDL, ScalarUDF, SessionConfig, WindowUDF,
+};
+
 /// The Python wrapper for the Wren Core session context.
 #[pyclass(name = "SessionContext")]
 #[derive(Clone)]
 pub struct PySessionContext {
     ctx: wren_core::SessionContext,
     mdl: Arc<AnalyzedWrenMDL>,
-    remote_functions: Vec<RemoteFunction>,
+    runtime: Arc<Runtime>,
 }
 
 impl Hash for PySessionContext {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.mdl.hash(state);
-        self.remote_functions.hash(state);
     }
 }
 
@@ -55,7 +59,7 @@ impl Default for PySessionContext {
         Self {
             ctx: wren_core::SessionContext::new(),
             mdl: Arc::new(AnalyzedWrenMDL::default()),
-            remote_functions: vec![],
+            runtime: Arc::new(Runtime::new().unwrap()),
         }
     }
 }
@@ -79,13 +83,36 @@ impl PySessionContext {
             .map(|f| f.into())
             .collect::<Vec<_>>();
 
-        let ctx = wren_core::SessionContext::new();
+        let config = SessionConfig::default().with_information_schema(true);
+        let ctx = wren_core::SessionContext::new_with_config(config);
+        let runtime = Runtime::new().map_err(CoreError::from)?;
+
+        let registered_functions = runtime
+            .block_on(Self::get_regietered_functions(&ctx))
+            .map(|functions| {
+                functions
+                    .into_iter()
+                    .map(|f| f.name)
+                    .collect::<std::collections::HashSet<String>>()
+            })
+            .map_err(CoreError::from)?;
+
+        remote_functions
+            .into_iter()
+            .try_for_each(|remote_function| {
+                debug!("Registering remote function: {:?}", remote_function);
+                // TODO: check not only the name but also the return type and the parameter types
+                if !registered_functions.contains(&remote_function.name) {
+                    Self::register_remote_function(&ctx, remote_function)?;
+                }
+                Ok::<(), CoreError>(())
+            })?;
 
         let Some(mdl_base64) = mdl_base64 else {
             return Ok(Self {
                 ctx,
                 mdl: Arc::new(AnalyzedWrenMDL::default()),
-                remote_functions,
+                runtime: Arc::new(runtime),
             });
         };
 
@@ -97,98 +124,39 @@ impl PySessionContext {
 
         let analyzed_mdl = Arc::new(analyzed_mdl);
 
-        let runtime = tokio::runtime::Runtime::new().map_err(CoreError::from)?;
         let ctx = runtime
             .block_on(create_ctx_with_mdl(&ctx, Arc::clone(&analyzed_mdl), false))
             .map_err(CoreError::from)?;
 
-        remote_functions.iter().try_for_each(|remote_function| {
-            debug!("Registering remote function: {:?}", remote_function);
-            Self::register_remote_function(&ctx, remote_function)?;
-            Ok::<(), CoreError>(())
-        })?;
-
         Ok(Self {
             ctx,
             mdl: analyzed_mdl,
-            remote_functions,
+            runtime: Arc::new(runtime),
         })
     }
 
     /// Transform the given Wren SQL to the equivalent Planned SQL.
     pub fn transform_sql(&self, sql: &str) -> PyResult<String> {
-        mdl::transform_sql(Arc::clone(&self.mdl), &self.remote_functions, sql)
+        self.runtime
+            .block_on(mdl::transform_sql_with_ctx(
+                &self.ctx,
+                Arc::clone(&self.mdl),
+                &[],
+                sql,
+            ))
             .map_err(|e| PyErr::from(CoreError::from(e)))
     }
 
     /// Get the available functions in the session context.
     pub fn get_available_functions(&self) -> PyResult<Vec<PyRemoteFunction>> {
-        let mut builder = self
-            .remote_functions
-            .iter()
-            .map(|f| (f.name.clone(), f.clone().into()))
-            .collect::<HashMap<String, PyRemoteFunction>>();
-        self.ctx
-            .state()
-            .scalar_functions()
-            .iter()
-            .for_each(|(name, _func)| {
-                match builder.entry(name.clone()) {
-                    Entry::Occupied(_) => {}
-                    Entry::Vacant(entry) => {
-                        entry.insert(PyRemoteFunction {
-                            function_type: "scalar".to_string(),
-                            name: name.clone(),
-                            // TODO: get function return type from SessionState
-                            return_type: None,
-                            param_names: None,
-                            param_types: None,
-                            description: None,
-                        });
-                    }
-                }
-            });
-        self.ctx
-            .state()
-            .aggregate_functions()
-            .iter()
-            .for_each(|(name, _func)| {
-                match builder.entry(name.clone()) {
-                    Entry::Occupied(_) => {}
-                    Entry::Vacant(entry) => {
-                        entry.insert(PyRemoteFunction {
-                            function_type: "aggregate".to_string(),
-                            name: name.clone(),
-                            // TODO: get function return type from SessionState
-                            return_type: None,
-                            param_names: None,
-                            param_types: None,
-                            description: None,
-                        });
-                    }
-                }
-            });
-        self.ctx
-            .state()
-            .window_functions()
-            .iter()
-            .for_each(|(name, _func)| {
-                match builder.entry(name.clone()) {
-                    Entry::Occupied(_) => {}
-                    Entry::Vacant(entry) => {
-                        entry.insert(PyRemoteFunction {
-                            function_type: "window".to_string(),
-                            name: name.clone(),
-                            // TODO: get function return type from SessionState
-                            return_type: None,
-                            param_names: None,
-                            param_types: None,
-                            description: None,
-                        });
-                    }
-                }
-            });
-        Ok(builder.values().cloned().collect())
+        let registered_functions: Vec<PyRemoteFunction> = self
+            .runtime
+            .block_on(Self::get_regietered_functions(&self.ctx))
+            .map_err(CoreError::from)?
+            .into_iter()
+            .map(|f| f.into())
+            .collect::<Vec<_>>();
+        Ok(registered_functions)
     }
 
     /// Push down the limit to the given SQL.
@@ -214,7 +182,7 @@ impl PySessionContext {
                         if n.parse::<usize>().unwrap() > pushdown {
                             q.limit = Some(Expr::Value(Value::Number(
                                 pushdown.to_string(),
-                                is.clone(),
+                                *is,
                             )));
                         }
                     }
@@ -232,29 +200,20 @@ impl PySessionContext {
 impl PySessionContext {
     fn register_remote_function(
         ctx: &wren_core::SessionContext,
-        remote_function: &RemoteFunction,
+        remote_function: RemoteFunction,
     ) -> PyResult<()> {
         match &remote_function.function_type {
             FunctionType::Scalar => {
-                ctx.register_udf(ScalarUDF::new_from_impl(ByPassScalarUDF::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                )))
+                let func: ByPassScalarUDF = remote_function.into();
+                ctx.register_udf(ScalarUDF::new_from_impl(func))
             }
             FunctionType::Aggregate => {
-                ctx.register_udaf(AggregateUDF::new_from_impl(ByPassAggregateUDF::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                )))
+                let func: ByPassAggregateUDF = remote_function.into();
+                ctx.register_udaf(AggregateUDF::new_from_impl(func))
             }
             FunctionType::Window => {
-                ctx.register_udwf(WindowUDF::new_from_impl(ByPassWindowFunction::new(
-                    &remote_function.name,
-                    map_data_type(&remote_function.return_type)
-                        .map_err(CoreError::from)?,
-                )))
+                let func: ByPassWindowFunction = remote_function.into();
+                ctx.register_udwf(WindowUDF::new_from_impl(func))
             }
         }
         Ok(())
@@ -274,5 +233,83 @@ impl PySessionContext {
         } else {
             Ok(vec![])
         }
+    }
+
+    async fn get_regietered_functions(
+        ctx: &wren_core::SessionContext,
+    ) -> PyResult<Vec<RemoteFunction>> {
+        let sql = r#"
+            WITH inputs AS (
+                SELECT
+                    r.specific_name,
+                    r.data_type as return_type,
+                    pi.rid,
+                    array_agg(pi.parameter_name order by pi.ordinal_position) as param_names,
+                    array_agg(pi.data_type order by pi.ordinal_position) as param_types
+                FROM
+                    information_schema.routines r
+                JOIN
+                    information_schema.parameters pi ON r.specific_name = pi.specific_name AND pi.parameter_mode = 'IN'
+                GROUP BY 1, 2, 3
+            )
+            SELECT
+                r.routine_name as name,
+                i.param_names,
+                i.param_types,
+                r.data_type as return_type,
+                r.function_type,
+                r.description
+            FROM
+                information_schema.routines r
+            LEFT JOIN
+                inputs i ON r.specific_name = i.specific_name
+        "#;
+        let batches = ctx
+            .sql(sql)
+            .await
+            .map_err(CoreError::from)?
+            .collect()
+            .await
+            .map_err(CoreError::from)?;
+        let mut functions = vec![];
+
+        for batch in batches {
+            let name_array = batch.column(0).as_string::<i32>();
+            let param_names_array = batch.column(1).as_list::<i32>();
+            let param_types_array = batch.column(2).as_list::<i32>();
+            let return_type_array = batch.column(3).as_string::<i32>();
+            let function_type_array = batch.column(4).as_string::<i32>();
+            let description_array = batch.column(5).as_string::<i32>();
+
+            for row in 0..batch.num_rows() {
+                let name = name_array.value(row).to_string();
+                let param_names =
+                    Self::to_string_vec(param_names_array.value(row).as_string::<i32>());
+                let param_types =
+                    Self::to_string_vec(param_types_array.value(row).as_string::<i32>());
+                let return_type = return_type_array.value(row).to_string();
+                let description = description_array.value(row).to_string();
+                let function_type = function_type_array.value(row).to_string();
+
+                functions.push(RemoteFunction {
+                    name,
+                    param_names: Some(param_names),
+                    param_types: Some(param_types),
+                    return_type,
+                    description: Some(description),
+                    function_type: FunctionType::from_str(&function_type).unwrap(),
+                });
+            }
+        }
+        Ok(functions)
+    }
+
+    fn to_string_vec(
+        array: &GenericByteArray<GenericStringType<i32>>,
+    ) -> Vec<Option<String>> {
+        array
+            .iter()
+            .map(|s| s.map(|s| s.to_string()))
+            .collect::<Vec<Option<String>>>()
     }
 }
