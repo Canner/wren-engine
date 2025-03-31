@@ -250,7 +250,7 @@ public class TestStatementAnalyzer
                                         column("custkey", "integer", null, false, "o_custkey"),
                                         column("customer", "Customer", "CustomerOrders", false),
                                         calculatedColumn("customer_name", "varchar", "customer.name")),
-                                "orderkey"),
+                                List.of("orderkey")),
                         model("Customer", "SELECT * FROM tpch.customer",
                                 List.of(column("custkey", "integer", null, false, "c_custkey"),
                                         column("name", "varchar", null, false, "c_name")))))

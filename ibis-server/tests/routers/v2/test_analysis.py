@@ -20,7 +20,7 @@ manifest = {
                 {"name": "mktsegment", "expression": "mktsegment", "type": "varchar"},
                 {"name": "comment", "expression": "comment", "type": "varchar"},
             ],
-            "primaryKey": "custkey",
+            "primaryKey": ["custkey"],
         },
         {
             "name": "orders",
@@ -44,7 +44,7 @@ manifest = {
                 },
                 {"name": "comment", "expression": "comment", "type": "varchar"},
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         },
         {
             "name": "lineitem",
