@@ -259,7 +259,7 @@ public abstract class AbstractTestModel
                 ImmutableList.of(
                         Column.column("mom_custkey", "VARCHAR", null, true, "custkey"),
                         Column.column("mom_totalprice", "VARCHAR", null, true, "totalprice")),
-                "mom_custkey");
+                List.of("mom_custkey"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, onCustomer, orders))
                 .setRelationships(List.of(ordersCustomer))

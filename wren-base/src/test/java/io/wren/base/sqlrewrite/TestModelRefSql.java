@@ -14,6 +14,8 @@
 
 package io.wren.base.sqlrewrite;
 
+import java.util.List;
+
 import static io.wren.base.dto.Model.model;
 
 public class TestModelRefSql
@@ -22,8 +24,8 @@ public class TestModelRefSql
     public TestModelRefSql()
     {
         super();
-        orders = model("Orders", "select * from main.orders", ordersColumns, "orderkey");
-        lineitem = model("Lineitem", "select * from main.lineitem", lineitemColumns, "orderkey_linenumber");
-        customer = model("Customer", "select * from main.customer", customerColumns, "custkey");
+        orders = model("Orders", "select * from main.orders", ordersColumns, List.of("orderkey"));
+        lineitem = model("Lineitem", "select * from main.lineitem", lineitemColumns, List.of("orderkey_linenumber"));
+        customer = model("Customer", "select * from main.customer", customerColumns, List.of("custkey"));
     }
 }

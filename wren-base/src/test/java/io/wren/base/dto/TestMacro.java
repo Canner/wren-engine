@@ -80,7 +80,7 @@ public class TestMacro
                                         Column.column("custkey_pass2Macro", WrenTypes.INTEGER, null, true, "{{pass2Macro('custkey', addOne, addTwo)}}"),
                                         Column.column("custkey_sum_addOne", WrenTypes.INTEGER, null, true, "{{addOne('sum(custkey)')}}"),
                                         Column.column("name", WrenTypes.VARCHAR, null, true)),
-                                "pk")))
+                                List.of("pk"))))
                 .setMacros(List.of(
                         Macro.macro("addOne", "(text: Expression) => {{ text }} + 1"),
                         Macro.macro("addTwo", "(text: Expression) => {{ text }} + 2"),
@@ -115,7 +115,7 @@ public class TestMacro
                                         Column.column("custkey_concat_name", WrenTypes.INTEGER, null, true, "{{concat('custkey', 'name')}}"),
                                         Column.column("custkey_callAddOne", WrenTypes.INTEGER, null, true, "{{addPrefixOne('custkey')}}"),
                                         Column.column("custkey_pass1Macro", WrenTypes.INTEGER, null, true, "{{pass1Macro('custkey', 'name', concat)}}")),
-                                "pk")))
+                                List.of("pk"))))
                 .setMacros(List.of(
                         Macro.macro("concat", "(text: Expression, text2: Expression) => {{ text }} || {{ text2 }}"),
                         Macro.macro("addPrefixOne", "(text: Expression) => {{concat(\"'1'\", text)}}"),
@@ -145,7 +145,7 @@ public class TestMacro
                                         Column.column("standardTime", WrenTypes.INTEGER, null, true, "{{standardTime()}}"),
                                         Column.column("callStandardTime", WrenTypes.INTEGER, null, true, "{{callStandardTime()}}"),
                                         Column.column("passStandardTime", WrenTypes.INTEGER, null, true, "{{passStandardTime(standardTime)}}")),
-                                "pk")))
+                                List.of("pk"))))
                 .setMacros(List.of(
                         Macro.macro("standardTime", "() => standardTime"),
                         Macro.macro("callStandardTime", "() => {{callStandardTime()}}"),

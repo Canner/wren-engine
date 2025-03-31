@@ -98,8 +98,8 @@ public class TestDecisionPointAnalyzer
         mdl = WrenMDL.fromManifest(Manifest.builder()
                 .setCatalog(DEFAULT_SESSION_CONTEXT.getCatalog().orElseThrow())
                 .setSchema(DEFAULT_SESSION_CONTEXT.getSchema().orElseThrow())
-                .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, "custkey"),
-                        onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, "orderkey"),
+                .setModels(List.of(onTableReference("customer", tableReference(null, "main", "customer"), customerColumns, List.of("custkey")),
+                        onTableReference("orders", tableReference(null, "main", "orders"), ordersColumns, List.of("orderkey")),
                         onTableReference("lineitem", tableReference(null, "main", "lineitem"), lineitemColumns, null)))
                 .setRelationships(List.of(Relationship.relationship("CustomerOrders", List.of("customer", "orders"), JoinType.ONE_TO_MANY, "customer.custkey = orders.custkey")))
                 .build());

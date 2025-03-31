@@ -64,7 +64,7 @@ public class TestMetric
                                         Column.calculatedColumn("cumstomer_address", WrenTypes.VARCHAR, "customer.address"),
                                         Column.column("customer", "Customer", "OrdersCustomer", true),
                                         Column.column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                                "orderkey"),
+                                List.of("orderkey")),
                         Model.model("Customer",
                                 "select * from main.customer",
                                 List.of(
@@ -77,7 +77,7 @@ public class TestMetric
                                         Column.column("mktsegment", WrenTypes.VARCHAR, null, true),
                                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                                         Column.column("orders", "Orders", "OrdersCustomer", true)),
-                                "custkey"),
+                                List.of("custkey")),
                         Model.model("Lineitem",
                                 "select * from main.lineitem",
                                 List.of(
@@ -99,7 +99,7 @@ public class TestMetric
                                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                                         Column.column("orderkey_linenumber", WrenTypes.VARCHAR, null, true, "concat(orderkey, '-', linenumber)"),
                                         Column.column("order_record", "Orders", "OrdersLineitem", true)),
-                                "orderkey_linenumber")))
+                                List.of("orderkey_linenumber"))))
                 .setRelationships(List.of(
                         Relationship.relationship("OrdersCustomer", List.of("Orders", "Customer"), JoinType.MANY_TO_ONE, "Orders.custkey = Customer.custkey"),
                         Relationship.relationship("OrdersLineitem", List.of("Orders", "Lineitem"), JoinType.ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey")))
@@ -279,7 +279,7 @@ public class TestMetric
                         List.of(
                                 Column.column("name", WrenTypes.VARCHAR, null, true),
                                 Column.column("revenue", WrenTypes.INTEGER, null, true, "totalprice")),
-                        "name"))
+                                List.of("name")))
                 .build();
         WrenMDL mdl = WrenMDL.fromManifest(
                 copyOf(manifest)
