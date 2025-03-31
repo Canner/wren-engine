@@ -64,7 +64,7 @@ manifest = {
                     "type": "bytea",
                 },
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         },
         {
             "name": "Customer",
@@ -73,7 +73,7 @@ manifest = {
                 {"name": "custkey", "expression": "c_custkey", "type": "integer"},
                 {"name": "name", "expression": "c_name", "type": "varchar"},
             ],
-            "primaryKey": "custkey",
+            "primaryKey": ["custkey"],
         },
     ],
 }

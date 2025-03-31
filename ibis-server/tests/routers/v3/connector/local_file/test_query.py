@@ -29,7 +29,7 @@ manifest = {
                 },
                 {"name": "orderdate", "expression": "o_orderdate", "type": "date"},
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         },
         {
             "name": "Customer",
@@ -54,7 +54,7 @@ manifest = {
                     "expression": 'sum("Orders".totalprice)',
                 },
             ],
-            "primaryKey": "custkey",
+            "primaryKey": ["custkey"],
         },
     ],
     "relationships": [

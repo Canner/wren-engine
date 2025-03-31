@@ -41,7 +41,7 @@ manifest = {
                     "type": "varchar",
                 },
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         },
         {
             "name": "Customer",
@@ -66,7 +66,7 @@ manifest = {
                     "expression": "sum(orders.totalprice)",
                 },
             ],
-            "primaryKey": "custkey",
+            "primaryKey": ["custkey"],
         },
     ],
     "relationships": [

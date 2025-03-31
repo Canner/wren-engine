@@ -66,7 +66,7 @@ manifest = {
                     "type": "timestamp",
                 },
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         },
     ],
 }

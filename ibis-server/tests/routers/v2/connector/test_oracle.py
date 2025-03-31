@@ -71,7 +71,7 @@ manifest = {
                     "type": "blob",
                 },
             ],
-            "primaryKey": "orderkey",
+            "primaryKey": ["orderkey"],
         }
     ],
 }

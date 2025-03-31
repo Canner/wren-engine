@@ -53,7 +53,7 @@ manifest = {
                     "type": "timestamptz",
                 },
             ],
-            "primaryKey": "o_orderkey",
+            "primaryKey": ["o_orderkey"],
         },
     ],
 }
