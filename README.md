@@ -42,6 +42,8 @@ Natural language alone isn't enough to drive complex workflows across enterprise
 
 ## 🎯 Our Mission
 
+<img src="./misc/mcp_wren_engine.webp">
+
 Wren Engine is on a mission to power the future of MCP clients and AI agents through the Model Context Protocol (MCP) — a new open standard that connects LLMs with tools, databases, and enterprise systems.
 
 As part of the MCP ecosystem, Wren Engine provides a **semantic engine** powered the next generation semantic layer that enables AI agents to access business data with accuracy, context, and governance. 
@@ -57,9 +59,7 @@ We believe the future of enterprise AI lies in **context-aware, composable syste
 
 With Wren Engine, you can scale AI adoption across teams — not just with better automation, but with better understanding.
 
-<img src="./misc/mcp_wren_engine.webp">
-
-Check our full article
+***Check our full article***
 
 🤩 [Our Mission - Fueling the Next Wave of AI Agents: Building the Foundation for Future MCP Clients and Enterprise Data Access](https://getwren.ai/post/fueling-the-next-wave-of-ai-agents-building-the-foundation-for-future-mcp-clients-and-enterprise-data-access)
 
