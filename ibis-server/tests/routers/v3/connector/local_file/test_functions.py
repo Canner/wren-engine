@@ -53,16 +53,16 @@ async def test_function_list(client):
     response = await client.get(url=f"{base_url}/functions")
     assert response.status_code == 200
     result = response.json()
-    # 437  is the number of functions in `resources/function_list/duckdb.csv` file excluded the default functions in DataFusion.
-    assert len(result) == DATAFUSION_FUNCTION_COUNT + 437
-    the_func = next(filter(lambda x: x["name"] == "array_length", result))
+    # 429 is the number of functions in `resources/function_list/duckdb.csv` file excluded the default functions in DataFusion.
+    assert len(result) == DATAFUSION_FUNCTION_COUNT + 429
+    the_func = next(filter(lambda x: x["name"] == "regexp_escape", result))
     assert the_func == {
-        "name": "array_length",
-        "description": "Returns the length of the list.",
+        "name": "regexp_escape",
+        "description": "Escapes all potentially meaningful regexp characters in the input string",
         "function_type": "scalar",
-        "param_names": "list,col1",
-        "param_types": "array,bigint",
-        "return_type": "bigint",
+        "param_names": "string",
+        "param_types": "Utf8",
+        "return_type": "Utf8",
     }
 
     config.set_remote_function_list_path(None)
