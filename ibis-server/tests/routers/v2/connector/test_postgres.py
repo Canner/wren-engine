@@ -1,6 +1,4 @@
 import base64
-import os
-import shutil
 from urllib.parse import quote_plus, urlparse
 
 import orjson
@@ -12,7 +10,6 @@ from sqlalchemy import text
 from testcontainers.postgres import PostgresContainer
 
 from app.model.validator import rules
-from app.query_cache import QueryCacheManager
 from tests.conftest import file_path
 
 pytestmark = pytest.mark.postgres
@@ -127,15 +124,6 @@ def postgres(request) -> PostgresContainer:
     return pg
 
 
-@pytest.fixture(scope="function")
-def cache_dir():
-    temp_dir = "/tmp/wren-engine-test"
-    os.makedirs(temp_dir, exist_ok=True)
-    yield temp_dir
-    # Clean up after the test
-    shutil.rmtree(temp_dir, ignore_errors=True)
-
-
 async def test_query(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
     response = await client.post(
@@ -176,16 +164,7 @@ async def test_query(client, manifest_str, postgres: PostgresContainer):
     }
 
 
-async def test_query_with_cache(
-    client, manifest_str, postgres: PostgresContainer, cache_dir, monkeypatch
-):
-    # Override the cache path to use our test directory
-    monkeypatch.setattr(
-        QueryCacheManager,
-        "_get_cache_path",
-        lambda self, key: f"{cache_dir}/{key}.cache",
-    )
-
+async def test_query_with_cache(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
 
     # First request - should miss cache
