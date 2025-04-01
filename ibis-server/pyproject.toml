@@ -76,7 +76,6 @@ markers = [
   "minio_file: mark a test as a minio file test",
   "gcs_file: mark a test as a gcs file test",
   "beta: mark a test as a test for beta versions of the engine",
-  "cache: mark a test as a cache test",
 ]
 
 [tool.ruff]
