@@ -27,7 +27,7 @@ use std::{collections::HashMap, sync::Arc};
 
 fn create_list_type(array_type: &str) -> Result<DataType> {
     // Workaround for the array type without an element type
-    if array_type.len() == "array".len() {
+    if array_type.len() == "array".len() || array_type == "list" {
         return create_list_type("array<varchar>");
     }
     if let ast::DataType::Array(value) = parse_type(array_type)? {
@@ -107,7 +107,7 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
     // TODO: try parse nested type by arrow
     // Currently, we don't care about the element type of the array or struct.
     // We only care about the array or struct itself.
-    if lower_data_type.starts_with("array") {
+    if lower_data_type.starts_with("array") || lower_data_type.starts_with("list") {
         return create_list_type(lower_data_type);
     }
     if lower_data_type.starts_with("struct") {
@@ -117,13 +117,17 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         // Wren Definition Types
         "bool" | "boolean" => DataType::Boolean,
         "tinyint" => DataType::Int8,
+        "utinyint" => DataType::UInt8,
         "int2" => DataType::Int16,
         "smallint" => DataType::Int16,
+        "usmallint" => DataType::UInt16,
         "int4" => DataType::Int32,
         "int" => DataType::Int32,
         "integer" => DataType::Int32,
+        "uinteger" => DataType::UInt32,
         "int8" => DataType::Int64,
         "bigint" => DataType::Int64,
+        "ubigint" => DataType::UInt64,
         "numeric" => DataType::Decimal128(38, 10), // set the default precision and scale
         "decimal" => DataType::Decimal128(38, 10),
         "varchar" => DataType::Utf8,
@@ -138,7 +142,13 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "float8" => DataType::Float64,
         "double" => DataType::Float64,
         "timestamp" | "datetime" => DataType::Timestamp(TimeUnit::Nanosecond, None), // chose the smallest time unit
-        "timestamptz" | "timestamp_with_timezone" | "timestamp_with_time_zone" => {
+        "timestamptz"
+        | "timestamp_with_timezone"
+        | "timestamp_with_time_zone"
+        | "timestamp with time zone"
+        | "time with time zone" => {
+            // time with time zone isn't equal to timestamp with time zone but
+            // we don't have a time with time zone type, so we map it to timestamp with time zone
             DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into()))
         }
         "date" => DataType::Date32,
@@ -161,6 +171,12 @@ pub fn map_data_type(data_type: &str) -> Result<DataType> {
         "null" => DataType::Null,
         // Trino Compatible Types
         "varbinary" => DataType::Binary,
+        // DuckDB Compatible Types
+        "blob" => DataType::Binary,
+        "hugeint" => DataType::Int64, // we don't have a HUGEINT type, so we map it to Int64
+        "uhugeint" => DataType::UInt64, // we don't have a UHUINT type, so we map it to UInt64
+        "bit" => DataType::Boolean, // we don't have a BIT type, so we map it to Boolean
+        "timestamp_ns" => DataType::Timestamp(TimeUnit::Nanosecond, None),
         _ => {
             debug!("try parse by arrow {}", lower_data_type);
             // the from_str is case sensitive, so we need to use the original string
