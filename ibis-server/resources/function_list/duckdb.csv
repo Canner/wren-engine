@@ -4,10 +4,9 @@ scalar,add,double,col0,double,Adds two double values
 scalar,add,timestamp,"col0,col1","interval,date",Adds an interval to a date
 scalar,add,timestamp with time zone,"col0,col1","date,time with time zone",Adds a date to a time with time zone
 scalar,yearweek,bigint,ts,interval,Extract the yearweek component from a date or timestamp
-scalar,array_dot_product,float,"array1,array2","float[any],float[any]",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_dot_product,float,"array1,array2","array<float>,array<float>",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,array_grade_up,array,"list,col1","array,varchar",Returns the index of their sorted position.
-scalar,array_negative_inner_product,float,"array1,array2","float[any],float[any]",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_position,integer,"list,element","array,any","Returns the index of the element if the list contains the element. If the element is not found, it returns NULL."
+scalar,array_negative_inner_product,float,"array1,array2","array<float>,array<float>",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,array_value,array,,,Create an ARRAY containing the argument values.
 scalar,bit_count,tinyint,x,smallint,Returns the number of bits that are set
 scalar,datediff,bigint,"part,startdate,enddate","varchar,timestamp,timestamp",The number of partition boundaries between the timestamps
@@ -18,8 +17,6 @@ scalar,dayofmonth,bigint,ts,timestamp,Extract the dayofmonth component from a da
 scalar,dayofyear,bigint,ts,interval,Extract the dayofyear component from a date or timestamp
 scalar,dayofyear,bigint,ts,timestamp with time zone,Extract the dayofyear component from a date or timestamp
 scalar,decade,bigint,ts,timestamp with time zone,Extract the decade component from a date or timestamp
-scalar,ends_with,boolean,"col0,col1","varchar,varchar",Checks if the first string ends with the second string
-scalar,finalize,invalid,col0,aggregate_state<?>,Finalizes an aggregate state
 scalar,typeof,varchar,expression,any,Returns the name of the data type of the result of the expression
 scalar,txid_current,ubigint,,,Returns the current transaction’s ID (a BIGINT). It will assign a new one if the current transaction does not have one already
 scalar,get_current_timestamp,timestamp with time zone,,,Returns the current timestamp
@@ -38,15 +35,11 @@ scalar,json_extract_path,json,"col0,col1","json,varchar",Extracts a JSON value f
 scalar,json_merge_patch,json,,,Merges two JSON objects
 scalar,json_valid,boolean,col0,varchar,Checks if a JSON string is valid
 scalar,to_minutes,interval,integer,bigint,Construct a minute interval
-scalar,length,bigint,string,bit,Number of characters in string.
-scalar,to_hex,varchar,value,varint,Converts the value to hexadecimal representation
-scalar,list_has,boolean,"list,element","array,any",Returns true if the list contains the element.
 scalar,timezone,bigint,ts,timestamp with time zone,Extract the timezone component from a date or timestamp
 scalar,subtract,decimal,"col0,col1","decimal,decimal",Subtracts the second decimal value from the first
-scalar,substring,varchar,"string,start","varchar,bigint",Extract substring of length characters starting from character start. Note that a start value of 1 refers to the first character of the string.
 scalar,list_negative_dot_product,double,"list1,list2","array,array",Compute the negative inner product between two lists
 scalar,make_timestamptz,timestamp with time zone,col0,bigint,Creates a timestamp with time zone from a bigint
-scalar,map_extract_value,any,"map,key","any,any",Returns the value for a given key or NULL if the key is not contained in the map. The type of the key provided in the second parameter must match the type of the map’s keys else an error is returned
+scalar,map_extract_value,same_as_input,"map,key","any,any",Returns the value for a given key or NULL if the key is not contained in the map. The type of the key provided in the second parameter must match the type of the map’s keys else an error is returned
 scalar,md5_number,hugeint,value,varchar,Returns the MD5 hash of the value as an INT128
 scalar,microsecond,bigint,ts,time with time zone,Extract the microsecond component from a date or timestamp
 scalar,millennium,bigint,ts,date,Extract the millennium component from a date or timestamp
@@ -57,29 +50,24 @@ scalar,mod,decimal,"col0,col1","decimal,decimal",Returns the remainder of dividi
 scalar,multiply,tinyint,"col0,col1","tinyint,tinyint",
 scalar,multiply,smallint,"col0,col1","smallint,smallint",
 scalar,parse_filename,varchar,"string,trim_extension","varchar,boolean","Returns the last component of the path similarly to Python's os.path.basename. If trim_extension is true, the file extension will be removed (it defaults to false). separator options: system, both_slash (default), forward_slash, backslash"
-scalar,sqrt,double,x,double,Returns the square root of x
-scalar,radians,double,x,double,Converts degrees to radians
 scalar,regexp_extract,varchar,"string,pattern[,group = 0][,options]","varchar,varchar,array,varchar","If string contains the regexp pattern, returns the capturing group specified by optional parameter group. The group must be a constant value. If no group is given, it defaults to 0. A set of optional options can be set."
 scalar,regexp_full_match,boolean,"string,regex[,options]","varchar,varchar,varchar",Returns true if the entire string matches the regex. A set of optional options can be set.
 scalar,sign,tinyint,x,integer,"Returns the sign of x as -1, 0 or 1"
 scalar,sign,tinyint,x,hugeint,"Returns the sign of x as -1, 0 or 1"
 scalar,second,bigint,ts,date,Extracts the second component from a date or timestamp
 scalar,second,bigint,ts,timestamp,Extracts the second component from a date or timestamp
-scalar,rtrim,varchar,string,varchar,Removes any occurrences of any of the characters from the right side of the string
-aggregate,regr_avgx,double,"y,x","double,double","Returns the average of the independent variable for non-null pairs in a group, where x is the independent variable and y is the dependent variable."
 aggregate,quantile_cont,hugeint,"x,pos","hugeint,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,timestamp with time zone,"x,pos","timestamp with time zone,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
-aggregate,quantile,any,"x,pos","any,double","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,quantile,same_as_input,"x,pos","any,double","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
 aggregate,min_by,integer,"arg,val","integer,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,blob,"arg,val","blob,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min,any,arg,any,Returns the minimum value present in arg.
+aggregate,min_by,same_as_input,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,bigint,"arg,val","bigint,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,interval,x,time,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,sum_no_overflow,decimal,arg,decimal,Internal only. Calculates the sum value for all tuples in arg without overflow checks.
 aggregate,reservoir_quantile,array,"x,quantile,sample_size","decimal,array,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -89,7 +77,7 @@ aggregate,reservoir_quantile,array,"x,quantile,sample_size","double,array,intege
 aggregate,approx_quantile,decimal,"x,pos","decimal,float",Computes the approximate quantile using T-Digest.
 aggregate,approx_quantile,double,"x,pos","double,float",Computes the approximate quantile using T-Digest.
 aggregate,approx_quantile,timestamp,"x,pos","timestamp,float",Computes the approximate quantile using T-Digest.
-aggregate,approx_quantile,time with time zone[],"x,pos","time with time zone,array",Computes the approximate quantile using T-Digest.
+aggregate,approx_quantile,array<time with time zone>,"x,pos","time with time zone,array",Computes the approximate quantile using T-Digest.
 aggregate,approx_quantile,array,"x,pos","timestamp,array",Computes the approximate quantile using T-Digest.
 aggregate,argmax,bigint,"arg,val","bigint,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,double,"arg,val","double,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -105,14 +93,14 @@ aggregate,argmin,date,"arg,val","date,timestamp",Finds the row with the minimum 
 aggregate,argmin,timestamp,"arg,val","timestamp,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,varchar,"arg,val","varchar,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,blob,"arg,val","blob,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,any",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,any",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,double,"arg,val","double,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,double,"arg,val","double,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -126,27 +114,14 @@ aggregate,arg_min,decimal,"arg,val","decimal,varchar",Finds the row with the min
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,any",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,any",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,integer,Returns a bitstring with bits set for each distinct value.
-aggregate,bit_and,integer,arg,integer,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_and,uhugeint,arg,uhugeint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_or,usmallint,arg,usmallint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_xor,integer,arg,integer,Returns the bitwise XOR of all bits in a given expression.
-aggregate,bit_xor,uhugeint,arg,uhugeint,Returns the bitwise XOR of all bits in a given expression.
-scalar,abs,decimal,x,decimal,Absolute value
-scalar,acosh,double,x,double,Computes the inverse hyperbolic cos of x
 scalar,add,tinyint,col0,tinyint,Adds two tinyint values
 scalar,add,ubigint,col0,ubigint,Adds two ubigint values
-scalar,array_concat,array,"list1,list2","array,array",Concatenates two lists.
-scalar,array_contains,boolean,"list,element","array,any",Returns true if the list contains the element.
-scalar,array_has_any,boolean,"l1, l2","array,array",Returns true if the lists have any element in common. NULLs are ignored.
-scalar,array_inner_product,float,"array1,array2","float[any],float[any]",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_inner_product,float,"array1,array2","array<float>,array<float>",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,xor,bit,"left,right","bit,bit",Bitwise XOR
-scalar,bit_length,bigint,col0,bit,
 scalar,can_cast_implicitly,boolean,"source_type,target_type","any,any",Whether or not we can implicitly cast from the source type to the other type
-scalar,datepart,bigint,"ts,col1","varchar,timestamp",Get subfield (equivalent to extract)
-scalar,date_trunc,timestamp,"part,timestamp","varchar,date",Truncate to specified precision
-scalar,enum_code,any,enum,any,Returns the numeric value backing the given enum value
+scalar,enum_code,same_as_input,enum,any,Returns the numeric value backing the given enum value
 scalar,enum_last,varchar,enum,any,Returns the last value of the input enum type
 scalar,epoch,double,temporal,interval,Extract the epoch component from a temporal type
 scalar,from_base64,blob,string,varchar,Convert a base64 encoded string to a character string
@@ -174,7 +149,6 @@ scalar,time_bucket,timestamp,"bucket_width,timestamp,origin","interval,timestamp
 scalar,time_bucket,timestamp with time zone,"bucket_width,timestamp,origin","interval,timestamp with time zone,varchar","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,timezone_minute,bigint,ts,timestamp,Extract the timezone_minute component from a date or timestamp
 scalar,timetz_byte_comparable,ubigint,time_tz,time with time zone,Converts a TIME WITH TIME ZONE to an integer sort key
-scalar,tanh,double,x,double,Computes the hyperbolic tan of x
 scalar,subtract,uinteger,"col0,col1","uinteger,uinteger",
 scalar,substring_grapheme,varchar,"string,start,length","varchar,bigint,bigint",Extract substring of length grapheme clusters starting from character start. Note that a start value of 1 refers to the first character of the string.
 scalar,make_timestamp,timestamp,year,bigint,The timestamp for the given parts
@@ -183,7 +157,6 @@ scalar,millisecond,bigint,ts,time with time zone,Extract the millisecond compone
 scalar,multiply,uhugeint,"col0,col1","uhugeint,uhugeint",
 scalar,nextval,bigint,'sequence_name',varchar,Return the following value of the sequence.
 scalar,nfc_normalize,varchar,string,varchar,Convert string to Unicode NFC normalized string. Useful for comparisons and ordering if text data is mixed between NFC normalized and not.
-scalar,power,double,"x,y","double,double",Computes x to the power of y
 scalar,regexp_extract,varchar,"string,pattern[,group = 0][,options]","varchar,varchar,integer,varchar","If string contains the regexp pattern, returns the capturing group specified by optional parameter group. The group must be a constant value. If no group is given, it defaults to 0. A set of optional options can be set."
 scalar,regexp_extract_all,array,"string, regex[","varchar,varchar",Split the string along the regex and extract all occurrences of group. A set of optional options can be set.
 scalar,regexp_matches,boolean,"string,pattern[,options]","varchar,varchar,varchar","Returns true if string contains the regexp pattern, false otherwise. A set of optional options can be set."
@@ -191,16 +164,11 @@ scalar,regexp_split_to_array,array,"string,separator","varchar,varchar",Splits t
 scalar,signbit,boolean,x,double,Returns whether the signbit is set or not
 scalar,sign,tinyint,x,float,"Returns the sign of x as -1, 0 or 1"
 scalar,second,bigint,ts,timestamp with time zone,Extract the second component from a date or timestamp
-scalar,round,float,x,float,Rounds x to s decimal places
 scalar,isfinite,boolean,x,float,"Returns true if the floating point value is finite, false otherwise"
-aggregate,histogram,map,arg,any,Returns a LIST of STRUCTs with the fields bucket and count.
-aggregate,regr_r2,double,"y,x","double,double",Returns the coefficient of determination for non-null pairs in a group.
-aggregate,quantile_disc,any,x,any,"Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,quantile_disc,same_as_input,x,any,"Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
 aggregate,quantile_cont,decimal,"x,pos","decimal,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,min_by,date,"arg,val","date,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,mean,double,x,bigint,Calculates the average value for all tuples in x.
-aggregate,mean,double,x,hugeint,Calculates the average value for all tuples in x.
+aggregate,min_by,same_as_input,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,bigint,"arg,val","bigint,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,varchar,"arg,val","varchar,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,varchar,"arg,val","varchar,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -215,7 +183,7 @@ aggregate,argmax,timestamp with time zone,"arg,val","timestamp with time zone,do
 aggregate,argmax,blob,"arg,val","blob,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,bigint,"arg,val","bigint,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -223,13 +191,13 @@ aggregate,arg_max,integer,"arg,val","integer,double",Finds the row with the maxi
 aggregate,arg_max,bigint,"arg,val","bigint,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,varchar,"arg,val","varchar,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,blob,"arg,val","blob,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,integer,"arg,val","integer,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp,"arg,val","timestamp,varchar",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,varchar",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,blob,"arg,val","blob,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,timestamp with time zone,"arg,val","timestamp with time zone,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,timestamp with time zone,"arg,val","timestamp with time zone,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -239,15 +207,9 @@ aggregate,arg_min_null,timestamp,"arg,val","timestamp,integer",Finds the row wit
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,double",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,double",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,integer,Returns a bitstring with bits set for each distinct value.
 aggregate,bitstring_agg,bit,"arg,col1,col2","utinyint,utinyint,utinyint",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_or,uinteger,arg,uinteger,Returns the bitwise OR of all bits in a given expression.
-aggregate,bool_or,boolean,arg,boolean,"Returns TRUE if any input value is TRUE, otherwise FALSE."
-aggregate,covar_pop,double,"y,x","double,double",Returns the population covariance of input values.
-aggregate,histogram_exact,map,"arg,bins","any,array",Returns a LIST of STRUCTs with the fields bucket and count matching the buckets exactly.
-scalar,abs,utinyint,x,utinyint,Absolute value
-scalar,acos,double,x,double,Computes the arccosine of x
 scalar,add,hugeint,"col0,col1","hugeint,hugeint",
 scalar,add,double,"col0,col1","double,double",
 scalar,add,utinyint,"col0,col1","utinyint,utinyint",
@@ -255,28 +217,23 @@ scalar,add,uhugeint,col0,uhugeint,
 scalar,add,timestamp with time zone,"col0,col1","time with time zone,date",
 scalar,age,interval,timestamp,timestamp,"Subtract arguments, resulting in the time difference between the two timestamps"
 scalar,alias,varchar,expr,any,Returns the name of a given expression
-scalar,array_aggregate,any,"list,name","array,varchar",Executes the aggregate function name on the elements of list
-scalar,array_negative_dot_product,double,"array1,array2","double[any],double[any]",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_aggregate,same_as_input_first_array_element,"list,name","array,varchar",Executes the aggregate function name on the elements of list
+scalar,array_negative_dot_product,double,"array1,array2","array<double>,array<double>",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,array_to_json,json,,,
 scalar,bin,varchar,value,varint,Converts the value to binary representation
 scalar,bitstring,bit,"bitstring,length","bit,integer",Pads the bitstring until the specified length
 scalar,bit_count,tinyint,x,tinyint,Returns the number of bits that are set
 scalar,week,bigint,ts,interval,Extract the week component from a date or timestamp
 scalar,century,bigint,ts,timestamp,Extract the century component from a date or timestamp
-scalar,upper,varchar,string,varchar,Convert string to upper case.
-scalar,datepart,bigint,"ts,col1","varchar,time",Get subfield (equivalent to extract)
 scalar,datesub,bigint,"part,startdate,enddate","varchar,timestamp with time zone,timestamp with time zone",The number of complete partitions between the timestamps
-scalar,date_part,bigint,"ts,col1","varchar,timestamp",Get subfield (equivalent to extract)
 scalar,date_sub,bigint,"part,startdate,enddate","varchar,timestamp,timestamp",The number of complete partitions between the timestamps
 scalar,divide,tinyint,"col0,col1","tinyint,tinyint",
 scalar,divide,double,"col0,col1","double,double",
 scalar,epoch_ns,bigint,temporal,time with time zone,Extract the epoch component in nanoseconds from a temporal type
 scalar,epoch_us,bigint,temporal,interval,Extract the epoch component in microseconds from a temporal type
 scalar,epoch_us,bigint,temporal,time,Extract the epoch component in microseconds from a temporal type
-scalar,error,"""null""",message,varchar,Throws the given error message
+scalar,error,null,message,varchar,Throws the given error message
 scalar,format_bytes,varchar,bytes,bigint,Converts bytes to a human-readable presentation (e.g. 16000 -> 15.6 KiB)
-scalar,trunc,hugeint,x,hugeint,Truncates the number
-scalar,trunc,double,x,double,Truncates the number
 scalar,hash,ubigint,param,any,Returns an integer with the hash of the value. Note that this is not a cryptographic hash
 scalar,hex,varchar,value,varint,Converts the value to hexadecimal representation
 scalar,hour,bigint,ts,time with time zone,Extract the hour component from a date or timestamp
@@ -294,19 +251,14 @@ scalar,least_common_multiple,hugeint,"x,y","hugeint,hugeint",Computes the least 
 scalar,list_inner_product,float,"list1,list2","array,array",Compute the inner product between two lists
 scalar,timezone,time with time zone,"ts,col1","interval,time with time zone",Extract the timezone component from a date or timestamp
 scalar,subtract,utinyint,"col0,col1","utinyint,utinyint",
-scalar,list_sort,array,"list,col1,col2","array,varchar,varchar",Sorts the elements of the list
 scalar,make_timestamptz,timestamp with time zone,"col0,col1,col2,col3,col4,col5,col6","bigint,bigint,bigint,bigint,bigint,double,varchar",
-scalar,map_from_entries,map,,,Returns a map created from the entries of the array
-scalar,map_values,list,,,Returns the values of a map as a list
 scalar,millisecond,bigint,ts,timestamp,Extract the millisecond component from a date or timestamp
 scalar,strftime,varchar,"data,format","varchar,timestamp",Converts a date to a string according to the format string.
 scalar,mod,float,"col0,col1","float,float",
 scalar,multiply,double,"col0,col1","double,double",
 scalar,parse_filename,varchar,string,varchar,"Returns the last component of the path similarly to Python's os.path.basename. If trim_extension is true, the file extension will be removed (it defaults to false). separator options: system, both_slash (default), forward_slash, backslash"
-scalar,range,timestamp with time zone[],"start,stop,step","timestamp with time zone,timestamp with time zone,interval",Create a list of values between start and stop - the stop parameter is exclusive
 scalar,regexp_extract,varchar,"string,pattern[,group = 0][","varchar,varchar,integer","If string contains the regexp pattern, returns the capturing group specified by optional parameter group. The group must be a constant value. If no group is given, it defaults to 0. A set of optional options can be set."
 scalar,regexp_extract_all,array,"string, regex[, group = 0][, options]","varchar,varchar,integer,varchar",Split the string along the regex and extract all occurrences of group. A set of optional options can be set.
-scalar,regexp_replace,varchar,"string,pattern,replacement[,options]","varchar,varchar,varchar,varchar","If string contains the regexp pattern, replaces the matching part with replacement. A set of optional options can be set."
 scalar,sign,tinyint,x,utinyint,"Returns the sign of x as -1, 0 or 1"
 scalar,right_grapheme,varchar,"string,count","varchar,bigint",Extract the right-most count grapheme clusters
 scalar,row_to_json,json,,,
@@ -317,11 +269,9 @@ aggregate,min_by,varchar,"arg,val","varchar,bigint",Finds the row with the minim
 aggregate,min_by,varchar,"arg,val","varchar,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp with time zone,"arg,val","timestamp with time zone,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,mean,double,x,integer,Calculates the average value for all tuples in x.
 aggregate,max_by,bigint,"arg,val","bigint,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max,any,arg,any,Returns the maximum value present in arg.
 aggregate,last,decimal,arg,decimal,Returns the last value of a column. This function is affected by ordering.
 aggregate,kurtosis_pop,double,x,double,"Returns the excess kurtosis (Fisher’s definition) of all input values, without bias correction"
 aggregate,approx_quantile,time with time zone,"x,pos","time with time zone,float",Computes the approximate quantile using T-Digest.
@@ -337,7 +287,7 @@ aggregate,argmin,date,"arg,val","date,blob",Finds the row with the minimum val. 
 aggregate,argmin,timestamp with time zone,"arg,val","timestamp with time zone,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,integer,"arg,val","integer,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,bigint,"arg,val","bigint,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,bigint,"arg,val","bigint,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -357,38 +307,30 @@ aggregate,arg_min,bigint,"arg,val","bigint,blob",Finds the row with the minimum 
 aggregate,arg_min,double,"arg,val","double,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,blob,"arg,val","blob,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,blob,"arg,val","blob,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,double,"arg,val","double,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,date,"arg,val","date,double",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,date,"arg,val","date,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,"arg,col1,col2","uinteger,uinteger,uinteger",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_or,bit,arg,bit,Returns the bitwise OR of all bits in a given expression.
-aggregate,count,bigint,arg,any,Returns the number of non-null values in arg.
 scalar,add,utinyint,col0,utinyint,
 scalar,add,uhugeint,"col0,col1","uhugeint,uhugeint",
 scalar,yearweek,bigint,ts,timestamp with time zone,Extracts the yearweek component from a date or timestamp
-scalar,array_extract,varchar,"list,index","varchar,bigint",Extract the indexth (1-based) value from the array.
 scalar,array_unique,ubigint,list,array,Counts the unique elements of a list
-scalar,ascii,integer,string,varchar,Returns an integer that represents the Unicode code point of the first character of the string
 scalar,year,bigint,ts,timestamp with time zone,Extract the year component from a date or timestamp
 scalar,bitstring,bit,"bitstring,length","varchar,integer",Pads the bitstring until the specified length
-scalar,write_log,any,string,varchar,Writes to the logger
 scalar,bit_count,bigint,x,bit,Returns the number of bits that are set
 scalar,ceiling,decimal,x,decimal,Rounds the number up
 scalar,century,bigint,ts,date,Extract the century component from a date or timestamp
 scalar,vector_type,varchar,col,any,Returns the VectorType of a given column
 scalar,current_database,varchar,,,Returns the name of the currently active database
 scalar,datediff,bigint,"part,startdate,enddate","varchar,timestamp with time zone,timestamp with time zone",The number of partition boundaries between the timestamps
-scalar,datepart,bigint,"ts,col1","varchar,timestamp with time zone",Get subfield (equivalent to extract)
 scalar,dayofmonth,bigint,ts,date,Extract the dayofmonth component from a date or timestamp
 scalar,divide,bigint,"col0,col1","bigint,bigint",
 scalar,epoch_ms,bigint,temporal,time,Extract the epoch component in milliseconds from a temporal type
 scalar,epoch_ns,bigint,temporal,timestamp with time zone,Extract the epoch component in nanoseconds from a temporal type
 scalar,epoch_us,bigint,temporal,timestamp with time zone,Extract the epoch component in microseconds from a temporal type
 scalar,unhex,blob,value,varchar,Converts a value from hexadecimal representation to a blob
-scalar,generate_series,array,start,bigint,Create a list of values between start and stop - the stop parameter is inclusive
-scalar,trunc,smallint,x,smallint,Truncates the number
 scalar,hex,varchar,value,bigint,Converts the value to hexadecimal representation
 scalar,icu_collate_az,varchar,col0,varchar,
 scalar,icu_collate_ca,varchar,col0,varchar,
@@ -404,21 +346,16 @@ scalar,is_histogram_other_bin,boolean,val,any,"Whether or not the provided value
 scalar,jaro_winkler_similarity,double,"str1,str2","varchar,varchar",The Jaro-Winkler similarity between two strings. Different case is considered different. Returns a number between 0 and 1
 scalar,json_contains,boolean,"col0,col1","varchar,varchar",
 scalar,json_exists,boolean,"col0,col1","json,varchar",
-scalar,json_transform,any,"col0,col1","varchar,varchar",
-scalar,json_transform,any,"col0,col1","json,varchar",
-scalar,json_transform_strict,any,"col0,col1","json,varchar",
+scalar,json_transform,same_as_input,"col0,col1","varchar,varchar",
+scalar,json_transform,same_as_input,"col0,col1","json,varchar",
+scalar,json_transform_strict,same_as_input,"col0,col1","json,varchar",
 scalar,to_seconds,interval,double,double,Construct a second interval
 scalar,to_json,json,,,
 scalar,time_bucket,timestamp with time zone,"bucket_width,timestamp,origin","interval,timestamp with time zone,timestamp with time zone","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,timezone_hour,bigint,ts,timestamp with time zone,Extract the timezone_hour component from a date or timestamp
 scalar,subtract,tinyint,col0,tinyint,
-scalar,list_resize,array,"list,size","array,any",Resizes the list to contain size elements. Initializes new elements with value or NULL if value is not set.
-scalar,log,double,b,double,"Computes the logarithm of x to base b. b may be omitted, in which case the default 10"
-scalar,log2,double,x,double,Computes the 2-log of x
-scalar,lpad,varchar,"string,count,character","varchar,integer,varchar",Pads the string with the character from the left until it has count characters
 scalar,strlen,bigint,string,varchar,Number of bytes in string.
 scalar,make_timestamp,timestamp,"year,month,day,hour,minute,seconds","bigint,bigint,bigint,bigint,bigint,double",The timestamp for the given parts
-scalar,map_extract,any,"map,key","any,any",Returns a list containing the value for a given key or an empty list if the key is not contained in the map. The type of the key provided in the second parameter must match the type of the map’s keys else an error is returned
 scalar,string_split_regex,array,"string,separator","varchar,varchar",Splits the string along the regex
 scalar,string_split,array,"string,separator","varchar,varchar",Splits the string along the separator
 scalar,microsecond,bigint,ts,time,Extract the microsecond component from a date or timestamp
@@ -431,24 +368,18 @@ scalar,split,array,"string,separator","varchar,varchar",Splits the string along 
 scalar,quarter,bigint,ts,date,Extract the quarter component from a date or timestamp
 scalar,sign,tinyint,x,tinyint,"Returns the sign of x as -1, 0 or 1"
 scalar,sign,tinyint,x,usmallint,"Returns the sign of x as -1, 0 or 1"
-scalar,sha256,varchar,value,varchar,Returns the SHA256 hash of the value
 scalar,set_bit,bit,"bitstring,index,new_value","bit,integer,integer",Sets the nth bit in bitstring to newvalue; the first (leftmost) bit is indexed 0. Returns a new bitstring
-scalar,right,varchar,"string,count","varchar,bigint",Extract the right-most count characters
-aggregate,regr_count,uinteger,"y,x","double,double",Returns the number of non-null number pairs in a group.
 aggregate,quantile_cont,timestamp,"x,pos","timestamp,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,time with time zone,"x,pos","time with time zone,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,min_by,varchar,"arg,val","varchar,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,blob,"arg,val","blob,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,string_agg,varchar,str,any,Concatenates the column string values with an optional separator.
-aggregate,string_agg,varchar,"str,arg","any,varchar",Concatenates the column string values with an optional separator.
+aggregate,min_by,same_as_input,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,bigint,"arg,val","bigint,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,date,"arg,val","date,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,date,"arg,val","date,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,sum,hugeint,arg,integer,Calculates the sum value for all tuples in arg.
 aggregate,reservoir_quantile,integer,"x,quantile,sample_size","integer,double,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,approx_count_distinct,bigint,any,any,Computes the approximate count of distinct elements using HyperLogLog.
 aggregate,approx_quantile,bigint,"x,pos","bigint,float",Computes the approximate quantile using T-Digest.
@@ -458,7 +389,7 @@ aggregate,argmax,bigint,"arg,val","bigint,double",Finds the row with the maximum
 aggregate,argmax,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,blob,"arg,val","blob,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,blob,"arg,val","blob,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,varchar,"arg,val","varchar,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,blob,"arg,val","blob,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -472,7 +403,7 @@ aggregate,arg_min,timestamp,"arg,val","timestamp,integer",Finds the row with the
 aggregate,arg_min,timestamp,"arg,val","timestamp,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,timestamp,"arg,val","timestamp,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,integer,"arg,val","integer,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,double,"arg,val","double,double",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,date,"arg,val","date,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
@@ -480,38 +411,21 @@ aggregate,arg_min_null,date,"arg,val","date,date",Finds the row with the minimum
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,date",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,avg,double,x,bigint,Calculates the average value for all tuples in x.
-aggregate,bit_and,smallint,arg,smallint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_and,bigint,arg,bigint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_or,utinyint,arg,utinyint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_or,ubigint,arg,ubigint,Returns the bitwise OR of all bits in a given expression.
+aggregate,arg_min_null,same_as_input,"arg,val","any,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,countif,hugeint,arg,boolean,Counts the total number of TRUE values for a boolean column
-aggregate,var_pop,double,x,double,Returns the population variance.
-aggregate,covar_samp,double,"y,x","double,double",Returns the sample covariance for non-null pairs in a group.
-scalar,abs,tinyint,x,tinyint,Absolute value
-scalar,abs,ubigint,x,ubigint,Absolute value
 scalar,add,bigint,col0,bigint,
 scalar,add,usmallint,col0,usmallint,
 scalar,add,timestamp,"col0,col1","time,date",
 scalar,yearweek,bigint,ts,date,Extract the yearweek component from a date or timestamp
-scalar,array_distance,double,"array1,array2","double[any],double[any]",Compute the distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,array_grade_up,array,"list,col1,col2","array,varchar,varchar",Returns the index of their sorted position.
-scalar,array_indexof,integer,"list,element","array,any","Returns the index of the element if the list contains the element. If the element is not found, it returns NULL."
-scalar,array_inner_product,double,"array1,array2","double[any],double[any]",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,atan2,double,"y,x","double,double","Computes the arctangent (y, x)"
+scalar,array_inner_product,double,"array1,array2","array<double>,array<double>",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,bin,varchar,value,hugeint,Converts the value to binary representation
 scalar,weekofyear,bigint,ts,date,Extract the weekofyear component from a date or timestamp
 scalar,weekday,bigint,ts,timestamp,Extract the weekday component from a date or timestamp
-scalar,uuid,uuid,,,Returns a random UUID similar to this: eeccb8c5-9943-b2bb-bb5e-222f4e14b687
 scalar,create_sort_key,blob,parameters...,any,Constructs a binary-comparable sort key based on a set of input parameters and sort qualifiers
-scalar,current_date,date,,,
 scalar,currval,bigint,'sequence_name',varchar,Return the current value of the sequence. Note that nextval must be called at least once prior to calling currval.
-scalar,datepart,bigint,"ts,col1","varchar,date",Get subfield (equivalent to extract)
-scalar,datetrunc,timestamp with time zone,"part,timestamp","varchar,timestamp with time zone",Truncate to specified precision
 scalar,date_diff,bigint,"part,startdate,enddate","varchar,date,date",The number of partition boundaries between the timestamps
 scalar,date_diff,bigint,"part,startdate,enddate","varchar,timestamp with time zone,timestamp with time zone",The number of partition boundaries between the timestamps
-scalar,date_trunc,timestamp,"part,timestamp","varchar,timestamp",Truncate to specified precision
 scalar,day,bigint,ts,timestamp,Extract the day component from a date or timestamp
 scalar,enum_range_boundary,array,"start,end","any,any","Returns the range between the two given enum values as an array. The values must be of the same enum type. When the first parameter is NULL, the result starts with the first value of the enum type. When the second parameter is NULL, the result ends with the last value of the enum type"
 scalar,epoch,double,temporal,timestamp,Extract the epoch component from a temporal type
@@ -520,10 +434,7 @@ scalar,epoch_ms,bigint,temporal,time with time zone,Extract the epoch component 
 scalar,epoch_ns,bigint,temporal,timestamp_ns,Extract the epoch component in nanoseconds from a temporal type
 scalar,epoch_us,bigint,temporal,timestamp,Extract the epoch component in microseconds from a temporal type
 scalar,equi_width_bins,array,"min,max,bin_count,nice_rounding","any,any,bigint,boolean",Generates bin_count equi-width bins between the min and max. If enabled nice_rounding makes the numbers more readable/less jagged
-scalar,union_tag,any,union,union,Retrieve the currently selected tag of the union as an ENUM
-scalar,union_extract,any,"union,tag","union,varchar",Extract the value with the named tags from the union. NULL if the tag is not currently selected
-scalar,gcd,hugeint,"x,y","hugeint,hugeint",Computes the greatest common divisor of x and y
-scalar,trunc,uinteger,x,uinteger,Truncates the number
+scalar,union_tag,same_as_input,union,union,Retrieve the currently selected tag of the union as an ENUM
 scalar,icu_collate_bo,varchar,col0,varchar,
 scalar,icu_collate_da,varchar,col0,varchar,
 scalar,icu_collate_es,varchar,col0,varchar,
@@ -547,27 +458,21 @@ scalar,lgamma,double,x,double,Computes the log of the gamma function
 scalar,to_decades,interval,integer,integer,Construct a decade interval
 scalar,list_cosine_distance,float,"list1,list2","array,array",Compute the cosine distance between two lists
 scalar,to_base,varchar,"number,radix","bigint,integer","Converts a value to a string in the given base radix, optionally padding with leading zeros to the minimum length"
-scalar,list_distance,double,"list1,list2","array,array",Compute the distance between two lists
 scalar,subtract,double,"col0,col1","double,double",
 scalar,subtract,uhugeint,col0,uhugeint,
 scalar,subtract,time with time zone,"col0,col1","time with time zone,interval",
-scalar,list_reduce,any,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
+scalar,list_reduce,same_as_input,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
 scalar,list_transform,array,"list,lambda","array,lambda",Returns a list that is the result of applying the lambda function to each element of the input list. See the Lambda Functions section for more details
 scalar,map_contains,boolean,"map,key","map(any, any),any",Checks if a map contains a given key.
-scalar,md5,varchar,value,varchar,Returns the MD5 hash of the value as a string
 scalar,millennium,bigint,ts,timestamp,Extract the millennium component from a date or timestamp
 scalar,strftime,varchar,"data,format","timestamp with time zone,varchar",Converts a date to a string according to the format string.
 scalar,stats,varchar,expression,any,"Returns a string with statistics about the expression. Expression can be a column, constant, or SQL expression"
 scalar,month,bigint,ts,timestamp with time zone,Extract the month component from a date or timestamp
 scalar,parse_path,array,"string,separator","varchar,varchar","Returns a list of the components (directories and filename) in the path similarly to Python's pathlib.PurePath::parts. separator options: system, both_slash (default), forward_slash, backslash"
-scalar,pi,double,,,Returns the value of pi
 scalar,printf,varchar,format,varchar,Formats a string using printf syntax
-scalar,sinh,double,x,double,Computes the hyperbolic sin of x
-scalar,range,array,"start,stop","bigint,bigint",Create a list of values between start and stop - the stop parameter is exclusive
-scalar,reduce,any,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
+scalar,reduce,same_as_input,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
 scalar,isfinite,boolean,x,timestamp with time zone,"Returns true if the floating point value is finite, false otherwise"
-aggregate,any_value,any,arg,any,Returns the first non-null value from arg. This function is affected by ordering.
-aggregate,histogram,map,"arg,col1","any,array",Returns a LIST of STRUCTs with the fields bucket and count.
+aggregate,any_value,same_as_input,arg,any,Returns the first non-null value from arg. This function is affected by ordering.
 aggregate,quantile_cont,bigint,"x,pos","bigint,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,date,"x,pos","date,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,time,"x,pos","time,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
@@ -576,7 +481,6 @@ aggregate,min_by,integer,"arg,val","integer,date",Finds the row with the minimum
 aggregate,min_by,double,"arg,val","double,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp,"arg,val","timestamp,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,mean,double,x,double,Calculates the average value for all tuples in x.
 aggregate,max_by,integer,"arg,val","integer,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -585,8 +489,8 @@ aggregate,max_by,date,"arg,val","date,date",Finds the row with the maximum val. 
 aggregate,max_by,date,"arg,val","date,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,interval,x,time with time zone,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,sumkahan,double,arg,double,Calculates the sum using a more accurate floating point summation (Kahan Sum).
 aggregate,reservoir_quantile,array,"x,quantile","decimal,array","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -627,22 +531,13 @@ aggregate,arg_min_null,double,"arg,val","double,hugeint",Finds the row with the 
 aggregate,arg_min_null,blob,"arg,val","blob,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,uhugeint,Returns a bitstring with bits set for each distinct value.
-aggregate,bit_and,usmallint,arg,usmallint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_or,bigint,arg,bigint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_or,hugeint,arg,hugeint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_xor,bigint,arg,bigint,Returns the bitwise XOR of all bits in a given expression.
 scalar,add,integer,col0,integer,
-scalar,array_cat,array,"list1,list2","array,array",Concatenates two lists.
-scalar,array_extract,any,"list,index","array,bigint",Extract the indexth (1-based) value from the array.
-scalar,array_has_all,boolean,"l1, l2","array,array",Returns true if all elements of l2 are in l1. NULLs are ignored.
 scalar,array_reverse_sort,array,"list,col1","array,varchar",Sorts the elements of the list in reverse order
 scalar,bin,varchar,value,varchar,Converts the value to binary representation
 scalar,weekday,bigint,ts,date,Extract the weekday component from a date or timestamp
-scalar,ceil,float,x,float,Rounds the number up
 scalar,ceiling,double,x,double,Rounds the number up
 scalar,current_schema,varchar,,,Returns the name of the currently active schema. Default is main
 scalar,datesub,bigint,"part,startdate,enddate","varchar,date,date",The number of complete partitions between the timestamps
-scalar,date_part,bigint,"ts,col1","varchar,time with time zone",Get subfield (equivalent to extract)
 scalar,day,bigint,ts,date,Extract the day component from a date or timestamp
 scalar,divide,smallint,"col0,col1","smallint,smallint",
 scalar,divide,integer,"col0,col1","integer,integer",
@@ -669,9 +564,7 @@ scalar,jaro_winkler_similarity,double,"str1,str2,score_cutoff","varchar,varchar,
 scalar,json_extract,json,"col0,col1","varchar,bigint",
 scalar,json_extract_string,varchar,"col0,col1","varchar,varchar",
 scalar,json_quote,json,,,
-scalar,length,bigint,string,varchar,Number of characters in string.
 scalar,to_binary,varchar,value,varint,Converts the value to binary representation
-scalar,list_contains,boolean,"list,element","array,any",Returns true if the list contains the element.
 scalar,time_bucket,timestamp with time zone,"bucket_width,timestamp","interval,timestamp with time zone","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,list_grade_up,array,"list,col1","array,varchar",Returns the index of their sorted position.
 scalar,timezone_minute,bigint,ts,timestamp with time zone,Extract the timezone_minute component from a date or timestamp
@@ -681,9 +574,7 @@ scalar,subtract,decimal,col0,decimal,
 scalar,substring_grapheme,varchar,"string,start","varchar,bigint",Extract substring of length grapheme clusters starting from character start. Note that a start value of 1 refers to the first character of the string.
 scalar,list_value,list,,,Create a LIST containing the argument values
 scalar,list_where,array,"value_list,mask_list","array,array",Returns a list with the BOOLEANs in mask_list applied as a mask to the value_list.
-scalar,make_date,date,col0,integer,
 scalar,make_timestamptz,timestamp with time zone,"col0,col1,col2,col3,col4,col5","bigint,bigint,bigint,bigint,bigint,double",
-scalar,string_to_array,array,"string,separator","varchar,varchar",Splits the string along the separator
 scalar,microsecond,bigint,ts,timestamp with time zone,Extract the microsecond component from a date or timestamp
 scalar,strftime,varchar,"data,format","timestamp,varchar",Converts a date to a string according to the format string.
 scalar,strftime,varchar,"data,format","timestamp_ns,varchar",Converts a date to a string according to the format string.
@@ -691,14 +582,10 @@ scalar,minute,bigint,ts,time with time zone,Extract the minute component from a 
 scalar,mod,uhugeint,"col0,col1","uhugeint,uhugeint",
 scalar,monthname,varchar,ts,timestamp,The (English) name of the month
 scalar,nanosecond,bigint,tsns,interval,Extract the nanosecond component from a date or timestamp
-scalar,random,double,,,Returns a random number between 0 and 1
-scalar,range,array,start,bigint,Create a list of values between start and stop - the stop parameter is exclusive
-scalar,range,array,"start,stop,step","timestamp,timestamp,interval",Create a list of values between start and stop - the stop parameter is exclusive
 scalar,sha1,varchar,value,varchar,Returns the SHA1 hash of the value
 scalar,isfinite,boolean,x,date,"Returns true if the floating point value is finite, false otherwise"
 aggregate,any_value,decimal,arg,decimal,Returns the first non-null value from arg. This function is affected by ordering.
-aggregate,regr_avgy,double,"y,x","double,double","Returns the average of the dependent variable for non-null pairs in a group, where x is the independent variable and y is the dependent variable."
-aggregate,quantile_disc,any,"x,pos","any,array","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,quantile_disc,same_as_input,"x,pos","any,array","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
 aggregate,skewness,double,x,double,Returns the skewness of all input values.
 aggregate,quantile_cont,smallint,"x,pos","smallint,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,double,"x,pos","double,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
@@ -712,15 +599,13 @@ aggregate,min_by,blob,"arg,val","blob,varchar",Finds the row with the minimum va
 aggregate,min_by,blob,"arg,val","blob,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,stddev_pop,double,x,double,Returns the population standard deviation.
-aggregate,mean,decimal,x,decimal,Calculates the average value for all tuples in x.
+aggregate,min_by,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,varchar,"arg,val","varchar,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,double,x,double,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,reservoir_quantile,array,"x,quantile,sample_size","integer,array,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,reservoir_quantile,array,"x,quantile,sample_size","bigint,array,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -735,8 +620,8 @@ aggregate,argmax,date,"arg,val","date,timestamp",Finds the row with the maximum 
 aggregate,argmax,timestamp,"arg,val","timestamp,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,timestamp with time zone,"arg,val","timestamp with time zone,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,date,"arg,val","date,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -755,56 +640,42 @@ aggregate,arg_max_null,timestamp,"arg,val","timestamp,double",Finds the row with
 aggregate,arg_max_null,timestamp,"arg,val","timestamp,date",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,blob,"arg,val","blob,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,blob,"arg,val","blob,date",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,varchar,"arg,val","varchar,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,timestamp with time zone,"arg,val","timestamp with time zone,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,blob,"arg,val","blob,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,blob,"arg,val","blob,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,array,"arg,val,col2","any,any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,bigint,"arg,val","bigint,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,double,"arg,val","double,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,double",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,array_agg,list,arg,any,Returns a LIST containing all the values of a column.
 aggregate,bitstring_agg,bit,"arg,col1,col2","ubigint,ubigint,ubigint",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_and,tinyint,arg,tinyint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_and,uinteger,arg,uinteger,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_xor,ubigint,arg,ubigint,Returns the bitwise XOR of all bits in a given expression.
-aggregate,bool_and,boolean,arg,boolean,"Returns TRUE if every input value is TRUE, otherwise FALSE."
-aggregate,first,any,arg,any,Returns the first value (null or non-null) from arg. This function is affected by ordering.
+aggregate,first,same_as_input,arg,any,Returns the first value (null or non-null) from arg. This function is affected by ordering.
 aggregate,fsum,double,arg,double,Calculates the sum using a more accurate floating point summation (Kahan Sum).
 aggregate,group_concat,varchar,"str,arg","any,varchar",Concatenates the column string values with an optional separator.
 scalar,add,date,"col0,col1","date,integer",
 scalar,add,time with time zone,"col0,col1","time with time zone,interval",
 scalar,apply,array,"list,lambda","array,lambda",Returns a list that is the result of applying the lambda function to each element of the input list. See the Lambda Functions section for more details
-scalar,array_length,bigint,list,array,Returns the length of the list.
-scalar,array_reduce,any,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
-scalar,array_resize,array,"list,size[","array,any",Resizes the list to contain size elements. Initializes new elements with value or NULL if value is not set.
+scalar,array_reduce,same_as_input_first_array_element,"list,lambda","array,lambda","Returns a single value that is the result of applying the lambda function to each element of the input list, starting with the first element and then repeatedly applying the lambda function to the result of the previous application and the next element of the list."
 scalar,year,bigint,ts,timestamp,Extract the year component from a date or timestamp
 scalar,bin,varchar,value,bigint,Converts the value to binary representation
-scalar,cardinality,ubigint,map,any,Returns the size of the map (or the number of entries in the map)
 scalar,century,bigint,ts,timestamp with time zone,Extract the century component from a date or timestamp
-scalar,cos,double,x,double,Computes the cos of x
-scalar,datetrunc,timestamp,"part,timestamp","varchar,date",Truncate to specified precision
 scalar,dayofmonth,bigint,ts,interval,Extract the dayofmonth component from a date or timestamp
 scalar,epoch,double,temporal,date,Extract the epoch component from a temporal type
 scalar,epoch,double,temporal,time with time zone,Extract the epoch component from a temporal type
 scalar,epoch_ns,bigint,temporal,timestamp,Extract the epoch component in nanoseconds from a temporal type
 scalar,epoch_ns,bigint,temporal,interval,Extract the epoch component in nanoseconds from a temporal type
 scalar,era,bigint,ts,timestamp with time zone,Extract the era component from a date or timestamp
-scalar,factorial,hugeint,x,integer,Factorial of x. Computes the product of the current integer and all integers below it
 scalar,filter,array,"list,lambda","array,lambda",Constructs a list from those elements of the input list for which the lambda function returns true
-scalar,floor,double,x,double,Rounds the number down
-scalar,from_json_strict,any,"col0,col1","json,varchar",
-scalar,generate_series,array,"start,stop,step","bigint,bigint,bigint",Create a list of values between start and stop - the stop parameter is inclusive
+scalar,from_json_strict,same_as_input,"col0,col1","json,varchar",
 scalar,gen_random_uuid,uuid,,,Returns a random UUID similar to this: eeccb8c5-9943-b2bb-bb5e-222f4e14b687
 scalar,try_strptime,timestamp,"text,format","varchar,array",Converts the string text to timestamp according to the format string. Returns NULL on failure.
 scalar,get_current_time,time with time zone,,,
-scalar,trunc,tinyint,x,tinyint,Truncates the number
 scalar,icu_collate_br,varchar,col0,varchar,
 scalar,icu_collate_en_us,varchar,col0,varchar,
 scalar,icu_collate_kl,varchar,col0,varchar,
@@ -812,21 +683,16 @@ scalar,icu_collate_ta,varchar,col0,varchar,
 scalar,json_array_length,array,"col0,col1","varchar,array",
 scalar,json_array_length,ubigint,col0,json,
 scalar,json_extract_path_text,varchar,"col0,col1","json,bigint",
-scalar,to_timestamp,timestamp with time zone,sec,double,Converts secs since epoch to a timestamp with time zone
 scalar,json_keys,array,col0,varchar,
 scalar,to_months,interval,integer,integer,Construct a month interval
 scalar,last_day,date,ts,date,Returns the last day of the month
-scalar,levenshtein,bigint,"str1,str2","varchar,varchar","The minimum number of single-character edits (insertions, deletions or substitutions) required to change one string to the other. Different case is considered different"
 scalar,like_escape,boolean,"string,like_specifier,escape_character","varchar,varchar,varchar",Returns true if the string matches the like_specifier (see Pattern Matching) using case-sensitive matching. escape_character is used to search for wildcard characters in the string.
-scalar,to_hex,varchar,value,ubigint,Converts the value to hexadecimal representation
-scalar,to_hex,varchar,value,hugeint,Converts the value to hexadecimal representation
 scalar,list_dot_product,double,"list1,list2","array,array",Compute the inner product between two lists
 scalar,timezone_minute,bigint,ts,interval,Extract the timezone_minute component from a date or timestamp
 scalar,timezone,timestamp,"ts,col1","varchar,timestamp with time zone",Extract the timezone component from a date or timestamp
 scalar,subtract,bigint,"col0,col1","bigint,bigint",
 scalar,subtract,hugeint,col0,hugeint,
 scalar,subtract,float,col0,float,
-scalar,substr,varchar,"string,start","varchar,bigint",Extract substring of length characters starting from character start. Note that a start value of 1 refers to the first character of the string.
 scalar,list_select,array,"value_list,index_list","array,array",Returns a list based on the elements selected by the index_list.
 scalar,list_zip,array,,,"Zips k LISTs to a new LIST whose length will be that of the longest list. Its elements are structs of k elements from each list list_1, …, list_k, missing elements are replaced with NULL. If truncate is set, all lists are truncated to the smallest list length."
 scalar,make_timestamp_ns,timestamp_ns,nanos,bigint,The timestamp for the given nanoseconds since epoch
@@ -838,13 +704,11 @@ scalar,regexp_escape,varchar,string,varchar,Escapes all potentially meaningful r
 scalar,sign,tinyint,x,double,"Returns the sign of x as -1, 0 or 1"
 scalar,sha1,varchar,value,blob,Returns the SHA1 hash of the value
 scalar,second,bigint,ts,time with time zone,Extract the second component from a date or timestamp
-scalar,reverse,varchar,string,varchar,Reverses the string
 aggregate,min_by,bigint,"arg,val","bigint,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,double,"arg,val","double,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,date,"arg,val","date,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,stddev_samp,double,x,double,Returns the sample standard deviation
+aggregate,min_by,same_as_input,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,min_by,same_as_input,"arg,val","any,any",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,bigint,"arg,val","bigint,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -882,44 +746,32 @@ aggregate,arg_min_null,varchar,"arg,val","varchar,timestamp",Finds the row with 
 aggregate,arg_min_null,blob,"arg,val","blob,double",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,avg,decimal,x,decimal,Calculates the average value for all tuples in x.
-aggregate,avg,double,x,hugeint,Calculates the average value for all tuples in x.
+aggregate,arg_min_null,same_as_input,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,smallint,Returns a bitstring with bits set for each distinct value.
 aggregate,bitstring_agg,bit,"arg,col1,col2","hugeint,hugeint,hugeint",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_xor,bit,arg,bit,Returns the bitwise XOR of all bits in a given expression.
-aggregate,regr_syy,double,"y,x","double,double",
 aggregate,favg,double,x,double,Calculates the average using a more accurate floating point summation (Kahan Sum)
 aggregate,kahan_sum,double,arg,double,Calculates the sum using a more accurate floating point summation (Kahan Sum).
-scalar,abs,uhugeint,x,uhugeint,Absolute value
 scalar,add,decimal,"col0,col1","decimal,decimal",
 scalar,add,ubigint,"col0,col1","ubigint,ubigint",
 scalar,add,date,"col0,col1","integer,date",
 scalar,age,interval,timestamp,timestamp with time zone,"Subtract arguments, resulting in the time difference between the two timestamps"
-scalar,aggregate,any,"list,name","array,varchar",Executes the aggregate function name on the elements of list
-scalar,array_cosine_distance,double,"array1,array2","double[any],double[any]",Compute the cosine distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_dot_product,double,"array1,array2","double[any],double[any]",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_has,boolean,"list,element","array,any",Returns true if the list contains the element.
+scalar,aggregate,same_as_input_first_array_element,"list,name","array,varchar",Executes the aggregate function name on the elements of list
+scalar,array_cosine_distance,double,"array1,array2","array<double>,array<double>",Compute the cosine distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_dot_product,double,"array1,array2","array<double>,array<double>",Compute the inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,bar,varchar,"x,min,max","double,double,double",Draws a band whose width is proportional to (x - min) and equal to width characters when x = max. width defaults to 80
 scalar,base64,varchar,blob,blob,Convert a blob to a base64 encoded string
 scalar,bin,varchar,value,uhugeint,Converts the value to binary representation
 scalar,xor,uinteger,"left,right","uinteger,uinteger",Bitwise XOR
-scalar,chr,varchar,code_point,integer,Returns a character which is corresponding the ASCII code value or Unicode code point
 scalar,url_encode,varchar,input,varchar,Escapes the input string by encoding it so that it can be included in a URL query parameter.
-scalar,date_part,bigint,"ts,col1","varchar,date",Get subfield (equivalent to extract)
-scalar,date_part,bigint,"ts,col1","varchar,interval",Get subfield (equivalent to extract)
 scalar,date_sub,bigint,"part,startdate,enddate","varchar,date,date",The number of complete partitions between the timestamps
 scalar,date_sub,bigint,"part,startdate,enddate","varchar,timestamp with time zone,timestamp with time zone",The number of complete partitions between the timestamps
-scalar,encode,blob,string,varchar,Convert varchar to blob. Converts utf-8 characters into literal encoding
 scalar,epoch_ms,bigint,temporal,interval,Extract the epoch component in milliseconds from a temporal type
 scalar,equi_width_bins,array,"min,max,bin_count,nice_rounding","timestamp,timestamp,bigint,boolean",Generates bin_count equi-width bins between the min and max. If enabled nice_rounding makes the numbers more readable/less jagged
 scalar,era,bigint,ts,interval,Extract the era component from a date or timestamp
-scalar,exp,double,x,double,Computes e to the power of x
 scalar,unbin,blob,value,varchar,Converts a value from binary representation to a blob
 scalar,getenv,varchar,col0,varchar,
 scalar,grade_up,array,"list,col1","array,varchar",Returns the index of their sorted position.
 scalar,grade_up,array,"list,col1,col2","array,varchar,varchar",Returns the index of their sorted position.
-scalar,trunc,ubigint,x,ubigint,Truncates the number
 scalar,hex,varchar,value,ubigint,Converts the value to hexadecimal representation
 scalar,hour,bigint,ts,interval,Extract the hour component from a date or timestamp
 scalar,icu_collate_el,varchar,col0,varchar,
@@ -942,15 +794,12 @@ scalar,json_pretty,varchar,col0,json,
 scalar,json_serialize_plan,json,"col0,col1,col2,col3","varchar,boolean,boolean,boolean",
 scalar,last_day,date,ts,timestamp with time zone,Returns the last day of the month
 scalar,least_common_multiple,bigint,"x,y","bigint,bigint",Computes the least common multiple of x and y
-scalar,left,varchar,"string,count","varchar,bigint",Extract the left-most count characters
 scalar,len,bigint,string,varchar,Number of characters in string.
-scalar,to_hex,varchar,value,uhugeint,Converts the value to hexadecimal representation
 scalar,to_binary,varchar,value,hugeint,Converts the value to binary representation
 scalar,list_cosine_similarity,float,"list1,list2","array,array",Compute the cosine similarity between two lists
 scalar,to_base,varchar,"number,radix,min_length","bigint,integer,integer","Converts a value to a string in the given base radix, optionally padding with leading zeros to the minimum length"
 scalar,list_grade_up,array,list,array,Returns the index of their sorted position.
 scalar,list_grade_up,array,"list,col1,col2","array,varchar,varchar",Returns the index of their sorted position.
-scalar,list_has_any,boolean,"l1, l2","array,array",Returns true if the lists have any element in common. NULLs are ignored.
 scalar,timezone,bigint,ts,date,Extract the timezone component from a date or timestamp
 scalar,subtract,bigint,col0,bigint,
 scalar,subtract,double,col0,double,
@@ -958,21 +807,14 @@ scalar,subtract,usmallint,"col0,col1","usmallint,usmallint",
 scalar,subtract,bigint,"col0,col1","date,date",
 scalar,subtract,timestamp,"col0,col1","timestamp,interval",
 scalar,list_negative_inner_product,float,"list1,list2","array,array",Compute the negative inner product between two lists
-scalar,list_slice,any,"list,begin,end","any,any,any",Extract a sublist using slice conventions. Negative values are accepted.
-scalar,ln,double,x,double,Computes the natural logarithm of x
-scalar,ltrim,varchar,"string,characters","varchar,varchar",Removes any occurrences of any of the characters from the left side of the string
 scalar,map_entries,list,,,Returns the map entries as a list of keys/values
-scalar,map_keys,list,,,Returns the keys of a map as a list
 scalar,strip_accents,varchar,string,varchar,Strips accents from string.
 scalar,millennium,bigint,ts,timestamp with time zone,Extract the millennium component from a date or timestamp
 scalar,mod,double,"col0,col1","double,double",
 scalar,month,bigint,ts,interval,Extract the month component from a date or timestamp
-scalar,range,array,"start,stop,step","bigint,bigint,bigint",Create a list of values between start and stop - the stop parameter is exclusive
 scalar,regexp_extract_all,array,"string, regex[, group = 0][","varchar,varchar,integer",Split the string along the regex and extract all occurrences of group. A set of optional options can be set.
 scalar,sign,tinyint,x,uinteger,"Returns the sign of x as -1, 0 or 1"
-scalar,sha256,varchar,value,blob,Returns the SHA256 hash of the value
-scalar,repeat,varchar,"string,count","varchar,bigint",Repeats the string count number of times
-aggregate,quantile_disc,any,"x,pos","any,double","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,quantile_disc,same_as_input,"x,pos","any,double","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
 aggregate,min_by,timestamp,"arg,val","timestamp,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -986,7 +828,7 @@ aggregate,max_by,blob,"arg,val","blob,double",Finds the row with the maximum val
 aggregate,max_by,blob,"arg,val","blob,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,reservoir_quantile,array,"x,quantile","bigint,array","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,approx_quantile,array,"x,pos","decimal,array",Computes the approximate quantile using T-Digest.
-aggregate,approx_quantile,timestamp with time zone[],"x,pos","timestamp with time zone,array",Computes the approximate quantile using T-Digest.
+aggregate,approx_quantile,array<timestamp with time zone>,"x,pos","timestamp with time zone,array",Computes the approximate quantile using T-Digest.
 aggregate,argmax,integer,"arg,val","integer,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,double,"arg,val","double,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,varchar,"arg,val","varchar,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -1003,7 +845,7 @@ aggregate,argmin,double,"arg,val","double,bigint",Finds the row with the minimum
 aggregate,argmin,date,"arg,val","date,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,bigint,"arg,val","bigint,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,double,"arg,val","double,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,double,"arg,val","double,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -1011,7 +853,7 @@ aggregate,arg_max,date,"arg,val","date,double",Finds the row with the maximum va
 aggregate,arg_max,date,"arg,val","date,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,integer,"arg,val","integer,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,integer,"arg,val","integer,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,bigint,"arg,val","bigint,date",Finds the row with the maximum val. Calculates the arg expression at that row.
@@ -1023,51 +865,35 @@ aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time z
 aggregate,arg_max_null,blob,"arg,val","blob,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,decimal,"arg,val","decimal,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,varchar,"arg,val","varchar,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,varchar,"arg,val","varchar,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,decimal,"arg,val","decimal,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,varchar,"arg,val","varchar,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,date,"arg,val","date,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,avg,double,x,integer,Calculates the average value for all tuples in x.
 aggregate,bitstring_agg,bit,"arg,col1,col2","tinyint,tinyint,tinyint",Returns a bitstring with bits set for each distinct value.
 aggregate,bitstring_agg,bit,arg,utinyint,Returns a bitstring with bits set for each distinct value.
-aggregate,bit_xor,usmallint,arg,usmallint,Returns the bitwise XOR of all bits in a given expression.
 aggregate,group_concat,varchar,str,any,Concatenates the column string values with an optional separator.
-scalar,rpad,varchar,"string,count,character","varchar,integer,varchar",Pads the string with the character from the right until it has count characters
-scalar,abs,smallint,x,smallint,Absolute value
-scalar,abs,float,x,float,Absolute value
 scalar,add,integer,"col0,col1","integer,integer",
 scalar,add,usmallint,"col0,col1","usmallint,usmallint",
 scalar,add,time,"col0,col1","time,interval",
-scalar,array_aggr,any,"list,name","array,varchar",Executes the aggregate function name on the elements of list
-scalar,array_length,bigint,"list,col1","array,bigint",Returns the length of the list.
-scalar,array_resize,array,"list,size[,value]","array,any,any",Resizes the list to contain size elements. Initializes new elements with value or NULL if value is not set.
-scalar,array_sort,array,"list,col1","array,varchar",Sorts the elements of the list
+scalar,array_aggr,same_as_input,"list,name","array,varchar",Executes the aggregate function name on the elements of list
 scalar,year,bigint,ts,interval,Extract the year component from a date or timestamp
 scalar,xor,usmallint,"left,right","usmallint,usmallint",Bitwise XOR
-scalar,bit_length,bigint,col0,varchar,
 scalar,week,bigint,ts,date,Extract the week component from a date or timestamp
-scalar,cbrt,double,x,double,Returns the cube root of x
-scalar,ceil,double,x,double,Rounds the number up
-scalar,contains,boolean,"list,element","array,any",Returns true if the list contains the element.
 scalar,datediff,bigint,"part,startdate,enddate","varchar,time,time",The number of partition boundaries between the timestamps
-scalar,date_part,bigint,"ts,col1","varchar,timestamp with time zone",Get subfield (equivalent to extract)
-scalar,date_trunc,interval,"part,timestamp","varchar,interval",Truncate to specified precision
 scalar,dayofyear,bigint,ts,date,Extract the dayofyear component from a date or timestamp
 scalar,enum_range,array,enum,any,Returns all values of the input enum type as an array
 scalar,epoch_ms,bigint,temporal,date,Extract the epoch component in milliseconds from a temporal type
 scalar,equi_width_bins,array,"min,max,bin_count,nice_rounding","bigint,bigint,bigint,boolean",Generates bin_count equi-width bins between the min and max. If enabled nice_rounding makes the numbers more readable/less jagged
 scalar,unicode,integer,str,varchar,Returns the unicode codepoint of the first character of the string
 scalar,from_binary,blob,value,varchar,Converts a value from binary representation to a blob
-scalar,from_json_strict,any,"col0,col1","varchar,varchar",
+scalar,from_json_strict,same_as_input,"col0,col1","varchar,varchar",
 scalar,get_bit,integer,"bitstring,index","bit,integer",Extracts the nth bit from bitstring; the first (leftmost) bit is indexed 0
-scalar,trunc,utinyint,x,utinyint,Truncates the number
 scalar,hex,varchar,value,blob,Converts the value to hexadecimal representation
-scalar,trim,varchar,string,varchar,Removes any spaces from either side of the string.
 scalar,icu_collate_be,varchar,col0,varchar,
 scalar,icu_collate_cy,varchar,col0,varchar,
 scalar,icu_collate_fy,varchar,col0,varchar,
@@ -1079,14 +905,10 @@ scalar,icu_collate_yi,varchar,col0,varchar,
 scalar,json_array,json,,,
 scalar,json_serialize_sql,json,"col0,col1","varchar,boolean",
 scalar,json_value,varchar,"col0,col1","json,varchar",
-scalar,list_aggregate,any,"list,name","array,varchar",Executes the aggregate function name on the elements of list
+scalar,list_aggregate,same_as_input,"list,name","array,varchar",Executes the aggregate function name on the elements of list
 scalar,list_apply,array,"list,lambda","array,lambda",Returns a list that is the result of applying the lambda function to each element of the input list. See the Lambda Functions section for more details
-scalar,to_hex,varchar,value,bigint,Converts the value to hexadecimal representation
-scalar,list_element,any,"list,index","array,bigint",Extract the indexth (1-based) value from the list.
-scalar,list_element,varchar,"list,index","varchar,bigint",Extract the indexth (1-based) value from the list.
 scalar,list_filter,array,"list,lambda","array,lambda",Constructs a list from those elements of the input list for which the lambda function returns true
 scalar,time_bucket,date,"bucket_width,timestamp,origin","interval,date,date","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
-scalar,list_has_all,boolean,"l1, l2","array,array",Returns true if all elements of l2 are in l1. NULLs are ignored.
 scalar,timezone_minute,bigint,ts,date,Extract the timezone_minute component from a date or timestamp
 scalar,timezone,time with time zone,"ts,col1","varchar,time with time zone",Extract the timezone component from a date or timestamp
 scalar,subtract,smallint,col0,smallint,
@@ -1094,17 +916,12 @@ scalar,subtract,smallint,"col0,col1","smallint,smallint",
 scalar,subtract,uhugeint,"col0,col1","uhugeint,uhugeint",
 scalar,subtract,interval,"col0,col1","timestamp,timestamp",
 scalar,strptime,timestamp,"text,format-list","varchar,array","Converts the string text to timestamp applying the format strings in the list until one succeeds. Throws an error on failure. To return NULL on failure, use try_strptime."
-scalar,log10,double,x,double,Computes the 10-log of x
-scalar,lower,varchar,string,varchar,Convert string to lower case
 scalar,minute,bigint,ts,date,Extract the minute component from a date or timestamp
 scalar,mod,integer,"col0,col1","integer,integer",
 scalar,mod,utinyint,"col0,col1","utinyint,utinyint",
 scalar,mod,uinteger,"col0,col1","uinteger,uinteger",
-scalar,starts_with,boolean,"string,search_string","varchar,varchar",Returns true if string begins with search_string
 scalar,not_ilike_escape,boolean,"string,like_specifier,escape_character","varchar,varchar,varchar",Returns false if the string matches the like_specifier (see Pattern Matching) using case-insensitive matching. escape_character is used to search for wildcard characters in the string.
-scalar,now,timestamp with time zone,,,Returns the current timestamp
 scalar,regexp_matches,boolean,"string,pattern[","varchar,varchar","Returns true if string contains the regexp pattern, false otherwise. A set of optional options can be set."
-scalar,rtrim,varchar,"string,characters","varchar,varchar",Removes any occurrences of any of the characters from the right side of the string
 aggregate,sem,double,x,double,Returns the standard error of the mean
 aggregate,quantile_cont,time,"x,pos","time,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,product,double,arg,double,Calculates the product of all tuples in arg.
@@ -1114,27 +931,26 @@ aggregate,min_by,date,"arg,val","date,date",Finds the row with the minimum val. 
 aggregate,min_by,date,"arg,val","date,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp,"arg,val","timestamp,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp with time zone,"arg,val","timestamp with time zone,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,min_by,same_as_input,"arg,val","any,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp,"arg,val","timestamp,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,sum,hugeint,arg,boolean,Calculates the sum value for all tuples in arg.
+aggregate,max_by,same_as_input,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,reservoir_quantile,decimal,"x,quantile,sample_size","decimal,double,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,approx_top_k,array,"val,k","any,bigint",Finds the k approximately most occurring values in the data set
-aggregate,arbitrary,any,arg,any,Returns the first value (null or non-null) from arg. This function is affected by ordering.
+aggregate,arbitrary,same_as_input,arg,any,Returns the first value (null or non-null) from arg. This function is affected by ordering.
 aggregate,argmax,integer,"arg,val","integer,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,varchar,"arg,val","varchar,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,timestamp,"arg,val","timestamp,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,timestamp,"arg,val","timestamp,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,timestamp,"arg,val","timestamp,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,blob,"arg,val","blob,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,double,"arg,val","double,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1146,8 +962,8 @@ aggregate,arg_max,varchar,"arg,val","varchar,hugeint",Finds the row with the max
 aggregate,arg_max,varchar,"arg,val","varchar,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,date,"arg,val","date,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,any",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,array,"arg,val,col2","any,any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,integer,"arg,val","integer,date",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,bigint,"arg,val","bigint,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
@@ -1163,35 +979,23 @@ aggregate,arg_min_null,varchar,"arg,val","varchar,timestamp with time zone",Find
 aggregate,arg_min_null,date,"arg,val","date,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,bit_and,utinyint,arg,utinyint,Returns the bitwise AND of all bits in a given expression.
+aggregate,arg_min_null,same_as_input,"arg,val","any,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,first,decimal,arg,decimal,Returns the first value (null or non-null) from arg. This function is affected by ordering.
-scalar,abs,double,x,double,Absolute value
 scalar,add,smallint,col0,smallint,
 scalar,add,bigint,"col0,col1","bigint,bigint",
 scalar,add,uinteger,"col0,col1","uinteger,uinteger",
 scalar,add,timestamp,"col0,col1","date,interval",
 scalar,add,timestamp,"col0,col1","interval,timestamp",
-scalar,array_cosine_similarity,float,"array1,array2","float[any],float[any]",Compute the cosine similarity between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_distinct,array,list,array,Removes all duplicates and NULLs from a list. Does not preserve the original order
-scalar,asin,double,x,double,Computes the arcsine of x
+scalar,array_cosine_similarity,float,"array1,array2","array<float>,array<float>",Compute the cosine similarity between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,weekofyear,bigint,ts,timestamp with time zone,Extract the weekofyear component from a date or timestamp
 scalar,week,bigint,ts,timestamp,Extract the week component from a date or timestamp
-scalar,ceil,decimal,x,decimal,Rounds the number up
-scalar,contains,boolean,"map,key","map(any, any),any",Checks if a map contains a given key.
-scalar,cosh,double,x,double,Computes the hyperbolic cos of x
 scalar,!__postfix,hugeint,x,integer,Factorial of x. Computes the product of the current integer and all integers below it
 scalar,datesub,bigint,"part,startdate,enddate","varchar,timestamp,timestamp",The number of complete partitions between the timestamps
-scalar,datetrunc,interval,"part,timestamp","varchar,interval",Truncate to specified precision
-scalar,date_trunc,timestamp with time zone,"part,timestamp","varchar,timestamp with time zone",Truncate to specified precision
 scalar,dayname,varchar,ts,timestamp,The (English) name of the weekday
 scalar,dayofmonth,bigint,ts,timestamp with time zone,Extract the dayofmonth component from a date or timestamp
 scalar,dayofweek,bigint,ts,interval,Extract the dayofweek component from a date or timestamp
 scalar,divide,uinteger,"col0,col1","uinteger,uinteger",
 scalar,epoch_ns,bigint,temporal,time,Extract the epoch component in nanoseconds from a temporal type
-scalar,floor,float,x,float,Rounds the number down
-scalar,generate_series,array,"start,stop","bigint,bigint",Create a list of values between start and stop - the stop parameter is inclusive
-scalar,trunc,float,x,float,Truncates the number
 scalar,icu_collate_cs,varchar,col0,varchar,
 scalar,icu_collate_fa,varchar,col0,varchar,
 scalar,icu_collate_fa_af,varchar,col0,varchar,
@@ -1210,7 +1014,6 @@ scalar,json_serialize_plan,json,"col0,col1,col2","varchar,boolean,boolean",
 scalar,json_value,varchar,"col0,col1","json,bigint",
 scalar,julian,double,ts,timestamp with time zone,Extract the Julian Day number from a date or timestamp
 scalar,lcase,varchar,string,varchar,Convert string to lower case
-scalar,least,any,arg1,any,Returns the lowest value of the set of input parameters
 scalar,length_grapheme,bigint,string,varchar,Number of grapheme clusters in string.
 scalar,to_microseconds,interval,integer,bigint,Construct a microsecond interval
 scalar,to_binary,varchar,value,ubigint,Converts the value to binary representation
@@ -1222,7 +1025,6 @@ scalar,subtract,ubigint,col0,ubigint,
 scalar,subtract,date,"col0,col1","date,integer",
 scalar,list_pack,list,,,Create a LIST containing the argument values
 scalar,str_split_regex,array,"string,separator,col2","varchar,varchar,varchar",Splits the string along the regex
-scalar,list_sort,array,list,array,Sorts the elements of the list
 scalar,icu_collate_sk,varchar,col0,varchar,
 scalar,microsecond,bigint,ts,timestamp,Extract the microsecond component from a date or timestamp
 scalar,strftime,varchar,"data,format","varchar,timestamp_ns",Converts a date to a string according to the format string.
@@ -1232,34 +1034,24 @@ scalar,nanosecond,bigint,tsns,timestamp,Extract the nanosecond component from a 
 scalar,normalized_interval,interval,interval,interval,Normalizes an INTERVAL to an equivalent interval
 scalar,parse_dirpath,varchar,"string,separator","varchar,varchar","Returns the head of the path similarly to Python's os.path.dirname. separator options: system, both_slash (default), forward_slash, backslash"
 scalar,parse_path,array,string,varchar,"Returns a list of the components (directories and filename) in the path similarly to Python's pathlib.PurePath::parts. separator options: system, both_slash (default), forward_slash, backslash"
-scalar,position,bigint,"haystack,needle","varchar,varchar","Returns location of first occurrence of needle in haystack, counting from 1. Returns 0 if no match found"
-scalar,regexp_replace,varchar,"string,pattern,replacement","varchar,varchar,varchar","If string contains the regexp pattern, replaces the matching part with replacement. A set of optional options can be set."
-scalar,round,float,"x,precision","float,integer",Rounds x to s decimal places
-scalar,round,double,x,double,Rounds x to s decimal places
-scalar,round,double,"x,precision","double,integer",Rounds x to s decimal places
-aggregate,regr_intercept,double,"y,x","double,double",Returns the intercept of the univariate linear regression line for non-null pairs in a group.
 aggregate,quantile_cont,decimal,"x,pos","decimal,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,float,"x,pos","float,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,double,"x,pos","double,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
-aggregate,quantile,any,x,any,"Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
-aggregate,mode,any,x,any,Returns the most frequent value for the values within x. NULL values are ignored.
+aggregate,quantile,same_as_input,x,any,"Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,mode,same_as_input,x,any,Returns the most frequent value for the values within x. NULL values are ignored.
 aggregate,min_by,double,"arg,val","double,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,double,"arg,val","double,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,date,"arg,val","date,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,blob,"arg,val","blob,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,blob,"arg,val","blob,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min,array,"arg,col1","any,bigint",Returns the minimum value present in arg.
-aggregate,mean,double,x,smallint,Calculates the average value for all tuples in x.
+aggregate,min_by,same_as_input,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,date,"arg,val","date,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,array,"arg,val,col2","any,any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,sum,decimal,arg,decimal,Calculates the sum value for all tuples in arg.
-aggregate,sum,hugeint,arg,bigint,Calculates the sum value for all tuples in arg.
 aggregate,reservoir_quantile,decimal,"x,quantile","decimal,double","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,reservoir_quantile,array,"x,quantile,sample_size","tinyint,array,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,reservoir_quantile,integer,"x,quantile","integer,double","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -1268,7 +1060,7 @@ aggregate,approx_quantile,integer,"x,pos","integer,float",Computes the approxima
 aggregate,argmax,integer,"arg,val","integer,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,array,"arg,val,col2","any,any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1277,14 +1069,14 @@ aggregate,argmin,double,"arg,val","double,integer",Finds the row with the minimu
 aggregate,argmin,double,"arg,val","double,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,double,"arg,val","double,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,date,"arg,val","date,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,integer,"arg,val","integer,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,double,"arg,val","double,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,double,"arg,val","double,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,double,"arg,val","double,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
@@ -1292,14 +1084,14 @@ aggregate,arg_max_null,varchar,"arg,val","varchar,date",Finds the row with the m
 aggregate,arg_max_null,date,"arg,val","date,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,blob,"arg,val","blob,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,integer,"arg,val","integer,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,integer,"arg,val","integer,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,integer,"arg,val","integer,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,date,"arg,val","date,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,double,"arg,val","double,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,varchar,"arg,val","varchar,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,varchar,"arg,val","varchar,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
@@ -1307,9 +1099,7 @@ aggregate,arg_min_null,timestamp,"arg,val","timestamp,double",Finds the row with
 aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,"arg,col1,col2","usmallint,usmallint,usmallint",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_xor,tinyint,arg,tinyint,Returns the bitwise XOR of all bits in a given expression.
-scalar,abs,usmallint,x,usmallint,Absolute value
-scalar,array_cross_product,float[3],"array, array","float[3],float[3]",Compute the cross product of two arrays of size 3. The array elements can not be NULL.
+scalar,array_cross_product,array<float>,"array, array","array<float>,array<float>",Compute the cross product of two arrays of size 3. The array elements can not be NULL.
 scalar,array_reverse_sort,array,list,array,Sorts the elements of the list in reverse order
 scalar,array_select,array,"value_list,index_list","array,array",Returns a list based on the elements selected by the index_list.
 scalar,array_zip,array,,,"Zips k LISTs to a new LIST whose length will be that of the longest list. Its elements are structs of k elements from each list list_1, …, list_k, missing elements are replaced with NULL. If truncate is set, all lists are truncated to the smallest list length."
@@ -1318,7 +1108,6 @@ scalar,ceiling,float,x,float,Rounds the number up
 scalar,current_localtime,time,,,
 scalar,date_diff,bigint,"part,startdate,enddate","varchar,time,time",The number of partition boundaries between the timestamps
 scalar,dayofweek,bigint,ts,timestamp with time zone,Extract the dayofweek component from a date or timestamp
-scalar,degrees,double,x,double,Converts radians to degrees
 scalar,divide,float,"col0,col1","float,float",
 scalar,divide,utinyint,"col0,col1","utinyint,utinyint",
 scalar,divide,ubigint,"col0,col1","ubigint,ubigint",
@@ -1326,16 +1115,12 @@ scalar,editdist3,bigint,"str1,str2","varchar,varchar","The minimum number of sin
 scalar,enum_first,varchar,enum,any,Returns the first value of the input enum type
 scalar,epoch_us,bigint,temporal,date,Extract the epoch component in microseconds from a temporal type
 scalar,formatReadableSize,varchar,bytes,bigint,Converts bytes to a human-readable presentation (e.g. 16000 -> 15.6 KiB)
-scalar,generate_series,timestamp with time zone[],"start,stop,step","timestamp with time zone,timestamp with time zone,interval",Create a list of values between start and stop - the stop parameter is inclusive
-scalar,trunc,bigint,x,bigint,Truncates the number
-scalar,trim,varchar,"string,characters","varchar,varchar",Removes any occurrences of any of the characters from either side of the string
 scalar,icu_collate_bg,varchar,col0,varchar,
 scalar,icu_collate_ga,varchar,col0,varchar,
 scalar,icu_collate_lb,varchar,col0,varchar,
 scalar,icu_collate_lt,varchar,col0,varchar,
 scalar,icu_collate_mt,varchar,col0,varchar,
 scalar,icu_collate_nl,varchar,col0,varchar,
-scalar,isnan,boolean,x,float,"Returns true if the floating point value is not a number, false otherwise"
 scalar,json_array_length,ubigint,col0,varchar,
 scalar,json_contains,boolean,"col0,col1","json,varchar",
 scalar,json_extract_path,json,"col0,col1","varchar,bigint",
@@ -1345,8 +1130,6 @@ scalar,json_serialize_plan,json,col0,varchar,
 scalar,json_serialize_plan,json,"col0,col1","varchar,boolean",
 scalar,json_structure,json,col0,varchar,
 scalar,json_type,varchar,"col0,col1","varchar,varchar",
-scalar,lcm,hugeint,"x,y","hugeint,hugeint",Computes the least common multiple of x and y
-scalar,to_hex,varchar,value,varchar,Converts the value to hexadecimal representation
 scalar,list_cosine_distance,double,"list1,list2","array,array",Compute the cosine distance between two lists
 scalar,time_bucket,date,"bucket_width,timestamp","interval,date","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,timezone_hour,bigint,ts,date,Extract the timezone_hour component from a date or timestamp
@@ -1361,7 +1144,6 @@ scalar,multiply,ubigint,"col0,col1","ubigint,ubigint",
 scalar,not_like_escape,boolean,"string,like_specifier,escape_character","varchar,varchar,varchar",Returns false if the string matches the like_specifier (see Pattern Matching) using case-sensitive matching. escape_character is used to search for wildcard characters in the string.
 scalar,regexp_full_match,boolean,"string,regex[","varchar,varchar",Returns true if the entire string matches the regex. A set of optional options can be set.
 scalar,sign,tinyint,x,ubigint,"Returns the sign of x as -1, 0 or 1"
-aggregate,regr_sxx,double,"y,x","double,double",
 aggregate,quantile_cont,integer,"x,pos","integer,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,min_by,bigint,"arg,val","bigint,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,bigint,"arg,val","bigint,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1373,7 +1155,6 @@ aggregate,min_by,timestamp with time zone,"arg,val","timestamp with time zone,bl
 aggregate,min_by,decimal,"arg,val","decimal,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,array,"arg,val,col2","any,any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,median,any,x,any,"Returns the middle value of the set. NULL values are ignored. For even value counts, quantitative values are averaged and ordinal values return the lower value."
 aggregate,max_by,double,"arg,val","double,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -1395,8 +1176,8 @@ aggregate,argmin,integer,"arg,val","integer,bigint",Finds the row with the minim
 aggregate,argmin,timestamp with time zone,"arg,val","timestamp with time zone,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,blob,"arg,val","blob,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,blob,"arg,val","blob,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,array,"arg,val,col2","any,any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,double,"arg,val","double,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,date,"arg,val","date,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
@@ -1418,12 +1199,8 @@ aggregate,arg_min_null,varchar,"arg,val","varchar,integer",Finds the row with th
 aggregate,arg_min_null,varchar,"arg,val","varchar,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,date,"arg,val","date,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,avg,double,x,double,Calculates the average value for all tuples in x.
 aggregate,bitstring_agg,bit,"arg,col1,col2","bigint,bigint,bigint",Returns a bitstring with bits set for each distinct value.
 aggregate,bitstring_agg,bit,"arg,col1,col2","uhugeint,uhugeint,uhugeint",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_or,uhugeint,arg,uhugeint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_xor,utinyint,arg,utinyint,Returns the bitwise XOR of all bits in a given expression.
-aggregate,var_samp,double,x,double,Returns the sample variance of all input values.
 aggregate,variance,double,x,double,Returns the sample variance of all input values.
 aggregate,count_if,hugeint,arg,boolean,Counts the total number of TRUE values for a boolean column
 scalar,add,hugeint,col0,hugeint,
@@ -1431,26 +1208,17 @@ scalar,add,time,"col0,col1","interval,time",
 scalar,age,interval,"timestamp,timestamp","timestamp,timestamp","Subtract arguments, resulting in the time difference between the two timestamps"
 scalar,age,interval,"timestamp,timestamp","timestamp with time zone,timestamp with time zone","Subtract arguments, resulting in the time difference between the two timestamps"
 scalar,yearweek,bigint,ts,timestamp,Extract the yearweek component from a date or timestamp
-scalar,array_distance,float,"array1,array2","float[any],float[any]",Compute the distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_sort,array,"list,col1,col2","array,varchar,varchar",Sorts the elements of the list
-scalar,atan,double,x,double,Computes the arctangent of x
-scalar,atanh,double,x,double,Computes the inverse hyperbolic tan of x
 scalar,xor,utinyint,"left,right","utinyint,utinyint",Bitwise XOR
 scalar,xor,uhugeint,"left,right","uhugeint,uhugeint",Bitwise XOR
 scalar,weekofyear,bigint,ts,timestamp,Extract the weekofyear component from a date or timestamp
 scalar,century,bigint,ts,interval,Extract the century component from a date or timestamp
-scalar,constant_or_null,any,"arg1,arg2","any,any","If arg2 is NULL, return NULL. Otherwise, return arg1."
-scalar,cot,double,x,double,Computes the cotangent of x
+scalar,constant_or_null,same_as_input,"arg1,arg2","any,any","If arg2 is NULL, return NULL. Otherwise, return arg1."
 scalar,date_sub,bigint,"part,startdate,enddate","varchar,time,time",The number of complete partitions between the timestamps
 scalar,dayname,varchar,ts,timestamp with time zone,The (English) name of the weekday
-scalar,decode,varchar,blob,blob,Convert blob to varchar. Fails if blob is not valid utf-8
-scalar,union_value,union,,,Create a single member UNION containing the argument value. The tag of the value will be the bound variable name
 scalar,epoch_ms,timestamp,temporal,bigint,Extract the epoch component in milliseconds from a temporal type
-scalar,from_json,any,"col0,col1","varchar,varchar",
-scalar,gcd,bigint,"x,y","bigint,bigint",Computes the greatest common divisor of x and y
+scalar,from_json,same_as_input,"col0,col1","varchar,varchar",
 scalar,greatest_common_divisor,bigint,"x,y","bigint,bigint",Computes the greatest common divisor of x and y
 scalar,hex,varchar,value,hugeint,Converts the value to hexadecimal representation
-scalar,translate,varchar,"string,from,to","varchar,varchar,varchar","Replaces each character in string that matches a character in the from set with the corresponding character in the to set. If from is longer than to, occurrences of the extra characters in from are deleted"
 scalar,icu_collate_am,varchar,col0,varchar,
 scalar,icu_collate_ceb,varchar,col0,varchar,
 scalar,icu_collate_de,varchar,col0,varchar,
@@ -1474,39 +1242,28 @@ scalar,to_weeks,interval,integer,integer,Construct a week interval
 scalar,json_keys,array,"col0,col1","json,varchar",
 scalar,json_value,varchar,"col0,col1","varchar,bigint",
 scalar,to_hours,interval,integer,bigint,Construct a hour interval
-scalar,to_hex,varchar,value,blob,Converts the value to hexadecimal representation
 scalar,to_binary,varchar,value,varchar,Converts the value to binary representation
-scalar,list_concat,array,"list1,list2","array,array",Concatenates two lists.
-scalar,list_extract,varchar,"list,index","varchar,bigint",Extract the indexth (1-based) value from the list.
 scalar,time_bucket,timestamp,"bucket_width,timestamp,origin","interval,timestamp,timestamp","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,timezone,bigint,ts,interval,Extract the timezone component from a date or timestamp
-scalar,tan,double,x,double,Computes the tan of x
 scalar,subtract,uinteger,col0,uinteger,
 scalar,subtract,ubigint,"col0,col1","ubigint,ubigint",
 scalar,subtract,time,"col0,col1","time,interval",
-scalar,substr,varchar,"string,start,length","varchar,bigint,bigint",Extract substring of length characters starting from character start. Note that a start value of 1 refers to the first character of the string.
 scalar,list_negative_inner_product,double,"list1,list2","array,array",Compute the negative inner product between two lists
 scalar,strptime,timestamp,"text,format","varchar,varchar","Converts the string text to timestamp according to the format string. Throws an error on failure. To return NULL on failure, use try_strptime."
 scalar,list_unique,ubigint,list,array,Counts the unique elements of a list
-scalar,ltrim,varchar,string,varchar,Removes any occurrences of any of the characters from the left side of the string
-scalar,make_date,date,"year,month,day","bigint,bigint,bigint",The date for the given parts
 scalar,map_concat,list,,,"Returns a map created from merging the input maps, on key collision the value is taken from the last map with that key"
 scalar,minute,bigint,ts,timestamp,Extract the minute component from a date or timestamp
 scalar,month,bigint,ts,date,Extract the month component from a date or timestamp
 scalar,monthname,varchar,ts,date,The (English) name of the month
 scalar,multiply,bigint,"col0,col1","bigint,bigint",
 scalar,multiply,usmallint,"col0,col1","usmallint,usmallint",
-scalar,octet_length,bigint,blob,bit,Number of bytes in blob.
-scalar,pow,double,"x,y","double,double",Computes x to the power of y
 scalar,regexp_extract,varchar,"string,pattern[","varchar,varchar","If string contains the regexp pattern, returns the capturing group specified by optional parameter group. The group must be a constant value. If no group is given, it defaults to 0. A set of optional options can be set."
 scalar,sign,tinyint,x,smallint,"Returns the sign of x as -1, 0 or 1"
 scalar,second,bigint,ts,interval,Extract the second component from a date or timestamp
-scalar,repeat,array,"string,count","array,bigint",Repeats the string count number of times
 scalar,isfinite,boolean,x,double,"Returns true if the floating point value is finite, false otherwise"
-aggregate,regr_slope,double,"y,x","double,double",Returns the slope of the linear regression line for non-null pairs in a group.
 aggregate,quantile_cont,hugeint,"x,pos","hugeint,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,float,"x,pos","float,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
-aggregate,quantile,any,"x,pos","any,array","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
+aggregate,quantile,same_as_input,"x,pos","any,array","Returns the exact quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding exact quantiles."
 aggregate,min_by,bigint,"arg,val","bigint,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,bigint,"arg,val","bigint,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,varchar,"arg,val","varchar,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1517,7 +1274,7 @@ aggregate,max_by,varchar,"arg,val","varchar,varchar",Finds the row with the maxi
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,float,x,float,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,mad,interval,x,timestamp,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,sum_no_overflow,hugeint,arg,bigint,Internal only. Calculates the sum value for all tuples in arg without overflow checks.
@@ -1532,21 +1289,21 @@ aggregate,argmin,timestamp,"arg,val","timestamp,double",Finds the row with the m
 aggregate,argmin,blob,"arg,val","blob,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,hugeint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,bigint,"arg,val","bigint,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,date,"arg,val","date,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,blob,"arg,val","blob,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,bigint,"arg,val","bigint,hugeint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,varchar,"arg,val","varchar,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,varchar,"arg,val","varchar,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,decimal,"arg,val","decimal,integer",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,integer,"arg,val","integer,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1560,23 +1317,19 @@ aggregate,bitstring_agg,bit,"arg,col1,col2","smallint,smallint,smallint",Returns
 aggregate,bitstring_agg,bit,arg,usmallint,Returns a bitstring with bits set for each distinct value.
 aggregate,kurtosis,double,x,double,"Returns the excess kurtosis (Fisher’s definition) of all input values, with a bias correction according to the sample size"
 scalar,icu_collate_si,varchar,col0,varchar,
-scalar,abs,bigint,x,bigint,Absolute value
 scalar,add,interval,"col0,col1","interval,interval",
 scalar,add,time with time zone,"col0,col1","interval,time with time zone",
 scalar,add,array,"col0,col1","array,array",
-scalar,array_cross_product,double[3],"array, array","double[3],double[3]",Compute the cross product of two arrays of size 3. The array elements can not be NULL.
-scalar,array_negative_inner_product,double,"array1,array2","double[any],double[any]",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_slice,any,"list,begin,end","any,any,any",Extract a sublist using slice conventions. Negative values are accepted.
+scalar,array_cross_product,array<double>,"array, array","array<double>,array<double>",Compute the cross product of two arrays of size 3. The array elements can not be NULL.
+scalar,array_negative_inner_product,double,"array1,array2","array<double>,array<double>",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,bar,varchar,"x,min,max,width","double,double,double,double",Draws a band whose width is proportional to (x - min) and equal to width characters when x = max. width defaults to 80
 scalar,xor,bigint,"left,right","bigint,bigint",Bitwise XOR
 scalar,bit_count,tinyint,x,bigint,Returns the number of bits that are set
 scalar,weekofyear,bigint,ts,interval,Extract the weekofyear component from a date or timestamp
-scalar,contains,boolean,"string,search_string","varchar,varchar",Returns true if search_string is found within string.
 scalar,url_decode,varchar,input,varchar,Unescapes the URL encoded input.
 scalar,current_localtimestamp,timestamp,,,
 scalar,current_schemas,array,include_implicit,boolean,Returns list of schemas. Pass a parameter of True to include implicit schemas
 scalar,datediff,bigint,"part,startdate,enddate","varchar,date,date",The number of partition boundaries between the timestamps
-scalar,datepart,bigint,"ts,col1","varchar,interval",Get subfield (equivalent to extract)
 scalar,divide,uhugeint,"col0,col1","uhugeint,uhugeint",
 scalar,epoch_ms,bigint,temporal,timestamp,Extract the epoch component in milliseconds from a temporal type
 scalar,epoch_ms,bigint,temporal,timestamp with time zone,Extract the epoch component in milliseconds from a temporal type
@@ -1591,44 +1344,33 @@ scalar,icu_collate_hr,varchar,col0,varchar,
 scalar,icu_collate_ln,varchar,col0,varchar,
 scalar,icu_collate_sa,varchar,col0,varchar,
 scalar,icu_collate_tk,varchar,col0,varchar,
-scalar,isnan,boolean,x,double,"Returns true if the floating point value is not a number, false otherwise"
 scalar,isoyear,bigint,ts,timestamp,Extract the isoyear component from a date or timestamp
 scalar,json_exists,array,"col0,col1","json,array",
 scalar,json_keys,array,"col0,col1","json,array",
-scalar,json_transform_strict,any,"col0,col1","varchar,varchar",
-scalar,list_distinct,array,list,array,Removes all duplicates and NULLs from a list. Does not preserve the original order
-scalar,list_extract,any,"list,index","array,bigint",Extract the indexth (1-based) value from the list.
+scalar,json_transform_strict,same_as_input,"col0,col1","varchar,varchar",
 scalar,list_inner_product,double,"list1,list2","array,array",Compute the inner product between two lists
 scalar,timezone,bigint,ts,timestamp,Extract the timezone component from a date or timestamp
 scalar,subtract,integer,"col0,col1","integer,integer",
 scalar,subtract,interval,"col0,col1","interval,interval",
 scalar,subtract,timestamp,"col0,col1","date,interval",
 scalar,list_negative_dot_product,float,"list1,list2","array,array",Compute the negative inner product between two lists
-scalar,list_position,integer,"list,element","array,any","Returns the index of the element if the list contains the element. If the element is not found, it returns NULL."
 scalar,list_reverse_sort,array,"list,col1","array,varchar",Sorts the elements of the list in reverse order
-scalar,list_slice,any,"list,begin,end,step","any,any,any,bigint",list_slice with added step feature.
-scalar,list_sort,array,"list,col1","array,varchar",Sorts the elements of the list
-scalar,log,double,"b, x","double,double","Computes the logarithm of x to base b. b may be omitted, in which case the default 10"
 scalar,millisecond,bigint,ts,interval,Extract the millisecond component from a date or timestamp
 scalar,strftime,varchar,"data,format","date,varchar",Converts a date to a string according to the format string.
 scalar,mod,tinyint,"col0,col1","tinyint,tinyint",
 scalar,multiply,decimal,"col0,col1","decimal,decimal",
-scalar,octet_length,bigint,blob,blob,Number of bytes in blob.
 scalar,parse_dirname,varchar,"string,separator","varchar,varchar","Returns the top-level directory name. separator options: system, both_slash (default), forward_slash, backslash"
 scalar,signbit,boolean,x,float,Returns whether the signbit is set or not
 scalar,sign,tinyint,x,uhugeint,"Returns the sign of x as -1, 0 or 1"
-scalar,repeat,blob,"string,count","blob,bigint",Repeats the string count number of times
 aggregate,min_by,double,"arg,val","double,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,varchar,"arg,val","varchar,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp,"arg,val","timestamp,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp with time zone,"arg,val","timestamp with time zone,date",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,stddev,double,x,double,Returns the sample standard deviation
+aggregate,min_by,same_as_input,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,double",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,sum,hugeint,arg,smallint,Calculates the sum value for all tuples in arg.
 aggregate,reservoir_quantile,float,"x,quantile","float,double","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,approx_quantile,date,"x,pos","date,float",Computes the approximate quantile using T-Digest.
 aggregate,approx_quantile,array,"x,pos","time,array",Computes the approximate quantile using T-Digest.
@@ -1638,14 +1380,14 @@ aggregate,argmax,decimal,"arg,val","decimal,integer",Finds the row with the maxi
 aggregate,argmin,varchar,"arg,val","varchar,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,varchar,"arg,val","varchar,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,varchar,"arg,val","varchar,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,date,"arg,val","date,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp with time zone,"arg,val","timestamp with time zone,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,blob,"arg,val","blob,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,decimal,"arg,val","decimal,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_max,any,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_max,same_as_input,"arg,val","any,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,bigint,"arg,val","bigint,integer",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,bigint,"arg,val","bigint,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1659,32 +1401,21 @@ aggregate,arg_min_null,timestamp with time zone,"arg,val","timestamp with time z
 aggregate,arg_min_null,decimal,"arg,val","decimal,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,bigint,Returns a bitstring with bits set for each distinct value.
 aggregate,bitstring_agg,bit,arg,hugeint,Returns a bitstring with bits set for each distinct value.
-aggregate,bit_and,ubigint,arg,ubigint,Returns the bitwise AND of all bits in a given expression.
 scalar,add,tinyint,"col0,col1","tinyint,tinyint",
 scalar,add,timestamp,"col0,col1","timestamp,interval",
 scalar,array_grade_up,array,list,array,Returns the index of their sorted position.
-scalar,array_slice,any,"list,begin,end,step","any,any,any,bigint",list_slice with added step feature.
 scalar,array_where,array,"value_list,mask_list","array,array",Returns a list with the BOOLEANs in mask_list applied as a mask to the value_list.
 scalar,xor,tinyint,"left,right","tinyint,tinyint",Bitwise XOR
 scalar,xor,ubigint,"left,right","ubigint,ubigint",Bitwise XOR
 scalar,bit_count,tinyint,x,integer,Returns the number of bits that are set
 scalar,bit_position,integer,"substring,bitstring","bit,bit","Returns first starting index of the specified substring within bits, or zero if it is not present. The first (leftmost) bit is indexed 1"
 scalar,weekday,bigint,ts,interval,Extract the weekday component from a date or timestamp
-scalar,combine,aggregate_state<?>,"col0,col1","aggregate_state<?>,any",
-scalar,version,varchar,,,Returns the currently active version of DuckDB in this format: v0.3.2	
 scalar,damerau_levenshtein,bigint,"str1,str2","varchar,varchar","Extension of Levenshtein distance to also include transposition of adjacent characters as an allowed edit operation. In other words, the minimum number of edit operations (insertions, deletions, substitutions or transpositions) required to change one string to another. Different case is considered different"
-scalar,datepart,bigint,"ts,col1","varchar,time with time zone",Get subfield (equivalent to extract)
-scalar,date_part,bigint,"ts,col1","varchar,time",Get subfield (equivalent to extract)
 scalar,dayofweek,bigint,ts,timestamp,Extract the dayofweek component from a date or timestamp
 scalar,divide,hugeint,"col0,col1","hugeint,hugeint",
-scalar,flatten,array,nested_list,array,Flatten a nested list by one level
-scalar,floor,decimal,x,decimal,Rounds the number down
 scalar,from_hex,blob,value,varchar,Converts a value from hexadecimal representation to a blob
 scalar,gamma,double,x,double,Interpolation of (x-1) factorial (so decimal inputs are allowed)
-scalar,generate_series,array,"start,stop,step","timestamp,timestamp,interval",Create a list of values between start and stop - the stop parameter is inclusive
-scalar,greatest,any,arg1,any,Returns the highest value of the set of input parameters
 scalar,greatest_common_divisor,hugeint,"x,y","hugeint,hugeint",Computes the greatest common divisor of x and y
-scalar,trunc,uhugeint,x,uhugeint,Truncates the number
 scalar,icu_collate_dz,varchar,col0,varchar,
 scalar,icu_collate_eo,varchar,col0,varchar,
 scalar,icu_collate_fo,varchar,col0,varchar,
@@ -1700,15 +1431,11 @@ scalar,json_extract_path_text,varchar,"col0,col1","json,varchar",
 scalar,json_valid,boolean,col0,json,
 scalar,to_days,interval,integer,integer,Construct a day interval
 scalar,to_centuries,interval,integer,integer,Construct a century interval
-scalar,list_cat,array,"list1,list2","array,array",Concatenates two lists.
 scalar,time_bucket,date,"bucket_width,timestamp,origin","interval,date,interval","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,time_bucket,timestamp with time zone,"bucket_width,timestamp,origin","interval,timestamp with time zone,interval","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,timezone,timestamp with time zone,"ts,col1","varchar,timestamp",Extract the timezone component from a date or timestamp
 scalar,subtract,utinyint,col0,utinyint,
-scalar,substring,varchar,"string,start,length","varchar,bigint,bigint",Extract substring of length characters starting from character start. Note that a start value of 1 refers to the first character of the string.
-scalar,strpos,bigint,"haystack,needle","varchar,varchar","Returns location of first occurrence of needle in haystack, counting from 1. Returns 0 if no match found"
 scalar,make_time,time,"hour,minute,seconds","bigint,bigint,double",The time for the given parts
-scalar,map,map,,,Creates a map from a set of keys and values
 scalar,string_split_regex,array,"string,separator,col2","varchar,varchar,varchar",Splits the string along the regex
 scalar,microsecond,bigint,ts,date,Extract the microsecond component from a date or timestamp
 scalar,minute,bigint,ts,time,Extract the minute component from a date or timestamp
@@ -1724,7 +1451,6 @@ scalar,parse_filename,varchar,"string,trim_extension","varchar,varchar","Returns
 scalar,prefix,boolean,"col0,col1","varchar,varchar",
 scalar,regexp_extract,varchar,"string,pattern[,group = 0][","varchar,varchar,array","If string contains the regexp pattern, returns the capturing group specified by optional parameter group. The group must be a constant value. If no group is given, it defaults to 0. A set of optional options can be set."
 scalar,sign,tinyint,x,bigint,"Returns the sign of x as -1, 0 or 1"
-scalar,round,decimal,x,decimal,Rounds x to s decimal places
 aggregate,quantile_cont,tinyint,"x,pos","tinyint,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,bigint,"x,pos","bigint,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,date,"x,pos","date,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
@@ -1741,9 +1467,8 @@ aggregate,max_by,varchar,"arg,val","varchar,timestamp",Finds the row with the ma
 aggregate,max_by,varchar,"arg,val","varchar,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,date,"arg,val","date,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,timestamp with time zone,"arg,val","timestamp with time zone,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max,array,"arg,col1","any,bigint",Returns the maximum value present in arg.
+aggregate,max_by,same_as_input,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,interval,x,date,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,reservoir_quantile,array,"x,quantile","tinyint,array","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,reservoir_quantile,hugeint,"x,quantile,sample_size","hugeint,double,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -1776,27 +1501,22 @@ aggregate,arg_min,decimal,"arg,val","decimal,timestamp",Finds the row with the m
 aggregate,arg_min_null,bigint,"arg,val","bigint,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,blob,"arg,val","blob,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,arg,uinteger,Returns a bitstring with bits set for each distinct value.
-aggregate,bit_xor,hugeint,arg,hugeint,Returns the bitwise XOR of all bits in a given expression.
-scalar,abs,hugeint,x,hugeint,Absolute value
 scalar,add,float,col0,float,
 scalar,add,float,"col0,col1","float,float",
 scalar,add,decimal,col0,decimal,
 scalar,add,uinteger,col0,uinteger,
 scalar,add,timestamp,"col0,col1","date,time",
 scalar,array_apply,array,"list,lambda","array,lambda",Returns a list that is the result of applying the lambda function to each element of the input list. See the Lambda Functions section for more details
-scalar,array_cosine_distance,float,"array1,array2","float[any],float[any]",Compute the cosine distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,array_cosine_similarity,double,"array1,array2","double[any],double[any]",Compute the cosine similarity between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_cosine_distance,float,"array1,array2","array<float>,array<float>",Compute the cosine distance between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
+scalar,array_cosine_similarity,double,"array1,array2","array<double>,array<double>",Compute the cosine similarity between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,array_filter,array,"list,lambda","array,lambda",Constructs a list from those elements of the input list for which the lambda function returns true
-scalar,array_sort,array,list,array,Sorts the elements of the list
 scalar,array_transform,array,"list,lambda","array,lambda",Returns a list that is the result of applying the lambda function to each element of the input list. See the Lambda Functions section for more details
 scalar,bit_count,tinyint,x,hugeint,Returns the number of bits that are set
 scalar,weekday,bigint,ts,timestamp with time zone,Extract the weekday component from a date or timestamp
 scalar,week,bigint,ts,timestamp with time zone,Extract the week component from a date or timestamp
-scalar,concat,any,string,any,Concatenate many strings together.
-scalar,concat_ws,varchar,"separator,string","varchar,any",Concatenate strings together separated by the specified separator.
-scalar,current_setting,any,setting_name,varchar,Returns the current value of the configuration setting
+scalar,current_setting,same_as_input,setting_name,varchar,Returns the current value of the configuration setting
 scalar,day,bigint,ts,timestamp with time zone,Extract the day component from a date or timestamp
 scalar,dayofyear,bigint,ts,timestamp,Extract the dayofyear component from a date or timestamp
 scalar,epoch,double,temporal,time,Extract the epoch component from a temporal type
@@ -1809,7 +1529,6 @@ scalar,icu_collate_ko,varchar,col0,varchar,
 scalar,icu_collate_pa_in,varchar,col0,varchar,
 scalar,icu_collate_tr,varchar,col0,varchar,
 scalar,icu_collate_zh_mo,varchar,col0,varchar,
-scalar,instr,bigint,"haystack,needle","varchar,varchar","Returns location of first occurrence of needle in haystack, counting from 1. Returns 0 if no match found"
 scalar,isinf,boolean,x,double,"Returns true if the floating point value is infinite, false otherwise"
 scalar,json_deserialize_sql,varchar,col0,json,
 scalar,json_extract_path_text,array,"col0,col1","varchar,array",
@@ -1820,13 +1539,9 @@ scalar,json_serialize_plan,json,"col0,col1,col2,col3,col4","varchar,boolean,bool
 scalar,json_serialize_sql,json,col0,varchar,
 scalar,json_value,varchar,"col0,col1","varchar,varchar",
 scalar,json_value,array,"col0,col1","json,array",
-scalar,lcm,bigint,"x,y","bigint,bigint",Computes the least common multiple of x and y
-scalar,list_distance,float,"list1,list2","array,array",Compute the distance between two lists
-scalar,today,date,,,
 scalar,time_bucket,timestamp,"bucket_width,timestamp","interval,timestamp","Truncate TIMESTAMPTZ by the specified interval bucket_width. Buckets are aligned relative to origin TIMESTAMPTZ. The origin defaults to 2000-01-03 00:00:00+00 for buckets that do not include a month or year interval, and to 2000-01-01 00:00:00+00 for month and year buckets"
 scalar,subtract,tinyint,"col0,col1","tinyint,tinyint",
 scalar,str_split_regex,array,"string,separator","varchar,varchar",Splits the string along the regex
-scalar,list_resize,array,"list,size[,value]","array,any,any",Resizes the list to contain size elements. Initializes new elements with value or NULL if value is not set.
 scalar,list_reverse_sort,array,list,array,Sorts the elements of the list in reverse order
 scalar,minute,bigint,ts,interval,Extract the minute component from a date or timestamp
 scalar,minute,bigint,ts,timestamp with time zone,Extract the minute component from a date or timestamp
@@ -1834,11 +1549,8 @@ scalar,nextafter,double,"x, y","double,double",Returns the next floating point v
 scalar,nextafter,float,"x, y","float,float",Returns the next floating point value after x in the direction of y
 scalar,quarter,bigint,ts,timestamp,Extract the quarter component from a date or timestamp
 scalar,quarter,bigint,ts,timestamp with time zone,Extract the quarter component from a date or timestamp
-scalar,sin,double,x,double,Computes the sin of x
 scalar,second,bigint,ts,time,Extract the second component from a date or timestamp
-scalar,replace,varchar,"string,source,target","varchar,varchar,varchar",Replaces any occurrences of the source with target in string
 scalar,isfinite,boolean,x,timestamp,"Returns true if the floating point value is finite, false otherwise"
-aggregate,regr_sxy,double,"y,x","double,double",Returns the population covariance of input values
 aggregate,quantile_cont,tinyint,"x,pos","tinyint,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,integer,"x,pos","integer,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,quantile_cont,timestamp with time zone,"x,pos","timestamp with time zone,double","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
@@ -1847,21 +1559,19 @@ aggregate,min_by,integer,"arg,val","integer,timestamp with time zone",Finds the 
 aggregate,min_by,bigint,"arg,val","bigint,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,date,"arg,val","date,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,timestamp with time zone,"arg,val","timestamp with time zone,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,min_by,any,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,min_by,same_as_input,"arg,val","any,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,integer,"arg,val","integer,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,double,"arg,val","double,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,interval,x,timestamp with time zone,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
-aggregate,sum,hugeint,arg,hugeint,Calculates the sum value for all tuples in arg.
-aggregate,sum,double,arg,double,Calculates the sum value for all tuples in arg.
 aggregate,reservoir_quantile,array,"x,quantile,sample_size","smallint,array,integer","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,listagg,varchar,"str,arg","any,varchar",Concatenates the column string values with an optional separator.
-aggregate,last,any,arg,any,Returns the last value of a column. This function is affected by ordering.
+aggregate,last,same_as_input,arg,any,Returns the last value of a column. This function is affected by ordering.
 aggregate,approx_quantile,timestamp with time zone,"x,pos","timestamp with time zone,float",Computes the approximate quantile using T-Digest.
 aggregate,argmax,timestamp with time zone,"arg,val","timestamp with time zone,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,blob,"arg,val","blob,varchar",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,blob,"arg,val","blob,date",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,integer,"arg,val","integer,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,double,"arg,val","double,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,integer",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1875,8 +1585,8 @@ aggregate,arg_max,decimal,"arg,val","decimal,timestamp",Finds the row with the m
 aggregate,arg_max_null,bigint,"arg,val","bigint,varchar",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,bigint,"arg,val","bigint,timestamp with time zone",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,blob,"arg,val","blob,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,integer",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,date",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,integer",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,date",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,double,"arg,val","double,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,varchar,"arg,val","varchar,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,date,"arg,val","date,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1886,42 +1596,27 @@ aggregate,arg_min_null,bigint,"arg,val","bigint,double",Finds the row with the m
 aggregate,arg_min_null,bigint,"arg,val","bigint,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,double,"arg,val","double,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,timestamp,"arg,val","timestamp,hugeint",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,arg_min_null,any,"arg,val","any,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,avg,double,x,smallint,Calculates the average value for all tuples in x.
+aggregate,arg_min_null,same_as_input,"arg,val","any,bigint",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
+aggregate,arg_min_null,same_as_input,"arg,val","any,blob",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,bitstring_agg,bit,"arg,col1,col2","integer,integer,integer",Returns a bitstring with bits set for each distinct value.
-aggregate,bit_and,hugeint,arg,hugeint,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_or,smallint,arg,smallint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_or,integer,arg,integer,Returns the bitwise OR of all bits in a given expression.
-aggregate,corr,double,"y,x","double,double",Returns the correlation coefficient for non-null pairs in a group.
-aggregate,count,bigint,,,Returns the number of non-null values in arg.
 aggregate,count_star,bigint,,,
-scalar,abs,integer,x,integer,Absolute value
-scalar,abs,uinteger,x,uinteger,Absolute value
-scalar,array_negative_dot_product,float,"array1,array2","float[any],float[any]",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
-scalar,asinh,double,x,double,Computes the inverse hyperbolic sin of x
+scalar,array_negative_dot_product,float,"array1,array2","array<float>,array<float>",Compute the negative inner product between two arrays of the same size. The array elements can not be NULL. The arrays can have any size as long as the size is the same for both arguments.
 scalar,year,bigint,ts,date,Extract the year component from a date or timestamp
 scalar,xor,smallint,"left,right","smallint,smallint",Bitwise XOR
 scalar,xor,integer,"left,right","integer,integer",Bitwise XOR
 scalar,xor,hugeint,"left,right","hugeint,hugeint",Bitwise XOR
 scalar,current_query,varchar,,,Returns the current query as a string
-scalar,datetrunc,timestamp,"part,timestamp","varchar,timestamp",Truncate to specified precision
 scalar,unpivot_list,list,,,"Identical to list_value, but generated as part of unpivot for better error messages"
 scalar,day,bigint,ts,interval,Extract the day component from a date or timestamp
 scalar,dayofweek,bigint,ts,date,Extract the dayofweek component from a date or timestamp
 scalar,decade,bigint,ts,date,Extract the decade component from a date or timestamp
 scalar,decade,bigint,ts,interval,Extract the decade component from a date or timestamp
 scalar,decade,bigint,ts,timestamp,Extract the decade component from a date or timestamp
-scalar,element_at,any,"map,key","any,any",Returns a list containing the value for a given key or an empty list if the key is not contained in the map. The type of the key provided in the second parameter must match the type of the map’s keys else an error is returned
 scalar,equi_width_bins,array,"min,max,bin_count,nice_rounding","double,double,bigint,boolean",Generates bin_count equi-width bins between the min and max. If enabled nice_rounding makes the numbers more readable/less jagged
 scalar,format,varchar,format,varchar,Formats a string using fmt syntax
-scalar,from_json,any,"col0,col1","json,varchar",
-scalar,getvariable,any,col0,varchar,
-scalar,trunc,integer,x,integer,Truncates the number
-scalar,trunc,decimal,x,decimal,Truncates the number
-scalar,trunc,usmallint,x,usmallint,Truncates the number
+scalar,from_json,same_as_input,"col0,col1","json,varchar",
 scalar,icu_collate_ar_sa,varchar,col0,varchar,
 scalar,icu_collate_bs,varchar,col0,varchar,
 scalar,icu_collate_et,varchar,col0,varchar,
@@ -1940,24 +1635,20 @@ scalar,json_extract_path_text,array,"col0,col1","json,array",
 scalar,json_type,varchar,col0,varchar,
 scalar,len,bigint,string,bit,Number of characters in string.
 scalar,len,bigint,string,array,Number of characters in string.
-scalar,length,bigint,string,array,Number of characters in string.
 scalar,to_milliseconds,interval,double,double,Construct a millisecond interval
 scalar,to_millennia,interval,integer,integer,Construct a millenium interval
-scalar,list_aggr,any,"list,name","array,varchar",Executes the aggregate function name on the elements of list
+scalar,list_aggr,same_as_input,"list,name","array,varchar",Executes the aggregate function name on the elements of list
 scalar,to_binary,varchar,value,uhugeint,Converts the value to binary representation
 scalar,timezone_hour,bigint,ts,interval,Extract the timezone_hour component from a date or timestamp
 scalar,subtract,float,"col0,col1","float,float",
 scalar,subtract,interval,col0,interval,
-scalar,list_indexof,integer,"list,element","array,any","Returns the index of the element if the list contains the element. If the element is not found, it returns NULL."
-scalar,md5,varchar,value,blob,Returns the MD5 hash of the value as a string
 scalar,monthname,varchar,ts,timestamp with time zone,The (English) name of the month
 scalar,multiply,float,"col0,col1","float,float",
 scalar,multiply,utinyint,"col0,col1","utinyint,utinyint",
 scalar,nanosecond,bigint,tsns,timestamp with time zone,Extract the nanosecond component from a date or timestamp
 scalar,quarter,bigint,ts,interval,Extract the quarter component from a date or timestamp
 scalar,regexp_split_to_array,array,"string,separator,col2","varchar,varchar,varchar",Splits the string along the regex
-scalar,setseed,"""null""",col0,double,Sets the seed to be used for the random function
-scalar,round,decimal,"x,precision","decimal,integer",Rounds x to s decimal places
+scalar,setseed,null,col0,double,Sets the seed to be used for the random function
 aggregate,quantile_cont,smallint,"x,pos","smallint,array","Returns the interpolated quantile number between 0 and 1 . If pos is a LIST of FLOATs, then the result is a LIST of the corresponding interpolated quantiles.	"
 aggregate,min_by,integer,"arg,val","integer,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,min_by,double,"arg,val","double,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
@@ -1975,7 +1666,7 @@ aggregate,max_by,date,"arg,val","date,hugeint",Finds the row with the maximum va
 aggregate,max_by,timestamp,"arg,val","timestamp,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,blob,"arg,val","blob,integer",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,max_by,decimal,"arg,val","decimal,blob",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,max_by,any,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,max_by,same_as_input,"arg,val","any,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,mad,decimal,x,decimal,Returns the median absolute deviation for the values within x. NULL values are ignored. Temporal types return a positive INTERVAL.	
 aggregate,reservoir_quantile,hugeint,"x,quantile","hugeint,double","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
 aggregate,reservoir_quantile,array,"x,quantile","float,array","Gives the approximate quantile using reservoir sampling, the sample size is optional and uses 8192 as a default size."
@@ -1989,24 +1680,24 @@ aggregate,argmax,varchar,"arg,val","varchar,date",Finds the row with the maximum
 aggregate,argmax,date,"arg,val","date,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,timestamp with time zone,"arg,val","timestamp with time zone,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmax,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmax,any,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmax,same_as_input,"arg,val","any,bigint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,bigint,"arg,val","bigint,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,bigint,"arg,val","bigint,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,varchar,"arg,val","varchar,bigint",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,timestamp,"arg,val","timestamp,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,argmin,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,argmin,any,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,argmin,same_as_input,"arg,val","any,timestamp",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,date,"arg,val","date,hugeint",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max,timestamp,"arg,val","timestamp,timestamp",Finds the row with the maximum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_max_null,integer,"arg,val","integer,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,varchar,"arg,val","varchar,bigint",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp,"arg,val","timestamp,timestamp",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_max_null,timestamp with time zone,"arg,val","timestamp with time zone,integer",Finds the row with the maximum val. Calculates the arg expression at that row.
-aggregate,arg_max_null,any,"arg,val","any,double",Finds the row with the maximum val. Calculates the arg expression at that row.
+aggregate,arg_max_null,same_as_input,"arg,val","any,double",Finds the row with the maximum val. Calculates the arg expression at that row.
 aggregate,arg_min,timestamp with time zone,"arg,val","timestamp with time zone,blob",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min,decimal,"arg,val","decimal,double",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
-aggregate,arg_min,any,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
+aggregate,arg_min,same_as_input,"arg,val","any,varchar",Finds the row with the minimum val. Calculates the non-NULL arg expression at that row.
 aggregate,arg_min_null,integer,"arg,val","integer,integer",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,integer,"arg,val","integer,timestamp",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,integer,"arg,val","integer,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
@@ -2017,8 +1708,4 @@ aggregate,arg_min_null,decimal,"arg,val","decimal,hugeint",Finds the row with th
 aggregate,arg_min_null,decimal,"arg,val","decimal,double",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,date",Finds the row with the minimum val. Calculates the arg expression at that row.
 aggregate,arg_min_null,decimal,"arg,val","decimal,timestamp with time zone",Finds the row with the minimum val. Calculates the arg expression at that row.
-aggregate,bit_and,bit,arg,bit,Returns the bitwise AND of all bits in a given expression.
-aggregate,bit_or,tinyint,arg,tinyint,Returns the bitwise OR of all bits in a given expression.
-aggregate,bit_xor,smallint,arg,smallint,Returns the bitwise XOR of all bits in a given expression.
-aggregate,bit_xor,uinteger,arg,uinteger,Returns the bitwise XOR of all bits in a given expression.
 aggregate,entropy,double,x,any,Returns the log-2 entropy of count input-values.
