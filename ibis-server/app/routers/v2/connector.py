@@ -75,17 +75,14 @@ async def query(
         # We don't need to check query cache
         if dry_run:
             connector.dry_run(rewritten_sql)
-            dry_response = Response(status_code=204)
-            dry_response.headers["X-Cache-Hit"] = "true"
-            return dry_response
+            return Response(status_code=204)
 
         # Not a dry run
         # Check if the query is cached
         cached_result = None
         cache_hit = False
-        enable_cache = cache_enable
 
-        if enable_cache:
+        if cache_enable:
             cached_result = query_cache_manager.get(
                 str(data_source), dto.sql, dto.connection_info
             )
@@ -98,7 +95,7 @@ async def query(
             return response
         else:
             result = connector.query(rewritten_sql, limit=limit)
-            if enable_cache:
+            if cache_enable:
                 query_cache_manager.set(
                     data_source, dto.sql, result, dto.connection_info
                 )
