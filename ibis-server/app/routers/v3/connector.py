@@ -96,7 +96,14 @@ async def query(
                 str(e),
             )
             return await v2.connector.query(
-                data_source, dto, dry_run, limit, java_engine_connector, headers
+                data_source,
+                dto,
+                dry_run,
+                cache_enable,
+                limit,
+                java_engine_connector,
+                query_cache_manager,
+                headers,
             )
 
 
