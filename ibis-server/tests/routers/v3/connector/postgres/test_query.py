@@ -136,6 +136,40 @@ async def test_query(client, manifest_str, connection_info):
     }
 
 
+async def test_query_with_cache(client, manifest_str, connection_info):
+    # First request - should miss cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response1.status_code == 200
+    assert response1.headers["X-Cache-Hit"] == "false"
+    result1 = response1.json()
+
+    # Second request with same SQL - should hit cache
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT * FROM wren.public.orders LIMIT 1",
+        },
+    )
+
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Hit"] == "true"
+    result2 = response2.json()
+
+    assert result1["data"] == result2["data"]
+    assert result1["columns"] == result2["columns"]
+    assert result1["dtypes"] == result2["dtypes"]
+
+
 async def test_query_with_connection_url(client, manifest_str, connection_url):
     response = await client.post(
         url=f"{base_url}/query",
