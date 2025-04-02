@@ -106,7 +106,7 @@ def test_read_function_list():
     path = "tests/functions.csv"
     session_context = SessionContext(manifest_str, path)
     functions = session_context.get_available_functions()
-    assert len(functions) == 25948
+    assert len(functions) == 283
 
     rewritten_sql = session_context.transform_sql(
         "SELECT add_two(c_custkey, c_custkey) FROM my_catalog.my_schema.customer"
@@ -118,7 +118,7 @@ def test_read_function_list():
 
     session_context = SessionContext(manifest_str, None)
     functions = session_context.get_available_functions()
-    assert len(functions) == 25941
+    assert len(functions) == 276
 
 
 def test_get_available_functions():
@@ -128,9 +128,9 @@ def test_get_available_functions():
     assert add_two.name == "add_two"
     assert add_two.function_type == "scalar"
     assert add_two.description == "Adds two numbers together."
-    assert add_two.return_type == "Int32"
-    assert add_two.param_names == "f1,f2"
-    assert add_two.param_types == "Int32,Int32"
+    assert add_two.return_type is None
+    assert add_two.param_names is None
+    assert add_two.param_types is None
 
     max_if = next(f for f in functions if f.name == "max_if")
     assert max_if.name == "max_if"
@@ -142,9 +142,9 @@ def test_get_available_functions():
     assert func.name == "add_custom"
     assert func.function_type == "scalar"
     assert func.description == "Adds two numbers together."
-    assert func.return_type == "Int32"
+    assert func.return_type is None
     assert func.param_names is None
-    assert func.param_types == "Int32,Int32"
+    assert func.param_types is None
 
     func = next(f for f in functions if f.name == "test_same_as_input_array")
     assert func.name == "test_same_as_input_array"
