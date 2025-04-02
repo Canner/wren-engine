@@ -61,8 +61,8 @@ async def test_function_list(client):
         "description": "Synonym for LOWER()",
         "function_type": "scalar",
         "param_names": None,
-        "param_types": "Utf8",
-        "return_type": "Utf8",
+        "param_types": None,
+        "return_type": None,
     }
 
     config.set_remote_function_list_path(None)

@@ -26,9 +26,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::vec;
 use tokio::runtime::Runtime;
-use wren_core::array::{AsArray, GenericByteArray};
+use wren_core::array::AsArray;
 use wren_core::ast::{visit_statements_mut, Expr, Statement, Value};
-use wren_core::datatypes::GenericStringType;
 use wren_core::dialect::GenericDialect;
 use wren_core::mdl::context::create_ctx_with_mdl;
 use wren_core::mdl::function::{
@@ -235,34 +234,21 @@ impl PySessionContext {
         }
     }
 
+    /// Get the registered functions in the session context.
+    /// Only return `name`, `function_type`, and `description`.
+    /// The `name` is the name of the function.
+    /// The `function_type` is the type of the function. (e.g. scalar, aggregate, window)
+    /// The `description` is the description of the function.
     async fn get_regietered_functions(
         ctx: &wren_core::SessionContext,
-    ) -> PyResult<Vec<RemoteFunction>> {
+    ) -> PyResult<Vec<RemoteFunctionDto>> {
         let sql = r#"
-            WITH inputs AS (
-                SELECT
-                    r.specific_name,
-                    r.data_type as return_type,
-                    pi.rid,
-                    array_agg(pi.parameter_name order by pi.ordinal_position) as param_names,
-                    array_agg(pi.data_type order by pi.ordinal_position) as param_types
-                FROM
-                    information_schema.routines r
-                JOIN
-                    information_schema.parameters pi ON r.specific_name = pi.specific_name AND pi.parameter_mode = 'IN'
-                GROUP BY 1, 2, 3
-            )
-            SELECT
+            SELECT DISTINCT
                 r.routine_name as name,
-                i.param_names,
-                i.param_types,
-                r.data_type as return_type,
                 r.function_type,
                 r.description
             FROM
                 information_schema.routines r
-            LEFT JOIN
-                inputs i ON r.specific_name = i.specific_name
         "#;
         let batches = ctx
             .sql(sql)
@@ -275,27 +261,16 @@ impl PySessionContext {
 
         for batch in batches {
             let name_array = batch.column(0).as_string::<i32>();
-            let param_names_array = batch.column(1).as_list::<i32>();
-            let param_types_array = batch.column(2).as_list::<i32>();
-            let return_type_array = batch.column(3).as_string::<i32>();
-            let function_type_array = batch.column(4).as_string::<i32>();
-            let description_array = batch.column(5).as_string::<i32>();
+            let function_type_array = batch.column(1).as_string::<i32>();
+            let description_array = batch.column(2).as_string::<i32>();
 
             for row in 0..batch.num_rows() {
                 let name = name_array.value(row).to_string();
-                let param_names =
-                    Self::to_string_vec(param_names_array.value(row).as_string::<i32>());
-                let param_types =
-                    Self::to_string_vec(param_types_array.value(row).as_string::<i32>());
-                let return_type = return_type_array.value(row).to_string();
                 let description = description_array.value(row).to_string();
                 let function_type = function_type_array.value(row).to_string();
 
-                functions.push(RemoteFunction {
+                functions.push(RemoteFunctionDto {
                     name,
-                    param_names: Some(param_names),
-                    param_types: Some(param_types),
-                    return_type,
                     description: Some(description),
                     function_type: FunctionType::from_str(&function_type).unwrap(),
                 });
@@ -303,13 +278,23 @@ impl PySessionContext {
         }
         Ok(functions)
     }
+}
 
-    fn to_string_vec(
-        array: &GenericByteArray<GenericStringType<i32>>,
-    ) -> Vec<Option<String>> {
-        array
-            .iter()
-            .map(|s| s.map(|s| s.to_string()))
-            .collect::<Vec<Option<String>>>()
+struct RemoteFunctionDto {
+    name: String,
+    function_type: FunctionType,
+    description: Option<String>,
+}
+
+impl From<RemoteFunctionDto> for PyRemoteFunction {
+    fn from(remote_function: RemoteFunctionDto) -> Self {
+        Self {
+            function_type: remote_function.function_type.to_string(),
+            name: remote_function.name,
+            return_type: None,
+            param_names: None,
+            param_types: None,
+            description: remote_function.description,
+        }
     }
 }
