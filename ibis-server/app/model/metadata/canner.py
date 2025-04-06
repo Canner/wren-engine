@@ -166,7 +166,7 @@ class CannerMetadata(Metadata):
             name=data["sqlName"],
             description=data["dataMetadata"]["metadata"]["description"],
             columns=cls._build_columns(data["columns"]),
-            primaryKey="",
+            primaryKey=[],
             properties=(
                 TableProperties(
                     catalog="canner",

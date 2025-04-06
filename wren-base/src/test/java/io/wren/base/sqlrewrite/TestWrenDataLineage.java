@@ -62,7 +62,7 @@ public class TestWrenDataLineage
                         Column.column("acctbal", WrenTypes.INTEGER, null, true),
                         Column.column("mktsegment", WrenTypes.VARCHAR, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true)),
-                "custkey");
+                List.of("custkey"));
         orders = Model.model("Orders",
                 "select * from main.orders",
                 List.of(
@@ -76,7 +76,7 @@ public class TestWrenDataLineage
                         Column.column("shippriority", WrenTypes.INTEGER, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                         Column.column("lineitem", "Lineitem", "OrdersLineitem", true)),
-                "orderkey");
+                List.of("orderkey"));
         lineitem = Model.model("Lineitem",
                 "select * from main.lineitem",
                 List.of(
@@ -97,7 +97,7 @@ public class TestWrenDataLineage
                         Column.column("shipmode", WrenTypes.VARCHAR, null, true),
                         Column.column("comment", WrenTypes.VARCHAR, null, true),
                         Column.column("orderkey_linenumber", WrenTypes.VARCHAR, null, true, "concat(orderkey, '-', linenumber)")),
-                "orderkey_linenumber");
+                List.of("orderkey_linenumber"));
         ordersCustomer = Relationship.relationship("OrdersCustomer", List.of("Orders", "Customer"), JoinType.MANY_TO_ONE, "Orders.custkey = Customer.custkey");
         ordersLineitem = Relationship.relationship("OrdersLineitem", List.of("Orders", "Lineitem"), JoinType.ONE_TO_MANY, "Orders.orderkey = Lineitem.orderkey");
     }
@@ -211,7 +211,7 @@ public class TestWrenDataLineage
                         Column.column("mom_name", "VARCHAR", null, true, "name"),
                         Column.column("mom_custkey", "VARCHAR", null, true, "custkey"),
                         Column.column("mom_totalprice", "VARCHAR", null, true, "total_price")),
-                "mom_custkey");
+                List.of("mom_custkey"));
         Model newOrders = addColumnsToModel(
                 orders,
                 Column.column("on_customer", "OnCustomer", "OrdersOnCustomer", true),
@@ -447,7 +447,7 @@ public class TestWrenDataLineage
                 ImmutableList.of(
                         Column.column("c_totalprice", WrenTypes.INTEGER, null, true, "totalprice"),
                         Column.column("c_orderdate", WrenTypes.DATE, null, true, "orderdate")),
-                "orderdate");
+                List.of("orderdate"));
 
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(onDailyRevenue, orders))

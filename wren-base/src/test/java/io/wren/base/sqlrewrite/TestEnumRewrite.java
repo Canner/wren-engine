@@ -50,7 +50,7 @@ public class TestEnumRewrite
                                         Column.column("name", WrenTypes.VARCHAR, null, true),
                                         Column.column("sex", "Sex", null, true),
                                         Column.column("country", "Country", null, true)),
-                                "userId")))
+                                List.of("userId"))))
                 .setEnumDefinitions(List.of(
                         EnumDefinition.enumDefinition("Sex", List.of(EnumValue.enumValue("MALE"), EnumValue.enumValue("FEMALE"))),
                         EnumDefinition.enumDefinition("Country", List.of(EnumValue.enumValue("TAIWAN", "tw"), EnumValue.enumValue("JAPAN", "jp"), EnumValue.enumValue("USA", "us")))))

@@ -17,7 +17,7 @@ manifest = {
                 {"name": "id", "type": "integer"},
                 {"name": "many_col", "type": "integer"},
             ],
-            "primaryKey": "id",
+            "primaryKey": ["id"],
         },
         {
             "name": "t2",

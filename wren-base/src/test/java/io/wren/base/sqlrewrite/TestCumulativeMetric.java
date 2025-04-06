@@ -115,7 +115,7 @@ public class TestCumulativeMetric
                         List.of(
                                 Column.column("totalprice", WrenTypes.INTEGER, null, false),
                                 Column.column("orderdate", "DATE", null, false)),
-                        "orderdate"))
+                                List.of("orderdate")))
                 .build();
         WrenMDL mdl = WrenMDL.fromManifest(
                 copyOf(manifest)
