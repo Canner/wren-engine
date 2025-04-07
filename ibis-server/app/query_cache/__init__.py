@@ -1,4 +1,5 @@
 import hashlib
+import time
 from typing import Any, Optional
 
 import ibis
@@ -64,8 +65,16 @@ class QueryCacheManager:
 
         return hashlib.sha256(key_string.encode()).hexdigest()
 
-    def _get_cache_file_name(self, cache_key: str) -> str:
-        return f"{cache_key}.cache"
+    def _get_cache_file_name(self, cache_key: str) -> str | None:
+        op = self._get_dal_operator()
+        for file in op.list("/"):
+            if file.path.startswith(cache_key):
+                return file.path
+
+        # If no cache file found, create a new one
+        # Get unix timestamp without decimal part (truncates milliseconds)
+        cache_create_timestamp = int(time.time())
+        return f"{cache_key}-{cache_create_timestamp}.cache"
 
     def _get_full_path(self, path: str) -> str:
         return self.root + path
