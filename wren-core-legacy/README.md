@@ -6,7 +6,7 @@ Currently, Wren engine has been migrated to [a new Rust implementation](../wren-
 - JDK 21+
 
 ## Running Wren Core Server
-We recommand running Wren core server using Docker. It's the easist way to start the wren core server:
+We recommend running Wren core server using Docker. It's the easiest way to start the wren core server:
 ```
 docker run --name java-engine -p 8080:8080 -v $(pwd)/docker/etc:/usr/src/app/etc ghcr.io/canner/wren-engine:latest  
 ```
