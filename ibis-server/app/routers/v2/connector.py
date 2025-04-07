@@ -84,7 +84,7 @@ async def query(
 
         if cache_enable:
             cached_result = query_cache_manager.get(
-                str(data_source), dto.sql, dto.connection_info
+                data_source, dto.sql, dto.connection_info
             )
             cache_hit = cached_result is not None
 
@@ -92,6 +92,11 @@ async def query(
             span.add_event("cache hit")
             response = ORJSONResponse(to_json(cached_result))
             response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+            response.headers["X-Cache-Create-At"] = str(
+                query_cache_manager.get_cache_file_timestamp(
+                    data_source, dto.sql, dto.connection_info
+                )
+            )
             return response
         else:
             result = connector.query(rewritten_sql, limit=limit)
