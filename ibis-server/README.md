@@ -1,18 +1,12 @@
-# Ibis server
-Ibis server is a server base on Python that provides the API for rewriting the queries with [Modeling Definition Language (MDL)](https://docs.getwren.ai/engine/concept/what_is_mdl) manifest and connect data source via [Ibis](https://github.com/ibis-project/ibis). It is built on top of the [FastAPI](https://github.com/tiangolo/fastapi) framework. \
-We still need to run the Java engine for rewriting the queries. In the future, we will redesign the modeling core of java engine to [Rust](https://github.com/rust-lang/rust) and integrate the modeling core into the Ibis server. \
-We continuously integrate the Rust core with the Ibis server now.
-
-## Application structure
-The application consists of three main parts:
-1. [ibis-server](./): a Python web server powered by FastAPI and Ibis
-2. [wren-core](../wren-cores): a modeling core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
-3. [wren-core-py](../wren-core-py): a Python adapter for the modeling core
+# Ibis Server Module
+This module is the API server of Wren Engine. It's built on top of [FastAPI](https://fastapi.tiangolo.com/). It provides several APIs for SQL queries. A SQL query will be planned by [wren-core](../wren-core/), transpiled by [sqlglot](https://github.com/tobymao/sqlglot), and then executed by [ibis](https://github.com/ibis-project/ibis) to query the database.
 
 ## Quick Start
 
 ### Running on Docker
 You can follow the steps below to run the Java engine and ibis.
+> Wren Engine is migrating to [wren-core](../wren-core/). However, we still recommend starting [the Java engine](../wren-core-legacy/) to enable the query fallback mechanism.
+
 Create `compose.yaml` file and add the following content, edit environment variables if needed (see [Environment Variables](docs/development#environment-variables))
 ```yaml
 services:
@@ -38,7 +32,6 @@ vim config.properties
 Add the following content to the `config.properties` file
 ```bash
 node.environment=production
-wren.directory=/usr/src/app/etc/mdl
 ```
 Run the docker compose
 ```bash
