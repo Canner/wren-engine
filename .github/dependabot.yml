@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "maven"
-    directory: "/"
+    directory: "/wren-core-legacy"
     schedule:
       interval: "weekly"
     groups:
@@ -40,6 +40,19 @@ updates:
       - "python"
   - package-ecosystem: "cargo"
     directory: "/wren-core"
+    schedule:
+      interval: "weekly"
+    groups:
+      all:
+        patterns: [ "*" ]
+    commit-message:
+      prefix: "deps(core)"
+    labels:
+      - "dependencies"
+      - "core"
+      - "rust"
+  - package-ecosystem: "cargo"
+    directory: "/wren-core-base"
     schedule:
       interval: "weekly"
     groups:

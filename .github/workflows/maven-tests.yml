@@ -9,6 +9,12 @@ on:
       - reopened
       - labeled
       - unlabeled
+    paths:
+      - 'wren-core-legacy/**'
+
+defaults:
+  run:
+    working-directory: wren-core-legacy
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number }}
