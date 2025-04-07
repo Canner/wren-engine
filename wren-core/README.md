@@ -1,32 +1,36 @@
 # Wren Core Module
 
-This is just a very early version of transforming SQL with DataFusion. The main program is a simple use case demonstrating how to use the mdl library.
+The Wren Core module serves as the semantic core of the Wren engine. To understand the concept of the Wren engine, refer to the [Wren engine documentation](https://docs.getwren.ai/oss/engine/concept/what_is_semantics). 
 
-There are some modules:
+This module is utilized by the API v3 of the ibis-server for SQL planning. Additionally, there is another module for Python bindings, [wren-core-py](../wren-core-py/), which is also used by the [ibis-server](../ibis-server/).
 
-- mdl: The main entry point for using Wren modeling.
-- logical_plan: The rewrite rule based on the logical planner of DataFusion.
+## How to Test / Build
 
-# How to Test / Build
+- **Run Tests**:
+  - Most unit test cases are located in `src/mdl/mod.rs`.
+  - SQL end-to-end tests are executed using `sqllogictests`.
 
-- Run Test
-  Currently, the test cases are placed in `src/mdl/mod.rs`
-
+You can run all tests with the following command:
 ```
 cargo test
 ```
 
-# Coding Style
 
-Please format your code with `rustfmt` and `taplo` before submitting a pull request.
+## Coding Style
 
-## Format with rustfmt
+Please ensure your code is properly formatted before submitting a pull request. Use `rustfmt` for Rust files and `taplo` for formatting TOML files.
+
+### Format with rustfmt
+
+Run the following command to format Rust code:
 
 ```
 cargo fmt
 ```
 
-## Format toml with taplo
+### Format TOML with taplo
+
+Install `taplo-cli` and format TOML files with the following commands:
 
 ```
 cargo install taplo-cli --locked
