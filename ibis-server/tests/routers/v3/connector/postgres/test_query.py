@@ -149,6 +149,7 @@ async def test_query_with_cache(client, manifest_str, connection_info):
 
     assert response1.status_code == 200
     assert response1.headers["X-Cache-Hit"] == "false"
+    assert response1.headers["X-Cache-Create-At"] is None
     result1 = response1.json()
 
     # Second request with same SQL - should hit cache
@@ -163,6 +164,7 @@ async def test_query_with_cache(client, manifest_str, connection_info):
 
     assert response2.status_code == 200
     assert response2.headers["X-Cache-Hit"] == "true"
+    assert int(response2.headers["X-Cache-Create-At"]) > 1743984000  # 2025.04.07
     result2 = response2.json()
 
     assert result1["data"] == result2["data"]
