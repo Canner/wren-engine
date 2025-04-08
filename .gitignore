@@ -3,7 +3,7 @@
 *.ipr
 *.iws
 target/
-.idea
+**/.idea
 .run
 .DS_Store
 .classpath
