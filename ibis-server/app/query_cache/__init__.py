@@ -38,7 +38,7 @@ class QueryCacheManager:
     @tracer.start_as_current_span("set_cache", kind=trace.SpanKind.INTERNAL)
     def set(self, data_source: str, sql: str, result: Any, info) -> None:
         cache_key = self._generate_cache_key(data_source, sql, info)
-        cache_file_name = self._get_cache_file_name(cache_key)
+        cache_file_name = self._set_cache_file_name(cache_key)
         op = self._get_dal_operator()
         full_path = self._get_full_path(cache_file_name)
 
@@ -77,18 +77,24 @@ class QueryCacheManager:
 
         return hashlib.sha256(key_string.encode()).hexdigest()
 
-    def _get_cache_file_name(self, cache_key: str) -> str | None:
+    def _get_cache_file_name(self, cache_key: str) -> str:
         op = self._get_dal_operator()
         for file in op.list("/"):
             if file.path.startswith(cache_key):
                 return file.path
 
-        # If no cache file found, create a new one
-        # |                         hash                                 |  | timestamp |
-        # 0dba4b451b77e62de2e6dfa78579a40-1744016574.cache
+        cache_create_timestamp = int(time.time() * 1000)
+        return f"{cache_key}-{cache_create_timestamp}.cache"
 
-        # Get unix timestamp without decimal part (truncates milliseconds)
-        cache_create_timestamp = int(time.time())
+    def _set_cache_file_name(self, cache_key: str) -> str:
+        # Delete old cache files, make only one cache file per query
+        op = self._get_dal_operator()
+        for file in op.list("/"):
+            if file.path.startswith(cache_key):
+                logger.info(f"Deleting old cache file {file.path}")
+                op.delete(file.path)
+
+        cache_create_timestamp = int(time.time() * 1000)
         return f"{cache_key}-{cache_create_timestamp}.cache"
 
     def _get_full_path(self, path: str) -> str:

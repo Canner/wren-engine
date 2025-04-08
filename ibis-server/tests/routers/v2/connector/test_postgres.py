@@ -216,7 +216,7 @@ async def test_query_with_cache_override(
     )
     assert response1.status_code == 200
 
-    # Second request with same SQL - should hit cache
+    # Second request with same SQL - should hit cache and override it
     response2 = await client.post(
         url=f"{base_url}/query?cacheEnable=true&overrideCache=true",  # Enable cache
         json={
@@ -227,7 +227,9 @@ async def test_query_with_cache_override(
     )
     assert response2.status_code == 200
     assert response2.headers["X-Cache-Override"] == "true"
-    assert int(response2.headers["X-Cache-Override-At"]) > 1743984000  # 2025.04.07
+    assert int(response2.headers["X-Cache-Override-At"]) > int(
+        response2.headers["X-Cache-Create-At"]
+    )
 
 
 async def test_query_with_connection_url(

@@ -74,7 +74,7 @@ async def query(
                 )
                 cache_hit = cached_result is not None
 
-            if cache_hit:
+            if cache_hit and not override_cache:
                 span.add_event("cache hit")
                 response = ORJSONResponse(to_json(cached_result))
                 response.headers["X-Cache-Hit"] = str(cache_hit).lower()
@@ -86,12 +86,28 @@ async def query(
                 return response
             else:
                 result = connector.query(rewritten_sql, limit=limit)
+
+                response = ORJSONResponse(to_json(result))
+                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+                if cache_hit:
+                    response.headers["X-Cache-Create-At"] = str(
+                        query_cache_manager.get_cache_file_timestamp(
+                            data_source, dto.sql, dto.connection_info
+                        )
+                    )
+
                 if cache_enable:
                     query_cache_manager.set(
                         data_source, dto.sql, result, dto.connection_info
                     )
-                response = ORJSONResponse(to_json(result))
-                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
+
+                if override_cache:
+                    response.headers["X-cache-override"] = str(override_cache).lower()
+                    response.headers["X-cache-override-at"] = str(
+                        query_cache_manager.get_cache_file_timestamp(
+                            data_source, dto.sql, dto.connection_info
+                        )
+                    )
                 return response
         except Exception as e:
             logger.warning(
