@@ -81,7 +81,7 @@ https://github.com/user-attachments/assets/dab9b50f-70d7-4eb3-8fc8-2ab55dc7d2ec
 ## 🚧 Project Status
 Wren Engine is currently in the beta version. The project team is actively working on progress and aiming to release new versions at least biweekly.
 
-## 🛠️ Developer GuideS
+## 🛠️ Developer Guides
 The project consists of 4 main modules:
 1. [ibis-server](./ibis-server/): the Web server of Wren Engine powered by FastAPI and Ibis
 2. [wren-core](./wren-cores): the semantic core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
