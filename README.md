@@ -84,7 +84,7 @@ Wren Engine is currently in the beta version. The project team is actively worki
 ## 🛠️ Developer Guides
 The project consists of 4 main modules:
 1. [ibis-server](./ibis-server/): the Web server of Wren Engine powered by FastAPI and Ibis
-2. [wren-core](./wren-cores): the semantic core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
+2. [wren-core](./wren-core): the semantic core written in Rust powered by [Apache DataFusion](https://github.com/apache/datafusion)
 3. [wren-core-py](./wren-core-py): the Python binding for wren-core
 4. [mcp-server](./mcp-server/): the MCP server of Wren Engine powered by [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
 
