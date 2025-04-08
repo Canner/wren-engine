@@ -25,21 +25,21 @@ from app.routers import v2
 from app.routers.v2.connector import get_java_engine_connector, get_query_cache_manager
 from app.util import build_context, pushdown_limit, to_json
 
-router = APIRouter(prefix="/connector")
+router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
 
 MIGRATION_MESSAGE = "Wren engine is migrating to Rust version now. \
     Wren AI team are appreciate if you can provide the error messages and related logs for us."
 
 
-@router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)])
+@router.post("/{data_source}/query", dependencies=[Depends(verify_query_dto)], description="query the specified data source")
 async def query(
     data_source: DataSource,
     dto: QueryDTO,
-    dry_run: Annotated[bool, Query(alias="dryRun")] = False,
-    cache_enable: Annotated[bool, Query(alias="cacheEnable")] = False,
+    dry_run: Annotated[bool, Query(alias="dryRun", description="enable dryRun mode for validating SQL only")] = False,
+    cache_enable: Annotated[bool, Query(alias="cacheEnable", description="enable query cache mode")] = False,
     override_cache: Annotated[bool, Query(alias="overrideCache")] = False,
-    limit: int | None = None,
+    limit: int | None = Query(None, description="limit the number of rows returned"),
     headers: Annotated[str | None, Header()] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
@@ -141,7 +141,7 @@ async def query(
             )
 
 
-@router.post("/dry-plan")
+@router.post("/dry-plan", description="get the planned WrenSQL")
 async def dry_plan(
     dto: DryPlanDTO,
     headers: Annotated[str | None, Header()] = None,
@@ -161,7 +161,7 @@ async def dry_plan(
             return await v2.connector.dry_plan(dto, java_engine_connector, headers)
 
 
-@router.post("/{data_source}/dry-plan")
+@router.post("/{data_source}/dry-plan", description="get the dialect SQL for the specified data source")
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
@@ -187,7 +187,7 @@ async def dry_plan_for_data_source(
             )
 
 
-@router.post("/{data_source}/validate/{rule_name}")
+@router.post("/{data_source}/validate/{rule_name}", description="validate the specified rule")
 async def validate(
     data_source: DataSource,
     rule_name: str,
@@ -217,7 +217,7 @@ async def validate(
             )
 
 
-@router.get("/{data_source}/functions")
+@router.get("/{data_source}/functions", description="get the available function list of the specified data source")
 def functions(
     data_source: DataSource,
     headers: Annotated[str | None, Header()] = None,
@@ -232,7 +232,7 @@ def functions(
         return ORJSONResponse(func_list)
 
 
-@router.post("/{data_source}/model-substitute")
+@router.post("/{data_source}/model-substitute", description="get the SQL which table name is substituted")
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,

@@ -73,55 +73,98 @@ class QueryGcsFileDTO(QueryDTO):
 
 
 class BigQueryConnectionInfo(BaseModel):
-    project_id: SecretStr
-    dataset_id: SecretStr
-    credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
+    project_id: SecretStr = Field(description="GCP project id", examples=["my-project"])
+    dataset_id: SecretStr = Field(
+        description="BigQuery dataset id", examples=["my_dataset"]
+    )
+    credentials: SecretStr = Field(
+        description="Base64 encode `credentials.json`", examples=["eyJ..."]
+    )
 
 
 class CannerConnectionInfo(BaseModel):
-    host: SecretStr = Field(examples=["localhost"])
-    port: SecretStr = Field(examples=[7432])
-    user: SecretStr
-    pat: SecretStr
-    workspace: SecretStr
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(description="the port of your database", examples=["8080"])
+    user: SecretStr = Field(
+        description="the username of your database", examples=["admin"]
+    )
+    pat: SecretStr = Field(
+        description="the personal access token of your database", examples=["eyJ..."]
+    )
+    workspace: SecretStr = Field(
+        description="the workspace of your database", examples=["default"]
+    )
     enable_ssl: bool = Field(
         description="Enable SSL connection", default=False, alias="enableSSL"
     )
 
 
 class ClickHouseConnectionInfo(BaseModel):
-    host: SecretStr
-    port: SecretStr
-    database: SecretStr
-    user: SecretStr
-    password: SecretStr | None = None
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(description="the port of your database", examples=["8123"])
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["default"]
+    )
+    user: SecretStr = Field(
+        description="the username of your database", examples=["default"]
+    )
+    password: SecretStr | None = Field(
+        description="the password of your database", examples=["password"], default=None
+    )
 
 
 class MSSqlConnectionInfo(BaseModel):
-    host: SecretStr
-    port: SecretStr
-    database: SecretStr
-    user: SecretStr
-    password: SecretStr | None = None
-    driver: str = Field(default="ODBC Driver 18 for SQL Server")
-    tds_version: str = Field(default="8.0", alias="TDS_Version")
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(description="the port of your database", examples=["1433"])
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["master"]
+    )
+    user: SecretStr = Field(
+        description="the username of your database", examples=["sa"]
+    )
+    password: SecretStr | None = Field(
+        description="the password of your database", examples=["password"], default=None
+    )
+    driver: str = Field(
+        default="ODBC Driver 18 for SQL Server", description="The ODBC driver to use"
+    )
+    tds_version: str = Field(
+        default="8.0", alias="TDS_Version", description="The TDS version to use"
+    )
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyODBC", default=None
     )
 
 
 class MySqlConnectionInfo(BaseModel):
-    host: SecretStr
-    port: SecretStr
-    database: SecretStr
-    user: SecretStr
-    password: SecretStr | None = None
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(description="the port of your database", examples=["3306"])
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["default"]
+    )
+    user: SecretStr = Field(
+        description="the username of your database", examples=["root"]
+    )
+    password: SecretStr | None = Field(
+        description="the password of your database", examples=["password"], default=None
+    )
     ssl_mode: SecretStr | None = Field(
         alias="sslMode",
         default="ENABLED",
         description="Use ssl connection or not. The default value is `ENABLED` because MySQL uses `caching_sha2_password` by default and the driver MySQLdb support caching_sha2_password with ssl only.",
+        examples=["DISABLED", "ENABLED", "VERIFY_CA"],
     )
-    ssl_ca: SecretStr | None = Field(alias="sslCA", default=None)
+    ssl_ca: SecretStr | None = Field(
+        alias="sslCA", default=None, description="The path to the CA certificate file"
+    )
     kwargs: dict[str, str] | None = Field(
         description="Additional keyword arguments to pass to PyMySQL", default=None
     )
@@ -132,83 +175,155 @@ class ConnectionUrl(BaseModel):
 
 
 class PostgresConnectionInfo(BaseModel):
-    host: SecretStr = Field(examples=["localhost"])
-    port: SecretStr = Field(examples=[5432])
-    database: SecretStr
-    user: SecretStr
-    password: SecretStr | None = None
+    host: SecretStr = Field(
+        examples=["localhost"], description="the hostname of your database"
+    )
+    port: SecretStr = Field(examples=[5432], description="the port of your database")
+    database: SecretStr = Field(
+        examples=["postgres"], description="the database name of your database"
+    )
+    user: SecretStr = Field(
+        examples=["postgres"], description="the username of your database"
+    )
+    password: SecretStr | None = Field(
+        examples=["password"], description="the password of your database", default=None
+    )
 
 
 class OracleConnectionInfo(BaseModel):
-    host: SecretStr = Field(examples=["localhost"])
-    port: SecretStr = Field(examples=[1521])
-    database: SecretStr
-    user: SecretStr
-    password: SecretStr | None = None
+    host: SecretStr = Field(
+        examples=["localhost"], description="the hostname of your database"
+    )
+    port: SecretStr = Field(examples=[1521], description="the port of your database")
+    database: SecretStr = Field(
+        examples=["orcl"], description="the database name of your database"
+    )
+    user: SecretStr = Field(
+        examples=["admin"], description="the username of your database"
+    )
+    password: SecretStr | None = Field(
+        examples=["password"], description="the password of your database", default=None
+    )
 
 
 class SnowflakeConnectionInfo(BaseModel):
-    user: SecretStr
-    password: SecretStr
-    account: SecretStr
-    database: SecretStr
+    user: SecretStr = Field(
+        description="the username of your database", examples=["admin"]
+    )
+    password: SecretStr = Field(
+        description="the password of your database", examples=["password"]
+    )
+    account: SecretStr = Field(
+        description="the account name of your database", examples=["myaccount"]
+    )
+    database: SecretStr = Field(
+        description="the database name of your database", examples=["mydb"]
+    )
     sf_schema: SecretStr = Field(
-        alias="schema"
+        alias="schema",
+        description="the schema name of your database",
+        examples=["myschema"],
     )  # Use `sf_schema` to avoid `schema` shadowing in BaseModel
 
 
 class TrinoConnectionInfo(BaseModel):
-    host: SecretStr
-    port: SecretStr = Field(default="8080")
-    catalog: SecretStr
+    host: SecretStr = Field(
+        description="the hostname of your database", examples=["localhost"]
+    )
+    port: SecretStr = Field(default="8080", description="the port of your database")
+    catalog: SecretStr = Field(
+        description="the catalog name of your database", examples=["hive"]
+    )
     trino_schema: SecretStr = Field(
-        alias="schema"
+        alias="schema",
+        description="the schema name of your database",
+        examples=["default"],
     )  # Use `trino_schema` to avoid `schema` shadowing in BaseModel
-    user: SecretStr | None = None
-    password: SecretStr | None = None
+    user: SecretStr | None = Field(
+        description="the username of your database", examples=["admin"], default=None
+    )
+    password: SecretStr | None = Field(
+        description="the password of your database", examples=["password"], default=None
+    )
 
 
 class LocalFileConnectionInfo(BaseModel):
-    url: SecretStr
+    url: SecretStr = Field(
+        description="the root path of the local file", default="/", examples=["/data"]
+    )
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
 
 
 class S3FileConnectionInfo(BaseModel):
-    url: SecretStr = Field(description="the root path of the s3 bucket", default="/")
+    url: SecretStr = Field(
+        description="the root path of the s3 bucket", default="/", examples=["/data"]
+    )
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
-    bucket: SecretStr
-    region: SecretStr
-    access_key: SecretStr
-    secret_key: SecretStr
+    bucket: SecretStr = Field(
+        description="the name of the s3 bucket", examples=["my-bucket"]
+    )
+    region: SecretStr = Field(
+        description="the region of the s3 bucket", examples=["us-west-2"]
+    )
+    access_key: SecretStr = Field(
+        description="the access key of the s3 bucket", examples=["my-access-key"]
+    )
+    secret_key: SecretStr = Field(
+        description="the secret key of the s3 bucket", examples=["my-secret-key"]
+    )
 
 
 class MinioFileConnectionInfo(BaseModel):
-    url: SecretStr = Field(description="the root path of the minio bucket", default="/")
+    url: SecretStr = Field(
+        description="the root path of the minio bucket", default="/", examples=["/data"]
+    )
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
     ssl_enabled: bool = Field(
-        description="use the ssl connection or not", default=False
+        description="use the ssl connection or not",
+        default=False,
+        examples=[True, False],
     )
-    endpoint: SecretStr
-    bucket: SecretStr
-    access_key: SecretStr
-    secret_key: SecretStr
+    endpoint: SecretStr = Field(
+        description="the endpoint of the minio bucket", examples=["localhost:9000"]
+    )
+    bucket: SecretStr = Field(
+        description="the name of the minio bucket", examples=["my-bucket"]
+    )
+    access_key: SecretStr = Field(
+        description="the account of the minio bucket", examples=["my-account"]
+    )
+    secret_key: SecretStr = Field(
+        description="the The password of the minio bucket", examples=["my-password"]
+    )
 
 
 class GcsFileConnectionInfo(BaseModel):
-    url: SecretStr = Field(description="the root path of the gcs bucket", default="/")
+    url: SecretStr = Field(
+        description="the root path of the gcs bucket", default="/", examples=["/data"]
+    )
     format: str = Field(
         description="File format", default="csv", examples=["csv", "parquet", "json"]
     )
-    bucket: SecretStr
-    key_id: SecretStr
-    secret_key: SecretStr
-    credentials: SecretStr = Field(description="Base64 encode `credentials.json`")
+    bucket: SecretStr = Field(
+        description="the name of the gcs bucket", examples=["my-bucket"]
+    )
+    key_id: SecretStr = Field(
+        description="the key id of the gcs bucket", examples=["my-key-id"]
+    )
+    secret_key: SecretStr = Field(
+        description="the secret key of the gcs bucket", examples=["my-secret-key"]
+    )
+    credentials: SecretStr = Field(
+        description="Base64 encode `credentials.json`",
+        examples=["eyJ..."],
+        default=None,
+    )
 
 
 ConnectionInfo = (

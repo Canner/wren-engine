@@ -23,7 +23,7 @@ from app.model.validator import Validator
 from app.query_cache import QueryCacheManager
 from app.util import build_context, pushdown_limit, to_json
 
-router = APIRouter(prefix="/connector")
+router = APIRouter(prefix="/connector", tags=["connector"])
 tracer = trace.get_tracer(__name__)
 
 
@@ -36,15 +36,15 @@ def get_query_cache_manager(request: Request) -> QueryCacheManager:
 
 
 @router.post(
-    "/{data_source}/query", dependencies=[Depends(verify_query_dto)], deprecated=True
+    "/{data_source}/query", dependencies=[Depends(verify_query_dto)], deprecated=True, description="query the specified data source"
 )
 async def query(
     data_source: DataSource,
     dto: QueryDTO,
-    dry_run: Annotated[bool, Query(alias="dryRun")] = False,
-    cache_enable: Annotated[bool, Query(alias="cacheEnable")] = False,
+    dry_run: Annotated[bool, Query(alias="dryRun", description="enable dryRun mode for validating SQL only")] = False,
+    cache_enable: Annotated[bool, Query(alias="cacheEnable", description="enable query cache mode")] = False,
     override_cache: Annotated[bool, Query(alias="overrideCache")] = False,
-    limit: int | None = None,
+    limit: int | None = Query(None, description="limit the number of rows returned"),
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
     headers: Annotated[str | None, Header()] = None,
@@ -140,7 +140,7 @@ async def query(
         return response
 
 
-@router.post("/{data_source}/validate/{rule_name}", deprecated=True)
+@router.post("/{data_source}/validate/{rule_name}", deprecated=True, description="validate the specified rule")
 async def validate(
     data_source: DataSource,
     rule_name: str,
@@ -165,7 +165,7 @@ async def validate(
 
 
 @router.post(
-    "/{data_source}/metadata/tables", response_model=list[Table], deprecated=True
+    "/{data_source}/metadata/tables", response_model=list[Table], deprecated=True, description="get the table list of the specified data source"
 )
 def get_table_list(
     data_source: DataSource,
@@ -185,6 +185,7 @@ def get_table_list(
     "/{data_source}/metadata/constraints",
     response_model=list[Constraint],
     deprecated=True,
+    description="get the constraints of the specified data source",
 )
 def get_constraints(
     data_source: DataSource,
@@ -200,12 +201,12 @@ def get_constraints(
         ).get_constraints()
 
 
-@router.post("/{data_source}/metadata/version", deprecated=True)
+@router.post("/{data_source}/metadata/version", deprecated=True, description="get the version of the specified data source")
 def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
     return MetadataFactory.get_metadata(data_source, dto.connection_info).get_version()
 
 
-@router.post("/dry-plan", deprecated=True)
+@router.post("/dry-plan", deprecated=True, description="get the planned WrenSQL")
 async def dry_plan(
     dto: DryPlanDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
@@ -219,7 +220,7 @@ async def dry_plan(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/dry-plan", deprecated=True)
+@router.post("/{data_source}/dry-plan", deprecated=True, description="get the dialect SQL for the specified data source")
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
@@ -237,7 +238,7 @@ async def dry_plan_for_data_source(
         ).rewrite(dto.sql)
 
 
-@router.post("/{data_source}/model-substitute", deprecated=True)
+@router.post("/{data_source}/model-substitute", deprecated=True, description="get the SQL which table name is substituted")
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
