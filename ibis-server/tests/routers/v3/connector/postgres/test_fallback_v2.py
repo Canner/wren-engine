@@ -71,12 +71,41 @@ async def test_query_with_cache(client, manifest_str, connection_info):
 
     assert response2.status_code == 200
     assert response2.headers["X-Cache-Hit"] == "true"
+    assert int(response2.headers["X-Cache-Create-At"]) > 1743984000  # 2025.04.07
     result2 = response2.json()
 
     # Verify results are identical
     assert result1["data"] == result2["data"]
     assert result1["columns"] == result2["columns"]
     assert result1["dtypes"] == result2["dtypes"]
+
+
+async def test_query_with_cache_override(client, manifest_str, connection_info):
+    # First request - should miss cache then create cache
+    response1 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true",  # Enable cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+    )
+    assert response1.status_code == 200
+
+    # Second request with same SQL - should hit cache and override it
+    response2 = await client.post(
+        url=f"{base_url}/query?cacheEnable=true&overrideCache=true",  # Override the cache
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": "SELECT orderkey FROM orders LIMIT 1",
+        },
+    )
+    assert response2.status_code == 200
+    assert response2.headers["X-Cache-Override"] == "true"
+    assert int(response2.headers["X-Cache-Override-At"]) > int(
+        response2.headers["X-Cache-Create-At"]
+    )
 
 
 async def test_dry_run(client, manifest_str, connection_info):

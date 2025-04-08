@@ -53,16 +53,20 @@ class QueryCacheManager:
             logger.debug(f"Failed to write query cache: {e}")
             return
 
-    def get_cache_file_timestamp(self, data_source: str, sql: str, info) -> int:
+    def get_cache_file_timestamp(self, data_source: str, sql: str, info) -> int | None:
         cache_key = self._generate_cache_key(data_source, sql, info)
         op = self._get_dal_operator()
         for file in op.list("/"):
             if file.path.startswith(cache_key):
                 # xxxxxxxxxxxxxx-1744016574.cache
                 # we only care about the timestamp part
-                timestamp = int(file.path.split("-")[-1].split(".")[0])
-                return timestamp
-
+                try:
+                    timestamp = int(file.path.split("-")[-1].split(".")[0])
+                    return timestamp
+                except (IndexError, ValueError) as e:
+                    logger.debug(
+                        f"Failed to extract timestamp from cache file {file.path}: {e}"
+                    )
         return None
 
     def _generate_cache_key(self, data_source: str, sql: str, info) -> str:
