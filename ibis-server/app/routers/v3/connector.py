@@ -74,41 +74,55 @@ async def query(
                 )
                 cache_hit = cached_result is not None
 
-            if cache_hit and not override_cache:
-                span.add_event("cache hit")
-                response = ORJSONResponse(to_json(cached_result))
-                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-                response.headers["X-Cache-Create-At"] = str(
-                    query_cache_manager.get_cache_file_timestamp(
-                        data_source, dto.sql, dto.connection_info
-                    )
-                )
-                return response
-            else:
-                result = connector.query(rewritten_sql, limit=limit)
-
-                response = ORJSONResponse(to_json(result))
-                response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-                if cache_hit:
+            match (cache_enable, cache_hit, override_cache):
+                # case 1 cache hit read
+                case (True, True, False):
+                    span.add_event("cache hit")
+                    response = ORJSONResponse(to_json(cached_result))
+                    response.headers["X-Cache-Hit"] = "true"
                     response.headers["X-Cache-Create-At"] = str(
                         query_cache_manager.get_cache_file_timestamp(
                             data_source, dto.sql, dto.connection_info
                         )
                     )
-
-                if cache_enable:
-                    query_cache_manager.set(
-                        data_source, dto.sql, result, dto.connection_info
-                    )
-
-                if override_cache:
-                    response.headers["X-cache-override"] = str(override_cache).lower()
-                    response.headers["X-cache-override-at"] = str(
+                # case 2 cache hit but override cache
+                case (True, True, True):
+                    result = connector.query(rewritten_sql, limit=limit)
+                    response = ORJSONResponse(to_json(result))
+                    # because we override the cache, so we need to set the cache hit to false
+                    response.headers["X-Cache-Hit"] = "false"
+                    response.headers["X-Cache-Create-At"] = str(
                         query_cache_manager.get_cache_file_timestamp(
                             data_source, dto.sql, dto.connection_info
                         )
                     )
-                return response
+                    query_cache_manager.set(
+                        data_source, dto.sql, result, dto.connection_info
+                    )
+                    response.headers["X-Cache-Override"] = "true"
+                    response.headers["X-Cache-Override-At"] = str(
+                        query_cache_manager.get_cache_file_timestamp(
+                            data_source, dto.sql, dto.connection_info
+                        )
+                    )
+                # case 3 and  case 4 cache miss read (first time cache read need to create cache)
+                # no matter the cache override or not, we need to create cache
+                case (True, False, _):
+                    result = connector.query(rewritten_sql, limit=limit)
+
+                    # set cache
+                    query_cache_manager.set(
+                        data_source, dto.sql, result, dto.connection_info
+                    )
+                    response = ORJSONResponse(to_json(result))
+                    response.headers["X-Cache-Hit"] = "false"
+                # case 5~8 Other cases (cache is not enabled)
+                case (False, _, _):
+                    result = connector.query(rewritten_sql, limit=limit)
+                    response = ORJSONResponse(to_json(result))
+                    response.headers["X-Cache-Hit"] = "false"
+
+            return response
         except Exception as e:
             logger.warning(
                 "Failed to execute v3 query, fallback to v2: {}\n" + MIGRATION_MESSAGE,
