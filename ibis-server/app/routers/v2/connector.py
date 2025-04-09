@@ -43,6 +43,7 @@ async def query(
     dto: QueryDTO,
     dry_run: Annotated[bool, Query(alias="dryRun")] = False,
     cache_enable: Annotated[bool, Query(alias="cacheEnable")] = False,
+    override_cache: Annotated[bool, Query(alias="overrideCache")] = False,
     limit: int | None = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
@@ -84,25 +85,59 @@ async def query(
 
         if cache_enable:
             cached_result = query_cache_manager.get(
-                str(data_source), dto.sql, dto.connection_info
+                data_source, dto.sql, dto.connection_info
             )
             cache_hit = cached_result is not None
 
-        if cache_hit:
-            span.add_event("cache hit")
-            response = ORJSONResponse(to_json(cached_result))
-            response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-            return response
-        else:
-            result = connector.query(rewritten_sql, limit=limit)
-            if cache_enable:
+        match (cache_enable, cache_hit, override_cache):
+            # case 1 cache hit read
+            case (True, True, False):
+                span.add_event("cache hit")
+                response = ORJSONResponse(to_json(cached_result))
+                response.headers["X-Cache-Hit"] = "true"
+                response.headers["X-Cache-Create-At"] = str(
+                    query_cache_manager.get_cache_file_timestamp(
+                        data_source, dto.sql, dto.connection_info
+                    )
+                )
+            # case 2 cache hit but override cache
+            case (True, True, True):
+                result = connector.query(rewritten_sql, limit=limit)
+                response = ORJSONResponse(to_json(result))
+                # because we override the cache, so we need to set the cache hit to false
+                response.headers["X-Cache-Hit"] = "false"
+                response.headers["X-Cache-Create-At"] = str(
+                    query_cache_manager.get_cache_file_timestamp(
+                        data_source, dto.sql, dto.connection_info
+                    )
+                )
                 query_cache_manager.set(
                     data_source, dto.sql, result, dto.connection_info
                 )
+                response.headers["X-Cache-Override"] = "true"
+                response.headers["X-Cache-Override-At"] = str(
+                    query_cache_manager.get_cache_file_timestamp(
+                        data_source, dto.sql, dto.connection_info
+                    )
+                )
+            # case 3 and  case 4 cache miss read (first time cache read need to create cache)
+            # no matter the cache override or not, we need to create cache
+            case (True, False, _):
+                result = connector.query(rewritten_sql, limit=limit)
 
-            response = ORJSONResponse(to_json(result))
-            response.headers["X-Cache-Hit"] = str(cache_hit).lower()
-            return response
+                # set cache
+                query_cache_manager.set(
+                    data_source, dto.sql, result, dto.connection_info
+                )
+                response = ORJSONResponse(to_json(result))
+                response.headers["X-Cache-Hit"] = "false"
+            # case 5~8 Other cases (cache is not enabled)
+            case (False, _, _):
+                result = connector.query(rewritten_sql, limit=limit)
+                response = ORJSONResponse(to_json(result))
+                response.headers["X-Cache-Hit"] = "false"
+
+        return response
 
 
 @router.post("/{data_source}/validate/{rule_name}", deprecated=True)

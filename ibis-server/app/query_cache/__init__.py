@@ -1,4 +1,5 @@
 import hashlib
+import time
 from typing import Any, Optional
 
 import ibis
@@ -37,7 +38,7 @@ class QueryCacheManager:
     @tracer.start_as_current_span("set_cache", kind=trace.SpanKind.INTERNAL)
     def set(self, data_source: str, sql: str, result: Any, info) -> None:
         cache_key = self._generate_cache_key(data_source, sql, info)
-        cache_file_name = self._get_cache_file_name(cache_key)
+        cache_file_name = self._set_cache_file_name(cache_key)
         op = self._get_dal_operator()
         full_path = self._get_full_path(cache_file_name)
 
@@ -52,6 +53,22 @@ class QueryCacheManager:
             logger.debug(f"Failed to write query cache: {e}")
             return
 
+    def get_cache_file_timestamp(self, data_source: str, sql: str, info) -> int | None:
+        cache_key = self._generate_cache_key(data_source, sql, info)
+        op = self._get_dal_operator()
+        for file in op.list("/"):
+            if file.path.startswith(cache_key):
+                # xxxxxxxxxxxxxx-1744016574.cache
+                # we only care about the timestamp part
+                try:
+                    timestamp = int(file.path.split("-")[-1].split(".")[0])
+                    return timestamp
+                except (IndexError, ValueError) as e:
+                    logger.debug(
+                        f"Failed to extract timestamp from cache file {file.path}: {e}"
+                    )
+        return None
+
     def _generate_cache_key(self, data_source: str, sql: str, info) -> str:
         key_parts = [
             data_source,
@@ -65,7 +82,24 @@ class QueryCacheManager:
         return hashlib.sha256(key_string.encode()).hexdigest()
 
     def _get_cache_file_name(self, cache_key: str) -> str:
-        return f"{cache_key}.cache"
+        op = self._get_dal_operator()
+        for file in op.list("/"):
+            if file.path.startswith(cache_key):
+                return file.path
+
+        cache_create_timestamp = int(time.time() * 1000)
+        return f"{cache_key}-{cache_create_timestamp}.cache"
+
+    def _set_cache_file_name(self, cache_key: str) -> str:
+        # Delete old cache files, make only one cache file per query
+        op = self._get_dal_operator()
+        for file in op.list("/"):
+            if file.path.startswith(cache_key):
+                logger.info(f"Deleting old cache file {file.path}")
+                op.delete(file.path)
+
+        cache_create_timestamp = int(time.time() * 1000)
+        return f"{cache_key}-{cache_create_timestamp}.cache"
 
     def _get_full_path(self, path: str) -> str:
         return self.root + path
