@@ -51,7 +51,9 @@ async def query(
     cache_enable: Annotated[
         bool, Query(alias="cacheEnable", description="enable query cache mode")
     ] = False,
-    override_cache: Annotated[bool, Query(alias="overrideCache")] = False,
+    override_cache: Annotated[
+        bool, Query(alias="overrideCache", description="ovrride the exist cache")
+    ] = False,
     limit: int | None = Query(None, description="limit the number of rows returned"),
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
