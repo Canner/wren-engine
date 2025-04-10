@@ -91,6 +91,8 @@ fn analyze_rule_for_local_runtime(
     session_state_ref: SessionStateRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
+        // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
+        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
@@ -118,6 +120,8 @@ fn analyze_rule_for_unparsing(
     session_state_ref: SessionStateRef,
 ) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![
+        // Every rule that will generate [Expr::Wildcard] should be placed in front of [ExpandWildcardRule].
+        Arc::new(ExpandWildcardRule::new()),
         // expand the view should be the first rule
         Arc::new(ExpandWrenViewRule::new(
             Arc::clone(&analyzed_mdl),
