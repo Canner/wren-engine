@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wren-engine"
-version = "0.15.3"
+version = "0.15.4"
 description = ""
 authors = ["Canner <dev@cannerdata.com>"]
 readme = "README.md"
