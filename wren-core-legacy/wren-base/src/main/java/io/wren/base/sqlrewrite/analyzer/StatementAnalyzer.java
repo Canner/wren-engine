@@ -403,22 +403,22 @@ public final class StatementAnalyzer
             ExpressionAnalysis expressionAnalysis = analyzeExpression(singleColumn.getExpression(), scope);
 
             if (expressionAnalysis.isRequireRelation()) {
-                Node source = scope.getRelationId().getSourceNode()
-                        .orElseThrow(() -> new IllegalArgumentException("count(*) should have a followed source"));
-
-                // collect only the source node that is a table for generating the required column for models
-                DefaultTraversalVisitor<Scope> visitor = new DefaultTraversalVisitor<>()
-                {
-                    @Override
-                    protected Void visitTable(Table node, Scope scope)
+                Optional<Node> source = scope.getRelationId().getSourceNode();
+                if (source.isPresent()) {
+                    // collect only the source node that is a table for generating the required column for models
+                    DefaultTraversalVisitor<Scope> visitor = new DefaultTraversalVisitor<>()
                     {
-                        if (scope.getNamedQuery(node.getName().getSuffix()).isEmpty()) {
-                            analysis.addRequiredSourceNode(node);
+                        @Override
+                        protected Void visitTable(Table node, Scope scope)
+                        {
+                            if (scope.getNamedQuery(node.getName().getSuffix()).isEmpty()) {
+                                analysis.addRequiredSourceNode(node);
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-                };
-                visitor.process(source, scope);
+                    };
+                    visitor.process(source.get(), scope);
+                }
             }
         }
 
