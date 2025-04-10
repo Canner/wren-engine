@@ -25,3 +25,6 @@ This folder contains useful tools and scripts for debugging and validation.
       "credentials": "..."
     }
     ```
+- `generate_openapi.py`: Used to generate the OpenAPI spec.
+  - The generated yaml will follow the extension of [redoc](https://redocly.com/docs-legacy/api-reference-docs/spec-extensions).
+  - It's helpful to create the API doc page by [redocusaurus](https://github.com/rohit-gohri/redocusaurus).

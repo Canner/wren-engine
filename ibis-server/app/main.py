@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[State]:
         }
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title="Wren Engine API")
 app.include_router(v2.router)
 app.include_router(v3.router)
 app.add_middleware(RequestLogMiddleware)
