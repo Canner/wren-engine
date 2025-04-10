@@ -55,6 +55,7 @@ jobs:
           java-version: '21'
           cache: 'maven'
       - name: Maven Prepare Release
+        working-directory: wren-core-legacy
         id: maven_prepare_release
         run: |
           if [ -n "${{ github.event.inputs.specific_version }}" ]; then
