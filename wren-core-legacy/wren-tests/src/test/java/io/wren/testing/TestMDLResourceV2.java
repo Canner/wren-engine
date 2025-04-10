@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import io.airlift.json.JsonCodec;
 import io.wren.base.dto.JoinType;
 import io.wren.base.dto.Manifest;
+import io.wren.base.dto.View;
 import io.wren.main.web.dto.DryPlanDtoV2;
 import org.testng.annotations.Test;
 
@@ -306,6 +307,58 @@ public class TestMDLResourceV2
                    FROM
                      orders_custkey
                 )  t
+                """);
+    }
+
+    @Test
+    public void testCountView()
+    {
+        Manifest manifest = Manifest.builder()
+                .setCatalog("wrenai")
+                .setSchema("tpch")
+                .setModels(List.of(
+                        model("Customer", "SELECT * FROM tpch.customer",
+                                List.of(column("custkey", "integer", null, false, "c_custkey"),
+                                        column("name", "varchar", null, false, "c_name")))))
+                .setViews(List.of(new View("view1", "select * from Customer", ImmutableMap.of())))
+                .build();
+        String manifestStr = base64Encode(toJson(manifest));
+        DryPlanDtoV2 dryPlanDto = new DryPlanDtoV2(manifestStr, "select count(*) from view1");
+        String dryPlan = dryPlanV2(dryPlanDto);
+        assertThat(dryPlan).isEqualTo("""
+                "WITH
+                  "Customer" AS (
+                   SELECT
+                     "Customer"."custkey" "custkey"
+                   , "Customer"."name" "name"
+                   FROM
+                     (
+                      SELECT
+                        "Customer"."custkey" "custkey"
+                      , "Customer"."name" "name"
+                      FROM
+                        (
+                         SELECT
+                           c_custkey "custkey"
+                         , c_name "name"
+                         FROM
+                           (
+                            SELECT *
+                            FROM
+                              tpch.customer
+                         )  "Customer"
+                      )  "Customer"
+                   )  "Customer"
+                )\s
+                , "view1" AS (
+                   SELECT *
+                   FROM
+                     Customer
+                )\s
+                SELECT count(*)
+                FROM
+                  view1
+                "
                 """);
     }
 
