@@ -73,6 +73,7 @@ https://github.com/user-attachments/assets/dab9b50f-70d7-4eb3-8fc8-2ab55dc7d2ec
 
 ## 🤔 Concepts
 
+- [Powering Semantic SQL for AI Agents with Apache DataFusion](https://getwren.ai/post/powering-semantic-sql-for-ai-agents-with-apache-datafusion)
 - [Quick start with Wren Engine](https://docs.getwren.ai/oss/engine/get_started/quickstart)
 - [What is semantics?](https://docs.getwren.ai/oss/engine/concept/what_is_semantics)
 - [What is Modeling Definition Language (MDL)?](https://docs.getwren.ai/oss/engine/concept/what_is_mdl)
