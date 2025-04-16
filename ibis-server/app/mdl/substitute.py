@@ -1,3 +1,4 @@
+from loguru import logger
 from opentelemetry import trace
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.scope import build_scope
@@ -40,6 +41,12 @@ class ModelSubstitute:
     def _build_model_dict(models) -> dict:
         def key(model):
             table_ref = model["tableReference"]
+
+            if not table_ref.get("catalog") and not table_ref.get("schema"):
+                logger.debug(
+                    "Try to substitute a tableReference has empty catalog and empty schema"
+                )
+
             return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
 
         return {key(model): model for model in models if "tableReference" in model}
