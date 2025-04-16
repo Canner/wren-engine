@@ -267,9 +267,9 @@ async def model_substitute(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
         try:
-            sql = ModelSubstitute(
-                data_source, dto.manifest_str, dict(headers)
-            ).substitute(dto.sql)
+            sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
+                dto.sql
+            )
             Connector(data_source, dto.connection_info).dry_run(
                 await Rewriter(
                     dto.manifest_str,

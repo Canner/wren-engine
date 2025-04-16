@@ -764,7 +764,11 @@ async def test_model_substitute(client, manifest_str, postgres: PostgresContaine
             "sql": 'SELECT * FROM "public"."orders"',
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
+    )
 
     # Test only have x-user-schema
     response = await client.post(

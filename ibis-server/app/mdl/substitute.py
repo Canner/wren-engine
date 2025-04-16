@@ -1,4 +1,3 @@
-from loguru import logger
 from opentelemetry import trace
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.scope import build_scope
@@ -42,25 +41,31 @@ class ModelSubstitute:
         def key(model):
             table_ref = model["tableReference"]
 
-            if not table_ref.get("catalog") and not table_ref.get("schema"):
-                logger.debug(
-                    "Try to substitute a tableReference has empty catalog and empty schema"
-                )
-
-            return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+            # fully qualified  catalog.schema.table
+            if table_ref.get("catalog") and table_ref.get("schema"):
+                return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+            # schema.table
+            elif table_ref.get("schema"):
+                return f"{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+            # table
+            else:
+                return table_ref.get("table", "")
 
         return {key(model): model for model in models if "tableReference" in model}
 
     def _find_model(self, source: exp.Table) -> dict | None:
-        if source.catalog and source.db:
+        # Determine catalog
+        if source.catalog:
             catalog = source.catalog
-            schema = source.db
-        elif self.headers is not None:
-            catalog = self.headers.get("x-user-catalog")
-            schema = self.headers.get("x-user-schema")
         else:
-            catalog = ""
-            schema = ""
+            catalog = self.headers.get("x-user-catalog", "") if self.headers else ""
+
+        # Determine schema
+        if source.db:
+            schema = source.db
+        else:
+            schema = self.headers.get("x-user-schema", "") if self.headers else ""
+
         table = source.name
         return self.model_dict.get(f"{catalog}.{schema}.{table}", None)
 
