@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Response
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
@@ -52,7 +52,7 @@ async def query(
         bool, Query(alias="overrideCache", description="ovrride the exist cache")
     ] = False,
     limit: int | None = Query(None, description="limit the number of rows returned"),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
 ) -> Response:
@@ -156,7 +156,7 @@ async def query(
 @router.post("/dry-plan", description="get the planned WrenSQL")
 async def dry_plan(
     dto: DryPlanDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     with tracer.start_as_current_span(
@@ -180,7 +180,7 @@ async def dry_plan(
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v3_dry_plan_{data_source}"
@@ -209,7 +209,7 @@ async def validate(
     data_source: DataSource,
     rule_name: str,
     dto: ValidateDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> Response:
     span_name = f"v3_validate_{data_source}"
@@ -240,7 +240,7 @@ async def validate(
 )
 def functions(
     data_source: DataSource,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> Response:
     span_name = f"v3_functions_{data_source}"
     with tracer.start_as_current_span(

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
@@ -58,7 +58,7 @@ async def query(
     limit: int | None = Query(None, description="limit the number of rows returned"),
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> Response:
     span_name = f"v2_query_{data_source}"
     if dry_run:
@@ -161,7 +161,7 @@ async def validate(
     rule_name: str,
     dto: ValidateDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> Response:
     span_name = f"v2_validate_{data_source}"
     with tracer.start_as_current_span(
@@ -188,7 +188,7 @@ async def validate(
 def get_table_list(
     data_source: DataSource,
     dto: MetadataDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> list[Table]:
     span_name = f"v2_metadata_tables_{data_source}"
     with tracer.start_as_current_span(
@@ -208,7 +208,7 @@ def get_table_list(
 def get_constraints(
     data_source: DataSource,
     dto: MetadataDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> list[Constraint]:
     span_name = f"v2_metadata_constraints_{data_source}"
     with tracer.start_as_current_span(
@@ -232,7 +232,7 @@ def get_db_version(data_source: DataSource, dto: MetadataDTO) -> str:
 async def dry_plan(
     dto: DryPlanDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> str:
     with tracer.start_as_current_span(
         name="dry_plan", kind=trace.SpanKind.SERVER, context=build_context(headers)
@@ -251,7 +251,7 @@ async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> str:
     span_name = f"v2_dry_plan_{data_source}"
     with tracer.start_as_current_span(
@@ -272,7 +272,7 @@ async def dry_plan_for_data_source(
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
-    headers: Annotated[Headers, Depends(get_wren_headers)],
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v2_model_substitute_{data_source}"
