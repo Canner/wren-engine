@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
+from starlette.datastructures import Headers
 
-from app.dependencies import verify_query_dto
+from app.dependencies import get_wren_headers, verify_query_dto
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
 from app.mdl.substitute import ModelSubstitute
@@ -271,17 +272,16 @@ async def dry_plan_for_data_source(
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
-    request: Request,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
-    headers: Annotated[str | None, Header()] = None,
 ) -> str:
     span_name = f"v2_model_substitute_{data_source}"
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
-        sql = ModelSubstitute(
-            data_source, dto.manifest_str, dict(request.headers)
-        ).substitute(dto.sql, write="trino")
+        sql = ModelSubstitute(data_source, dto.manifest_str, dict(headers)).substitute(
+            dto.sql, write="trino"
+        )
         Connector(data_source, dto.connection_info).dry_run(
             await Rewriter(
                 dto.manifest_str,

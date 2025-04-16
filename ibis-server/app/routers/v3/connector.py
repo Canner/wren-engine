@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
+from starlette.datastructures import Headers
 
 from app.config import get_config
-from app.dependencies import verify_query_dto
+from app.dependencies import get_wren_headers, verify_query_dto
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
@@ -258,8 +259,7 @@ def functions(
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
-    request: Request,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v3_model-substitute_{data_source}"
@@ -268,7 +268,7 @@ async def model_substitute(
     ):
         try:
             sql = ModelSubstitute(
-                data_source, dto.manifest_str, dict(request.headers)
+                data_source, dto.manifest_str, dict(headers)
             ).substitute(dto.sql)
             Connector(data_source, dto.connection_info).dry_run(
                 await Rewriter(
@@ -283,5 +283,5 @@ async def model_substitute(
                 "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
             )
             return await v2.connector.model_substitute(
-                data_source, dto, request, java_engine_connector, headers
+                data_source, dto, headers, java_engine_connector
             )
