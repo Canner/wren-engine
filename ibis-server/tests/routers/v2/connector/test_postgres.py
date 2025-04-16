@@ -23,6 +23,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
+                "catalog": "test",
                 "schema": "public",
                 "table": "orders",
             },
@@ -710,12 +711,29 @@ async def test_dry_plan(client, manifest_str):
 
 async def test_model_substitute(client, manifest_str, postgres: PostgresContainer):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "public"."orders"',
+            "sql": 'SELECT * FROM "test"."public"."orders"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\""'
+    )
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": 'SELECT * FROM "orders"',
         },
     )
     assert response.status_code == 200
@@ -729,6 +747,7 @@ async def test_model_substitute_with_cte(
     client, manifest_str, postgres: PostgresContainer
 ):
     connection_info = _to_connection_info(postgres)
+    # Test with catalog and schema in SQL
     response = await client.post(
         url=f"{base_url}/model-substitute",
         json={
@@ -736,7 +755,28 @@ async def test_model_substitute_with_cte(
             "manifestStr": manifest_str,
             "sql": """
                 WITH orders_cte AS (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
+                )
+                SELECT * FROM orders_cte;
+            """,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"WITH orders_cte AS (SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"orders\\") SELECT * FROM orders_cte"'
+    )
+
+    # Test without catalog and schema in SQL but in headers(x-user-xxx)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-catalog": "test", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "sql": """
+                WITH orders_cte AS (
+                    SELECT * FROM "orders"
                 )
                 SELECT * FROM orders_cte;
             """,
@@ -760,7 +800,7 @@ async def test_model_substitute_with_subquery(
             "manifestStr": manifest_str,
             "sql": """
                 SELECT * FROM (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
                 ) AS orders_subquery;
             """,
         },
@@ -797,7 +837,7 @@ async def test_model_substitute_non_existent_column(
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT x FROM "public"."orders" LIMIT 1',
+            "sql": 'SELECT x FROM "test"."public"."orders" LIMIT 1',
         },
     )
     assert response.status_code == 422

@@ -12,6 +12,7 @@ manifest = {
         {
             "name": "Orders",
             "tableReference": {
+                "catalog": "test",
                 "schema": "public",
                 "table": "orders",
             },
@@ -34,7 +35,7 @@ async def test_model_substitute(client, manifest_str, connection_info):
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT * FROM "public"."orders"',
+            "sql": 'SELECT * FROM "test"."public"."orders"',
         },
     )
     assert response.status_code == 200
@@ -52,7 +53,7 @@ async def test_model_substitute_with_cte(client, manifest_str, connection_info):
             "manifestStr": manifest_str,
             "sql": """
                 WITH orders_cte AS (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
                 )
                 SELECT * FROM orders_cte;
             """,
@@ -73,7 +74,7 @@ async def test_model_substitute_with_subquery(client, manifest_str, connection_i
             "manifestStr": manifest_str,
             "sql": """
                 SELECT * FROM (
-                    SELECT * FROM "public"."orders"
+                    SELECT * FROM "test"."public"."orders"
                 ) AS orders_subquery;
             """,
         },
@@ -106,7 +107,7 @@ async def test_model_substitute_non_existent_column(
         json={
             "connectionInfo": connection_info,
             "manifestStr": manifest_str,
-            "sql": 'SELECT x FROM "public"."orders" LIMIT 1',
+            "sql": 'SELECT x FROM "test"."public"."orders" LIMIT 1',
         },
     )
     assert response.status_code == 422

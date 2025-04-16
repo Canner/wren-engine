@@ -10,10 +10,11 @@ tracer = trace.get_tracer(__name__)
 
 
 class ModelSubstitute:
-    def __init__(self, data_source: DataSource, manifest_str: str):
+    def __init__(self, data_source: DataSource, manifest_str: str, headers=None):
         self.data_source = data_source
         self.manifest = base64_to_dict(manifest_str)
         self.model_dict = self._build_model_dict(self.manifest["models"])
+        self.headers = dict(headers) if headers else None
 
     @tracer.start_as_current_span("substitute", kind=trace.SpanKind.INTERNAL)
     def substitute(self, sql: str, write: str | None = None) -> str:
@@ -44,8 +45,15 @@ class ModelSubstitute:
         return {key(model): model for model in models if "tableReference" in model}
 
     def _find_model(self, source: exp.Table) -> dict | None:
-        catalog = source.catalog or ""
-        schema = source.db or ""
+        if source.catalog and source.db:
+            catalog = source.catalog
+            schema = source.db
+        elif self.headers is not None:
+            catalog = self.headers.get("x-user-catalog")
+            schema = self.headers.get("x-user-schema")
+        else:
+            catalog = ""
+            schema = ""
         table = source.name
         return self.model_dict.get(f"{catalog}.{schema}.{table}", None)
 

@@ -271,6 +271,7 @@ async def dry_plan_for_data_source(
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
+    request: Request,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     headers: Annotated[str | None, Header()] = None,
 ) -> str:
@@ -278,9 +279,9 @@ async def model_substitute(
     with tracer.start_as_current_span(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
-        sql = ModelSubstitute(data_source, dto.manifest_str).substitute(
-            dto.sql, write="trino"
-        )
+        sql = ModelSubstitute(
+            data_source, dto.manifest_str, dict(request.headers)
+        ).substitute(dto.sql, write="trino")
         Connector(data_source, dto.connection_info).dry_run(
             await Rewriter(
                 dto.manifest_str,
