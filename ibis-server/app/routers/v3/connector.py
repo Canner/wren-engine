@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Response
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import ORJSONResponse
 from loguru import logger
 from opentelemetry import trace
+from starlette.datastructures import Headers
 
 from app.config import get_config
-from app.dependencies import verify_query_dto
+from app.dependencies import get_wren_headers, verify_query_dto
 from app.mdl.core import get_session_context
 from app.mdl.java_engine import JavaEngineConnector
 from app.mdl.rewriter import Rewriter
@@ -51,7 +52,7 @@ async def query(
         bool, Query(alias="overrideCache", description="ovrride the exist cache")
     ] = False,
     limit: int | None = Query(None, description="limit the number of rows returned"),
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
     query_cache_manager: QueryCacheManager = Depends(get_query_cache_manager),
 ) -> Response:
@@ -155,7 +156,7 @@ async def query(
 @router.post("/dry-plan", description="get the planned WrenSQL")
 async def dry_plan(
     dto: DryPlanDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     with tracer.start_as_current_span(
@@ -179,7 +180,7 @@ async def dry_plan(
 async def dry_plan_for_data_source(
     data_source: DataSource,
     dto: DryPlanDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v3_dry_plan_{data_source}"
@@ -208,7 +209,7 @@ async def validate(
     data_source: DataSource,
     rule_name: str,
     dto: ValidateDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> Response:
     span_name = f"v3_validate_{data_source}"
@@ -239,7 +240,7 @@ async def validate(
 )
 def functions(
     data_source: DataSource,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)] = None,
 ) -> Response:
     span_name = f"v3_functions_{data_source}"
     with tracer.start_as_current_span(
@@ -258,7 +259,7 @@ def functions(
 async def model_substitute(
     data_source: DataSource,
     dto: TranspileDTO,
-    headers: Annotated[str | None, Header()] = None,
+    headers: Annotated[Headers, Depends(get_wren_headers)],
     java_engine_connector: JavaEngineConnector = Depends(get_java_engine_connector),
 ) -> str:
     span_name = f"v3_model-substitute_{data_source}"
@@ -266,7 +267,9 @@ async def model_substitute(
         name=span_name, kind=trace.SpanKind.SERVER, context=build_context(headers)
     ):
         try:
-            sql = ModelSubstitute(data_source, dto.manifest_str).substitute(dto.sql)
+            sql = ModelSubstitute(data_source, dto.manifest_str, headers).substitute(
+                dto.sql
+            )
             Connector(data_source, dto.connection_info).dry_run(
                 await Rewriter(
                     dto.manifest_str,
@@ -280,5 +283,5 @@ async def model_substitute(
                 "Failed to execute v3 model-substitute, fallback to v2: {}", str(e)
             )
             return await v2.connector.model_substitute(
-                data_source, dto, java_engine_connector, headers
+                data_source, dto, headers, java_engine_connector
             )
