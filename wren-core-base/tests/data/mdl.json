@@ -34,6 +34,39 @@
           }
         }
       ],
+      "rowLevelAccessControls": [
+        {
+          "name": "rule1",
+          "requiredVariables": [
+            {
+              "name": "session_id",
+              "required": true
+            }
+          ],
+          "condition": "c_custkey = @session_id"
+        },
+        {
+          "name": "rule2",
+          "requiredVariables": [
+            {
+              "name": "session_id_optional",
+              "required": false
+            }
+          ],
+          "condition": "c_custkey = @session_id_optional"
+        },
+        {
+          "name": "rule3",
+          "requiredVariables": [
+            {
+              "name": "session_id_default",
+              "required": false,
+              "defaultExpr": "1"
+            }
+          ],
+          "condition": "c_custkey = @session_id_default"
+        }
+      ],
       "primaryKey": "c_custkey",
       "properties": {
         "description": "This is a customer table",
