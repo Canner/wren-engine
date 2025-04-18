@@ -67,7 +67,15 @@ class ModelSubstitute:
             schema = self.headers.get("x-user-schema", "") if self.headers else ""
 
         table = source.name
-        return self.model_dict.get(f"{catalog}.{schema}.{table}", None)
+
+        # catalog and schema is not None and not empty string
+        if catalog and schema:
+            return self.model_dict.get(f"{catalog}.{schema}.{table}", None)
+        # catalog is not None and not empty string
+        elif schema:
+            return self.model_dict.get(f"{schema}.{table}", None)
+        else:
+            return self.model_dict.get(f"{table}", None)
 
 
 def quote(s: str) -> str:
