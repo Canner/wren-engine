@@ -102,10 +102,34 @@ manifest = {
     ],
 }
 
+manifest_model_without_catalog = {
+    "catalog": "my_catalog",
+    "schema": "my_schema",
+    "models": [
+        {
+            "name": "Orders",
+            "tableReference": {
+                "schema": "public",
+                "table": "orders",
+            },
+            "columns": [
+                {"name": "o_orderkey", "type": "integer"},
+            ],
+        },
+    ],
+}
+
 
 @pytest.fixture(scope="module")
 def manifest_str():
     return base64.b64encode(orjson.dumps(manifest)).decode("utf-8")
+
+
+@pytest.fixture(scope="module")
+def manifest_without_catalog_str():
+    return base64.b64encode(orjson.dumps(manifest_model_without_catalog)).decode(
+        "utf-8"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -709,7 +733,9 @@ async def test_dry_plan(client, manifest_str):
     assert response.text is not None
 
 
-async def test_model_substitute(client, manifest_str, postgres: PostgresContainer):
+async def test_model_substitute(
+    client, manifest_str, manifest_without_catalog_str, postgres: PostgresContainer
+):
     connection_info = _to_connection_info(postgres)
     # Test with catalog and schema in SQL
     response = await client.post(
@@ -781,6 +807,31 @@ async def test_model_substitute(client, manifest_str, postgres: PostgresContaine
         },
     )
     assert response.status_code == 422
+
+    # Test only have x-user-schema
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_without_catalog_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 200
+
+    # Test only have x-user-schema
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        # empty catalog
+        headers={"x-user-catalog": "", "x-user-schema": "public"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_without_catalog_str,
+            "sql": 'SELECT * FROM "orders"',
+        },
+    )
+    assert response.status_code == 200
 
 
 async def test_model_substitute_with_cte(
