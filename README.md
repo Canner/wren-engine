@@ -26,6 +26,8 @@
 > Wren Engine is the Semantic Engine for MCP Clients and AI Agents. 
 > [Wren AI](https://github.com/Canner/WrenAI) GenBI AI Agent is based on Wren Engine.
 
+<img src="./misc/wren_engine_overview.png">
+
 ## 😫 Challenge Today
 
 At the enterprise level, the stakes - and the complexity - are much higher. Businesses run on structured data stored in cloud warehouses, relational databases, and secure filesystems. From BI dashboards to CRM updates and compliance workflows, AI must not only execute commands but also **understand and retrieve the right data, with precision and in context**.
