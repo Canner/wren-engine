@@ -37,7 +37,7 @@
       "rowLevelAccessControls": [
         {
           "name": "rule1",
-          "requiredVariables": [
+          "requiredProperties": [
             {
               "name": "session_id",
               "required": true
@@ -47,7 +47,7 @@
         },
         {
           "name": "rule2",
-          "requiredVariables": [
+          "requiredProperties": [
             {
               "name": "session_id_optional",
               "required": false
@@ -57,7 +57,7 @@
         },
         {
           "name": "rule3",
-          "requiredVariables": [
+          "requiredProperties": [
             {
               "name": "session_id_default",
               "required": false,

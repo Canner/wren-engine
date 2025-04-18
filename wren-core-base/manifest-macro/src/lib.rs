@@ -374,7 +374,7 @@ pub fn row_level_access_control(python_binding: proc_macro::TokenStream) -> proc
         pub struct RowLevelAccessControl {
             pub name: String,
             #[serde(default)]
-            pub required_variables: Vec<SessionVariable>,
+            pub required_properties: Vec<SessionProperty>,
             /// A string expression that can be evaluated to a boolean value
             pub condition: String,
         }
@@ -383,7 +383,7 @@ pub fn row_level_access_control(python_binding: proc_macro::TokenStream) -> proc
 }
 
 #[proc_macro]
-pub fn session_variable(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn session_property(python_binding: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(python_binding as LitBool);
     let python_binding = if input.value {
         quote! {
@@ -396,7 +396,7 @@ pub fn session_variable(python_binding: proc_macro::TokenStream) -> proc_macro::
         #python_binding
         #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
         #[serde(rename_all = "camelCase")]
-        pub struct SessionVariable {
+        pub struct SessionProperty {
             pub name: String,
             pub required: bool,
             pub default_expr: Option<String>,

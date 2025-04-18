@@ -25,7 +25,7 @@ use crate::mdl::manifest::{
 #[allow(deprecated)]
 use crate::mdl::{
     ColumnLevelOperator, ColumnLevelSecurity, NormalizedExpr, RowLevelAccessControl,
-    RowLevelOperator, RowLevelSecurity, SessionVariable,
+    RowLevelOperator, RowLevelSecurity, SessionProperty,
 };
 use std::sync::Arc;
 
@@ -154,12 +154,12 @@ impl ModelBuilder {
     pub fn add_row_level_access_control(
         mut self,
         name: &str,
-        required_variables: Vec<SessionVariable>,
+        required_properties: Vec<SessionProperty>,
         condition: &str,
     ) -> Self {
         let rule = RowLevelAccessControl {
             name: name.to_string(),
-            required_variables,
+            required_properties,
             condition: condition.to_string(),
         };
         self.model.row_level_access_controls.push(rule);
@@ -171,16 +171,16 @@ impl ModelBuilder {
     }
 }
 
-impl SessionVariable {
+impl SessionProperty {
     pub fn new_required(name: &str) -> Self {
-        SessionVariable {
+        SessionProperty {
             name: name.to_string(),
             required: true,
             default_expr: None,
         }
     }
     pub fn new_optional(name: &str, default_expr: Option<String>) -> Self {
-        SessionVariable {
+        SessionProperty {
             name: name.to_string(),
             required: false,
             default_expr,
@@ -421,7 +421,7 @@ mod test {
     use crate::mdl::ColumnLevelOperator;
     #[allow(deprecated)]
     use crate::mdl::RowLevelOperator;
-    use crate::mdl::SessionVariable;
+    use crate::mdl::SessionProperty;
     use std::fs;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -494,17 +494,17 @@ mod test {
             .refresh_time("1h")
             .add_row_level_access_control(
                 "rule1",
-                vec![SessionVariable::new_required("session_id")],
+                vec![SessionProperty::new_required("session_id")],
                 "id = @session_id",
             )
             .add_row_level_access_control(
                 "rule2",
-                vec![SessionVariable::new_optional("session_id_optional", None)],
+                vec![SessionProperty::new_optional("session_id_optional", None)],
                 "id = @session_id_optional",
             )
             .add_row_level_access_control(
                 "rule3",
-                vec![SessionVariable::new_optional(
+                vec![SessionProperty::new_optional(
                     "session_id_default",
                     Some("1".to_string()),
                 )],
@@ -708,17 +708,17 @@ mod test {
                     )
                     .add_row_level_access_control(
                         "rule1",
-                        vec![SessionVariable::new_required("session_id")],
+                        vec![SessionProperty::new_required("session_id")],
                         "c_custkey = @session_id",
                     )
                     .add_row_level_access_control(
                         "rule2",
-                        vec![SessionVariable::new_optional("session_id_optional", None)],
+                        vec![SessionProperty::new_optional("session_id_optional", None)],
                         "c_custkey = @session_id_optional",
                     )
                     .add_row_level_access_control(
                         "rule3",
-                        vec![SessionVariable::new_optional(
+                        vec![SessionProperty::new_optional(
                             "session_id_default",
                             Some("1".to_string()),
                         )],

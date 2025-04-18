@@ -27,7 +27,7 @@ mod manifest_impl {
     use manifest_macro::{
         column, column_level_operator, column_level_security, data_source, join_type, manifest,
         metric, model, normalized_expr, normalized_expr_type, relationship,
-        row_level_access_control, row_level_operator, row_level_security, session_variable,
+        row_level_access_control, row_level_operator, row_level_security, session_property,
         time_grain, time_unit, view,
     };
     use serde::{Deserialize, Serialize};
@@ -47,7 +47,7 @@ mod manifest_impl {
     time_grain!(false);
     time_unit!(false);
     row_level_access_control!(false);
-    session_variable!(false);
+    session_property!(false);
     row_level_security!(false);
     row_level_operator!(false);
     column_level_security!(false);
@@ -64,7 +64,7 @@ mod manifest_impl {
     use manifest_macro::{
         column, column_level_operator, column_level_security, data_source, join_type, manifest,
         metric, model, normalized_expr, normalized_expr_type, relationship,
-        row_level_access_control, row_level_operator, row_level_security, session_variable,
+        row_level_access_control, row_level_operator, row_level_security, session_property,
         time_grain, time_unit, view,
     };
     use pyo3::pyclass;
@@ -86,7 +86,7 @@ mod manifest_impl {
     time_unit!(true);
     manifest!(true);
     row_level_access_control!(true);
-    session_variable!(true);
+    session_property!(true);
     row_level_security!(true);
     row_level_operator!(true);
     column_level_security!(true);
