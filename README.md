@@ -71,7 +71,7 @@ With Wren Engine, you can scale AI adoption across teams — not just with bette
 https://github.com/user-attachments/assets/dab9b50f-70d7-4eb3-8fc8-2ab55dc7d2ec
 
 
-
+👉 Blog Post Tutorial: [Powering AI-driven workflows with Wren Engine and Zapier via the Model Context Protocol (MCP)](https://getwren.ai/post/powering-ai-driven-workflows-with-wren-engine-and-zapier-via-the-model-context-protocol-mcp?utm_campaign=10904457-MCP&utm_content=330804773&utm_medium=social&utm_source=linkedin&hss_channel=lcp-89794921)
 
 ## 🤔 Concepts
 
