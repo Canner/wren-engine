@@ -48,37 +48,32 @@ class ModelSubstitute:
 
     @staticmethod
     def _build_model_dict(models) -> dict:
-        def key(model):
-            table_ref = model["tableReference"]
-
-            # fully qualified  catalog.schema.table
-            if table_ref.get("catalog") and table_ref.get("schema"):
-                return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
-            # schema.table
-            elif table_ref.get("schema"):
-                return f"{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
-            # table
-            else:
-                return table_ref.get("table", "")
-
-        return {key(model): model for model in models if "tableReference" in model}
+        return {
+            ModelSubstitute._build_key(model): model
+            for model in models
+            if "tableReference" in model
+        }
 
     @staticmethod
     def _build_case_insensitive_model_dict(models) -> dict:
-        def key(model):
-            table_ref = model["tableReference"]
+        return {
+            ModelSubstitute._build_key(model).lower(): model
+            for model in models
+            if "tableReference" in model
+        }
 
-            # fully qualified catalog.schema.table
-            if table_ref.get("catalog") and table_ref.get("schema"):
-                return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}".lower()
-            # schema.table
-            elif table_ref.get("schema"):
-                return f"{table_ref.get('schema', '')}.{table_ref.get('table', '')}".lower()
-            # table
-            else:
-                return table_ref.get("table", "").lower()
+    def _build_key(model):
+        table_ref = model["tableReference"]
 
-        return {key(model): model for model in models if "tableReference" in model}
+        # fully qualified  catalog.schema.table
+        if table_ref.get("catalog") and table_ref.get("schema"):
+            return f"{table_ref.get('catalog', '')}.{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+        # schema.table
+        elif table_ref.get("schema"):
+            return f"{table_ref.get('schema', '')}.{table_ref.get('table', '')}"
+        # table
+        else:
+            return table_ref.get("table", "")
 
     def _find_model(self, source: exp.Table, case_sensitive=True) -> dict | None:
         # Determine catalog
@@ -95,28 +90,20 @@ class ModelSubstitute:
 
         table = source.name
 
+        # catalog and schema is not None and not empty string
+        if catalog and schema:
+            key = f"{catalog}.{schema}.{table}"
+        # schema is not None and not empty string
+        elif schema:
+            key = f"{schema}.{table}"
+        else:
+            key = f"{table}"
+
         # Determine if case insensitive search is needed
         if case_sensitive:
-            model_dict = self.model_dict
-            # catalog and schema is not None and not empty string
-            if catalog and schema:
-                return model_dict.get(f"{catalog}.{schema}.{table}", None)
-            # catalog is not None and not empty string
-            elif schema:
-                return model_dict.get(f"{schema}.{table}", None)
-            else:
-                return model_dict.get(f"{table}", None)
-
+            return self.model_dict.get(key, None)
         else:
-            model_dict = self.model_dict_case_insensitive
-            # catalog and schema is not None and not empty string
-            if catalog and schema:
-                return model_dict.get(f"{catalog}.{schema}.{table}".lower(), None)
-            # catalog is not None and not empty string
-            elif schema:
-                return model_dict.get(f"{schema}.{table}".lower(), None)
-            else:
-                return model_dict.get(f"{table}".lower(), None)
+            return self.model_dict_case_insensitive.get(key.lower(), None)
 
 
 def quote(s: str) -> str:
