@@ -39,7 +39,7 @@ class ModelSubstitute:
 
                 # if model name is ambiguous, raise an error
                 duplicate_keys = get_case_insensitive_duplicate_keys(self.model_dict)
-                if model is not None and key in duplicate_keys:
+                if model is not None and key.lower() in duplicate_keys:
                     raise SubstituteError(
                         f"Ambiguous model: found multiple matches for {source}"
                     )
@@ -125,9 +125,9 @@ def quote(s: str) -> str:
 def get_case_insensitive_duplicate_keys(d):
     key_map = defaultdict(list)
     for k in d:
-        key_map[k.lower()].append(k)
+        key_map[k.lower()].append(k.lower())
 
-    duplicates = [keys for keys in key_map.values() if len(keys) > 1]
+    duplicates = [key for keys in key_map.values() if len(keys) > 1 for key in keys]
     return duplicates
 
 

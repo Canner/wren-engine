@@ -111,6 +111,11 @@ def manifest_str():
 
 
 @pytest.fixture(scope="module")
+def duplicate_key_manifest_str():
+    return base64.b64encode(orjson.dumps(duplicate_key_manifest)).decode("utf-8")
+
+
+@pytest.fixture(scope="module")
 def oracle(request) -> OracleDbContainer:
     oracle = OracleDbContainer(
         "gvenzl/oracle-free:23.6-slim-faststart", oracle_password=f"{oracle_password}"
@@ -428,7 +433,9 @@ async def test_metadata_db_version(client, oracle: OracleDbContainer):
     assert "23.0" in response.text
 
 
-async def test_model_substitute(client, manifest_str, oracle: OracleDbContainer):
+async def test_model_substitute(
+    client, manifest_str, duplicate_key_manifest_str, oracle: OracleDbContainer
+):
     connection_info = _to_connection_info(oracle)
     response = await client.post(
         url=f"{base_url}/model-substitute",
@@ -467,12 +474,12 @@ async def test_model_substitute(client, manifest_str, oracle: OracleDbContainer)
         headers={"x-user-schema": "system"},
         json={
             "connectionInfo": connection_info,
-            "manifestStr": duplicate_key_manifest,
-            "modelName": "Orders",
+            "manifestStr": duplicate_key_manifest_str,
             "sql": 'SELECT * FROM "ORDERS"',
         },
     )
     assert response.status_code == 422
+    assert response.text == 'Ambiguous model: found multiple matches for "ORDERS"'
 
 
 def _to_connection_info(oracle: OracleDbContainer):
