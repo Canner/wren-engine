@@ -400,6 +400,41 @@ async def test_metadata_db_version(client, oracle: OracleDbContainer):
     assert "23.0" in response.text
 
 
+async def test_model_substitute(client, manifest_str, oracle: OracleDbContainer):
+    connection_info = _to_connection_info(oracle)
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "SYSTEM"},  # uppoercase to test case insensitivity
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "modelName": "Orders",
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
+    )
+
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "system"},  # lowercase to test case insensitivity
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": manifest_str,
+            "modelName": "Orders",
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        response.text
+        == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
+    )
+
+
 def _to_connection_info(oracle: OracleDbContainer):
     # We can't use oracle.user, oracle.password, oracle.dbname here
     # since these values are None at this point
