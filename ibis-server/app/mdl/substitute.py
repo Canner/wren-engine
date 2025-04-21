@@ -30,7 +30,7 @@ class ModelSubstitute:
                     continue
 
                 model = self._find_model(source) or self._find_model(
-                    source, case_insensitive=False
+                    source, case_sensitive=False
                 )
                 if model is None:
                     raise SubstituteError(f"Model not found: {source}")
@@ -80,7 +80,7 @@ class ModelSubstitute:
 
         return {key(model): model for model in models if "tableReference" in model}
 
-    def _find_model(self, source: exp.Table, case_insensitive=True) -> dict | None:
+    def _find_model(self, source: exp.Table, case_sensitive=True) -> dict | None:
         # Determine catalog
         if source.catalog:
             catalog = source.catalog
@@ -96,7 +96,7 @@ class ModelSubstitute:
         table = source.name
 
         # Determine if case insensitive search is needed
-        if case_insensitive:
+        if case_sensitive:
             model_dict = self.model_dict
             # catalog and schema is not None and not empty string
             if catalog and schema:
