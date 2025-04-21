@@ -469,6 +469,7 @@ async def test_model_substitute(
         == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
     )
 
+    # test ambiguous model name
     response = await client.post(
         url=f"{base_url}/model-substitute",
         headers={"x-user-schema": "system"},
