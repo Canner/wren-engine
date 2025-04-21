@@ -76,6 +76,34 @@ manifest = {
     ],
 }
 
+# for testing substitute case sensitivity
+duplicate_key_manifest = {
+    "catalog": "my_catalog",
+    "schema": "my_schema",
+    "models": [
+        {
+            "name": "ORDERS",
+            "tableReference": {
+                "schema": "SYSTEM",  # uppercase schema name
+                "table": "ORDERS",
+            },
+            "columns": [
+                {"name": "orderkey", "expression": "O_ORDERKEY", "type": "number"},
+            ],
+        },
+        {
+            "name": "orders",
+            "tableReference": {
+                "schema": "system",  # lowercase schema name
+                "table": "ORDERS",
+            },
+            "columns": [
+                {"name": "orderkey", "expression": "O_ORDERKEY", "type": "number"},
+            ],
+        },
+    ],
+}
+
 
 @pytest.fixture(scope="module")
 def manifest_str():
@@ -433,6 +461,18 @@ async def test_model_substitute(client, manifest_str, oracle: OracleDbContainer)
         response.text
         == '"SELECT * FROM \\"my_catalog\\".\\"my_schema\\".\\"Orders\\" AS \\"ORDERS\\""'
     )
+
+    response = await client.post(
+        url=f"{base_url}/model-substitute",
+        headers={"x-user-schema": "system"},
+        json={
+            "connectionInfo": connection_info,
+            "manifestStr": duplicate_key_manifest,
+            "modelName": "Orders",
+            "sql": 'SELECT * FROM "ORDERS"',
+        },
+    )
+    assert response.status_code == 422
 
 
 def _to_connection_info(oracle: OracleDbContainer):

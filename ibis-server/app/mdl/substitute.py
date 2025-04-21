@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from opentelemetry import trace
 from sqlglot import exp, parse_one
 from sqlglot.optimizer.scope import build_scope
@@ -29,9 +31,19 @@ class ModelSubstitute:
                 if not isinstance(source, exp.Table):
                     continue
 
-                model = self._find_model(source) or self._find_model(
+                key, sensitive_model = self._find_model(source)
+                _, case_insensitive_model = self._find_model(
                     source, case_sensitive=False
                 )
+                model = sensitive_model or case_insensitive_model
+
+                # if model name is ambiguous, raise an error
+                duplicate_keys = get_case_insensitive_duplicate_keys(self.model_dict)
+                if model is not None and key in duplicate_keys:
+                    raise SubstituteError(
+                        f"Ambiguous model: found multiple matches for {source}"
+                    )
+
                 if model is None:
                     raise SubstituteError(f"Model not found: {source}")
 
@@ -101,13 +113,22 @@ class ModelSubstitute:
 
         # Determine if case insensitive search is needed
         if case_sensitive:
-            return self.model_dict.get(key, None)
+            return key, self.model_dict.get(key, None)
         else:
-            return self.model_dict_case_insensitive.get(key.lower(), None)
+            return key.lower(), self.model_dict_case_insensitive.get(key.lower(), None)
 
 
 def quote(s: str) -> str:
     return f'"{s}"'
+
+
+def get_case_insensitive_duplicate_keys(d):
+    key_map = defaultdict(list)
+    for k in d:
+        key_map[k.lower()].append(k)
+
+    duplicates = [keys for keys in key_map.values() if len(keys) > 1]
+    return duplicates
 
 
 class SubstituteError(UnprocessableEntityError):
